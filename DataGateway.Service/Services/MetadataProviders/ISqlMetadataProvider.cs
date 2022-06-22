@@ -33,8 +33,6 @@ namespace Azure.DataGateway.Service.Services
 
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
 
-        string RestPath { get; }
-
         /// <summary>
         /// Obtains the underlying OData filter parser.
         /// </summary>

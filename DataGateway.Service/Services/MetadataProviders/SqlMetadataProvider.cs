@@ -41,8 +41,6 @@ namespace Azure.DataGateway.Service.Services
 
         private const int NUMBER_OF_RESTRICTIONS = 4;
 
-        public string RestPath { get; }
-
         protected string ConnectionString { get; init; }
 
         protected IQueryBuilder SqlQueryBuilder { get; init; }
@@ -69,7 +67,6 @@ namespace Azure.DataGateway.Service.Services
             _databaseType = runtimeConfig.DatabaseType;
             _entities = runtimeConfig.Entities;
             ConnectionString = runtimeConfig.ConnectionString;
-            RestPath = runtimeConfigProvider.RestPath;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;

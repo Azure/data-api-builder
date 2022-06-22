@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Parsers;
@@ -30,13 +31,15 @@ namespace Azure.DataGateway.Service.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         public RestService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
             ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
-            IAuthorizationService authorizationService
+            IAuthorizationService authorizationService,
+            RuntimeConfigProvider runtimeConfigProvider
             )
         {
             _queryEngine = queryEngine;
@@ -44,6 +47,7 @@ namespace Azure.DataGateway.Service.Services
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
             _sqlMetadataProvider = sqlMetadataProvider;
+            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         /// <summary>
@@ -166,7 +170,7 @@ namespace Azure.DataGateway.Service.Services
         /// <exception cref="DataGatewayException"></exception>
         public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string route)
         {
-            string path = _sqlMetadataProvider.RestPath.TrimStart('/');
+            string path = _runtimeConfigProvider.RestPath.TrimStart('/');
             if (!route.StartsWith(path))
             {
                 throw new DataGatewayException(message: $"Invalid Path for route: {route}.",
@@ -175,11 +179,10 @@ namespace Azure.DataGateway.Service.Services
             }
 
             // entity name comes after the path, so get substring starting from
-            // the end of path. If path is not empty we add +1 to length of path
-            // to account for the '/' following the path.
-            string routeAfterPath = string.IsNullOrEmpty(path) ? route : route.Substring(path.Length + 1);
-            string entityName = string.Empty;
+            // the end of path. If path is not empty we trim the '/' following the path.
+            string routeAfterPath = string.IsNullOrEmpty(path) ? route : route.Substring(path.Length).TrimStart('/');
             string primaryKeyRoute = string.Empty;
+            string entityName;
             // a '/' remaining in this substring means we have a primary key route
             if (routeAfterPath.Contains('/'))
             {
@@ -187,6 +190,10 @@ namespace Azure.DataGateway.Service.Services
                 primaryKeyRoute = routeAfterPath.Substring(routeAfterPath.IndexOf('/') + 1);
                 // save entity name as string up until first '/'
                 entityName = routeAfterPath[..routeAfterPath.IndexOf('/')];
+            }
+            else
+            {
+                entityName = routeAfterPath;
             }
 
             return (entityName, primaryKeyRoute);

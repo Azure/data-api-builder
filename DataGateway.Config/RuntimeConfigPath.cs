@@ -1,9 +1,7 @@
-using System.Buffers;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataGateway.Service.Exceptions;
-using Newtonsoft.Json;
 
 namespace Azure.DataGateway.Config
 {

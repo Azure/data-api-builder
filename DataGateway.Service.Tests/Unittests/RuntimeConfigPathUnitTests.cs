@@ -212,7 +212,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
           ""target.entity"": """ + reps[++index % reps.Length] + @"""
         },
         ""websiteplacement"": {
-          ""cardinality"": ""one"",
+          ""cardinality"": 1,
           ""target.entity"": """ + reps[++index % reps.Length] + @"""
         },
         ""reviews"": {
@@ -261,7 +261,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
       ],
       ""relationships"": {
         ""books"": {
-          ""cardinality"": ""one"",
+          ""cardinality"": 1.1,
           ""target.entity"": """ + reps[++index % reps.Length] + @"""
         }
       }

@@ -8,7 +8,7 @@ namespace Azure.DataGateway.Auth
     public class EntityMetadata
     {
         /// <summary>
-        /// Given the key (roleName) returns the associated RoleDS object.
+        /// Given the key (roleName) returns the associated RoleMetadata object.
         /// To retrieve all roles associated with an entity -> RoleToActionMap.Keys()
         /// </summary>
         public Dictionary<string, RoleMetadata> RoleToActionMap { get; set; } = new();
@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Auth
     public class RoleMetadata
     {
         /// <summary>
-        /// Given the key (actionName) returns the associated ActionDS object.
+        /// Given the key (actionName) returns the associated ActionMetadata object.
         /// </summary>
         public Dictionary<string, ActionMetadata> ActionToColumnMap { get; set; } = new();
     }

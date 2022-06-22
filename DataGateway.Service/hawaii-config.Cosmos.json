@@ -36,6 +36,10 @@
         {
           "role": "anonymous",
           "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
         }
       ]
     },
@@ -44,6 +48,10 @@
       "permissions": [
         {
           "role": "anonymous",
+          "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
           "actions": [ "*" ]
         }
       ]

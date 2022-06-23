@@ -1,5 +1,5 @@
 {
-  "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
+  "$schema": "../schemas/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "mysql",
     "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests"
@@ -15,7 +15,7 @@
       "allow-introspection": true
     },
     "host": {
-      "mode": "Development",
+      "mode": "development",
       "cors": {
         "origins": [ "http://localhost:3000" ],
         "allow-credentials": false
@@ -24,8 +24,7 @@
         "provider": "EasyAuth",
         "jwt": {
           "audience": "",
-          "issuer": "",
-          "issuer-key": ""
+          "issuer": ""
         }
       }
     }
@@ -133,8 +132,7 @@
                 "database": "@claims.id eq @item.id"
               },
               "fields": {
-                "include": [ "*" ],
-                "exclude": [ "id" ]
+                "include": [ "*" ]
               }
             }
           ]
@@ -284,6 +282,16 @@
       "mappings": {
         "spores": "hazards"
       }
+    },
+    "Empty": {
+      "source": "empty_table",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "books_view_all": {
       "source": "books_view_all",

@@ -40,8 +40,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             Jwt jwt = new(
                 Audience: "12345",
-                Issuer: "https://login.microsoftonline.com/common",
-                IssuerKey: "XYZ");
+                Issuer: "https://login.microsoftonline.com/common");
             AuthenticationConfig authNConfig = new(
                 Provider: "AzureAD",
                 Jwt: jwt);
@@ -67,8 +66,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             Jwt jwt = new(
                 Audience: "12345",
-                Issuer: string.Empty,
-                IssuerKey: string.Empty);
+                Issuer: string.Empty);
             AuthenticationConfig authNConfig = new(
                 Provider: "AzureAD",
                 Jwt: jwt);
@@ -84,8 +82,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             jwt = new(
                 Audience: string.Empty,
-                Issuer: DEFAULT_ISSUER,
-                IssuerKey: "XYZ");
+                Issuer: DEFAULT_ISSUER);
             authNConfig = new(
                 Provider: "AzureAD",
                 Jwt: jwt);
@@ -102,8 +99,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         {
             Jwt jwt = new(
                 Audience: "12345",
-                Issuer: string.Empty,
-                IssuerKey: string.Empty);
+                Issuer: string.Empty);
             AuthenticationConfig authNConfig = new(Provider: "EasyAuth", Jwt: jwt);
             RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
 
@@ -116,8 +112,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             jwt = new(
                 Audience: string.Empty,
-                Issuer: DEFAULT_ISSUER,
-                IssuerKey: "XYZ");
+                Issuer: DEFAULT_ISSUER);
             authNConfig = new(Provider: "EasyAuth", Jwt: jwt);
             config = CreateRuntimeConfigWithAuthN(authNConfig);
 

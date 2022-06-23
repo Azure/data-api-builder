@@ -2,6 +2,7 @@ using System;
 using System.IO.Abstractions;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Authorization;

@@ -203,6 +203,11 @@ WHERE
                     // For more refer to: https://stackoverflow.com/questions/49131832/how-to-create-a-json-object-in-mysql-with-a-boolean-value
                     jsonColumns.Add($"{parametrizedCLabel}, CAST({subqueryName}.{QuoteIdentifier(cLabel)} is true as json)");
                 }
+                else if (column.ColumnName != SqlQueryStructure.DATA_IDENT &&
+                    structure.GetColumnSystemType(column.ColumnName) == typeof(byte[]))
+                {
+                    jsonColumns.Add($"{parametrizedCLabel}, TO_BASE64({subqueryName}.{QuoteIdentifier(cLabel)})");
+                }
                 else
                 {
                     jsonColumns.Add($"{parametrizedCLabel}, {subqueryName}.{QuoteIdentifier(cLabel)}");

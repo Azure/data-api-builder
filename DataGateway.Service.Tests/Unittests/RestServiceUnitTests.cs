@@ -1,5 +1,6 @@
 using System.Net;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
@@ -140,6 +141,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
                 queryBuilder,
                 sqlMetadataProvider);
 
+            AuthorizationResolver authZResolver = new(runtimeConfigProvider, sqlMetadataProvider);
             // Setup REST Service
             _restService = new RestService(
                 queryEngine,
@@ -147,6 +149,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
                 sqlMetadataProvider,
                 httpContextAccessor.Object,
                 authorizationService.Object,
+                authZResolver,
                 runtimeConfigProvider);
         }
 

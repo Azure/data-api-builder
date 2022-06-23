@@ -440,12 +440,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             )
         {
             Field fieldsForRole = new(
-                Include: includedCols,
-                Exclude: excludedCols);
+                include: includedCols,
+                exclude: excludedCols);
 
             Policy policy = new(
-                Request: requestPolicy,
-                Database: databasePolicy);
+                request: requestPolicy,
+                database: databasePolicy);
 
             Action actionForRole = new(
                 Name: actionName,
@@ -453,8 +453,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 Policy: policy);
 
             PermissionSetting permissionForEntity = new(
-                Role: roleName,
-                Actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+                role: roleName,
+                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
                 Source: TEST_ENTITY,

@@ -28,7 +28,6 @@ namespace Azure.DataGateway.Service.Authorization
         private Dictionary<string, EntityMetadata> _entityPermissionMap = new();
         private const string WILDCARD = "*";
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
-        private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
 
         public AuthorizationResolver(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -225,10 +224,6 @@ namespace Azure.DataGateway.Service.Authorization
                             if (actionObj is not null)
                             {
                                 actionName = actionObj.Name;
-
-                                //Assert the assumption that the actionName is valid.
-                                Assert.IsTrue(IsValidActionName(actionName));
-
                                 if (actionObj.Fields!.Include is not null)
                                 {
                                     // When a wildcard (*) is defined for Included columns, all of the table's
@@ -241,7 +236,7 @@ namespace Azure.DataGateway.Service.Authorization
                                     }
                                     else
                                     {
-                                        actionToColumn.included = new(actionObj.Fields.Include);
+                                        actionToColumn.included = actionObj.Fields.IncludeSet!;
                                     }
                                 }
 
@@ -255,7 +250,7 @@ namespace Azure.DataGateway.Service.Authorization
                                     }
                                     else
                                     {
-                                        actionToColumn.excluded = new(actionObj.Fields.Exclude);
+                                        actionToColumn.excluded = actionObj.Fields.ExcludeSet!;
                                     }
                                 }
 
@@ -292,18 +287,6 @@ namespace Azure.DataGateway.Service.Authorization
             }
 
             return allowedExposedColumns;
-        }
-
-        /// <summary>
-        /// Returns whether the actionName is a valid
-        /// - Create, Read, Update, Delete (CRUD) operation
-        /// - Wildcard (*)
-        /// </summary>
-        /// <param name="actionName"></param>
-        /// <returns></returns>
-        private static bool IsValidActionName(string actionName)
-        {
-            return actionName.Equals(WILDCARD) || _validActions.Contains(actionName);
         }
 
         /// <summary>

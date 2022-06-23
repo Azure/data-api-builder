@@ -184,7 +184,8 @@ namespace Azure.DataGateway.Service.Services
         /// '/' if one exists, and the primary key as the substring
         /// following the '/'.
         /// </summary>
-        /// <param name="route">String containing path + entity name.</param>
+        /// <param name="route">String containing path + entity name
+        /// (and optionally primary key).</param>
         /// <returns>entity name after path.</returns>
         /// <exception cref="DataGatewayException"></exception>
         public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string route)
@@ -205,8 +206,9 @@ namespace Azure.DataGateway.Service.Services
             // a '/' remaining in this substring means we have a primary key route
             if (routeAfterPath.Contains('/'))
             {
-                // primary key route is what follows the first '/'
-                primaryKeyRoute = routeAfterPath.Substring(routeAfterPath.IndexOf('/') + 1);
+                // primary key route is what follows the first '/', we trim this an any
+                // additional '/'
+                primaryKeyRoute = routeAfterPath.Substring(routeAfterPath.IndexOf('/')).TrimStart('/');
                 // save entity name as string up until first '/'
                 entityName = routeAfterPath[..routeAfterPath.IndexOf('/')];
             }

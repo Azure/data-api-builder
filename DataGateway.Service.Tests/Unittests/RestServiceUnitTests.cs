@@ -50,6 +50,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
         [DataRow("foo/bar/baz/qux", "/foo", "bar", "baz/qux")]
         [DataRow("foo/bar/baz/qux", "/foo/bar/", "baz", "qux")]
         [DataRow("foo/bar/baz/qux", "/foo/bar/baz", "qux", "")]
+        [DataRow("foo////bar////baz/qux", "////foo", "bar", "baz/qux")]
         [DataRow("foo/bar/baz/qux/1/fred/23/thud/456789", "",
             "foo", "bar/baz/qux/1/fred/23/thud/456789")]
         public void ParseEntityNameAndPrimaryKeyTest(string route,

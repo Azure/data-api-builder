@@ -41,7 +41,7 @@ namespace Azure.DataGateway.Service.Services
             ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService,
-            IAuthorizationResolver authorizationResolver
+            IAuthorizationResolver authorizationResolver,
             RuntimeConfigProvider runtimeConfigProvider
             )
         {

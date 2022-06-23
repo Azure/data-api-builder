@@ -1,7 +1,6 @@
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 
-namespace Azure.DataGateway.Service.Authorization
+namespace Azure.DataGateway.Auth
 {
     /// <summary>
     /// Interface for authorization decision-making. Each method performs lookups within a
@@ -9,6 +8,11 @@ namespace Azure.DataGateway.Service.Authorization
     /// </summary>
     public interface IAuthorizationResolver
     {
+        /// <summary>
+        /// Representation of authorization permissions for each entity in the runtime config.
+        /// </summary>
+        public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; }
+
         /// <summary>
         /// Checks for the existence of the client role header in httpContext.Request.Headers
         /// and evaluates that header against the authenticated (httpContext.User)'s roles
@@ -39,18 +43,6 @@ namespace Azure.DataGateway.Service.Authorization
         public bool AreColumnsAllowedForAction(string entityName, string roleName, string action, IEnumerable<string> columns);
 
         /// <summary>
-        /// Retrieves the policy of an action within an entity's role entry
-        /// within the permissions section of the runtime config.
-        /// </summary>
-        /// <param name="entityName">Entity from request</param>
-        /// <param name="roleName">Role defined in client role header</param>
-        /// <param name="action">Action type: Create, Read, Update, Delete</param>
-        /// <param name="httpContext">Contains token claims of the authenticated user used in policy evaluation.</param>
-        /// <returns>True, if query predicates are successfully appended to the auto-generated database query.
-        /// or if a policy is not defined.</returns>
-        public bool DidProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext);
-
-        /// <summary>
         /// From the given parameters, processes the included and excluded column permissions to output
         /// a list of columns that are "allowed".
         /// -- IncludedColumns minus ExcludedColumns == Allowed Columns
@@ -61,5 +53,39 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="action">Action type: Create, Read, Update, Delete</param>
         /// <returns></returns>
         public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action);
+
+        /// <summary>
+        /// Retrieves the policy of an action within an entity's role entry
+        /// within the permissions section of the runtime config, and tries to process
+        /// the policy.
+        /// </summary>
+        /// <param name="entityName">Entity from request.</param>
+        /// <param name="roleName">Role defined in client role header.</param>
+        /// <param name="action">Action type: Create, Read, Update, Delete.</param>
+        /// <param name="httpContext">Contains token claims of the authenticated user used in policy evaluation.</param>
+        /// <returns>Returns the parsed policy, if successfully processed, or an exception otherwise.</returns>
+        public string TryProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext);
+
+        /// <summary>
+        /// Returns a list of roles which define permissions for the provided action.
+        /// i.e. list of roles which allow the action "read" on entityName.
+        /// </summary>
+        /// <param name="entityName">Entity to lookup permissions</param>
+        /// <param name="actionName">Action to lookup applicable roles</param>
+        /// <returns>Collection of roles. Empty list if entityPermissionsMap is null.</returns>
+        public static IEnumerable<string> GetRolesForAction(string entityName, string actionName, Dictionary<string, EntityMetadata>? entityPermissionsMap)
+        {
+            if (entityName is null)
+            {
+                throw new ArgumentNullException(paramName: "entityName");
+            }
+
+            if (entityPermissionsMap is not null && entityPermissionsMap[entityName].ActionToRolesMap.TryGetValue(actionName, out List<string>? roleList) && roleList is not null)
+            {
+                return roleList;
+            }
+
+            return new List<string>();
+        }
     }
 }

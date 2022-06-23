@@ -55,7 +55,7 @@ namespace Azure.DataGateway.Service.Services
         /// Maps an entity name to a DatabaseObject.
         /// </summary>
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
-            new(StringComparer.InvariantCultureIgnoreCase);
+            new(StringComparer.InvariantCulture);
 
         public SqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -762,6 +762,12 @@ namespace Azure.DataGateway.Service.Services
             List<string> tableNames = new();
             IEnumerable<TableDefinition> tablesToBePopulatedWithFK =
                 FindAllTablesWhoseForeignKeyIsToBeRetrieved(schemaNames, tableNames);
+
+            // No need to do any further work if there are no FK to be retrieved
+            if (tablesToBePopulatedWithFK.Count() == 0)
+            {
+                return;
+            }
 
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =

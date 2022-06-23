@@ -1,5 +1,5 @@
 {
-  "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
+  "$schema": "../schemas/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "postgresql",
     "connection-string": "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME"
@@ -15,7 +15,7 @@
       "allow-introspection": true
     },
     "host": {
-      "mode": "Development",
+      "mode": "development",
       "cors": {
         "origins": [ "http://localhost:3000" ],
         "allow-credentials": false
@@ -24,8 +24,8 @@
         "provider": "EasyAuth",
         "jwt": {
           "audience": "",
-          "issuer": "",
-          "issuer-key": ""
+          "issuer": ""
+          }
         }
       }
     }
@@ -63,7 +63,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "read", "update" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -84,7 +84,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "update", "delete" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -107,6 +107,10 @@
           "linking.source.fields": [ "book_id" ],
           "linking.target.fields": [ "author_id" ]
         }
+      },
+      "mappings": {
+        "id": "id",
+        "title": "title"
       }
     },
     "BookWebsitePlacement": {
@@ -151,6 +155,10 @@
         {
           "role": "anonymous",
           "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -168,6 +176,10 @@
         {
           "role": "anonymous",
           "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -188,7 +200,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "read", "delete" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ]
     },
@@ -199,6 +211,10 @@
         {
           "role": "anonymous",
           "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ]
     },
@@ -216,6 +232,58 @@
       "source": "type_table",
       "rest": false,
       "permissions": []
+    },
+    "Tree": {
+      "source": "trees",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "species": "Scientific Name",
+        "region": "United State's Region"
+      }
+    },
+    "Shrub": {
+      "source": "trees",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "species": "fancyName"
+      }
+    },
+    "Fungus": {
+      "source": "fungi",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "spores": "hazards"
+      }
     }
   }
 }

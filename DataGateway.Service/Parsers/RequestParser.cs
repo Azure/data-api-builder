@@ -245,7 +245,9 @@ namespace Azure.DataGateway.Service.Parsers
             {
                 if (IsNull(word))
                 {
-                    throw new ArgumentException("Invalid Field name: null or white space");
+                    throw new DataGatewayException(message: "Invalid Field name: null or white space",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
             }
         }

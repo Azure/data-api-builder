@@ -8,7 +8,6 @@ using System.Text.RegularExpressions;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Models.Authorization;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
@@ -166,7 +165,7 @@ namespace Azure.DataGateway.Service.Authorization
         {
             string dBpolicyWithClaimTypes = GetDBPolicyForRequest(entityName, roleName, action);
             return string.IsNullOrWhiteSpace(dBpolicyWithClaimTypes) ? string.Empty :
-                   ProcessTokenClaimsForPolicy(dBpolicyWithClaimTypes, httpContext);
+                   ProcessClaimsForPolicy(dBpolicyWithClaimTypes, httpContext);
         }
 
         /// <summary>
@@ -230,13 +229,13 @@ namespace Azure.DataGateway.Service.Authorization
                                     // columns must be resolved and placed in the actionToColumn Key/Value store.
                                     // This is especially relevant for find requests, where actual column names must be
                                     // resolved when no columns were included in a request.
-                                    if (actionObj.Fields.Include.Length == 1 && actionObj.Fields.Include[0] == WILDCARD)
+                                    if (actionObj.Fields.Include.Count == 1 && actionObj.Fields.Include.Contains(WILDCARD))
                                     {
                                         actionToColumn.included.UnionWith(ResolveTableDefinitionColumns(entityName));
                                     }
                                     else
                                     {
-                                        actionToColumn.included = actionObj.Fields.IncludeSet!;
+                                        actionToColumn.included = actionObj.Fields.Include!;
                                     }
                                 }
 
@@ -244,13 +243,13 @@ namespace Azure.DataGateway.Service.Authorization
                                 {
                                     // When a wildcard (*) is defined for Excluded columns, all of the table's
                                     // columns must be resolved and placed in the actionToColumn Key/Value store.
-                                    if (actionObj.Fields.Exclude.Length == 1 && actionObj.Fields.Exclude[0] == WILDCARD)
+                                    if (actionObj.Fields.Exclude.Count == 1 && actionObj.Fields.Exclude.Contains(WILDCARD))
                                     {
                                         actionToColumn.excluded.UnionWith(ResolveTableDefinitionColumns(entityName));
                                     }
                                     else
                                     {
-                                        actionToColumn.excluded = actionObj.Fields.ExcludeSet!;
+                                        actionToColumn.excluded = actionObj.Fields.Exclude!;
                                     }
                                 }
 
@@ -291,12 +290,12 @@ namespace Azure.DataGateway.Service.Authorization
 
         /// <summary>
         /// Helper method to process the given policy obtained from config, and convert it into an injectable format in
-        /// the HttpContext object by substituting/removing @claim./@item. directives.
+        /// the HttpContext object by substituting @claim.xyz claims with their values.
         /// </summary>
         /// <param name="policy">The policy to be processed.</param>
         /// <param name="context">HttpContext object used to extract all the claims available in the request.</param>
         /// <returns>Processed policy string that can be injected into the HttpContext object.</returns>
-        private static string ProcessTokenClaimsForPolicy(string policy, HttpContext context)
+        private static string ProcessClaimsForPolicy(string policy, HttpContext context)
         {
             Dictionary<string, Claim> claimsInRequestContext = GetAllUserClaims(context);
             policy = GetPolicyWithClaimValues(policy, claimsInRequestContext);

@@ -48,23 +48,15 @@ namespace Azure.DataGateway.Config
     /// <param name="Exclude">All the fields specified here are excluded.</param>
     public class Field
     {
-        public Field(string[]? include, string[]? exclude)
+        public Field(HashSet<string>? include, HashSet<string>? exclude)
         {
-            Include = include;
-            Exclude = exclude;
-            IncludeSet = Include is null ? new() : new(Include);
-            ExcludeSet = Exclude is null ? new() : new(Exclude);
+            Include = include is null ? new() : new(include);
+            Exclude = exclude is null ? new() : new(exclude);
         }
         [property: JsonPropertyName("include")]
-        public string[]? Include { get; set; }
+        public HashSet<string> Include { get; set; }
         [property: JsonPropertyName("exclude")]
-        public string[]? Exclude { get; set; }
-
-        // The IncludeSet and ExcludeSet are not used in deserialisation of runtimeconfig.
-        // They are later used in config validation and in authorisation resolver for quick lookup
-        // of included/excluded fields.
-        public HashSet<string>? IncludeSet { get; set; }
-        public HashSet<string?>? ExcludeSet { get; set; }
+        public HashSet<string> Exclude { get; set; }
     }
 
     /// <summary>

@@ -6,7 +6,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Action = Azure.DataGateway.Config.Action;
@@ -165,16 +164,12 @@ namespace Azure.DataGateway.Service.Configurations
                                         subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
                             }
 
-                            // Set the included and excluded sets present in the action object
-                            configAction.Fields!.IncludeSet = configAction.Fields.Include is null ? new() : new(configAction.Fields.Include);
-                            configAction.Fields!.ExcludeSet = configAction.Fields.Exclude is null ? new() : new(configAction.Fields.Exclude);
-
                             // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
                             // don't contain any other field. If they do, we throw an appropriate exception.
-                            if (configAction.Fields.IncludeSet.Contains("*") && configAction.Fields.IncludeSet.Count > 1 ||
-                                configAction.Fields.ExcludeSet.Contains("*") && configAction.Fields.ExcludeSet.Count > 1)
+                            if (configAction.Fields!.Include.Contains("*") && configAction.Fields.Include.Count > 1 ||
+                                configAction.Fields.Exclude.Contains("*") && configAction.Fields.Exclude.Count > 1)
                             {
-                                string incExc = configAction.Fields.IncludeSet.Contains("*") && configAction.Fields.IncludeSet.Count > 1 ? "included" : "excluded";
+                                string incExc = configAction.Fields.Include.Contains("*") && configAction.Fields.Include.Count > 1 ? "included" : "excluded";
                                 throw new DataGatewayException(
                                         message: $"No other field can be present with wildcard in the {incExc} set for: entity:{entityName}," +
                                                  $" role:{permissionSetting.Role}, action:{actionName}",
@@ -187,7 +182,7 @@ namespace Azure.DataGateway.Service.Configurations
                                 // validate that all the fields mentioned in database policy are accessible to user
                                 // and remove all the occurences of @item. directive from the policy.
                                 configAction.Policy.Database = ProcessFieldsInPolicy(configAction.Policy.Database,
-                                    configAction.Fields!.IncludeSet, configAction.Fields!.ExcludeSet!);
+                                    configAction.Fields.Include, configAction.Fields.Exclude);
 
                                 // validate that all the claimTypes in the policy are well formed, and remove
                                 // parenthesis around claimTypes.
@@ -268,7 +263,7 @@ namespace Azure.DataGateway.Service.Configurations
             MatchCollection claimTypes = Regex.Matches(policy, claimCharsRgx);
 
             // parsedIdx indicates the last index in the policy string from which we need to append to the
-            // policyTokens array.
+            // processedPolicy.
             int parsedIdx = 0;
 
             foreach (Match claimType in claimTypes)
@@ -302,10 +297,10 @@ namespace Azure.DataGateway.Service.Configurations
                 int claimIdx = claimType.Index;
 
                 // Add token for the portion of policy string between the current and the previous @claims.*** claimType
-                // to the policyTokens.
+                // to the processedPolicy.
                 processedPolicy.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx));
 
-                // Add token for the claimType to policyTokens
+                // Add token for the claimType to processedPolicy
                 processedPolicy.Append("@claims."+typeOfClaim);
 
                 // Move the parsedIdx to the index following a claimType in the policy string

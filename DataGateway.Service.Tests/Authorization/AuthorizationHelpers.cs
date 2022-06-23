@@ -57,10 +57,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string entityName = "SampleEntity",
             string roleName = "Reader",
             string actionName = ActionType.CREATE,
-            string[] includedCols = null,
-            string[] excludedCols = null
+            HashSet<string> includedCols = null,
+            HashSet<string> excludedCols = null
             )
         {
+            includedCols = includedCols is null ? new() : includedCols;
+            excludedCols = excludedCols is null ? new() : excludedCols;
             Field fieldsForRole = new(
                 include: includedCols,
                 exclude: excludedCols);

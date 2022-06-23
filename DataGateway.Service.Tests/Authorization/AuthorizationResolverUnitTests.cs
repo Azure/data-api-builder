@@ -127,7 +127,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2", "col3" }
+                includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -145,7 +145,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2", "col3" }
+                includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -163,7 +163,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "*" }
+                includedCols: new HashSet<string> { "*" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -181,8 +181,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "*" },
-                excludedCols: new string[] { "col1", "col2" }
+                includedCols: new HashSet<string> { "*" },
+                excludedCols: new HashSet<string> { "col1", "col2" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -201,7 +201,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2", "col3" }
+                includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -219,7 +219,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2", "col3" }
+                includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -238,8 +238,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2", "col3" },
-                excludedCols: new string[] { "col4", "col5", "col6" }
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
+                excludedCols: new HashSet<string> { "col4", "col5", "col6" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -257,8 +257,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2", "col3" },
-                excludedCols: new string[] { "col4", "col5", "col6" }
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
+                excludedCols: new HashSet<string> { "col4", "col5", "col6" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -276,7 +276,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                excludedCols: new string[] { "*" }
+                excludedCols: new HashSet<string> { "*" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -294,8 +294,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "*" },
-                excludedCols: new string[] { "col1", "col2" }
+                includedCols: new HashSet<string> { "*" },
+                excludedCols: new HashSet<string> { "col1", "col2" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -313,8 +313,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2" },
-                excludedCols: new string[] { "*" }
+                includedCols: new HashSet<string> { "col1", "col2" },
+                excludedCols: new HashSet<string> { "*" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -332,8 +332,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2" },
-                excludedCols: new string[] { "*" }
+                includedCols: new HashSet<string> { "col1", "col2" },
+                excludedCols: new HashSet<string> { "*" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -366,7 +366,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 TEST_ENTITY,
                 TEST_ROLE,
                 TEST_ACTION,
-                includedCols: new string[] { "col1", "col2", "col3" },
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
@@ -403,7 +403,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 TEST_ENTITY,
                 TEST_ROLE,
                 TEST_ACTION,
-                includedCols: new string[] { "col1", "col2", "col3" },
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
@@ -433,12 +433,14 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string entityName = "SampleEntity",
             string roleName = "Reader",
             string actionName = ActionType.CREATE,
-            string[] includedCols = null,
-            string[] excludedCols = null,
+            HashSet<string> includedCols = null,
+            HashSet<string> excludedCols = null,
             string requestPolicy = null,
             string databasePolicy = null
             )
         {
+            includedCols = includedCols is null ? new() : includedCols;
+            excludedCols = excludedCols is null ? new() : excludedCols;
             Field fieldsForRole = new(
                 include: includedCols,
                 exclude: excludedCols);

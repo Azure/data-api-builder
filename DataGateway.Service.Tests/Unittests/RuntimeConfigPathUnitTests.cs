@@ -45,7 +45,8 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
                 new string[] { "envVarValue", "@env(envVarValue)", "@enenvVarValue", "@env'()@env'envVarValue')')" }
             },
             DisplayName = "Replacement strings that match.")]
-        //  the following are envionrment variable names set to the
+        //  since we match strings surrounded by single quotes,
+        //  the following are environment variable names set to the
         //  associated values:
         // 'envVarName  -> _envVarName
         //  envVarName' ->  envVarName_

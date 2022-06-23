@@ -126,7 +126,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
                 queryExecutor,
                 queryBuilder);
 
-            Mock<IAuthorizationService>  authorizationService = new();
+            Mock<IAuthorizationService> authorizationService = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             SqlQueryEngine queryEngine = new(
                 queryExecutor,

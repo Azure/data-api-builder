@@ -80,6 +80,8 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [DataTestMethod]
         [DataRow("")]
         [DataRow("fooBARbaz")]
+        // extra single quote added to environment variable
+        // names to validate we don't match these
         [DataRow("''envVarName")]
         [DataRow("''envVarName'")]
         [DataRow("envVarName''")]

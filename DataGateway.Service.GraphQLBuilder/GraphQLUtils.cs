@@ -1,4 +1,6 @@
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -8,6 +10,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
     public static class GraphQLUtils
     {
         public const string DEFAULT_PRIMARY_KEY_NAME = "id";
+        public const string DEFAULT_PARTITION_KEY_NAME = "_partitionKeyValue";
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
@@ -23,13 +26,23 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 
         public static bool IsBuiltInType(ITypeNode typeNode)
         {
-            string name = typeNode.NamedType().Name.Value;
-            if (name == "String" || name == "Int" || name == "Boolean" || name == "Float" || name == "ID")
+            HashSet<string> inBuiltTypes = new()
             {
-                return true;
-            }
-
-            return false;
+                "ID",
+                "Byte",
+                "Short",
+                "Int",
+                "Long",
+                SingleType.TypeName,
+                "Float",
+                "Decimal",
+                "String",
+                "Boolean",
+                "DateTime",
+                "ByteArray"
+            };
+            string name = typeNode.NamedType().Name.Value;
+            return inBuiltTypes.Contains(name);
         }
 
         /// <summary>
@@ -38,30 +51,54 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
         /// If no directives present, default to a field named "id" as the primary key.
         /// If even that doesn't exist, throw an exception in initialization.
         /// </summary>
-        public static List<FieldDefinitionNode> FindPrimaryKeyFields(ObjectTypeDefinitionNode node)
+        public static List<FieldDefinitionNode> FindPrimaryKeyFields(ObjectTypeDefinitionNode node, DatabaseType databaseType)
         {
-            List<FieldDefinitionNode> fieldDefinitionNodes =
-                new(node.Fields.Where(f => f.Directives.Any(d => d.Name.Value == PrimaryKeyDirectiveType.DirectiveName)));
+            List<FieldDefinitionNode> fieldDefinitionNodes = new();
 
-            // By convention we look for a `@primaryKey` directive, if that didn't exist
-            // fallback to using an expected field name on the GraphQL object
-            if (fieldDefinitionNodes.Count == 0)
+            if (databaseType == DatabaseType.cosmos)
             {
-                FieldDefinitionNode? fieldDefinitionNode =
-                    node.Fields.FirstOrDefault(f => f.Name.Value == DEFAULT_PRIMARY_KEY_NAME);
-                if (fieldDefinitionNode is not null)
-                {
-                    fieldDefinitionNodes.Add(fieldDefinitionNode);
-                }
+                fieldDefinitionNodes.Add(
+                    new FieldDefinitionNode(
+                        location: null,
+                        new NameNode(DEFAULT_PRIMARY_KEY_NAME),
+                        new StringValueNode("Id value to provide to identify a cosmos db record"),
+                        new List<InputValueDefinitionNode>(),
+                        new IdType().ToTypeNode(),
+                        new List<DirectiveNode>()));
+
+                fieldDefinitionNodes.Add(
+                    new FieldDefinitionNode(
+                        location: null,
+                        new NameNode(DEFAULT_PARTITION_KEY_NAME),
+                        new StringValueNode("Partition key value to provide to identify a cosmos db record"),
+                        new List<InputValueDefinitionNode>(),
+                        new StringType().ToTypeNode(),
+                        new List<DirectiveNode>()));
             }
-
-            // Nothing explicitly defined nor could we find anything using our conventions, fail out
-            if (fieldDefinitionNodes.Count == 0)
+            else
             {
-                throw new DataGatewayException(
-                    message: "No primary key defined and conventions couldn't locate a fallback",
-                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization,
-                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable);
+                fieldDefinitionNodes = new(node.Fields.Where(f => f.Directives.Any(d => d.Name.Value == PrimaryKeyDirectiveType.DirectiveName)));
+
+                // By convention we look for a `@primaryKey` directive, if that didn't exist
+                // fallback to using an expected field name on the GraphQL object
+                if (fieldDefinitionNodes.Count == 0)
+                {
+                    FieldDefinitionNode? fieldDefinitionNode =
+                        node.Fields.FirstOrDefault(f => f.Name.Value == DEFAULT_PRIMARY_KEY_NAME);
+                    if (fieldDefinitionNode is not null)
+                    {
+                        fieldDefinitionNodes.Add(fieldDefinitionNode);
+                    }
+                    else
+                    {
+                        // Nothing explicitly defined nor could we find anything using our conventions, fail out
+                        throw new DataGatewayException(
+                               message: "No primary key defined and conventions couldn't locate a fallback",
+                               subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization,
+                               statusCode: System.Net.HttpStatusCode.ServiceUnavailable);
+                    }
+
+                }
             }
 
             return fieldDefinitionNodes;

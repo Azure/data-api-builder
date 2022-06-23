@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
@@ -30,13 +31,15 @@ namespace Azure.DataGateway.Service.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
+        private readonly IAuthorizationResolver _authorizationResolver;
 
         public RestService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
             ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
-            IAuthorizationService authorizationService
+            IAuthorizationService authorizationService,
+            IAuthorizationResolver authorizationResolver
             )
         {
             _queryEngine = queryEngine;
@@ -44,6 +47,7 @@ namespace Azure.DataGateway.Service.Services
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
             _sqlMetadataProvider = sqlMetadataProvider;
+            _authorizationResolver = authorizationResolver;
         }
 
         /// <summary>
@@ -128,6 +132,21 @@ namespace Azure.DataGateway.Service.Services
             {
                 context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
                 RequestParser.ParseQueryString(context, _sqlMetadataProvider);
+            }
+
+            string role = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+            string action = HttpVerbToActions(GetHttpVerb(operationType).Name);
+            string dbPolicy = _authorizationResolver.TryProcessDBPolicy(entityName, role, action, GetHttpContext());
+            if (!string.IsNullOrEmpty(dbPolicy))
+            {
+                // Since dbPolicy is nothing but filters to be added by virtue of database policy, we prefix it with
+                // ?$filter= so that it conforms with the format followed by other filter predicates.
+                // This helps the ODataVisitor helpers to parse the policy text properly.
+                dbPolicy = "?$filter=" + dbPolicy;
+
+                // Parse and save the values that are needed to later generate queries in the given RestRequestContext.
+                // FilterClauseInDbPolicy is an Abstract Syntax Tree representing the parsed policy text.
+                context.DbPolicyClause = _sqlMetadataProvider.GetODataFilterParser().GetFilterClause(dbPolicy, $"{context.EntityName}.{context.DatabaseObject.FullName}");
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context.
@@ -286,6 +305,36 @@ namespace Azure.DataGateway.Service.Services
                     message: "Authorization Failure: Access Not Allowed.",
                     statusCode: HttpStatusCode.Forbidden,
                     subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+        }
+
+        /// <summary>
+        /// Converts httpverb type of a RestRequestContext object to the
+        /// matching CRUD operation, to facilitate authorization checks.
+        /// </summary>
+        /// <param name="httpVerb"></param>
+        /// <returns>The CRUD operation for the given httpverb.</returns>
+        public static string HttpVerbToActions(string httpVerbName)
+        {
+            switch (httpVerbName)
+            {
+                case "POST":
+                    return "create";
+                case "PUT":
+                case "PATCH":
+                    // Please refer to the use of this method, which is to look out for policy based on crud operation type.
+                    // Since create doesn't have filter predicates, PUT/PATCH would resolve to update operation.
+                    return "update";
+                case "DELETE":
+                    return "delete";
+                case "GET":
+                    return "read";
+                default:
+                    throw new DataGatewayException(
+                        message: "Unsupported operation type.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest
+                    );
             }
         }
     }

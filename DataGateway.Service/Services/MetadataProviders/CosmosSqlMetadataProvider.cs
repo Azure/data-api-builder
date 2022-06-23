@@ -17,6 +17,8 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         private readonly Dictionary<string, Entity> _entities;
         private CosmosDbOptions _cosmosDb;
         private readonly RuntimeConfig _runtimeConfig;
+        private Dictionary<string, string> _partitionKeyPaths = new();
+
         public FilterParser ODataFilterParser => new();
 
         /// <inheritdoc />
@@ -144,6 +146,22 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntityNamesAndDbObjects()
         {
             throw new NotImplementedException();
+        }
+
+        /// <inheritdoc />
+        public string? GetPartitionKeyPath(string database, string container)
+        {
+            _partitionKeyPaths.TryGetValue($"{database}/{container}", out string? partitionKeyPath);
+            return partitionKeyPath;
+        }
+
+        /// <inheritdoc />
+        public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
+        {
+            if (!_partitionKeyPaths.TryAdd($"{database}/{container}", partitionKeyPath))
+            {
+                _partitionKeyPaths[$"{database}/{container}"] = partitionKeyPath;
+            }
         }
     }
 }

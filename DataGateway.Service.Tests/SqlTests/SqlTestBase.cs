@@ -9,7 +9,10 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
@@ -19,7 +22,6 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
@@ -34,7 +36,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass]
     public abstract class SqlTestBase
     {
-        private static string _testCategory;
+        protected static string _testCategory;
         protected static IQueryExecutor _queryExecutor;
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
@@ -45,7 +47,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
-        protected static IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
+        protected static RuntimeConfigProvider _runtimeConfigProvider;
+        protected static IAuthorizationResolver _authZResolver;
+        protected static RuntimeConfig _runtimeConfig;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -56,43 +60,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static async Task InitializeTestFixture(TestContext context, string testCategory)
         {
             _testCategory = testCategory;
+            _runtimeConfig = SqlTestHelper.LoadConfig($"{_testCategory}").CurrentValue;
 
-            _runtimeConfigPath = SqlTestHelper.LoadConfig($"{_testCategory}");
-            switch (_testCategory)
-            {
-                case TestCategory.POSTGRESQL:
-                    _queryBuilder = new PostgresQueryBuilder();
-                    _defaultSchemaName = "public";
-                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigPath);
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigPath, _dbExceptionParser);
-                    _sqlMetadataProvider =
-                        new PostgreSqlMetadataProvider(
-                            _runtimeConfigPath,
-                            _queryExecutor,
-                            _queryBuilder);
-                    break;
-                case TestCategory.MSSQL:
-                    _queryBuilder = new MsSqlQueryBuilder();
-                    _defaultSchemaName = "dbo";
-                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigPath);
-                    _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigPath, _dbExceptionParser);
-                    _sqlMetadataProvider = new MsSqlMetadataProvider(
-                        _runtimeConfigPath,
-                        _queryExecutor, _queryBuilder);
-                    break;
-                case TestCategory.MYSQL:
-                    _queryBuilder = new MySqlQueryBuilder();
-                    _defaultSchemaName = "mysql";
-                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigPath);
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfigPath, _dbExceptionParser);
-                    _sqlMetadataProvider =
-                         new MySqlMetadataProvider(
-                             _runtimeConfigPath,
-                             _queryExecutor,
-                             _queryBuilder);
-                    break;
-            }
-
+            SetUpSQLMetadataProvider();
             // Setup AuthorizationService to always return Authorized.
             _authorizationService = new Mock<IAuthorizationService>();
             _authorizationService.Setup(x => x.AuthorizeAsync(
@@ -117,6 +87,53 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _sqlMetadataProvider);
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
+
+            //Initialize the authorization resolver object
+            _authZResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
+        }
+
+        protected static void SetUpSQLMetadataProvider()
+        {
+            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
+            mockRuntimeConfigProvider.Setup(x => x.IsDeveloperMode()).Returns(true);
+            mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out _runtimeConfig)).Returns(true);
+            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(_runtimeConfig);
+            _runtimeConfigProvider = mockRuntimeConfigProvider.Object;
+
+            switch (_testCategory)
+            {
+                case TestCategory.POSTGRESQL:
+                    _queryBuilder = new PostgresQueryBuilder();
+                    _defaultSchemaName = "public";
+                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
+                    _sqlMetadataProvider =
+                        new PostgreSqlMetadataProvider(
+                            _runtimeConfigProvider,
+                            _queryExecutor,
+                            _queryBuilder);
+                    break;
+                case TestCategory.MSSQL:
+                    _queryBuilder = new MsSqlQueryBuilder();
+                    _defaultSchemaName = "dbo";
+                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
+                    _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
+                    _sqlMetadataProvider = new MsSqlMetadataProvider(
+                        _runtimeConfigProvider,
+                        _queryExecutor, _queryBuilder);
+                    break;
+                case TestCategory.MYSQL:
+                    _queryBuilder = new MySqlQueryBuilder();
+                    _defaultSchemaName = "mysql";
+                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
+                    _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
+                    _sqlMetadataProvider =
+                         new MySqlMetadataProvider(
+                             _runtimeConfigProvider,
+                             _queryExecutor,
+                             _queryBuilder);
+                    break;
+            }
         }
 
         protected static async Task ResetDbStateAsync()
@@ -162,6 +179,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 httpContext.Request.Body = stream;
                 httpContext.Request.ContentLength = stream.Length;
             }
+
+            // Set the user role as authenticated to allow tests to execute with all privileges.
+            httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = "authenticated";
 
             return httpContext;
         }
@@ -256,11 +276,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // Initial DELETE request results in 204 no content, no exception thrown.
             // Subsequent DELETE requests result in 404, which result in an exception.
             string expected;
-            if ((operationType == Operation.Delete ||
-                 operationType == Operation.Upsert ||
-                 operationType == Operation.UpsertIncremental ||
-                 operationType == Operation.Update ||
-                 operationType == Operation.UpdateIncremental)
+            if ((operationType is Operation.Delete ||
+                 operationType is Operation.Upsert ||
+                 operationType is Operation.UpsertIncremental ||
+                 operationType is Operation.Update ||
+                 operationType is Operation.UpdateIncremental)
                 && actionResult is NoContentResult)
             {
                 expected = null;
@@ -271,13 +291,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 {
                     Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                 };
-                expected = exception ?
-                    JsonSerializer.Serialize(RestController.ErrorResponse(
+
+                if (exception)
+                {
+                    expected = JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
                         expectedErrorMessage,
                         expectedStatusCode).Value,
-                        options) :
-                    $"{{\"value\":{FormatExpectedValue(await GetDatabaseResultAsync(sqlQuery))}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";
+                        options);
+                }
+                else
+                {
+                    string dbResult = await GetDatabaseResultAsync(sqlQuery);
+                    // For FIND requests, null result signifies an empty result set
+                    dbResult = (operationType is Operation.Find && dbResult is null) ? "[]" : dbResult;
+                    expected = $"{{\"value\":{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";
+                }
             }
 
             SqlTestHelper.VerifyResult(
@@ -345,6 +374,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             // Set the mock context accessor's request same as the controller's request.
             _httpContextAccessor.Setup(x => x.HttpContext.Request).Returns(restController.ControllerContext.HttpContext.Request);
+
+            //Set the mock context accessor's Items same as the controller's Items
+            _httpContextAccessor.Setup(x => x.HttpContext.Items).Returns(restController.ControllerContext.HttpContext.Items);
         }
 
         /// <summary>

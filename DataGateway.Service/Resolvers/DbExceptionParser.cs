@@ -1,9 +1,8 @@
 using System;
 using System.Data.Common;
 using System.Net;
-using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
-using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -16,9 +15,9 @@ namespace Azure.DataGateway.Service.Resolvers
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
         private readonly bool _developerMode;
 
-        public DbExceptionParser(IOptionsMonitor<RuntimeConfigPath> config)
+        public DbExceptionParser(RuntimeConfigProvider configProvider)
         {
-            _developerMode = config.CurrentValue.IsDeveloperMode();
+            _developerMode = configProvider.IsDeveloperMode();
         }
 
         public virtual Exception Parse(DbException e)

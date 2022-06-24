@@ -8,9 +8,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
     internal static class DeleteMutationBuilder
     {
-        public static FieldDefinitionNode Build(NameNode name, ObjectTypeDefinitionNode objectTypeDefinitionNode, Entity configEntity)
+        public static FieldDefinitionNode Build(NameNode name, ObjectTypeDefinitionNode objectTypeDefinitionNode, Entity configEntity, DatabaseType databaseType)
         {
-            List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode);
+            List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode, databaseType);
             string description;
             if (idFields.Count > 1)
             {

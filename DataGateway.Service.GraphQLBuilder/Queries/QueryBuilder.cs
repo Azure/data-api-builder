@@ -17,8 +17,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public const string PAGINATION_OBJECT_TYPE_SUFFIX = "Connection";
         public const string FILTER_FIELD_NAME = "_filter";
         public const string ORDER_BY_FIELD_NAME = "orderBy";
+        public const string PARTITION_KEY_FIELD_NAME = "_partitionKeyValue";
+        public const string ID_FIELD_NAME = "id";
 
-        public static DocumentNode Build(DocumentNode root, IDictionary<string, Entity> entities, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+        public static DocumentNode Build(DocumentNode root, DatabaseType databaseType, IDictionary<string, Entity> entities, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
             List<FieldDefinitionNode> queryFields = new();
             List<ObjectTypeDefinitionNode> returnTypes = new();
@@ -35,7 +37,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                     returnTypes.Add(returnType);
 
                     queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity));
-                    queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name));
+                    queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType));
                 }
             }
 
@@ -47,10 +49,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return new(definitionNodes);
         }
 
-        private static FieldDefinitionNode GenerateByPKQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name)
+        private static FieldDefinitionNode GenerateByPKQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name, DatabaseType databaseType)
         {
             IEnumerable<FieldDefinitionNode> primaryKeyFields =
-                FindPrimaryKeyFields(objectTypeDefinitionNode);
+                FindPrimaryKeyFields(objectTypeDefinitionNode, databaseType);
             List<InputValueDefinitionNode> inputValues = new();
 
             foreach (FieldDefinitionNode primaryKeyField in primaryKeyFields)

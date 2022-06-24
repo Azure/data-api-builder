@@ -25,6 +25,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                   ) AS subq"
             },
             {
+                "FindEmptyTable",
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _emptyTableTableName + @"
+                    ) AS subq"
+            },
+            {
+                "FindEmptyResultSetWithQueryFilter",
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE 1 != 1
+                    ) AS subq"
+            },
+            {
                 "FindViewAll",
                 @"
                   SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
@@ -664,7 +683,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                   ) AS subq"
             },
             {
-            "FindTestWithDifferentMappedFieldsAndOrderBy",
+                "FindTestWithDifferentMappedFieldsAndOrderBy",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
                   FROM (
@@ -675,7 +694,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                   ) AS subq"
             },
             {
-            "FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy",
+                "FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
                   FROM (
@@ -686,7 +705,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                   ) AS subq"
             },
             {
-            "FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy",
+                "FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
                   FROM (
@@ -1109,7 +1128,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 _mutationEngine,
                 _sqlMetadataProvider,
                 _httpContextAccessor.Object,
-                _authorizationService.Object);
+                _authorizationService.Object,
+                _authZResolver);
             _restController = new RestController(_restService);
         }
 

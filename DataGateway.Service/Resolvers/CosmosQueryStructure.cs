@@ -24,6 +24,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Database { get; internal set; }
         public string? Continuation { get; internal set; }
         public int MaxItemCount { get; internal set; }
+        public string? PartitionKeyValue { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
 
         public CosmosQueryStructure(
@@ -91,6 +92,12 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 Continuation = (string)queryParams[QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME];
                 queryParams.Remove(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME);
+            }
+
+            if (queryParams.ContainsKey(QueryBuilder.PARTITION_KEY_FIELD_NAME))
+            {
+                PartitionKeyValue = (string)queryParams[QueryBuilder.PARTITION_KEY_FIELD_NAME];
+                queryParams.Remove(QueryBuilder.PARTITION_KEY_FIELD_NAME);
             }
 
             if (queryParams.ContainsKey("orderBy"))

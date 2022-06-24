@@ -7,15 +7,14 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.Azure.Cosmos;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -23,16 +22,13 @@ namespace Azure.DataGateway.Service.Resolvers
     public class CosmosMutationEngine : IMutationEngine
     {
         private readonly CosmosClientProvider _clientProvider;
-        private readonly IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
         private readonly ISqlMetadataProvider _metadataProvider;
 
         public CosmosMutationEngine(
             CosmosClientProvider clientProvider,
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
             ISqlMetadataProvider metadataProvider)
         {
             _clientProvider = clientProvider;
-            _runtimeConfigPath = runtimeConfigPath;
             _metadataProvider = metadataProvider;
         }
 
@@ -61,28 +57,21 @@ namespace Azure.DataGateway.Service.Resolvers
 
             ItemResponse<JObject>? response = resolver.OperationType switch
             {
-                Operation.UpdateGraphQL => await HandleUpsertAsync(queryArgs, container),
+                Operation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
                 Operation.Create => await HandleCreateAsync(queryArgs, container),
                 Operation.Delete => await HandleDeleteAsync(queryArgs, container),
                 _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
             };
-
-            if (response.StatusCode == HttpStatusCode.NoContent)
-            {
-                // Delete item doesnt return the actual item, so we return emtpy json
-                return new JObject();
-            }
 
             return response.Resource;
         }
 
         private static async Task<ItemResponse<JObject>> HandleDeleteAsync(IDictionary<string, object> queryArgs, Container container)
         {
-            // TODO: As of now id is the partition key. This has to be changed when partition key support is added. Issue #215
-            PartitionKey partitionKey;
+            string? partitionKey = null;
             string? id = null;
 
-            if (queryArgs.TryGetValue("id", out object? idObj))
+            if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj))
             {
                 id = idObj.ToString();
             }
@@ -91,46 +80,18 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 throw new InvalidDataException("id field is mandatory");
             }
-            else
+
+            if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj))
             {
-                partitionKey = new(id);
+                partitionKey = partitionKeyObj.ToString();
             }
 
-            return await container.DeleteItemAsync<JObject>(id, partitionKey);
-        }
-
-        private static async Task<ItemResponse<JObject>> HandleUpsertAsync(IDictionary<string, object> queryArgs, Container container)
-        {
-            string? id = queryArgs.First(arg => arg.Key == GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME).Value.ToString();
-
-            object item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
-
-            Dictionary<string, object?> createInput = new();
-            if (item is List<ObjectFieldNode> createInputRaw)
+            if (string.IsNullOrEmpty(partitionKey))
             {
-                createInput = new Dictionary<string, object?>();
-                foreach (ObjectFieldNode node in createInputRaw)
-                {
-                    createInput.Add(node.Name.Value, node.Value.Value);
-                }
-            }
-            else if (item is Dictionary<string, object?> dict)
-            {
-                createInput = dict;
-            }
-            else
-            {
-                throw new InvalidDataException("The type of argument for the provided data is unsupported.");
+                throw new InvalidDataException("Partition Key field is mandatory");
             }
 
-            if (string.IsNullOrEmpty(id))
-            {
-                throw new InvalidDataException($"{GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME} field is mandatory");
-            }
-
-            createInput.Add(GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME, id);
-
-            return await container.UpsertItemAsync(JObject.FromObject(createInput));
+            return await container.DeleteItemAsync<JObject>(id, new PartitionKey(partitionKey));
         }
 
         private static async Task<ItemResponse<JObject>> HandleCreateAsync(IDictionary<string, object> queryArgs, Container container)
@@ -176,6 +137,98 @@ namespace Azure.DataGateway.Service.Resolvers
             return await container.CreateItemAsync(JObject.FromObject(createInput));
         }
 
+        private static async Task<ItemResponse<JObject>> HandleUpdateAsync(IDictionary<string, object> queryArgs, Container container)
+        {
+            string? partitionKey = null;
+            string? id = null;
+
+            if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj))
+            {
+                id = idObj.ToString();
+            }
+
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new InvalidDataException("id field is mandatory");
+            }
+
+            if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj))
+            {
+                partitionKey = partitionKeyObj.ToString();
+            }
+
+            if (string.IsNullOrEmpty(partitionKey))
+            {
+                throw new InvalidDataException("Partition Key field is mandatory");
+            }
+
+            object item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+
+            JObject? input;
+            // Variables were provided to the mutation
+            if (item is Dictionary<string, object?>)
+            {
+                input = (JObject?)ParseVariableInputItem(item);
+            }
+            else
+            {
+                // An inline argument was set
+                input = (JObject?)ParseInlineInputItem(item);
+            }
+
+            return await container.ReplaceItemAsync<JObject>(input, id, new PartitionKey(partitionKey), new ItemRequestOptions());
+        }
+
+        /// <summary>
+        /// The method is for parsing the mutation input object with nested inner objects when input is passed in as variables.
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        private static object? ParseVariableInputItem(object? item)
+        {
+            if (item is Dictionary<string, object?> inputItem)
+            {
+                JObject? createInput = new();
+
+                foreach (string key in inputItem.Keys)
+                {
+                    createInput.Add(new JProperty(key, ParseVariableInputItem(inputItem.GetValueOrDefault(key))));
+                }
+
+                return createInput;
+            }
+
+            return item;
+        }
+
+        /// <summary>
+        /// The method is for parsing the mutation input object with nested inner objects when input is passing inline.
+        /// </summary>
+        /// <param name="item"> In the form of ObjectFieldNode, or List<ObjectFieldNode></param>
+        /// <returns>In the form of JObject</returns>
+        private static object? ParseInlineInputItem(object? item)
+        {
+            JObject? createInput = new();
+
+            if (item is ObjectFieldNode node)
+            {
+                createInput.Add(new JProperty(node.Name.Value, ParseInlineInputItem(node.Value.Value)));
+                return createInput;
+            }
+
+            if (item is List<ObjectFieldNode> nodeList)
+            {
+                foreach (ObjectFieldNode subfield in nodeList)
+                {
+                    createInput.Add(new JProperty(subfield.Name.Value, ParseInlineInputItem(subfield.Value.Value)));
+                }
+
+                return createInput;
+            }
+
+            return item;
+        }
+
         /// <summary>
         /// Executes the mutation query and return result as JSON object asynchronously.
         /// </summary>
@@ -186,14 +239,6 @@ namespace Azure.DataGateway.Service.Resolvers
             IDictionary<string, object?> parameters)
         {
             string entityName = context.Selection.Field.Type.NamedType().Name.Value;
-            RuntimeConfig? configValue = _runtimeConfigPath.CurrentValue.ConfigValue;
-            if (configValue is null)
-            {
-                throw new DataGatewayException(
-                    message: "Runtime config isn't setup.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
-            }
 
             string databaseName = _metadataProvider.GetSchemaName(entityName);
             string containerName = _metadataProvider.GetDatabaseObjectName(entityName);
@@ -207,7 +252,7 @@ namespace Azure.DataGateway.Service.Resolvers
             // fixme
             JObject jObject = await ExecuteAsync(parameters, mutation);
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
-            return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(jObject.ToString()), null);
+            return new Tuple<JsonDocument, IMetadata>((jObject is null) ? null! : JsonDocument.Parse(jObject.ToString()), null);
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
         }
 

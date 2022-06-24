@@ -7,11 +7,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
-using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
@@ -55,19 +55,18 @@ namespace Azure.DataGateway.Service.Services
         /// Maps an entity name to a DatabaseObject.
         /// </summary>
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
-            new(StringComparer.InvariantCultureIgnoreCase);
+            new(StringComparer.InvariantCulture);
 
         public SqlMetadataProvider(
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
+            RuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder)
         {
-            runtimeConfigPath.CurrentValue.
-                ExtractConfigValues(
-                    out _databaseType,
-                    out string connectionString,
-                    out _entities);
-            ConnectionString = connectionString;
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+
+            _databaseType = runtimeConfig.DatabaseType;
+            _entities = runtimeConfig.Entities;
+            ConnectionString = runtimeConfig.ConnectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
@@ -763,6 +762,12 @@ namespace Azure.DataGateway.Service.Services
             IEnumerable<TableDefinition> tablesToBePopulatedWithFK =
                 FindAllTablesWhoseForeignKeyIsToBeRetrieved(schemaNames, tableNames);
 
+            // No need to do any further work if there are no FK to be retrieved
+            if (tablesToBePopulatedWithFK.Count() == 0)
+            {
+                return;
+            }
+
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =
                 ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tableNames.Count());
@@ -952,6 +957,19 @@ namespace Azure.DataGateway.Service.Services
                 }
             }
         }
+
+        /// <summary>
+        /// Retrieving the partition key path, for Cosmos only
+        /// </summary>
+        public string? GetPartitionKeyPath(string database, string container)
+            => throw new NotImplementedException();
+
+        /// <summary>
+        /// Setting the partition key path, for Cosmos only
+        /// </summary>
+        public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
+            => throw new NotImplementedException();
+
     }
 }
 

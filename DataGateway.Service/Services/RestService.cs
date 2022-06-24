@@ -7,7 +7,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Parsers;
@@ -29,13 +31,15 @@ namespace Azure.DataGateway.Service.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
+        private readonly IAuthorizationResolver _authorizationResolver;
 
         public RestService(
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
             ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
-            IAuthorizationService authorizationService
+            IAuthorizationService authorizationService,
+            IAuthorizationResolver authorizationResolver
             )
         {
             _queryEngine = queryEngine;
@@ -43,6 +47,7 @@ namespace Azure.DataGateway.Service.Services
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
             _sqlMetadataProvider = sqlMetadataProvider;
+            _authorizationResolver = authorizationResolver;
         }
 
         /// <summary>
@@ -59,6 +64,9 @@ namespace Azure.DataGateway.Service.Services
         {
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
+
+            await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleActionPermissionsRequirement());
+
             QueryString? query = GetHttpContext().Request.QueryString;
             string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
 
@@ -126,42 +134,41 @@ namespace Azure.DataGateway.Service.Services
                 RequestParser.ParseQueryString(context, _sqlMetadataProvider);
             }
 
+            string role = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+            string action = HttpVerbToActions(GetHttpVerb(operationType).Name);
+            string dbPolicy = _authorizationResolver.TryProcessDBPolicy(entityName, role, action, GetHttpContext());
+            if (!string.IsNullOrEmpty(dbPolicy))
+            {
+                // Since dbPolicy is nothing but filters to be added by virtue of database policy, we prefix it with
+                // ?$filter= so that it conforms with the format followed by other filter predicates.
+                // This helps the ODataVisitor helpers to parse the policy text properly.
+                dbPolicy = "?$filter=" + dbPolicy;
+
+                // Parse and save the values that are needed to later generate queries in the given RestRequestContext.
+                // FilterClauseInDbPolicy is an Abstract Syntax Tree representing the parsed policy text.
+                context.DbPolicyClause = _sqlMetadataProvider.GetODataFilterParser().GetFilterClause(dbPolicy, $"{context.EntityName}.{context.DatabaseObject.FullName}");
+            }
+
             // At this point for DELETE, the primary key should be populated in the Request Context.
             RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
 
-            // RestRequestContext is finalized for QueryBuilding and QueryExecution.
-            // Perform Authorization check prior to moving forward in request pipeline.
-            // RESTAuthorizationService
-            AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
-                user: GetHttpContext().User,
-                resource: context,
-                requirements: new[] { context.HttpVerb });
+            // The final authorization check on columns occurs after the request is fully parsed and validated.
+            await AuthorizationCheckForRequirementAsync(resource: context, requirement: new ColumnsPermissionsRequirement());
 
-            if (authorizationResult.Succeeded)
+            switch (operationType)
             {
-                switch (operationType)
-                {
-                    case Operation.Find:
-                        return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
-                    case Operation.Insert:
-                    case Operation.Delete:
-                    case Operation.Update:
-                    case Operation.UpdateIncremental:
-                    case Operation.Upsert:
-                    case Operation.UpsertIncremental:
-                        return await _mutationEngine.ExecuteAsync(context);
-                    default:
-                        throw new NotSupportedException("This operation is not yet supported.");
-                };
-            }
-            else
-            {
-                throw new DataGatewayException(
-                    message: "Forbidden",
-                    statusCode: HttpStatusCode.Forbidden,
-                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
-                );
-            }
+                case Operation.Find:
+                    return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
+                case Operation.Insert:
+                case Operation.Delete:
+                case Operation.Update:
+                case Operation.UpdateIncremental:
+                case Operation.Upsert:
+                case Operation.UpsertIncremental:
+                    return await _mutationEngine.ExecuteAsync(context);
+                default:
+                    throw new NotSupportedException("This operation is not yet supported.");
+            };
         }
 
         /// <summary>
@@ -265,6 +272,69 @@ namespace Azure.DataGateway.Service.Services
                     return HttpRestVerbs.GET;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
+            }
+        }
+
+        /// <summary>
+        /// Performs authorization check for REST with a single requirement.
+        /// Called when the relevant metadata has been parsed from the request.
+        /// </summary>
+        /// <param name="resource">Request metadata object (RestRequestContext, DatabaseObject, or null)</param>
+        /// <param name="requirement">The authorization check to perform.</param>
+        /// <returns>No return value. If this method succeeds, the request is authorized for the requirement.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the resource is null
+        /// for requirements which need one.</exception>
+        /// <exception cref="DataGatewayException">Thrown when authorization fails.
+        /// Results in server returning 403 Unauthorized.</exception>
+        public async Task AuthorizationCheckForRequirementAsync(object? resource, IAuthorizationRequirement requirement)
+        {
+            if (requirement is not RoleContextPermissionsRequirement && resource is null)
+            {
+                throw new ArgumentNullException(paramName: "resource", message: $"Resource can't be null for the requirement: {requirement.GetType}");
+            }
+
+            AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
+                user: GetHttpContext().User,
+                resource: resource,
+                requirements: new[] { requirement });
+
+            if (!authorizationResult.Succeeded)
+            {
+                // Authorization failed so the request terminates.
+                throw new DataGatewayException(
+                    message: "Authorization Failure: Access Not Allowed.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+        }
+
+        /// <summary>
+        /// Converts httpverb type of a RestRequestContext object to the
+        /// matching CRUD operation, to facilitate authorization checks.
+        /// </summary>
+        /// <param name="httpVerb"></param>
+        /// <returns>The CRUD operation for the given httpverb.</returns>
+        public static string HttpVerbToActions(string httpVerbName)
+        {
+            switch (httpVerbName)
+            {
+                case "POST":
+                    return "create";
+                case "PUT":
+                case "PATCH":
+                    // Please refer to the use of this method, which is to look out for policy based on crud operation type.
+                    // Since create doesn't have filter predicates, PUT/PATCH would resolve to update operation.
+                    return "update";
+                case "DELETE":
+                    return "delete";
+                case "GET":
+                    return "read";
+                default:
+                    throw new DataGatewayException(
+                        message: "Unsupported operation type.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest
+                    );
             }
         }
     }

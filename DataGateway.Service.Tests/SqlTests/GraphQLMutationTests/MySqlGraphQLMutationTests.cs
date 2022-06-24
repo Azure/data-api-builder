@@ -10,13 +10,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
     [TestClass, TestCategory(TestCategory.MYSQL)]
     public class MySqlGraphQLMutationTests : GraphQLMutationTestBase
     {
+        private static string _invalidForeignKeyError =
+            "Cannot add or update a child row: a foreign key constraint fails " +
+            "(\\u0060datagateway\\u0060.\\u0060books\\u0060";
+
         #region Test Fixture Setup
-        /// <summary>
-        /// Sets up test fixture for class, only to be run once per test run, as defined by
-        /// MSTest decorator.
-        /// </summary>
-        /// <param name="context"></param>
-        [ClassInitialize]
+/// <summary>
+/// Sets up test fixture for class, only to be run once per test run, as defined by
+/// MSTest decorator.
+/// </summary>
+/// <param name="context"></param>
+[ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
         {
             await InitializeTestFixture(context, TestCategory.MYSQL);
@@ -320,7 +324,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         [TestMethod]
         public async Task InsertWithInvalidForeignKey()
         {
-            string errorMessage = "Cannot add or update a child row: a foreign key constraint fails";
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
                 FROM (
@@ -330,7 +333,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                     ) AS `subq`
             ";
 
-            await InsertWithInvalidForeignKey(mySqlQuery, errorMessage);
+            await InsertWithInvalidForeignKey(mySqlQuery, _invalidForeignKeyError);
         }
 
         /// <summary>
@@ -340,19 +343,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         [TestMethod]
         public async Task UpdateWithInvalidForeignKey()
         {
-            string errorMessage = "Cannot add or update a child row: a foreign key constraint fails " +
-                                  "(\\u0060datagateway\\u0060.\\u0060books\\u0060";
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
                 FROM (
                     SELECT COUNT(*) AS `count`
                     FROM `books`
                     WHERE `id` = 1
-                        AND `publisher_id` = - 1
+                    AND `publisher_id` = - 1
                     ) AS `subq`
             ";
 
-            await UpdateWithInvalidForeignKey(mySqlQuery, errorMessage);
+            await UpdateWithInvalidForeignKey(mySqlQuery, _invalidForeignKeyError);
         }
 
         /// <summary>

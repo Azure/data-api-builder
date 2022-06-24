@@ -10,6 +10,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlGraphQLMutationTests : GraphQLMutationTestBase
     {
+        private static string _invalidForeignKeyError =
+            "23503: insert or update on table \\u0022books\\u0022 " +
+            "violates foreign key constraint \\u0022book_publisher_fk\\u0022\"";
+
         #region Test Fixture Setup
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run, as defined by
@@ -322,8 +326,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         [TestMethod]
         public async Task InsertWithInvalidForeignKey()
         {
-            string errorMessage = "23503: insert or update on table \\u0022books\\u0022 " +
-                                  "violates foreign key constraint \\u0022book_publisher_fk\\u0022\"";
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
                 FROM
@@ -332,7 +334,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE publisher_id = -1 ) AS subq
             ";
 
-            await InsertWithInvalidForeignKey(postgresQuery, errorMessage);
+            await InsertWithInvalidForeignKey(postgresQuery, _invalidForeignKeyError);
         }
 
         /// <summary>
@@ -342,8 +344,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         [TestMethod]
         public async Task UpdateWithInvalidForeignKey()
         {
-            string errorMessage = "23503: insert or update on table \\u0022books\\u0022 " +
-                                  "violates foreign key constraint \\u0022book_publisher_fk\\u0022\"";
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
                 FROM
@@ -352,7 +352,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 1 AND publisher_id = -1 ) AS subq
             ";
 
-            await UpdateWithInvalidForeignKey(postgresQuery, errorMessage);
+            await UpdateWithInvalidForeignKey(postgresQuery, _invalidForeignKeyError);
         }
 
         /// <summary>

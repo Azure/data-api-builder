@@ -15,12 +15,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
             "(\\u0060datagateway\\u0060.\\u0060books\\u0060";
 
         #region Test Fixture Setup
-/// <summary>
-/// Sets up test fixture for class, only to be run once per test run, as defined by
-/// MSTest decorator.
-/// </summary>
-/// <param name="context"></param>
-[ClassInitialize]
+        /// <summary>
+        /// Sets up test fixture for class, only to be run once per test run, as defined by
+        /// MSTest decorator.
+        /// </summary>
+        /// <param name="context"></param>
+        [ClassInitialize]
         public static async Task InitializeTestFixture(TestContext context)
         {
             await InitializeTestFixture(context, TestCategory.MYSQL);

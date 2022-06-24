@@ -70,6 +70,7 @@ namespace Azure.DataGateway.Service.Services
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
+
         }
 
         /// <inheritdoc />

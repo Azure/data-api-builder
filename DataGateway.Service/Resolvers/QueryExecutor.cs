@@ -4,7 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Microsoft.Extensions.Options;
+using Azure.DataGateway.Service.Configurations;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -15,16 +15,13 @@ namespace Azure.DataGateway.Service.Resolvers
         where ConnectionT : DbConnection, new()
     {
         private readonly string _connectionString;
-        private readonly DbExceptionParserBase _dbExceptionParser;
+        private readonly DbExceptionParser _dbExceptionParser;
 
-        public QueryExecutor(IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath, DbExceptionParserBase dbExceptionParser)
+        public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider, DbExceptionParser dbExceptionParser)
         {
-            runtimeConfigPath.CurrentValue.
-                ExtractConfigValues(
-                    out _,
-                    out _connectionString,
-                    out _);
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
+            _connectionString = runtimeConfig.ConnectionString;
             _dbExceptionParser = dbExceptionParser;
         }
 

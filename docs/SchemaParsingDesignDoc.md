@@ -58,8 +58,11 @@ Once we have the schema name correctly parsed and stored in our mapping, we will
 ### Runtime-Config
 >The runtime config is a JSON that is created by the command line input of the developer, using a tool that we provide. This configuration can be read about in more detail here: `https://github.com/Azure/project-hawaii/blob/main/rfcs/configuration-file.md`. There are some specific parts of this JSON to take note of with respect to this PR's changes, which would be the `source` field that exists for each `entity` in the configuration. The source is what holds the schema and database object (table) name, and does so by separating schema from table with a `.`. `MySql` will not use a schema name as this configuration defines, and therefore can not contain a `.` in its source. We throw an exception in this case as this is a `BadRequest`. For `MsSql` and `PostgreSql`, a schema is a collection of database objects, or logical structures of data. In this way, a schema can be thought of and used much like a `namespace`. In `MySql` however, the word "schema" is used to reference what would otherwise be thought of as the Database Structure itself, and so for our purposes does not have what we reference as a `schema`. We therefore have the `empty string` as the default schema for `MySql`, while `MsSql` uses `dbo` and `PostgreSql` uses `public`.
 
+### CosmosQueryEngine.cs
+>The method `GetPartitionKeyValue` is using `PartitionKeyPath` to find the partition key value from query input parameters, using recursion. Example of `PartitionKeyPath` is `/character/id`.
+
 ### CosmosMutationEngine.cs
->For Cosmos, if the nested object field has the same name with an existing model, it will assume it's that model. We are assuming that it's not possible the child nested model has the same name with an other entity, but different json objects.
+>For Cosmos, if the nested object field has the same name with an existing model, it will assume it's that model. We are assuming that it's not possible the child nested model has the same name with any other entity, but different json objects.
 
 
 ## Testing

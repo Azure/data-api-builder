@@ -27,6 +27,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                   ) AS subq"
             },
             {
+                "FindEmptyTable",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _emptyTableTableName + @"
+                    ) AS subq"
+            },
+            {
+                "FindEmptyResultSetWithQueryFilter",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE 1 <> 1
+                    ) AS subq"
+            },
+            {
                 "FindTestWithQueryStringOneField",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data
@@ -1000,7 +1019,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 _mutationEngine,
                 _sqlMetadataProvider,
                 _httpContextAccessor.Object,
-                _authorizationService.Object);
+                _authorizationService.Object,
+                _authZResolver,
+                _runtimeConfigProvider);
             _restController = new RestController(_restService);
         }
 

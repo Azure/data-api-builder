@@ -85,6 +85,9 @@ namespace Azure.DataGateway.Service.Services
 
         /// <summary>
         /// Sets Partition Key Path of a database container.
+        /// Example of a Partition Key Path looks like: /id
+        /// Example of a Parition Key Path on nested inner object: /character/id
+        /// When a partition key path is being looked up for the first time, this method will add it to the dictionary
         /// </summary>
         void SetPartitionKeyPath(string database, string container, string partitionKeyPath);
     }

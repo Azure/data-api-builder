@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         [ClassInitialize]
         public static void Init(TestContext context)
         {
-            _clientProvider = new CosmosClientProvider(TestHelper.ConfigPath);
+            _clientProvider = new CosmosClientProvider(TestHelper.ConfigProvider);
             string jsonString = @"
 type Character @model {
     id : ID,
@@ -61,11 +61,11 @@ type Star @model {
                 { @"./schema.gql", new MockFileData(jsonString) }
             });
 
-            CosmosSqlMetadataProvider _metadataStoreProvider = new(TestHelper.ConfigPath, fileSystem);
+            CosmosSqlMetadataProvider _metadataStoreProvider = new(TestHelper.ConfigProvider, fileSystem);
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
-            _mutationEngine = new CosmosMutationEngine(_clientProvider, TestHelper.ConfigPath, _metadataStoreProvider);
+            _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(
-                TestHelper.ConfigPath,
+                TestHelper.ConfigProvider,
                 _queryEngine,
                 _mutationEngine,
                 new DocumentCache(),
@@ -120,7 +120,7 @@ type Star @model {
         /// <param name="containerName">the container name</param>
         internal static void OverrideEntityContainer(string entityName, string containerName)
         {
-            Entity entity = TestHelper.ConfigPath.CurrentValue.ConfigValue.Entities[entityName];
+            Entity entity = TestHelper.Config.Entities[entityName];
 
             System.Reflection.PropertyInfo prop = entity.GetType().GetProperty("Source");
             // Use reflection to set the entity Source (since `entity` is a record type and technically immutable)

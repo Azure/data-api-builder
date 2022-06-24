@@ -30,6 +30,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "FindEmptyTable",
+                $"SELECT * FROM { _emptyTableTableName } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindEmptyResultSetWithQueryFilter",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE 1 != 1 FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindViewAll",
                 $"SELECT * FROM { _simple_all_books } " +
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -649,7 +659,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 _mutationEngine,
                 _sqlMetadataProvider,
                 _httpContextAccessor.Object,
-                _authorizationService.Object);
+                _authorizationService.Object,
+                _authZResolver,
+                _runtimeConfigProvider);
             _restController = new RestController(_restService);
         }
 
@@ -692,13 +704,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
 
             // Setup params to invoke function with
             // Must use valid entity name
+            string path = "api";
             string entityName = "Book";
             Operation operationType = Operation.None;
             string primaryKeyRoute = string.Empty;
 
             // Reflection to invoke a private method to unit test all code paths
             PrivateObject testObject = new(_restController);
-            IActionResult actionResult = await testObject.Invoke("HandleOperation", new object[] { entityName, operationType, primaryKeyRoute });
+            IActionResult actionResult = await testObject.Invoke("HandleOperation", new object[] { $"{path}/{entityName}/{primaryKeyRoute}", operationType });
             SqlTestHelper.VerifyResult(actionResult, expected, System.Net.HttpStatusCode.BadRequest, string.Empty);
         }
 

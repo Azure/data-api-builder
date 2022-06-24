@@ -25,6 +25,5 @@ namespace Azure.DataGateway.Config
     /// </summary> 
     /// <param name="Audience"></param>
     /// <param name="Issuer"></param>
-    /// <param name="IssuerKey"></param>
-    public record Jwt(string Audience, string Issuer, string IssuerKey);
+    public record Jwt(string Audience, string Issuer);
 }

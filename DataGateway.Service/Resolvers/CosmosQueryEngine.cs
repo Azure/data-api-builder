@@ -74,11 +74,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 requestContinuation = Base64Decode(structure.Continuation);
             }
 
+            // If both partition key value and id value are provided, will execute single partition query
             if (!string.IsNullOrEmpty(partitionKeyValue) && !string.IsNullOrEmpty(idValue))
             {
                 return await QueryByIdAndPartitionKey(container, idValue, partitionKeyValue, structure.IsPaginated);
             }
 
+            // If partition key value or id values are not provided, will execute cross partition query
             using (FeedIterator<JObject> query = container.GetItemQueryIterator<JObject>(querySpec, requestContinuation, queryRequestOptions))
             {
                 do
@@ -179,12 +181,21 @@ namespace Azure.DataGateway.Service.Resolvers
             return JsonSerializer.Deserialize<List<JsonDocument>>(element.ToString());
         }
 
+        /// <summary>
+        /// Query cosmos container using a single partition key, returns a single document. 
+        /// </summary>
+        /// <param name="container"></param>
+        /// <param name="idValue"></param>
+        /// <param name="partitionKeyValue"></param>
+        /// <param name="IsPaginated"></param>
+        /// <returns></returns>
         private static async Task<Tuple<JsonDocument, IMetadata>> QueryByIdAndPartitionKey(Container container, string idValue, string partitionKeyValue, bool IsPaginated)
         {
             try
             {
                 JObject item = await container.ReadItemAsync<JObject>(idValue, new PartitionKey(partitionKeyValue));
 
+                // If paginated, returning a Connection type document.
                 if (IsPaginated)
                 {
                     JObject res = new(
@@ -201,10 +212,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 return new Tuple<JsonDocument, IMetadata>(null, null);
             }
         }
+
         private async Task<string> GetPartitionKeyPath(Container container)
         {
             string partitionKeyPath = _metadataStoreProvider.GetPartitionKeyPath(container.Database.Id, container.Id);
-            if (partitionKeyPath != null)
+            if (partitionKeyPath is not null)
             {
                 return partitionKeyPath;
             }
@@ -216,26 +228,25 @@ namespace Azure.DataGateway.Service.Resolvers
             return partitionKeyPath;
         }
 
-        private async Task<(string idValue, string partitionKeyValue)> GetIdAndPartitionKey(IDictionary<string, object?> parameters, Container container, CosmosQueryStructure structure)
+#nullable enable
+        private async Task<(string? idValue, string? partitionKeyValue)> GetIdAndPartitionKey(IDictionary<string, object?> parameters, Container container, CosmosQueryStructure structure)
         {
-            string partitionKeyValue = null;
-            string idValue = null;
+            string? partitionKeyValue = null, idValue = null;
             string partitionKeyPath = await GetPartitionKeyPath(container);
 
-            foreach (KeyValuePair<string, object> parameterEntry in parameters)
+            foreach (KeyValuePair<string, object?> parameterEntry in parameters)
             {
-                // Mapping partitionKey and id value from _filter object if _filter keywords exists in args
-                if (parameterEntry.Key == QueryBuilder.FILTER_FIELD_NAME)
-                {
-                    partitionKeyValue = GetPartitionKeyValue(partitionKeyPath, parameterEntry.Value);
-
-                    idValue = GetIdValue(parameterEntry.Value);
-                }
-
-                // Set id value if id is passed in as an argument
+                // id and _filter args can't exist at the same time
                 if (parameterEntry.Key == QueryBuilder.ID_FIELD_NAME)
                 {
-                    idValue = parameterEntry.Value.ToString();
+                    // Set id value if id is passed in as an argument
+                    idValue = parameterEntry.Value?.ToString();
+                }
+                else if (parameterEntry.Key == QueryBuilder.FILTER_FIELD_NAME)
+                {
+                    // Mapping partitionKey and id value from _filter object if _filter keywords exists in args
+                    partitionKeyValue = GetPartitionKeyValue(partitionKeyPath, parameterEntry.Value);
+                    idValue = GetIdValue(parameterEntry.Value);
                 }
             }
 
@@ -249,24 +260,32 @@ namespace Azure.DataGateway.Service.Resolvers
             return new(idValue, partitionKeyValue);
         }
 
-        private string GetPartitionKeyValue(string partitionKeyPath, object parameter)
+        /// <summary>
+        /// This method is using `PartitionKeyPath` to find the partition key value from query input parameters, using recursion.
+        /// Example of `PartitionKeyPath` is `/character/id`.
+        /// </summary>
+        /// <param name="partitionKeyPath"></param>
+        /// <param name="parameter"></param>
+        /// <returns></returns>
+#nullable enable
+        private string? GetPartitionKeyValue(string? partitionKeyPath, object? parameter)
         {
-            if (parameter == null || partitionKeyPath == null)
+            if (parameter is null || partitionKeyPath is null)
             {
                 return null;
             }
 
-            string currentEntity = (partitionKeyPath.Split("/").Length > 1) ? partitionKeyPath.Split("/")[1] : String.Empty;
+            string currentEntity = (partitionKeyPath.Split("/").Length > 1) ? partitionKeyPath.Split("/")[1] : string.Empty;
 
             foreach (ObjectFieldNode item in (IList<ObjectFieldNode>)parameter)
             {
-                if (string.IsNullOrEmpty(partitionKeyPath)
+                if (partitionKeyPath == string.Empty
                     && string.Equals(item.Name.Value, "eq", StringComparison.OrdinalIgnoreCase))
                 {
                     return item.Value.Value?.ToString();
                 }
 
-                if (!string.IsNullOrEmpty(partitionKeyPath)
+                if (partitionKeyPath != string.Empty
                     && string.Equals(item.Name.Value, currentEntity, StringComparison.OrdinalIgnoreCase))
                 {
                     // Recursion to mapping next inner object
@@ -279,14 +298,24 @@ namespace Azure.DataGateway.Service.Resolvers
             return null;
         }
 
-        private static string GetIdValue(object parameter)
+        /// <summary>
+        /// Parsing id field value from input parameter
+        /// </summary>
+        /// <param name="parameter"></param>
+        /// <returns></returns>
+
+#nullable enable
+        private static string? GetIdValue(object? parameter)
         {
-            foreach (ObjectFieldNode item in (IList<ObjectFieldNode>)parameter)
+            if (parameter != null)
             {
-                if (string.Equals(item.Name.Value, "id", StringComparison.OrdinalIgnoreCase))
+                foreach (ObjectFieldNode item in (IList<ObjectFieldNode>)parameter)
                 {
-                    IList<ObjectFieldNode> idValueObj = (IList<ObjectFieldNode>)item.Value.Value;
-                    return idValueObj.FirstOrDefault(x => x.Name.Value == "eq")?.Value.Value.ToString();
+                    if (string.Equals(item.Name.Value, "id", StringComparison.OrdinalIgnoreCase))
+                    {
+                        IList<ObjectFieldNode> idValueObj = (IList<ObjectFieldNode>)item.Value.Value;
+                        return idValueObj.FirstOrDefault(x => x.Name.Value == "eq")?.Value.Value.ToString();
+                    }
                 }
             }
 

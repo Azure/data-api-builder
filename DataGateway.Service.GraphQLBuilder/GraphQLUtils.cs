@@ -1,5 +1,6 @@
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -25,13 +26,23 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 
         public static bool IsBuiltInType(ITypeNode typeNode)
         {
-            string name = typeNode.NamedType().Name.Value;
-            if (name == "String" || name == "Int" || name == "Boolean" || name == "Float" || name == "ID")
+            HashSet<string> inBuiltTypes = new()
             {
-                return true;
-            }
-
-            return false;
+                "ID",
+                "Byte",
+                "Short",
+                "Int",
+                "Long",
+                SingleType.TypeName,
+                "Float",
+                "Decimal",
+                "String",
+                "Boolean",
+                "DateTime",
+                "ByteArray"
+            };
+            string name = typeNode.NamedType().Name.Value;
+            return inBuiltTypes.Contains(name);
         }
 
         /// <summary>
@@ -50,7 +61,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
                     new FieldDefinitionNode(
                         location: null,
                         new NameNode(DEFAULT_PRIMARY_KEY_NAME),
-                        new StringValueNode("Id value to provide to delete a cosmos db record"),
+                        new StringValueNode("Id value to provide to identify a cosmos db record"),
                         new List<InputValueDefinitionNode>(),
                         new IdType().ToTypeNode(),
                         new List<DirectiveNode>()));
@@ -59,7 +70,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
                     new FieldDefinitionNode(
                         location: null,
                         new NameNode(DEFAULT_PARTITION_KEY_NAME),
-                        new StringValueNode("Partition key value to provide to delete a cosmos db record"),
+                        new StringValueNode("Partition key value to provide to identify a cosmos db record"),
                         new List<InputValueDefinitionNode>(),
                         new StringType().ToTypeNode(),
                         new List<DirectiveNode>()));

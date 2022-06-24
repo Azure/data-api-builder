@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -22,16 +23,13 @@ namespace Azure.DataGateway.Service.Resolvers
     public class CosmosMutationEngine : IMutationEngine
     {
         private readonly CosmosClientProvider _clientProvider;
-        private readonly IOptionsMonitor<RuntimeConfigPath> _runtimeConfigPath;
         private readonly ISqlMetadataProvider _metadataProvider;
 
         public CosmosMutationEngine(
             CosmosClientProvider clientProvider,
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
             ISqlMetadataProvider metadataProvider)
         {
             _clientProvider = clientProvider;
-            _runtimeConfigPath = runtimeConfigPath;
             _metadataProvider = metadataProvider;
         }
 
@@ -223,14 +221,6 @@ namespace Azure.DataGateway.Service.Resolvers
             IDictionary<string, object?> parameters)
         {
             string entityName = context.Selection.Field.Type.NamedType().Name.Value;
-            RuntimeConfig? configValue = _runtimeConfigPath.CurrentValue.ConfigValue;
-            if (configValue is null)
-            {
-                throw new DataGatewayException(
-                    message: "Runtime config isn't setup.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
-            }
 
             string databaseName = _metadataProvider.GetSchemaName(entityName);
             string containerName = _metadataProvider.GetDatabaseObjectName(entityName);

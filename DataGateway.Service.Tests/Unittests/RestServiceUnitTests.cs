@@ -121,7 +121,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
             mockRuntimeConfigProvider.Setup(x => x.RestPath).Returns(path);
             RuntimeConfigProvider runtimeConfigProvider = mockRuntimeConfigProvider.Object;
             MsSqlQueryBuilder queryBuilder = new();
-            DbExceptionParserBase dbExceptionParser = new(runtimeConfigProvider);
+            DbExceptionParser dbExceptionParser = new(runtimeConfigProvider);
             QueryExecutor<SqlConnection> queryExecutor = new(runtimeConfigProvider, dbExceptionParser);
             MsSqlMetadataProvider sqlMetadataProvider = new(
                 runtimeConfigProvider,

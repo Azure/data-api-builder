@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -15,7 +14,6 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.Azure.Cosmos;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Resolvers

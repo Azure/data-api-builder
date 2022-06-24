@@ -19,9 +19,9 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
         private Dictionary<string, EntityMetadata> _entityPermissions;
 
         /// <summary>
-        /// Create stub entityPermissions to enable MutationBuilder to create
-        /// mutations in GraphQL schema. Without permissions present
-        /// (i.e. no roles defined for action on entity), then mutation
+        /// Create stub entityPermissions to enable QueryBuilder to create
+        /// queries in GraphQL schema. Without permissions present
+        /// (i.e. no roles defined for action on entity), then queries
         /// will not be created in schema since it is inaccessible
         /// as stated by permissions configuration.
         /// </summary>

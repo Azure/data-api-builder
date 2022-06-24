@@ -180,7 +180,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 httpContext.Request.ContentLength = stream.Length;
             }
 
-            //Add identity object to the Mock context object.
+            // Add identity object to the Mock context object.
             ClaimsIdentity identity = new(authenticationType: "Bearer");
             identity.AddClaim(new Claim(ClaimTypes.Role, "anonymous"));
             identity.AddClaim(new Claim(ClaimTypes.Role, "authenticated"));

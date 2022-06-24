@@ -507,7 +507,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="entityName">EntityName whose actionMetadata will be searched.</param>
         /// <param name="actionName">ActionName to lookup field permissions</param>
         /// <param name="field">Specific field to get collection of roles</param>
-        /// <returns>Collection of role names allowed to perform actionType on Entity's field.</returns>
+        /// <returns>Collection of role names allowed to perform actionName on Entity's field.</returns>
         public IEnumerable<string> GetRolesForField(string entityName, string actionName, string field)
         {
             return EntityPermissionsMap[entityName].FieldToRolesMap[actionName][field];

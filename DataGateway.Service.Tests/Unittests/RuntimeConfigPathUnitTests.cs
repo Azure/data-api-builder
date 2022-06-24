@@ -121,6 +121,10 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             return
 @"{
   ""$schema"": "".. /../project-hawaii/playground/hawaii.draft-01.schema.json"",
+  ""versioning"": {
+    ""version"": 1.1,
+    ""patch"": 1
+  },
   ""data-source"": {
     ""database-type"": """ + reps[index % reps.Length] + @""",
     ""connection-string"": ""server=datagateway;database=" + reps[++index % reps.Length] + @";uid=" + reps[++index % reps.Length] + @";Password=" + reps[++index % reps.Length] + @";Allow User Variables=true"",
@@ -215,7 +219,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
           ""target.entity"": """ + reps[++index % reps.Length] + @"""
         },
         ""websiteplacement"": {
-          ""cardinality"": 1,
+          ""cardinality"": ""one"",
           ""target.entity"": """ + reps[++index % reps.Length] + @"""
         },
         ""reviews"": {
@@ -264,7 +268,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
       ],
       ""relationships"": {
         ""books"": {
-          ""cardinality"": 1.1,
+          ""cardinality"": ""one"",
           ""target.entity"": """ + reps[++index % reps.Length] + @"""
         }
       }

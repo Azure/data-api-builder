@@ -32,24 +32,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     Entity entity = entities[dbEntityName];
 
-                    // Get Roles for mutation actionType on Entity, number of roles could be zero.
-                    IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, actionName: "create", entityPermissionsMap);
-                    if (rolesAllowedForMutation.Count() > 0)
-                    {
-                        mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity, rolesAllowedForMutation));
-                    }
-
-                    rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, actionName: "update", entityPermissionsMap);
-                    if (rolesAllowedForMutation.Count() > 0)
-                    {
-                        mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType, rolesAllowedForMutation));
-                    }
-
-                    rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, actionName: "delete", entityPermissionsMap);
-                    if (rolesAllowedForMutation.Count() > 0)
-                    {
-                        mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity, rolesAllowedForMutation));
-                    }
+                    AddMutations(dbEntityName, actionName: "create", entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entity, mutationFields);
+                    AddMutations(dbEntityName, actionName: "update", entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entity, mutationFields);
+                    AddMutations(dbEntityName, actionName: "delete", entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entity, mutationFields);
                 }
             }
 
@@ -60,6 +45,53 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
             definitionNodes.AddRange(inputs.Values);
             return new(definitionNodes);
+        }
+
+        /// <summary>
+        /// Helper function to create mutation definitions.
+        /// </summary>
+        /// <param name="dbEntityName"></param>
+        /// <param name="actionName"></param>
+        /// <param name="entityPermissionsMap"></param>
+        /// <param name="name"></param>
+        /// <param name="inputs"></param>
+        /// <param name="objectTypeDefinitionNode"></param>
+        /// <param name="root"></param>
+        /// <param name="databaseType"></param>
+        /// <param name="entity"></param>
+        /// <param name="mutationFields"></param>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        private static void AddMutations(
+            string dbEntityName,
+            string actionName,
+            Dictionary<string, EntityMetadata>? entityPermissionsMap,
+            NameNode name,
+            Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
+            ObjectTypeDefinitionNode objectTypeDefinitionNode,
+            DocumentNode root,
+            DatabaseType databaseType,
+            Entity entity,
+            List<FieldDefinitionNode> mutationFields
+            )
+        {
+            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, actionName: actionName, entityPermissionsMap);
+            if (rolesAllowedForMutation.Count() > 0)
+            {
+                switch (actionName)
+                {
+                    case "create":
+                        mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity, rolesAllowedForMutation));
+                        break;
+                    case "update":
+                        mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType, rolesAllowedForMutation));
+                        break;
+                    case "delete":
+                        mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity, rolesAllowedForMutation));
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(paramName: "actionName", message: "Invalid argument value provided.");
+                }
+            }
         }
 
         public static Operation DetermineMutationOperationTypeBasedOnInputType(string inputTypeName)

@@ -35,11 +35,6 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
                     );
         }
 
-        private static Entity GenerateEmptyEntity()
-        {
-            return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
-        }
-
         [TestMethod]
         [TestCategory("Query Generation")]
         [TestCategory("Single item access")]
@@ -56,7 +51,7 @@ type Foo @model {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -81,7 +76,7 @@ type Foo @model {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -112,7 +107,7 @@ type Foo @model {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -137,7 +132,7 @@ type Foo @model {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -168,7 +163,7 @@ type Foo @model {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
                 );

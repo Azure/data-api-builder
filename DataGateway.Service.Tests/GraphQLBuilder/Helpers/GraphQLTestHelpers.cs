@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -56,7 +56,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers
         /// <param name="fieldDefinition">Query or Mutation Definition</param>
         public static void ValidateAuthorizeDirectivePresence(string ObjectType, IEnumerable<string> rolesDefinedInPermissions, FieldDefinitionNode fieldDefinition)
         {
-            IEnumerable<DirectiveNode> authorizeDirectiveNodesFound = fieldDefinition.Directives.Where(f => f.Name.Value == "authorize");
+            IEnumerable<DirectiveNode> authorizeDirectiveNodesFound = fieldDefinition.Directives.Where(f => f.Name.Value == GraphQLUtils.AUTHORIZE_DIRECTIVE);
 
             // Currently, only 1 authorize directive node is supported on field definition.
             //
@@ -67,7 +67,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers
             // Possible Arguments: "roles" and "policy" per:
             // https://github.com/ChilliCream/hotchocolate/blob/main/src/HotChocolate/AspNetCore/src/AspNetCore.Authorization/AuthorizeDirective.cs
             //
-            IEnumerable<ArgumentNode> authorizeArguments = authorizationDirectiveNode.Arguments.Where(f => f.Name.Value == "roles");
+            IEnumerable<ArgumentNode> authorizeArguments = authorizationDirectiveNode.Arguments.Where(f => f.Name.Value == GraphQLUtils.AUTHORIZE_DIRECTIVE_ARGUMENT_ROLES);
             Assert.AreEqual(expected: 1, actual: authorizeArguments.Count());
 
             ArgumentNode roleArgumentNode = authorizeArguments.First();

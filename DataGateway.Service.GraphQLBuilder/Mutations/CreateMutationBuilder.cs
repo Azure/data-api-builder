@@ -216,6 +216,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         /// <param name="root">The GraphQL document root to find GraphQL schema items in.</param>
         /// <param name="databaseType">Type of database we're generating the field for.</param>
         /// <param name="entity">Runtime config information for the type.</param>
+        /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
         /// <returns>A GraphQL field definition named <c>create*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
         public static FieldDefinitionNode Build(
             NameNode name,

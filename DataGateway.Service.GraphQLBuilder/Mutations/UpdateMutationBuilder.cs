@@ -148,6 +148,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         /// <param name="objectTypeDefinitionNode">GraphQL object to create the update field for.</param>
         /// <param name="root">GraphQL schema root</param>
         /// <param name="entity">Runtime config information for the object type.</param>
+        /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
         /// <returns>A <c>update*ObjectName*</c> field to be added to the Mutation type.</returns>
         public static FieldDefinitionNode Build(
             NameNode name,

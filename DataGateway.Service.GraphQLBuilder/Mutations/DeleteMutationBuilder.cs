@@ -8,6 +8,14 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
     public static class DeleteMutationBuilder
     {
+        /// <summary>
+        /// Generate the `delete` mutation field for the GraphQL mutations for a given Object Definition
+        /// </summary>
+        /// <param name="name">Name of the GraphQL object to generate the delete field for.</param>
+        /// <param name="objectTypeDefinitionNode">The GraphQL object type to generate for.</param>
+        /// <param name="configEntity">Entity definition</param>
+        /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
+        /// <returns>A GraphQL field definition named <c>delete*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
         public static FieldDefinitionNode Build(NameNode name, ObjectTypeDefinitionNode objectTypeDefinitionNode, Entity configEntity, IEnumerable<string>? rolesAllowedForMutation = null)
         {
             List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode);

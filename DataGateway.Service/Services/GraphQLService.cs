@@ -79,7 +79,7 @@ namespace Azure.DataGateway.Service.Services
                 .AddAuthorizeDirectiveType()
                 .AddType<OrderByType>()
                 .AddType<DefaultValueType>()
-                .AddDocument(QueryBuilder.Build(root, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap))
+                .AddDocument(QueryBuilder.Build(root, _databaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap))
                 .AddDocument(MutationBuilder.Build(root, _databaseType, _entities, _authorizationResolver.EntityPermissionsMap));
 
             Schema = sb
@@ -223,7 +223,6 @@ namespace Azure.DataGateway.Service.Services
             DocumentNode root = Utf8GraphQLParser.Parse(graphqlSchema);
 
             IEnumerable<ObjectTypeDefinitionNode> objectNodes = root.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>();
-
             foreach (ObjectTypeDefinitionNode node in objectNodes)
             {
                 InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);

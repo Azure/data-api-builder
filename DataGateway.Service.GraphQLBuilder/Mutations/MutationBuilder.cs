@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                         mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType, rolesAllowedForMutation));
                         break;
                     case "delete":
-                        mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity, rolesAllowedForMutation));
+                        mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity, databaseType, rolesAllowedForMutation));
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(paramName: "actionName", message: "Invalid argument value provided.");

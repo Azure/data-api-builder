@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -11,6 +10,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
     [TestClass, TestCategory(TestCategory.MYSQL)]
     public class MySqlGraphQLMutationTests : GraphQLMutationTestBase
     {
+        private static string _invalidForeignKeyError =
+            "Cannot add or update a child row: a foreign key constraint fails " +
+            "(\\u0060datagateway\\u0060.\\u0060books\\u0060";
 
         #region Test Fixture Setup
         /// <summary>
@@ -332,7 +334,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                     ) AS `subq`
             ";
 
-            await InsertWithInvalidForeignKey(mySqlQuery, MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
+            await InsertWithInvalidForeignKey(mySqlQuery, _invalidForeignKeyError);
         }
 
         /// <summary>
@@ -348,11 +350,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                     SELECT COUNT(*) AS `count`
                     FROM `books`
                     WHERE `id` = 1
-                        AND `publisher_id` = - 1
+                    AND `publisher_id` = - 1
                     ) AS `subq`
             ";
 
-            await UpdateWithInvalidForeignKey(mySqlQuery, MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
+            await UpdateWithInvalidForeignKey(mySqlQuery, _invalidForeignKeyError);
         }
 
         /// <summary>
@@ -382,7 +384,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         [TestMethod]
         public async Task TestViolatingOneToOneRelashionShip()
         {
-            await TestViolatingOneToOneRelashionShip(MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE);
+            string errorMessage = "Duplicate entry \\u00271\\u0027 for key " +
+                                  "\\u0027book_website_placements.book_id\\u0027\"";
+            await TestViolatingOneToOneRelashionShip(errorMessage);
         }
         #endregion
     }

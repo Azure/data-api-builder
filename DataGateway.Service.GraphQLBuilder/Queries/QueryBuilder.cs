@@ -18,18 +18,22 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public const string PAGINATION_OBJECT_TYPE_SUFFIX = "Connection";
         public const string FILTER_FIELD_NAME = "_filter";
         public const string ORDER_BY_FIELD_NAME = "orderBy";
+        public const string PARTITION_KEY_FIELD_NAME = "_partitionKeyValue";
+        public const string ID_FIELD_NAME = "id";
 
         /// <summary>
         /// Creates a DocumentNode containing FieldDefinitionNodes representing the FindByPK and FindAll queries
         /// Also populates the DocumentNode with return types.
         /// </summary>
         /// <param name="root"></param>
+        /// <param name="databaseType"></param>
         /// <param name="entities"></param>
         /// <param name="inputTypes"></param>
         /// <param name="entityPermissionsMap">Collection of permissions defined in runtime config.</param>
         /// <returns></returns>
         public static DocumentNode Build(
             DocumentNode root,
+            DatabaseType databaseType,
             IDictionary<string, Entity> entities,
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
             Dictionary<string, EntityMetadata>? entityPermissionsMap = null)
@@ -53,7 +57,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                     if (rolesAllowedForRead.Count() > 0)
                     {
                         queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity, rolesAllowedForRead));
-                        queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, rolesAllowedForRead));
+                        queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, rolesAllowedForRead));
                     }
                 }
             }
@@ -66,10 +70,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return new(definitionNodes);
         }
 
-        public static FieldDefinitionNode GenerateByPKQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name, IEnumerable<string>? rolesAllowedForRead = null)
+        public static FieldDefinitionNode GenerateByPKQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name, DatabaseType databaseType, IEnumerable<string>? rolesAllowedForRead = null)
         {
             IEnumerable<FieldDefinitionNode> primaryKeyFields =
-                FindPrimaryKeyFields(objectTypeDefinitionNode);
+            FindPrimaryKeyFields(objectTypeDefinitionNode, databaseType);
             List<InputValueDefinitionNode> inputValues = new();
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
 

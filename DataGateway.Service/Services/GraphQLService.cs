@@ -188,11 +188,9 @@ namespace Azure.DataGateway.Service.Services
 
                 TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
 
-                // Create Authorize directive for Object Type
+                // Collection of role names allowed to access entity, to be added to the authorize directive
+                // of the objectTypeDefinitionNode. The authorize Directive is one of many directives created.
                 IEnumerable<string> rolesAllowedForEntity = _authorizationResolver.GetRolesForEntity(entityName);
-
-                // TODO: Create Authorize directive for fields
-                // Dictionary<string, Directive> fieldNameToDirective
 
                 ObjectTypeDefinitionNode node = SchemaConverter.FromTableDefinition(entityName, tableDefinition, entity, entities, rolesAllowedForEntity);
                 InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);

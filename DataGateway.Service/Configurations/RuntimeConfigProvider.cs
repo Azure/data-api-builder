@@ -16,6 +16,11 @@ namespace Azure.DataGateway.Service.Configurations
 
         protected virtual RuntimeConfig? RuntimeConfiguration { get; set; }
 
+        public virtual string RestPath
+        {
+            get { return RuntimeConfiguration is not null ? RuntimeConfiguration.RestGlobalSettings.Path : string.Empty; }
+        }
+
         public RuntimeConfigProvider() { }
 
         public RuntimeConfigProvider(IOptions<RuntimeConfigPath>? runtimeConfigPath)

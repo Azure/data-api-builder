@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -43,6 +44,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             return Mock.Of<IOptionsMonitor<RuntimeConfig>>(_ => _.CurrentValue == runtimeConfig);
         }
 
+        public static void RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
+        {
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
+            {
+                Entity updatedEntity = new(entity.Source, entity.Rest,
+                                           entity.GraphQL, entity.Permissions,
+                                           Relationships: null, Mappings: null);
+                runtimeConfig.Entities.Remove(entityName);
+                runtimeConfig.Entities.Add(entityName, updatedEntity);
+            }
+        }
+
         /// <summary>
         /// Temporary Helper function to ensure that in testing we have an entity
         /// that can have a custom schema. We create a new entity of 'Magazine' with
@@ -57,7 +70,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             string magazineSource = config.DatabaseType is DatabaseType.mysql ? "\"magazines\"" : "\"foo.magazines\"";
             string magazineEntityJsonString =
-              @"{ 
+              @"{
                     ""source"":  " + magazineSource + @",
                     ""graphql"": true,
                     ""permissions"": [
@@ -145,30 +158,32 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="operationType">The operation type to be tested.</param>
         public static async Task<IActionResult> PerformApiTest(
             RestController controller,
+            string path,
             string entityName,
             string primaryKeyRoute,
             Operation operationType = Operation.Find)
 
         {
             IActionResult actionResult;
+            string pathAndEntityName = $"{path}/{entityName}";
             switch (operationType)
             {
                 case Operation.Find:
-                    actionResult = await controller.Find(entityName, primaryKeyRoute);
+                    actionResult = await controller.Find($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 case Operation.Insert:
-                    actionResult = await controller.Insert(entityName);
+                    actionResult = await controller.Insert($"{pathAndEntityName}");
                     break;
                 case Operation.Delete:
-                    actionResult = await controller.Delete(entityName, primaryKeyRoute);
+                    actionResult = await controller.Delete($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 case Operation.Update:
                 case Operation.Upsert:
-                    actionResult = await controller.Upsert(entityName, primaryKeyRoute);
+                    actionResult = await controller.Upsert($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 case Operation.UpdateIncremental:
                 case Operation.UpsertIncremental:
-                    actionResult = await controller.UpsertIncremental(entityName, primaryKeyRoute);
+                    actionResult = await controller.UpsertIncremental($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");

@@ -361,9 +361,13 @@ namespace Azure.DataGateway.Service.Authorization
                  * claim.Value: "authz@microsoft.com"
                  * claim.ValueType: "string"
                  */
-                string type = claim.Type;
+                // If a claim has a short type name, use it (i.e. 'roles' instead of 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role')
+                string shortTypeNameProperty = "http://schemas.xmlsoap.org/ws/2005/05/identity/claimproperties/ShortTypeName";
+                string type = claim.Properties.TryGetValue(shortTypeNameProperty, out string? shortName) ? shortName : claim.Type;
 
-                if (!claimsInRequestContext.TryAdd(type, claim))
+                // Don't add roles to the claims dictionary and don't throw an exception in the case of multiple role claims,
+                // since a user can have multiple roles assigned and role resolution happens beforehand
+                if (type != "roles" && !claimsInRequestContext.TryAdd(type, claim))
                 {
                     // If there are duplicate claims present in the request, return an exception.
                     throw new DataGatewayException(

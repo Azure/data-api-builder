@@ -69,7 +69,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 include: includedCols,
                 exclude: excludedCols);
 
-            Policy policy = new (requestPolicy, databasePolicy);
+            Policy policy = new(requestPolicy, databasePolicy);
 
             Action actionForRole = new(
                 Name: actionName,

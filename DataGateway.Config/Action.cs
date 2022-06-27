@@ -68,7 +68,7 @@ namespace Azure.DataGateway.Config
     /// (predicate) that will be injected in the query sent to the database.</param>
     public class Policy
     {
-        public Policy(string ? request, string? database)
+        public Policy(string? request, string? database)
         {
             Request = request;
             Database = database;

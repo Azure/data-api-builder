@@ -105,7 +105,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <exception cref="DataGatewayException">Throws exception whenever some validation fails.</exception>
         public static void ValidateAndProcessPermissionsInConfig(RuntimeConfig runtimeConfig)
         {
-            foreach ((string entityName,Entity entity) in runtimeConfig.Entities)
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
                 {
@@ -114,7 +114,6 @@ namespace Azure.DataGateway.Service.Configurations
                     // processedActions will contain the processed actions which are formed after performing all kind of
                     // validations and pre-processing.
                     List<Object> processedActions = new();
-                    
                     foreach (Object action in actions)
                     {
                         string actionName;
@@ -228,7 +227,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <param name="excluded">Set of fields which are accessible to the user.</param>
         /// <returns>Field name without the @item. prefix.</returns>
         /// <exception cref="DataGatewayException">Throws exception if the field is not accessible.</exception>
-        private static string CheckAndProcessField(Match columnNameMatch,HashSet<string> includedFields,HashSet<string> excludedFields)
+        private static string CheckAndProcessField(Match columnNameMatch, HashSet<string> includedFields, HashSet<string> excludedFields)
         {
             string columnName = columnNameMatch.Value.Substring("@item.".Length);
             if (excludedFields.Contains(columnName!) || excludedFields.Contains("*") ||
@@ -300,7 +299,7 @@ namespace Azure.DataGateway.Service.Configurations
                 processedPolicy.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx));
 
                 // Add token for the claimType to processedPolicy
-                processedPolicy.Append("@claims."+typeOfClaim);
+                processedPolicy.Append("@claims." + typeOfClaim);
 
                 // Move the parsedIdx to the index following a claimType in the policy string
                 parsedIdx = claimIdx + claimType.Value.Length;

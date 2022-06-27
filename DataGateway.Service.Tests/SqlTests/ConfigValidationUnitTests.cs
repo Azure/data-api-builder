@@ -100,7 +100,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             catch (DataGatewayException ex)
             {
-                Assert.AreEqual("Claimtype cannot be empty.",ex.Message);
+                Assert.AreEqual("Claimtype cannot be empty.", ex.Message);
                 Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
             }
         }

@@ -97,6 +97,14 @@ namespace Azure.DataGateway.Service.Authorization
         /// <inheritdoc />
         public bool AreRoleAndActionDefinedForEntity(string entityName, string roleName, string action)
         {
+            // If the roleName is null, this indicates absence of the
+            // X-MS-API-ROLE header in the http request. In such a case, request is assumed
+            // to have anonymous role.
+            if (roleName is null)
+            {
+                roleName = "anonymous";
+            }
+
             if (EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? valueOfEntityToRole))
             {
                 if (valueOfEntityToRole.RoleToActionMap.TryGetValue(roleName, out RoleMetadata? valueOfRoleToAction))

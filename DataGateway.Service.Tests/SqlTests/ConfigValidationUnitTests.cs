@@ -38,11 +38,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 RuntimeConfigValidator.ValidateAndProcessPermissionsInConfig(runtimeConfig);
             }
-            catch(DataGatewayException ex)
+            catch (DataGatewayException ex)
             {
                 Assert.AreEqual("Not all the columns required by policy are accessible.", ex.Message);
                 Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
-            } 
+            }
         }
 
         /// <summary>

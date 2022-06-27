@@ -130,7 +130,7 @@ namespace Azure.DataGateway.Service.Configurations
                                         statusCode: System.Net.HttpStatusCode.InternalServerError,
                                         subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
                             }
-                            
+
                             processedActions.Add(action);
                         }
                         else

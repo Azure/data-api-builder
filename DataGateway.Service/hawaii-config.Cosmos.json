@@ -47,6 +47,15 @@
           "actions": [ "*" ]
         }
       ]
+    },
+    "Star": {
+      "source": "star",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        }
+      ]
     }
   }
 }

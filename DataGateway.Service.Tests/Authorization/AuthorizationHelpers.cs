@@ -58,7 +58,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string roleName = "Reader",
             string actionName = ActionType.CREATE,
             HashSet<string> includedCols = null,
-            HashSet<string> excludedCols = null
+            HashSet<string> excludedCols = null,
+            string databasePolicy = null,
+            string requestPolicy = null
             )
         {
             includedCols = includedCols is null ? new() : includedCols;
@@ -67,10 +69,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 include: includedCols,
                 exclude: excludedCols);
 
+            Policy policy = new (requestPolicy, databasePolicy);
+
             Action actionForRole = new(
                 Name: actionName,
                 Fields: fieldsForRole,
-                Policy: null);
+                Policy: policy);
 
             PermissionSetting permissionForEntity = new(
                 role: roleName,

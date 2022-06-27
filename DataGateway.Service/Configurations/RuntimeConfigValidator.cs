@@ -72,7 +72,7 @@ namespace Azure.DataGateway.Service.Configurations
             }
 
             ValidateAuthenticationConfig();
-            ValidateAndProcessRuntimeConfig();
+            ValidateAndProcessPermissionsInConfig(_runtimeConfigProvider.GetRuntimeConfiguration());
         }
 
         private void ValidateAuthenticationConfig()
@@ -100,12 +100,11 @@ namespace Azure.DataGateway.Service.Configurations
 
         /// <summary>
         /// Method to perform all the different validations related to the semantic correctness of the
-        /// runtime configuration.
+        /// runtime configuration, focusing on the permissions section of the entity.
         /// </summary>
         /// <exception cref="DataGatewayException">Throws exception whenever some validation fails.</exception>
-        private void ValidateAndProcessRuntimeConfig()
+        public static void ValidateAndProcessPermissionsInConfig(RuntimeConfig runtimeConfig)
         {
-            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
             foreach ((string entityName,Entity entity) in runtimeConfig.Entities)
             {
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
@@ -278,7 +277,7 @@ namespace Azure.DataGateway.Service.Configurations
                 {
                     // Empty claimType is not allowed
                     throw new DataGatewayException(
-                        message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
+                        message: $"Claimtype cannot be empty.",
                         statusCode: System.Net.HttpStatusCode.InternalServerError,
                         subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
                         );

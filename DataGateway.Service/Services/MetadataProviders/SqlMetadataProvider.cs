@@ -70,6 +70,7 @@ namespace Azure.DataGateway.Service.Services
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
+
         }
 
         /// <inheritdoc />
@@ -957,6 +958,19 @@ namespace Azure.DataGateway.Service.Services
                 }
             }
         }
+
+        /// <summary>
+        /// Retrieving the partition key path, for Cosmos only
+        /// </summary>
+        public string? GetPartitionKeyPath(string database, string container)
+            => throw new NotImplementedException();
+
+        /// <summary>
+        /// Setting the partition key path, for Cosmos only
+        /// </summary>
+        public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
+            => throw new NotImplementedException();
+
     }
 }
 

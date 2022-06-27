@@ -43,7 +43,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IMutationEngine _mutationEngine;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
-        protected static DbExceptionParserBase _dbExceptionParser;
+        protected static DbExceptionParser _dbExceptionParser;
         protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
@@ -98,6 +98,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             mockRuntimeConfigProvider.Setup(x => x.IsDeveloperMode()).Returns(true);
             mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out _runtimeConfig)).Returns(true);
             mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(_runtimeConfig);
+            mockRuntimeConfigProvider.Setup(x => x.RestPath).Returns("/api");
             _runtimeConfigProvider = mockRuntimeConfigProvider.Object;
 
             switch (_testCategory)
@@ -105,7 +106,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case TestCategory.POSTGRESQL:
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
-                    _dbExceptionParser = new PostgresDbExceptionParser(_runtimeConfigProvider);
+                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
@@ -116,7 +117,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case TestCategory.MSSQL:
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
-                    _dbExceptionParser = new DbExceptionParserBase(_runtimeConfigProvider);
+                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
                     _sqlMetadataProvider = new MsSqlMetadataProvider(
                         _runtimeConfigProvider,
@@ -125,7 +126,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
-                    _dbExceptionParser = new MySqlDbExceptionParser(_runtimeConfigProvider);
+                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
                     _sqlMetadataProvider =
                          new MySqlMetadataProvider(
@@ -240,6 +241,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string sqlQuery,
             RestController controller,
             Operation operationType = Operation.Find,
+            string path = "api",
             IHeaderDictionary headers = null,
             string requestBody = null,
             bool exception = false,
@@ -266,6 +268,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             IActionResult actionResult = await SqlTestHelper.PerformApiTest(
                         controller,
+                        path,
                         entity,
                         primaryKeyRoute,
                         operationType);

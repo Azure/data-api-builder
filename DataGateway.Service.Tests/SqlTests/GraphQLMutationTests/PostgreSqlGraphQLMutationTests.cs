@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -11,6 +10,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlGraphQLMutationTests : GraphQLMutationTestBase
     {
+        private static string _invalidForeignKeyError =
+            "23503: insert or update on table \\u0022books\\u0022 " +
+            "violates foreign key constraint \\u0022book_publisher_fk\\u0022\"";
 
         #region Test Fixture Setup
         /// <summary>
@@ -332,7 +334,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE publisher_id = -1 ) AS subq
             ";
 
-            await InsertWithInvalidForeignKey(postgresQuery, PostgresDbExceptionParser.FK_VIOLATION_MESSAGE);
+            await InsertWithInvalidForeignKey(postgresQuery, _invalidForeignKeyError);
         }
 
         /// <summary>
@@ -350,7 +352,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 1 AND publisher_id = -1 ) AS subq
             ";
 
-            await UpdateWithInvalidForeignKey(postgresQuery, PostgresDbExceptionParser.FK_VIOLATION_MESSAGE);
+            await UpdateWithInvalidForeignKey(postgresQuery, _invalidForeignKeyError);
         }
 
         /// <summary>
@@ -380,7 +382,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         [TestMethod]
         public async Task TestViolatingOneToOneRelashionShip()
         {
-            await TestViolatingOneToOneRelashionShip(PostgresDbExceptionParser.UNQIUE_VIOLATION_MESSAGE);
+            string errorMessage = "23505: duplicate key value violates unique constraint " +
+                                  "\\u0022book_website_placements_book_id_key\\u0022";
+            await TestViolatingOneToOneRelashionShip(errorMessage);
         }
         #endregion
     }

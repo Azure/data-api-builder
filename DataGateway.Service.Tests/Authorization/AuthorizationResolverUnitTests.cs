@@ -435,10 +435,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// <param name="exceptionExpected"> Whether we expect an exception (403 forbidden) to be thrown while parsing policy </param>
         /// <param name="claims"> Parameter list of claim types/keys to add to the claims dictionary that can be accessed with @claims </param>
         [DataTestMethod]
-        [DataRow(true, "roles", "username", "guid", "username", DisplayName = "duplicate claim expect exception")]
-        [DataRow(false, "roles", "username", "guid", "roles", DisplayName = "duplicate role claim does not expect exception")]
-        [DataRow(true, "roles", "roles", "username", "username", DisplayName = "duplicate claim expect exception ignoring role")]
-        public void ParsePolicyWithDuplicateUserClaims(bool exceptionExpected, params string[] claims)
+        [DataRow(true, ClaimTypes.Role, "username", "guid", "username", DisplayName = "duplicate claim expect exception")]
+        [DataRow(false, ClaimTypes.Role, "username", "guid", ClaimTypes.Role, DisplayName = "duplicate role claim does not expect exception")]
+        [DataRow(true, ClaimTypes.Role, ClaimTypes.Role, "username", "username", DisplayName = "duplicate claim expect exception ignoring role")]
+        public void ParsePolicyWithDuplicateUserClaims(bool exceptionExpected, params string[] claimTypes)
         {
             string policy = $"@claims.guid eq 1";
             string defaultClaimValue = "unimportant";
@@ -454,9 +454,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             //Add identity object to the Mock context object.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, TEST_ROLE_TYPE);
-            foreach (string claim in claims)
+            foreach (string claimType in claimTypes)
             {
-                identity.AddClaim(new Claim(type: claim, value: defaultClaimValue, ClaimValueTypes.String));
+                identity.AddClaim(new Claim(type: claimType, value: defaultClaimValue, ClaimValueTypes.String));
             }
 
             ClaimsPrincipal principal = new(identity);

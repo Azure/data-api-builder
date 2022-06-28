@@ -27,6 +27,7 @@ namespace Azure.DataGateway.Service.Authorization
         private ISqlMetadataProvider _metadataProvider;
         private const string WILDCARD = "*";
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
+        private const string SHORT_CLAIM_TYPE_NAME = "http://schemas.xmlsoap.org/ws/2005/05/identity/claimproperties/ShortTypeName";
         private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
@@ -362,12 +363,10 @@ namespace Azure.DataGateway.Service.Authorization
                  * claim.ValueType: "string"
                  */
                 // If a claim has a short type name, use it (i.e. 'roles' instead of 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role')
-                string shortTypeNameProperty = "http://schemas.xmlsoap.org/ws/2005/05/identity/claimproperties/ShortTypeName";
-                string type = claim.Properties.TryGetValue(shortTypeNameProperty, out string? shortName) ? shortName : claim.Type;
-
+                string type = claim.Properties.TryGetValue(SHORT_CLAIM_TYPE_NAME, out string? shortName) ? shortName : claim.Type;
                 // Don't add roles to the claims dictionary and don't throw an exception in the case of multiple role claims,
                 // since a user can have multiple roles assigned and role resolution happens beforehand
-                if (type != "roles" && !claimsInRequestContext.TryAdd(type, claim))
+                if (claim.Type is not ClaimTypes.Role && !claimsInRequestContext.TryAdd(type, claim))
                 {
                     // If there are duplicate claims present in the request, return an exception.
                     throw new DataGatewayException(

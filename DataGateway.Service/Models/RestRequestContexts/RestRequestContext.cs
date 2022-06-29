@@ -17,9 +17,8 @@ namespace Azure.DataGateway.Service.Models
     /// </summary>
     public abstract class RestRequestContext
     {
-        protected RestRequestContext(OperationAuthorizationRequirement httpVerb, string entityName, DatabaseObject dbo)
+        protected RestRequestContext(string entityName, DatabaseObject dbo)
         {
-            HttpVerb = httpVerb;
             EntityName = entityName;
             DatabaseObject = dbo;
         }
@@ -91,11 +90,6 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
 
         public bool IsMany { get; set; }
-
-        /// <summary>
-        /// The REST verb this request is.
-        /// </summary>
-        public OperationAuthorizationRequirement HttpVerb { get; init; }
 
         /// <summary>
         /// The database engine operation type this request is.

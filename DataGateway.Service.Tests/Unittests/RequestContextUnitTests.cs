@@ -3,7 +3,6 @@ using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.UnitTests
@@ -35,13 +34,11 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             // "null" will be instantiated as a string of "null", which will
             // deserialize into type of null, this should throw excception
             JsonElement payload = JsonSerializer.Deserialize<JsonElement>("\"null\"");
-            OperationAuthorizationRequirement verb = new();
             try
             {
                 InsertRequestContext context = new(entityName: string.Empty,
                                                     dbo: _defaultDbObject,
                                                     insertPayloadRoot: payload,
-                                                    httpVerb: verb,
                                                     operationType: Operation.Insert);
                 Assert.Fail();
             }
@@ -64,11 +61,9 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             // null will be instantiated as the empty string which will
             // mean an empty FieldValuePairsInBody
             JsonElement payload = JsonSerializer.Deserialize<JsonElement>("null");
-            OperationAuthorizationRequirement verb = new();
             InsertRequestContext context = new(entityName: string.Empty,
                                                 dbo: _defaultDbObject,
                                                 insertPayloadRoot: payload,
-                                                httpVerb: verb,
                                                 operationType: Operation.Insert);
             Assert.AreEqual(0, context.FieldValuePairsInBody.Count);
         }

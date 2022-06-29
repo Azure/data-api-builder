@@ -660,7 +660,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 _sqlMetadataProvider,
                 _httpContextAccessor.Object,
                 _authorizationService.Object,
-                _authZResolver,
+                _authorizationResolver,
                 _runtimeConfigProvider);
             _restController = new RestController(_restService);
         }

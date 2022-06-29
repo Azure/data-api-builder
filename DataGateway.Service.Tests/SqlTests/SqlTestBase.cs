@@ -48,7 +48,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
         protected static RuntimeConfigProvider _runtimeConfigProvider;
-        protected static IAuthorizationResolver _authZResolver;
+        protected static IAuthorizationResolver _authorizationResolver;
         protected static RuntimeConfig _runtimeConfig;
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await _sqlMetadataProvider.InitializeAsync();
 
             //Initialize the authorization resolver object
-            _authZResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
+            _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
         }
 
         protected static void SetUpSQLMetadataProvider()
@@ -180,6 +180,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 httpContext.Request.Body = stream;
                 httpContext.Request.ContentLength = stream.Length;
             }
+
+            // Add identity object to the Mock context object.
+            ClaimsIdentity identity = new(authenticationType: "Bearer");
+            identity.AddClaim(new Claim(ClaimTypes.Role, "anonymous"));
+            identity.AddClaim(new Claim(ClaimTypes.Role, "authenticated"));
+
+            ClaimsPrincipal user = new(identity);
+            httpContext.User = user;
 
             // Set the user role as authenticated to allow tests to execute with all privileges.
             httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = "authenticated";

@@ -67,6 +67,24 @@ namespace Azure.DataGateway.Auth
         public string TryProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext);
 
         /// <summary>
+        /// Get list of roles defined for entity within runtime configuration.. This is applicable for GraphQL when creating authorization
+        /// directive on Object type.
+        /// </summary>
+        /// <param name="entityName">Name of entity.</param>
+        /// <returns>Collection of role names.</returns>
+        public IEnumerable<string> GetRolesForEntity(string entityName);
+
+        /// <summary>
+        /// Returns the collection of roles which can perform {actionName} the provided field.
+        /// Applicable to GraphQL field directive @authorize on ObjectType fields.
+        /// </summary>
+        /// <param name="entityName">EntityName whose actionMetadata will be searched.</param>
+        /// <param name="actionName">ActionName to lookup field permissions</param>
+        /// <param name="field">Specific field to get collection of roles</param>
+        /// <returns>Collection of role names allowed to perform actionType on Entity's field.</returns>
+        public IEnumerable<string> GetRolesForField(string entityName, string actionName, string field);
+
+        /// <summary>
         /// Returns a list of roles which define permissions for the provided action.
         /// i.e. list of roles which allow the action "read" on entityName.
         /// </summary>

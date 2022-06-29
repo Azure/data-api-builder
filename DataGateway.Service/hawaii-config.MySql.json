@@ -1,5 +1,5 @@
 {
-  "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
+  "$schema": "../schemas/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "mysql",
     "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests"
@@ -15,7 +15,7 @@
       "allow-introspection": true
     },
     "host": {
-      "mode": "Development",
+      "mode": "development",
       "cors": {
         "origins": [ "http://localhost:3000" ],
         "allow-credentials": false
@@ -24,8 +24,7 @@
         "provider": "EasyAuth",
         "jwt": {
           "audience": "",
-          "issuer": "",
-          "issuer-key": ""
+          "issuer": ""
         }
       }
     }
@@ -221,17 +220,44 @@
     "WebsiteUser": {
       "source": "website_users",
       "rest": false,
-      "permissions": []
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "SupportedType": {
       "source": "type_table",
       "rest": false,
-      "permissions": []
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "stocks_price": {
       "source": "stocks_price",
       "rest": false,
-      "permissions": []
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "Tree": {
       "source": "trees",

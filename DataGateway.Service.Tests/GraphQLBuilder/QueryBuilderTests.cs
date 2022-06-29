@@ -190,7 +190,13 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(
+                            root,
+                            DatabaseType.cosmos,
+                            new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                            inputTypes: new(),
+                            entityPermissionsMap: _entityPermissions
+                            );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"foo_by_pk");

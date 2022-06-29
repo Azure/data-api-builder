@@ -102,7 +102,7 @@ namespace Azure.DataGateway.Service.Authorization
             // to have anonymous role.
             if (roleName is null)
             {
-                roleName = "anonymous";
+                roleName = AuthorizationType.Anonymous.ToString().ToLower();
             }
 
             if (EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? valueOfEntityToRole))

@@ -79,6 +79,10 @@
     <PackageReference Include="Npgsql" Version="$(PostgresVersion)" />
     <PackageReference Include="Microsoft.OData.Edm" Version="$(ODataVersion)" />
     <PackageReference Include="Microsoft.OData.Core" Version="$(ODataVersion)" />
+    <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="System.IO.Abstractions" Version="$(SystemIOAbstractionsVersion)" />
   </ItemGroup>
   <ItemGroup>

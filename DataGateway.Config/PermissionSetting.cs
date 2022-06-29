@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Config
             Actions = actions;
         }
         [property: JsonPropertyName("role")]
-        public string Role { get; set; }
+        public string Role { get; }
         [property: JsonPropertyName("actions")]
         public object[] Actions { get; set; }
     }

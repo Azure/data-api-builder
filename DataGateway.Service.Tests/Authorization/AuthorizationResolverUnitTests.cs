@@ -1,3 +1,4 @@
+#nullable enable
 using System.Collections.Generic;
 using System.Net;
 using System.Security.Claims;
@@ -433,14 +434,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string entityName = "SampleEntity",
             string roleName = "Reader",
             string actionName = ActionType.CREATE,
-            HashSet<string> includedCols = null,
-            HashSet<string> excludedCols = null,
-            string requestPolicy = null,
-            string databasePolicy = null
+            HashSet<string>? includedCols = null,
+            HashSet<string>? excludedCols = null,
+            string? requestPolicy = null,
+            string? databasePolicy = null
             )
         {
-            includedCols = includedCols is null ? new() : includedCols;
-            excludedCols = excludedCols is null ? new() : excludedCols;
             Field fieldsForRole = new(
                 include: includedCols,
                 exclude: excludedCols);

@@ -53,6 +53,11 @@ namespace Azure.DataGateway.Service.Models
         public virtual FilterClause? FilterClauseInUrl { get; set; }
 
         /// <summary>
+        /// AST that represents the filter part added to the query because of database policy.
+        /// </summary>
+        public virtual FilterClause? DbPolicyClause { get; set; }
+
+        /// <summary>
         /// List of OrderBy Columns which represent the OrderByClause from the URL.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>

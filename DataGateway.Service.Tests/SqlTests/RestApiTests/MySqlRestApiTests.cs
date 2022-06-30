@@ -1,11 +1,6 @@
-using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Threading.Tasks;
-using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -28,6 +23,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                       ORDER BY id
                       LIMIT 1
                   ) AS subq"
+            },
+            {
+                "FindEmptyTable",
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _emptyTableTableName + @"
+                    ) AS subq"
+            },
+            {
+                "FindEmptyResultSetWithQueryFilter",
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE 1 != 1
+                    ) AS subq"
             },
             {
                 "FindViewAll",
@@ -669,7 +683,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                   ) AS subq"
             },
             {
-            "FindTestWithDifferentMappedFieldsAndOrderBy",
+                "FindTestWithDifferentMappedFieldsAndOrderBy",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
                   FROM (
@@ -680,7 +694,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                   ) AS subq"
             },
             {
-            "FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy",
+                "FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
                   FROM (
@@ -691,7 +705,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                   ) AS subq"
             },
             {
-            "FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy",
+                "FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
                   FROM (
@@ -1114,7 +1128,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 _mutationEngine,
                 _sqlMetadataProvider,
                 _httpContextAccessor.Object,
-                _authorizationService.Object);
+                _authorizationService.Object,
+                _authorizationResolver,
+                _runtimeConfigProvider);
             _restController = new RestController(_restService);
         }
 
@@ -1153,37 +1169,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         /// <summary>
         /// We have 1 test, which is named
         /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
-        /// that will have Db specific error messages, however mysql
-        /// has more unique constrainst and so instead of
-        /// returning the custom message, the function is entirely
-        /// overridden. Therefore here we throw not implemented.
+        /// that will have Db specific error messages.
+        /// We return the mysql specific message here.
         /// </summary>
         /// <returns></returns>
         public override string GetUniqueDbErrorMessage()
         {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        public override async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
-        {
-            string requestBody = @"
-            {
-                ""categoryName"":""comics""
-            }";
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "categoryid/1/pieceid/1",
-                queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK_EntityName,
-                sqlQuery: string.Empty,
-                controller: _restController,
-                operationType: Operation.Upsert,
-                requestBody: requestBody,
-                exception: true,
-                expectedErrorMessage: MySqlDbExceptionParser.INTEGRITY_CONSTRAINT_VIOLATION_MESSAGE,
-                expectedStatusCode: HttpStatusCode.Conflict,
-                expectedSubStatusCode: $"{DataGatewayException.SubStatusCodes.DatabaseOperationFailed}"
-            );
+            return "Column 'piecesRequired' cannot be null";
         }
     }
 }

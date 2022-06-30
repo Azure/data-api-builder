@@ -1,4 +1,6 @@
+using System.Net;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
@@ -45,7 +47,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     if (!IsBuiltInType(f.Type))
                     {
                         string typeName = RelationshipDirectiveType.Target(f);
-                        HotChocolate.Language.IHasName def = definitions.First(d => d.Name.Value == typeName);
+                        HotChocolate.Language.IHasName? def = definitions.FirstOrDefault(d => d.Name.Value == typeName);
+
+                        if (def is null)
+                        {
+                            throw new DataGatewayException($"The type {typeName} is not a known GraphQL type, and cannot be used in this schema.", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.GraphQLMapping);
+                        }
+
                         if (def is ObjectTypeDefinitionNode otdn)
                         {
                             return GetComplexInputType(inputs, definitions, f, typeName, otdn, databaseType, entity);
@@ -208,6 +216,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         /// <param name="root">The GraphQL document root to find GraphQL schema items in.</param>
         /// <param name="databaseType">Type of database we're generating the field for.</param>
         /// <param name="entity">Runtime config information for the type.</param>
+        /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
         /// <returns>A GraphQL field definition named <c>create*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
         public static FieldDefinitionNode Build(
             NameNode name,
@@ -215,7 +224,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             DocumentNode root,
             DatabaseType databaseType,
-            Entity entity)
+            Entity entity,
+            IEnumerable<string>? rolesAllowedForMutation = null)
         {
             InputObjectTypeDefinitionNode input = GenerateCreateInputType(
                 inputs,
@@ -224,6 +234,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),
                 databaseType,
                 entity);
+
+            // Create authorize directive denoting allowed roles
+            List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+            if (rolesAllowedForMutation is not null)
+            {
+                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForMutation));
+            }
 
             return new(
                 location: null,
@@ -239,7 +256,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     new List<DirectiveNode>())
                 },
                 new NamedTypeNode(FormatNameForObject(name, entity)),
-                new List<DirectiveNode>()
+                fieldDefinitionNodeDirectives
             );
         }
     }

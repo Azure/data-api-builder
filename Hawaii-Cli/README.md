@@ -37,7 +37,7 @@ hawaii init -name <<filename>> --database-type <<db_type>> --connection-string <
 ```
 ### Add entity to the config:
 ```
-hawaii add <<entity>> -source <<source.DB>> --rest <<rest_route>> --graphql <<graphql_type>> --permission <<rules:actions>>
+hawaii add <<entity>> -source <<source.DB>> --rest <<rest_route>> --graphql <<graphql_type>> --permissions <<rules:actions>>
 ```
 ### Update entity to the config:
 ```
@@ -62,11 +62,11 @@ Generate config with some permissions and relationship
 ```
 hawaii init --name todo-005 --database-type mssql --connection-string ""
 
-hawaii add todo --name todo-005 --source s005.todos --permission "authenticated:*" 
+hawaii add todo --name todo-005 --source s005.todos --permissions "authenticated:*" 
 
-hawaii add user --name todo-005 --source s005.users --permission "authenticated:*" 
+hawaii add user --name todo-005 --source s005.users --permissions "authenticated:*" 
 
-hawaii add category --name todo-005 --source s005.categories  --permission "authenticated:read"
+hawaii add category --name todo-005 --source s005.categories  --permissions "authenticated:read"
 
 hawaii update category --name todo-005 --graphql category
 

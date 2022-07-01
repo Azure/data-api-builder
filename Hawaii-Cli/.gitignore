@@ -6,6 +6,8 @@
 # Generated Files
 **/bin
 **/obj
+/coveragereport
+**/TestResults
 
 # Local History for Visual Studio
 .localhistory/

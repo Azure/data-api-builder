@@ -1,3 +1,5 @@
+using System.Buffers;
+using System.Reflection.Metadata.Ecma335;
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using static Hawaii.Cli.Models.Utils;
@@ -10,6 +12,7 @@ namespace Hawaii.Cli.Models
     /// </summary>
     public class ConfigGenerator
     {
+
         /// <summary>
         /// This method will generate the initial config with databaseType and connection-string.
         /// </summary>
@@ -18,22 +21,13 @@ namespace Hawaii.Cli.Models
             string runtimeConfigJson;
             if (!TryCreateRuntimeConfig(options, out runtimeConfigJson))
             {
+                Console.Error.Write($"Failed to create the runtime config file.");
                 return false;
             }
 
             string file = $"{options.Name}.json";
 
-            try
-            {
-                File.WriteAllText(file, runtimeConfigJson);
-            }
-            catch (Exception e)
-            {
-                Console.Error.WriteLine($"Failed to Generate the config file, operation failed with exception:{e}.");
-                return false;
-            }
-
-            return true;
+            return WriteJsonContentToFile(file, runtimeConfigJson);
         }
 
         /// <summary>
@@ -65,7 +59,7 @@ namespace Hawaii.Cli.Models
                     string? graphQLSchemaPath = options.GraphQLSchemaPath;
                     if (string.IsNullOrEmpty(cosmosDatabase) || string.IsNullOrEmpty(graphQLSchemaPath))
                     {
-                        Console.WriteLine($"Please provide all the mandatory options for CosmosDB: --cosmos-database, --graphql-schema");
+                        Console.WriteLine($"Please provide the mandatory options for CosmosDB: --cosmos-database");
                         return false;
                     }
 
@@ -89,24 +83,16 @@ namespace Hawaii.Cli.Models
                     return false;
             }
 
-            RuntimeConfig runtimeConfig;
-            try
-            {
-                runtimeConfig = new RuntimeConfig(
-                    Schema: RuntimeConfig.SCHEMA,
-                    DataSource: dataSource,
-                    CosmosDb: cosmosDbOptions,
-                    MsSql: msSqlOptions,
-                    PostgreSql: postgreSqlOptions,
-                    MySql: mySqlOptions,
-                    RuntimeSettings: GetDefaultGlobalSettings(dbType, options.HostMode),
-                    Entities: new Dictionary<string, Entity>());
-            }
-            catch (NotSupportedException e)
-            {
-                Console.WriteLine($"{e}");
-                return false;
-            }
+            RuntimeConfig runtimeConfig = new (
+                Schema: RuntimeConfig.SCHEMA,
+                DataSource: dataSource,
+                CosmosDb: cosmosDbOptions,
+                MsSql: msSqlOptions,
+                PostgreSql: postgreSqlOptions,
+                MySql: mySqlOptions,
+                RuntimeSettings: GetDefaultGlobalSettings(dbType, options.HostMode),
+                Entities: new Dictionary<string, Entity>());
+
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
             return true;
@@ -123,25 +109,17 @@ namespace Hawaii.Cli.Models
             string runtimeConfigJson;
             if (!TryReadRuntimeConfig(file, out runtimeConfigJson))
             {
+                Console.Error.Write($"Failed to read the config file: {file}.");
                 return false;
             }
 
             if (!TryAddNewEntity(options, ref runtimeConfigJson))
             {
+                Console.Error.Write("Failed to add a new entity.");
                 return false;
             }
 
-            try
-            {
-                File.WriteAllText(file, runtimeConfigJson);
-            }
-            catch (Exception e)
-            {
-                Console.Error.WriteLine($"Failed to Generate the config file, operation failed with exception:{e}.");
-                return false;
-            }
-
-            return true;
+            return WriteJsonContentToFile(file, runtimeConfigJson);
         }
 
         /// <summary>
@@ -153,9 +131,22 @@ namespace Hawaii.Cli.Models
         /// <returns>True on success. False otherwise.</returns>
         public static bool TryAddNewEntity(AddOptions options, ref string runtimeConfigJson)
         {
-            // Deserialize the content to RuntimeConfig.
+            // Deserialize the json string to RuntimeConfig object.
             //
-            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigJson, GetSerializationOptions());
+            RuntimeConfig? runtimeConfig;
+            try
+            {
+                runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigJson, GetSerializationOptions());
+                if (runtimeConfig is null)
+                {
+                    throw new Exception("Failed to parse the runtime config file.");
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Failed with exception: {e}.");
+                return false;
+            }
 
             // If entity exist, we cannot add. Just exit.
             //
@@ -202,19 +193,18 @@ namespace Hawaii.Cli.Models
         /// <returns></returns>
         public static PermissionSetting[]? ParsePermission(string permissions, string? fieldsToInclude, string? fieldsToExclude)
         {
-            // Split permission to role and actions
+            // Getting Role and Actions from permission string
             //
-            string[] permission_array = permissions.Split(":");
-            if (permission_array.Length != 2)
+            string? role, actions;
+            if(!TryGetRoleAndActionFromPermissionString(permissions, out role, out actions))
             {
+                Console.Error.Write($"Failed to fetch the role and action from the given permission string: {permissions}.");
                 return null;
             }
 
-            string role = permission_array[0];
-            string actions = permission_array[1];
             PermissionSetting[] permissionSettings = new PermissionSetting[]
             {
-                CreatePermissions(role, actions, fieldsToInclude, fieldsToExclude)
+                CreatePermissions(role!, actions!, fieldsToInclude, fieldsToExclude)
             };
 
             return permissionSettings;
@@ -222,9 +212,36 @@ namespace Hawaii.Cli.Models
 
         /// <summary>
         /// This method will update an existing Entity with the given REST and GraphQL endpoints, source, and permissions.
-        /// It also supports adding a new relationship as well as updating an existing one.
+        /// It also supports updating fields that need to be included or excluded for a given role and action.
         /// </summary>
         public static bool TryUpdateEntityWithOptions(UpdateOptions options)
+        {
+            string file = $"{options.Name}.json";
+
+            string runtimeConfigJson;
+            if (!TryReadRuntimeConfig(file, out runtimeConfigJson))
+            {
+                Console.Error.Write($"Failed to read the config file: {file}.");
+                return false;
+            }
+
+            if (!TryUpdateExistingEntity(options, ref runtimeConfigJson))
+            {
+                Console.Error.Write($"Failed to update the Entity: {options.Entity}.");
+                return false;
+            }
+
+            return WriteJsonContentToFile(file, runtimeConfigJson);
+        }
+
+        /// <summary>
+        /// Update an existing entity in the runtime config json.
+        /// On successful return of the function, runtimeConfigJson will be modified.
+        /// </summary>
+        /// <param name="options">UpdateOptions.</param>
+        /// <param name="runtimeConfigJson">Json string of existing runtime config. This will be modified on successful return.</param>
+        /// <returns>True on success. False otherwise.</returns>
+        public static bool TryUpdateExistingEntity(UpdateOptions options, ref string runtimeConfigJson)
         {
             string? source = options.Source;
             string? rest = options.RestRoute;
@@ -235,303 +252,329 @@ namespace Hawaii.Cli.Models
             string? relationship = options.Relationship;
             string? cardinality = options.Cardinality;
             string? targetEntity = options.TargetEntity;
-            string? linkingObject = options.LinkingObject;
-            string? linkingSourceFields = options.LinkingSourceFields;
-            string? linkingTargetFields = options.LinkingTargetFields;
-            string? mappingFields = options.MappingFields;
 
-            string file = $"{options.Name}.json";
-            string runtimeConfigJson;
-            if (!TryReadRuntimeConfig(file, out runtimeConfigJson))
+            // Deserialize the json string to RuntimeConfig object.
+            //
+            RuntimeConfig? runtimeConfig;
+            try
             {
+                runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigJson, GetSerializationOptions());
+                if (runtimeConfig is null)
+                {
+                    throw new Exception("Failed to parse the runtime config file.");
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Failed with exception: {e}.");
                 return false;
             }
 
-            // Deserialize the content to RuntimeConfig.
+            // Check if Entity is present
             //
-            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigJson, GetSerializationOptions());
-
-            Entity updatedEntity = runtimeConfig!.Entities[options.Entity];
-            if (source is not null)
+            Entity? entity;
+            bool IsEntityPresent = runtimeConfig.Entities.TryGetValue(options.Entity, out entity);
+            if (!IsEntityPresent)
             {
-                updatedEntity = new Entity(source, updatedEntity.Rest, updatedEntity.GraphQL, updatedEntity.Permissions, updatedEntity.Relationships, updatedEntity.Mappings);
+                Console.WriteLine($"Entity:{options.Entity} not found. Please add the entity first.");
+                return false;
             }
 
-            if (rest is not null)
-            {
-                updatedEntity = new Entity(updatedEntity.Source, GetRestDetails(rest), updatedEntity.GraphQL, updatedEntity.Permissions, updatedEntity.Relationships, updatedEntity.Mappings);
-            }
-
-            if (graphQL is not null)
-            {
-                updatedEntity = new Entity(updatedEntity.Source, updatedEntity.Rest, GetGraphQLDetails(graphQL), updatedEntity.Permissions, updatedEntity.Relationships, updatedEntity.Mappings);
-            }
+            object updatedSource = source is null ? entity!.Source : source;
+            object? updatedRestDetails = rest is null ? entity!.Rest : GetRestDetails(rest);
+            object? updatedGraphqlDetails = graphQL is null ? entity!.GraphQL : GetGraphQLDetails(graphQL);
+            PermissionSetting[]? updatedPermissions = entity!.Permissions;
+            Dictionary<string, Relationship>? updatedRelationships = entity.Relationships;
+            Dictionary<string, string>? updatedMappings = entity.Mappings;
 
             if (permissions is not null)
             {
-                string[] permission_array = permissions.Split(":");
-                if (permission_array.Length is not 2)
+                // Get the Updated Permission Settings
+                //
+                updatedPermissions = GetUpdatedPermissionSettings(entity, permissions, fieldsToInclude, fieldsToExclude);
+
+                if (updatedPermissions is null)
                 {
-                    Console.WriteLine("Please add permission in the following format. --permission \"<<role>>:<<actions>>\"");
+                    Console.WriteLine($"Failed to update permissions.");
                     return false;
                 }
-
-                string new_role = permission_array[0];
-                string new_action = permission_array[1];
-                PermissionSetting? dict = Array.Find(updatedEntity.Permissions, item => item.Role == new_role);
-                PermissionSetting[] updatedPermissions;
-                List<PermissionSetting> permissionSettingsList = new();
-                if (dict is null)
-                {
-                    updatedPermissions = AddNewPermissions(updatedEntity.Permissions, new_role, new_action, fieldsToInclude, fieldsToExclude);
-                }
-                else
-                {
-                    string[] new_action_elements = new_action.Split(",");
-                    if (new_action_elements.Length > 1)
-                    {
-                        Console.WriteLine($"ERROR: we currently support updating only one action operation.");
-                        return false;
-                    }
-
-                    string new_action_element = new_action;
-                    foreach (PermissionSetting permission in updatedEntity.Permissions)
-                    {    //Loop through current permissions for an entity.
-                        if (permission.Role == new_role)
-                        { // Updating an existing permission
-                            string operation = GetCRUDOperation((JsonElement)permission.Actions[0]);
-                            if (permission.Actions.Length == 1 && "*".Equals(operation))
-                            { // if the role had only one action and that is "*"
-                                if (operation == new_action_element)
-                                { // if the new and old action is "*"
-                                    permissionSettingsList.Add(CreatePermissions(permission.Role, "*", fieldsToInclude, fieldsToExclude));
-                                }
-                                else
-                                { // if the new action is other than "*"
-                                    List<Action> action_list = new();
-                                    //looping through all the CRUD operations and updating the one which is asked
-                                    foreach (string op in Enum.GetNames(typeof(CRUD)))
-                                    {
-                                        if (op.Equals(new_action_element))
-                                        { //if the current crud operation is equal to the asked crud operation
-                                            action_list.Add(GetAction(op, fieldsToInclude, fieldsToExclude));
-                                        }
-                                        else
-                                        {    // else we just create a new node and add it with existing properties
-                                            if (!JsonValueKind.String.Equals(((JsonElement)permission.Actions[0]).ValueKind))
-                                            {
-                                                Field? fields_dict = ToActionObject((JsonElement)permission.Actions[0])!.Fields;
-                                                action_list.Add(new Action(op, Policy: null, Fields: new Field(fields_dict!.Include, fields_dict!.Exclude)));
-                                            }
-                                            else
-                                            {
-                                                action_list.Add(new Action(op, Policy: null, Fields: null));
-                                            }
-                                        }
-                                    }
-
-                                    permissionSettingsList.Add(new PermissionSetting(permission.Role, action_list.ToArray()));
-                                }
-                            }
-                            else
-                            {
-                                if ("*".Equals(new_action_element))
-                                {
-                                    permissionSettingsList.Add(new PermissionSetting(permission.Role, CreateActions(new_action_element, fieldsToInclude, fieldsToExclude)));
-                                }
-                                else
-                                {
-                                    List<object> action_list = new();
-                                    bool existing_action_element = false;
-                                    foreach (JsonElement action_element in permission.Actions)
-                                    {
-                                        operation = GetCRUDOperation(action_element);
-                                        if (new_action_element.Equals(operation))
-                                        {
-                                            action_list.Add(GetAction(operation, fieldsToInclude, fieldsToExclude));
-                                            existing_action_element = true;
-                                        }
-                                        else
-                                        {
-                                            action_list.Add(action_element);
-                                        }
-                                    }
-
-                                    if (!existing_action_element)
-                                    {
-                                        action_list.Add(GetAction(new_action_element, fieldsToInclude, fieldsToExclude));
-                                    }
-
-                                    permissionSettingsList.Add(new PermissionSetting(permission.Role, action_list.ToArray()));
-                                }
-                            }
-                        }
-                        else
-                        { //Adding a new permission
-                            permissionSettingsList.Add(permission);
-                        }
-                    }
-
-                    updatedPermissions = permissionSettingsList.ToArray();
-                }
-
-                updatedEntity = new Entity(updatedEntity.Source, updatedEntity.Rest, updatedEntity.GraphQL, updatedPermissions, updatedEntity.Relationships, updatedEntity.Mappings);
             }
             else
             {
                 if (fieldsToInclude is not null || fieldsToExclude is not null)
                 {
-                    Console.WriteLine($"please provide the role and action name to apply this update to.");
-                    return true;
+                    Console.WriteLine($"--permission is mandatory with --fields.include and --fields.exclude.");
+                    return false;
                 }
             }
 
             if (relationship is not null)
             {
-                //if it's an existing relation
-                if (updatedEntity.Relationships is not null && updatedEntity.Relationships.ContainsKey(relationship))
+                if (!VerifyCanUpdateRelationship(runtimeConfig, cardinality, targetEntity))
                 {
-                    Relationship currentRelationship = updatedEntity.Relationships[relationship];
-                    Dictionary<string, Relationship> relationship_mapping = new();
-                    Relationship updatedRelationship = currentRelationship;
-                    if (cardinality is not null)
-                    {
-                        Cardinality cardinalityType;
-                        try
-                        {
-                            cardinalityType = GetCardinalityTypeFromString(cardinality);
-                        }
-                        catch (System.NotSupportedException)
-                        {
-                            Console.WriteLine($"Given Cardinality: {cardinality} not supported. Currently supported options: one or many.");
-                            return false;
-                        }
-
-                        updatedRelationship = new Relationship(cardinalityType, updatedRelationship.TargetEntity, updatedRelationship.SourceFields, updatedRelationship.TargetFields, updatedRelationship.LinkingObject, updatedRelationship.LinkingSourceFields, updatedRelationship.LinkingTargetFields);
-                    }
-
-                    if (targetEntity is not null)
-                    {
-                        if (!runtimeConfig.Entities.ContainsKey(targetEntity))
-                        {
-                            Console.WriteLine($"Entity:{targetEntity} is not present. No new changes are added to Config.");
-                            return false;
-                        }
-
-                        updatedRelationship = new Relationship(updatedRelationship.Cardinality, targetEntity, updatedRelationship.SourceFields, updatedRelationship.TargetFields, updatedRelationship.LinkingObject, updatedRelationship.LinkingSourceFields, updatedRelationship.LinkingTargetFields);
-                    }
-
-                }
-                else
-                {    // if it's a new relationship
-                    if (cardinality is not null && targetEntity is not null)
-                    {
-                        Dictionary<string, Relationship> relationship_mapping = updatedEntity.Relationships is null ? new Dictionary<string, Relationship>() : updatedEntity.Relationships;
-                        Cardinality cardinalityType;
-                        try
-                        {
-                            cardinalityType = GetCardinalityTypeFromString(cardinality);
-                        }
-                        catch (System.NotSupportedException)
-                        {
-                            Console.WriteLine($"Given Cardinality: {cardinality} not supported. Currently supported options: one or many.");
-                            return false;
-                        }
-
-                        if (!runtimeConfig.Entities.ContainsKey(targetEntity))
-                        {
-                            Console.WriteLine($"Entity:{targetEntity} is not present. No new changes are added to Config.");
-                            return false;
-                        }
-
-                        relationship_mapping.Add(relationship, new Relationship(cardinalityType, targetEntity,
-                                                                                    SourceFields: null, TargetFields: null,
-                                                                                    LinkingObject: null, LinkingSourceFields: null,
-                                                                                    LinkingTargetFields: null));
-
-                        updatedEntity = new Entity(updatedEntity.Source, updatedEntity.Rest, updatedEntity.GraphQL, updatedEntity.Permissions, relationship_mapping, updatedEntity.Mappings);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"ERROR: For adding a new relationship following options are mandatory: --relationship, --cardinality, --target.entity.");
-                        return false;
-                    }
-                }
-
-                if (mappingFields is not null)
-                {
-                    string[]? sourceAndTargetFields = null;
-                    string[]? sourceFields = null;
-                    string[]? targetFields = null;
-
-                    sourceAndTargetFields = mappingFields.Split(":");
-                    if (sourceAndTargetFields.Length is not 2)
-                    {
-                        Console.WriteLine($"ERROR: Please use correct format for --mappings.fields, It should be \"<<source.fields>>:<<target.fields>>\".");
-                        return false;
-                    }
-
-                    sourceFields = sourceAndTargetFields[0].Split(",");
-                    targetFields = sourceAndTargetFields[1].Split(",");
-
-                    Relationship updatedRelationship = updatedEntity.Relationships![relationship];
-                    updatedRelationship = new Relationship(updatedRelationship.Cardinality, updatedRelationship.TargetEntity,
-                                                            sourceFields, targetFields, updatedRelationship.LinkingObject,
-                                                            updatedRelationship.LinkingSourceFields, updatedRelationship.LinkingTargetFields);
-
-                    updatedEntity.Relationships[relationship] = updatedRelationship;
-                }
-
-                if (linkingObject is not null && linkingSourceFields is not null && linkingTargetFields is not null)
-                {
-                    string[] linkingSourceFieldsArray = linkingSourceFields.Split(",");
-                    string[] linkingTargetFieldsArray = linkingTargetFields.Split(",");
-
-                    Relationship updatedRelationship = updatedEntity.Relationships![relationship];
-                    updatedRelationship = new Relationship(updatedRelationship.Cardinality, updatedRelationship.TargetEntity,
-                                                            updatedRelationship.SourceFields, updatedRelationship.TargetFields,
-                                                            linkingObject, linkingSourceFieldsArray, linkingTargetFieldsArray);
-
-                    updatedEntity.Relationships[relationship] = updatedRelationship;
-                }
-                else if (linkingObject is not null || linkingSourceFields is not null || linkingTargetFields is not null)
-                {
-                    Console.WriteLine($"ERROR: Please provide --linking.object, --linking.source.fields, and --linking.target.fields to add the linking object.");
                     return false;
                 }
 
+                if (updatedRelationships is null)
+                {
+                    updatedRelationships = new();
+                }
+
+                Relationship? new_relationship = CreateNewRelationshipWithUpdateOptions(options);
+                if(new_relationship is null) {
+                    return false;
+                }
+
+                updatedRelationships[relationship] = new_relationship;
             }
 
-            runtimeConfig.Entities[options.Entity] = updatedEntity;
-
+            runtimeConfig.Entities[options.Entity] = new Entity(updatedSource,
+                                                                updatedRestDetails,
+                                                                updatedGraphqlDetails,
+                                                                updatedPermissions,
+                                                                updatedRelationships,
+                                                                updatedMappings);
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
-            File.WriteAllText(file, runtimeConfigJson);
+            return true;
+        }
+
+        /// <summary>
+        /// Get an array of PermissionSetting by merging the existing permissions of an entity with new permissions.
+        /// If a role has existing permission and user updates permission of that role,
+        /// the old permission will be overwritten. Otherwise, a new permission of the role will be added.
+        /// </summary>
+        /// <param name="entityToUpdate">entity whose permission needs to be updated</param>
+        /// <param name="permissions">New permission to be applied.</param>
+        /// <param name="fieldsToInclude">fields to allow the action permission</param>
+        /// <param name="fieldsToExclude">fields that will be excluded from the action permission.</param>
+        /// <returns> On failure, returns null. Else updated PermissionSettings array will be returned.</returns>
+        private static PermissionSetting[]? GetUpdatedPermissionSettings(Entity entityToUpdate,
+                                                                        string permissions,
+                                                                        string? fieldsToInclude,
+                                                                        string? fieldsToExclude)
+        {
+            string? newRole, newActions;
+
+            // Parse role and actions from the permissions string
+            //
+            if(!TryGetRoleAndActionFromPermissionString(permissions, out newRole, out newActions))
+            {
+                Console.Error.Write($"Failed to fetch the role and action from the given permission string: {permissions}.");
+                return null;
+            }
+
+            List<PermissionSetting> updatedPermissionsList = new();
+            string[] newActionArray = newActions!.Split(",");
+
+            if(newActionArray.Length > 1 && newActionArray.ToHashSet().Contains(WILDCARD))
+            {
+                Console.Error.WriteLine("\"*\" along with other CRUD operations in a single update is not allowed.");
+                return null;
+            }
+
+            bool role_found = false;
+            // Loop through the current permissions
+            foreach (PermissionSetting permission in entityToUpdate.Permissions)
+            {
+                // Find the role that needs to be updated
+                if (permission.Role.Equals(newRole!))
+                {
+                    role_found = true;
+                    if (newActionArray.Length is 1 && WILDCARD.Equals(newActionArray[0]))
+                    {
+                        // If the user inputs WILDCARD as actions, we overwrite the existing actions.
+                        //
+                        updatedPermissionsList.Add(CreatePermissions(newRole!, WILDCARD, fieldsToInclude, fieldsToExclude));
+                    }
+                    else
+                    {
+                        // User didn't use WILDCARD, and wants to update some of the CRUD actions.
+                        //
+                        List<object> actionList = permission.Actions.ToList();
+                        if (permission.Actions.Length is 1 && GetCRUDOperation((JsonElement)permission.Actions[0]) is WILDCARD)
+                        {
+                            // Expanding WILDCARD operation to all the CRUD operations before updating.
+                            //
+                            actionList = ExpandWildcardToAllCRUDActions(permission);
+                        }
+
+                        // updating the current action list
+                        object[] updatedActionArray = GetUpdatedActionArray(newActionArray, fieldsToInclude, fieldsToExclude, actionList);
+
+                        if(updatedActionArray is null)
+                        {
+                            Console.Error.WriteLine("Failed to get the updated Action list.");
+                            return null;
+                        }
+
+                        updatedPermissionsList.Add(new PermissionSetting(newRole, updatedActionArray));
+                    }
+                }
+                else
+                {
+                    updatedPermissionsList.Add(permission);
+                }
+            }
+
+            // if the role we are trying to update is not found, we create a new one
+            // and add it to permissionSettings list.
+            if (!role_found)
+            {
+                updatedPermissionsList.Add(CreatePermissions(newRole!, newActions!, fieldsToInclude, fieldsToExclude));
+            }
+
+            return updatedPermissionsList.ToArray();
+        }
+
+        /// <summary>
+        /// This Method will expand Wildcard("*") to all the CRUD actions.
+        /// It is useful in cases where we need to update some of the actions.
+        /// </summary>
+        /// <param name="permission">permission which needs to be updated</param>
+        /// <returns>List of all the CRUD objects</returns>
+        private static List<object> ExpandWildcardToAllCRUDActions(PermissionSetting permission)
+        {
+            List<object> actionList = new();
+            Action? action = ToActionObject((JsonElement)permission.Actions[0]);
+
+            if (action!.Fields is null)
+            {
+                actionList = Enum.GetNames(typeof(CRUD)).ToList<object>();
+            }
+            else
+            {
+                foreach (string op in Enum.GetNames(typeof(CRUD)))
+                {
+                    // TODO: Add Support for Policy in Action
+                    //
+                    actionList.Add(new Action(op, Policy: null, Fields: new Field(action.Fields.Include, action.Fields.Exclude)));
+                }
+            }
+
+            return actionList;
+        }
+
+        /// <summary>
+        /// Merge old and new actions into a new list. Take all new updated actions.
+        /// Only add existing actions to the merged list if there is no update.
+        /// </summary>
+        ///
+        /// <param name="newActions">action items to update received from user.</param>
+        /// <param name="fieldsToInclude">fields to allow the action permission</param>
+        /// <param name="fieldsToExclude">fields that will be excluded form the action permission.</param>
+        /// <param name="existingActions">action items present in the config.</param>
+        /// <returns>Array of updated Action objects</returns>
+        private static object[] GetUpdatedActionArray(  string[] newActions,
+                                                        string? fieldsToInclude,
+                                                        string? fieldsToExclude,
+                                                        List<object> existingActions)
+        {
+            // a new list to store merged result.
+            List<object> updatedActionList = new();
+
+            // create a hash table of new action
+            HashSet<string> newActionSet = newActions.ToHashSet();
+
+            // Adding the new Actions in the updatedActionList
+            foreach (string action in newActionSet) {
+                updatedActionList.Add(GetAction(action, fieldsToInclude, fieldsToExclude));
+            }
+
+            // Looping through existing actions
+            foreach (object action in existingActions)
+            {
+                // getting action name from action object
+                string actionName = GetCRUDOperation(JsonSerializer.SerializeToElement(action));
+
+                // if any existing action doesn't require update, it is added as it is.
+                if (!newActionSet.Contains(actionName))
+                {
+                    updatedActionList.Add(action);
+                }
+            }
+
+            return updatedActionList.ToArray();
+        }
+
+        /// <summary>
+        /// This Method will verify the params required to update relationship info of an entity.
+        /// </summary>
+        /// <param name="runtimeConfig">runtime config object</param>
+        /// <param name="cardinality">cardinality provided by user for update</param>
+        /// <param name="targetEntity">name of the target entity for relationship</param>
+        /// <returns>Boolean value specifying if given params for update is possible</returns>
+        public static bool VerifyCanUpdateRelationship(RuntimeConfig runtimeConfig, string? cardinality, string? targetEntity)
+        {
+            // Checking if both cardinality and targetEntity is provided.
+            //
+            if (cardinality is null || targetEntity is null)
+            {
+                Console.WriteLine("cardinality and target entity is mandatory to update/add a relationship.");
+                return false;
+            }
+
+            // Both the source entity and target entity needs to present in config to establish relationship.
+            //
+            if (!runtimeConfig.Entities.ContainsKey(targetEntity))
+            {
+                Console.WriteLine($"Entity:{targetEntity} is not present. Relationship cannot be added.");
+                return false;
+            }
+
+            // Check if provided value of cardinality is present in the enum.
+            //
+            if (!string.Equals(cardinality, Cardinality.One.ToString(), StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(cardinality, Cardinality.Many.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"Failed to parse the given cardinality : {cardinality}. Supported values are one/many.");
+                return false;
+            }
 
             return true;
         }
 
         /// <summary>
-        /// Try to read and deserialize runtime config from a file.
+        /// This Method will create a new Relationship Object based on the given UpdateOptions.
         /// </summary>
-        /// <param name="file">File path.</param>
-        /// <param name="runtimeConfig">Runtime config output. On failure, this will be null.</param>
-        /// <returns>True on success. On failure, return false and runtimeConfig will be set to null.</returns>
-        private static bool TryReadRuntimeConfig(string file, out string runtimeConfigJson)
+        /// <param name="options">update options </param>
+        /// <returns>Returns a Relationship Object</returns>
+        public static Relationship? CreateNewRelationshipWithUpdateOptions(UpdateOptions options)
         {
-            runtimeConfigJson = string.Empty;
+            string? cardinality = options.Cardinality;
+            string? targetEntity = options.TargetEntity;
+            string? linkingObject = options.LinkingObject;
+            string? linkingSourceFields = options.LinkingSourceFields;
+            string? linkingTargetFields = options.LinkingTargetFields;
+            string? mappingFields = options.MappingFields;
+            string[]? updatedSourceFields = null;
+            string[]? updatedTargetFields = null;
+            string[]? updatedLinkingSourceFields = linkingSourceFields is null ? null : linkingSourceFields.Split(",");
+            string[]? updatedLinkingTargetFields = linkingTargetFields is null ? null : linkingTargetFields.Split(",");
 
-            if (!File.Exists(file))
+            Cardinality updatedCardinality = Enum.Parse<Cardinality>(cardinality!, ignoreCase: true);
+
+            if (mappingFields is not null)
             {
-                Console.WriteLine($"ERROR: Couldn't find config  file: {file}.");
-                Console.WriteLine($"Please run: hawaii init <options> to create a new config file.");
+                // Getting source and target fields from mapping fields
+                //
+                string[] mappingFieldsArray = mappingFields.Split(":");
+                if (mappingFieldsArray.Length != 2)
+                {
+                    Console.WriteLine("Please provide the --mapping.fields in the correct format using ':' between source and target fields.");
+                    return null;
+                }
 
-                return false;
+                updatedSourceFields = mappingFieldsArray[0].Split(",");
+                updatedTargetFields = mappingFieldsArray[1].Split(",");
             }
 
-            // Read existing config file content.
-            //
-            runtimeConfigJson = File.ReadAllText(file);
-            return true;
+            return new Relationship(updatedCardinality,
+                                    targetEntity!,
+                                    updatedSourceFields,
+                                    updatedTargetFields,
+                                    linkingObject,
+                                    updatedLinkingSourceFields,
+                                    updatedLinkingTargetFields);
         }
     }
 }

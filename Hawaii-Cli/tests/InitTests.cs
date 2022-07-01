@@ -25,8 +25,7 @@ namespace Hawaii.Cli.Tests
                 name: "outputfile");
 
             string expectedRuntimeConfig =
-            @"
-{
+            @"{
   ""$schema"": ""hawaii.draft-01.schema.json"",
   ""data-source"": {
     ""database-type"": ""mssql"",
@@ -38,7 +37,7 @@ namespace Hawaii.Cli.Tests
   ""runtime"": {
     ""rest"": {
       ""enabled"": true,
-      ""path"": ""/""
+      ""path"": ""/api""
     },
     ""graphql"": {
       ""allow-introspection"": true,
@@ -49,21 +48,15 @@ namespace Hawaii.Cli.Tests
       ""mode"": ""development"",
       ""cors"": {
         ""origins"": [],
-        ""allow-credentials"": true
+        ""allow-credentials"": false
       },
       ""authentication"": {
-        ""provider"": ""EasyAuth"",
-        ""jwt"": {
-          ""audience"": """",
-          ""issuer"": """",
-          ""issuerkey"": """"
-        }
+        ""provider"": ""EasyAuth""
       }
     }
   },
   ""entities"": {}
-}
-";
+}";
 
             RunTest(options, expectedRuntimeConfig);
         }
@@ -83,8 +76,7 @@ namespace Hawaii.Cli.Tests
                 hostMode: HostModeType.Production,
                 name: "outputfile");
 
-            string expectedRuntimeConfig = @"
-{
+            string expectedRuntimeConfig = @"{
   ""$schema"": ""hawaii.draft-01.schema.json"",
   ""data-source"": {
     ""database-type"": ""cosmos"",
@@ -98,7 +90,7 @@ namespace Hawaii.Cli.Tests
   ""runtime"": {
     ""rest"": {
       ""enabled"": false,
-      ""path"": ""/""
+      ""path"": ""/api""
     },
     ""graphql"": {
       ""allow-introspection"": true,
@@ -109,21 +101,15 @@ namespace Hawaii.Cli.Tests
       ""mode"": ""production"",
       ""cors"": {
         ""origins"": [],
-        ""allow-credentials"": true
+        ""allow-credentials"": false
       },
       ""authentication"": {
-        ""provider"": ""EasyAuth"",
-        ""jwt"": {
-          ""audience"": """",
-          ""issuer"": """",
-          ""issuerkey"": """"
-        }
+        ""provider"": ""EasyAuth""
       }
     }
   },
   ""entities"": {}
-}
-";
+}";
 
             RunTest(options, expectedRuntimeConfig);
         }

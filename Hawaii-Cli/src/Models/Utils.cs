@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Config;
 using Humanizer;
+using Hawaii.Cli.Models;
 using Action = Azure.DataGateway.Config.Action;
 
 /// <summary>
@@ -18,6 +19,8 @@ namespace Hawaii.Cli.Models
     }
     public class Utils
     {
+        public const string WILDCARD = "*";
+
         /// <summary>
         /// creates the rest object which can be either a boolean value
         /// or a RestEntitySettings object containing api route based on the input
@@ -83,6 +86,11 @@ namespace Hawaii.Cli.Models
         /// </summary>
         public static Action? ToActionObject(JsonElement element)
         {
+            if (element.ValueKind is JsonValueKind.String)
+            {
+                return new Action(element.GetRawText(), Policy: null, Fields: null);
+            }
+
             string json = element.GetRawText();
             return JsonSerializer.Deserialize<Action>(json);
         }
@@ -99,7 +107,7 @@ namespace Hawaii.Cli.Models
                 return actions.Split(",");
             }
 
-            if ("*".Equals(actions))
+            if (actions is WILDCARD)
             {
                 action_items = new object[] { GetAction(actions, fieldsToInclude, fieldsToExclude) };
             }
@@ -135,18 +143,6 @@ namespace Hawaii.Cli.Models
         }
 
         /// <summary>
-        /// Add a new PermissionSetting object(based on role, actions, fieldsToInclude, and fieldsToExclude) in the existing array of PermissionSetting.
-        /// returns the updated array of PermissionSetting.
-        /// </summary>
-        public static PermissionSetting[] AddNewPermissions(PermissionSetting[] currentPermissions, string role, string actions, string? fieldsToInclude, string? fieldsToExclude)
-        {
-            List<PermissionSetting>? currentPermissionsList = currentPermissions.ToList();
-            PermissionSetting? permissionSetting = CreatePermissions(role, actions, fieldsToInclude, fieldsToExclude);
-            currentPermissionsList.Add(permissionSetting);
-            return currentPermissionsList.ToArray();
-        }
-
-        /// <summary>
         /// JsonNamingPolicy to convert all the keys in Json as lower case string.
         /// </summary>
         public class LowerCaseNamingPolicy : JsonNamingPolicy
@@ -167,8 +163,7 @@ namespace Hawaii.Cli.Models
             {
                 WriteIndented = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                PropertyNamingPolicy = new LowerCaseNamingPolicy(),
-                PropertyNameCaseInsensitive = true
+                PropertyNamingPolicy = new LowerCaseNamingPolicy()
             };
 
             options.Converters.Add(new JsonStringEnumConverter(namingPolicy: new LowerCaseNamingPolicy()));
@@ -180,27 +175,12 @@ namespace Hawaii.Cli.Models
         /// </summary>
         public static string GetCRUDOperation(JsonElement op)
         {
-            if (JsonValueKind.String.Equals(op.ValueKind))
+            if (op.ValueKind is JsonValueKind.String)
             {
                 return op.ToString();
             }
 
             return ToActionObject(op)!.Name;
-        }
-
-        /// <summary>
-        /// returns the Cardinality from the given string(one, or many).
-        /// </summary>
-        public static Cardinality GetCardinalityTypeFromString(string cardinality)
-        {
-            if ("one".Equals(cardinality, StringComparison.OrdinalIgnoreCase))
-                return Cardinality.One;
-            else if ("many".Equals(cardinality, StringComparison.OrdinalIgnoreCase))
-                return Cardinality.Many;
-            else
-            {
-                throw new NotSupportedException();
-            }
         }
 
         /// <summary>
@@ -234,20 +214,81 @@ namespace Hawaii.Cli.Models
         //         "allow-credentials": true
         //     },
         //     "authentication": {
-        //         "provider": "EasyAuth",
-        //         "jwt": {
-        //         "audience": "",
-        //         "issuer": "",
-        //         "issuerkey": ""
-        //         }
+        //         "provider": "EasyAuth"
         //     }
         // }
         /// </summary>
         public static HostGlobalSettings GetDefaultHostGlobalSettings(HostModeType hostMode)
         {
             Cors cors = new(new string[] { });
-            AuthenticationConfig authenticationConfig = new(Jwt: new Jwt(Audience: string.Empty, Issuer: string.Empty, IssuerKey: string.Empty));
+            AuthenticationConfig authenticationConfig = new();
             return new HostGlobalSettings(hostMode, cors, authenticationConfig);
+        }
+
+        /// <summary>
+        /// Try to read and deserialize runtime config from a file.
+        /// </summary>
+        /// <param name="file">File path.</param>
+        /// <param name="runtimeConfigJson">Runtime config output. On failure, this will be null.</param>
+        /// <returns>True on success. On failure, return false and runtimeConfig will be set to null.</returns>
+        public static bool TryReadRuntimeConfig(string file, out string runtimeConfigJson)
+        {
+            runtimeConfigJson = string.Empty;
+
+            if (!File.Exists(file))
+            {
+                Console.WriteLine($"ERROR: Couldn't find config  file: {file}.");
+                Console.WriteLine($"Please run: hawaii init <options> to create a new config file.");
+
+                return false;
+            }
+
+            // Read existing config file content.
+            //
+            runtimeConfigJson = File.ReadAllText(file);
+            return true;
+        }
+
+        /// <summary>
+        /// this method will parse role and Action from permission string.
+        /// A valid permission string will be of the form "<<role>>:<<actions>>"
+        /// it will return true if parsing is successful and add the parsed value
+        /// to the out params role and action.
+        /// </summary>
+        public static bool TryGetRoleAndActionFromPermissionString(string permissions, out string? role, out string? actions)
+        {
+            // Split permission to role and actions
+            //
+            role = null;
+            actions = null;
+            string[] permission_array = permissions.Split(":");
+            if (permission_array.Length != 2)
+            {
+                Console.WriteLine("Please add permission in the following format. --permission \"<<role>>:<<actions>>\"");
+                return false;
+            }
+
+            role = permission_array[0];
+            actions = permission_array[1];
+            return true;
+        }
+
+        /// <summary>
+        /// this method will write all the json string in the given file.
+        /// </summary>
+        public static bool WriteJsonContentToFile(string file, string jsonContent)
+        {
+            try
+            {
+                File.WriteAllText(file, jsonContent);
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine($"Failed to generate the config file, operation failed with exception:{e}.");
+                return false;
+            }
+
+            return true;
         }
     }
 }

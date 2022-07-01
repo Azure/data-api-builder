@@ -1,7 +1,10 @@
 namespace Hawaii.Cli.Tests
 {
-    [TestClass]
-    public class AddEntityTest
+    /// <summary>
+    /// Tests for Adding new Entity.
+    /// </summary>
+    [TestClass, TestCategory("AddEntityTests")]
+    public class AddEntityTests
     {
         /// <summary>
         /// Simple test to add a new entity to json config when there is no existing entity.

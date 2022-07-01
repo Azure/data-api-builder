@@ -33,7 +33,7 @@ export PATH=$PATH:~/.dotnet/tools
 
 ### Generate the config:
 ```
-hawaii init -name <<filename>> --database-type <<db_type>> --connection-string <<connection_string>>
+hawaii init --name <<filename>> --database-type <<db_type>> --connection-string <<connection_string>>
 ```
 ### Add entity to the config:
 ```

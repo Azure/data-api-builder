@@ -18,9 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Azure.DataGateway.Config">
-      <HintPath>..\..\hawaii-gql\DataGateway.Config\bin\Debug\net6.0\Azure.DataGateway.Config.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\..\hawaii-engine\DataGateway.Config\Azure.DataGateway.Config.csproj" />
   </ItemGroup>
 
 </Project>

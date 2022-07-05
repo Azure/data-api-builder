@@ -12,26 +12,26 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     /// Helper class which parses EasyAuth's injected headers into a ClaimsIdentity object.
     /// This class provides helper methods for StaticWebApp's Authentication feature: EasyAuth.
     /// </summary>
-    public static class EasyAuthAuthentication
+    public static class AppServiceAuthentication
     {
         public const string EASYAUTHHEADER = "X-MS-CLIENT-PRINCIPAL";
         /// <summary>
         /// Representation of authenticated user principal Http header
         /// injected by EasyAuth
         /// </summary>
-        public struct EasyAuthClientPrincipal
+        public struct AppServiceClientPrincipal
         {
             public string Auth_typ { get; set; }
             public string Name_typ { get; set; }
             public string Role_typ { get; set; }
-            public IEnumerable<EasyAuthClaim> Claims { get; set; }
+            public IEnumerable<AppServiceClaim> Claims { get; set; }
         }
 
         /// <summary>
         /// Representation of authenticated user principal claims
         /// injected by EasyAuth
         /// </summary>
-        public struct EasyAuthClaim
+        public struct AppServiceClaim
         {
             public string Typ { get; set; }
             public string Val { get; set; }
@@ -53,20 +53,20 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         {
             ClaimsIdentity? identity = null;
 
-            if (context.Request.Headers.TryGetValue(EasyAuthAuthentication.EASYAUTHHEADER, out StringValues header))
+            if (context.Request.Headers.TryGetValue(AppServiceAuthentication.EASYAUTHHEADER, out StringValues header))
             {
                 try
                 {
                     string encodedPrincipalData = header[0];
                     byte[] decodedPrincpalData = Convert.FromBase64String(encodedPrincipalData);
                     string json = Encoding.UTF8.GetString(decodedPrincpalData);
-                    EasyAuthClientPrincipal principal = JsonSerializer.Deserialize<EasyAuthClientPrincipal>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    AppServiceClientPrincipal principal = JsonSerializer.Deserialize<AppServiceClientPrincipal>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
                     identity = new(principal.Auth_typ, principal.Name_typ, principal.Role_typ);
 
                     if (principal.Claims != null)
                     {
-                        foreach (EasyAuthClaim claim in principal.Claims)
+                        foreach (AppServiceClaim claim in principal.Claims)
                         {
                             identity.AddClaim(new Claim(type: claim.Typ, value: claim.Val));
                         }
@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                     // Logging the parsing failure exception to the console, but not rethrowing
                     // nor creating a DataGateway exception because the authentication handler
                     // will create and send a 401 unauthorized response to the client.
-                    Console.Error.WriteLine("Failure processing the EasyAuth header.");
+                    Console.Error.WriteLine("Failure processing the AppServie EasyAuth header.");
                     Console.Error.WriteLine(error.Message);
                     Console.Error.WriteLine(error.StackTrace);
                 }

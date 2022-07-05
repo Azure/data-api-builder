@@ -322,7 +322,7 @@ namespace Azure.DataGateway.Service
                 runtimeConfig.IsEasyAuthAuthenticationProvider())
             {
                 services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                    .AddEasyAuthAuthentication();
+                    .AddEasyAuthAuthentication(runtimeConfig.AuthNConfig.Provider);
             }
         }
 

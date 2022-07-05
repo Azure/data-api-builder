@@ -17,7 +17,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     /// Usage modelled from Microsoft.Identity.Web.
     ///     Ref: https://github.com/AzureAD/microsoft-identity-web/blob/master/src/Microsoft.Identity.Web/AppServicesAuth/AppServicesAuthenticationHandler.cs
     /// </summary>
-    public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthenticationOptions>
+    public class AppServiceAuthenticationHandler : AuthenticationHandler<EasyAuthAuthenticationOptions>
     {
         private const string EASY_AUTH_HEADER = "X-MS-CLIENT-PRINCIPAL";
 
@@ -29,7 +29,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         /// <param name="logger">Logger factory.</param>
         /// <param name="encoder">URL encoder.</param>
         /// <param name="clock">System clock.</param>
-        public EasyAuthAuthenticationHandler(
+        public AppServiceAuthenticationHandler(
             IOptionsMonitor<EasyAuthAuthenticationOptions> options,
               ILoggerFactory logger,
               UrlEncoder encoder,
@@ -49,11 +49,11 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         {
             if (Context.Request.Headers[EASY_AUTH_HEADER].Count > 0)
             {
-                ClaimsIdentity? identity = EasyAuthAuthentication.Parse(Context);
+                ClaimsIdentity? identity = AppServiceAuthentication.Parse(Context);
 
                 if (identity is null)
                 {
-                    return Task.FromResult(AuthenticateResult.Fail(failureMessage: "Invalid EasyAuth token."));
+                    return Task.FromResult(AuthenticateResult.Fail(failureMessage: "Invalid AppService EasyAuth token."));
                 }
 
                 ClaimsPrincipal? claimsPrincipal = new(identity);

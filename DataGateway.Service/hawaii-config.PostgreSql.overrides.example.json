@@ -21,12 +21,12 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "EasyAuth",
+        "provider": "StaticWebApps",
         "jwt": {
           "audience": "",
           "issuer": ""
-          }
         }
+      }
       }
     }
   },

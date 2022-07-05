@@ -1,16 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
@@ -692,15 +688,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
             HeaderDictionary headers = new();
             headers.Add("x-ms-client-principal", Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"hello\":\"world\"}")));
 
-            // Features are used to setup the httpcontext such that the test will run without null references
-            IFeatureCollection features = new FeatureCollection();
-            features.Set<IHttpRequestFeature>(new HttpRequestFeature { Headers = headers });
-            features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(new MemoryStream()));
-            features.Set<IHttpResponseFeature>(new HttpResponseFeature { StatusCode = (int)HttpStatusCode.OK });
-            DefaultHttpContext httpContext = new(features);
-
-            ConfigureRestController(_restController, string.Empty);
-            _restController.ControllerContext.HttpContext = httpContext;
+            ConfigureRestController(_restController, string.Empty, Operation.None);
 
             // Setup params to invoke function with
             // Must use valid entity name

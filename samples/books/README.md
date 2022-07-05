@@ -27,7 +27,7 @@ Add a new entity called "book" using the CLI tool by running the below command:
 hawaii add book --name my-books --source "dbo.books" --permission "anonymous:*"
 ```
 
-It will create a `book` entity in the `entity` section of the configuration file "my-books.json":
+It will create a `book` entity in the `entities` section of the configuration file "my-books.json":
 
 ```json
 "book": {
@@ -125,7 +125,7 @@ As a book can be categorized using one of the available category, we want to sur
 To add the one-to-many relatioship between categories and books, update the `category` entity by adding the `relationship` element through CLI:
 
 ```sh
-hawaii update category --name my-books --relationship "book" --cardinality many --target.entity "book"
+hawaii update category --name my-books --relationship "books" --cardinality many --target.entity "book"
 ```
 
 It will add a new relationship to the entity.
@@ -133,7 +133,7 @@ It will add a new relationship to the entity.
 "category": {
   "source": "dbo.categories",
   "relationships": {
-    "book": {
+    "books": {
       "cardinality": "many",
       "target.entity": "book"
     }
@@ -224,7 +224,7 @@ The `book` entity needs to be updated using the following configuration:
 
 In the CLI tool we can use the option `--linking.object` to provide the linking object in the json config.
 
-the above configuration it telling Hawaii that a `book` entity will have a `authors` property thjat will connected it to an `author` entity with a cardinalit of `many` and that such relatioship is implemented via `dbo.book_authors` in the underlying database. A sample of the GraphQL that can be used to query books and related authors is:
+the above configuration it telling Hawaii that a `book` entity will have a `authors` property that will connected it to an `author` entity with a cardinalit of `many` and that such relatioship is implemented via `dbo.book_authors` in the underlying database. A sample of the GraphQL that can be used to query books and related authors is:
 
 ```graphql
 {

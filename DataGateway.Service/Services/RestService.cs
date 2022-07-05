@@ -16,7 +16,6 @@ using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 
@@ -94,7 +93,6 @@ namespace Azure.DataGateway.Service.Services
                         entityName,
                         dbo: dbObject,
                         insertPayloadRoot,
-                        HttpRestVerbs.POST,
                         operationType);
                     RequestValidator.ValidateInsertRequestContext(
                         (InsertRequestContext)context,
@@ -114,7 +112,6 @@ namespace Azure.DataGateway.Service.Services
                     context = new UpsertRequestContext(entityName,
                                                        dbo: dbObject,
                                                        upsertPayloadRoot,
-                                                       GetHttpVerb(operationType),
                                                        operationType);
                     RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                     break;
@@ -139,7 +136,7 @@ namespace Azure.DataGateway.Service.Services
             }
 
             string role = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-            string action = HttpVerbToActions(GetHttpVerb(operationType).Name);
+            string action = HttpVerbToActions(GetHttpContext().Request.Method);
             string dbPolicy = _authorizationResolver.TryProcessDBPolicy(entityName, role, action, GetHttpContext());
             if (!string.IsNullOrEmpty(dbPolicy))
             {
@@ -301,27 +298,6 @@ namespace Azure.DataGateway.Service.Services
         private HttpContext GetHttpContext()
         {
             return _httpContextAccessor.HttpContext!;
-        }
-
-        private static OperationAuthorizationRequirement GetHttpVerb(Operation operation)
-        {
-            switch (operation)
-            {
-                case Operation.Update:
-                case Operation.Upsert:
-                    return HttpRestVerbs.PUT;
-                case Operation.UpdateIncremental:
-                case Operation.UpsertIncremental:
-                    return HttpRestVerbs.PATCH;
-                case Operation.Delete:
-                    return HttpRestVerbs.DELETE;
-                case Operation.Insert:
-                    return HttpRestVerbs.POST;
-                case Operation.Find:
-                    return HttpRestVerbs.GET;
-                default:
-                    throw new NotSupportedException("This operation is not yet supported.");
-            }
         }
 
         /// <summary>

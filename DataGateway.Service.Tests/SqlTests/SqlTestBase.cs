@@ -147,26 +147,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         /// <param name="queryStringUrl">query</param>
         /// <param name="bodyData">The data to be put in the request body e.g. GraphQLQuery</param>
+        /// <param name="operation">The operation used to define the HttpContext HTTP Method</param>
         /// <returns>The http context with request consisting of the given query string (if any)
         /// and request body (if any) as a stream of utf-8 bytes.</returns>
         protected static DefaultHttpContext GetRequestHttpContext(
             string queryStringUrl = null,
             IHeaderDictionary headers = null,
-            string bodyData = null)
+            string bodyData = null,
+            Operation operation = Operation.Find)
         {
             DefaultHttpContext httpContext;
+            IFeatureCollection features = new FeatureCollection();
+            //Add response features
+            features.Set<IHttpResponseFeature>(new HttpResponseFeature());
+            features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(new MemoryStream()));
+
             if (headers is not null)
             {
-                IFeatureCollection features = new FeatureCollection();
-                features.Set<IHttpRequestFeature>(new HttpRequestFeature { Headers = headers });
-                features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(new MemoryStream()));
-                // set Response StatusCode here to avoid null reference when returning exception in test with supplied headers
-                features.Set<IHttpResponseFeature>(new HttpResponseFeature { StatusCode = 200 });
+                features.Set<IHttpRequestFeature>(new HttpRequestFeature { Headers = headers, Method = SqlTestHelper.OperationTypeToHTTPVerb(operation) });
                 httpContext = new(features);
             }
             else
             {
-                httpContext = new();
+                features.Set<IHttpRequestFeature>(new HttpRequestFeature { Method = SqlTestHelper.OperationTypeToHTTPVerb(operation) });
+                httpContext = new(features);
             }
 
             if (!string.IsNullOrEmpty(queryStringUrl))
@@ -264,8 +268,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ConfigureRestController(
                 controller,
                 queryString,
+                operationType,
                 headers,
-                requestBody);
+                requestBody
+                );
             string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
             if (expectedLocationHeader != null)
             {
@@ -374,14 +380,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static void ConfigureRestController(
             RestController restController,
             string queryString,
+            Operation operation,
             IHeaderDictionary headers = null,
-            string requestBody = null)
+            string requestBody = null
+            )
         {
             restController.ControllerContext.HttpContext =
                 GetRequestHttpContext(
                     queryString,
                     headers,
-                    bodyData: requestBody);
+                    bodyData: requestBody,
+                    operation);
 
             // Set the mock context accessor's request same as the controller's request.
             _httpContextAccessor.Setup(x => x.HttpContext.Request).Returns(restController.ControllerContext.HttpContext.Request);

@@ -15,6 +15,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         /// Add authentication with Static Web Apps.
         /// </summary>
         /// <param name="builder">Authentication builder.</param>
+        /// <param name="easyAuthAuthenticationProvider">EasyAuth provider type. StaticWebApps or AppService</param>
         /// <returns>The builder, to chain commands.</returns>
         public static AuthenticationBuilder AddEasyAuthAuthentication(
              this AuthenticationBuilder builder, string easyAuthAuthenticationProvider)

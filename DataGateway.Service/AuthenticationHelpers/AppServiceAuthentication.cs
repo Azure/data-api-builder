@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
@@ -10,11 +11,10 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
 {
     /// <summary>
     /// Helper class which parses EasyAuth's injected headers into a ClaimsIdentity object.
-    /// This class provides helper methods for StaticWebApp's Authentication feature: EasyAuth.
+    /// This class provides helper methods for AppService's Authentication feature: EasyAuth.
     /// </summary>
     public static class AppServiceAuthentication
     {
-        public const string EASYAUTHHEADER = "X-MS-CLIENT-PRINCIPAL";
         /// <summary>
         /// Representation of authenticated user principal Http header
         /// injected by EasyAuth
@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         {
             ClaimsIdentity? identity = null;
 
-            if (context.Request.Headers.TryGetValue(AppServiceAuthentication.EASYAUTHHEADER, out StringValues header))
+            if (context.Request.Headers.TryGetValue(AuthenticationConfig.EASYAUTHHEADER, out StringValues header))
             {
                 try
                 {

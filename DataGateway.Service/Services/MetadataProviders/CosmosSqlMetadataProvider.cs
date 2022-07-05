@@ -145,9 +145,10 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
 
         /// <summary>
         /// Helper function will parse the schema and database object name
-        /// from the provided and string and sort out if a default schema
+        /// from the provided source string and sort out if a default schema
         /// should be used. It then returns the appropriate schema and
         /// db object name as a tuple of strings.
+        /// i.e. source = 'graphqldb.planet' -> databaseName ='graphqldb'; containerName ='planet'
         /// </summary>
         /// <param name="source">source string to parse</param>
         /// <returns></returns>

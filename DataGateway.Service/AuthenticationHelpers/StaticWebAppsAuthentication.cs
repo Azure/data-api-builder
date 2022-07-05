@@ -4,15 +4,22 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataGateway.Service.AuthenticationHelpers
 {
+    /// <summary>
+    /// Helper class which parses EasyAuth's injected headers into a ClaimsIdentity object.
+    /// This class provides helper methods for StaticWebApps' Authentication feature: EasyAuth.
+    /// </summary>
     public class StaticWebAppsAuthentication
     {
-        public const string EASYAUTHHEADER = "X-MS-CLIENT-PRINCIPAL";
-
+        /// <summary>
+        /// Link for reference of how StaticWebAppsClientPrincipal is defined
+        /// https://docs.microsoft.com/azure/static-web-apps/user-information?tabs=csharp#client-principal-data
+        /// </summary>
         public class StaticWebAppsClientPrincipal
         {
             public string? IdentityProvider { get; set; }
@@ -27,7 +34,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             StaticWebAppsClientPrincipal principal = new();
             try
             {
-                if (req.Headers.TryGetValue(EASYAUTHHEADER, out StringValues header))
+                if (req.Headers.TryGetValue(AuthenticationConfig.EASYAUTHHEADER, out StringValues header))
                 {
                     string data = header[0];
                     byte[] decoded = Convert.FromBase64String(data);

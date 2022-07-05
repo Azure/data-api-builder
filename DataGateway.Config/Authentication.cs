@@ -12,6 +12,7 @@ namespace Azure.DataGateway.Config
         string Provider,
         Jwt? Jwt = null)
     {
+        public const string EASYAUTHHEADER = "X-MS-CLIENT-PRINCIPAL";
         public bool IsEasyAuthAuthenticationProvider()
         {
             return Enum.GetName(EasyAuthType.StaticWebApps)!.Equals(Provider, StringComparison.OrdinalIgnoreCase)

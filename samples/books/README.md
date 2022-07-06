@@ -8,19 +8,26 @@ This sample uses Azure SQL DB or SQL Server Sample as the backend database. Use 
 
 ## Hawaii Configuration
 
-Create a new Hawaii configuration file starting from the `hawaii-config.template.json` provided in the root folder. Make a copy of that file and name it `my-book.json`.
+Use the hawaii-cli to create the configuration file. 
+To install the Hawaii CLI read the instructions [here](https://github.com/Azure/hawaii-cli#readme):
 
-Alternatively you can create a new Hawaii configuration file using Hawaii CLI. To install the Hawaii CLI read the instructions here:
-
+Below Command will generate a config file with name "my-books.json".
 ```sh
 hawaii init --name my-books --host-mode development --database-type mssql --connection-string "Server=;Database=;User ID=;Password=;TrustServerCertificate=true"
 ```
+We can also manually create a new Hawaii configuration file starting from the `hawaii-config.template.json` provided in the root folder by making a copy of that file and naming it `my-book.json`.
 
 Make sure you use the correct connection string for your enviroment. Once the command completes, you'll have a file named `my-books.json` created for you.
 
 ### Add a Book entity
 
-The `dbo.books` table needs to be exposed as a REST and GraphQL endpoint. To do that you have to create a `book` entity in the `entity` section of the configuration file:
+Add a new entity called "book" using the CLI tool by running the below command:
+
+```sh
+hawaii add book --name my-books --source "dbo.books" --permission "anonymous:*"
+```
+
+It will create a `book` entity in the `entities` section of the configuration file "my-books.json":
 
 ```json
 "book": {
@@ -34,11 +41,6 @@ The `dbo.books` table needs to be exposed as a REST and GraphQL endpoint. To do 
 
 The above configuration, will tell Hawaii that the anyone, even those request which cannot be authenticated, will be allowed to perform all the CRUD actions on the `book` entity.
 
-The same configuration can also be defined via CLI, instead of writing the JSON manually:
-
-```sh
-hawaii add book --name my-books --source "dbo.books" --permission "anonymous:*"
-```
 
 The `book` entity will be available as a REST endpoint at `/api/book`:
 
@@ -78,7 +80,13 @@ or as GraphQL object at the `/graphql` endpoint:
 
 ### Add a Category entity
 
-Each book will be able to be categorized into one category, so a category entity is needed. The database contains the `dbo.categories` table that can be exposed by adding the following `category` entity to the configuration file:
+Each book will be able to be categorized into one category, so a category entity is needed. The database contains the `dbo.categories` table that can be exposed by adding the following `category` entity to the configuration file by running the below command:
+
+```sh
+hawaii add category --name my-books --source "dbo.categories" --permission "anonymous:*"
+```
+
+It will add another entity called "category".
 
 ```json
 "category": {
@@ -90,9 +98,6 @@ Each book will be able to be categorized into one category, so a category entity
 }
 ```
 
-The same configuration can also be defined via CLI, instead of writing the JSON manually:
-
-TDB
 
 The `category` entity will be available as a REST endpoint at `/api/category`:
 
@@ -117,13 +122,18 @@ or as GraphQL object at the `/graphql` endpoint:
 
 As a book can be categorized using one of the available category, we want to surface that one-to-many relationship between categories and books (and, vice-versa, a many-to-one relationship between books and categories) so that it will be usable to build GraphQL requests. To do that you we need to inform Hawaii that we want to take advantage of the existing Foreign Key. Thanks to the Foreign Key only the fact that we want to expose that relationship need to be configured as Hawaii can figure how to correctly correlate `books` and `categories` entity by reading the existing metadata.
 
-To add the one-to-many relatioship between categories and books, update the `category` entity by adding the `relationship` element:
+To add the one-to-many relatioship between categories and books, update the `category` entity by adding the `relationship` element through CLI:
 
+```sh
+hawaii update category --name my-books --relationship "books" --cardinality many --target.entity "book"
+```
+
+It will add a new relationship to the entity.
 ```json
 "category": {
   "source": "dbo.categories",
   "relationships": {
-    "book": {
+    "books": {
       "cardinality": "many",
       "target.entity": "book"
     }
@@ -136,6 +146,10 @@ To add the one-to-many relatioship between categories and books, update the `cat
 ```
 
 in the same way, the `book` entity needs to be updated:
+
+```sh
+hawaii update book --name my-books --relationship "category" --cardinality one --target.entity "category"
+```
 
 ```json
 "book": {
@@ -152,6 +166,7 @@ in the same way, the `book` entity needs to be updated:
   }]
 }
 ```
+
 
 as you notice in the configuration file there are only the information needs to tell Hawaii what are the entities taking part in the relationship and the cardinality of such relationship. How the relationship is implemented behind the scenes is automatically inferred from the existing Foreign Key. If there are no Foreign Keys or there are ambiguities as there are many Foreign Keys that can potentilly be used, you can specifiy the databases fields that will be used to sustain the relationship using the `source.fields` and `target.fields` elements.
 
@@ -207,7 +222,9 @@ The `book` entity needs to be updated using the following configuration:
 }
 ```
 
-the above configuration it telling Hawaii that a `book` entity will have a `authors` property thjat will connected it to an `author` entity with a cardinalit of `many` and that such relatioship is implemented via `dbo.book_authors` in the underlying database. A sample of the GraphQL that can be used to query books and related authors is:
+In the CLI tool we can use the option `--linking.object` to provide the linking object in the json config.
+
+the above configuration it telling Hawaii that a `book` entity will have a `authors` property that will connected it to an `author` entity with a cardinalit of `many` and that such relatioship is implemented via `dbo.book_authors` in the underlying database. A sample of the GraphQL that can be used to query books and related authors is:
 
 ```graphql
 {

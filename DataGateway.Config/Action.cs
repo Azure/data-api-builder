@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 namespace Azure.DataGateway.Config
 {
@@ -78,40 +77,5 @@ namespace Azure.DataGateway.Config
         public string? Request { get; set; }
         [property: JsonPropertyName("database")]
         public string? Database { get; set; }
-    }
-
-    /// <summary>
-    /// The REST HttpVerbs supported by the service
-    /// expressed as authorization requirements.
-    /// </summary>
-    public static class HttpRestVerbs
-    {
-        public static OperationAuthorizationRequirement POST =
-            new() { Name = nameof(POST) };
-
-        public static OperationAuthorizationRequirement GET =
-            new() { Name = nameof(GET) };
-
-        public static OperationAuthorizationRequirement DELETE =
-            new() { Name = nameof(DELETE) };
-
-        public static OperationAuthorizationRequirement PUT =
-            new() { Name = nameof(PUT) };
-
-        public static OperationAuthorizationRequirement PATCH =
-            new() { Name = nameof(PATCH) };
-
-        public static OperationAuthorizationRequirement
-            GetVerb(string action) => action switch
-            {
-                "create" => POST,
-                "read" => GET,
-                "update" => PATCH,
-                "delete" => DELETE,
-                // TODO: This mapping will no longer be required after AuthZ engine work
-                // Hence, simply returning GET to pass the test.
-                "*" => GET,
-                _ => throw new NotSupportedException($"{action} is not supported.")
-            };
     }
 }

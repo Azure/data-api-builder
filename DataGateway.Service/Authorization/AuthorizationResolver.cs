@@ -25,6 +25,8 @@ namespace Azure.DataGateway.Service.Authorization
     {
         private ISqlMetadataProvider _metadataProvider;
         private const string WILDCARD = "*";
+        public const string CLAIM_PREFIX = "@claims.";
+        public const string FIELD_PREFIX = "@item.";
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
@@ -378,7 +380,7 @@ namespace Azure.DataGateway.Service.Authorization
                 (claimTypeMatch) => GetClaimValueFromClaim(claimTypeMatch, claimsInRequestContext));
 
             //Remove occurences of @item. directives
-            processedPolicy = processedPolicy.Replace("@item.", "");
+            processedPolicy = processedPolicy.Replace(AuthorizationResolver.FIELD_PREFIX, "");
             return processedPolicy;
         }
 
@@ -391,7 +393,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <exception cref="DataGatewayException"> Throws exception when the user does not possess the given claim.</exception>
         private static string GetClaimValueFromClaim(Match claimTypeMatch, Dictionary<string, Claim> claimsInRequestContext)
         {
-            string claimType = claimTypeMatch.Value.ToString().Substring("@claims.".Length);
+            string claimType = claimTypeMatch.Value.ToString().Substring(AuthorizationResolver.CLAIM_PREFIX.Length);
             if (claimsInRequestContext.TryGetValue(claimType, out Claim? claim))
             {
                 return GetClaimValueByDataType(claim);

@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Action = Azure.DataGateway.Config.Action;
@@ -19,8 +20,13 @@ namespace Azure.DataGateway.Service.Configurations
     {
         private readonly IFileSystem _fileSystem;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
-        private static readonly string _invalidChars = @"[^a-zA-Z0-9_\.]+";
-        private static readonly Regex _invalidCharsRgx = new(_invalidChars, RegexOptions.Compiled);
+
+        // Only characters from a-z,A-Z,0-9,.,_ are allowed to be present within the claimType.
+        private static readonly string _invalidClaimChars = @"[^a-zA-Z0-9_\.]+";
+
+        // Regex to check occurence of any character not among [a-z,A-Z,0-9,.,_] in the claimType.
+        // The claimType is invalid if there is a match found.
+        private static readonly Regex _invalidClaimCharsRgx = new(_invalidClaimChars, RegexOptions.Compiled);
 
         // Set of allowed actions for a request.
         private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
@@ -122,15 +128,7 @@ namespace Azure.DataGateway.Service.Configurations
                             actionName = action.ToString()!;
                             // If we have reached this point, it means that we don't have any invalid
                             // data type in actions. However we need to ensure that the actionName is valid.
-                            if (!IsValidActionName(actionName))
-                            {
-                                // If the actionName is invalid, we throw an appropriate exception for the same.
-                                throw new DataGatewayException(
-                                        message: $"One of the action specified for entity:{entityName} is not valid.",
-                                        statusCode: System.Net.HttpStatusCode.InternalServerError,
-                                        subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
-                            }
-
+                            ValidateActionName(actionName, entityName);
                             processedActions.Add(action);
                         }
                         else
@@ -146,21 +144,14 @@ namespace Azure.DataGateway.Service.Configurations
                                 throw new DataGatewayException(
                                     message: $"One of the action specified for entity:{entityName} is not well formed.",
                                     statusCode: System.Net.HttpStatusCode.InternalServerError,
-                                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
+                                    subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
                             }
 
                             actionName = configAction.Name;
 
                             // If we have reached this point, it means that we don't have any invalid
                             // data type in actions. However we need to ensure that the actionName is valid.
-                            if (!IsValidActionName(actionName))
-                            {
-                                // If the actionName is invalid, we throw an appropriate exception for the same.
-                                throw new DataGatewayException(
-                                        message: $"One of the action specified for entity:{entityName}, role:{permissionSetting.Role} is not valid.",
-                                        statusCode: System.Net.HttpStatusCode.InternalServerError,
-                                        subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
-                            }
+                            ValidateActionName(actionName, entityName);
 
                             // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
                             // don't contain any other field. If they do, we throw an appropriate exception.
@@ -172,7 +163,7 @@ namespace Azure.DataGateway.Service.Configurations
                                         message: $"No other field can be present with wildcard in the {incExc} set for: entity:{entityName}," +
                                                  $" role:{permissionSetting.Role}, action:{actionName}",
                                         statusCode: System.Net.HttpStatusCode.InternalServerError,
-                                        subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
+                                        subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
                             }
 
                             if (configAction.Policy is not null && configAction.Policy.Database is not null)
@@ -184,10 +175,9 @@ namespace Azure.DataGateway.Service.Configurations
 
                                 // validate that all the claimTypes in the policy are well formed, and remove
                                 // parenthesis around claimTypes.
-                                configAction.Policy.Database = ProcessClaimsInPolicy(configAction.Policy.Database);
+                                configAction.Policy.Database = ValidateAndProcessClaimsInPolicy(configAction.Policy.Database);
                             }
 
-                            //processedActions.Add(JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize<Action>(configAction))!);
                             processedActions.Add(JsonSerializer.SerializeToElement(configAction));
                         }
                     }
@@ -205,7 +195,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <param name="policy">Raw database policy</param>
         /// <param name="include">Array of fields which are accessible to the user.</param>
         /// <param name="exclude">Array of fields which are not accessible to the user.</param>
-        /// <returns>Processed policy without @item. directives before fields names.</returns>
+        /// <returns>Processed policy without @item. directives before field names.</returns>
         private static string ProcessFieldsInPolicy(string policy, HashSet<string> includedFields, HashSet<string> excludedFields)
         {
             string fieldCharsRgx = @"@item\.[a-zA-Z0-9_]*";
@@ -224,12 +214,12 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         /// <param name="columnNameMatch"></param>
         /// <param name="included">Set of fields which are accessible to the user.</param>
-        /// <param name="excluded">Set of fields which are accessible to the user.</param>
+        /// <param name="excluded">Set of fields which are not accessible to the user.</param>
         /// <returns>Field name without the @item. prefix.</returns>
         /// <exception cref="DataGatewayException">Throws exception if the field is not accessible.</exception>
         private static string CheckAndProcessField(Match columnNameMatch, HashSet<string> includedFields, HashSet<string> excludedFields)
         {
-            string columnName = columnNameMatch.Value.Substring("@item.".Length);
+            string columnName = columnNameMatch.Value.Substring(AuthorizationResolver.FIELD_PREFIX.Length);
             if (excludedFields.Contains(columnName!) || excludedFields.Contains("*") ||
                 !(includedFields.Contains("*") || includedFields.Contains(columnName)))
             {
@@ -239,13 +229,20 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new DataGatewayException(
                     message: $"Not all the columns required by policy are accessible.",
                     statusCode: System.Net.HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError);
+                    subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
             }
 
             return columnName;
         }
 
-        private static string ProcessClaimsInPolicy(string policy)
+        /// <summary>
+        /// Helper method to do different validations related to the claims in the policy and remove the claim
+        /// prefix from the claimTypes and any parenthesis surrounding the claimTypes.
+        /// </summary>
+        /// <param name="policy">The policy to be validated and processed.</param>
+        /// <returns></returns>
+        /// <exception cref="DataGatewayException">Throws exception when one or the other validations fail.</exception>
+        private static string ValidateAndProcessClaimsInPolicy(string policy)
         {
             // Regex used to extract all claimTypes in policy. It finds all the substrings which are
             // of the form @claims.*** delimited by space character,end of the line or end of the string.
@@ -267,7 +264,7 @@ namespace Azure.DataGateway.Service.Configurations
             foreach (Match claimType in claimTypes)
             {
                 // Remove the prefix @claims. from the claimType
-                string typeOfClaimWithOpenParenthesis = claimType.Value.Substring("@claims.".Length);
+                string typeOfClaimWithOpenParenthesis = claimType.Value.Substring(AuthorizationResolver.CLAIM_PREFIX.Length);
 
                 //Process typeOfClaimWithParenthesis to remove opening parenthesis.
                 string typeOfClaim = GetClaimTypeWithoutOpeningParenthesis(typeOfClaimWithOpenParenthesis);
@@ -278,17 +275,17 @@ namespace Azure.DataGateway.Service.Configurations
                     throw new DataGatewayException(
                         message: $"Claimtype cannot be empty.",
                         statusCode: System.Net.HttpStatusCode.InternalServerError,
-                        subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
+                        subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError
                         );
                 }
 
-                if (_invalidCharsRgx.IsMatch(typeOfClaim))
+                if (_invalidClaimCharsRgx.IsMatch(typeOfClaim))
                 {
                     // Not a valid claimType containing allowed characters
                     throw new DataGatewayException(
                         message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
                         statusCode: System.Net.HttpStatusCode.InternalServerError,
-                        subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
+                        subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError
                         );
                 }
 
@@ -299,7 +296,7 @@ namespace Azure.DataGateway.Service.Configurations
                 processedPolicy.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx));
 
                 // Add token for the claimType to processedPolicy
-                processedPolicy.Append("@claims." + typeOfClaim);
+                processedPolicy.Append(AuthorizationResolver.CLAIM_PREFIX + typeOfClaim);
 
                 // Move the parsedIdx to the index following a claimType in the policy string
                 parsedIdx = claimIdx + claimType.Value.Length;
@@ -320,7 +317,7 @@ namespace Azure.DataGateway.Service.Configurations
                         throw new DataGatewayException(
                             message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
                             statusCode: System.Net.HttpStatusCode.InternalServerError,
-                            subStatusCode: DataGatewayException.SubStatusCodes.UnexpectedError
+                            subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError
                             );
                     }
 
@@ -334,7 +331,7 @@ namespace Azure.DataGateway.Service.Configurations
 
                     parsedIdx++;
                 }
-            }
+            } // MatchType claimType
 
             if (parsedIdx < policy.Length)
             {
@@ -361,6 +358,25 @@ namespace Azure.DataGateway.Service.Configurations
             }
 
             return typeOfClaimWithParenthesis.Substring(idx);
+        }
+
+        /// <summary>
+        /// Helper function to throw an exception if the actionName is not valid.
+        /// </summary>
+        /// <param name="actionName">The actionName to be validated.</param>
+        /// <param name="entityName">Name of the entity on which the action is to be executed.</param>
+        /// <exception cref="DataGatewayException">Exception thrown if the actionName is invalid.</exception>
+        private static void ValidateActionName(string actionName, string entityName)
+        {
+            if (!IsValidActionName(actionName))
+            {
+                // If the actionName is invalid, we throw an appropriate exception for the same.
+                throw new DataGatewayException(
+                        message: $"One of the action specified for entity:{entityName} is not valid.",
+                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
+            }
+
         }
 
         /// <summary>

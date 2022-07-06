@@ -1,8 +1,10 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
+using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -12,9 +14,24 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
     public class QueryBuilderTests
     {
         private const int NUMBER_OF_ARGUMENTS = 4;
-        private static Entity GenerateEmptyEntity()
+
+        private Dictionary<string, EntityMetadata> _entityPermissions;
+
+        /// <summary>
+        /// Create stub entityPermissions to enable QueryBuilder to create
+        /// queries in GraphQL schema. Without permissions present
+        /// (i.e. no roles defined for action on entity), then queries
+        /// will not be created in schema since it is inaccessible
+        /// as stated by permissions configuration.
+        /// </summary>
+        [TestInitialize]
+        public void SetupEntityPermissionsMap()
         {
-            return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
+            _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    new string[] { "Foo" },
+                    new string[] { ActionType.READ },
+                    new string[] { "anonymous", "authenticated" }
+                    );
         }
 
         [TestMethod]
@@ -31,7 +48,13 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(
+                root,
+                DatabaseType.cosmos,
+                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                inputTypes: new(),
+                entityPermissionsMap: _entityPermissions
+                );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"foo_by_pk"));
@@ -51,7 +74,13 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(
+                root,
+                DatabaseType.cosmos,
+                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                inputTypes: new(),
+                entityPermissionsMap: _entityPermissions
+                );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
@@ -78,7 +107,13 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(
+                root,
+                DatabaseType.cosmos,
+                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                inputTypes: new(),
+                entityPermissionsMap: _entityPermissions
+                );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"foos"));
@@ -98,7 +133,13 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(
+                root,
+                DatabaseType.cosmos,
+                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                inputTypes: new(),
+                entityPermissionsMap: _entityPermissions
+                );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             string returnTypeName = query.Fields.First(f => f.Name.Value == $"foos").Type.NamedType().Name.Value;
@@ -124,7 +165,13 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.mssql, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(
+                root,
+                DatabaseType.mssql,
+                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                inputTypes: new(),
+                entityPermissionsMap: _entityPermissions
+                );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
@@ -143,7 +190,13 @@ type Foo @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode queryRoot = QueryBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }, new());
+            DocumentNode queryRoot = QueryBuilder.Build(
+                            root,
+                            DatabaseType.cosmos,
+                            new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                            inputTypes: new(),
+                            entityPermissionsMap: _entityPermissions
+                            );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
@@ -207,7 +260,7 @@ type Table @model(name: ""table"") {
             Assert.AreEqual(0, field.Arguments.Count, "No query fields on cardinality of One relationshop");
         }
 
-        private static ObjectTypeDefinitionNode GetQueryNode(DocumentNode queryRoot)
+        public static ObjectTypeDefinitionNode GetQueryNode(DocumentNode queryRoot)
         {
             return (ObjectTypeDefinitionNode)queryRoot.Definitions.First(d => d is ObjectTypeDefinitionNode node && node.Name.Value == "Query");
         }

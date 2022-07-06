@@ -21,9 +21,15 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
         /// <param name="tableDefinition">SQL table definition information.</param>
         /// <param name="configEntity">Runtime config information for the table.</param>
         /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
-        public static ObjectTypeDefinitionNode FromTableDefinition(string entityName, TableDefinition tableDefinition, [NotNull] Entity configEntity, Dictionary<string, Entity> entities)
+        public static ObjectTypeDefinitionNode FromTableDefinition(
+            string entityName,
+            TableDefinition tableDefinition,
+            [NotNull] Entity configEntity,
+            Dictionary<string, Entity> entities,
+            IEnumerable<string>? rolesAllowedForEntity = null)
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
+            List<DirectiveNode> objectTypeDirectives = new();
 
             foreach ((string columnName, ColumnDefinition column) in tableDefinition.Columns)
             {
@@ -115,11 +121,20 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 }
             }
 
+            objectTypeDirectives.Add(new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName)));
+
+            // Any roles passed in will be added to the authorize directive for this ObjectType
+            // taking the form: @authorize(roles: [“role1”, ..., “roleN”]) 
+            if (rolesAllowedForEntity is not null)
+            {
+                objectTypeDirectives.Add(GraphQLUtils.CreateAuthorizationDirective(rolesAllowedForEntity));
+            }
+
             return new ObjectTypeDefinitionNode(
                 location: null,
                 new(FormatNameForObject(entityName, configEntity)),
                 description: null,
-                new List<DirectiveNode>() { new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName)) },
+                objectTypeDirectives,
                 new List<NamedTypeNode>(),
                 fields.Values.ToImmutableList());
         }

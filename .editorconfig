@@ -443,6 +443,7 @@ dotnet_diagnostic.SA1027.severity = silent
 dotnet_diagnostic.SA1028.severity = silent
 dotnet_diagnostic.SA0001.severity = silent
 dotnet_diagnostic.SA0002.severity = silent
+dotnet_diagnostic.SA1600.severity = suggestion
 
 [*.{cs,vb}]
 dotnet_diagnostic.CA1034.severity=suggestion

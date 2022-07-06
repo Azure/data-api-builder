@@ -21,11 +21,7 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "StaticWebApps",
-        "jwt": {
-          "audience": "",
-          "issuer": ""
-        }
+        "provider": "StaticWebApps"
       }
     }
   },

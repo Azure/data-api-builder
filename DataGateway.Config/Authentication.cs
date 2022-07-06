@@ -3,7 +3,7 @@ namespace Azure.DataGateway.Config
     /// <summary>
     /// Authentication configuration.
     /// </summary>
-    /// <param name="Provider">Identity Provider.
+    /// <param name="Provider">Identity Provider. Default is StaticWebApps.
     /// With EasyAuth, no Audience or Issuer are expected.
     /// </param>
     /// <param name="Jwt">Settings enabling validation of the received JWT token.

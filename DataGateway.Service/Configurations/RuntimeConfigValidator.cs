@@ -182,7 +182,6 @@ namespace Azure.DataGateway.Service.Configurations
         /// <param name="runtimeConfig">The deserialised config object obtained from the json config supplied.</param>
         public void ProcessPermissionsInConfig(RuntimeConfig runtimeConfig)
         {
-            //RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
@@ -209,7 +208,7 @@ namespace Azure.DataGateway.Service.Configurations
                                 configAction.Policy.Database = ProcessFieldsInPolicy(configAction.Policy.Database);
 
                                 // Remove redundant spaces and parenthesis around claimTypes.
-                                configAction.Policy.Database  = ProcessClaimsInPolicy(configAction.Policy.Database);
+                                configAction.Policy.Database = ProcessClaimsInPolicy(configAction.Policy.Database);
                             }
 
                             processedActions.Add(JsonSerializer.SerializeToElement(configAction));
@@ -260,8 +259,8 @@ namespace Azure.DataGateway.Service.Configurations
             string fieldCharsRgx = @"@item\.[a-zA-Z0-9_]*";
 
             // processedPolicy would be devoid of @item. directives.
-            string processedPolicy = Regex.Replace(policy, fieldCharsRgx, (columnNameMatch) => 
-                                            columnNameMatch.Value.Substring(AuthorizationResolver.FIELD_PREFIX.Length));
+            string processedPolicy = Regex.Replace(policy, fieldCharsRgx, (columnNameMatch) =>
+            columnNameMatch.Value.Substring(AuthorizationResolver.FIELD_PREFIX.Length));
             return processedPolicy;
         }
 

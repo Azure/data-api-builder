@@ -17,55 +17,16 @@ namespace Hawaii.Cli.Tests
             AddOptions options = new(
                 source: "MyTable",
                 permissions: "anonymous:read,update",
-                entity: "MyEntity",
+                entity: "FirstEntity",
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: null,
                 fieldsToExclude: null,
                 name: "outputfile");
 
-            string initialConfig =
-            @"
-{
-  ""$schema"": ""hawaii.draft-01.schema.json"",
-  ""data-source"": {
-    ""database-type"": ""mssql"",
-    ""connection-string"": ""testconnectionstring""
-  },
-  ""mssql"": {
-    ""set-session-context"": true
-  },
-  ""runtime"": {
-    ""rest"": {
-      ""enabled"": true,
-      ""path"": ""/api""
-    },
-    ""graphql"": {
-      ""allow-introspection"": true,
-      ""enabled"": true,
-      ""path"": ""/graphql""
-    },
-    ""host"": {
-      ""mode"": ""development"",
-      ""cors"": {
-        ""origins"": [],
-        ""allow-credentials"": true
-      },
-      ""authentication"": {
-        ""provider"": ""EasyAuth"",
-        ""jwt"": {
-          ""audience"": """",
-          ""issuer"": """"
-        }
-      }
-    }
-  },
-  ""entities"": {}
-}
-";
-            string expectedConfig = GetGeneratedConfigWithOneEntity();
-
-            RunTest(options, initialConfig, expectedConfig);
+            string initialConfiguration = GetInitialConfiguration();
+            string expectedConfiguration = AddEntityPropertiesToConfiguration(GetInitialConfiguration(), GetFirstEntityConfiguration());
+            RunTest(options, initialConfiguration, expectedConfiguration);
         }
 
         /// <summary>
@@ -84,70 +45,11 @@ namespace Hawaii.Cli.Tests
                 fieldsToExclude: null,
                 name: "outputfile");
 
-            string initialConfig = GetGeneratedConfigWithOneEntity();
-            string expectedConfig =
-            @"
-{
-  ""$schema"": ""hawaii.draft-01.schema.json"",
-  ""data-source"": {
-    ""database-type"": ""mssql"",
-    ""connection-string"": ""testconnectionstring""
-  },
-  ""mssql"": {
-    ""set-session-context"": true
-  },
-  ""runtime"": {
-    ""rest"": {
-      ""enabled"": true,
-      ""path"": ""/api""
-    },
-    ""graphql"": {
-      ""allow-introspection"": true,
-      ""enabled"": true,
-      ""path"": ""/graphql""
-    },
-    ""host"": {
-      ""mode"": ""development"",
-      ""cors"": {
-        ""origins"": [],
-        ""allow-credentials"": true
-      },
-      ""authentication"": {
-        ""provider"": ""EasyAuth"",
-        ""jwt"": {
-          ""audience"": """",
-          ""issuer"": """"
-        }
-      }
-    }
-  },
-  ""entities"": {
-    ""MyEntity"": {
-      ""source"": ""MyTable"",
-      ""permissions"": [
-        {
-          ""role"": ""anonymous"",
-          ""actions"": [
-            ""read"",
-            ""update""
-          ]
-        }
-      ]
-    },
-    ""SecondEntity"": {
-      ""source"": ""MyTable"",
-      ""permissions"": [
-        {
-          ""role"": ""anonymous"",
-          ""actions"": [ ""*"" ]
-        }
-      ]
-    }
-  }
-}
-";
+            string initialConfiguration = AddEntityPropertiesToConfiguration(GetInitialConfiguration(), GetFirstEntityConfiguration());
+            string configurationWithOneEntity = AddEntityPropertiesToConfiguration(GetInitialConfiguration(), GetFirstEntityConfiguration());
+            string expectedConfiguration = AddEntityPropertiesToConfiguration(configurationWithOneEntity, GetSecondEntityConfiguration());
+            RunTest(options, initialConfiguration, expectedConfiguration);
 
-            RunTest(options, initialConfig, expectedConfig);
         }
 
         /// <summary>
@@ -159,16 +61,40 @@ namespace Hawaii.Cli.Tests
             AddOptions options = new(
                 source: "MyTable",
                 permissions: "anonymous:*",
-                entity: "MyEntity",
+                entity: "FirstEntity",
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: null,
                 fieldsToExclude: null,
                 name: "outputfile");
 
-            string initialConfig = GetGeneratedConfigWithOneEntity();
+            string initialConfiguration = AddEntityPropertiesToConfiguration(GetInitialConfiguration(), GetFirstEntityConfiguration());
+            Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref initialConfiguration));
+        }
 
-            Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref initialConfig));
+        /// <summary>
+        /// Entity names should be case-sensitive. Adding a new entity with the an existing name but with 
+        /// a different case in one or more characters should be successful.
+        /// </summary>
+        [TestMethod]
+        public void AddEntityWithAnExistingNameButWithDifferentCase()
+        {
+
+            AddOptions options = new(
+               source: "MyTable",
+               permissions: "anonymous:*",
+                entity: "FIRSTEntity",
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                name: "outputfile"
+            );
+
+            string initialConfiguration = AddEntityPropertiesToConfiguration(GetInitialConfiguration(), GetFirstEntityConfiguration());
+            string configurationWithOneEntity = AddEntityPropertiesToConfiguration(GetInitialConfiguration(), GetFirstEntityConfiguration());
+            string expectedConfiguration = AddEntityPropertiesToConfiguration(configurationWithOneEntity, GetConfigurationWithCaseSensitiveEntityName());
+            RunTest(options, initialConfiguration, expectedConfiguration);
         }
 
         /// <summary>
@@ -187,59 +113,119 @@ namespace Hawaii.Cli.Tests
             Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
         }
 
-        private static string GetGeneratedConfigWithOneEntity()
+        /// <summary>
+        /// Adds the entity properties to the configuration and returns the updated configuration json as a string.  
+        /// </summary>
+        /// <param name="configuration">Configuration Json.</param>
+        /// <param name="entityProperties">Entity properties to be added to the configuration.</param>
+        private static string AddEntityPropertiesToConfiguration(string configuration, string entityProperties)
+        {
+            JObject configurationJson = JObject.Parse(configuration);
+            JObject entityPropertiesJson = JObject.Parse(entityProperties);
+
+            configurationJson.Merge(entityPropertiesJson, new JsonMergeSettings
+            {
+                MergeArrayHandling = MergeArrayHandling.Union
+            });
+            return configurationJson.ToString();
+        }
+
+        private static string GetInitialConfiguration()
+        {
+            return @"{
+            ""$schema"": ""hawaii.draft-01.schema.json"",
+            ""data-source"": {
+              ""database-type"": ""mssql"",
+              ""connection-string"": ""testconnectionstring""
+            },
+            ""mssql"": {
+              ""set-session-context"": true
+            },
+            ""runtime"": {
+              ""rest"": {
+                ""enabled"": true,
+                ""path"": ""/api""
+              },
+              ""graphql"": {
+                ""allow-introspection"": true,
+                ""enabled"": true,
+                ""path"": ""/graphql""
+              },
+              ""host"": {
+                ""mode"": ""development"",
+                ""cors"": {
+                  ""origins"": [],
+                  ""allow-credentials"": true
+                },
+                ""authentication"": {
+                  ""provider"": ""EasyAuth""
+                }
+              }
+            },
+            ""entities"": {}
+          }";
+
+        }
+
+        private static string GetFirstEntityConfiguration()
+        {
+            return @"
+              {
+                ""entities"": {
+                    ""FirstEntity"": {
+                      ""source"": ""MyTable"",
+                      ""permissions"": [
+                          {
+                          ""role"": ""anonymous"",
+                          ""actions"": [
+                              ""read"",
+                              ""update""
+                            ]
+                          }
+                        ]
+                    }
+                }     
+            }";
+        }
+
+        private static string GetSecondEntityConfiguration()
+        {
+            return @"{
+              ""entities"": {
+                    ""SecondEntity"": {
+                      ""source"": ""MyTable"",
+                      ""permissions"": [
+                        {
+                          ""role"": ""anonymous"",
+                          ""actions"": [ ""*"" ]
+                        }
+                      ]
+                    }
+                  }
+                }";
+        }
+
+        private static string GetConfigurationWithCaseSensitiveEntityName()
         {
             return @"
                 {
-                ""$schema"": ""hawaii.draft-01.schema.json"",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring""
-                },
-                ""mssql"": {
-                    ""set-session-context"": true
-                },
-                ""runtime"": {
-                    ""rest"": {
-                    ""enabled"": true,
-                    ""path"": ""/api""
-                    },
-                    ""graphql"": {
-                    ""allow-introspection"": true,
-                    ""enabled"": true,
-                    ""path"": ""/graphql""
-                    },
-                    ""host"": {
-                    ""mode"": ""development"",
-                    ""cors"": {
-                        ""origins"": [],
-                        ""allow-credentials"": true
-                    },
-                    ""authentication"": {
-                        ""provider"": ""EasyAuth"",
-                        ""jwt"": {
-                        ""audience"": """",
-                        ""issuer"": """"
-                        }
-                    }
-                    }
-                },
                 ""entities"": {
-                    ""MyEntity"": {
+                    ""FIRSTEntity"": {
                     ""source"": ""MyTable"",
                     ""permissions"": [
                         {
                         ""role"": ""anonymous"",
                         ""actions"": [
-                            ""read"",
-                            ""update""
+                            ""*""
                         ]
                         }
                     ]
                     }
                 }
-                }
+              }
             ";
         }
+
     }
+
 }

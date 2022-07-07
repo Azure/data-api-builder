@@ -120,7 +120,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [DataRow("@claims.user_email eq @item.col1 and not ( true eq @claims.isemp%loyee or @claims.name eq 'Aaron')"
             , DisplayName = "% in claimType")]
         [DataRow("@claims.user+email eq @item.col1 and @claims.isemployee eq @item.col2", DisplayName = "+ in claimType")]
-        [DataRow("@claims.user_email eq @item.col1 and @claims.((isemployee eq @item.col2", DisplayName = "unbalanced parenthesis in claimType")]
+        [DataRow("@claims.(use(r) eq @item.col1 and @claims.isemployee eq @item.col2", DisplayName = "unbalanced parenthesis in claimType 1")]
+        [DataRow("@claims.user_email eq @item.col1 and @claims.((isemployee eq @item.col2", DisplayName = "unbalanced parenthesis in claimType 2")]
         public void ParseInvalidDbPolicyWithInvalidClaimTypeFormat(string policy)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(

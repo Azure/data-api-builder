@@ -7,14 +7,15 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 
@@ -31,6 +32,7 @@ namespace Azure.DataGateway.Service.Services
         private readonly IAuthorizationService _authorizationService;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IAuthorizationResolver _authorizationResolver;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         public RestService(
             IQueryEngine queryEngine,
@@ -38,7 +40,8 @@ namespace Azure.DataGateway.Service.Services
             ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService,
-            IAuthorizationResolver authorizationResolver
+            IAuthorizationResolver authorizationResolver,
+            RuntimeConfigProvider runtimeConfigProvider
             )
         {
             _queryEngine = queryEngine;
@@ -47,6 +50,7 @@ namespace Azure.DataGateway.Service.Services
             _authorizationService = authorizationService;
             _sqlMetadataProvider = sqlMetadataProvider;
             _authorizationResolver = authorizationResolver;
+            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         /// <summary>
@@ -89,7 +93,6 @@ namespace Azure.DataGateway.Service.Services
                         entityName,
                         dbo: dbObject,
                         insertPayloadRoot,
-                        HttpRestVerbs.POST,
                         operationType);
                     RequestValidator.ValidateInsertRequestContext(
                         (InsertRequestContext)context,
@@ -109,7 +112,6 @@ namespace Azure.DataGateway.Service.Services
                     context = new UpsertRequestContext(entityName,
                                                        dbo: dbObject,
                                                        upsertPayloadRoot,
-                                                       GetHttpVerb(operationType),
                                                        operationType);
                     RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                     break;
@@ -134,7 +136,7 @@ namespace Azure.DataGateway.Service.Services
             }
 
             string role = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-            string action = HttpVerbToActions(GetHttpVerb(operationType).Name);
+            string action = HttpVerbToActions(GetHttpContext().Request.Method);
             string dbPolicy = _authorizationResolver.TryProcessDBPolicy(entityName, role, action, GetHttpContext());
             if (!string.IsNullOrEmpty(dbPolicy))
             {
@@ -168,6 +170,51 @@ namespace Azure.DataGateway.Service.Services
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             };
+        }
+
+        /// <summary>
+        /// Tries to get the Entity name and primary key route
+        /// from the provided string that starts with the REST
+        /// path. If the provided string does not start with
+        /// the given REST path, we throw an exception. We then
+        /// return the entity name as the string up until the next
+        /// '/' if one exists, and the primary key as the substring
+        /// following the '/'.
+        /// </summary>
+        /// <param name="route">String containing path + entity name
+        /// (and optionally primary key).</param>
+        /// <returns>entity name after path.</returns>
+        /// <exception cref="DataGatewayException"></exception>
+        public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string route)
+        {
+            string path = _runtimeConfigProvider.RestPath.TrimStart('/');
+            if (!route.StartsWith(path))
+            {
+                throw new DataGatewayException(message: $"Invalid Path for route: {route}.",
+                                               statusCode: HttpStatusCode.BadRequest,
+                                               subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+            }
+
+            // entity name comes after the path, so get substring starting from
+            // the end of path. If path is not empty we trim the '/' following the path.
+            string routeAfterPath = string.IsNullOrEmpty(path) ? route : route.Substring(path.Length).TrimStart('/');
+            string primaryKeyRoute = string.Empty;
+            string entityName;
+            // a '/' remaining in this substring means we have a primary key route
+            if (routeAfterPath.Contains('/'))
+            {
+                // primary key route is what follows the first '/', we trim this an any
+                // additional '/'
+                primaryKeyRoute = routeAfterPath.Substring(routeAfterPath.IndexOf('/')).TrimStart('/');
+                // save entity name as string up until first '/'
+                entityName = routeAfterPath[..routeAfterPath.IndexOf('/')];
+            }
+            else
+            {
+                entityName = routeAfterPath;
+            }
+
+            return (entityName, primaryKeyRoute);
         }
 
         /// <summary>
@@ -253,27 +300,6 @@ namespace Azure.DataGateway.Service.Services
             return _httpContextAccessor.HttpContext!;
         }
 
-        private static OperationAuthorizationRequirement GetHttpVerb(Operation operation)
-        {
-            switch (operation)
-            {
-                case Operation.Update:
-                case Operation.Upsert:
-                    return HttpRestVerbs.PUT;
-                case Operation.UpdateIncremental:
-                case Operation.UpsertIncremental:
-                    return HttpRestVerbs.PATCH;
-                case Operation.Delete:
-                    return HttpRestVerbs.DELETE;
-                case Operation.Insert:
-                    return HttpRestVerbs.POST;
-                case Operation.Find:
-                    return HttpRestVerbs.GET;
-                default:
-                    throw new NotSupportedException("This operation is not yet supported.");
-            }
-        }
-
         /// <summary>
         /// Performs authorization check for REST with a single requirement.
         /// Called when the relevant metadata has been parsed from the request.
@@ -313,7 +339,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="httpVerb"></param>
         /// <returns>The CRUD operation for the given httpverb.</returns>
-        private static string HttpVerbToActions(string httpVerbName)
+        public static string HttpVerbToActions(string httpVerbName)
         {
             switch (httpVerbName)
             {

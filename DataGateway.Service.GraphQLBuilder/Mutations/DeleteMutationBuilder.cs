@@ -6,11 +6,19 @@ using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
-    internal static class DeleteMutationBuilder
+    public static class DeleteMutationBuilder
     {
-        public static FieldDefinitionNode Build(NameNode name, ObjectTypeDefinitionNode objectTypeDefinitionNode, Entity configEntity)
+        /// <summary>
+        /// Generate the `delete` mutation field for the GraphQL mutations for a given Object Definition
+        /// </summary>
+        /// <param name="name">Name of the GraphQL object to generate the delete field for.</param>
+        /// <param name="objectTypeDefinitionNode">The GraphQL object type to generate for.</param>
+        /// <param name="configEntity">Entity definition</param>
+        /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
+        /// <returns>A GraphQL field definition named <c>delete*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
+        public static FieldDefinitionNode Build(NameNode name, ObjectTypeDefinitionNode objectTypeDefinitionNode, Entity configEntity, DatabaseType databaseType, IEnumerable<string>? rolesAllowedForMutation = null)
         {
-            List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode);
+            List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode, databaseType);
             string description;
             if (idFields.Count > 1)
             {
@@ -33,13 +41,20 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     new List<DirectiveNode>()));
             }
 
+            // Create authorize directive denoting allowed roles
+            List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+            if (rolesAllowedForMutation is not null)
+            {
+                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForMutation));
+            }
+
             return new(
                 null,
                 new NameNode($"delete{FormatNameForObject(name, configEntity)}"),
                 new StringValueNode($"Delete a {name}"),
                 inputValues,
                 new NamedTypeNode(FormatNameForObject(name, configEntity)),
-                new List<DirectiveNode>()
+                fieldDefinitionNodeDirectives
             );
         }
     }

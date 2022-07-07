@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Config
     /// for all entities will be exposed.</param>
     public record RestGlobalSettings
         (bool Enabled = true,
-         string Path = "/")
+         string Path = "/api")
         : ApiSettings(Enabled, Path);
 
     /// <summary>
@@ -71,7 +71,7 @@ namespace Azure.DataGateway.Config
         [property: JsonPropertyName("origins")]
         string[]? Origins,
         [property: JsonPropertyName("allow-credentials")]
-        bool AllowCredentials = true);
+        bool AllowCredentials = false);
 
     /// <summary>
     /// Different global settings types.

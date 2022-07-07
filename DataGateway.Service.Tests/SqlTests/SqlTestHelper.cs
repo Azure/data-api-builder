@@ -158,30 +158,32 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="operationType">The operation type to be tested.</param>
         public static async Task<IActionResult> PerformApiTest(
             RestController controller,
+            string path,
             string entityName,
             string primaryKeyRoute,
             Operation operationType = Operation.Find)
 
         {
             IActionResult actionResult;
+            string pathAndEntityName = $"{path}/{entityName}";
             switch (operationType)
             {
                 case Operation.Find:
-                    actionResult = await controller.Find(entityName, primaryKeyRoute);
+                    actionResult = await controller.Find($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 case Operation.Insert:
-                    actionResult = await controller.Insert(entityName);
+                    actionResult = await controller.Insert($"{pathAndEntityName}");
                     break;
                 case Operation.Delete:
-                    actionResult = await controller.Delete(entityName, primaryKeyRoute);
+                    actionResult = await controller.Delete($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 case Operation.Update:
                 case Operation.Upsert:
-                    actionResult = await controller.Upsert(entityName, primaryKeyRoute);
+                    actionResult = await controller.Upsert($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 case Operation.UpdateIncremental:
                 case Operation.UpsertIncremental:
-                    actionResult = await controller.UpsertIncremental(entityName, primaryKeyRoute);
+                    actionResult = await controller.UpsertIncremental($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
@@ -255,6 +257,34 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             else
             {
                 Assert.AreEqual(expected, actual, ignoreCase: true);
+            }
+        }
+
+        /// <summary>
+        /// Returns the HTTP verb for a provided Operation.
+        /// </summary>
+        /// <param name="operationType">Operation such as Find, Upsert, Delete, etc.
+        /// When Operation.None is provided from some tests, return empty string.</param>
+        /// <returns>Matching HttpConstants value</returns>
+        /// <exception cref="ArgumentException"></exception>
+        public static string OperationTypeToHTTPVerb(Operation operationType)
+        {
+            switch (operationType)
+            {
+                case Operation.Find:
+                    return HttpConstants.GET;
+                case Operation.Insert:
+                    return HttpConstants.POST;
+                case Operation.Upsert:
+                    return HttpConstants.PUT;
+                case Operation.UpsertIncremental:
+                    return HttpConstants.PATCH;
+                case Operation.Delete:
+                    return HttpConstants.DELETE;
+                case Operation.None:
+                    return string.Empty;
+                default:
+                    throw new ArgumentException(message: $"Invalid operationType {operationType} provided");
             }
         }
 

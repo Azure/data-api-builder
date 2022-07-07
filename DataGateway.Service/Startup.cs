@@ -2,6 +2,7 @@ using System;
 using System.IO.Abstractions;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Authorization;
@@ -152,11 +153,9 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.cosmos:
                         return null!;
                     case DatabaseType.mssql:
-                        return new DbExceptionParserBase(configProvider);
                     case DatabaseType.postgresql:
-                        return ActivatorUtilities.CreateInstance<PostgresDbExceptionParser>(serviceProvider);
                     case DatabaseType.mysql:
-                        return ActivatorUtilities.CreateInstance<MySqlDbExceptionParser>(serviceProvider);
+                        return new DbExceptionParser(configProvider);
                     default:
                         throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
                 }
@@ -174,7 +173,6 @@ namespace Azure.DataGateway.Service
 
             ConfigureAuthentication(services);
             services.AddAuthorization();
-            services.AddSingleton<IAuthorizationHandler, RequestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
 

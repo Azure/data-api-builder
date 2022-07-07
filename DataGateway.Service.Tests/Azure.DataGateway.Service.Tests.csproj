@@ -20,10 +20,12 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="HotChocolate" Version="$(HotChocolateVersion)" />
+    <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     <PackageReference Include="System.IO.Abstractions.TestingHelpers" Version="$(SystemIOAbstractionsVersion)" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DataGateway.Auth\Azure.DataGateway.Auth.csproj" />
     <ProjectReference Include="..\DataGateway.Config\Azure.DataGateway.Config.csproj" />
     <ProjectReference Include="..\DataGateway.Service\Azure.DataGateway.Service.csproj" />
   </ItemGroup>

@@ -1,10 +1,7 @@
 name: CI
 
-# Controls when the workflow will run
-on:
-  # Triggers the workflow on push or pull request events
-  push:
-    branches: [ "*" ]
+# runs the workflow on every push
+on: [ push ]
 
 jobs:
    build:
@@ -65,6 +62,7 @@ jobs:
       # PR number will be used to update PR comment on test coverage report
       - name: Get PR number
         uses: jwalton/gh-find-current-pr@v1
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         id: finder
 
       # Add Coverage report in the PR Comment

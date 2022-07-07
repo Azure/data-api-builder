@@ -53,9 +53,27 @@ namespace Hawaii.Cli.Models
             }
             else
             {
-                SingularPlural singularPlural = new(
-                    graphQL.Singularize(inputIsKnownToBePlural: false),
-                    graphQL.Pluralize(inputIsKnownToBeSingular: false));
+                string singular, plural;
+                if (graphQL.Contains(":"))
+                {
+                    string[] arr = graphQL.Split(":");
+                    if (arr.Length != 2)
+                    {
+                        Console.Error.WriteLine($"Invalid format for --graphql. Accepted values are true/false," +
+                                                "a string, or a pair of string in the format <singular>:<plural>");
+                        return null;
+                    }
+
+                    singular = arr[0];
+                    plural = arr[1];
+                }
+                else
+                {
+                    singular = graphQL.Singularize(inputIsKnownToBePlural: false);
+                    plural = graphQL.Pluralize(inputIsKnownToBeSingular: false);
+                }
+
+                SingularPlural singularPlural = new(singular, plural);
                 GraphQLEntitySettings graphQLEntitySettings = new(singularPlural);
                 graphQL_detail = graphQLEntitySettings;
             }

@@ -3,7 +3,7 @@ namespace Hawaii.Cli.Tests
     /// <summary>
     /// Tests for Adding new Entity.
     /// </summary>
-    [TestClass, TestCategory("AddEntityTests")]
+    [TestClass]
     public class AddEntityTests
     {
         /// <summary>

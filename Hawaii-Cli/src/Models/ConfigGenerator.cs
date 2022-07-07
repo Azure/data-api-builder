@@ -399,12 +399,6 @@ namespace Hawaii.Cli.Models
                         // updating the current action list
                         object[] updatedActionArray = GetUpdatedActionArray(newActionArray, fieldsToInclude, fieldsToExclude, actionList);
 
-                        if (updatedActionArray is null)
-                        {
-                            Console.Error.WriteLine("Failed to get the updated Action list.");
-                            return null;
-                        }
-
                         updatedPermissionsList.Add(new PermissionSetting(newRole, updatedActionArray));
                     }
                 }

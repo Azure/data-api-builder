@@ -28,6 +28,10 @@ namespace Azure.DataGateway.Service.Configurations
         // The claimType is invalid if there is a match found.
         private static readonly Regex _invalidClaimCharsRgx = new(_invalidClaimChars, RegexOptions.Compiled);
 
+        // Regex used to extract all claimTypes in policy. It finds all the substrings which are
+        // of the form @claims.*** delimited by space character,end of the line or end of the string.
+        private static readonly string _claimChars = @"@claims\.[^\s\)]*";
+
         // Set of allowed actions for a request.
         private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
 
@@ -222,33 +226,6 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Helper method which takes in the policy string and checks whether all fields referenced
-        /// within the policy are accessible to the user.
-        /// </summary>
-        /// <param name="policy">Database policy</param>
-        /// <param name="include">Array of fields which are accessible to the user.</param>
-        /// <param name="exclude">Array of fields which are not accessible to the user.</param>
-        /// <returns>Processed policy without @item. directives before field names.</returns>
-        private static void AreFieldsAccessible(string policy, HashSet<string> includedFields, HashSet<string> excludedFields)
-        {
-            string fieldCharsRgx = @"@item\.[a-zA-Z0-9_]*";
-
-            // processedPolicy would be devoid of @item. directives, provided all the columns referenced in
-            // the database policy are accessible.
-            MatchCollection columnNameMatches = Regex.Matches(policy, fieldCharsRgx);
-            foreach (Match columnNameMatch in columnNameMatches)
-            {
-                if (!IsFieldAccessible(columnNameMatch, includedFields, excludedFields))
-                {
-                    throw new DataGatewayException(
-                    message: $"Not all the columns required by policy are accessible.",
-                    statusCode: System.Net.HttpStatusCode.InternalServerError,
-                    subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
-                }
-            }
-        }
-
-        /// <summary>
         /// Helper method which takes in the database policy and returns the processed policy
         /// without @item. directives before field names.
         /// </summary>
@@ -264,20 +241,18 @@ namespace Azure.DataGateway.Service.Configurations
             return processedPolicy;
         }
 
+        /// <summary>
+        /// The method takes the policy string and does the pre-processing related to the claimTypes within it.
+        /// For eg. Removal of redundant parenthesis etc.
+        /// </summary>
+        /// <param name="policy">Policy string to be processed.</param>
+        /// <returns></returns>
         private static string ProcessClaimsInPolicy(string policy)
         {
-            // Regex used to extract all claimTypes in policy. It finds all the substrings which are
-            // of the form @claims.*** delimited by space character,end of the line or end of the string.
-            string claimCharsRgx = @"@claims\.[^\s\)]*";
             StringBuilder processedPolicy = new();
-
-            // Pre-process the policy to replace "( " with "(", i.e. remove
-            // extra spaces after opening parenthesis. This will prevent allowed claimTypes
-            // from being invalidated.
-            string reduntantSpaceRgx = @"\(\s*";
-            policy = Regex.Replace(policy, reduntantSpaceRgx, "(");
+            policy = RemoveRedundantSpacesFromPolicy(policy);
             // Find all the claimTypes from the policy
-            MatchCollection claimTypes = Regex.Matches(policy, claimCharsRgx);
+            MatchCollection claimTypes = GetClaimTypesInPolicy(policy);
 
             // parsedIdx indicates the last index in the policy string from which we need to append to the
             // processedPolicy.
@@ -310,9 +285,6 @@ namespace Azure.DataGateway.Service.Configurations
                 // We don't need to include unnecessary parenthesis in our parsed policy, so we don't append.
                 while (expNumClosingParenthesis > 0)
                 {
-                    // If the code reaches here, either the character is ')' or ' '.
-                    // If its a ' ', we ignore as it is an extra space.
-                    // If its a ')', we decrement the required closing parenthesis by 1.
                     if (policy[parsedIdx] == ')')
                     {
                         expNumClosingParenthesis--;
@@ -332,13 +304,38 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
+        /// Helper method which takes in the policy string and checks whether all fields referenced
+        /// within the policy are accessible to the user.
+        /// </summary>
+        /// <param name="policy">Database policy</param>
+        /// <param name="include">Array of fields which are accessible to the user.</param>
+        /// <param name="exclude">Array of fields which are not accessible to the user.</param>
+        private static void AreFieldsAccessible(string policy, HashSet<string> includedFields, HashSet<string> excludedFields)
+        {
+            // Pattern of field references in the policy
+            string fieldCharsRgx = @"@item\.[a-zA-Z0-9_]*";
+            MatchCollection fieldNameMatches = Regex.Matches(policy, fieldCharsRgx);
+
+            foreach (Match fieldNameMatch in fieldNameMatches)
+            {
+                if (!IsFieldAccessible(fieldNameMatch, includedFields, excludedFields))
+                {
+                    throw new DataGatewayException(
+                    message: $"Not all the columns required by policy are accessible.",
+                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
+                }
+            }
+        }
+
+        /// <summary>
         /// Helper method which takes in field prefixed with @item. directive and check if its
         /// accessible based on include/exclude fields.
         /// </summary>
         /// <param name="columnNameMatch"></param>
         /// <param name="included">Set of fields which are accessible to the user.</param>
         /// <param name="excluded">Set of fields which are not accessible to the user.</param>
-        /// <returns>Field name without the @item. prefix.</returns>
+        /// <returns>Boolean value indicating whether the field is accessible or not.</returns>
         /// <exception cref="DataGatewayException">Throws exception if the field is not accessible.</exception>
         private static bool IsFieldAccessible(Match columnNameMatch, HashSet<string> includedFields, HashSet<string> excludedFields)
         {
@@ -356,25 +353,42 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Helper method to do different validations related to the claims in the policy and remove the claim
-        /// prefix from the claimTypes and any parenthesis surrounding the claimTypes.
+        /// Helper method to get all the claimTypes from the policy.
         /// </summary>
-        /// <param name="policy">The policy to be validated and processed.</param>
-        /// <returns></returns>
-        /// <exception cref="DataGatewayException">Throws exception when one or the other validations fail.</exception>
-        private static void ValidateClaimsInPolicy(string policy)
+        /// <param name="policy">Policy from which the claimTypes are to be looked</param>
+        /// <returns>Collection of all matches i.e. claimTypes.</returns>
+        private static MatchCollection GetClaimTypesInPolicy(string policy)
         {
-            // Regex used to extract all claimTypes in policy. It finds all the substrings which are
-            // of the form @claims.*** delimited by space character,end of the line or end of the string.
-            string claimCharsRgx = @"@claims\.[^\s\)]*";
+            return Regex.Matches(policy, _claimChars);
+        }
 
+        /// <summary>
+        /// Helper method to preprocess the policy by replacing "( " with "(", i.e. remove 
+        /// extra spaces after opening parenthesis. This will prevent allowed claimTypes 
+        /// from being invalidated.
+        /// </summary>
+        /// <param name="policy"></param>
+        /// <returns>Policy string without redundant spaces.</returns>
+        private static string RemoveRedundantSpacesFromPolicy(string policy)
+        {
             // Pre-process the policy to replace "( " with "(", i.e. remove
             // extra spaces after opening parenthesis. This will prevent allowed claimTypes
             // from being invalidated.
             string reduntantSpaceRgx = @"\(\s*";
-            policy = Regex.Replace(policy, reduntantSpaceRgx, "(");
+            return Regex.Replace(policy, reduntantSpaceRgx, "(");
+        }
+
+        /// <summary>
+        /// Method to do different validations related to the claims in the policy.
+        /// </summary>
+        /// <param name="policy">The policy to be validated and processed.</param>
+        /// <exception cref="DataGatewayException">Throws exception when one or the other validations fail.</exception>
+        private static void ValidateClaimsInPolicy(string policy)
+        {
+            policy = RemoveRedundantSpacesFromPolicy(policy);
+
             // Find all the claimTypes from the policy
-            MatchCollection claimTypes = Regex.Matches(policy, claimCharsRgx);
+            MatchCollection claimTypes = GetClaimTypesInPolicy(policy);
 
             // parsedIdx indicates the last index in the policy string from which we need to append to the
             // processedPolicy.
@@ -478,7 +492,6 @@ namespace Azure.DataGateway.Service.Configurations
                         statusCode: System.Net.HttpStatusCode.InternalServerError,
                         subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
             }
-
         }
 
         /// <summary>
@@ -487,7 +500,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// - Wildcard (*)
         /// </summary>
         /// <param name="actionName"></param>
-        /// <returns></returns>
+        /// <returns>Boolean value indicating whether the actionName is valid or not.</returns>
         public static bool IsValidActionName(string actionName)
         {
             return actionName.Equals("*") || _validActions.Contains(actionName);

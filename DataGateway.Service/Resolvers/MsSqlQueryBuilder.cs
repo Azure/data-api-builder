@@ -120,7 +120,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// e.g. for columns [C1, C2, C3] and output qualifier Inserted
         /// return Inserted.C1, Inserted.C2, Inserted.C3
         /// </summary>
-        private string MakeOutputColumns(List<ReturnColumn> columns, OutputQualifier outputQualifier)
+        private string MakeOutputColumns(List<OutputColumn> columns, OutputQualifier outputQualifier)
         {
             return string.Join(", ", columns.Select(c => Build(c, outputQualifier)));
         }
@@ -129,7 +129,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Build a labelled column as a column and attach
         /// ... AS {Label} to it
         /// </summary>
-        private string Build(ReturnColumn column, OutputQualifier outputQualifier)
+        private string Build(OutputColumn column, OutputQualifier outputQualifier)
         {
             return $"{outputQualifier}.{QuoteIdentifier(column.ColumnName)} AS {QuoteIdentifier(column.Label)}";
         }

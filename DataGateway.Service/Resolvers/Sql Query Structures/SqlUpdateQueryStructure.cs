@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The updated columns that will return
         /// </summary>
-        public List<ReturnColumn> ReturnColumns { get; }
+        public List<OutputColumn> ReturnColumns { get; }
 
         public SqlUpdateStructure(
             string entityName,

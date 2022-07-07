@@ -152,9 +152,9 @@ namespace Azure.DataGateway.Service.Resolvers
         /// name and the exposed name.
         /// </summary>
         /// <returns>List of ReturnColumns</returns>
-        protected List<ReturnColumn> GenerateReturnColumns()
+        protected List<OutputColumn> GenerateReturnColumns()
         {
-            List<ReturnColumn> returnColumns = new();
+            List<OutputColumn> returnColumns = new();
             foreach (string columnName in GetUnderlyingTableDefinition().Columns.Keys)
             {
                 SqlMetadataProvider.TryGetExposedColumnName(EntityName, columnName, out string? exposedName);

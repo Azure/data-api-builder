@@ -1037,7 +1037,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
-        /// Tests the InsertOne functionality with a REST POST request.
+        /// Tests the InsertOne functionality with a REST POST request
+        /// where the entity has mapping defined for its columns.
         /// </summary>
         [TestMethod]
         public virtual async Task InsertOneWithMappingTest()
@@ -1124,6 +1125,29 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     primaryKeyRoute: "id/5",
                     queryString: null,
                     entity: _integrationEntityName,
+                    sqlQuery: null,
+                    controller: _restController,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
+        /// <summary>
+        /// DeleteOne operates on a single entity with mapping defined
+        /// for its columns, and with target object identified in the
+        /// primaryKeyRoute. No requestBody is used for this type of
+        /// request. sqlQuery is not used because we are confirming the
+        /// NoContent result of a successful delete operation.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeleteOneMappingTest()
+        {
+            //expected status code 204
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "treeId/1",
+                    queryString: null,
+                    entity: _integrationMappingEntity,
                     sqlQuery: null,
                     controller: _restController,
                     operationType: Operation.Delete,
@@ -1595,6 +1619,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     expectedLocationHeader: expectedLocationHeader
                 );
 
+            // Entity with mapping defined for columns
             requestBody = @"
             {
                 ""Scientific Name"": ""Quercus"",

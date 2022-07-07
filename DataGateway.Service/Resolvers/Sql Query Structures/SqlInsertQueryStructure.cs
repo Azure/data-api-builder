@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The inserted columns that the insert will return
         /// </summary>
-        public List<ReturnColumn> ReturnColumns { get; }
+        public List<OutputColumn> ReturnColumns { get; }
 
         public SqlInsertStructure(
             string entityName,

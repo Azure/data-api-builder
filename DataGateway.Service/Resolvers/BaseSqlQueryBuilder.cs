@@ -318,7 +318,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Quote and join list of strings with a ", " separator
         /// </summary>
-        protected string Build(List<ReturnColumn> columns)
+        protected string Build(List<OutputColumn> columns)
         {
             return string.Join(", ", columns.Select(c => Build(c)));
         }
@@ -327,7 +327,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Build a labelled column as a column and attach
         /// ... AS {Label} to it
         /// </summary>
-        protected string Build(ReturnColumn column)
+        protected string Build(OutputColumn column)
         {
             return QuoteIdentifier(column.ColumnName) + " AS " + QuoteIdentifier(column.Label);
         }

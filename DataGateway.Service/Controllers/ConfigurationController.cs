@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.ServerTiming;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Controllers
@@ -8,9 +10,12 @@ namespace Azure.DataGateway.Service.Controllers
     public class ConfigurationController : Controller
     {
         RuntimeConfigProvider _configurationProvider;
-        public ConfigurationController(RuntimeConfigProvider configurationProvider)
+        private readonly IServerTiming _serverTiming;
+
+        public ConfigurationController(RuntimeConfigProvider configurationProvider, IServerTiming serverTiming)
         {
             _configurationProvider = configurationProvider;
+            _serverTiming = serverTiming;
         }
 
         /// <summary>
@@ -23,6 +28,8 @@ namespace Azure.DataGateway.Service.Controllers
         [HttpPost]
         public ActionResult Index([FromBody] ConfigurationPostParameters configuration)
         {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
             if (_configurationProvider.TryGetRuntimeConfiguration(out _))
             {
                 return new ConflictResult();
@@ -32,6 +39,8 @@ namespace Azure.DataGateway.Service.Controllers
                 configuration.Configuration,
                 configuration.Schema,
                 configuration.ConnectionString);
+            stopwatch.Stop();
+            _serverTiming.Metrics.Add(new ServerTimingMetric("Graphql-BindAsync", stopwatch.ElapsedMilliseconds, ""));
 
             return new OkResult();
         }

@@ -7,6 +7,7 @@ using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
+using Azure.DataGateway.Service.ServerTiming;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Services.MetadataProviders;
 using HotChocolate.Language;
@@ -166,6 +167,7 @@ namespace Azure.DataGateway.Service
             services.AddSingleton<GraphQLService>();
             services.AddSingleton<RestService>();
             services.AddSingleton<IFileSystem, FileSystem>();
+            services.AddServerTiming();
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
@@ -204,6 +206,8 @@ namespace Azure.DataGateway.Service
 
             app.UseRouting();
 
+            app.UseMiddleware<ServerTimingMiddleware>();
+
             // Adding CORS Middleware
             if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Cors is not null)
             {
@@ -216,9 +220,10 @@ namespace Azure.DataGateway.Service
 
             app.Use(async (context, next) =>
             {
+                bool isHealthCheckRequest = context.Request.Path == "/" && context.Request.Method == HttpMethod.Get.Method;
                 bool isSettingConfig = context.Request.Path.StartsWithSegments("/configuration")
                     && context.Request.Method == HttpMethod.Post.Method;
-                if (isRuntimeReady)
+                if (isRuntimeReady || isHealthCheckRequest)
                 {
                     await next.Invoke();
                 }

@@ -34,7 +34,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
 
                 // primary keys used as predicates
-                if (primaryKeys.Contains(backingColumn))
+                if (primaryKeys.Contains(backingColumn!))
                 {
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn)),

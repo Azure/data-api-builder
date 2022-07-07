@@ -230,9 +230,9 @@ WHERE
             Dictionary<string, string> fields = new();
 
             int index = 0;
-            foreach (MutationColumn cols in structure.InsertColumns)
+            foreach (string cols in structure.InsertColumns)
             {
-                fields[cols.ColumnName] = structure.Values[index];
+                fields[cols] = structure.Values[index];
                 index++;
             }
 
@@ -241,7 +241,7 @@ WHERE
                 ColumnDefinition columnDef = structure.GetColumnDefinition(column);
 
                 string quotedColName = QuoteIdentifier(column);
-                if (structure.InsertColumns.Select(x => x.ColumnName.Equals(column)).Contains(true))
+                if (structure.InsertColumns.Select(x => x.Equals(column)).Contains(true))
                 {
                     selections.Add($"{fields[column]} as {quotedColName}");
                 }
@@ -270,7 +270,7 @@ WHERE
             {
                 string quotedColName = QuoteIdentifier(colName);
 
-                if (structure.InsertColumns.Select(x => x.ColumnName.Equals(colName)).Contains(true))
+                if (structure.InsertColumns.Select(x => x.Equals(colName)).Contains(true))
                 {
                     selections.Add($"{structure.Values[index]} AS {quotedColName}");
                     index++;

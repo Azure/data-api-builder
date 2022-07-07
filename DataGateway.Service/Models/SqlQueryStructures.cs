@@ -89,16 +89,17 @@ namespace Azure.DataGateway.Service.Models
     }
 
     /// <summary>
-    /// Mutation columns contains a column name which
+    /// Output columns contains a column name which
     /// represents the backing column in the table,
     /// and a label which is the exposed name.
+    /// Used in the OUTPUT portion during query building.
     /// </summary>
-    public class MutationColumn
+    public class OutputColumn
     {
         public string ColumnName { get; }
         public string Label { get; }
 
-        public MutationColumn(string columnName, string label)
+        public OutputColumn(string columnName, string label)
         {
             ColumnName = columnName;
             Label = label;

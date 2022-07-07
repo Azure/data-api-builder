@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Column names to insert into the given columns
         /// </summary>
-        public List<MutationColumn> InsertColumns { get; }
+        public List<string> InsertColumns { get; }
 
         /// <summary>
         /// Values to insert into the given columns
@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The inserted columns that the insert will return
         /// </summary>
-        public List<string> ReturnColumns { get; }
+        public List<ReturnColumn> ReturnColumns { get; }
 
         public SqlInsertStructure(
             string entityName,
@@ -38,17 +38,15 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             InsertColumns = new();
             Values = new();
-
-            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
-
-            ReturnColumns = tableDefinition.Columns.Keys.ToList();
+            ReturnColumns = GenerateReturnColumns();
 
             IDictionary<string, object?> createInput =
                 InputArgumentToMutationParams(mutationParams, CreateMutationBuilder.INPUT_ARGUMENT_NAME);
 
             foreach (KeyValuePair<string, object?> param in createInput)
             {
-                PopulateColumnsAndParams(param.Key, param.Value);
+                SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+                PopulateColumnsAndParams(backingColumn!, param.Value);
             }
         }
 
@@ -60,8 +58,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <param name="value">The value of the column.</param>
         private void PopulateColumnsAndParams(string columnName, object? value)
         {
-            SqlMetadataProvider.TryGetExposedColumnName(EntityName, columnName, out string? exposedName);
-            InsertColumns.Add(new (columnName, exposedName!));
+            InsertColumns.Add(columnName);
             string paramName;
 
             try

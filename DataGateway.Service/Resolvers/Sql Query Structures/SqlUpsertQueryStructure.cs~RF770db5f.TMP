@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The updated columns that the update will return
         /// </summary>
-        public List<OutputColumn> ReturnColumns { get; }
+        public List<ReturnColumn> ReturnColumns { get; }
 
         /// <summary>
         /// Indicates whether the upsert should fallback to an update

@@ -146,6 +146,24 @@ namespace Azure.DataGateway.Service.Resolvers
             return GetUnderlyingTableDefinition().Columns.Select(col => col.Key).ToList();
         }
 
+        /// <summary>
+        /// Get a list of the return columns for this table.
+        /// A return column holds both the backing column
+        /// name and the exposed name.
+        /// </summary>
+        /// <returns>List of ReturnColumns</returns>
+        protected List<ReturnColumn> GenerateReturnColumns()
+        {
+            List<ReturnColumn> returnColumns = new();
+            foreach (string columnName in GetUnderlyingTableDefinition().Columns.Keys)
+            {
+                SqlMetadataProvider.TryGetExposedColumnName(EntityName, columnName, out string? exposedName);
+                returnColumns.Add(new(columnName, exposedName!));
+            }
+
+            return returnColumns;
+        }
+
         ///<summary>
         /// Gets the value of the parameter cast as the system type
         /// of the column this parameter is associated with

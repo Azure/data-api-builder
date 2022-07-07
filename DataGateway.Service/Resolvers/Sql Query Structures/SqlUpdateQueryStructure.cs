@@ -19,14 +19,20 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<Predicate> UpdateOperations { get; }
 
+        /// <summary>
+        /// The updated columns that will return
+        /// </summary>
+        public List<ReturnColumn> ReturnColumns { get; }
+
         public SqlUpdateStructure(
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
             bool isIncrementalUpdate)
-        : base(sqlMetadataProvider, entityName: entityName)
+        : base(sqlMetadataProvider, entityName)
         {
             UpdateOperations = new();
+            ReturnColumns = GenerateReturnColumns();
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
 
             List<string> primaryKeys = tableDefinition.PrimaryKey;
@@ -76,6 +82,7 @@ namespace Azure.DataGateway.Service.Resolvers
             UpdateOperations = new();
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
             List<string> columns = tableDefinition.Columns.Keys.ToList();
+            ReturnColumns = GenerateReturnColumns();
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 // primary keys used as predicates
@@ -120,11 +127,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
-            else if (param.Value == null)
+            else if (param.Value is null)
             {
                 predicate = new(
                     new PredicateOperand(
-                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn)),
+                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn!)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"@{MakeParamWithValue(null)}")
                 );

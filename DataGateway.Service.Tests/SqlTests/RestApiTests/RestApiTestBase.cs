@@ -1037,6 +1037,33 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
+        /// Tests the InsertOne functionality with a REST POST request.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithMappingTest()
+        {
+            string requestBody = @"
+            {
+                ""treeId"" : 3,
+                ""Scientific Name"": ""Cupressus Sempervirens"",
+                ""United State's Region"": ""South East""
+            }";
+
+            string expectedLocationHeader = $"treeId/3";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entity: _integrationMappingEntity,
+                sqlQuery: GetQuery(nameof(InsertOneWithMappingTest)),
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
         /// Tests InsertOne into a table that has a composite primary key
         /// with a REST POST request.
         /// </summary>
@@ -1480,6 +1507,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 );
 
         }
+
         /// <summary>
         /// Tests REST PatchOne which results in an insert.
         /// URI Path: PK of record that does not exist.
@@ -1566,6 +1594,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
                 );
+
+            requestBody = @"
+            {
+                ""Scientific Name"": ""Quercus"",
+                ""United State's Region"": ""South West""
+            }";
+            expectedLocationHeader = $"treeId/4";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entity: _integrationMappingEntity,
+                    sqlQuery: GetQuery("PatchOne_Insert_Mapping_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
         }
 
         /// <summary>
@@ -1642,6 +1689,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
         }
+
         /// <summary>
         /// Tests the PatchOne functionality with a REST PUT request using
         /// headers that include as a key "If-Match" with an item that does exist,

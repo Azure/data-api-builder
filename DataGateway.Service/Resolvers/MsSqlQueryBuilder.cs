@@ -68,7 +68,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
-                    $"OUTPUT {MakeOutputColumns(structure.PrimaryKey(), OutputQualifier.Inserted)} " +
+                    $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
                     $"WHERE {Build(structure.Predicates)};";
         }
 
@@ -120,10 +120,18 @@ namespace Azure.DataGateway.Service.Resolvers
         /// e.g. for columns [C1, C2, C3] and output qualifier Inserted
         /// return Inserted.C1, Inserted.C2, Inserted.C3
         /// </summary>
-        private string MakeOutputColumns(List<string> columns, OutputQualifier outputQualifier)
+        private string MakeOutputColumns(List<ReturnColumn> columns, OutputQualifier outputQualifier)
         {
-            List<string> outputColumns = columns.Select(column => $"{outputQualifier}.{QuoteIdentifier(column)}").ToList();
-            return string.Join(", ", outputColumns);
+            return string.Join(", ", columns.Select(c => Build(c, outputQualifier)));
+        }
+
+        /// <summary>
+        /// Build a labelled column as a column and attach
+        /// ... AS {Label} to it
+        /// </summary>
+        private string Build(ReturnColumn column, OutputQualifier outputQualifier)
+        {
+            return $"{outputQualifier}.{QuoteIdentifier(column.ColumnName)} AS {QuoteIdentifier(column.Label)}";
         }
 
         /// <summary>

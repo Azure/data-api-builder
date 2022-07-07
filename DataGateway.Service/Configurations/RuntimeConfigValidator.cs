@@ -78,7 +78,6 @@ namespace Azure.DataGateway.Service.Configurations
             }
 
             ValidateAuthenticationConfig();
-            ValidateAndProcessPermissionsInConfig(_runtimeConfigProvider.GetRuntimeConfiguration());
         }
 
         private void ValidateAuthenticationConfig()
@@ -109,17 +108,13 @@ namespace Azure.DataGateway.Service.Configurations
         /// runtime configuration, focusing on the permissions section of the entity.
         /// </summary>
         /// <exception cref="DataGatewayException">Throws exception whenever some validation fails.</exception>
-        public static void ValidateAndProcessPermissionsInConfig(RuntimeConfig runtimeConfig)
+        public void ValidatePermissionsInConfig(RuntimeConfig runtimeConfig)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
                 {
                     Object[] actions = permissionSetting.Actions;
-
-                    // processedActions will contain the processed actions which are formed after performing all kind of
-                    // validations and pre-processing.
-                    List<Object> processedActions = new();
                     foreach (Object action in actions)
                     {
                         string actionName;
@@ -129,7 +124,6 @@ namespace Azure.DataGateway.Service.Configurations
                             // If we have reached this point, it means that we don't have any invalid
                             // data type in actions. However we need to ensure that the actionName is valid.
                             ValidateActionName(actionName, entityName, permissionSetting.Role);
-                            processedActions.Add(action);
                         }
                         else
                         {
@@ -168,14 +162,54 @@ namespace Azure.DataGateway.Service.Configurations
 
                             if (configAction.Policy is not null && configAction.Policy.Database is not null)
                             {
-                                // validate that all the fields mentioned in database policy are accessible to user
-                                // and remove all the occurences of @item. directive from the policy.
-                                configAction.Policy.Database = ProcessFieldsInPolicy(configAction.Policy.Database,
+                                // validate that all the fields mentioned in database policy are accessible to user.
+                                AreFieldsAccessible(configAction.Policy.Database,
                                     configAction.Fields.Include, configAction.Fields.Exclude);
 
-                                // validate that all the claimTypes in the policy are well formed, and remove
-                                // parenthesis around claimTypes.
-                                configAction.Policy.Database = ValidateAndProcessClaimsInPolicy(configAction.Policy.Database);
+                                // validate that all the claimTypes in the policy are well formed.
+                                ValidateClaimsInPolicy(configAction.Policy.Database);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Method to do the pre-processing needed in the permissions section of the runtimeconfig object.
+        /// For eg. removing the @item. directives, checking for invalid characters in claimTypes etc.
+        /// </summary>
+        /// <param name="runtimeConfig">The deserialised config object obtained from the json config supplied.</param>
+        public void ProcessPermissionsInConfig(RuntimeConfig runtimeConfig)
+        {
+            //RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+            {
+                foreach (PermissionSetting permissionSetting in entity.Permissions)
+                {
+                    Object[] actions = permissionSetting.Actions;
+
+                    // processedActions will contain the processed actions which are formed after performing all kind of
+                    // validations and pre-processing.
+                    List<Object> processedActions = new();
+                    foreach (Object action in actions)
+                    {
+                        if (((JsonElement)action).ValueKind == JsonValueKind.String)
+                        {
+                            processedActions.Add(action);
+                        }
+                        else
+                        {
+                            Action configAction;
+                            configAction = JsonSerializer.Deserialize<Config.Action>(action.ToString()!)!;
+
+                            if (configAction.Policy is not null && configAction.Policy.Database is not null)
+                            {
+                                // Remove all the occurences of @item. directive from the policy.
+                                configAction.Policy.Database = ProcessFieldsInPolicy(configAction.Policy.Database);
+
+                                // Remove redundant spaces and parenthesis around claimTypes.
+                                configAction.Policy.Database  = ProcessClaimsInPolicy(configAction.Policy.Database);
                             }
 
                             processedActions.Add(JsonSerializer.SerializeToElement(configAction));
@@ -189,60 +223,49 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Helper method which takes in raw policy and returns the processed policy
-        /// without @item. directives before field names.
+        /// Helper method which takes in the policy string and checks whether all fields referenced
+        /// within the policy are accessible to the user.
         /// </summary>
-        /// <param name="policy">Raw database policy</param>
+        /// <param name="policy">Database policy</param>
         /// <param name="include">Array of fields which are accessible to the user.</param>
         /// <param name="exclude">Array of fields which are not accessible to the user.</param>
         /// <returns>Processed policy without @item. directives before field names.</returns>
-        private static string ProcessFieldsInPolicy(string policy, HashSet<string> includedFields, HashSet<string> excludedFields)
+        private static void AreFieldsAccessible(string policy, HashSet<string> includedFields, HashSet<string> excludedFields)
         {
             string fieldCharsRgx = @"@item\.[a-zA-Z0-9_]*";
 
             // processedPolicy would be devoid of @item. directives, provided all the columns referenced in
             // the database policy are accessible.
-            string processedPolicy = Regex.Replace(policy, fieldCharsRgx, (columnNameMatch) =>
-                                                   CheckAndProcessField(columnNameMatch, includedFields, excludedFields));
-            return processedPolicy;
-        }
-
-        /// <summary>
-        /// Helper method which takes in raw database policy and does two things:
-        /// 1. Check if the field followed by @item. directive is accessible based on include/exclude fields.
-        /// 2. If the field is acessible to the user, remove the @item. directive preceding the field and return the field.
-        /// </summary>
-        /// <param name="columnNameMatch"></param>
-        /// <param name="included">Set of fields which are accessible to the user.</param>
-        /// <param name="excluded">Set of fields which are not accessible to the user.</param>
-        /// <returns>Field name without the @item. prefix.</returns>
-        /// <exception cref="DataGatewayException">Throws exception if the field is not accessible.</exception>
-        private static string CheckAndProcessField(Match columnNameMatch, HashSet<string> includedFields, HashSet<string> excludedFields)
-        {
-            string columnName = columnNameMatch.Value.Substring(AuthorizationResolver.FIELD_PREFIX.Length);
-            if (excludedFields.Contains(columnName!) || excludedFields.Contains("*") ||
-                !(includedFields.Contains("*") || includedFields.Contains(columnName)))
+            MatchCollection columnNameMatches = Regex.Matches(policy, fieldCharsRgx);
+            foreach (Match columnNameMatch in columnNameMatches)
             {
-                // If column is present in excluded OR excluded='*'
-                // If column is absent from included and included!=*
-                // In this case, the column is not accessible to the user
-                throw new DataGatewayException(
+                if (!IsFieldAccessible(columnNameMatch, includedFields, excludedFields))
+                {
+                    throw new DataGatewayException(
                     message: $"Not all the columns required by policy are accessible.",
                     statusCode: System.Net.HttpStatusCode.InternalServerError,
                     subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
+                }
             }
-
-            return columnName;
         }
 
         /// <summary>
-        /// Helper method to do different validations related to the claims in the policy and remove the claim
-        /// prefix from the claimTypes and any parenthesis surrounding the claimTypes.
+        /// Helper method which takes in the database policy and returns the processed policy
+        /// without @item. directives before field names.
         /// </summary>
-        /// <param name="policy">The policy to be validated and processed.</param>
-        /// <returns></returns>
-        /// <exception cref="DataGatewayException">Throws exception when one or the other validations fail.</exception>
-        private static string ValidateAndProcessClaimsInPolicy(string policy)
+        /// <param name="policy">Raw database policy</param>
+        /// <returns>Processed policy without @item. directives before field names.</returns>
+        private static string ProcessFieldsInPolicy(string policy)
+        {
+            string fieldCharsRgx = @"@item\.[a-zA-Z0-9_]*";
+
+            // processedPolicy would be devoid of @item. directives.
+            string processedPolicy = Regex.Replace(policy, fieldCharsRgx, (columnNameMatch) => 
+                                            columnNameMatch.Value.Substring(AuthorizationResolver.FIELD_PREFIX.Length));
+            return processedPolicy;
+        }
+
+        private static string ProcessClaimsInPolicy(string policy)
         {
             // Regex used to extract all claimTypes in policy. It finds all the substrings which are
             // of the form @claims.*** delimited by space character,end of the line or end of the string.
@@ -260,6 +283,103 @@ namespace Azure.DataGateway.Service.Configurations
             // parsedIdx indicates the last index in the policy string from which we need to append to the
             // processedPolicy.
             int parsedIdx = 0;
+
+            foreach (Match claimType in claimTypes)
+            {
+                // Remove the prefix @claims. from the claimType
+                string typeOfClaimWithOpenParenthesis = claimType.Value.Substring(AuthorizationResolver.CLAIM_PREFIX.Length);
+
+                //Process typeOfClaimWithParenthesis to remove opening parenthesis.
+                string typeOfClaim = GetClaimTypeWithoutOpeningParenthesis(typeOfClaimWithOpenParenthesis);
+
+                int claimIdx = claimType.Index;
+
+                // Add token for the portion of policy string between the current and the previous @claims.*** claimType
+                // to the processedPolicy.
+                processedPolicy.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx));
+
+                // Add token for the claimType to processedPolicy
+                processedPolicy.Append(AuthorizationResolver.CLAIM_PREFIX + typeOfClaim);
+
+                // Move the parsedIdx to the index following a claimType in the policy string
+                parsedIdx = claimIdx + claimType.Value.Length;
+
+                // Expected number of closing parenthesis after the claimType,
+                // equal to the number of opening parenthesis before the claimType.
+                int expNumClosingParenthesis = typeOfClaimWithOpenParenthesis.Length - typeOfClaim.Length;
+
+                // We don't need to include unnecessary parenthesis in our parsed policy, so we don't append.
+                while (expNumClosingParenthesis > 0)
+                {
+                    // If the code reaches here, either the character is ')' or ' '.
+                    // If its a ' ', we ignore as it is an extra space.
+                    // If its a ')', we decrement the required closing parenthesis by 1.
+                    if (policy[parsedIdx] == ')')
+                    {
+                        expNumClosingParenthesis--;
+                    }
+
+                    parsedIdx++;
+                }
+            } // MatchType claimType
+
+            if (parsedIdx < policy.Length)
+            {
+                // Append if there is still some part of policy string left to be appended to the result.
+                processedPolicy.Append(policy.Substring(parsedIdx));
+            }
+
+            return processedPolicy.ToString();
+        }
+
+        /// <summary>
+        /// Helper method which takes in field prefixed with @item. directive and check if its
+        /// accessible based on include/exclude fields.
+        /// </summary>
+        /// <param name="columnNameMatch"></param>
+        /// <param name="included">Set of fields which are accessible to the user.</param>
+        /// <param name="excluded">Set of fields which are not accessible to the user.</param>
+        /// <returns>Field name without the @item. prefix.</returns>
+        /// <exception cref="DataGatewayException">Throws exception if the field is not accessible.</exception>
+        private static bool IsFieldAccessible(Match columnNameMatch, HashSet<string> includedFields, HashSet<string> excludedFields)
+        {
+            string columnName = columnNameMatch.Value.Substring(AuthorizationResolver.FIELD_PREFIX.Length);
+            if (excludedFields.Contains(columnName!) || excludedFields.Contains("*") ||
+                !(includedFields.Contains("*") || includedFields.Contains(columnName)))
+            {
+                // If column is present in excluded OR excluded='*'
+                // If column is absent from included and included!=*
+                // In this case, the column is not accessible to the user
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Helper method to do different validations related to the claims in the policy and remove the claim
+        /// prefix from the claimTypes and any parenthesis surrounding the claimTypes.
+        /// </summary>
+        /// <param name="policy">The policy to be validated and processed.</param>
+        /// <returns></returns>
+        /// <exception cref="DataGatewayException">Throws exception when one or the other validations fail.</exception>
+        private static void ValidateClaimsInPolicy(string policy)
+        {
+            // Regex used to extract all claimTypes in policy. It finds all the substrings which are
+            // of the form @claims.*** delimited by space character,end of the line or end of the string.
+            string claimCharsRgx = @"@claims\.[^\s\)]*";
+
+            // Pre-process the policy to replace "( " with "(", i.e. remove
+            // extra spaces after opening parenthesis. This will prevent allowed claimTypes
+            // from being invalidated.
+            string reduntantSpaceRgx = @"\(\s*";
+            policy = Regex.Replace(policy, reduntantSpaceRgx, "(");
+            // Find all the claimTypes from the policy
+            MatchCollection claimTypes = Regex.Matches(policy, claimCharsRgx);
+
+            // parsedIdx indicates the last index in the policy string from which we need to append to the
+            // processedPolicy.
+            int parsedIdx;
 
             foreach (Match claimType in claimTypes)
             {
@@ -291,13 +411,6 @@ namespace Azure.DataGateway.Service.Configurations
 
                 int claimIdx = claimType.Index;
 
-                // Add token for the portion of policy string between the current and the previous @claims.*** claimType
-                // to the processedPolicy.
-                processedPolicy.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx));
-
-                // Add token for the claimType to processedPolicy
-                processedPolicy.Append(AuthorizationResolver.CLAIM_PREFIX + typeOfClaim);
-
                 // Move the parsedIdx to the index following a claimType in the policy string
                 parsedIdx = claimIdx + claimType.Value.Length;
 
@@ -305,9 +418,7 @@ namespace Azure.DataGateway.Service.Configurations
                 // equal to the number of opening parenthesis before the claimType.
                 int expNumClosingParenthesis = typeOfClaimWithOpenParenthesis.Length - typeOfClaim.Length;
 
-                // Ensure that there are atleast expectedNumClosingParenthesis following
-                // a claim type. However we don't need to include unnecessary parenthesis
-                // in our parsed policy, so we don't append.
+                // Ensure that there are atleast expectedNumClosingParenthesis following a claim type.
                 while (expNumClosingParenthesis > 0)
                 {
                     if (parsedIdx >= policy.Length || (policy[parsedIdx] != ')' && policy[parsedIdx] != ' '))
@@ -332,14 +443,6 @@ namespace Azure.DataGateway.Service.Configurations
                     parsedIdx++;
                 }
             } // MatchType claimType
-
-            if (parsedIdx < policy.Length)
-            {
-                // Append if there is still some part of policy string left to be appended to the result.
-                processedPolicy.Append(policy.Substring(parsedIdx));
-            }
-
-            return processedPolicy.ToString();
         }
 
         /// <summary>

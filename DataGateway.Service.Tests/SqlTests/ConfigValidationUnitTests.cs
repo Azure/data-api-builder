@@ -5,6 +5,7 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Tests.Authorization;
+using Azure.DataGateway.Service.Tests.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -34,9 +35,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 excludedCols: new HashSet<string> { "id", "email" },
                 databasePolicy: dbPolicy
                 );
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
             try
             {
-                RuntimeConfigValidator.ValidateAndProcessPermissionsInConfig(runtimeConfig);
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
             }
             catch (DataGatewayException ex)
             {
@@ -64,9 +66,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy
                 );
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
             try
             {
-                RuntimeConfigValidator.ValidateAndProcessPermissionsInConfig(runtimeConfig);
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
             }
             catch (DataGatewayException ex)
             {
@@ -94,9 +97,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy
                 );
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
             try
             {
-                RuntimeConfigValidator.ValidateAndProcessPermissionsInConfig(runtimeConfig);
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
             }
             catch (DataGatewayException ex)
             {
@@ -126,9 +130,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
             try
             {
-                RuntimeConfigValidator.ValidateAndProcessPermissionsInConfig(runtimeConfig);
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
             }
             catch (DataGatewayException ex)
             {

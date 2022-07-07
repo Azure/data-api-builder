@@ -154,6 +154,11 @@ namespace Azure.DataGateway.Service.Resolvers
             return await container.ReplaceItemAsync<JObject>(input, id, new PartitionKey(partitionKey), new ItemRequestOptions());
         }
 
+        /// <summary>
+        /// The method is for parsing the mutation input object with nested inner objects when input is passed in as variables.
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns></returns>
         private static object? ParseVariableInputItem(object? item)
         {
             if (item is Dictionary<string, object?> inputItem)
@@ -173,6 +178,12 @@ namespace Azure.DataGateway.Service.Resolvers
 
             return item;
         }
+
+        /// <summary>
+        /// The method is for parsing the mutation input object with nested inner objects when input is passing inline.
+        /// </summary>
+        /// <param name="item"> In the form of ObjectFieldNode, or List<ObjectFieldNode></param>
+        /// <returns>In the form of JObject</returns>
         private static object? ParseInlineInputItem(object? item)
         {
             JObject? createInput = new();

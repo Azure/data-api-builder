@@ -667,6 +667,36 @@ type Baz @model {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.mysql, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Baz", GenerateEmptyEntity() } });
+
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
+            Assert.AreEqual(1, field.Arguments.Count);
+
+            InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[0].Type.NamedType().Name);
+            Assert.AreEqual(1, argType.Fields.Count);
+            Assert.AreEqual("id", argType.Fields[0].Name.Value);
+        }
+
+        [TestMethod]
+        [TestCategory("Mutation Builder - Create")]
+        public void CreateMutationWillCreateNestedModelsOnInputForCosmos()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID!
+    baz: Baz!
+}
+
+type Baz @model {
+    id: ID!
+    x: String!
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
             DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Baz", GenerateEmptyEntity() } });
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);

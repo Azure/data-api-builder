@@ -1,7 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
+
 namespace Azure.DataGateway.Service.ServerTiming
 {
-    using Microsoft.Extensions.DependencyInjection;
-
     public static class ServerTimingServiceCollectionExtensions
     {
         public static IServiceCollection AddServerTiming(this IServiceCollection services)

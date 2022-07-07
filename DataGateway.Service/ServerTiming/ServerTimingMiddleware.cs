@@ -1,11 +1,11 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+
 namespace Azure.DataGateway.Service.ServerTiming
 {
-    using Microsoft.AspNetCore.Http;
-    using Microsoft.Extensions.DependencyInjection;
-    using System;
-    using System.Linq;
-    using System.Threading.Tasks;
-
     public sealed class ServerTimingMiddleware
     {
         private readonly RequestDelegate _next;

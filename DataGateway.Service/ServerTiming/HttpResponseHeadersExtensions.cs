@@ -1,7 +1,7 @@
+using Microsoft.AspNetCore.Http;
+
 namespace Azure.DataGateway.Service.ServerTiming
 {
-    using Microsoft.AspNetCore.Http;
-
     public static class HttpResponseHeadersExtensions
     {
         public static void SetServerTiming(this HttpResponse response, params ServerTimingMetric[] metrics)

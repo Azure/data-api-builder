@@ -1,7 +1,7 @@
+using System.Collections.Generic;
+
 namespace Azure.DataGateway.Service.ServerTiming
 {
-    using System.Collections.Generic;
-
     internal class ServerTiming : IServerTiming
     {
         public ICollection<ServerTimingMetric> Metrics { get; }

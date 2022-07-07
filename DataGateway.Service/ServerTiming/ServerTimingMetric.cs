@@ -1,8 +1,8 @@
+using System;
+using System.Globalization;
+
 namespace Azure.DataGateway.Service.ServerTiming
 {
-    using System;
-    using System.Globalization;
-
     public struct ServerTimingMetric
     {
         private string _serverTimingMetric;

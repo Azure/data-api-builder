@@ -1,7 +1,7 @@
+using Microsoft.AspNetCore.Mvc;
+
 namespace Azure.DataGateway.Service.Controllers
 {
-    using Microsoft.AspNetCore.Mvc;
-
     [Route("")]
     public sealed class HomeController : ControllerBase
     {

@@ -428,6 +428,63 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 Assert.AreEqual("User does not possess all the claims required to perform this action.", ex.Message);
             }
         }
+
+        /// <summary>
+        /// Test to validate that duplicate claims throws an exception for everything except roles
+        /// duplicate role claims are ignored, so just checks policy is parsed as expected in this case 
+        /// </summary>
+        /// <param name="exceptionExpected"> Whether we expect an exception (403 forbidden) to be thrown while parsing policy </param>
+        /// <param name="claims"> Parameter list of claim types/keys to add to the claims dictionary that can be accessed with @claims </param>
+        [DataTestMethod]
+        [DataRow(true, ClaimTypes.Role, "username", "guid", "username", DisplayName = "duplicate claim expect exception")]
+        [DataRow(false, ClaimTypes.Role, "username", "guid", ClaimTypes.Role, DisplayName = "duplicate role claim does not expect exception")]
+        [DataRow(true, ClaimTypes.Role, ClaimTypes.Role, "username", "username", DisplayName = "duplicate claim expect exception ignoring role")]
+        public void ParsePolicyWithDuplicateUserClaims(bool exceptionExpected, params string[] claimTypes)
+        {
+            string policy = $"@claims.guid eq 1";
+            string defaultClaimValue = "unimportant";
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
+                databasePolicy: policy
+                );
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+            Mock<HttpContext> context = new();
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, TEST_ROLE_TYPE);
+            foreach (string claimType in claimTypes)
+            {
+                identity.AddClaim(new Claim(type: claimType, value: defaultClaimValue, ClaimValueTypes.String));
+            }
+
+            ClaimsPrincipal principal = new(identity);
+            context.Setup(x => x.User).Returns(principal);
+
+            // We expect an exception if duplicate claims are present EXCEPT for role claim
+            if (exceptionExpected)
+            {
+                try
+                {
+                    authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_ACTION, context.Object);
+                    Assert.Fail();
+                }
+                catch (DataGatewayException ex)
+                {
+                    Assert.AreEqual(HttpStatusCode.Forbidden, ex.StatusCode);
+                    Assert.AreEqual("Duplicate claims are not allowed within a request.", ex.Message);
+                }
+            }
+            else
+            {
+                // If the role claim was the only duplicate, simply verify policy parsed as expected
+                string expectedPolicy = $"('{defaultClaimValue}') eq 1";
+                string parsedPolicy = authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_ACTION, context.Object);
+                Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy);
+            }
+        }
         #endregion
         #region Helpers
         public static RuntimeConfig InitRuntimeConfig(

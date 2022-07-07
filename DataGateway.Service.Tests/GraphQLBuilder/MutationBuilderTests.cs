@@ -573,6 +573,82 @@ type Foo @model {
         }
 
         [TestMethod]
+        [TestCategory("Mutation Builder - Updated")]
+        [TestCategory("Schema Builder - Nested Type")]
+        public void UpdateMutationWithNestedInnerObject_NonNullableListTypeNonNullableItems()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID!
+    bar: [Bar!]!
+}
+
+type Bar {
+    baz: Int
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
+            InputValueDefinitionNode inputArg = field.Arguments[2];
+            InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
+            Assert.AreEqual(2, inputObj.Fields.Count);
+
+            Assert.AreEqual("id", inputObj.Fields[0].Name.Value);
+            Assert.AreEqual("ID", inputObj.Fields[0].Type.NamedType().Name.Value);
+            Assert.IsTrue(inputObj.Fields[0].Type.IsNonNullType(), "id field shouldn't be null");
+
+            Assert.AreEqual("bar", inputObj.Fields[1].Name.Value);
+            Assert.AreEqual("UpdateBarInput", inputObj.Fields[1].Type.NamedType().Name.Value);
+            Assert.IsTrue(inputObj.Fields[1].Type.IsNonNullType(), "bar field shouldn't be null");
+            Assert.IsTrue(inputObj.Fields[1].Type.InnerType().IsListType(), "bar field should be a list");
+            Assert.IsTrue(inputObj.Fields[1].Type.InnerType().InnerType().IsNonNullType(), "list fields aren't nullable");
+        }
+
+        [TestMethod]
+        [TestCategory("Mutation Builder - Updated")]
+        [TestCategory("Schema Builder - Nested Type")]
+        public void UpdateMutationWithNestedInnerObject_NullableListTypeNullableItems()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID
+    bar: [Bar]
+}
+
+type Bar {
+    baz: Int
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
+            InputValueDefinitionNode inputArg = field.Arguments[2];
+            InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
+            Assert.AreEqual(2, inputObj.Fields.Count);
+
+            Assert.AreEqual("id", inputObj.Fields[0].Name.Value);
+            Assert.AreEqual("ID", inputObj.Fields[0].Type.NamedType().Name.Value);
+            Assert.IsFalse(inputObj.Fields[0].Type.IsNonNullType(), "id field should allow null for schema validation");
+
+            Assert.AreEqual("bar", inputObj.Fields[1].Name.Value);
+            Assert.AreEqual("UpdateBarInput", inputObj.Fields[1].Type.NamedType().Name.Value);
+            Assert.IsFalse(inputObj.Fields[1].Type.IsNonNullType(), "bar field shouldn't be null");
+            Assert.IsTrue(inputObj.Fields[1].Type.IsListType(), "bar field should be a list");
+            Assert.IsFalse(inputObj.Fields[1].Type.InnerType().IsNonNullType(), "list fields should be nullable");
+        }
+
+        [TestMethod]
         [TestCategory("Mutation Builder - Create")]
         public void CreateMutationWontCreateNestedModelsOnInput()
         {

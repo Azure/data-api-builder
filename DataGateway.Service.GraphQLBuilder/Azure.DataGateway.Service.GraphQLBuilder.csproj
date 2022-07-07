@@ -16,6 +16,10 @@
     <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="$(HotChocolateVersion)" />
     <PackageReference Include="Humanizer" Version="$(HumanizerVersion)" />
     <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
+    <PackageReference Include="StyleCop.Analyzers" Version="$(StyleCopAnalyzerVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

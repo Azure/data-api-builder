@@ -316,7 +316,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Quote and join list of strings with a ", " separator
+        /// Quote and join list of OutputColumn with a ", " separator
         /// </summary>
         protected string Build(List<OutputColumn> columns)
         {
@@ -324,8 +324,7 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Build a labelled column as a column and attach
-        /// ... AS {Label} to it
+        /// Build an OutputColumn as {ColumnName} AS {Label}
         /// </summary>
         protected string Build(OutputColumn column)
         {

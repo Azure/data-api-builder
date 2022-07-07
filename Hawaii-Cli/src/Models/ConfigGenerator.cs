@@ -1,5 +1,3 @@
-using System.Buffers;
-using System.Reflection.Metadata.Ecma335;
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using static Hawaii.Cli.Models.Utils;
@@ -83,7 +81,7 @@ namespace Hawaii.Cli.Models
                     return false;
             }
 
-            RuntimeConfig runtimeConfig = new (
+            RuntimeConfig runtimeConfig = new(
                 Schema: RuntimeConfig.SCHEMA,
                 DataSource: dataSource,
                 CosmosDb: cosmosDbOptions,
@@ -92,7 +90,6 @@ namespace Hawaii.Cli.Models
                 MySql: mySqlOptions,
                 RuntimeSettings: GetDefaultGlobalSettings(dbType, options.HostMode),
                 Entities: new Dictionary<string, Entity>());
-
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
             return true;
@@ -124,7 +121,7 @@ namespace Hawaii.Cli.Models
 
         /// <summary>
         /// Add new entity to runtime config json. The function will add new entity to runtimeConfigJson string.
-        /// On sucessful return of the function, runtimeConfigJson will be modified.
+        /// On successful return of the function, runtimeConfigJson will be modified.
         /// </summary>
         /// <param name="options">AddOptions.</param>
         /// <param name="runtimeConfigJson">Json string of existing runtime config. This will be modified on successful return.</param>
@@ -196,7 +193,7 @@ namespace Hawaii.Cli.Models
             // Getting Role and Actions from permission string
             //
             string? role, actions;
-            if(!TryGetRoleAndActionFromPermissionString(permissions, out role, out actions))
+            if (!TryGetRoleAndActionFromPermissionString(permissions, out role, out actions))
             {
                 Console.Error.Write($"Failed to fetch the role and action from the given permission string: {permissions}.");
                 return null;
@@ -321,7 +318,8 @@ namespace Hawaii.Cli.Models
                 }
 
                 Relationship? new_relationship = CreateNewRelationshipWithUpdateOptions(options);
-                if(new_relationship is null) {
+                if (new_relationship is null)
+                {
                     return false;
                 }
 
@@ -357,7 +355,7 @@ namespace Hawaii.Cli.Models
 
             // Parse role and actions from the permissions string
             //
-            if(!TryGetRoleAndActionFromPermissionString(permissions, out newRole, out newActions))
+            if (!TryGetRoleAndActionFromPermissionString(permissions, out newRole, out newActions))
             {
                 Console.Error.Write($"Failed to fetch the role and action from the given permission string: {permissions}.");
                 return null;
@@ -366,7 +364,7 @@ namespace Hawaii.Cli.Models
             List<PermissionSetting> updatedPermissionsList = new();
             string[] newActionArray = newActions!.Split(",");
 
-            if(newActionArray.Length > 1 && newActionArray.ToHashSet().Contains(WILDCARD))
+            if (newActionArray.Length > 1 && newActionArray.ToHashSet().Contains(WILDCARD))
             {
                 Console.Error.WriteLine("\"*\" along with other CRUD operations in a single update is not allowed.");
                 return null;
@@ -401,7 +399,7 @@ namespace Hawaii.Cli.Models
                         // updating the current action list
                         object[] updatedActionArray = GetUpdatedActionArray(newActionArray, fieldsToInclude, fieldsToExclude, actionList);
 
-                        if(updatedActionArray is null)
+                        if (updatedActionArray is null)
                         {
                             Console.Error.WriteLine("Failed to get the updated Action list.");
                             return null;
@@ -464,7 +462,7 @@ namespace Hawaii.Cli.Models
         /// <param name="fieldsToExclude">fields that will be excluded form the action permission.</param>
         /// <param name="existingActions">action items present in the config.</param>
         /// <returns>Array of updated Action objects</returns>
-        private static object[] GetUpdatedActionArray(  string[] newActions,
+        private static object[] GetUpdatedActionArray(string[] newActions,
                                                         string? fieldsToInclude,
                                                         string? fieldsToExclude,
                                                         List<object> existingActions)
@@ -476,7 +474,8 @@ namespace Hawaii.Cli.Models
             HashSet<string> newActionSet = newActions.ToHashSet();
 
             // Adding the new Actions in the updatedActionList
-            foreach (string action in newActionSet) {
+            foreach (string action in newActionSet)
+            {
                 updatedActionList.Add(GetAction(action, fieldsToInclude, fieldsToExclude));
             }
 

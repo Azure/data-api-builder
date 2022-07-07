@@ -38,7 +38,7 @@ namespace Hawaii.Cli.Tests
   ""runtime"": {
     ""rest"": {
       ""enabled"": true,
-      ""path"": ""/""
+      ""path"": ""/api""
     },
     ""graphql"": {
       ""allow-introspection"": true,
@@ -55,8 +55,7 @@ namespace Hawaii.Cli.Tests
         ""provider"": ""EasyAuth"",
         ""jwt"": {
           ""audience"": """",
-          ""issuer"": """",
-          ""issuerkey"": """"
+          ""issuer"": """"
         }
       }
     }
@@ -100,7 +99,7 @@ namespace Hawaii.Cli.Tests
   ""runtime"": {
     ""rest"": {
       ""enabled"": true,
-      ""path"": ""/""
+      ""path"": ""/api""
     },
     ""graphql"": {
       ""allow-introspection"": true,
@@ -117,8 +116,7 @@ namespace Hawaii.Cli.Tests
         ""provider"": ""EasyAuth"",
         ""jwt"": {
           ""audience"": """",
-          ""issuer"": """",
-          ""issuerkey"": """"
+          ""issuer"": """"
         }
       }
     }
@@ -204,7 +202,7 @@ namespace Hawaii.Cli.Tests
                 ""runtime"": {
                     ""rest"": {
                     ""enabled"": true,
-                    ""path"": ""/""
+                    ""path"": ""/api""
                     },
                     ""graphql"": {
                     ""allow-introspection"": true,
@@ -221,8 +219,7 @@ namespace Hawaii.Cli.Tests
                         ""provider"": ""EasyAuth"",
                         ""jwt"": {
                         ""audience"": """",
-                        ""issuer"": """",
-                        ""issuerkey"": """"
+                        ""issuer"": """"
                         }
                     }
                     }

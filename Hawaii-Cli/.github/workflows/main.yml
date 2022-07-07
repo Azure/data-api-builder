@@ -1,0 +1,87 @@
+name: CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events
+  push:
+    branches: [ "*" ]
+
+jobs:
+   build:
+    # The type of runner that the job will run on [windows-latest, ubuntu-latest]
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    # Steps Containing sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{secrets.MY_REPO_PAT}}
+          submodules: recursive
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      # line ending is set to 'lf' for this project hence running format check only for ubuntu
+      - name: Check Formatting
+        run: dotnet format --verify-no-changes
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+
+      - name: Build Cli-tool
+        run: dotnet build --no-restore
+
+      # Runs tests and collect coverage report
+      - name: Tests
+        run: dotnet test tests/tests.csproj --collect:"XPlat Code Coverage" --results-directory ./coverage
+
+      - name: Copying test coverage to an accessible location
+        run: cp coverage/**/coverage.cobertura.xml coverage.cobertura.xml
+
+      # Generate Summary Report for code coverage
+      # running it only in ubuntu as CodeCoverageSummary tool is not supported in windows
+      - name: Code Coverage Summary Report
+        uses: irongut/CodeCoverageSummary@v1.2.0
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        with:
+          filename: coverage.cobertura.xml
+          badge: true
+          hide_branch_rate: false
+          hide_complexity: true
+          indicators: true
+          format: 'markdown'
+          output: 'both'
+
+      # Upload Test results to the artifact
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverageReport.xml # Artifact name
+          path: coverage.cobertura.xml # Directory containing files to upload
+
+      # PR number will be used to update PR comment on test coverage report
+      - name: Get PR number
+        uses: jwalton/gh-find-current-pr@v1
+        id: finder
+
+      # Add Coverage report in the PR Comment
+      # running it only in ubuntu as CodeCoverageSummary tool is not supported in windows
+      - name: Add Coverage PR Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        with:
+          number: ${{ steps.finder.outputs.pr }}
+          recreate: true
+          path: code-coverage-results.md
+
+      - name: Create the package
+        run: dotnet pack --configuration Release
+
+      - name: Upload nuget package
+        uses: actions/upload-artifact@v3
+        with:
+          name: hawaii-cli.nupkg
+          path: src/nupkg/hawaii-cli.*.nupkg

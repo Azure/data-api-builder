@@ -48,7 +48,7 @@ namespace Hawaii.Cli.Tests
                         }
                     }";
 
-            string expectedConfig = GetInitialConfigString() + "," +  @"
+            string expectedConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
                             ""MyEntity"": {
                                 ""source"": ""MyTable"",
@@ -627,10 +627,10 @@ namespace Hawaii.Cli.Tests
             Assert.AreEqual(Cardinality.Many, relationship.Cardinality);
             Assert.AreEqual("entity_link", relationship.LinkingObject);
             Assert.AreEqual("FirstEntity", relationship.TargetEntity);
-            CollectionAssert.AreEqual(new string[] {"e1"}, relationship.SourceFields);
-            CollectionAssert.AreEqual(new string[] {"e2", "t2"}, relationship.TargetFields);
-            CollectionAssert.AreEqual(new string[] {"eid1"}, relationship.LinkingSourceFields);
-            CollectionAssert.AreEqual(new string[] {"eid2", "fid2"}, relationship.LinkingTargetFields);
+            CollectionAssert.AreEqual(new string[] { "e1" }, relationship.SourceFields);
+            CollectionAssert.AreEqual(new string[] { "e2", "t2" }, relationship.TargetFields);
+            CollectionAssert.AreEqual(new string[] { "eid1" }, relationship.LinkingSourceFields);
+            CollectionAssert.AreEqual(new string[] { "eid2", "fid2" }, relationship.LinkingTargetFields);
 
         }
 
@@ -638,7 +638,7 @@ namespace Hawaii.Cli.Tests
 
         #region  Negative Tests
 
-                /// <summary>
+        /// <summary>
         /// Simple test to update an entity permission with new action containing WILDCARD and other crud operation.
         /// example "*,read,create"
         /// update including WILDCARD along with other crud operation is not allowed
@@ -689,7 +689,7 @@ namespace Hawaii.Cli.Tests
         [TestMethod]
         public void TestParsingFromInvalidPermissionString()
         {
-            string? role,actions;
+            string? role, actions;
             string permissions = "anonymous,create"; //wrong format
             bool isSuccess = TryGetRoleAndActionFromPermissionString(permissions, out role, out actions);
 
@@ -734,7 +734,7 @@ namespace Hawaii.Cli.Tests
         [TestMethod]
         public void TestVerifyCanUpdateRelationshipInvalidOptions()
         {
-            RuntimeConfig runtimeConfig = new RuntimeConfig(
+            RuntimeConfig runtimeConfig = new(
                 Schema: "schema",
                 DataSource: new DataSource(DatabaseType.mssql),
                 CosmosDb: null,

@@ -2,7 +2,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Config;
 using Humanizer;
-using Hawaii.Cli.Models;
 using Action = Azure.DataGateway.Config.Action;
 
 /// <summary>

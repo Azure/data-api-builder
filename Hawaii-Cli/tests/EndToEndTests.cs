@@ -131,17 +131,16 @@ public class EndToEndTests
         Assert.AreEqual("\"read\"", JsonSerializer.Serialize(entity.Permissions[0].Actions[2]));
         Assert.AreEqual("\"update\"", JsonSerializer.Serialize(entity.Permissions[0].Actions[3]));
 
-
         Assert.IsTrue(entity.Relationships!.ContainsKey("r1"));
         Relationship relationship = entity.Relationships["r1"];
         Assert.AreEqual(1, entity.Relationships.Count());
         Assert.AreEqual(Cardinality.One, relationship.Cardinality);
         Assert.AreEqual("books", relationship.TargetEntity);
         Assert.AreEqual("todo_books", relationship.LinkingObject);
-        CollectionAssert.AreEqual(new string[] {"id"}, relationship.SourceFields);
-        CollectionAssert.AreEqual(new string[] {"book_id"}, relationship.TargetFields);
-        CollectionAssert.AreEqual(new string[] {"todo_id"}, relationship.LinkingSourceFields);
-        CollectionAssert.AreEqual(new string[] {"id"}, relationship.LinkingTargetFields);
+        CollectionAssert.AreEqual(new string[] { "id" }, relationship.SourceFields);
+        CollectionAssert.AreEqual(new string[] { "book_id" }, relationship.TargetFields);
+        CollectionAssert.AreEqual(new string[] { "todo_id" }, relationship.LinkingSourceFields);
+        CollectionAssert.AreEqual(new string[] { "id" }, relationship.LinkingTargetFields);
     }
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)

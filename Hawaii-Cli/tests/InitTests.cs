@@ -1,5 +1,3 @@
-using Azure.DataGateway.Config;
-
 namespace Hawaii.Cli.Tests
 {
     /// <summary>

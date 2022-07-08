@@ -9,8 +9,8 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
-using Action = Azure.DataGateway.Config.Action;
 using Microsoft.Extensions.Logging;
+using Action = Azure.DataGateway.Config.Action;
 
 namespace Azure.DataGateway.Service.Configurations
 {

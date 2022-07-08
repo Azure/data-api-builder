@@ -176,7 +176,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
                         // we return entire response for update
                         jsonResultString = JsonSerializer.Serialize(resultRecord);
-
                     }
                     else if (await dbDataReader.NextResultAsync())
                     {

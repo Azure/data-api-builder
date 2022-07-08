@@ -164,24 +164,28 @@ namespace Azure.DataGateway.Service.Resolvers
                     /// In MsSQL upsert:
                     /// result set #1: result of the UPDATE operation.
                     /// result set #2: result of the INSERT operation.
-                    if (resultRecord != null)
+                    if (resultRecord is not null)
                     {
-                        if (_sqlMetadataProvider.GetDatabaseType() == DatabaseType.postgresql &&
+                        // postgress may be an insert op here, if so, update operation to sort
+                        // out the correct response type
+                        if (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&
                             PostgresQueryBuilder.IsInsert(resultRecord))
                         {
-                            jsonResultString = JsonSerializer.Serialize(resultRecord);
+                            context.OperationType = Operation.Insert;
                         }
-                        else
-                        {
-                            // We give empty result set for updates
-                            jsonResultString = null;
-                        }
+
+                        // we return entire response for update
+                        jsonResultString = JsonSerializer.Serialize(resultRecord);
+
                     }
                     else if (await dbDataReader.NextResultAsync())
                     {
                         // Since no first result set exists, we overwrite Dictionary here.
+                        // and because we have executed an insert operation, we update the
+                        // operation type to sort out the correct response types.
                         resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
                         jsonResultString = JsonSerializer.Serialize(resultRecord);
+                        context.OperationType = Operation.Insert;
                     }
                     else
                     {
@@ -198,7 +202,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     break;
             }
 
-            if (jsonResultString == null)
+            if (jsonResultString is null)
             {
                 return null;
             }

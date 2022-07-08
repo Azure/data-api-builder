@@ -713,7 +713,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                         SELECT id, book_id, content
                         FROM " + _tableWithCompositePrimaryKey + @"
                         WHERE id = 568 AND book_id = 1 AND content ='Good book to read'
-                            AND publisher_id = 1234
                     ) AS subq
                 "
             },
@@ -943,7 +942,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     FROM (
                         SELECT id, book_id, content
                         FROM " + _tableWithCompositePrimaryKey + @"
-                        WHERE id = 567 AND book_id = 1 AND content = 'That's a great book'
+                        WHERE id = 567 AND book_id = 1 AND content = 'That''s a great book'
                     ) AS subq
                 "
             },

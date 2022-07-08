@@ -222,14 +222,14 @@ namespace Azure.DataGateway.Service.Controllers
                             operationType,
                             primaryKeyRoute);
 
-                if (result != null)
+                if (result is not null)
                 {
                     // Clones the root element to a new JsonElement that can be
                     // safely stored beyond the lifetime of the original JsonDocument.
                     JsonElement resultElement = result.RootElement.Clone();
                     OkObjectResult formattedResult = OkResponse(resultElement);
 
-                    switch (operationType)
+                    switch (_restService.CurrentOperationType)
                     {
                         case Operation.Find:
                             return formattedResult;
@@ -242,17 +242,14 @@ namespace Azure.DataGateway.Service.Controllers
                             return new NoContentResult();
                         case Operation.Upsert:
                         case Operation.UpsertIncremental:
-                            primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
-                            location =
-                                UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
-                            return new CreatedResult(location: location, formattedResult.Value);
+                            return formattedResult;
                         default:
                             throw new NotSupportedException($"Unsupported Operation: \" {operationType}\".");
                     }
                 }
                 else
                 {
-                    switch (operationType)
+                    switch (_restService.CurrentOperationType)
                     {
                         case Operation.Update:
                         case Operation.UpdateIncremental:

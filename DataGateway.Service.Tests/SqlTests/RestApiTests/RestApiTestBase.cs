@@ -1126,7 +1126,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
             requestBody = @"
@@ -1143,7 +1143,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
                 );
 
@@ -1163,7 +1163,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
                 );
 
@@ -1184,7 +1184,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
             );
 
@@ -1204,7 +1204,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
                 );
         }
@@ -1426,7 +1426,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
                 );
         }
@@ -1476,7 +1476,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
         }
@@ -1572,7 +1572,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         /// Tests REST PatchOne which results in incremental update
         /// URI Path: PK of existing record.
         /// Req Body: Valid Parameter with intended update.
-        /// Expects: 201 Created where sqlQuery validates update.
+        /// Expects: 200 OK where sqlQuery validates update.
         /// </summary>
         [TestMethod]
         public virtual async Task PatchOne_Update_Test()
@@ -1590,7 +1590,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
             requestBody = @"
@@ -1606,7 +1606,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
             requestBody = @"
@@ -1622,7 +1622,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
             requestBody = @"
@@ -1639,7 +1639,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
         }
         /// <summary>

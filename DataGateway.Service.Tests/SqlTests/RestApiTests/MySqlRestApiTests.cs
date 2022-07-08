@@ -726,6 +726,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                         WHERE id = 5001
                     ) AS subq
                 "
+            },{
+                "InsertOneWithMappingTest",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species, 'United State\'s Region', region)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationMappingTable + @"
+                        WHERE treeId = 3
+                    ) AS subq
+                "
             },
             {
                 "InsertOneInCompositeNonAutoGenPKTest",
@@ -956,6 +966,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                         FROM " + _integration_NonAutoGenPK_TableName + @"
                         WHERE id = 2 AND title = 'Batman Begins'
                         AND issue_number = 1234
+                    ) as subq
+                "
+            },{
+                "PatchOne_Insert_Mapping_Test",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species, 'United State\'s Region', region, 'height', height)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationMappingTable + @"
+                        WHERE treeId = 4
                     ) as subq
                 "
             },

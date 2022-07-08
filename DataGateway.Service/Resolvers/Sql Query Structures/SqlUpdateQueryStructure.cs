@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<Predicate> UpdateOperations { get; }
 
         /// <summary>
-        /// The updated columns that will return
+        /// The columns used for OUTPUT
         /// </summary>
         public List<OutputColumn> OutputColumns { get; }
 

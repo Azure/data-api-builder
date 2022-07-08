@@ -26,7 +26,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<string> Values { get; }
 
         /// <summary>
-        /// The inserted columns that the insert will return
+        /// The inserted columns that the insert will OUTPUT
         /// </summary>
         public List<OutputColumn> OutputColumns { get; }
 

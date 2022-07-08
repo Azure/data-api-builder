@@ -274,9 +274,7 @@ namespace Azure.DataGateway.Service
         /// tries to load the runtime configuration value.
         /// </summary>
         /// <param name="services">Collection of services.</param>
-        /// <param name="runtimeConfig">If successful, this is set to value
-        /// of the runtime configuration otherwise, null</param>
-        /// <returns>True if successfully configured, false otherwise.</returns>
+        /// <returns>True if successfully loaded, false otherwise.</returns>
         private bool TryConfigureRuntime(IServiceCollection services)
         {
             IServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -287,6 +285,36 @@ namespace Azure.DataGateway.Service
             runtimeConfigPath.Logger = logger;
 
             return runtimeConfigPath.TryLoadRuntimeConfigValue();
+        }
+
+        /// <summary>
+        /// Add services necessary for Authentication Middleware and based on the loaded
+        /// runtime configuration set the AuthenticationOptions to be either
+        /// EasyAuth based (by default) or JwtBearerOptions.
+        /// </summary>
+        /// <param name="services">The service collection to add authentication services to.</param>
+        /// <param name="runtimeConfig">The loaded runtime configuration.</param>
+        private static void ConfigureAuthentication(IServiceCollection services, RuntimeConfig runtimeConfig)
+        {
+            // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
+            // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
+            // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
+            if (runtimeConfig.AuthNConfig != null &&
+                !runtimeConfig.IsEasyAuthAuthenticationProvider())
+            {
+                services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
+                    options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
+                });
+            }
+            else
+            // If no authentication configuration section specified, defaults to EasyAuth.
+            {
+                services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                    .AddEasyAuthAuthentication();
+            }
         }
 
         /// <summary>
@@ -329,29 +357,6 @@ namespace Azure.DataGateway.Service
                 }
 
                 return false;
-            }
-        }
-
-        private static void ConfigureAuthentication(IServiceCollection services, RuntimeConfig runtimeConfig)
-        {
-            // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
-            // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
-            // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
-            if (runtimeConfig.AuthNConfig != null &&
-                !runtimeConfig.IsEasyAuthAuthenticationProvider())
-            {
-                services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
-                {
-                    options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
-                    options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
-                });
-            }
-            else if (runtimeConfig.AuthNConfig != null &&
-                runtimeConfig.IsEasyAuthAuthenticationProvider())
-            {
-                services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                    .AddEasyAuthAuthentication();
             }
         }
 

@@ -13,7 +13,7 @@ namespace Azure.DataGateway.Service.Configurations
     /// </summary>
     public class RuntimeConfigProvider
     {
-        private readonly ILogger<RuntimeConfig>? _logger;
+        private readonly ILogger<RuntimeConfigPath>? _logger;
 
         public event EventHandler<RuntimeConfig>? RuntimeConfigLoaded;
 
@@ -26,7 +26,7 @@ namespace Azure.DataGateway.Service.Configurations
 
         public RuntimeConfigProvider(
             IOptions<RuntimeConfigPath>? runtimeConfigPath,
-            ILogger<RuntimeConfig> logger)
+            ILogger<RuntimeConfigPath> logger)
         {
             if (runtimeConfigPath != null)
             {

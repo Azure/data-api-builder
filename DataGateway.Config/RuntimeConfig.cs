@@ -64,7 +64,7 @@ namespace Azure.DataGateway.Config
         [property: JsonPropertyName(MySqlOptions.JSON_PROPERTY_NAME)]
         MySqlOptions? MySql,
         [property: JsonPropertyName(GlobalSettings.JSON_PROPERTY_NAME)]
-        Dictionary<GlobalSettingsType, object> RuntimeSettings,
+        Dictionary<GlobalSettingsType, object>? RuntimeSettings,
         [property: JsonPropertyName(Entity.JSON_PROPERTY_NAME)]
         Dictionary<string, Entity> Entities)
     {
@@ -78,26 +78,29 @@ namespace Azure.DataGateway.Config
         public void DetermineGlobalSettings()
         {
             JsonSerializerOptions options = GetDeserializationOptions();
-            foreach (
-                (GlobalSettingsType settingsType, object settingsJson) in RuntimeSettings)
+            if (RuntimeSettings is not null)
             {
-                switch (settingsType)
+                foreach (
+                    (GlobalSettingsType settingsType, object settingsJson) in RuntimeSettings)
                 {
-                    case GlobalSettingsType.Rest:
-                        RestGlobalSettings
-                            = ((JsonElement)settingsJson).Deserialize<RestGlobalSettings>(options)!;
-                        break;
-                    case GlobalSettingsType.GraphQL:
-                        GraphQLGlobalSettings =
-                            ((JsonElement)settingsJson).Deserialize<GraphQLGlobalSettings>(options)!;
-                        break;
-                    case GlobalSettingsType.Host:
-                        HostGlobalSettings =
-                           ((JsonElement)settingsJson).Deserialize<HostGlobalSettings>(options)!;
-                        break;
-                    default:
-                        throw new NotSupportedException("The runtime does not " +
-                            " support this global settings type.");
+                    switch (settingsType)
+                    {
+                        case GlobalSettingsType.Rest:
+                            RestGlobalSettings
+                                = ((JsonElement)settingsJson).Deserialize<RestGlobalSettings>(options)!;
+                            break;
+                        case GlobalSettingsType.GraphQL:
+                            GraphQLGlobalSettings =
+                                ((JsonElement)settingsJson).Deserialize<GraphQLGlobalSettings>(options)!;
+                            break;
+                        case GlobalSettingsType.Host:
+                            HostGlobalSettings =
+                               ((JsonElement)settingsJson).Deserialize<HostGlobalSettings>(options)!;
+                            break;
+                        default:
+                            throw new NotSupportedException("The runtime does not " +
+                                " support this global settings type.");
+                    }
                 }
             }
         }
@@ -113,7 +116,7 @@ namespace Azure.DataGateway.Config
         public static bool TryGetDeserializedConfig<T>(
             string configJson,
             out T? deserializedConfig,
-            ILogger<RuntimeConfig>? logger)
+            ILogger<RuntimeConfigPath>? logger)
         {
             try
             {

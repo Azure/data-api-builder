@@ -278,8 +278,8 @@ namespace Azure.DataGateway.Service
         private bool TryConfigureRuntime(IServiceCollection services)
         {
             IServiceProvider serviceProvider = services.BuildServiceProvider();
-            ILogger<RuntimeConfig>? logger
-                = serviceProvider.GetService<ILogger<RuntimeConfig>>();
+            ILogger<RuntimeConfigPath>? logger
+                = serviceProvider.GetService<ILogger<RuntimeConfigPath>>();
             // Read configuration and use it locally.
             RuntimeConfigPath runtimeConfigPath = Configuration.Get<RuntimeConfigPath>();
             runtimeConfigPath.Logger = logger;
@@ -325,16 +325,16 @@ namespace Azure.DataGateway.Service
         /// <returns>Indicates if the runtime is ready to accept requests.</returns>
         private static async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app)
         {
-            ISqlMetadataProvider sqlMetadataProvider =
-                app.ApplicationServices.GetRequiredService<ISqlMetadataProvider>();
-
-            ILogger<ISqlMetadataProvider>? logger =
-                app.ApplicationServices.GetService<ILogger<ISqlMetadataProvider>>();
+            ILogger<Startup>? logger =
+                app.ApplicationServices.GetService<ILogger<Startup>>();
             try
             {
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
                 app.ApplicationServices.GetService<RuntimeConfigValidator>()!.ValidateConfig();
+
+                ISqlMetadataProvider sqlMetadataProvider =
+                    app.ApplicationServices.GetRequiredService<ISqlMetadataProvider>();
 
                 if (sqlMetadataProvider is not null)
                 {

@@ -24,7 +24,7 @@ namespace Azure.DataGateway.Config
 
         public string? CONNSTRING { get; set; }
 
-        public ILogger<RuntimeConfig>? Logger { get; set; }
+        public ILogger<RuntimeConfigPath>? Logger { get; set; }
 
         public static RuntimeConfig? LoadedRuntimeConfig { get; private set; }
 

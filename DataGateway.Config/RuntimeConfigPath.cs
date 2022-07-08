@@ -26,71 +26,81 @@ namespace Azure.DataGateway.Config
 
         public ILogger<RuntimeConfig>? Logger { get; set; }
 
-        public RuntimeConfigPath() { }
+        public static RuntimeConfig? LoadedRuntimeConfig { get; private set; }
 
-        public RuntimeConfigPath(ILogger<RuntimeConfig> logger)
-        {
-            Logger = logger;
-        }
+        public RuntimeConfigPath() { }
 
         /// <summary>
         /// Reads the contents of the json config file if it exists,
         /// and sets the deserialized RuntimeConfig object.
         /// </summary>
-        public bool TryLoadRuntimeConfigValue(out RuntimeConfig? runtimeConfig)
+        public bool TryLoadRuntimeConfigValue()
         {
             try
             {
-                runtimeConfig = LoadRuntimeConfigValue();
-                Logger.LogInformation($"Runtime configuration has been successfully loaded.");
+                return LoadedRuntimeConfig is not null || LoadRuntimeConfigValue();
             }
             catch (Exception ex)
             {
                 Logger.LogError($"Failed to load the runtime" +
                     $" configuration file due to: \n{ex}");
-                runtimeConfig = null;
             }
 
-            return runtimeConfig is not null;
+            return false;
         }
 
         /// <summary>
         /// Reads the contents of the json config file if it exists,
         /// and sets the deserialized RuntimeConfig object.
         /// </summary>
-        public RuntimeConfig? LoadRuntimeConfigValue()
+        public bool LoadRuntimeConfigValue()
         {
             string? runtimeConfigJson;
-            if (File.Exists(ConfigFileName))
+            if (!string.IsNullOrEmpty(ConfigFileName))
             {
-                if (Logger is not null)
+                if (File.Exists(ConfigFileName))
                 {
-                    Logger.LogInformation($"Using file {ConfigFileName} to configure the runtime.");
-                }
+                    if (Logger is not null)
+                    {
+                        Logger.LogInformation($"Using file {ConfigFileName} to configure the runtime.");
+                    }
 
-                runtimeConfigJson = ParseConfigJsonAndReplaceEnvVariables(File.ReadAllText(ConfigFileName));
+                    runtimeConfigJson = ParseConfigJsonAndReplaceEnvVariables(File.ReadAllText(ConfigFileName));
+                }
+                else
+                {
+                    // This is the case when config file name provided as a commandLine argument
+                    // does not exist.
+                    throw new FileNotFoundException($"Requested configuration file '{ConfigFileName}' does not exist.");
+                }
             }
             else
             {
-                throw new FileNotFoundException($"Requested configuration file '{ConfigFileName}' does not exist.");
+                // This is the case when GetFileNameForEnvironment() is unable to
+                // find a configuration file name after attempting all the possibilities
+                // and checking for their existence in the current directory
+                // eventually setting it to an empty string.
+                throw new ArgumentNullException($"Could not determine a configuration file name that exists.");
             }
 
             if (!string.IsNullOrEmpty(runtimeConfigJson) &&
                 RuntimeConfig.TryGetDeserializedConfig(
                     runtimeConfigJson,
-                    out RuntimeConfig? configValue,
+                    out RuntimeConfig? runtimeConfig,
                     Logger))
             {
-                configValue!.DetermineGlobalSettings();
+                LoadedRuntimeConfig = runtimeConfig;
+                LoadedRuntimeConfig!.DetermineGlobalSettings();
                 if (!string.IsNullOrWhiteSpace(CONNSTRING))
                 {
-                    configValue!.ConnectionString = CONNSTRING;
+                    LoadedRuntimeConfig!.ConnectionString = CONNSTRING;
                 }
 
-                return configValue;
+                Logger.LogInformation($"Runtime configuration has been successfully loaded.");
+                return true;
             }
 
-            return null;
+            return false;
         }
 
         /// <summary>

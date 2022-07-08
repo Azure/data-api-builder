@@ -170,9 +170,9 @@ namespace Azure.DataGateway.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            if (TryConfigureRuntime(services, out RuntimeConfig? runtimeConfig))
+            if (TryConfigureRuntime(services))
             {
-                ConfigureAuthentication(services, runtimeConfig!);
+                ConfigureAuthentication(services, RuntimeConfigPath.LoadedRuntimeConfig!);
             }
 
             services.AddAuthorization();
@@ -277,16 +277,16 @@ namespace Azure.DataGateway.Service
         /// <param name="runtimeConfig">If successful, this is set to value
         /// of the runtime configuration otherwise, null</param>
         /// <returns>True if successfully configured, false otherwise.</returns>
-        private bool TryConfigureRuntime(IServiceCollection services, out RuntimeConfig? runtimeConfig)
+        private bool TryConfigureRuntime(IServiceCollection services)
         {
             IServiceProvider serviceProvider = services.BuildServiceProvider();
-            ILogger<RuntimeConfig> logger
-                = serviceProvider.GetRequiredService<ILogger<RuntimeConfig>>();
+            ILogger<RuntimeConfig>? logger
+                = serviceProvider.GetService<ILogger<RuntimeConfig>>();
             // Read configuration and use it locally.
             RuntimeConfigPath runtimeConfigPath = Configuration.Get<RuntimeConfigPath>();
             runtimeConfigPath.Logger = logger;
 
-            return runtimeConfigPath.TryLoadRuntimeConfigValue(out runtimeConfig);
+            return runtimeConfigPath.TryLoadRuntimeConfigValue();
         }
 
         /// <summary>
@@ -297,28 +297,37 @@ namespace Azure.DataGateway.Service
         /// <returns>Indicates if the runtime is ready to accept requests.</returns>
         private static async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app)
         {
-            ILogger logger = app.ApplicationServices.GetRequiredService<ILogger>();
+            ISqlMetadataProvider sqlMetadataProvider =
+                app.ApplicationServices.GetRequiredService<ISqlMetadataProvider>();
+
+            ILogger<ISqlMetadataProvider>? logger =
+                app.ApplicationServices.GetService<ILogger<ISqlMetadataProvider>>();
             try
             {
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
                 app.ApplicationServices.GetService<RuntimeConfigValidator>()!.ValidateConfig();
 
-                ISqlMetadataProvider? sqlMetadataProvider =
-                    app.ApplicationServices.GetService<ISqlMetadataProvider>();
-
                 if (sqlMetadataProvider is not null)
                 {
                     await sqlMetadataProvider.InitializeAsync();
                 }
 
-                logger.LogInformation($"Successfully completed initialization.");
+                if (logger is not null)
+                {
+                    logger.LogInformation($"Successfully completed runtime initialization.");
+                }
+
                 return true;
             }
             catch (Exception ex)
             {
-                logger.LogError($"Unable to complete runtime " +
-                    $"intialization operations due to: {ex}");
+                if (logger is not null)
+                {
+                    logger.LogError($"Unable to complete runtime " +
+                       $"intialization operations due to: \n{ex}");
+                }
+
                 return false;
             }
         }

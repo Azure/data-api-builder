@@ -17,14 +17,12 @@ namespace Azure.DataGateway.Service.Configurations
 
         public event EventHandler<RuntimeConfig>? RuntimeConfigLoaded;
 
-        protected virtual RuntimeConfig? RuntimeConfiguration { get; set; }
+        protected virtual RuntimeConfig? RuntimeConfiguration { get; private set; }
 
         public virtual string RestPath
         {
             get { return RuntimeConfiguration is not null ? RuntimeConfiguration.RestGlobalSettings.Path : string.Empty; }
         }
-
-        public RuntimeConfigProvider() { }
 
         public RuntimeConfigProvider(
             IOptions<RuntimeConfigPath>? runtimeConfigPath,
@@ -33,9 +31,9 @@ namespace Azure.DataGateway.Service.Configurations
             if (runtimeConfigPath != null)
             {
                 runtimeConfigPath.Value.Logger = logger;
-                if (runtimeConfigPath.Value.TryLoadRuntimeConfigValue(out RuntimeConfig? runtimeConfig))
+                if (runtimeConfigPath.Value.TryLoadRuntimeConfigValue())
                 {
-                    RuntimeConfiguration = runtimeConfig;
+                    RuntimeConfiguration = RuntimeConfigPath.LoadedRuntimeConfig;
                 }
             }
 

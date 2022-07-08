@@ -52,7 +52,11 @@ namespace Azure.DataGateway.Service.Exceptions
             /// <summary>
             /// Requested exposedColumnName does not map to backingColumnName for entity.
             /// </summary>
-            ExposedColumnNameMappingError
+            ExposedColumnNameMappingError,
+            /// <summary>
+            /// The runtime config is invalid semantically.
+            /// </summary>
+            ConfigValidationError
         }
 
         public HttpStatusCode StatusCode { get; }

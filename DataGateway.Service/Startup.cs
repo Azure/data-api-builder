@@ -21,6 +21,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Npgsql;
 
@@ -169,7 +170,11 @@ namespace Azure.DataGateway.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            ConfigureAuthentication(services);
+            if (TryConfigureRuntime(services, out RuntimeConfig? runtimeConfig))
+            {
+                ConfigureAuthentication(services, runtimeConfig!);
+            }
+
             services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
@@ -264,6 +269,29 @@ namespace Azure.DataGateway.Service
             });
         }
 
+        private bool TryConfigureRuntime(IServiceCollection services, out RuntimeConfig? runtimeConfig)
+        {
+            IServiceProvider serviceProvider = services.BuildServiceProvider();
+            ILogger<RuntimeConfig> logger
+                = serviceProvider.GetRequiredService<ILogger<RuntimeConfig>>();
+            // Read configuration and use it locally.
+            RuntimeConfigPath runtimeConfigPath = Configuration.Get<RuntimeConfigPath>();
+            runtimeConfigPath.Logger = logger;
+
+            try
+            {
+                runtimeConfig = runtimeConfigPath.LoadRuntimeConfigValue();
+            }
+            catch(Exception ex)
+            {
+                logger.LogError($"Failed to load the runtime" +
+                    $" configuration file due to: \n{ex}");
+                runtimeConfig = null;
+            }
+
+            return runtimeConfig is not null;
+        }
+
         /// <summary>
         /// Perform these additional steps once the configuration has been bound
         /// to a particular database type.
@@ -296,17 +324,12 @@ namespace Azure.DataGateway.Service
             }
         }
 
-        private void ConfigureAuthentication(IServiceCollection services)
+        private static void ConfigureAuthentication(IServiceCollection services, RuntimeConfig runtimeConfig)
         {
-            // Read configuration and use it locally.
-            RuntimeConfigPath runtimeConfigPath = Configuration.Get<RuntimeConfigPath>();
-            RuntimeConfig? runtimeConfig = runtimeConfigPath.LoadRuntimeConfigValue();
-
             // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
             // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
             // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
-            if (runtimeConfig != null &&
-                runtimeConfig.AuthNConfig != null &&
+            if (runtimeConfig.AuthNConfig != null &&
                 !runtimeConfig.IsEasyAuthAuthenticationProvider())
             {
                 services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -316,8 +339,7 @@ namespace Azure.DataGateway.Service
                     options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
                 });
             }
-            else if (runtimeConfig != null &&
-                runtimeConfig.AuthNConfig != null &&
+            else if(runtimeConfig.AuthNConfig != null &&
                 runtimeConfig.IsEasyAuthAuthenticationProvider())
             {
                 services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)

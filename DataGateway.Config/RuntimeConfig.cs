@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataGateway.Config
 {
@@ -101,19 +102,20 @@ namespace Azure.DataGateway.Config
             }
         }
 
-        public static T GetDeserializedConfig<T>(string configJson)
+        public static bool TryGetDeserializedConfig<T>(string configJson, out T? deserializedConfig)
         {
-            JsonSerializerOptions options = GetDeserializationOptions();
-
-            // This feels verbose but it avoids having to make _config nullable - which would result in more
-            // down the line issues and null check requirements
-            T? deserializedConfig;
-            if ((deserializedConfig = JsonSerializer.Deserialize<T>(configJson, options)) is null)
+            try
             {
-                throw new JsonException("Failed to get a deserialized config from the provided config.");
+                JsonSerializerOptions options = GetDeserializationOptions();
+                deserializedConfig = JsonSerializer.Deserialize<T>(configJson, options);
+                return true;
             }
-
-            return deserializedConfig;
+            catch(JsonException ex)
+            {
+                Console.WriteLine($"Deserialization failed due to: \n{ex}");
+                deserializedConfig = default(T);
+                return false;
+            }
         }
 
         public static JsonSerializerOptions GetDeserializationOptions()

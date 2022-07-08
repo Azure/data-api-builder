@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Azure.DataGateway.Config;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -11,7 +14,14 @@ namespace Azure.DataGateway.Service
     {
         public static void Main(string[] args)
         {
-            CreateHostBuilder(args).Build().Run();
+            try
+            {
+                CreateHostBuilder(args).Build().Run();
+            }
+            catch
+            {
+                Environment.ExitCode = -1;
+            }
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>

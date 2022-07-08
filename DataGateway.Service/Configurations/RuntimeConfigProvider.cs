@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataGateway.Service.Configurations
@@ -23,11 +24,15 @@ namespace Azure.DataGateway.Service.Configurations
 
         public RuntimeConfigProvider() { }
 
-        public RuntimeConfigProvider(IOptions<RuntimeConfigPath>? runtimeConfigPath)
+        public RuntimeConfigProvider(
+            IOptions<RuntimeConfigPath>? runtimeConfigPath,
+            ILogger<RuntimeConfig> logger)
         {
             if (runtimeConfigPath != null)
             {
-                RuntimeConfiguration = runtimeConfigPath.Value.LoadRuntimeConfigValue();
+                runtimeConfigPath.Value.Logger = logger;
+                RuntimeConfiguration =
+                    runtimeConfigPath.Value.LoadRuntimeConfigValue();
             }
         }
 
@@ -49,19 +54,22 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
             }
 
-            RuntimeConfiguration = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(configuration);
-            RuntimeConfiguration.DetermineGlobalSettings();
-            RuntimeConfiguration.ConnectionString = connectionString;
-
-            if (RuntimeConfiguration.DatabaseType == DatabaseType.cosmos)
+            if (RuntimeConfig.TryGetDeserializedConfig(configuration, out RuntimeConfig? runtimeConfig))
             {
-                if (string.IsNullOrEmpty(schema))
-                {
-                    throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
-                }
+                RuntimeConfiguration = runtimeConfig;
+                RuntimeConfiguration!.DetermineGlobalSettings();
+                RuntimeConfiguration!.ConnectionString = connectionString;
 
-                CosmosDbOptions? cosmosDb = RuntimeConfiguration.CosmosDb! with { GraphQLSchema = schema };
-                RuntimeConfiguration = RuntimeConfiguration with { CosmosDb = cosmosDb };
+                if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmos)
+                {
+                    if (string.IsNullOrEmpty(schema))
+                    {
+                        throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
+                    }
+
+                    CosmosDbOptions? cosmosDb = RuntimeConfiguration.CosmosDb! with { GraphQLSchema = schema };
+                    RuntimeConfiguration = RuntimeConfiguration with { CosmosDb = cosmosDb };
+                }
             }
 
             EventHandler<RuntimeConfig>? handlers = RuntimeConfigLoaded;

@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataGateway.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataGateway.Config
 {
@@ -23,6 +24,15 @@ namespace Azure.DataGateway.Config
 
         public string? CONNSTRING { get; set; }
 
+        public ILogger<RuntimeConfig>? Logger { get; set; }
+
+        public RuntimeConfigPath() { }
+
+        public RuntimeConfigPath(ILogger<RuntimeConfig> logger)
+        {
+            Logger = logger;
+        }
+
         /// <summary>
         /// Reads the contents of the json config file if it exists,
         /// and sets the deserialized RuntimeConfig object.
@@ -34,6 +44,11 @@ namespace Azure.DataGateway.Config
             {
                 if (File.Exists(ConfigFileName))
                 {
+                    if (Logger is not null)
+                    {
+                        Logger.LogInformation($"Using file {ConfigFileName} to configure the runtime.");
+                    }
+
                     runtimeConfigJson = ParseConfigJsonAndReplaceEnvVariables(File.ReadAllText(ConfigFileName));
                 }
                 else
@@ -42,14 +57,15 @@ namespace Azure.DataGateway.Config
                 }
             }
 
-            if (!string.IsNullOrEmpty(runtimeConfigJson))
+            if (!string.IsNullOrEmpty(runtimeConfigJson) &&
+                RuntimeConfig.TryGetDeserializedConfig(
+                    runtimeConfigJson,
+                    out RuntimeConfig? configValue))
             {
-                RuntimeConfig configValue = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
-                configValue.DetermineGlobalSettings();
-
+                configValue!.DetermineGlobalSettings();
                 if (!string.IsNullOrWhiteSpace(CONNSTRING))
                 {
-                    configValue.ConnectionString = CONNSTRING;
+                    configValue!.ConnectionString = CONNSTRING;
                 }
 
                 return configValue;

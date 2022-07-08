@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.IO.Abstractions;
 using Azure.DataGateway.Config;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataGateway.Service.Configurations
 {
@@ -12,11 +13,16 @@ namespace Azure.DataGateway.Service.Configurations
     {
         private readonly IFileSystem _fileSystem;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly ILogger<RuntimeConfigValidator> _logger;
 
-        public RuntimeConfigValidator(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
+        public RuntimeConfigValidator(
+            RuntimeConfigProvider runtimeConfigProvider,
+            IFileSystem fileSystem,
+            ILogger<RuntimeConfigValidator> logger)
         {
             _runtimeConfigProvider = runtimeConfigProvider;
             _fileSystem = fileSystem;
+            _logger = logger;
         }
 
         /// <summary>
@@ -30,7 +36,10 @@ namespace Azure.DataGateway.Service.Configurations
 
             if (string.IsNullOrWhiteSpace(runtimeConfig.DatabaseType.ToString()))
             {
-                throw new NotSupportedException("The database-type should be provided with the runtime config.");
+                const string databaseTypeNotSpecified =
+                    "The database-type should be provided with the runtime config.";
+                _logger.LogCritical(databaseTypeNotSpecified);
+                throw new NotSupportedException(databaseTypeNotSpecified);
             }
 
             if (string.IsNullOrWhiteSpace(runtimeConfig.ConnectionString))

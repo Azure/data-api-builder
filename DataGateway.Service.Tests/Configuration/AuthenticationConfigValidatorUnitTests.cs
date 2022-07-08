@@ -151,7 +151,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             return config;
         }
 
-        private static RuntimeConfigValidator GetMockConfigValidator(ref RuntimeConfig config)
+        public static RuntimeConfigValidator GetMockConfigValidator(ref RuntimeConfig config)
         {
             RuntimeConfig conf = config;
             Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();

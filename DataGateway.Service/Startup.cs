@@ -329,9 +329,21 @@ namespace Azure.DataGateway.Service
                 app.ApplicationServices.GetService<ILogger<Startup>>();
             try
             {
+                RuntimeConfig runtimeConfig = app.ApplicationServices.GetService<RuntimeConfigProvider>()!.GetRuntimeConfiguration();
+                RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
+
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
-                app.ApplicationServices.GetService<RuntimeConfigValidator>()!.ValidateConfig();
+                runtimeConfigValidator.ValidateConfig();
+
+                if (app.ApplicationServices.GetService<RuntimeConfigProvider>()!.IsDeveloperMode())
+                {
+                    // Perform semantic validation in development mode only.
+                    runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+                }
+
+                // Pre-process the permissions section in the runtimeconfig.
+                runtimeConfigValidator.ProcessPermissionsInConfig(runtimeConfig);
 
                 ISqlMetadataProvider sqlMetadataProvider =
                     app.ApplicationServices.GetRequiredService<ISqlMetadataProvider>();

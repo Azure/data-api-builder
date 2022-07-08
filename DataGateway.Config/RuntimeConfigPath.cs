@@ -37,30 +37,49 @@ namespace Azure.DataGateway.Config
         /// Reads the contents of the json config file if it exists,
         /// and sets the deserialized RuntimeConfig object.
         /// </summary>
+        public bool TryLoadRuntimeConfigValue(out RuntimeConfig? runtimeConfig)
+        {
+            try
+            {
+                runtimeConfig = LoadRuntimeConfigValue();
+                Logger.LogInformation($"Runtime configuration has been successfully loaded.");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to load the runtime" +
+                    $" configuration file due to: \n{ex}");
+                runtimeConfig = null;
+            }
+
+            return runtimeConfig is not null;
+        }
+
+        /// <summary>
+        /// Reads the contents of the json config file if it exists,
+        /// and sets the deserialized RuntimeConfig object.
+        /// </summary>
         public RuntimeConfig? LoadRuntimeConfigValue()
         {
-            string? runtimeConfigJson = null;
-            if (!string.IsNullOrEmpty(ConfigFileName))
+            string? runtimeConfigJson;
+            if (File.Exists(ConfigFileName))
             {
-                if (File.Exists(ConfigFileName))
+                if (Logger is not null)
                 {
-                    if (Logger is not null)
-                    {
-                        Logger.LogInformation($"Using file {ConfigFileName} to configure the runtime.");
-                    }
+                    Logger.LogInformation($"Using file {ConfigFileName} to configure the runtime.");
+                }
 
-                    runtimeConfigJson = ParseConfigJsonAndReplaceEnvVariables(File.ReadAllText(ConfigFileName));
-                }
-                else
-                {
-                    throw new FileNotFoundException($"Requested configuration file {ConfigFileName} does not exist.");
-                }
+                runtimeConfigJson = ParseConfigJsonAndReplaceEnvVariables(File.ReadAllText(ConfigFileName));
+            }
+            else
+            {
+                throw new FileNotFoundException($"Requested configuration file '{ConfigFileName}' does not exist.");
             }
 
             if (!string.IsNullOrEmpty(runtimeConfigJson) &&
                 RuntimeConfig.TryGetDeserializedConfig(
                     runtimeConfigJson,
-                    out RuntimeConfig? configValue))
+                    out RuntimeConfig? configValue,
+                    Logger))
             {
                 configValue!.DetermineGlobalSettings();
                 if (!string.IsNullOrWhiteSpace(CONNSTRING))

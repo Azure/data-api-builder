@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataGateway.Config
 {
@@ -101,7 +102,18 @@ namespace Azure.DataGateway.Config
             }
         }
 
-        public static bool TryGetDeserializedConfig<T>(string configJson, out T? deserializedConfig)
+        /// <summary>
+        /// Try to deserialize the given json string into its object form.
+        /// </summary>
+        /// <typeparam name="T">The object type.</typeparam>
+        /// <param name="configJson">Json string to be deserialized.</param>
+        /// <param name="deserializedConfig">Deserialized json object upon success.</param>
+        /// <param name="logger">Log provider to use to log exceptions</param>
+        /// <returns>True on success, false otherwise.</returns>
+        public static bool TryGetDeserializedConfig<T>(
+            string configJson,
+            out T? deserializedConfig,
+            ILogger<RuntimeConfig>? logger)
         {
             try
             {
@@ -111,7 +123,11 @@ namespace Azure.DataGateway.Config
             }
             catch (JsonException ex)
             {
-                Console.WriteLine($"Deserialization failed due to: \n{ex}");
+                if (logger is not null)
+                {
+                    logger.LogError($"Deserialization failed due to: \n{ex}");
+                }
+
                 deserializedConfig = default(T);
                 return false;
             }

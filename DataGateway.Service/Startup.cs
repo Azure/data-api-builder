@@ -269,6 +269,14 @@ namespace Azure.DataGateway.Service
             });
         }
 
+        /// <summary>
+        /// Binds the runtime config path, sets its logger and
+        /// tries to load the runtime configuration value.
+        /// </summary>
+        /// <param name="services">Collection of services.</param>
+        /// <param name="runtimeConfig">If successful, this is set to value
+        /// of the runtime configuration otherwise, null</param>
+        /// <returns>True if successfully configured, false otherwise.</returns>
         private bool TryConfigureRuntime(IServiceCollection services, out RuntimeConfig? runtimeConfig)
         {
             IServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -278,18 +286,7 @@ namespace Azure.DataGateway.Service
             RuntimeConfigPath runtimeConfigPath = Configuration.Get<RuntimeConfigPath>();
             runtimeConfigPath.Logger = logger;
 
-            try
-            {
-                runtimeConfig = runtimeConfigPath.LoadRuntimeConfigValue();
-            }
-            catch (Exception ex)
-            {
-                logger.LogError($"Failed to load the runtime" +
-                    $" configuration file due to: \n{ex}");
-                runtimeConfig = null;
-            }
-
-            return runtimeConfig is not null;
+            return runtimeConfigPath.TryLoadRuntimeConfigValue(out runtimeConfig);
         }
 
         /// <summary>
@@ -300,6 +297,7 @@ namespace Azure.DataGateway.Service
         /// <returns>Indicates if the runtime is ready to accept requests.</returns>
         private static async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app)
         {
+            ILogger logger = app.ApplicationServices.GetRequiredService<ILogger>();
             try
             {
                 // Now that the configuration has been set, perform validation of the runtime config
@@ -314,12 +312,13 @@ namespace Azure.DataGateway.Service
                     await sqlMetadataProvider.InitializeAsync();
                 }
 
+                logger.LogInformation($"Successfully completed initialization.");
                 return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unable to complete runtime " +
-                    $"intialization operations due to: {ex.Message}.");
+                logger.LogError($"Unable to complete runtime " +
+                    $"intialization operations due to: {ex}");
                 return false;
             }
         }

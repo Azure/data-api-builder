@@ -13,6 +13,8 @@ namespace Azure.DataGateway.Service.Configurations
     /// </summary>
     public class RuntimeConfigProvider
     {
+        private readonly ILogger<RuntimeConfig>? _logger;
+
         public event EventHandler<RuntimeConfig>? RuntimeConfigLoaded;
 
         protected virtual RuntimeConfig? RuntimeConfiguration { get; set; }
@@ -31,9 +33,13 @@ namespace Azure.DataGateway.Service.Configurations
             if (runtimeConfigPath != null)
             {
                 runtimeConfigPath.Value.Logger = logger;
-                RuntimeConfiguration =
-                    runtimeConfigPath.Value.LoadRuntimeConfigValue();
+                if(runtimeConfigPath.Value.TryLoadRuntimeConfigValue(out RuntimeConfig? runtimeConfig))
+                {
+                    RuntimeConfiguration = runtimeConfig;
+                }
             }
+
+            _logger = logger;
         }
 
         /// <summary>
@@ -54,7 +60,10 @@ namespace Azure.DataGateway.Service.Configurations
                 throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
             }
 
-            if (RuntimeConfig.TryGetDeserializedConfig(configuration, out RuntimeConfig? runtimeConfig))
+            if (RuntimeConfig.TryGetDeserializedConfig(
+                    configuration,
+                    out RuntimeConfig? runtimeConfig,
+                    _logger))
             {
                 RuntimeConfiguration = runtimeConfig;
                 RuntimeConfiguration!.DetermineGlobalSettings();

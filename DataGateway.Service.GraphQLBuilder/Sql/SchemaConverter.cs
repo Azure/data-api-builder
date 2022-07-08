@@ -26,7 +26,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
             TableDefinition tableDefinition,
             [NotNull] Entity configEntity,
             Dictionary<string, Entity> entities,
-            IEnumerable<string>? rolesAllowedForEntity = null)
+            IEnumerable<string>? rolesAllowedForEntity = null,
+            IDictionary<string, IEnumerable<string>>? rolesAllowedForFields = null)
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
             List<DirectiveNode> objectTypeDirectives = new();
@@ -70,16 +71,23 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                     directives.Add(new DirectiveNode(DefaultValueDirectiveType.DirectiveName, new ArgumentNode("value", arg)));
                 }
 
-                NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
-                FieldDefinitionNode field = new(
-                    location: null,
-                    new(FormatNameForField(columnName)),
-                    description: null,
-                    new List<InputValueDefinitionNode>(),
-                    column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
-                    directives);
+                // If no roles are allowed for the field, we should not include it in the schema.
+                // Consequently, the field is only added to schema if this conditional evaluates to TRUE.
+                if (rolesAllowedForFields is not null && rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles))
+                {
+                    directives.Add(GraphQLUtils.CreateAuthorizationDirective(roles));
 
-                fields.Add(columnName, field);
+                    NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
+                    FieldDefinitionNode field = new(
+                        location: null,
+                        new(FormatNameForField(columnName)),
+                        description: null,
+                        new List<InputValueDefinitionNode>(),
+                        column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
+                        directives);
+
+                    fields.Add(columnName, field);
+                }
             }
 
             if (configEntity.Relationships is not null)

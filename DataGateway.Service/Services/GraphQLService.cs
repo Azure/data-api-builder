@@ -13,6 +13,7 @@ using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.GraphQLBuilder.Sql;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services.MetadataProviders;
 using HotChocolate;
@@ -191,8 +192,30 @@ namespace Azure.DataGateway.Service.Services
                 // Collection of role names allowed to access entity, to be added to the authorize directive
                 // of the objectTypeDefinitionNode. The authorize Directive is one of many directives created.
                 IEnumerable<string> rolesAllowedForEntity = _authorizationResolver.GetRolesForEntity(entityName);
+                Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
+                foreach (string column in tableDefinition.Columns.Keys)
+                {
+                    IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, actionName: ActionType.READ );
+                    if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
+                    {
+                        throw new DataGatewayException(
+                            message: "Column already processed for building ObjectTypeDefinition authorization definition.",
+                            statusCode: System.Net.HttpStatusCode.InternalServerError,
+                            subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization
+                            );
+                    }
+                }
 
-                ObjectTypeDefinitionNode node = SchemaConverter.FromTableDefinition(entityName, tableDefinition, entity, entities, rolesAllowedForEntity);
+                // The roles allowed for Fields are the roles allowed to READ the fields, so any role that has a read definition for the field.
+                ObjectTypeDefinitionNode node = SchemaConverter.FromTableDefinition(
+                    entityName,
+                    tableDefinition,
+                    entity,
+                    entities,
+                    rolesAllowedForEntity,
+                    rolesAllowedForFields
+                    );
+
                 InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
                 objectTypes.Add(entityName, node);
             }

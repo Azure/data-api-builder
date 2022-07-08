@@ -635,6 +635,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
                     ) AS subq
                 "
+            },{
+                "InsertOneWithMappingTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT  ""treeId"", ""species"" AS ""Scientific Name"", ""region"" AS ""United State's Region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                        WHERE ""treeId"" = 3
+                    ) AS subq
+                "
             },
             {
                 "InsertOneInCompositeNonAutoGenPKTest",
@@ -856,6 +866,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
+                "PatchOne_Insert_Mapping_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT  ""treeId"", ""species"" AS ""Scientific Name"", ""region"" AS ""United State's Region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                        WHERE ""treeId"" = 4
+                    ) AS subq
+                "
+            },{
                 "PatchOne_Insert_NonAutoGenPK_Test",
                 @"
                     SELECT to_jsonb(subq) AS data

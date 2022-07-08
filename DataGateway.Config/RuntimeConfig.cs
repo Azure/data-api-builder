@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.Logging;
 
 namespace Azure.DataGateway.Config
 {
@@ -110,7 +109,7 @@ namespace Azure.DataGateway.Config
                 deserializedConfig = JsonSerializer.Deserialize<T>(configJson, options);
                 return true;
             }
-            catch(JsonException ex)
+            catch (JsonException ex)
             {
                 Console.WriteLine($"Deserialization failed due to: \n{ex}");
                 deserializedConfig = default(T);

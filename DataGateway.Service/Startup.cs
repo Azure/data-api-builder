@@ -282,7 +282,7 @@ namespace Azure.DataGateway.Service
             {
                 runtimeConfig = runtimeConfigPath.LoadRuntimeConfigValue();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 logger.LogError($"Failed to load the runtime" +
                     $" configuration file due to: \n{ex}");
@@ -339,7 +339,7 @@ namespace Azure.DataGateway.Service
                     options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
                 });
             }
-            else if(runtimeConfig.AuthNConfig != null &&
+            else if (runtimeConfig.AuthNConfig != null &&
                 runtimeConfig.IsEasyAuthAuthenticationProvider())
             {
                 services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)

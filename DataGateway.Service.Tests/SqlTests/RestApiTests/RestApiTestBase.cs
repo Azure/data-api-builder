@@ -2873,6 +2873,73 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
+        /// Verifies that we throw exception when field
+        /// provided to insert is an exposed name that
+        /// maps to a backing column name that does not
+        /// exist in the table.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task InsertTestWithInvalidMapping()
+        {
+            string requestBody = @"
+            {
+                ""speciesid"" : 3,
+                ""hazards"": ""black mold"",
+                ""region"": ""Pacific North West""
+            }";
+
+            string expectedLocationHeader = $"speciedid/3";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationBrokenMappingEntity,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                exception: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Invalid request body. Contained unexpected fields in body: hazards",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest",
+                expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        /// <summary>
+        /// Verifies that we throw exception when field
+        /// provided to upsert is an exposed name that
+        /// maps to a backing column name that does not
+        /// exist in the table.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task PatchTestWithInvalidMapping()
+        {
+            string requestBody = @"
+            {
+                ""hazards"": ""black mold"",
+                ""region"": ""Pacific North West""
+            }";
+
+            string expectedLocationHeader = $"speciedid/3";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: string.Empty,
+                entity: _integrationBrokenMappingEntity,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.UpsertIncremental,
+                exception: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Invalid request body. Either insufficient or extra fields supplied.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest",
+                expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        /// <summary>
         /// Tests the Put functionality with a REST PUT request
         /// with the request body having null value for non-nullable column
         /// We expect a failure and so no sql query is provided.

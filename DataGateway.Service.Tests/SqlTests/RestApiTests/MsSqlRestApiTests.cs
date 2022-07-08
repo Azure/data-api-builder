@@ -405,7 +405,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform
                 // the insertion.
-                $"SELECT [treeId], [species] AS [Scientific Name], [region] AS [United State's Region], [height] FROM { _integrationMappingTable } " +
+                $"SELECT [treeId], [species] AS [Scientific Name], [region] AS " +
+                $"[United State's Region], [height] FROM { _integrationMappingTable } " +
                 $"WHERE [treeId] = 3 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },

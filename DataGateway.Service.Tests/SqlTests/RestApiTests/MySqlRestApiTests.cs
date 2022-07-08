@@ -729,11 +729,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
             },{
                 "InsertOneWithMappingTest",
                 @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species, 'United State\'s Region', region)) AS data
-                    FROM (
-                        SELECT *
-                        FROM " + _integrationMappingTable + @"
-                        WHERE treeId = 3
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species,
+                    'United State\'s Region', region)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationMappingTable + @"
+                      WHERE treeId = 3
                     ) AS subq
                 "
             },
@@ -741,7 +742,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "InsertOneInCompositeNonAutoGenPKTest",
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
-                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                      'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
@@ -971,11 +972,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
             },{
                 "PatchOne_Insert_Mapping_Test",
                 @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species, 'United State\'s Region', region, 'height', height)) AS data
-                    FROM (
-                        SELECT *
-                        FROM " + _integrationMappingTable + @"
-                        WHERE treeId = 4
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species,
+                    'United State\'s Region', region, 'height', height)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationMappingTable + @"
+                      WHERE treeId = 4
                     ) as subq
                 "
             },

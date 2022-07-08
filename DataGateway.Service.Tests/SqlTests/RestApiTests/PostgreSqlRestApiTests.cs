@@ -640,7 +640,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
-                        SELECT  ""treeId"", ""species"" AS ""Scientific Name"", ""region"" AS ""United State's Region"", ""height""
+                        SELECT  ""treeId"", ""species"" AS ""Scientific Name"", ""region""
+                            AS ""United State's Region"", ""height""
                         FROM " + _integrationMappingTable + @"
                         WHERE ""treeId"" = 3
                     ) AS subq
@@ -870,7 +871,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
-                        SELECT  ""treeId"", ""species"" AS ""Scientific Name"", ""region"" AS ""United State's Region"", ""height""
+                        SELECT  ""treeId"", ""species"" AS ""Scientific Name"", ""region""
+                            AS ""United State's Region"", ""height""
                         FROM " + _integrationMappingTable + @"
                         WHERE ""treeId"" = 4
                     ) AS subq

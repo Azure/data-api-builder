@@ -1133,7 +1133,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 );
         }
         /// <summary>
-        /// DeleteOne operates on a single entity with mapping defined
+        /// Operates on a single entity with mapping defined
         /// for its columns, and with target object identified in the
         /// primaryKeyRoute. No requestBody is used for this type of
         /// request. sqlQuery is not used because we are confirming the

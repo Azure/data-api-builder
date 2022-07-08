@@ -89,10 +89,10 @@ namespace Azure.DataGateway.Service.Models
     }
 
     /// <summary>
-    /// Output columns contains a column name which
+    /// Output columns have a column name which
     /// represents the backing column in the table,
     /// and a label which is the exposed name.
-    /// Used in the OUTPUT portion during query building.
+    /// Used in the OUTPUT (or equivalent) during query building.
     /// </summary>
     public class OutputColumn
     {

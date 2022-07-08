@@ -241,7 +241,7 @@ WHERE
                 ColumnDefinition columnDef = structure.GetColumnDefinition(column);
 
                 string quotedColName = QuoteIdentifier(column);
-                if (structure.InsertColumns.Select(x => x.Equals(column)).Contains(true))
+                if (structure.InsertColumns.Contains(column))
                 {
                     selections.Add($"{fields[column]} as {quotedColName}");
                 }
@@ -270,7 +270,7 @@ WHERE
             {
                 string quotedColName = QuoteIdentifier(colName);
 
-                if (structure.InsertColumns.Select(x => x.Equals(colName)).Contains(true))
+                if (structure.InsertColumns.Contains(colName))
                 {
                     selections.Add($"{structure.Values[index]} AS {quotedColName}");
                     index++;

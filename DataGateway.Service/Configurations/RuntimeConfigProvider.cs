@@ -60,7 +60,7 @@ namespace Azure.DataGateway.Service.Configurations
                     throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
                 }
 
-                CosmosDbOptions? cosmosDb = RuntimeConfiguration.CosmosDb! with { GraphQLSchema = schema };
+                CosmosDbOptions? cosmosDb = RuntimeConfiguration.CosmosDb!;
                 RuntimeConfiguration = RuntimeConfiguration with { CosmosDb = cosmosDb };
             }
 

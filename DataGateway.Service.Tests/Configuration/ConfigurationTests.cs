@@ -454,7 +454,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.AreEqual(jsonString, metadataStoreProvider.GraphQLSchema());
 
             // GraphQL Schema File doesn't exist
-            metadataStoreProvider = new(runtimeConfigProvider ,new MockFileSystem());
+            metadataStoreProvider = new(runtimeConfigProvider, new MockFileSystem());
             try
             {
                 string graphQLSchema = metadataStoreProvider.GraphQLSchema();

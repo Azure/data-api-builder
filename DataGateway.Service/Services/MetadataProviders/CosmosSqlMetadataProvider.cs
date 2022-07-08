@@ -107,7 +107,6 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
 
         public string GraphQLSchema()
         {
-            string? graphQLSchema = null;
             if (string.IsNullOrEmpty(_cosmosDb.GraphQLSchemaPath))
             {
                 throw new DataGatewayException(
@@ -116,6 +115,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
                     DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
+            string? graphQLSchema;
             if (_fileSystem.File.Exists(_cosmosDb.GraphQLSchemaPath))
             {
                 graphQLSchema = _fileSystem.File.ReadAllText(_cosmosDb.GraphQLSchemaPath);

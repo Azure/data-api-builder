@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service.Configurations
             if (runtimeConfigPath != null)
             {
                 runtimeConfigPath.Value.Logger = logger;
-                if(runtimeConfigPath.Value.TryLoadRuntimeConfigValue(out RuntimeConfig? runtimeConfig))
+                if (runtimeConfigPath.Value.TryLoadRuntimeConfigValue(out RuntimeConfig? runtimeConfig))
                 {
                     RuntimeConfiguration = runtimeConfig;
                 }

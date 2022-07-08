@@ -108,12 +108,27 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         public string GraphQLSchema()
         {
             string? graphQLSchema = null;
+            if (string.IsNullOrEmpty(_cosmosDb.GraphQLSchemaPath))
+            {
+                throw new DataGatewayException(
+                    "No GraphQL schema file has been provided for CosmosDB.",
+                    System.Net.HttpStatusCode.InternalServerError,
+                    DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
             if (_fileSystem.File.Exists(_cosmosDb.GraphQLSchemaPath))
             {
                 graphQLSchema = _fileSystem.File.ReadAllText(_cosmosDb.GraphQLSchemaPath);
             }
+            else
+            {
+                throw new DataGatewayException(
+                    "GraphQL Schema Path is Invalid.",
+                    System.Net.HttpStatusCode.InternalServerError,
+                    DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
 
-            if (graphQLSchema is null)
+            if (string.IsNullOrEmpty(graphQLSchema))
             {
                 throw new DataGatewayException(
                     "GraphQL Schema isn't set.",

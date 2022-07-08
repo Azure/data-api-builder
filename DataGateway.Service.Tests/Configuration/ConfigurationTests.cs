@@ -425,6 +425,46 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.AreEqual(ex.Message, "Requested configuration file NonExistentConfigFile.json does not exist.");
         }
 
+        [TestMethod("Validates that graphQLSchema is correctly picked up from graphQLSchemaPath.")]
+        public void TestScenariosForGraphQLSchemaInCosmosDbOptions()
+        {
+            string jsonString = @"
+                type Character @model {
+                    id : ID,
+                    name : String,
+                    type: String,
+                    homePlanet: Int,
+                    primaryFunction: String
+                }";
+            MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
+            {
+                { @"./schema.gql", new MockFileData(jsonString) }
+            });
+
+            IOptionsMonitor<RuntimeConfig> config =
+                SqlTestHelper.LoadConfig(COSMOS_ENVIRONMENT);
+
+            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
+            RuntimeConfig runtimeConfig = config.CurrentValue;
+            mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out runtimeConfig)).Returns(true);
+            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
+            RuntimeConfigProvider runtimeConfigProvider = mockRuntimeConfigProvider.Object;
+
+            CosmosSqlMetadataProvider metadataStoreProvider = new(runtimeConfigProvider, fileSystem);
+            Assert.AreEqual(jsonString, metadataStoreProvider.GraphQLSchema());
+
+            // GraphQL Schema File doesn't exist
+            metadataStoreProvider = new(runtimeConfigProvider ,new MockFileSystem());
+            try
+            {
+                string graphQLSchema = metadataStoreProvider.GraphQLSchema();
+            }
+            catch (Exception e)
+            {
+                Assert.AreEqual("GraphQL Schema Path is Invalid.", e.Message);
+            }
+        }
+
         [TestCleanup]
         public void Cleanup()
         {

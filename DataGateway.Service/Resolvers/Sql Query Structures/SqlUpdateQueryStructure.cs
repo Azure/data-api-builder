@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The updated columns that will return
         /// </summary>
-        public List<OutputColumn> ReturnColumns { get; }
+        public List<OutputColumn> OutputColumns { get; }
 
         public SqlUpdateStructure(
             string entityName,
@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.Resolvers
         : base(sqlMetadataProvider, entityName)
         {
             UpdateOperations = new();
-            ReturnColumns = GenerateReturnColumns();
+            OutputColumns = GenerateOutputColumns();
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
 
             List<string> primaryKeys = tableDefinition.PrimaryKey;
@@ -82,7 +82,7 @@ namespace Azure.DataGateway.Service.Resolvers
             UpdateOperations = new();
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
             List<string> columns = tableDefinition.Columns.Keys.ToList();
-            ReturnColumns = GenerateReturnColumns();
+            OutputColumns = GenerateOutputColumns();
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 // primary keys used as predicates

@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The inserted columns that the insert will return
         /// </summary>
-        public List<OutputColumn> ReturnColumns { get; }
+        public List<OutputColumn> OutputColumns { get; }
 
         public SqlInsertStructure(
             string entityName,
@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             InsertColumns = new();
             Values = new();
-            ReturnColumns = GenerateReturnColumns();
+            OutputColumns = GenerateOutputColumns();
 
             IDictionary<string, object?> createInput =
                 InputArgumentToMutationParams(mutationParams, CreateMutationBuilder.INPUT_ARGUMENT_NAME);

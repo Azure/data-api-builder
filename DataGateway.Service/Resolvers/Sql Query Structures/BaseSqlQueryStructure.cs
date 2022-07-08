@@ -147,21 +147,21 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Get a list of the return columns for this table.
-        /// A return column holds both the backing column
-        /// name and the exposed name.
+        /// Get a list of the output columns for this table.
+        /// An OutputColumn holds both the backing column
+        /// name and a label with the exposed name.
         /// </summary>
-        /// <returns>List of ReturnColumns</returns>
-        protected List<OutputColumn> GenerateReturnColumns()
+        /// <returns>List of OutputColumn</returns>
+        protected List<OutputColumn> GenerateOutputColumns()
         {
-            List<OutputColumn> returnColumns = new();
+            List<OutputColumn> outputColumns = new();
             foreach (string columnName in GetUnderlyingTableDefinition().Columns.Keys)
             {
                 SqlMetadataProvider.TryGetExposedColumnName(EntityName, columnName, out string? exposedName);
-                returnColumns.Add(new(columnName, exposedName!));
+                outputColumns.Add(new(columnName, exposedName!));
             }
 
-            return returnColumns;
+            return outputColumns;
         }
 
         ///<summary>

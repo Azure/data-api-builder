@@ -45,11 +45,18 @@ namespace Azure.DataGateway.Config
     /// </summary>
     /// <param name="Include">All the fields specified here are included.</param>
     /// <param name="Exclude">All the fields specified here are excluded.</param>
-    public record Field(
+    public class Field
+    {
+        public Field(HashSet<string>? include, HashSet<string>? exclude)
+        {
+            Include = include is null ? new() : new(include);
+            Exclude = exclude is null ? new() : new(exclude);
+        }
         [property: JsonPropertyName("include")]
-        string[]? Include,
+        public HashSet<string> Include { get; set; }
         [property: JsonPropertyName("exclude")]
-        string[]? Exclude);
+        public HashSet<string> Exclude { get; set; }
+    }
 
     /// <summary>
     /// Details the item-level security rules.
@@ -58,7 +65,17 @@ namespace Azure.DataGateway.Config
     /// sending any request to the database.</param>
     /// <param name="Database">An OData style filter rule
     /// (predicate) that will be injected in the query sent to the database.</param>
-    public record Policy(
-        string? Request,
-        string? Database);
+    public class Policy
+    {
+        public Policy(string? request, string? database)
+        {
+            Request = request;
+            Database = database;
+        }
+
+        [property: JsonPropertyName("request")]
+        public string? Request { get; set; }
+        [property: JsonPropertyName("database")]
+        public string? Database { get; set; }
+    }
 }

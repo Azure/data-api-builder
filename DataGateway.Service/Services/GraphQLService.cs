@@ -195,7 +195,7 @@ namespace Azure.DataGateway.Service.Services
                 Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
                 foreach (string column in tableDefinition.Columns.Keys)
                 {
-                    IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, actionName: ActionType.READ );
+                    IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, actionName: ActionType.READ);
                     if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
                     {
                         throw new DataGatewayException(

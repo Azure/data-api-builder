@@ -7,15 +7,19 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Services.MetadataProviders;
+using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Cosmos;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
@@ -56,6 +60,11 @@ type Planet @model {
             });
 
             CosmosSqlMetadataProvider _metadataStoreProvider = new(TestHelper.ConfigProvider, fileSystem);
+
+            //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.
+            Mock<IAuthorizationResolver> authorizationResolverCosmos = new();
+            authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet" }));
+
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(
@@ -64,7 +73,8 @@ type Planet @model {
                 _mutationEngine,
                 new DocumentCache(),
                 new Sha256DocumentHashProvider(),
-                _metadataStoreProvider);
+                _metadataStoreProvider,
+                authorizationResolverCosmos.Object);
             _controller = new GraphQLController(_graphQLService);
             Client = _clientProvider.Client;
         }
@@ -98,7 +108,13 @@ type Planet @model {
             HttpRequestMessage request = new();
             MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
             request.Method = HttpMethod.Post;
-            ClaimsPrincipal user = new(new ClaimsIdentity(authenticationType: "Bearer"));
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identity = new(authenticationType: "Bearer");
+            identity.AddClaim(new Claim(ClaimTypes.Role, "anonymous"));
+            identity.AddClaim(new Claim(ClaimTypes.Role, "authenticated"));
+
+            ClaimsPrincipal user = new(identity);
             DefaultHttpContext httpContext = new()
             {
                 Request = { Body = stream, ContentLength = stream.Length },
@@ -170,6 +186,15 @@ type Planet @model {
 
             return JsonDocument.Parse(jarray.ToString().Trim());
 
+        }
+
+        private static Dictionary<string, EntityMetadata> GetEntityPermissionsMap(string[] entities)
+        {
+            return GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    entityNames: entities,
+                    actionNames: new string[] { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE },
+                    roles: new string[] { "anonymous", "authenticated" }
+                );
         }
 
     }

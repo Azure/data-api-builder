@@ -27,6 +27,7 @@ namespace Azure.DataGateway.Service.Authorization
         private ISqlMetadataProvider _metadataProvider;
         private const string WILDCARD = "*";
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
+        private const string SHORT_CLAIM_TYPE_NAME = "http://schemas.xmlsoap.org/ws/2005/05/identity/claimproperties/ShortTypeName";
         private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
@@ -236,10 +237,12 @@ namespace Azure.DataGateway.Service.Authorization
                     {
                         string actionName = string.Empty;
                         ActionMetadata actionToColumn = new();
+                        IEnumerable<string> allTableColumns = ResolveTableDefinitionColumns(entityName);
                         if (actionElement.ValueKind is JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();
-                            actionToColumn.Included.UnionWith(ResolveTableDefinitionColumns(entityName));
+                            actionToColumn.Included.UnionWith(allTableColumns);
+                            actionToColumn.Allowed.UnionWith(allTableColumns);
                         }
                         else
                         {
@@ -287,7 +290,17 @@ namespace Azure.DataGateway.Service.Authorization
                                 {
                                     actionToColumn.DatabasePolicy = actionObj.Policy.Database;
                                 }
+
+                                // Calculate the set of allowed backing column names.
+                                actionToColumn.Allowed.UnionWith(actionToColumn.Included.Except(actionToColumn.Excluded));
                             }
+                        }
+
+                        // Try to add the actionName to the map if not present.
+                        // Builds up mapping: i.e. ActionType.CREATE permitted in {Role1, Role2, ..., RoleN}
+                        if (!string.IsNullOrWhiteSpace(actionName) && !entityToRoleMap.ActionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
+                        {
+                            entityToRoleMap.ActionToRolesMap[actionName].Add(role);
                         }
 
                         roleToAction.ActionToColumnMap[actionName] = actionToColumn;
@@ -304,7 +317,7 @@ namespace Azure.DataGateway.Service.Authorization
         public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action)
         {
             ActionMetadata actionMetadata = EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action];
-            IEnumerable<string> allowedDBColumns = actionMetadata.Included.Except(actionMetadata.Excluded);
+            IEnumerable<string> allowedDBColumns = actionMetadata.Allowed;
             List<string> allowedExposedColumns = new();
 
             foreach (string dbColumn in allowedDBColumns)
@@ -369,9 +382,11 @@ namespace Azure.DataGateway.Service.Authorization
                  * claim.Value: "authz@microsoft.com"
                  * claim.ValueType: "string"
                  */
-                string type = claim.Type;
-
-                if (!claimsInRequestContext.TryAdd(type, claim))
+                // If a claim has a short type name, use it (i.e. 'roles' instead of 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role')
+                string type = claim.Properties.TryGetValue(SHORT_CLAIM_TYPE_NAME, out string? shortName) ? shortName : claim.Type;
+                // Don't add roles to the claims dictionary and don't throw an exception in the case of multiple role claims,
+                // since a user can have multiple roles assigned and role resolution happens beforehand
+                if (claim.Type is not ClaimTypes.Role && !claimsInRequestContext.TryAdd(type, claim))
                 {
                     // If there are duplicate claims present in the request, return an exception.
                     throw new DataGatewayException(
@@ -466,6 +481,47 @@ namespace Azure.DataGateway.Service.Authorization
                         subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                     );
             }
+        }
+
+        /// <summary>
+        /// Get list of roles defined for entity within runtime configuration.. This is applicable for GraphQL when creating authorization
+        /// directive on Object type.
+        /// </summary>
+        /// <param name="entityName">Name of entity.</param>
+        /// <returns>Collection of role names.</returns>
+        public IEnumerable<string> GetRolesForEntity(string entityName)
+        {
+            return EntityPermissionsMap[entityName].RoleToActionMap.Keys;
+        }
+
+        /// <summary>
+        /// Returns a list of roles which define permissions for the provided action.
+        /// i.e. list of roles which allow the action "read" on entityName.
+        /// </summary>
+        /// <param name="entityName">Entity to lookup permissions</param>
+        /// <param name="actionName">Action to lookup applicable roles</param>
+        /// <returns>Collection of roles.</returns>
+        public IEnumerable<string> GetRolesForAction(string entityName, string actionName)
+        {
+            if (EntityPermissionsMap[entityName].ActionToRolesMap.TryGetValue(actionName, out List<string>? roleList) && roleList is not null)
+            {
+                return roleList;
+            }
+
+            return new List<string>();
+        }
+
+        /// <summary>
+        /// Returns the collection of roles which can perform {actionName} the provided field.
+        /// Applicable to GraphQL field directive @authorize on ObjectType fields.
+        /// </summary>
+        /// <param name="entityName">EntityName whose actionMetadata will be searched.</param>
+        /// <param name="actionName">ActionName to lookup field permissions</param>
+        /// <param name="field">Specific field to get collection of roles</param>
+        /// <returns>Collection of role names allowed to perform actionName on Entity's field.</returns>
+        public IEnumerable<string> GetRolesForField(string entityName, string actionName, string field)
+        {
+            return EntityPermissionsMap[entityName].FieldToRolesMap[actionName][field];
         }
 
         /// <summary>

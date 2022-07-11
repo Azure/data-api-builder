@@ -71,34 +71,64 @@ Justification of allowing permission configuration for CRUD operations:
 - Aniruddh: we should leave the responsibility for the developer to properly configure hawaii; it's not our fault if they configure against the API guidelines 
 - Keeping the same OperationTypes does let us reuse the AuthZ code and the same result set formatting
 
-## Implementation Plan (REST)
-1. Add field(s) to the `DatabaseObject` config class allowing for stored procedure identification on metadata parsing
-2. Add logic in `SqlMetadataProvider` to populate each stored procedure `DatabaseObject` with appropriate required parameters and such.
-    - Also include error handling config source object here, e.g. if a key in the parameters dictionary not present as a parameter on the stored procedure found in the schema 
+## Implementation Plan (REST) - By Class
 
-### Closely Following Davide's Spec
-3. After request is routed from `RestController` through `HandleOperation`, we condition in `ExecuteAsync` of `RestService` based on the runtimeConfig and/or _metadataProvider whether the entity type requested is a stored procedure.
-   - OperationType (find, insert, update, delete, etc.) is being maintained based on Davide's spec, however each OperationType uses its own respective RequestContext. Since stored procedure is semantically identical for `POST`, `PUT`, `PATCH`, `DELETE`, there should be a new `StoredProcedureRequestContext` that includes parsing of the request body (as that's where parameters will be passed for these methods). 
-      - To see why we can't use original associated RequestContexts, consider a `DELETE` call to a stored procedure - `DeleteRequestContext` does not parse the body, since normally the body is ignored on `DELETE` requests.
-4.  Conditionally ignore the primary key route parsing and validation if database object type is stored procedure.
-5.  Only perform AuthZ for checking if role and action are appropriate for this stored procedure
-    - Do not try to process DB policy - predicates not allowed for stored procedures
-6. Now that we have a request and request context, need to do SQL translation. How?
-    - First, we need to add a new query structure, i.e. `SqlExecuteQueryStructure` that may inherit from `BaseSqlQueryStructure`. This structure will contain all fields necessary to build an `EXEC` command
-    - Next, we need to add a `Build(SqlExecuteQueryStructure structure)` method to the respective `SqlQueryBuilder` classes that will actually perform the translation
-    - Now we need to have an engine/controller initialize the `SqlExecuteQueryStructure` and build it! How?
-        1. Route to `SqlQueryEngine` or `SqlMutationEngine` as the OperationType dictates, i.e. `GET` stored procedure requests would route to `SqlQueryEngine` and all else route to `SqlMutationEngine`. Then, each class would condition based on the RequestContext - if it happens to be a `StoredProcedureRequestContext`, create, build, and execute the `SqlExecuteQueryStructure` according to some resolution of the RequestContext and runtimeConfig parameters.
-        2. Have a separate `SqlExecutionEngine` that is dedicated to only execute commands. This would involve less code but may be semantically confusing
-7. After returning up through the stack trace, we have to return the result set to the user somehow..
-   - Does it make sense for a user to be able to send a `DELETE` request to a stored procedure that actually just gets some rows and returns them? What result do we display? Probably should just be the result returned by SQL to avoid confusion?
+### SqlMetadataProvider.cs
 
-### Another Route?
-AuthZ simplification discussed above and/or limiting request to only `POST` for stored procedures. What would this involve?
-- Might still make semantic sense to give stored procedures their own request context for clarity, but it would be identical to `InsertRequestContext`
-- Decide on how config would change - just conditionally ignore all CRUD action permissions except create on stored procedures? Or have something like [above](#suggested-config)
-- What result gets propagated to client?
+> When we draw metadata from the database schema, we implicitly check if each entity specified in config exists in the database. Path: in `Startup.cs`, the `PerformOnConfigChangeAsync()` method invokes `InitializeAsync()` of the metadata provider bound at runtime, which then invokes `PopulateTableDefinitionForEntities()`. Several steps down the stack `FillSchemaForTableAsync()` is called, which performs a `SELECT * FROM {table_name}` for the given entity and adds the resulting `DataTable` object to the `EntitiesDataSet` class variable. 
+> 
+> Problem: Unfortunately, stored procedure metadata cannot be queried using the same syntax. As such, running the select statement on a stored procedure source name will cause a Sql exception to surface and result in runtime initialization failure. 
+> 
+> Change: Instead, we will have to conditionally check if the entity is labeled a stored procedure in config, and then query its metadata through `SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE SPECIFIC_NAME = {source_name_in_config}` to see if the stored procedure exists. To get parameter metadata for validation and such, we can use `SELECT * FROM INFORMATION_SCHEMA.PARAMETERS WHERE SPECIFIC_NAME = {source_name}`
+> 
+> Note: some might suggest querying `sys.all_objects` instead for MsSql. Postgres and MySql have different system table names, so this would require changes to each derived class, which doesn't nicely fit in with the way all the logic has been put in the base class. `INFORMATION_SCHEMA` is being used because it is supported by all sql variants we currently support.
 
-### Misc Questions
-- should separate OperationType should be defined or just continue to condition on database object type
-    - keeping same OperationType aligns more with Davide's spec in that AuthZ mapped actions wouldn't need to change
-    - adding a type such as sp_execute allows for more intuitive separation of logic in `RestService` but doesn't fit with HTTP verb logic
+### Entity.cs 
+
+> Need to expose the rest of the `DatabaseObjectSource`, including source type and parameters, rather than just the source name. Necessary for referencing in metadata generation, then in setting appropriate request context in `RestService.cs`
+
+### SqlExecuteStructure.cs
+
+> **New class addition**
+Need a structure to build the `EXECUTE {sp_name} {parameters}` statement with. Many of the fields present in other structures are superfluous. The only one I can think to need is parameters (input and output). Predicates in the future perhaps but not now.  Can either inherit from `BaseSqlQueryStructure` or just be implemented standalone.
+
+### DatabaseObject.cs
+
+> Would be a nice-to-have to have input/output parameters in this class for accessing in the `SqlQueryBuilder` classes and their `build` methods.
+
+### MsSqlQueryBuilder.cs
+
+> Starting with sql server, need to add a `build(SqlExecuteStructure structure)` method to build the `EXECUTE {sp_name} {parameters}` statement. Might be extensible to all 3 sql variants we support, in which case it can be moved to `BaseSqlQueryBuilder.cs`
+
+
+### RestController.cs
+> No changes. Stored procedure request will be semantically the same in terms of calling and returning http requests. Yes, that means if you call an http `DELETE url/sp_entity_name`, you will receive a deleted/no content response regardless of what the stored procedure actually does.
+
+### RestService.cs
+
+> We need to condition in `ExecuteAsync` based on the runtimeConfig and/or _metadataProvider whether the entity type requested is a stored procedure. `OperationType` is maintained and most of the AuthZ flow will be maintained, but for now if the entity is a stored procedure we want to bypass 
+> - policy parsing
+> - ignore the primary key route parsing and validation
+> 
+> We also want to set the `RestRequestContext` to `StoredProcedureRequestContext` so that the query and mutation engine build the correct query structure - as of now, the query structures are built solely based on the request context, and refactoring this would be a much bigger change than simply creating a new request context. Also needed to bypass context validation (fx: updates and delete require primary keys, which are irrelevant to sp executes).
+> 
+> Finally, we dispatch to 
+> 1. `SqlQueryEngine` if the entity is a stored procedure and `OperationType` is Find.
+> 2. `SqlMutationEngine` if the entity is a sp and `OperationType` is any of Insert, Delete, Update, UpdateIncremental, Upsert, UpsertIncremental
+
+### StoredProcedureRequestContext.cs
+
+> Will inherit from `RestRequestContext`. Needs to at least implement/expose `FieldValuePairsInBody` for accessing parameters in `POST`, `PUT`, `PATCH`, `DELETE` requests. Query parameters will be present in base class anyway for `GET` requests. Conditioned on in `SqlQueryEngine` and `SqlMutationEngine` to build appropriate structure.
+
+
+### SqlQueryEngine.cs
+
+> In `ExecuteAsync(RestRequestContext context)`, check the type of the context; if stored proc, initialize the `SqlExecuteStructure`, else go ahead with the `SqlQueryStructure`. Then, either refactor the `ExecuteAsync(SqlQueryStructure structure)` to instead take the superclass `BaseSqlQueryStructure` or just create a new `ExecuteAsync(SqlExecuteStructure structure)` method. The latter is clearer but results in more code duplication.
+
+### SqlMutationEngine.cs
+
+> Refactor `ExecuteAsync(RestRequestContext context)` and `PerformMutationOperation()` methods so that we can pass the whole context, not just the `OperationType` to the `PerformMutationOperation` method and conditionally build the `SqlExecuteStructure`. Potentially many other changes will be needed in the `ExecuteAsync` method to handle error conditions depending on the `OperationType` (the result set of executing a stored procedure likely won't follow the format the code is expecting for a delete result, for example, which may throw incorrect errors).
+
+### Misc - not yet on the todo list
+- Include error handling config source object in metadata provider, e.g. if a key in the parameters dictionary not present as a parameter on the stored procedure found in the schema
+- Parameter resolution between those fixed in config and request context. As of now just gonna prefer the request context.

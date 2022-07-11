@@ -1,3 +1,4 @@
+#nullable enable
 using System.Collections.Generic;
 using System.Text.Json;
 using Azure.DataGateway.Config;
@@ -57,22 +58,26 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string entityName = "SampleEntity",
             string roleName = "Reader",
             string actionName = ActionType.CREATE,
-            string[] includedCols = null,
-            string[] excludedCols = null
+            HashSet<string>? includedCols = null,
+            HashSet<string>? excludedCols = null,
+            string? databasePolicy = null,
+            string? requestPolicy = null
             )
         {
             Field fieldsForRole = new(
-                Include: includedCols,
-                Exclude: excludedCols);
+                include: includedCols,
+                exclude: excludedCols);
+
+            Policy policy = new(requestPolicy, databasePolicy);
 
             Action actionForRole = new(
                 Name: actionName,
                 Fields: fieldsForRole,
-                Policy: null);
+                Policy: policy);
 
             PermissionSetting permissionForEntity = new(
-                Role: roleName,
-                Actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+                role: roleName,
+                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
                 Source: TEST_ENTITY,

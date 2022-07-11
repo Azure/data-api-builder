@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -19,8 +20,6 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     /// </summary>
     public class AppServiceAuthenticationHandler : AuthenticationHandler<EasyAuthAuthenticationOptions>
     {
-        private const string EASY_AUTH_HEADER = "X-MS-CLIENT-PRINCIPAL";
-
         /// <summary>
         /// Constructor for the EasyAuthAuthenticationHandler.
         /// Note the parameters are required by the base class.
@@ -47,7 +46,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         /// <returns>An authentication result to ASP.NET Core library authentication mechanisms</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            if (Context.Request.Headers[EASY_AUTH_HEADER].Count > 0)
+            if (Context.Request.Headers[AuthenticationConfig.CLIENT_PRINCIPAL_HEADER].Count > 0)
             {
                 ClaimsIdentity? identity = AppServiceAuthentication.Parse(Context);
 

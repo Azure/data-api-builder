@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         {
             ClaimsIdentity? identity = null;
 
-            if (context.Request.Headers.TryGetValue(AuthenticationConfig.EASYAUTHHEADER, out StringValues header))
+            if (context.Request.Headers.TryGetValue(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, out StringValues header))
             {
                 try
                 {
@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                     // Logging the parsing failure exception to the console, but not rethrowing
                     // nor creating a DataGateway exception because the authentication handler
                     // will create and send a 401 unauthorized response to the client.
-                    Console.Error.WriteLine("Failure processing the AppServie EasyAuth header.");
+                    Console.Error.WriteLine("Failure processing the AppService EasyAuth header.");
                     Console.Error.WriteLine(error.Message);
                     Console.Error.WriteLine(error.StackTrace);
                 }

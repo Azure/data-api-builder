@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,17 +16,15 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     /// - AuthenticateAsync: Authenticates the current request.
     /// - Forbid Async: Creates 403 HTTP Response.
     /// Usage modelled from Microsoft.Identity.Web.
-    ///     Ref: https://github.com/AzureAD/microsoft-identity-web/blob/master/src/Microsoft.Identity.Web/AppServicesAuth/AppServicesAuthenticationHandler.cs
+    ///     Ref: https://docs.microsoft.com/en-us/azure/static-web-apps/user-information?tabs=javascript
     /// </summary>
     public class StaticWebAppsAuthenticationHandler : AuthenticationHandler<EasyAuthAuthenticationOptions>
     {
-        private const string EASY_AUTH_HEADER = "X-MS-CLIENT-PRINCIPAL";
-
         /// <summary>
         /// Constructor for the EasyAuthAuthenticationHandler.
         /// Note the parameters are required by the base class.
         /// </summary>
-        /// <param name="options">App service authentication options.</param>
+        /// <param name="options">Static Web Apps authentication options.</param>
         /// <param name="logger">Logger factory.</param>
         /// <param name="encoder">URL encoder.</param>
         /// <param name="clock">System clock.</param>
@@ -47,7 +46,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         /// <returns>An authentication result to ASP.NET Core library authentication mechanisms</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            if (Context.Request.Headers[EASY_AUTH_HEADER].Count > 0)
+            if (Context.Request.Headers[AuthenticationConfig.CLIENT_PRINCIPAL_HEADER].Count > 0)
             {
                 ClaimsIdentity? identity = StaticWebAppsAuthentication.Parse(Context.Request);
 

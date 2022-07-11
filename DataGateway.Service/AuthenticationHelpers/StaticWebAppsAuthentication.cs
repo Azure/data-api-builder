@@ -34,7 +34,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             StaticWebAppsClientPrincipal principal = new();
             try
             {
-                if (req.Headers.TryGetValue(AuthenticationConfig.EASYAUTHHEADER, out StringValues header))
+                if (req.Headers.TryGetValue(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, out StringValues header))
                 {
                     string data = header[0];
                     byte[] decoded = Convert.FromBase64String(data);

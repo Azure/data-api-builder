@@ -157,7 +157,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                 if (token is not null)
                 {
                     StringValues headerValue = new(new string[] { $"{token}" });
-                    KeyValuePair<string, StringValues> easyAuthHeader = new(AuthenticationConfig.EASYAUTHHEADER, headerValue);
+                    KeyValuePair<string, StringValues> easyAuthHeader = new(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, headerValue);
                     context.Request.Headers.Add(easyAuthHeader);
                 }
 

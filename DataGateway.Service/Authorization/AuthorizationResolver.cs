@@ -92,7 +92,8 @@ namespace Azure.DataGateway.Service.Authorization
                 return false;
             }
 
-            return httpContext.User.IsInRole(clientRoleHeaderValue);
+            return (httpContext.User.Identity!.IsAuthenticated && clientRoleHeader[0].Equals(AuthorizationType.Authenticated.ToString().ToLower()))
+                || httpContext.User.IsInRole(clientRoleHeaderValue);
         }
 
         /// <inheritdoc />
@@ -357,6 +358,10 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 return claimsInRequestContext;
             }
+
+            // Add role claim to the claimsInRequestContext as it is not added later.
+            string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER][0];
+            claimsInRequestContext.Add("roles", new Claim("roles", clientRoleHeader, ClaimValueTypes.String));
 
             foreach (Claim claim in identity.Claims)
             {

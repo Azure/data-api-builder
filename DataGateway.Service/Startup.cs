@@ -43,6 +43,7 @@ namespace Azure.DataGateway.Service
             services.AddSingleton<RuntimeConfigValidator>();
 
             services.AddSingleton<CosmosClientProvider>();
+            services.AddHealthChecks();
 
             services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
             {
@@ -264,6 +265,7 @@ namespace Azure.DataGateway.Service
             {
                 endpoints.MapControllers();
                 endpoints.MapBananaCakePop(toolPath: "/graphql");
+                endpoints.MapHealthChecks("/");
             });
         }
 

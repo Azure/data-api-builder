@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         {
             Mock<RuntimeConfigProvider> provider = new();
             provider.Setup(x => x.IsDeveloperMode()).Returns(isDeveloperMode);
-            DbExceptionParserBase parser = new(provider.Object);
+            DbExceptionParser parser = new(provider.Object);
             DbException e = CreateSqlException();
             string actual = parser.Parse(e).Message;
             Assert.AreEqual(expected, actual);

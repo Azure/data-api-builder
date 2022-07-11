@@ -2,6 +2,7 @@ using System;
 using System.IO.Abstractions;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Authorization;
@@ -152,11 +153,9 @@ namespace Azure.DataGateway.Service
                     case DatabaseType.cosmos:
                         return null!;
                     case DatabaseType.mssql:
-                        return new DbExceptionParserBase(configProvider);
                     case DatabaseType.postgresql:
-                        return ActivatorUtilities.CreateInstance<PostgresDbExceptionParser>(serviceProvider);
                     case DatabaseType.mysql:
-                        return ActivatorUtilities.CreateInstance<MySqlDbExceptionParser>(serviceProvider);
+                        return new DbExceptionParser(configProvider);
                     default:
                         throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
                 }
@@ -173,7 +172,6 @@ namespace Azure.DataGateway.Service
 
             ConfigureAuthentication(services);
             services.AddAuthorization();
-            services.AddSingleton<IAuthorizationHandler, RequestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
 
@@ -279,9 +277,21 @@ namespace Azure.DataGateway.Service
         {
             try
             {
+                RuntimeConfig runtimeConfig = app.ApplicationServices.GetService<RuntimeConfigProvider>()!.GetRuntimeConfiguration();
+                RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
+
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
-                app.ApplicationServices.GetService<RuntimeConfigValidator>()!.ValidateConfig();
+                runtimeConfigValidator.ValidateConfig();
+
+                if (app.ApplicationServices.GetService<RuntimeConfigProvider>()!.IsDeveloperMode())
+                {
+                    // Perform semantic validation in development mode only.
+                    runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+                }
+
+                // Pre-process the permissions section in the runtimeconfig.
+                runtimeConfigValidator.ProcessPermissionsInConfig(runtimeConfig);
 
                 ISqlMetadataProvider? sqlMetadataProvider =
                     app.ApplicationServices.GetService<ISqlMetadataProvider>();

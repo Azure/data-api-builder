@@ -132,8 +132,7 @@
                 "database": "@claims.id eq @item.id"
               },
               "fields": {
-                "include": [ "*" ],
-                "exclude": [ "id" ]
+                "include": [ "*" ]
               }
             }
           ]
@@ -220,17 +219,44 @@
     "WebsiteUser": {
       "source": "website_users",
       "rest": false,
-      "permissions": []
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "SupportedType": {
       "source": "type_table",
       "rest": false,
-      "permissions": []
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "stocks_price": {
       "source": "stocks_price",
       "rest": false,
-      "permissions": []
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "Tree": {
       "source": "trees",

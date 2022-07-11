@@ -31,7 +31,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
                 _mutationEngine,
                 new DocumentCache(),
                 new Sha256DocumentHashProvider(),
-                _sqlMetadataProvider);
+                _sqlMetadataProvider,
+                _authorizationResolver);
             _graphQLController = new GraphQLController(_graphQLService);
         }
 

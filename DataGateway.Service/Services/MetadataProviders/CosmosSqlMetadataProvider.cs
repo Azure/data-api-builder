@@ -97,81 +97,12 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
 
         public TableDefinition GetTableDefinition(string entityName)
         {
-            if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
-            {
-                throw new InvalidCastException($"Table Definition for {entityName} has not been inferred.");
-            }
-
-            return databaseObject!.TableDefinition;
+            throw new NotSupportedException("Cosmos backends don't support direct table definitions. Definitions are provided via the GraphQL schema");
         }
 
         public Task InitializeAsync()
         {
-            GenerateDatabaseObjectForEntities();
             return Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Create a DatabaseObject for all the exposed entities.
-        /// </summary>
-        private void GenerateDatabaseObjectForEntities()
-        {
-            string schemaName, dbObjectName;
-            Dictionary<string, DatabaseObject> sourceObjects = new();
-            foreach ((string entityName, Entity entity)
-                in _entities)
-            {
-                if (!EntityToDatabaseObject.ContainsKey(entityName))
-                {
-                    // Reuse the same Database object for multiple entities if they share the same source.
-                    if (!sourceObjects.TryGetValue(entity.GetSourceName(), out DatabaseObject? sourceObject))
-                    {
-                        // parse source name into a tuple of (schemaName, databaseObjectName)
-                        (schemaName, dbObjectName) = ParseDatabaseAndContainerName(entity.GetSourceName())!;
-                        sourceObject = new()
-                        {
-                            SchemaName = schemaName,
-                            Name = dbObjectName,
-                            TableDefinition = new()
-                        };
-
-                        sourceObjects.Add(entity.GetSourceName(), sourceObject);
-                    }
-
-                    EntityToDatabaseObject.Add(entityName, sourceObject);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Helper function will parse the schema and database object name
-        /// from the provided source string and sort out if a default schema
-        /// should be used. It then returns the appropriate schema and
-        /// db object name as a tuple of strings.
-        /// i.e. source = 'graphqldb.planet' -> databaseName ='graphqldb'; containerName ='planet'
-        /// </summary>
-        /// <param name="source">source string to parse</param>
-        /// <returns></returns>
-        /// <exception cref="DataGatewayException"></exception>
-        public (string, string) ParseDatabaseAndContainerName(string source)
-        {
-            (string? schemaName, string dbObjectName) = EntitySourceNamesParser.ParseSchemaAndTable(source)!;
-
-            if (string.IsNullOrEmpty(schemaName))
-            {
-                throw new DataGatewayException(message: $"Missing database name for entity name: {source} in Config file for Cosmos",
-                                               statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                               subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
-            }
-
-            if (string.IsNullOrEmpty(dbObjectName))
-            {
-                throw new DataGatewayException(message: $"Missing container name for entity name: {source} in Config file for Cosmos",
-                                               statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                               subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
-            }
-
-            return (schemaName, dbObjectName);
         }
 
         public string GraphQLSchema()

@@ -111,7 +111,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                         .ConfigureServices(services =>
                         {
                             services.AddAuthentication(defaultScheme: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                                    .AddEasyAuthAuthentication(easyAuthType.ToString());
+                                    .AddEasyAuthAuthentication(easyAuthType);
 
                             services.AddAuthorization();
                         })

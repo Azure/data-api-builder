@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         /// <param name="easyAuthAuthenticationProvider">EasyAuth provider type. StaticWebApps or AppService</param>
         /// <returns>The builder, to chain commands.</returns>
         public static AuthenticationBuilder AddEasyAuthAuthentication(
-             this AuthenticationBuilder builder, string easyAuthAuthenticationProvider)
+             this AuthenticationBuilder builder, EasyAuthType easyAuthAuthenticationProvider)
         {
             if (builder is null)
             {
@@ -29,11 +29,11 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                 authenticationScheme: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME,
                 displayName: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME,
                 options => {
-                    if (Enum.GetName(EasyAuthType.StaticWebApps)!.Equals(easyAuthAuthenticationProvider, StringComparison.OrdinalIgnoreCase))
-                    {
+                    if (easyAuthAuthenticationProvider is EasyAuthType.StaticWebApps)
+                    { 
                         options.EasyAuthProvider = EasyAuthType.StaticWebApps;
                     }
-                    else if (Enum.GetName(EasyAuthType.AppService)!.Equals(easyAuthAuthenticationProvider, StringComparison.OrdinalIgnoreCase))
+                    else if (easyAuthAuthenticationProvider is EasyAuthType.AppService)
                     {
                         options.EasyAuthProvider = EasyAuthType.AppService;
                     }

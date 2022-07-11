@@ -321,7 +321,7 @@ namespace Azure.DataGateway.Service
                 runtimeConfig.IsEasyAuthAuthenticationProvider())
             {
                 services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                    .AddEasyAuthAuthentication(runtimeConfig.AuthNConfig.Provider);
+                    .AddEasyAuthAuthentication((EasyAuthType)Enum.Parse(typeof(EasyAuthType), runtimeConfig.AuthNConfig.Provider, true));
             }
         }
 

@@ -15,8 +15,7 @@ namespace Azure.DataGateway.Config
         public const string CLIENT_PRINCIPAL_HEADER = "X-MS-CLIENT-PRINCIPAL";
         public bool IsEasyAuthAuthenticationProvider()
         {
-            return Enum.GetName(EasyAuthType.StaticWebApps)!.Equals(Provider, StringComparison.OrdinalIgnoreCase)
-                || Enum.GetName(EasyAuthType.AppService)!.Equals(Provider, StringComparison.OrdinalIgnoreCase);
+            return Enum.GetNames(typeof(EasyAuthType)).Any(x => x.Equals(Provider, StringComparison.OrdinalIgnoreCase));
         }
     }
 

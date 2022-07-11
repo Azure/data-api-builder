@@ -1,3 +1,4 @@
+#nullable enable
 using System.Collections.Generic;
 using System.Net;
 using System.Security.Claims;
@@ -127,7 +128,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2", "col3" }
+                includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -145,7 +146,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2", "col3" }
+                includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -163,7 +164,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "*" }
+                includedCols: new HashSet<string> { "*" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -181,8 +182,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "*" },
-                excludedCols: new string[] { "col1", "col2" }
+                includedCols: new HashSet<string> { "*" },
+                excludedCols: new HashSet<string> { "col1", "col2" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -201,7 +202,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2", "col3" }
+                includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -219,7 +220,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2", "col3" }
+                includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -238,8 +239,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2", "col3" },
-                excludedCols: new string[] { "col4", "col5", "col6" }
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
+                excludedCols: new HashSet<string> { "col4", "col5", "col6" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -257,8 +258,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2", "col3" },
-                excludedCols: new string[] { "col4", "col5", "col6" }
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
+                excludedCols: new HashSet<string> { "col4", "col5", "col6" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -276,7 +277,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                excludedCols: new string[] { "*" }
+                excludedCols: new HashSet<string> { "*" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -294,8 +295,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "*" },
-                excludedCols: new string[] { "col1", "col2" }
+                includedCols: new HashSet<string> { "*" },
+                excludedCols: new HashSet<string> { "col1", "col2" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -313,8 +314,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2" },
-                excludedCols: new string[] { "*" }
+                includedCols: new HashSet<string> { "col1", "col2" },
+                excludedCols: new HashSet<string> { "*" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -332,8 +333,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new string[] { "col1", "col2" },
-                excludedCols: new string[] { "*" }
+                includedCols: new HashSet<string> { "col1", "col2" },
+                excludedCols: new HashSet<string> { "*" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -366,7 +367,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 TEST_ENTITY,
                 TEST_ROLE,
                 TEST_ACTION,
-                includedCols: new string[] { "col1", "col2", "col3" },
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
@@ -403,7 +404,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 TEST_ENTITY,
                 TEST_ROLE,
                 TEST_ACTION,
-                includedCols: new string[] { "col1", "col2", "col3" },
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
@@ -427,25 +428,82 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 Assert.AreEqual("User does not possess all the claims required to perform this action.", ex.Message);
             }
         }
+
+        /// <summary>
+        /// Test to validate that duplicate claims throws an exception for everything except roles
+        /// duplicate role claims are ignored, so just checks policy is parsed as expected in this case 
+        /// </summary>
+        /// <param name="exceptionExpected"> Whether we expect an exception (403 forbidden) to be thrown while parsing policy </param>
+        /// <param name="claims"> Parameter list of claim types/keys to add to the claims dictionary that can be accessed with @claims </param>
+        [DataTestMethod]
+        [DataRow(true, ClaimTypes.Role, "username", "guid", "username", DisplayName = "duplicate claim expect exception")]
+        [DataRow(false, ClaimTypes.Role, "username", "guid", ClaimTypes.Role, DisplayName = "duplicate role claim does not expect exception")]
+        [DataRow(true, ClaimTypes.Role, ClaimTypes.Role, "username", "username", DisplayName = "duplicate claim expect exception ignoring role")]
+        public void ParsePolicyWithDuplicateUserClaims(bool exceptionExpected, params string[] claimTypes)
+        {
+            string policy = $"@claims.guid eq 1";
+            string defaultClaimValue = "unimportant";
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(
+                TEST_ENTITY,
+                TEST_ROLE,
+                TEST_ACTION,
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
+                databasePolicy: policy
+                );
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+            Mock<HttpContext> context = new();
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, TEST_ROLE_TYPE);
+            foreach (string claimType in claimTypes)
+            {
+                identity.AddClaim(new Claim(type: claimType, value: defaultClaimValue, ClaimValueTypes.String));
+            }
+
+            ClaimsPrincipal principal = new(identity);
+            context.Setup(x => x.User).Returns(principal);
+
+            // We expect an exception if duplicate claims are present EXCEPT for role claim
+            if (exceptionExpected)
+            {
+                try
+                {
+                    authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_ACTION, context.Object);
+                    Assert.Fail();
+                }
+                catch (DataGatewayException ex)
+                {
+                    Assert.AreEqual(HttpStatusCode.Forbidden, ex.StatusCode);
+                    Assert.AreEqual("Duplicate claims are not allowed within a request.", ex.Message);
+                }
+            }
+            else
+            {
+                // If the role claim was the only duplicate, simply verify policy parsed as expected
+                string expectedPolicy = $"('{defaultClaimValue}') eq 1";
+                string parsedPolicy = authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_ACTION, context.Object);
+                Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy);
+            }
+        }
         #endregion
         #region Helpers
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
             string roleName = "Reader",
             string actionName = ActionType.CREATE,
-            string[] includedCols = null,
-            string[] excludedCols = null,
-            string requestPolicy = null,
-            string databasePolicy = null
+            HashSet<string>? includedCols = null,
+            HashSet<string>? excludedCols = null,
+            string? requestPolicy = null,
+            string? databasePolicy = null
             )
         {
             Field fieldsForRole = new(
-                Include: includedCols,
-                Exclude: excludedCols);
+                include: includedCols,
+                exclude: excludedCols);
 
             Policy policy = new(
-                Request: requestPolicy,
-                Database: databasePolicy);
+                request: requestPolicy,
+                database: databasePolicy);
 
             Action actionForRole = new(
                 Name: actionName,
@@ -453,8 +511,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 Policy: policy);
 
             PermissionSetting permissionForEntity = new(
-                Role: roleName,
-                Actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+                role: roleName,
+                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
                 Source: TEST_ENTITY,

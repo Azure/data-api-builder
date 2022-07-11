@@ -9,7 +9,6 @@ using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -26,8 +25,10 @@ namespace Azure.DataGateway.Service.Authorization
     {
         private ISqlMetadataProvider _metadataProvider;
         private const string WILDCARD = "*";
+        public const string CLAIM_PREFIX = "@claims.";
+        public const string FIELD_PREFIX = "@item.";
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
-        private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
+        private const string SHORT_CLAIM_TYPE_NAME = "http://schemas.xmlsoap.org/ws/2005/05/identity/claimproperties/ShortTypeName";
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
         public AuthorizationResolver(
@@ -167,7 +168,7 @@ namespace Azure.DataGateway.Service.Authorization
         {
             string dBpolicyWithClaimTypes = GetDBPolicyForRequest(entityName, roleName, action);
             return string.IsNullOrWhiteSpace(dBpolicyWithClaimTypes) ? string.Empty :
-                   ProcessTokenClaimsForPolicy(dBpolicyWithClaimTypes, httpContext);
+                   ProcessClaimsForPolicy(dBpolicyWithClaimTypes, httpContext);
         }
 
         /// <summary>
@@ -243,23 +244,19 @@ namespace Azure.DataGateway.Service.Authorization
                             if (actionObj is not null)
                             {
                                 actionName = actionObj.Name;
-
-                                //Assert the assumption that the actionName is valid.
-                                Assert.IsTrue(IsValidActionName(actionName));
-
                                 if (actionObj.Fields!.Include is not null)
                                 {
                                     // When a wildcard (*) is defined for Included columns, all of the table's
                                     // columns must be resolved and placed in the actionToColumn Key/Value store.
                                     // This is especially relevant for find requests, where actual column names must be
                                     // resolved when no columns were included in a request.
-                                    if (actionObj.Fields.Include.Length == 1 && actionObj.Fields.Include[0] == WILDCARD)
+                                    if (actionObj.Fields.Include.Count == 1 && actionObj.Fields.Include.Contains(WILDCARD))
                                     {
                                         actionToColumn.Included.UnionWith(ResolveTableDefinitionColumns(entityName));
                                     }
                                     else
                                     {
-                                        actionToColumn.Included = new(actionObj.Fields.Include);
+                                        actionToColumn.Included = actionObj.Fields.Include!;
                                     }
                                 }
 
@@ -267,13 +264,13 @@ namespace Azure.DataGateway.Service.Authorization
                                 {
                                     // When a wildcard (*) is defined for Excluded columns, all of the table's
                                     // columns must be resolved and placed in the actionToColumn Key/Value store.
-                                    if (actionObj.Fields.Exclude.Length == 1 && actionObj.Fields.Exclude[0] == WILDCARD)
+                                    if (actionObj.Fields.Exclude.Count == 1 && actionObj.Fields.Exclude.Contains(WILDCARD))
                                     {
                                         actionToColumn.Excluded.UnionWith(ResolveTableDefinitionColumns(entityName));
                                     }
                                     else
                                     {
-                                        actionToColumn.Excluded = new(actionObj.Fields.Exclude);
+                                        actionToColumn.Excluded = actionObj.Fields.Exclude!;
                                     }
                                 }
 
@@ -323,25 +320,13 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <summary>
-        /// Returns whether the actionName is a valid
-        /// - Create, Read, Update, Delete (CRUD) operation
-        /// - Wildcard (*)
-        /// </summary>
-        /// <param name="actionName"></param>
-        /// <returns></returns>
-        private static bool IsValidActionName(string actionName)
-        {
-            return actionName.Equals(WILDCARD) || _validActions.Contains(actionName);
-        }
-
-        /// <summary>
         /// Helper method to process the given policy obtained from config, and convert it into an injectable format in
-        /// the HttpContext object by substituting/removing @claim./@item. directives.
+        /// the HttpContext object by substituting @claim.xyz claims with their values.
         /// </summary>
         /// <param name="policy">The policy to be processed.</param>
         /// <param name="context">HttpContext object used to extract all the claims available in the request.</param>
         /// <returns>Processed policy string that can be injected into the HttpContext object.</returns>
-        private static string ProcessTokenClaimsForPolicy(string policy, HttpContext context)
+        private static string ProcessClaimsForPolicy(string policy, HttpContext context)
         {
             Dictionary<string, Claim> claimsInRequestContext = GetAllUserClaims(context);
             policy = GetPolicyWithClaimValues(policy, claimsInRequestContext);
@@ -373,9 +358,11 @@ namespace Azure.DataGateway.Service.Authorization
                  * claim.Value: "authz@microsoft.com"
                  * claim.ValueType: "string"
                  */
-                string type = claim.Type;
-
-                if (!claimsInRequestContext.TryAdd(type, claim))
+                // If a claim has a short type name, use it (i.e. 'roles' instead of 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role')
+                string type = claim.Properties.TryGetValue(SHORT_CLAIM_TYPE_NAME, out string? shortName) ? shortName : claim.Type;
+                // Don't add roles to the claims dictionary and don't throw an exception in the case of multiple role claims,
+                // since a user can have multiple roles assigned and role resolution happens beforehand
+                if (claim.Type is not ClaimTypes.Role && !claimsInRequestContext.TryAdd(type, claim))
                 {
                     // If there are duplicate claims present in the request, return an exception.
                     throw new DataGatewayException(
@@ -408,7 +395,7 @@ namespace Azure.DataGateway.Service.Authorization
                 (claimTypeMatch) => GetClaimValueFromClaim(claimTypeMatch, claimsInRequestContext));
 
             //Remove occurences of @item. directives
-            processedPolicy = processedPolicy.Replace("@item.", "");
+            processedPolicy = processedPolicy.Replace(AuthorizationResolver.FIELD_PREFIX, "");
             return processedPolicy;
         }
 
@@ -421,7 +408,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <exception cref="DataGatewayException"> Throws exception when the user does not possess the given claim.</exception>
         private static string GetClaimValueFromClaim(Match claimTypeMatch, Dictionary<string, Claim> claimsInRequestContext)
         {
-            string claimType = claimTypeMatch.Value.ToString().Substring("@claims.".Length);
+            string claimType = claimTypeMatch.Value.ToString().Substring(AuthorizationResolver.CLAIM_PREFIX.Length);
             if (claimsInRequestContext.TryGetValue(claimType, out Claim? claim))
             {
                 return GetClaimValueByDataType(claim);

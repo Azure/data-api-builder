@@ -128,8 +128,7 @@
                 "database": "@claims.id eq @item.id"
               },
               "fields": {
-                "include": [ "*" ],
-                "exclude": [ "id" ]
+                "include": [ "*" ]
               }
             }
           ]

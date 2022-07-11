@@ -28,13 +28,13 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             public IEnumerable<string>? UserRoles { get; set; }
         }
 
-        public static ClaimsIdentity? Parse(HttpRequest req)
+        public static ClaimsIdentity? Parse(HttpContext context)
         {
             ClaimsIdentity? identity = null;
             StaticWebAppsClientPrincipal principal = new();
             try
             {
-                if (req.Headers.TryGetValue(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, out StringValues header))
+                if (context.Request.Headers.TryGetValue(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, out StringValues header))
                 {
                     string data = header[0];
                     byte[] decoded = Convert.FromBase64String(data);

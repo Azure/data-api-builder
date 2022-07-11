@@ -25,22 +25,19 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                 throw new System.ArgumentNullException(nameof(builder));
             }
 
-            if (Enum.GetName(EasyAuthType.StaticWebApps)!.Equals(easyAuthAuthenticationProvider, StringComparison.OrdinalIgnoreCase))
-            {
-                builder.AddScheme<EasyAuthAuthenticationOptions, StaticWebAppsAuthenticationHandler>(
-                    authenticationScheme: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME,
-                    displayName: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME,
-                    options => { });
-            }
-
-            if (Enum.GetName(EasyAuthType.AppService)!.Equals(easyAuthAuthenticationProvider, StringComparison.OrdinalIgnoreCase))
-            {
-                builder.AddScheme<EasyAuthAuthenticationOptions, AppServiceAuthenticationHandler>(
-                    authenticationScheme: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME,
-                    displayName: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME,
-                    options => { });
-            }
-
+            builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
+                authenticationScheme: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME,
+                displayName: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME,
+                options => {
+                    if (Enum.GetName(EasyAuthType.StaticWebApps)!.Equals(easyAuthAuthenticationProvider, StringComparison.OrdinalIgnoreCase))
+                    {
+                        options.EasyAuthProvider = EasyAuthType.StaticWebApps;
+                    }
+                    else if (Enum.GetName(EasyAuthType.AppService)!.Equals(easyAuthAuthenticationProvider, StringComparison.OrdinalIgnoreCase))
+                    {
+                        options.EasyAuthProvider = EasyAuthType.AppService;
+                    }
+                });
             return builder;
         }
     }

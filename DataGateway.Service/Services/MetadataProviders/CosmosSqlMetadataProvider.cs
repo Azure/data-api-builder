@@ -127,7 +127,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
                     if (!sourceObjects.TryGetValue(entity.GetSourceName(), out DatabaseObject? sourceObject))
                     {
                         // parse source name into a tuple of (schemaName, databaseObjectName)
-                        (schemaName, dbObjectName) = ParseSchemaAndDbObjectName(entity.GetSourceName())!;
+                        (schemaName, dbObjectName) = ParseDatabaseAndContainerName(entity.GetSourceName())!;
                         sourceObject = new()
                         {
                             SchemaName = schemaName,
@@ -153,7 +153,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         /// <param name="source">source string to parse</param>
         /// <returns></returns>
         /// <exception cref="DataGatewayException"></exception>
-        public (string, string) ParseSchemaAndDbObjectName(string source)
+        public (string, string) ParseDatabaseAndContainerName(string source)
         {
             (string? schemaName, string dbObjectName) = EntitySourceNamesParser.ParseSchemaAndTable(source)!;
 

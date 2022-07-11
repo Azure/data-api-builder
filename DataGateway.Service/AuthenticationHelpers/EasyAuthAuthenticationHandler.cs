@@ -15,10 +15,8 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     /// and utilizes the base class default handler for
     /// - AuthenticateAsync: Authenticates the current request.
     /// - Forbid Async: Creates 403 HTTP Response.
-    /// Usage modelled from Microsoft.Identity.Web.
-    ///     Ref: https://docs.microsoft.com/en-us/azure/static-web-apps/user-information?tabs=javascript
     /// </summary>
-    public class StaticWebAppsAuthenticationHandler : AuthenticationHandler<EasyAuthAuthenticationOptions>
+    public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthenticationOptions>
     {
         /// <summary>
         /// Constructor for the EasyAuthAuthenticationHandler.
@@ -28,7 +26,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         /// <param name="logger">Logger factory.</param>
         /// <param name="encoder">URL encoder.</param>
         /// <param name="clock">System clock.</param>
-        public StaticWebAppsAuthenticationHandler(
+        public EasyAuthAuthenticationHandler(
             IOptionsMonitor<EasyAuthAuthenticationOptions> options,
               ILoggerFactory logger,
               UrlEncoder encoder,
@@ -48,11 +46,16 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         {
             if (Context.Request.Headers[AuthenticationConfig.CLIENT_PRINCIPAL_HEADER].Count > 0)
             {
-                ClaimsIdentity? identity = StaticWebAppsAuthentication.Parse(Context.Request);
+                ClaimsIdentity? identity = Options.EasyAuthProvider switch
+                {
+                    EasyAuthType.StaticWebApps => StaticWebAppsAuthentication.Parse(Context),
+                    EasyAuthType.AppService => AppServiceAuthentication.Parse(Context),
+                    _ => null
+                };
 
                 if (identity is null)
                 {
-                    return Task.FromResult(AuthenticateResult.Fail(failureMessage: "Invalid StaticWebApps EasyAuth token."));
+                    return Task.FromResult(AuthenticateResult.Fail(failureMessage: $"Invalid {Options.EasyAuthProvider.ToString()} EasyAuth token."));
                 }
 
                 ClaimsPrincipal? claimsPrincipal = new(identity);

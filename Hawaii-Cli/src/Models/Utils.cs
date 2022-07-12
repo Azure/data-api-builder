@@ -267,6 +267,57 @@ namespace Hawaii.Cli.Models
         }
 
         /// <summary>
+        /// Verifies whether the action provided by the user is valid or not
+        /// Example:
+        /// *, create -> Invalid
+        /// create, create, read -> Invalid
+        /// * -> Valid
+        /// fetch, read -> Invalid
+        /// read, delete -> Valid
+        /// </summary>
+        /// <param name="actions">array of string containing actions for permissions</param>
+        /// <returns>True if no invalid action is found.</returns>
+        public static bool VerifyActions(string[] actions)
+        {
+            // Check if there are any duplicate actions
+            // Ex: read,read,create
+            HashSet<string> uniqueActions = actions.ToHashSet();
+            if (uniqueActions.Count() != actions.Length)
+            {
+                Console.Error.WriteLine("Duplicate action found in --permissions");
+                return false;
+            }
+
+            bool containsWildcardAction = false;
+            foreach (string action in uniqueActions)
+            {
+                CRUD crud;
+                if (!Enum.TryParse<CRUD>(action.ToLower(), out crud))
+                {
+                    if (action is WILDCARD)
+                    {
+                        containsWildcardAction = true;
+                    }
+                    else
+                    {
+                        // Check for invalid CRUD actions such as fetch, creates, etc.
+                        Console.Error.WriteLine("Invalid actions found in --permissions");
+                        return false;
+                    }
+                }
+            }
+
+            // Check for WILDCARD action with CRUD actions
+            if (containsWildcardAction && uniqueActions.Count() > 1)
+            {
+                Console.Error.WriteLine(" WILDCARD(*) along with other CRUD actions in a single operation is not allowed.");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// this method will parse role and Action from permission string.
         /// A valid permission string will be of the form "<<role>>:<<actions>>"
         /// it will return true if parsing is successful and add the parsed value

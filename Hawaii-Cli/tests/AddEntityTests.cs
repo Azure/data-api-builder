@@ -73,7 +73,7 @@ namespace Hawaii.Cli.Tests
         }
 
         /// <summary>
-        /// Entity names should be case-sensitive. Adding a new entity with the an existing name but with 
+        /// Entity names should be case-sensitive. Adding a new entity with the an existing name but with
         /// a different case in one or more characters should be successful.
         /// </summary>
         [TestMethod]
@@ -97,6 +97,37 @@ namespace Hawaii.Cli.Tests
             RunTest(options, initialConfiguration, expectedConfiguration);
         }
 
+        #region Negative Tests
+
+        /// <summary>
+        /// Check failure when adding an entity with permission containing invalid actions
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("anonymous:*,create,read", DisplayName = "Permission With Wildcard And Other CRUD Actions")]
+        [DataRow("anonymous:create,create,read", DisplayName = "Permission With duplicate CRUD Actions")]
+        [DataRow("anonymous:fetch", DisplayName = "Invalid CRUD action: fetch")]
+        [DataRow("anonymous:fetch,*", DisplayName = "WILDCARD combined with other actions")]
+        [DataRow("anonymous:fetch,create", DisplayName = "Mix of invalid and valid CRUD action")]
+        [DataRow("anonymous:reads,create", DisplayName = "Misspelled CRUD actions")]
+        public void TestAddEntityPermissionWithInvalidAction(string permissions)
+        {
+            AddOptions options = new(
+                source: "MyTable",
+                permissions: permissions,
+                entity: "MyEntity",
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: "id,rating",
+                fieldsToExclude: "level",
+                name: "outputfile");
+
+            string runtimeConfig = GetInitialConfiguration();
+
+            Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
+        }
+
+        #endregion
+
         /// <summary>
         /// Call ConfigGenerator.TryAddNewEntity and verify json result.
         /// </summary>
@@ -114,7 +145,7 @@ namespace Hawaii.Cli.Tests
         }
 
         /// <summary>
-        /// Adds the entity properties to the configuration and returns the updated configuration json as a string.  
+        /// Adds the entity properties to the configuration and returns the updated configuration json as a string.
         /// </summary>
         /// <param name="configuration">Configuration Json.</param>
         /// <param name="entityProperties">Entity properties to be added to the configuration.</param>
@@ -184,7 +215,7 @@ namespace Hawaii.Cli.Tests
                           }
                         ]
                     }
-                }     
+                }
             }";
         }
 

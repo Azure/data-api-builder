@@ -57,7 +57,7 @@ namespace Hawaii.Cli.Models
                     string? graphQLSchemaPath = options.GraphQLSchemaPath;
                     if (string.IsNullOrEmpty(cosmosDatabase) || string.IsNullOrEmpty(graphQLSchemaPath))
                     {
-                        Console.WriteLine($"Please provide the mandatory options for CosmosDB: --cosmos-database");
+                        Console.WriteLine($"Please provide the mandatory options for CosmosDB: --cosmos-database, --graphql-schema");
                         return false;
                     }
 
@@ -196,6 +196,13 @@ namespace Hawaii.Cli.Models
             if (!TryGetRoleAndActionFromPermissionString(permissions, out role, out actions))
             {
                 Console.Error.Write($"Failed to fetch the role and action from the given permission string: {permissions}.");
+                return null;
+            }
+
+            // Check if provided actions are valid
+            if (!VerifyActions(actions!.Split(",")))
+            {
+                Console.Error.WriteLine("Invalid action provided.");
                 return null;
             }
 
@@ -364,9 +371,8 @@ namespace Hawaii.Cli.Models
             List<PermissionSetting> updatedPermissionsList = new();
             string[] newActionArray = newActions!.Split(",");
 
-            if (newActionArray.Length > 1 && newActionArray.ToHashSet().Contains(WILDCARD))
+            if (!VerifyActions(newActionArray))
             {
-                Console.Error.WriteLine("\"*\" along with other CRUD operations in a single update is not allowed.");
                 return null;
             }
 

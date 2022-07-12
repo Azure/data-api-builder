@@ -119,8 +119,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Adds qualifiers (inserted or deleted) to output columns in OUTPUT clause
         /// and joins them with commas. e.g. for outputcolumns [C1, C2, C3] and output
         /// qualifier Inserted return
-        /// Inserted.C1.ColumnName AS {C1.Label}, Inserted.C2.ColumnName AS {C2.Label},
-        /// Inserted.C3.ColumnName AS {C3.Label}
+        /// Inserted.ColumnName1 AS {Label1}, Inserted.ColumnName2 AS {Label2},
+        /// Inserted.ColumnName3 AS {Label3}
         /// </summary>
         private string MakeOutputColumns(List<LabelledColumn> columns, OutputQualifier outputQualifier)
         {

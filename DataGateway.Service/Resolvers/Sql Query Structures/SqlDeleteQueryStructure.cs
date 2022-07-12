@@ -23,7 +23,6 @@ namespace Azure.DataGateway.Service.Resolvers
             List<string> primaryKeys = tableDefinition.PrimaryKey;
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
-                SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 if (param.Value is null)
                 {
                     // Should never happen since delete mutations expect non nullable pk params
@@ -34,6 +33,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
 
                 // primary keys used as predicates
+                SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 if (primaryKeys.Contains(backingColumn!))
                 {
                     Predicates.Add(new Predicate(

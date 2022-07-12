@@ -113,6 +113,8 @@ namespace Azure.DataGateway.Service.Configurations
             return false;
         }
 
+        public RuntimeConfigProvider() { }
+
         /// <summary>
         /// Initialize the runtime configuration provider with the specified configurations.
         /// </summary>

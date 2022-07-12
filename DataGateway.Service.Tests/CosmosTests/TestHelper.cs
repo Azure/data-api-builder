@@ -7,6 +7,7 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
@@ -32,8 +33,15 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                 .Build();
 
             RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
-            RuntimeConfig runtimeConfig = configPath.LoadRuntimeConfigValue();
-            AddMissingEntitiesToConfig(runtimeConfig);
+            if (configPath.TryLoadRuntimeConfigValue())
+            {
+                AddMissingEntitiesToConfig(RuntimeConfigPath.LoadedRuntimeConfig!);
+            }
+            else
+            {
+                Assert.Fail($"Failed to load runtime configuration file in test setup");
+            }
+
             return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
         }
 
@@ -96,7 +104,8 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             }
         }
 
-        public static RuntimeConfig Config { get; } = _runtimeConfigPath.Value.CurrentValue.LoadRuntimeConfigValue();
+        public static RuntimeConfig Config { get; }
+            = RuntimeConfigPath.LoadedRuntimeConfig;
 
         public static object GetItem(string id, string name = null, int numericVal = 4)
         {

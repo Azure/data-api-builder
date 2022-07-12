@@ -518,6 +518,11 @@ namespace Azure.DataGateway.Service.Authorization
         /// <returns>Collection of columns in table definition.</returns>
         private IEnumerable<string> ResolveTableDefinitionColumns(string entityName)
         {
+            if (_metadataProvider.GetDatabaseType() is DatabaseType.cosmos)
+            {
+                return new List<string>();
+            }
+
             return _metadataProvider.GetTableDefinition(entityName).Columns.Keys;
         }
 

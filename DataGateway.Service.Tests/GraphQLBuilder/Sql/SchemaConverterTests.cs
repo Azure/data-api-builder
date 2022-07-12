@@ -455,7 +455,6 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         {
             return new List<string>()
             {
-                "anonymous",
                 "authenticated"
             };
         }

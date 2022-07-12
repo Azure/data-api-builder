@@ -55,7 +55,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
 
                 if (identity is null)
                 {
-                    return Task.FromResult(AuthenticateResult.Fail(failureMessage: $"Invalid {Options.EasyAuthProvider.ToString()} EasyAuth token."));
+                    return Task.FromResult(AuthenticateResult.Fail(failureMessage: $"Invalid {Options.EasyAuthProvider} EasyAuth token."));
                 }
 
                 ClaimsPrincipal? claimsPrincipal = new(identity);

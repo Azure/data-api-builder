@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         /// Constructor for the EasyAuthAuthenticationHandler.
         /// Note the parameters are required by the base class.
         /// </summary>
-        /// <param name="options">Static Web Apps authentication options.</param>
+        /// <param name="options">Easy Auth authentication options.</param>
         /// <param name="logger">Logger factory.</param>
         /// <param name="encoder">URL encoder.</param>
         /// <param name="clock">System clock.</param>

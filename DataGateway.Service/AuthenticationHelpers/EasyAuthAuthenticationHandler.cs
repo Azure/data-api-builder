@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     /// </summary>
     public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthenticationOptions>
     {
-        private const string EASY_AUTH_HEADER = "X-MS-CLIENT-PRINCIPAL";
+        public const string EASY_AUTH_HEADER = "X-MS-CLIENT-PRINCIPAL";
 
         /// <summary>
         /// Constructor for the EasyAuthAuthenticationHandler.

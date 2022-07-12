@@ -323,8 +323,8 @@ namespace Azure.DataGateway.Service
         /// <returns>Indicates if the runtime is ready to accept requests.</returns>
         private static async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app)
         {
-            ILogger<Startup>? logger =
-                app.ApplicationServices.GetService<ILogger<Startup>>();
+            ILogger<Startup> logger =
+                app.ApplicationServices.GetRequiredService<ILogger<Startup>>();
             try
             {
                 RuntimeConfig runtimeConfig = app.ApplicationServices.GetService<RuntimeConfigProvider>()!.GetRuntimeConfiguration();
@@ -351,21 +351,13 @@ namespace Azure.DataGateway.Service
                     await sqlMetadataProvider.InitializeAsync();
                 }
 
-                if (logger is not null)
-                {
-                    logger.LogInformation($"Successfully completed runtime initialization.");
-                }
-
+                logger.LogInformation($"Successfully completed runtime initialization.");
                 return true;
             }
             catch (Exception ex)
             {
-                if (logger is not null)
-                {
-                    logger.LogError($"Unable to complete runtime " +
-                       $"intialization operations due to: \n{ex}");
-                }
-
+                logger.LogError($"Unable to complete runtime " +
+                    $"intialization operations due to: \n{ex}");
                 return false;
             }
         }

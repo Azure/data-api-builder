@@ -556,13 +556,7 @@ type Foo @model {
     bar: String!
 }
                 ";
-
-            DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
-            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
-
-            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
-            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
+            FieldDefinitionNode field = GenerateTestMutationFieldNodes(gql).field;
             Assert.AreEqual(3, field.Arguments.Count);
             Assert.AreEqual("id", field.Arguments[0].Name.Value);
             Assert.AreEqual("ID", field.Arguments[0].Type.NamedType().Name.Value);
@@ -589,12 +583,9 @@ type Bar {
 }
                 ";
 
-            DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
-            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
 
-            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
-            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
+            (DocumentNode mutationRoot, FieldDefinitionNode field) = GenerateTestMutationFieldNodes(gql);
             InputValueDefinitionNode inputArg = field.Arguments[2];
             InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
             Assert.AreEqual(2, inputObj.Fields.Count);
@@ -627,12 +618,7 @@ type Bar {
 }
                 ";
 
-            DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
-            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
-
-            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
-            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
+            (DocumentNode mutationRoot, FieldDefinitionNode field) = GenerateTestMutationFieldNodes(gql);
             InputValueDefinitionNode inputArg = field.Arguments[2];
             InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
             Assert.AreEqual(2, inputObj.Fields.Count);
@@ -737,6 +723,17 @@ type Foo @model {{
         {
             return (ObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is ObjectTypeDefinitionNode node && node.Name.Value == "Mutation");
 
+        }
+
+        private static (DocumentNode mutationRoot, FieldDefinitionNode field) GenerateTestMutationFieldNodes(string gql)
+        {
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(root, DatabaseType.cosmos, new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } });
+
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
+            return (mutationRoot, field);
         }
     }
 }

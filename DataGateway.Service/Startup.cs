@@ -29,9 +29,14 @@ namespace Azure.DataGateway.Service
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        private ILogger<Startup> _logger;
+        private ILogger<RuntimeConfigProvider> _configProviderLogger;
+
+        public Startup(IConfiguration configuration, ILogger<Startup> logger, ILogger<RuntimeConfigProvider> configProviderLogger)
         {
             Configuration = configuration;
+            _logger = logger;
+            _configProviderLogger = configProviderLogger;
         }
 
         public IConfiguration Configuration { get; }
@@ -39,13 +44,12 @@ namespace Azure.DataGateway.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddOptions<RuntimeConfigPath>()
-                .Configure<ILogger<RuntimeConfigPath>>(
-                    (runtimeConfigPath, logger) =>
-                        runtimeConfigPath.Logger = logger);
+            RuntimeConfigPath runtimeConfigPath = new();
+            Configuration.Bind(runtimeConfigPath);
 
-            services.Configure<RuntimeConfigPath>(Configuration);
-            services.AddSingleton<RuntimeConfigProvider>();
+            RuntimeConfigProvider runtimeConfigurationProvider = new(runtimeConfigPath, _configProviderLogger);
+
+            services.AddSingleton(runtimeConfigurationProvider);
             services.AddSingleton<RuntimeConfigValidator>();
 
             services.AddSingleton<CosmosClientProvider>();
@@ -174,10 +178,7 @@ namespace Azure.DataGateway.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            if (TryConfigureRuntime())
-            {
-                ConfigureAuthentication(services, RuntimeConfigPath.LoadedRuntimeConfig!);
-            }
+            ConfigureAuthentication(services, runtimeConfigurationProvider);
 
             services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
@@ -274,44 +275,35 @@ namespace Azure.DataGateway.Service
         }
 
         /// <summary>
-        /// Binds the runtime config path and
-        /// tries to load the runtime configuration value.
-        /// </summary>
-        /// <returns>True if successfully loaded, false otherwise.</returns>
-        private bool TryConfigureRuntime()
-        {
-            // Read configuration and use it locally.
-            RuntimeConfigPath runtimeConfigPath = Configuration.Get<RuntimeConfigPath>();
-            return runtimeConfigPath.TryLoadRuntimeConfigValue();
-        }
-
-        /// <summary>
         /// Add services necessary for Authentication Middleware and based on the loaded
         /// runtime configuration set the AuthenticationOptions to be either
         /// EasyAuth based (by default) or JwtBearerOptions.
         /// </summary>
         /// <param name="services">The service collection to add authentication services to.</param>
         /// <param name="runtimeConfig">The loaded runtime configuration.</param>
-        private static void ConfigureAuthentication(IServiceCollection services, RuntimeConfig runtimeConfig)
+        private static void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
         {
-            // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
-            // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
-            // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
-            if (runtimeConfig.AuthNConfig != null &&
-                !runtimeConfig.IsEasyAuthAuthenticationProvider())
+            if (runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
             {
-                services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
+                // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
+                // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
+                // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
+                if (runtimeConfig!.AuthNConfig != null &&
+                    !runtimeConfig.IsEasyAuthAuthenticationProvider())
                 {
-                    options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
-                    options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
-                });
-            }
-            else
-            // If no authentication configuration section specified, defaults to EasyAuth.
-            {
-                services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                    .AddEasyAuthAuthentication();
+                    services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                    .AddJwtBearer(options =>
+                    {
+                        options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
+                        options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
+                    });
+                }
+                else
+                // If no authentication configuration section specified, defaults to EasyAuth.
+                {
+                    services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                        .AddEasyAuthAuthentication();
+                }
             }
         }
 
@@ -321,10 +313,8 @@ namespace Azure.DataGateway.Service
         /// </summary>
         /// <param name="app"></param>
         /// <returns>Indicates if the runtime is ready to accept requests.</returns>
-        private static async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app)
+        private async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app)
         {
-            ILogger<Startup> logger =
-                app.ApplicationServices.GetRequiredService<ILogger<Startup>>();
             try
             {
                 RuntimeConfig runtimeConfig = app.ApplicationServices.GetService<RuntimeConfigProvider>()!.GetRuntimeConfiguration();
@@ -351,12 +341,12 @@ namespace Azure.DataGateway.Service
                     await sqlMetadataProvider.InitializeAsync();
                 }
 
-                logger.LogInformation($"Successfully completed runtime initialization.");
+                _logger.LogInformation($"Successfully completed runtime initialization.");
                 return true;
             }
             catch (Exception ex)
             {
-                logger.LogError($"Unable to complete runtime " +
+                _logger.LogError($"Unable to complete runtime " +
                     $"intialization operations due to: \n{ex}");
                 return false;
             }

@@ -89,24 +89,6 @@ namespace Azure.DataGateway.Service.Models
     }
 
     /// <summary>
-    /// Output columns have a column name which
-    /// represents the backing column in the table,
-    /// and a label which is the exposed name.
-    /// Used in the OUTPUT (or equivalent) during query building.
-    /// </summary>
-    public class OutputColumn
-    {
-        public string ColumnName { get; }
-        public string Label { get; }
-
-        public OutputColumn(string columnName, string label)
-        {
-            ColumnName = columnName;
-            Label = label;
-        }
-    }
-
-    /// <summary>
     /// Represents the comparison operations a predicate can have
     /// </summary>
     public enum PredicateOperation

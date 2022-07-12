@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected virtual string Build(KeysetPaginationPredicate? predicate)
         {
-            if (predicate == null)
+            if (predicate is null)
             {
                 return string.Empty;
             }
@@ -313,22 +313,6 @@ namespace Azure.DataGateway.Service.Resolvers
         protected string Build(List<string> columns)
         {
             return string.Join(", ", columns.Select(c => QuoteIdentifier(c)));
-        }
-
-        /// <summary>
-        /// Quote and join list of OutputColumn with a ", " separator
-        /// </summary>
-        protected string Build(List<OutputColumn> columns)
-        {
-            return string.Join(", ", columns.Select(c => Build(c)));
-        }
-
-        /// <summary>
-        /// Build an OutputColumn as {ColumnName} AS {Label}
-        /// </summary>
-        protected string Build(OutputColumn column)
-        {
-            return QuoteIdentifier(column.ColumnName) + " AS " + QuoteIdentifier(column.Label);
         }
 
         /// <summary>

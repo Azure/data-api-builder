@@ -19,6 +19,7 @@ using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -382,8 +383,13 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out runtimeConfig)).Returns(true);
             mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
             RuntimeConfigProvider runtimeConfigProvider = mockRuntimeConfigProvider.Object;
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
 
-            IConfigValidator configValidator = new RuntimeConfigValidator(runtimeConfigProvider, new MockFileSystem());
+            IConfigValidator configValidator =
+                new RuntimeConfigValidator(
+                    runtimeConfigProvider,
+                    new MockFileSystem(),
+                    configValidatorLogger.Object);
 
             configValidator.ValidateConfig();
         }
@@ -410,19 +416,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
 
             }
-        }
-
-        [TestMethod("Validates that an exception is thrown if config file for the runtime engine is not found.")]
-        public void TestConfigFileNotFound()
-        {
-            RuntimeConfigPath runtimeConfigPath = new()
-            {
-                ConfigFileName = "NonExistentConfigFile.json"
-            };
-
-            Exception ex = Assert.ThrowsException<FileNotFoundException>(() => runtimeConfigPath.LoadRuntimeConfigValue());
-            Console.WriteLine(ex.Message);
-            Assert.AreEqual(ex.Message, "Requested configuration file NonExistentConfigFile.json does not exist.");
         }
 
         [TestCleanup]

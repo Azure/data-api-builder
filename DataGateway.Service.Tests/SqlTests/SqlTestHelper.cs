@@ -39,9 +39,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 .Build();
 
             RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
-            RuntimeConfig runtimeConfig = configPath.LoadRuntimeConfigValue();
-            AddMissingEntitiesToConfig(runtimeConfig);
-            return Mock.Of<IOptionsMonitor<RuntimeConfig>>(_ => _.CurrentValue == runtimeConfig);
+            if (configPath.TryLoadRuntimeConfigValue())
+            {
+                AddMissingEntitiesToConfig(RuntimeConfigPath.LoadedRuntimeConfig!);
+            }
+            else
+            {
+                Assert.Fail($"Failed to load runtime configuration file in test setup");
+            }
+
+            return Mock.Of<IOptionsMonitor<RuntimeConfig>>(_ => _.CurrentValue == RuntimeConfigPath.LoadedRuntimeConfig);
         }
 
         public static void RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)

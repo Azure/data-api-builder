@@ -4,6 +4,7 @@ using System.IO.Abstractions.TestingHelpers;
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -158,7 +159,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out conf)).Returns(true);
             mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(config);
             RuntimeConfigProvider runtimeConfigProvider = mockRuntimeConfigProvider.Object;
-            RuntimeConfigValidator configValidator = new(runtimeConfigProvider, new MockFileSystem());
+            Mock<ILogger<RuntimeConfigValidator>> logger = new();
+            RuntimeConfigValidator configValidator = new(runtimeConfigProvider, new MockFileSystem(), logger.Object);
             return configValidator;
         }
         #endregion

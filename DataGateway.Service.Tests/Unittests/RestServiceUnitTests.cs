@@ -9,6 +9,7 @@ using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -123,10 +124,12 @@ namespace Azure.DataGateway.Service.Tests.Unittests
             MsSqlQueryBuilder queryBuilder = new();
             DbExceptionParser dbExceptionParser = new(runtimeConfigProvider);
             QueryExecutor<SqlConnection> queryExecutor = new(runtimeConfigProvider, dbExceptionParser);
+            Mock<ILogger<ISqlMetadataProvider>> sqlMetadataLogger = new();
             MsSqlMetadataProvider sqlMetadataProvider = new(
                 runtimeConfigProvider,
                 queryExecutor,
-                queryBuilder);
+                queryBuilder,
+                sqlMetadataLogger.Object);
 
             Mock<IAuthorizationService> authorizationService = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();

@@ -115,8 +115,7 @@ namespace Azure.DataGateway.Config
         /// <returns>True on success, false otherwise.</returns>
         public static bool TryGetDeserializedConfig<T>(
             string configJson,
-            out T? deserializedConfig,
-            ILogger<RuntimeConfigPath>? logger)
+            out T? deserializedConfig)
         {
             try
             {
@@ -126,14 +125,7 @@ namespace Azure.DataGateway.Config
             }
             catch (JsonException ex)
             {
-                if (logger is null)
-                {
-                    Console.Error.WriteLine($"Deserialization failed due to: \n{ex}");
-                }
-                else
-                {
-                    logger.LogError($"Deserialization failed due to: \n{ex}");
-                }
+                Console.WriteLine($"Deserialization failed due to: \n{ex}");
 
                 deserializedConfig = default(T);
                 return false;

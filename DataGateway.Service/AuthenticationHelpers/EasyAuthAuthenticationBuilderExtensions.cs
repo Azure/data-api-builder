@@ -1,4 +1,3 @@
-using System;
 using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Authentication;
 
@@ -28,9 +27,10 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
                 authenticationScheme: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME,
                 displayName: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME,
-                options => {
+                options =>
+                {
                     if (easyAuthAuthenticationProvider is EasyAuthType.StaticWebApps)
-                    { 
+                    {
                         options.EasyAuthProvider = EasyAuthType.StaticWebApps;
                     }
                     else if (easyAuthAuthenticationProvider is EasyAuthType.AppService)

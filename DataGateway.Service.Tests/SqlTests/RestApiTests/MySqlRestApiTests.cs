@@ -788,7 +788,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
-                "PutOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                "PutOne_Update_IfMatchHeaders_Test",
                 @"
                   SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
                   FROM (
@@ -1024,7 +1024,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
-                "PatchOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                "PatchOne_Update_IfMatchHeaders_Test",
                 @"
                   SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
                   FROM (

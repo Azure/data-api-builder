@@ -438,7 +438,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PutOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                "PutOne_Update_IfMatchHeaders_Test",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE id = 1 AND title = 'The Return of the King' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -588,7 +588,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PatchOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                "PatchOne_Update_IfMatchHeaders_Test",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE id = 1 AND title = 'The Hobbit Returns to The Shire' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"

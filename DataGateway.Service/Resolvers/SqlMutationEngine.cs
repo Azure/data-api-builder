@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
@@ -13,6 +14,7 @@ using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -60,7 +62,7 @@ namespace Azure.DataGateway.Service.Resolvers
             Tuple<JsonDocument, IMetadata>? result = null;
             Operation mutationOperation =
                 MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
-            if (mutationOperation == Operation.Delete)
+            if (mutationOperation is Operation.Delete)
             {
                 // compute the mutation result before removing the element
                 result = await _queryEngine.ExecuteAsync(context, parameters);
@@ -72,7 +74,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     mutationOperation,
                     parameters);
 
-            if (!context.Selection.Type.IsScalarType() && mutationOperation != Operation.Delete)
+            if (!context.Selection.Type.IsScalarType() && mutationOperation is not Operation.Delete)
             {
                 TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
 
@@ -99,7 +101,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     searchParams);
             }
 
-            if (result == null)
+            if (result is null)
             {
                 throw new DataGatewayException(
                     message: "Failed to resolve any query based on the current configuration.",
@@ -111,12 +113,11 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Executes the REST mutation query and returns result as JSON object asynchronously.
+        /// Executes the REST mutation query and returns IActionResult asynchronously.
         /// </summary>
         /// <param name="context">context of REST mutation request.</param>
-        /// <param name="parameters">parameters in the mutation query.</param>
-        /// <returns>JSON object result</returns>
-        public async Task<JsonDocument?> ExecuteAsync(RestRequestContext context)
+        /// <returns>IActionResult</returns>
+        public async Task<IActionResult?> ExecuteAsync(RestRequestContext context)
         {
             Dictionary<string, object?> parameters = PrepareParameters(context);
 
@@ -126,26 +127,30 @@ namespace Azure.DataGateway.Service.Resolvers
                 context.OperationType,
                 parameters);
 
+            string primaryKeyRoute;
             Dictionary<string, object?>? resultRecord = new();
             resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
-
-            string? jsonResultString = null;
 
             switch (context.OperationType)
             {
                 case Operation.Delete:
                     // Records affected tells us that item was successfully deleted.
                     // No records affected happens for a DELETE request on nonexistent object
-                    // Returning empty JSON result triggers a NoContent result in calling REST service.
                     if (dbDataReader.RecordsAffected > 0)
                     {
-                        jsonResultString = "{}";
+                        return new NoContentResult();
                     }
 
                     break;
                 case Operation.Insert:
-                    jsonResultString = JsonSerializer.Serialize(resultRecord);
-                    break;
+                    if (resultRecord is null)
+                    {
+                        break;
+                    }
+
+                    primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRecord);
+                    // location will be updated in rest controller where httpcontext is available
+                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRecord).Value);
                 case Operation.Update:
                 case Operation.UpdateIncremental:
                     // Nothing to update means we throw Exception
@@ -155,9 +160,9 @@ namespace Azure.DataGateway.Service.Resolvers
                                                        statusCode: HttpStatusCode.PreconditionFailed,
                                                        subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
                     }
-                    // Valid REST updates return empty result set
-                    jsonResultString = null;
-                    break;
+
+                    // Valid REST updates return OkObjetResult
+                    return OkMutationResponse(resultRecord);
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
                     /// Processes a second result set from DbDataReader if it exists.
@@ -166,25 +171,30 @@ namespace Azure.DataGateway.Service.Resolvers
                     /// result set #2: result of the INSERT operation.
                     if (resultRecord is not null)
                     {
-                        // postgress may be an insert op here, if so, update operation to sort
-                        // out the correct response type
+                        // postgress may be an insert op here, if so, return CreatedResult
                         if (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&
                             PostgresQueryBuilder.IsInsert(resultRecord))
                         {
-                            context.OperationType = Operation.Insert;
+                            primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRecord!);
+                            // location will be updated in rest controller where httpcontext is available
+                            return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRecord).Value);
                         }
 
-                        // we return entire response for update
-                        jsonResultString = JsonSerializer.Serialize(resultRecord);
+                        // Valid REST updates return OkObjetResult
+                        return OkMutationResponse(resultRecord);
                     }
                     else if (await dbDataReader.NextResultAsync())
                     {
                         // Since no first result set exists, we overwrite Dictionary here.
-                        // and because we have executed an insert operation, we update the
-                        // operation type to sort out the correct response types.
                         resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
-                        jsonResultString = JsonSerializer.Serialize(resultRecord);
-                        context.OperationType = Operation.Insert;
+                        if (resultRecord is null)
+                        {
+                            break;
+                        }
+
+                        // location will be updated in rest controller where httpcontext is available
+                        primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRecord);
+                        return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRecord).Value);
                     }
                     else
                     {
@@ -197,16 +207,28 @@ namespace Azure.DataGateway.Service.Resolvers
                             statusCode: HttpStatusCode.NotFound,
                             subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
                     }
-
-                    break;
             }
 
-            if (jsonResultString is null)
+            // if we have not yet returned, record is null
+            return null;
+        }
+
+        /// <summary>
+        /// Helper function returns an OkObjectResult with provided arguments in a
+        /// form that complies with vNext Api guidelines.
+        /// </summary>
+        /// <param name="result">Dictionary representing the results of the client's request.</param>
+        private static OkObjectResult OkMutationResponse(Dictionary<string, object?> result)
+        {
+            // Convert Dictionary to array of JsonElements
+            string jsonString = $"[{JsonSerializer.Serialize(result)}]";
+            JsonElement jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
+            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
+
+            return new OkObjectResult(new
             {
-                return null;
-            }
-
-            return JsonDocument.Parse(jsonResultString);
+                value = resultEnumerated
+            });
         }
 
         /// <summary>
@@ -291,6 +313,35 @@ namespace Azure.DataGateway.Service.Resolvers
             Console.WriteLine(queryString);
 
             return await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
+        }
+
+        /// <summary>
+        /// For the given entity, constructs the primary key route
+        /// using the primary key names from metadata and their values
+        /// from the JsonElement representing the entity.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="entity">A Json element representing one instance of the entity.</param>
+        /// <remarks> This function expects the Json element entity to contain all the properties
+        /// that make up the primary keys.</remarks>
+        /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
+        public string ConstructPrimaryKeyRoute(string entityName, Dictionary<string, object?> entity)
+        {
+            TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
+            StringBuilder newPrimaryKeyRoute = new();
+
+            foreach (string primaryKey in tableDefinition.PrimaryKey)
+            {
+                newPrimaryKeyRoute.Append(primaryKey);
+                newPrimaryKeyRoute.Append("/");
+                newPrimaryKeyRoute.Append(entity[primaryKey]!.ToString());
+                newPrimaryKeyRoute.Append("/");
+            }
+
+            // Remove the trailing "/"
+            newPrimaryKeyRoute.Remove(newPrimaryKeyRoute.Length - 1, 1);
+
+            return newPrimaryKeyRoute.ToString();
         }
 
         private static Dictionary<string, object?> PrepareParameters(RestRequestContext context)

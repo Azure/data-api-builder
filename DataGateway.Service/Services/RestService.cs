@@ -18,6 +18,7 @@ using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -61,7 +62,7 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="entityName">The entity name.</param>
         /// <param name="operationType">The kind of operation to execute.</param>
         /// <param name="primaryKeyRoute">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
-        public async Task<JsonDocument?> ExecuteAsync(
+        public async Task<IActionResult?> ExecuteAsync(
             string entityName,
             Operation operationType,
             string? primaryKeyRoute)
@@ -168,10 +169,7 @@ namespace Azure.DataGateway.Service.Services
                 case Operation.UpdateIncremental:
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
-                    // save result before returning to update the current operation
-                    JsonDocument? result = await _mutationEngine.ExecuteAsync(context);
-                    CurrentOperationType = context.OperationType;
-                    return result;
+                    return await _mutationEngine.ExecuteAsync(context);
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             };
@@ -225,16 +223,16 @@ namespace Azure.DataGateway.Service.Services
         /// <summary>
         /// Format the results from a Find operation. Check if there is a requirement
         /// for a nextLink, and if so, add this value to the array of JsonElements to
-        /// be used later to format the response in the RestController.
+        /// be used as part of the response.
         /// </summary>
-        /// <param name="task">This task will return the resultant JsonDocument from the query.</param>
+        /// <param name="jsonDoc">The JsonDocument from the query.</param>
         /// <param name="context">The RequestContext.</param>
-        /// <returns>A result from a Find operation that has been correctly formatted for the controller.</returns>
-        private JsonDocument? FormatFindResult(JsonDocument? jsonDoc, FindRequestContext context)
+        /// <returns>An OkObjectResult from a Find operation that has been correctly formatted.</returns>
+        private OkObjectResult? FormatFindResult(JsonDocument? jsonDoc, FindRequestContext context)
         {
             if (jsonDoc is null)
             {
-                return jsonDoc;
+                return null;
             }
 
             JsonElement jsonElement = jsonDoc.RootElement;
@@ -243,7 +241,7 @@ namespace Azure.DataGateway.Service.Services
             // no nextLink is needed, return JsonDocument as is
             if (jsonElement.ValueKind != JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
             {
-                return jsonDoc;
+                return OkResponse(jsonDoc.RootElement.Clone());
             }
 
             // More records exist than requested, we know this by requesting 1 extra record,
@@ -268,7 +266,50 @@ namespace Azure.DataGateway.Service.Services
                                   nvc: context!.ParsedQueryString,
                                   after);
             rootEnumerated = rootEnumerated.Append(nextLink);
-            return JsonDocument.Parse(JsonSerializer.Serialize(rootEnumerated));
+            return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated));
+        }
+
+        /// <summary>
+        /// Helper function returns an OkObjectResult with provided arguments in a
+        /// form that complies with vNext Api guidelines.
+        /// </summary>
+        /// <param name="jsonResult">Value representing the Json results of the client's request.</param>
+        /// <returns>Correctly formatted OkObjectResult.</returns>
+        public OkObjectResult OkResponse(JsonElement jsonResult)
+        {
+            // For consistency we return all values as type Array
+            if (jsonResult.ValueKind != JsonValueKind.Array)
+            {
+                string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
+                jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
+            }
+
+            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
+            // More than 0 records, and the last element is of type array, then we have pagination
+            if (resultEnumerated.Count() > 0 && resultEnumerated.Last().ValueKind == JsonValueKind.Array)
+            {
+                // Get the nextLink
+                // resultEnumerated will be an array of the form
+                // [{object1}, {object2},...{objectlimit}, [{nextLinkObject}]]
+                // if the last element is of type array, we know it is nextLink
+                // we strip the "[" and "]" and then save the nextLink element
+                // into a dictionary with a key of "nextLink" and a value that
+                // represents the nextLink data we require.
+                string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated.Last());
+                Dictionary<string, object> nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString[1..^1])!;
+                IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count() - 1);
+                return new OkObjectResult(new
+                {
+                    value = value,
+                    @nextLink = nextLink["nextLink"]
+                });
+            }
+
+            // no pagination, do not need nextLink
+            return new OkObjectResult(new
+            {
+                value = resultEnumerated
+            });
         }
 
         /// <summary>

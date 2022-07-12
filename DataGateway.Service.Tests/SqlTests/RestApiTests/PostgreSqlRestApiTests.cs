@@ -695,7 +695,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
-                "PutOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                "PutOne_Update_IfMatchHeaders_Test",
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
@@ -925,7 +925,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
-                "PatchOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                "PatchOne_Update_IfMatchHeaders_Test",
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (

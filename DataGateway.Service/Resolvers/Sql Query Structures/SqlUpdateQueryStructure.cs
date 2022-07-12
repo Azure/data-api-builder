@@ -19,6 +19,11 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<Predicate> UpdateOperations { get; }
 
+        /// <summary>
+        /// The updated columns that the update will return
+        /// </summary>
+        public List<string> ReturnColumns { get; }
+
         public SqlUpdateStructure(
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
@@ -28,6 +33,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             UpdateOperations = new();
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
+            ReturnColumns = tableDefinition.Columns.Keys.ToList();
 
             List<string> primaryKeys = tableDefinition.PrimaryKey;
             List<string> columns = tableDefinition.Columns.Keys.ToList();

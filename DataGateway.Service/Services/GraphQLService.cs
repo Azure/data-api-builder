@@ -174,6 +174,13 @@ namespace Azure.DataGateway.Service.Services
             Parse(root, inputTypes);
         }
 
+        /// <summary>
+        /// Generates the ObjectTypeDefinitionNodes and InputObjectTypeDefinitionNodes as part of GraphQL Schema generation
+        /// with the provided entities listed in the runtime configuration.
+        /// </summary>
+        /// <param name="entities">Key/Value Collection {entityName -> Entity object}</param>
+        /// <returns>Root GraphQLSchema DocumentNode and inputNodes to be processed by downstream schema generation helpers.</returns>
+        /// <exception cref="DataGatewayException"></exception>
         private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateSqlGraphQLObjects(Dictionary<string, Entity> entities)
         {
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();

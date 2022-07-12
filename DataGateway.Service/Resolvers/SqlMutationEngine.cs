@@ -161,7 +161,7 @@ namespace Azure.DataGateway.Service.Resolvers
                                                        subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
                     }
 
-                    // Valid REST updates return OkObjetResult
+                    // Valid REST updates return OkObjectResult
                     return OkMutationResponse(resultRecord);
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
@@ -180,7 +180,7 @@ namespace Azure.DataGateway.Service.Resolvers
                             return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRecord).Value);
                         }
 
-                        // Valid REST updates return OkObjetResult
+                        // Valid REST updates return OkObjectResult
                         return OkMutationResponse(resultRecord);
                     }
                     else if (await dbDataReader.NextResultAsync())

@@ -232,7 +232,7 @@ namespace Azure.DataGateway.Service.Authorization
                         ActionMetadata actionToColumn = new();
                         IEnumerable<string> allTableColumns = ResolveTableDefinitionColumns(entityName);
 
-                        // Implicitly, all table collumns are 'allowed' when an actiontype is a string.
+                        // Implicitly, all table columns are 'allowed' when an actiontype is a string.
                         // Since no granular field permissions exist for this action within the current role.
                         if (actionElement.ValueKind is JsonValueKind.String)
                         {

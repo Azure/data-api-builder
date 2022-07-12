@@ -1,5 +1,6 @@
 using System.Collections.Generic;
-using System.Linq;using System.Net;
+using System.Linq;
+using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;

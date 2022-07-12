@@ -111,23 +111,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // Mock Request Values
             Assert.AreEqual(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, roleName, actionName), expected);
         }
-
-        /// <summary>
-        /// Tests the AreRoleAndActionDefinedForEntity stage of authorization.
-        /// when the request lacks the X-MS-API-ROLE header. In such a case,
-        /// the request is assumed to have anonymous role.
-        /// </summary>
-        [TestMethod]
-        public void RequestsMissingRoleHeader()
-        {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                "anonymous",
-                ActionType.CREATE
-                );
-            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, null, ActionType.CREATE));
-        }
         #endregion
 
         /// <summary>

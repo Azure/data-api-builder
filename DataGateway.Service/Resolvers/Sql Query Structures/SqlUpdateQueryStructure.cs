@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
@@ -22,7 +23,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The columns used for OUTPUT
         /// </summary>
-        public List<OutputColumn> OutputColumns { get; }
+        public List<LabelledColumn> OutputColumns { get; }
 
         public SqlUpdateStructure(
             string entityName,

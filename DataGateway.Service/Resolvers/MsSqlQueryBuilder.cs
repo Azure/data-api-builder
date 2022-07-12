@@ -122,7 +122,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Inserted.C1.ColumnName AS {C1.Label}, Inserted.C2.ColumnName AS {C2.Label},
         /// Inserted.C3.ColumnName AS {C3.Label}
         /// </summary>
-        private string MakeOutputColumns(List<OutputColumn> columns, OutputQualifier outputQualifier)
+        private string MakeOutputColumns(List<LabelledColumn> columns, OutputQualifier outputQualifier)
         {
             return string.Join(", ", columns.Select(c => Build(c, outputQualifier)));
         }
@@ -131,7 +131,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Build a labelled column as a column and attach
         /// ... AS {Label} to it
         /// </summary>
-        private string Build(OutputColumn column, OutputQualifier outputQualifier)
+        private string Build(LabelledColumn column, OutputQualifier outputQualifier)
         {
             return $"{outputQualifier}.{QuoteIdentifier(column.ColumnName)} AS {QuoteIdentifier(column.Label)}";
         }

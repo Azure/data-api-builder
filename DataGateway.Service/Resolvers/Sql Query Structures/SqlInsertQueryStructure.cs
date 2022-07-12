@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// The inserted columns that the insert will OUTPUT
         /// </summary>
-        public List<OutputColumn> OutputColumns { get; }
+        public List<LabelledColumn> OutputColumns { get; }
 
         public SqlInsertStructure(
             string entityName,

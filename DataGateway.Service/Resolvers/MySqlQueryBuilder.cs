@@ -164,8 +164,8 @@ WHERE
         /// <summary>
         /// Makes the query segments to store PK during an update
         /// </summary>
-        private (string, string, string) MakeStoreUpdatePK(List<String> primaryKey,
-                                                           List<OutputColumn> outputColumns)
+        private (string, string, string) MakeStoreUpdatePK(List<string> primaryKey,
+                                                           List<LabelledColumn> outputColumns)
         {
             // Create local variables to store the pk columns
             string sets = String.Join(";\n", primaryKey.Select((x, index) => $"SET {"@LU_" + index.ToString()} := 0"));
@@ -239,7 +239,7 @@ WHERE
                 index++;
             }
 
-            foreach (OutputColumn column in structure.OutputColumns)
+            foreach (LabelledColumn column in structure.OutputColumns)
             {
                 ColumnDefinition columnDef = structure.GetColumnDefinition(column.ColumnName);
 
@@ -266,10 +266,10 @@ WHERE
         {
             List<string> selections = new();
 
-            List<OutputColumn> fields = structure.OutputColumns;
+            List<LabelledColumn> fields = structure.OutputColumns;
 
             int index = 0;
-            foreach (OutputColumn column in fields)
+            foreach (LabelledColumn column in fields)
             {
                 string quotedColName = QuoteIdentifier(column.Label);
 
@@ -297,7 +297,7 @@ WHERE
 
         private static string GetMySQLDefaultValue(ColumnDefinition column)
         {
-            string defaultValue = column.DefaultValue.ToString()!;
+            string defaultValue = column.DefaultValue!.ToString()!;
 
             // HACK: Need to figure out how to proper parse the string with encoding
             if (defaultValue.StartsWith("_utf8mb4"))

@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Security.Claims;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
@@ -21,7 +24,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     {
         private readonly RequestDelegate _nextMiddleware;
         private readonly RuntimeConfig _runtimeConfig;
-        private readonly string _jWTAuthHeader = "Authorization";
+        private readonly string _jwtAuthHeader = "Authorization";
 
         public AuthenticationMiddleware(RequestDelegate next, RuntimeConfigProvider runtimeConfigProvider)
         {
@@ -47,70 +50,47 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             // When calling parameterless version of AddAuthentication()
             // the default scheme is used to hydrate the httpContext.User object.
             AuthenticateResult authNResult = await httpContext.AuthenticateAsync();
-
-            if (authNResult != null)
+            if (authNResult is not null)
             {
                 httpContext.User = authNResult.Principal!;
             }
 
-            string expectedTokenHeader = useJWTAuth ? _jWTAuthHeader : EasyAuthAuthenticationHandler.EASY_AUTH_HEADER;
-
-            if (expectedTokenHeader.Equals(EasyAuthAuthenticationHandler.EASY_AUTH_HEADER))
+            if (authNResult!.None)
             {
-                if (authNResult!.None)
-                {
-                    // The request is to be considered anonymous
-                    httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = AuthorizationType.Anonymous.ToString().ToLower();
-                }
-                else if (authNResult.Succeeded)
-                {
-                    // Honor existing role if any, else assign authenticated role.
-                    httpContext.Request.Headers.TryAdd(AuthorizationResolver.CLIENT_ROLE_HEADER, AuthorizationType.Authenticated.ToString().ToLower());
-                }
-                else
-                {
-                    // Authentication failed, terminate the pipeline.
-                    await TerminatePipeLine(httpContext);
-                    return;
-                }
+                // The request is to be considered anonymous
+                httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = AuthorizationType.Anonymous.ToString().ToLower();
+            }
+            else if (authNResult.Succeeded)
+            {
+                // Honor existing role if any, else assign authenticated role.
+                httpContext.Request.Headers.TryAdd(AuthorizationResolver.CLIENT_ROLE_HEADER, AuthorizationType.Authenticated.ToString().ToLower());
             }
             else
             {
                 // User not being authenticated means validation failed.
                 // A challenge result will add WWW-Authenticate header to indicate failure reason
-                // Failure reasons: no bearer token, invalid token (specific validation failure)
-                if (httpContext.Request.Headers.ContainsKey(expectedTokenHeader) && !httpContext.User.Identity!.IsAuthenticated)
+                // Failure reasons: invalid token (specific validation failure).
+                // Terminate middleware request pipeline.
+                IActionResult result = new ChallengeResult();
+                await result.ExecuteResultAsync(new ActionContext
                 {
-                    // Authentication failed, terminate the pipeline.
-                    await TerminatePipeLine(httpContext);
-                    return;
-                }
+                    HttpContext = httpContext
+                });
+                return;
+            }
 
-                if (httpContext.Request.Headers.ContainsKey(expectedTokenHeader))
-                {
-                    // Honor existing role if any, else assign authenticated role.
-                    httpContext.Request.Headers.TryAdd(AuthorizationResolver.CLIENT_ROLE_HEADER, AuthorizationType.Authenticated.ToString().ToLower());
-                }
-                else
-                {
-                    // The X-MS-CLIENT-PRINCIPAL header is absent. The request would be considered anonymous.
-                    httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = AuthorizationType.Anonymous.ToString().ToLower();
-                }
+            string expectedTokenHeader = useJWTAuth ? _jwtAuthHeader : EasyAuthAuthenticationHandler.EASY_AUTH_HEADER;
+            //Add a claim for the X-MS-API-ROLE header to the request in case of jwtAuth.
+            if (expectedTokenHeader.Equals(_jwtAuthHeader))
+            {
+                Claim claim = new(ClaimTypes.Role, httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER], ClaimValueTypes.String);
+                // To set the IsAuthenticated value as true, authenticationType needs to be set.
+                ClaimsIdentity identity = new("Hawaii-Authenticated");
+                identity.AddClaim(claim);
+                httpContext.User.AddIdentity(identity);
             }
 
             await _nextMiddleware(httpContext);
-        }
-
-        private static async Task TerminatePipeLine(HttpContext httpContext)
-        {
-            IActionResult result = new ChallengeResult();
-            await result.ExecuteResultAsync(new ActionContext
-            {
-                HttpContext = httpContext
-            });
-
-            // Terminate middleware request pipeline
-            return;
         }
     }
 

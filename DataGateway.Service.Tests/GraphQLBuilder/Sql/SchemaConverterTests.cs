@@ -41,7 +41,14 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         {
             TableDefinition table = new();
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(entityName, table, GenerateEmptyEntity(), new());
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                entityName,
+                table,
+                GenerateEmptyEntity(),
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap()
+                );
 
             Assert.AreEqual(expected, od.Name.Value);
         }
@@ -117,7 +124,14 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 table.PrimaryKey.Add(columnName);
             }
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, GenerateEmptyEntity(), new());
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                "table",
+                table,
+                GenerateEmptyEntity(),
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap()
+                );
 
             foreach (FieldDefinitionNode field in od.Fields)
             {
@@ -302,7 +316,14 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             TableDefinition table = new();
 
             Entity configEntity = GenerateEmptyEntity() with { GraphQL = new SingularPlural(singular, null) };
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(entityName, table, configEntity, new());
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                entityName,
+                table,
+                configEntity,
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap()
+                );
 
             Assert.AreEqual(expected, od.Name.Value);
         }

@@ -92,6 +92,8 @@ namespace Azure.DataGateway.Service.Authorization
                 return false;
             }
 
+            // IsInRole looks at all the claims present in the request
+            // Reference: https://github.com/microsoft/referencesource/blob/master/mscorlib/system/security/claims/ClaimsPrincipal.cs
             return (httpContext.User.Identity!.IsAuthenticated && clientRoleHeader[0].Equals(AuthorizationType.Authenticated.ToString().ToLower()))
                 || httpContext.User.IsInRole(clientRoleHeaderValue);
         }

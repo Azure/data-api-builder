@@ -68,8 +68,8 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             }
             //Add a claim for the X-MS-API-ROLE header to the request.
             Claim claim = new(ClaimTypes.Role, httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER], ClaimValueTypes.String);
-            // To set the IsAuthenticated value as true, authenticationType needs to be set.
-            ClaimsIdentity identity = new("Hawaii-Authenticated");
+            // To set the IsAuthenticated value as false, omit the authenticationType.
+            ClaimsIdentity identity = new();
             identity.AddClaim(claim);
             httpContext.User.AddIdentity(identity);
 

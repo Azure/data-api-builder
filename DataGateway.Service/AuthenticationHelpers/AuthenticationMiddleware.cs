@@ -21,13 +21,10 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     public class AuthenticationMiddleware
     {
         private readonly RequestDelegate _nextMiddleware;
-        private readonly RuntimeConfig _runtimeConfig;
-        private readonly string _jwtAuthHeader = "Authorization";
 
-        public AuthenticationMiddleware(RequestDelegate next, RuntimeConfigProvider runtimeConfigProvider)
+        public AuthenticationMiddleware(RequestDelegate next)
         {
             _nextMiddleware = next;
-            _runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
         }
 
         /// <summary>
@@ -39,12 +36,6 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         /// <param name="httpContext"></param>
         public async Task InvokeAsync(HttpContext httpContext)
         {
-            bool useJWTAuth = true;
-            if (_runtimeConfig!.AuthNConfig is not null && _runtimeConfig.AuthNConfig.Provider.Equals("EasyAuth"))
-            {
-                useJWTAuth = false;
-            }
-
             // When calling parameterless version of AddAuthentication()
             // the default scheme is used to hydrate the httpContext.User object.
             AuthenticateResult authNResult = await httpContext.AuthenticateAsync();
@@ -76,17 +67,12 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                 });
                 return;
             }
-
-            string expectedTokenHeader = useJWTAuth ? _jwtAuthHeader : EasyAuthAuthenticationHandler.EASY_AUTH_HEADER;
-            //Add a claim for the X-MS-API-ROLE header to the request in case of jwtAuth.
-            if (expectedTokenHeader.Equals(_jwtAuthHeader))
-            {
-                Claim claim = new(ClaimTypes.Role, httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER], ClaimValueTypes.String);
-                // To set the IsAuthenticated value as true, authenticationType needs to be set.
-                ClaimsIdentity identity = new("Hawaii-Authenticated");
-                identity.AddClaim(claim);
-                httpContext.User.AddIdentity(identity);
-            }
+            //Add a claim for the X-MS-API-ROLE header to the request.
+            Claim claim = new(ClaimTypes.Role, httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER], ClaimValueTypes.String);
+            // To set the IsAuthenticated value as true, authenticationType needs to be set.
+            ClaimsIdentity identity = new("Hawaii-Authenticated");
+            identity.AddClaim(claim);
+            httpContext.User.AddIdentity(identity);
 
             await _nextMiddleware(httpContext);
         }

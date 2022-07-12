@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.AuthenticationHelpers;
+using Azure.DataGateway.Service.Configurations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -61,10 +62,8 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         [DataTestMethod]
         [DataRow("", DisplayName = "No EasyAuth header value provided")]
         [DataRow("ey==", DisplayName = "Corrupt EasyAuth header value provided")]
-        [DataRow(null, DisplayName = "No EasyAuth header provided")]
         [DataRow("", true, DisplayName = "No EasyAuth header value provided, include authorization header")]
         [DataRow("ey==", true, DisplayName = "Corrupt EasyAuth header value provided, include authorization header")]
-        [DataRow(null, true, DisplayName = "No EasyAuth header provided, include authorization header")]
         [TestMethod]
         public async Task TestInvalidEasyAuthToken(string token, bool sendAuthorizationHeader = false)
         {

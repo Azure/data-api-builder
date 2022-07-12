@@ -175,7 +175,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         if (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&
                             PostgresQueryBuilder.IsInsert(resultRecord))
                         {
-                            primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRecord!);
+                            primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRecord);
                             // location will be updated in rest controller where httpcontext is available
                             return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRecord).Value);
                         }

@@ -39,8 +39,12 @@ namespace Azure.DataGateway.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.Configure<RuntimeConfigPath>(Configuration);
+            services.AddOptions<RuntimeConfigPath>()
+                .Configure<ILogger<RuntimeConfigPath>>(
+                    (runtimeConfigPath, logger) =>
+                        runtimeConfigPath.Logger = logger);
 
+            services.Configure<RuntimeConfigPath>(Configuration);
             services.AddSingleton<RuntimeConfigProvider>();
             services.AddSingleton<RuntimeConfigValidator>();
 
@@ -170,7 +174,7 @@ namespace Azure.DataGateway.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            if (TryConfigureRuntime(services))
+            if (TryConfigureRuntime())
             {
                 ConfigureAuthentication(services, RuntimeConfigPath.LoadedRuntimeConfig!);
             }
@@ -270,20 +274,14 @@ namespace Azure.DataGateway.Service
         }
 
         /// <summary>
-        /// Binds the runtime config path, sets its logger and
+        /// Binds the runtime config path and
         /// tries to load the runtime configuration value.
         /// </summary>
-        /// <param name="services">Collection of services.</param>
         /// <returns>True if successfully loaded, false otherwise.</returns>
-        private bool TryConfigureRuntime(IServiceCollection services)
+        private bool TryConfigureRuntime()
         {
-            IServiceProvider serviceProvider = services.BuildServiceProvider();
-            ILogger<RuntimeConfigPath>? logger
-                = serviceProvider.GetService<ILogger<RuntimeConfigPath>>();
             // Read configuration and use it locally.
             RuntimeConfigPath runtimeConfigPath = Configuration.Get<RuntimeConfigPath>();
-            runtimeConfigPath.Logger = logger;
-
             return runtimeConfigPath.TryLoadRuntimeConfigValue();
         }
 

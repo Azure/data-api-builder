@@ -126,7 +126,11 @@ namespace Azure.DataGateway.Config
             }
             catch (JsonException ex)
             {
-                if (logger is not null)
+                if (logger is null)
+                {
+                    Console.WriteLine($"Deserialization failed due to: \n{ex}");
+                }
+                else
                 {
                     logger.LogError($"Deserialization failed due to: \n{ex}");
                 }

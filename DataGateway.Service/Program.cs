@@ -16,8 +16,9 @@ namespace Azure.DataGateway.Service
             {
                 CreateHostBuilder(args).Build().Run();
             }
-            catch
+            catch(Exception ex)
             {
+                Console.WriteLine($"Unable to launch the runtime due to: {ex}");
                 Environment.ExitCode = -1;
             }
         }

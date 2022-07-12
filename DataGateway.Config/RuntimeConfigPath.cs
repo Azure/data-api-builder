@@ -30,6 +30,11 @@ namespace Azure.DataGateway.Config
 
         public RuntimeConfigPath() { }
 
+        public RuntimeConfigPath(ILogger<RuntimeConfigPath> logger)
+        {
+            Logger = logger;
+        }
+
         /// <summary>
         /// Reads the contents of the json config file if it exists,
         /// and sets the deserialized RuntimeConfig object.
@@ -42,8 +47,16 @@ namespace Azure.DataGateway.Config
             }
             catch (Exception ex)
             {
-                Logger.LogError($"Failed to load the runtime" +
-                    $" configuration file due to: \n{ex}");
+                string loadErrorMsg = $"Failed to load the runtime" +
+                    $" configuration file due to: \n{ex}";
+                if (Logger is null)
+                {
+                    Console.WriteLine(loadErrorMsg);
+                }
+                else
+                {
+                    Logger.LogError(loadErrorMsg);
+                }
             }
 
             return false;
@@ -60,9 +73,14 @@ namespace Azure.DataGateway.Config
             {
                 if (File.Exists(ConfigFileName))
                 {
-                    if (Logger is not null)
+                    string fileUsedMsg = $"Using file {ConfigFileName} to configure the runtime.";
+                    if (Logger is null)
                     {
-                        Logger.LogInformation($"Using file {ConfigFileName} to configure the runtime.");
+                        Console.WriteLine(fileUsedMsg);
+                    }
+                    else
+                    {
+                        Logger.LogInformation(fileUsedMsg);
                     }
 
                     runtimeConfigJson = ParseConfigJsonAndReplaceEnvVariables(File.ReadAllText(ConfigFileName));
@@ -96,7 +114,16 @@ namespace Azure.DataGateway.Config
                     LoadedRuntimeConfig!.ConnectionString = CONNSTRING;
                 }
 
-                Logger.LogInformation($"Runtime configuration has been successfully loaded.");
+                const string successFulLoadMsg = $"Runtime configuration has been successfully loaded.";
+                if (Logger is null)
+                {
+                    Console.WriteLine(successFulLoadMsg);
+                }
+                else
+                {
+                    Logger.LogInformation(successFulLoadMsg);
+                }
+
                 return true;
             }
 

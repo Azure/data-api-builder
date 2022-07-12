@@ -26,8 +26,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
             TableDefinition tableDefinition,
             [NotNull] Entity configEntity,
             Dictionary<string, Entity> entities,
-            IEnumerable<string>? rolesAllowedForEntity = null,
-            IDictionary<string, IEnumerable<string>>? rolesAllowedForFields = null)
+            IEnumerable<string>? rolesAllowedForEntity,
+            IDictionary<string, IEnumerable<string>>? rolesAllowedForFields)
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
             List<DirectiveNode> objectTypeDirectives = new();

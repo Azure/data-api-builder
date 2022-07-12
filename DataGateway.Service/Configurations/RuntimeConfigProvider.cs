@@ -39,6 +39,8 @@ namespace Azure.DataGateway.Service.Configurations
             _logger = logger;
         }
 
+        public RuntimeConfigProvider() { }
+
         /// <summary>
         /// Initialize the runtime configuration provider with the specified configurations.
         /// </summary>

@@ -236,7 +236,7 @@ namespace Azure.DataGateway.Service.Services
 
             // If the results are not a collection or if the query does not have a next page
             // no nextLink is needed, return JsonDocument as is
-            if (jsonElement.ValueKind != JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
+            if (jsonElement.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
             {
                 return jsonDoc;
             }

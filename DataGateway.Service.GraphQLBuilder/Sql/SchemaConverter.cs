@@ -75,18 +75,27 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 // Consequently, the field is only added to schema if this conditional evaluates to TRUE.
                 if (rolesAllowedForFields is not null && rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles))
                 {
-                    directives.Add(GraphQLUtils.CreateAuthorizationDirective(roles));
+                    // Roles will not be null here if TryGetValue evaluates to true, so here we check if there are any roles to process.
+                    if (roles.Count() > 0)
+                    {
+                        // Add field to object definition but do not add @authorize directive
+                        // if anonymous is defined for field since authentication is not required.
+                        if (!roles.Contains(GraphQLUtils.SYSTEM_ROLE_ANONYMOUS))
+                        {
+                            directives.Add(GraphQLUtils.CreateAuthorizationDirective(roles));
+                        }
 
-                    NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
-                    FieldDefinitionNode field = new(
-                        location: null,
-                        new(FormatNameForField(columnName)),
-                        description: null,
-                        new List<InputValueDefinitionNode>(),
-                        column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
-                        directives);
+                        NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
+                        FieldDefinitionNode field = new(
+                            location: null,
+                            new(FormatNameForField(columnName)),
+                            description: null,
+                            new List<InputValueDefinitionNode>(),
+                            column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
+                            directives);
 
-                    fields.Add(columnName, field);
+                        fields.Add(columnName, field);
+                    }
                 }
             }
 

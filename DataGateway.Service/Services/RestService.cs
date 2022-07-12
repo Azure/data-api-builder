@@ -34,7 +34,6 @@ namespace Azure.DataGateway.Service.Services
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
-        public Operation CurrentOperationType { get; set; }
 
         public RestService(
             IQueryEngine queryEngine,
@@ -67,7 +66,6 @@ namespace Azure.DataGateway.Service.Services
             Operation operationType,
             string? primaryKeyRoute)
         {
-            CurrentOperationType = operationType;
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
 

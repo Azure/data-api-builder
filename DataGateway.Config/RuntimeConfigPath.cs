@@ -64,8 +64,12 @@ namespace Azure.DataGateway.Config
 
         /// <summary>
         /// Reads the contents of the json config file if it exists,
-        /// and sets the deserialized RuntimeConfig object.
+        /// and sets the deserialized RuntimeConfig object as the value of the
+        /// static property LoadedRuntimeConfig.
         /// </summary>
+        /// <returns>True if load succeed, false otherwise.</returns>
+        /// <throws> ArgumentNullException when ConfigFileName is empty,
+        /// FileNotFoundException if the file does not exist.</throws>
         public bool LoadRuntimeConfigValue()
         {
             string? runtimeConfigJson;
@@ -98,7 +102,8 @@ namespace Azure.DataGateway.Config
                 // find a configuration file name after attempting all the possibilities
                 // and checking for their existence in the current directory
                 // eventually setting it to an empty string.
-                throw new ArgumentNullException($"Could not determine a configuration file name that exists.");
+                throw new ArgumentNullException($"Configuration file name",
+                    $"Could not determine a configuration file name that exists.");
             }
 
             if (!string.IsNullOrEmpty(runtimeConfigJson) &&

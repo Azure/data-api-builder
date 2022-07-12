@@ -51,7 +51,7 @@ namespace Azure.DataGateway.Config
                     $" configuration file due to: \n{ex}";
                 if (Logger is null)
                 {
-                    Console.WriteLine(loadErrorMsg);
+                    Console.Error.WriteLine(loadErrorMsg);
                 }
                 else
                 {

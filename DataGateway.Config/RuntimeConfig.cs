@@ -128,7 +128,7 @@ namespace Azure.DataGateway.Config
             {
                 if (logger is null)
                 {
-                    Console.WriteLine($"Deserialization failed due to: \n{ex}");
+                    Console.Error.WriteLine($"Deserialization failed due to: \n{ex}");
                 }
                 else
                 {

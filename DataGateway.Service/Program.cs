@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unable to launch the runtime due to: {ex}");
+                Console.Error.WriteLine($"Unable to launch the runtime due to: {ex}");
                 Environment.ExitCode = -1;
             }
         }

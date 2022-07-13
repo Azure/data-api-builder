@@ -13,11 +13,18 @@ namespace Azure.DataGateway.Service.Configurations
     /// </summary>
     public class RuntimeConfigProvider
     {
-        private readonly RuntimeConfigPath? _runtimeConfigPath;
         private readonly ILogger<RuntimeConfigProvider> _logger;
 
         public event EventHandler<RuntimeConfig>? RuntimeConfigLoaded;
 
+        /// <summary>
+        /// Represents the path to the runtime configuration file.
+        /// </summary>
+        public RuntimeConfigPath? RuntimeConfigPath { get; set; }
+
+        /// <summary>
+        /// Represents the loaded and deserialized runtime configuration.
+        /// </summary>
         protected virtual RuntimeConfig? RuntimeConfiguration { get; private set; }
 
         public virtual string RestPath
@@ -26,10 +33,10 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         public RuntimeConfigProvider(
-            RuntimeConfigPath runtimeConfigPath,
+            RuntimeConfigPath? runtimeConfigPath,
             ILogger<RuntimeConfigProvider> logger)
         {
-            _runtimeConfigPath = runtimeConfigPath!;
+            RuntimeConfigPath = runtimeConfigPath;
             _logger = logger;
             if (runtimeConfigPath != null && TryLoadRuntimeConfigValue())
             {
@@ -76,7 +83,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         public virtual bool LoadRuntimeConfigValue()
         {
-            string? configFileName = _runtimeConfigPath?.ConfigFileName;
+            string? configFileName = RuntimeConfigPath?.ConfigFileName;
             string? runtimeConfigJson = GetRuntimeConfigJsonString(configFileName);
 
             if (!string.IsNullOrEmpty(runtimeConfigJson) &&
@@ -86,9 +93,9 @@ namespace Azure.DataGateway.Service.Configurations
             {
                 RuntimeConfiguration = runtimeConfig;
                 RuntimeConfiguration!.DetermineGlobalSettings();
-                if (!string.IsNullOrWhiteSpace(_runtimeConfigPath?.CONNSTRING))
+                if (!string.IsNullOrWhiteSpace(RuntimeConfigPath?.CONNSTRING))
                 {
-                    RuntimeConfiguration!.ConnectionString = _runtimeConfigPath.CONNSTRING;
+                    RuntimeConfiguration!.ConnectionString = RuntimeConfigPath.CONNSTRING;
                 }
 
                 _logger.LogInformation($"Runtime configuration has been successfully loaded.");
@@ -130,7 +137,8 @@ namespace Azure.DataGateway.Service.Configurations
                 // find a configuration file name after attempting all the possibilities
                 // and checking for their existence in the current directory
                 // eventually setting it to an empty string.
-                throw new ArgumentNullException($"Could not determine a configuration file name that exists.");
+                throw new ArgumentNullException("Configuration file name",
+                    $"Could not determine a configuration file name that exists.");
             }
 
             return runtimeConfigJson;

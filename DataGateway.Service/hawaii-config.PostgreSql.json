@@ -21,11 +21,7 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "EasyAuth",
-        "jwt": {
-          "audience": "",
-          "issuer": ""
-        }
+        "provider": "StaticWebApps"
       }
     }
   },
@@ -132,8 +128,7 @@
                 "database": "@claims.id eq @item.id"
               },
               "fields": {
-                "include": [ "*" ],
-                "exclude": [ "id" ]
+                "include": [ "*" ]
               }
             }
           ]

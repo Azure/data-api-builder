@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.AuthenticationHelpers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -17,7 +18,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using static Azure.DataGateway.Service.AuthenticationHelpers.EasyAuthAuthentication;
+using static Azure.DataGateway.Service.AuthenticationHelpers.AppServiceAuthentication;
+using static Azure.DataGateway.Service.AuthenticationHelpers.StaticWebAppsAuthentication;
 
 namespace Azure.DataGateway.Service.Tests.Authentication
 {
@@ -30,19 +32,38 @@ namespace Azure.DataGateway.Service.Tests.Authentication
     {
         #region Positive Tests
         /// <summary>
-        /// Ensures a valid EasyAuth header/value does NOT result in HTTP 401 Unauthorized response.
+        /// Ensures a valid AppService EasyAuth header/value does NOT result in HTTP 401 Unauthorized response.
         /// 403 is okay, as it indicates authorization level failure, not authentication.
         /// When an authorization header is sent, it contains an invalid value, if the runtime returns an error
         /// then there is improper JWT validation occurring.
         /// </summary>
         [DataTestMethod]
-        [DataRow(false, DisplayName = "Valid EasyAuth header only")]
-        [DataRow(true, DisplayName = "Valid EasyAuth header and authorization header")]
+        [DataRow(false, DisplayName = "Valid AppService EasyAuth header only")]
+        [DataRow(true, DisplayName = "Valid AppService EasyAuth header and authorization header")]
         [TestMethod]
-        public async Task TestValidEasyAuthToken(bool sendAuthorizationHeader)
+        public async Task TestValidAppServiceEasyAuthToken(bool sendAuthorizationHeader)
         {
-            string generatedToken = CreateEasyAuthToken();
-            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(generatedToken);
+            string generatedToken = CreateAppServiceEasyAuthToken();
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(generatedToken, EasyAuthType.AppService);
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+        }
+
+        /// <summary>
+        /// Ensures a valid StaticWebApps EasyAuth header/value does NOT result in HTTP 401 Unauthorized response.
+        /// 403 is okay, as it indicates authorization level failure, not authentication.
+        /// When an authorization header is sent, it contains an invalid value, if the runtime returns an error
+        /// then there is improper JWT validation occurring.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Valid StaticWebApps EasyAuth header only")]
+        [DataRow(true, DisplayName = "Valid StaticWebApps EasyAuth header and authorization header")]
+        [TestMethod]
+        public async Task TestValidStaticWebAppsEasyAuthToken(bool sendAuthorizationHeader)
+        {
+            string generatedToken = CreateStaticWebAppsEasyAuthToken();
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(generatedToken, EasyAuthType.StaticWebApps);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
@@ -68,7 +89,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         [TestMethod]
         public async Task TestInvalidEasyAuthToken(string token, bool sendAuthorizationHeader = false)
         {
-            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token, sendAuthorizationHeader);
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token, EasyAuthType.StaticWebApps, sendAuthorizationHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
@@ -80,7 +101,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         /// Configures test server with bare minimum middleware
         /// </summary>
         /// <returns>IHost</returns>
-        private static async Task<IHost> CreateWebHostEasyAuth()
+        private static async Task<IHost> CreateWebHostEasyAuth(EasyAuthType easyAuthType)
         {
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>
@@ -90,7 +111,8 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                         .ConfigureServices(services =>
                         {
                             services.AddAuthentication(defaultScheme: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                                .AddEasyAuthAuthentication();
+                                    .AddEasyAuthAuthentication(easyAuthType);
+
                             services.AddAuthorization();
                         })
                         .ConfigureLogging(o =>
@@ -125,9 +147,9 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         /// <param name="token">The EasyAuth header value(base64 encoded token) to test against the TestServer</param>
         /// <param name="sendAuthorizationHeader">Whether to add authorization header to header dictionary</param>
         /// <returns></returns>
-        private static async Task<HttpContext> SendRequestAndGetHttpContextState(string? token, bool sendAuthorizationHeader = false)
+        private static async Task<HttpContext> SendRequestAndGetHttpContextState(string? token, EasyAuthType easyAuthType, bool sendAuthorizationHeader = false)
         {
-            using IHost host = await CreateWebHostEasyAuth();
+            using IHost host = await CreateWebHostEasyAuth(easyAuthType);
             TestServer server = host.GetTestServer();
 
             return await server.SendAsync(context =>
@@ -135,7 +157,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                 if (token is not null)
                 {
                     StringValues headerValue = new(new string[] { $"{token}" });
-                    KeyValuePair<string, StringValues> easyAuthHeader = new(EasyAuthAuthentication.EASYAUTHHEADER, headerValue);
+                    KeyValuePair<string, StringValues> easyAuthHeader = new(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, headerValue);
                     context.Request.Headers.Add(easyAuthHeader);
                 }
 
@@ -153,30 +175,50 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         /// Creates a mocked EasyAuth token, namely, the value of the header injected by EasyAuth.
         /// </summary>
         /// <returns>A Base64 encoded string of a serialized EasyAuthClientPrincipal object</returns>
-        private static string CreateEasyAuthToken()
+        private static string CreateAppServiceEasyAuthToken()
         {
-            EasyAuthClaim emailClaim = new()
+            AppServiceClaim emailClaim = new()
             {
                 Val = "apple@contoso.com",
                 Typ = ClaimTypes.Upn
             };
 
-            EasyAuthClaim roleClaim = new()
+            AppServiceClaim roleClaim = new()
             {
                 Val = "Anonymous",
                 Typ = ClaimTypes.Role
             };
 
-            List<EasyAuthClaim> claims = new();
+            List<AppServiceClaim> claims = new();
             claims.Add(emailClaim);
             claims.Add(roleClaim);
 
-            EasyAuthClientPrincipal token = new()
+            AppServiceClientPrincipal token = new()
             {
                 Auth_typ = "aad",
                 Name_typ = "Apple Banana",
                 Claims = claims,
                 Role_typ = ClaimTypes.Role
+            };
+
+            string serializedToken = JsonSerializer.Serialize(value: token);
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(serializedToken));
+        }
+
+        /// <summary>
+        /// Creates a mocked EasyAuth token, namely, the value of the header injected by EasyAuth.
+        /// </summary>
+        /// <returns>A Base64 encoded string of a serialized EasyAuthClientPrincipal object</returns>
+        private static string CreateStaticWebAppsEasyAuthToken()
+        {
+            List<string> roles = new();
+            roles.Add("anonymous");
+            roles.Add("authenticated");
+
+            StaticWebAppsClientPrincipal token = new()
+            {
+                IdentityProvider = "github",
+                UserRoles = roles
             };
 
             string serializedToken = JsonSerializer.Serialize(value: token);

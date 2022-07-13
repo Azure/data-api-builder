@@ -213,7 +213,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsTrue(isConfigSet, "TryGetRuntimeConfiguration should return true when the config is set.");
 
             Assert.AreEqual(DatabaseType.cosmos, configuration.DatabaseType, "Expected cosmos database type after configuring the runtime with cosmos settings.");
-            Assert.AreEqual(config.Schema, File.ReadAllText(configuration.CosmosDb.GraphQLSchemaPath), "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
+            Assert.AreEqual(config.Schema, configuration.CosmosDb.GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
             Assert.AreEqual(config.ConnectionString, configuration.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
         }
 
@@ -423,46 +423,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Exception ex = Assert.ThrowsException<FileNotFoundException>(() => runtimeConfigPath.LoadRuntimeConfigValue());
             Console.WriteLine(ex.Message);
             Assert.AreEqual(ex.Message, "Requested configuration file NonExistentConfigFile.json does not exist.");
-        }
-
-        [TestMethod("Validates that graphQLSchema is correctly picked up from graphQLSchemaPath.")]
-        public void TestScenariosForGraphQLSchemaInCosmosDbOptions()
-        {
-            string jsonString = @"
-                type Character @model {
-                    id : ID,
-                    name : String,
-                    type: String,
-                    homePlanet: Int,
-                    primaryFunction: String
-                }";
-            MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
-            {
-                { @"./schema.gql", new MockFileData(jsonString) }
-            });
-
-            IOptionsMonitor<RuntimeConfig> config =
-                SqlTestHelper.LoadConfig(COSMOS_ENVIRONMENT);
-
-            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
-            RuntimeConfig runtimeConfig = config.CurrentValue;
-            mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out runtimeConfig)).Returns(true);
-            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
-            RuntimeConfigProvider runtimeConfigProvider = mockRuntimeConfigProvider.Object;
-
-            CosmosSqlMetadataProvider metadataStoreProvider = new(runtimeConfigProvider, fileSystem);
-            Assert.AreEqual(jsonString, metadataStoreProvider.GraphQLSchema());
-
-            // GraphQL Schema File doesn't exist
-            metadataStoreProvider = new(runtimeConfigProvider, new MockFileSystem());
-            try
-            {
-                string graphQLSchema = metadataStoreProvider.GraphQLSchema();
-            }
-            catch (Exception e)
-            {
-                Assert.AreEqual("GraphQL Schema Path is Invalid.", e.Message);
-            }
         }
 
         [TestCleanup]

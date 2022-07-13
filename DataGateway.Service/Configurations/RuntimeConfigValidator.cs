@@ -67,14 +67,17 @@ namespace Azure.DataGateway.Service.Configurations
                     throw new NotSupportedException("CosmosDB is specified but no CosmosDB configuration information has been provided.");
                 }
 
-                if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchema))
                 {
-                    throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
-                }
+                    if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    {
+                        throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
+                    }
 
-                if (!_fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
-                {
-                    throw new FileNotFoundException($"The GraphQL schema file at '{runtimeConfig.CosmosDb.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
+                    if (!_fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    {
+                        throw new FileNotFoundException($"The GraphQL schema file at '{runtimeConfig.CosmosDb.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
+                    }
                 }
             }
 
@@ -400,8 +403,8 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Helper method to preprocess the policy by replacing "( " with "(", i.e. remove 
-        /// extra spaces after opening parenthesis. This will prevent allowed claimTypes 
+        /// Helper method to preprocess the policy by replacing "( " with "(", i.e. remove
+        /// extra spaces after opening parenthesis. This will prevent allowed claimTypes
         /// from being invalidated.
         /// </summary>
         /// <param name="policy"></param>

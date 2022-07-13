@@ -107,28 +107,12 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
 
         public string GraphQLSchema()
         {
-            if (string.IsNullOrEmpty(_cosmosDb.GraphQLSchemaPath))
+            if (_cosmosDb.GraphQLSchema is null && _fileSystem.File.Exists(_cosmosDb.GraphQLSchemaPath))
             {
-                throw new DataGatewayException(
-                    "No GraphQL schema file has been provided for CosmosDB.",
-                    System.Net.HttpStatusCode.InternalServerError,
-                    DataGatewayException.SubStatusCodes.ErrorInInitialization);
+                _cosmosDb = _cosmosDb with { GraphQLSchema = _fileSystem.File.ReadAllText(_cosmosDb.GraphQLSchemaPath) };
             }
 
-            string? graphQLSchema;
-            if (_fileSystem.File.Exists(_cosmosDb.GraphQLSchemaPath))
-            {
-                graphQLSchema = _fileSystem.File.ReadAllText(_cosmosDb.GraphQLSchemaPath);
-            }
-            else
-            {
-                throw new DataGatewayException(
-                    "GraphQL Schema Path is Invalid.",
-                    System.Net.HttpStatusCode.InternalServerError,
-                    DataGatewayException.SubStatusCodes.ErrorInInitialization);
-            }
-
-            if (string.IsNullOrEmpty(graphQLSchema))
+            if (_cosmosDb.GraphQLSchema is null)
             {
                 throw new DataGatewayException(
                     "GraphQL Schema isn't set.",
@@ -136,7 +120,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
                     DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
-            return graphQLSchema;
+            return _cosmosDb.GraphQLSchema;
         }
 
         public FilterParser GetODataFilterParser()

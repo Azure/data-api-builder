@@ -128,25 +128,28 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             };
 
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            RuntimeConfigProvider runtimeConfigProvider
-                = new(configPath,
-                      configProviderLogger.Object);
             try
             {
+                // Send in a null for runtime config path  so that it does
+                // not invoke TryLoadRuntimeConfig since the test intends to test
+                // the exceptions thrown from LoadRuntimeConfig.
+                RuntimeConfigProvider runtimeConfigProvider
+                    = new(runtimeConfigPath: null,
+                          configProviderLogger.Object)
+                    {
+                        RuntimeConfigPath = configPath
+                    };
                 runtimeConfigProvider.LoadRuntimeConfigValue();
-                Assert.Fail();
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
                 Assert.AreEqual(exceptionType, ex.GetType());
                 Assert.AreEqual(exceptionMessage, ex.Message);
-                Assert.AreEqual(0, configProviderLogger.Invocations.Count);
+                Assert.AreEqual(1, configProviderLogger.Invocations.Count);
+                // This is the information logged by the RuntimeConfigProvider constructor.
+                Assert.AreEqual(LogLevel.Information, configProviderLogger.Invocations[0].Arguments[0]);
             }
-
-            Assert.IsFalse(runtimeConfigProvider.TryLoadRuntimeConfigValue());
-            Assert.AreEqual(1, configProviderLogger.Invocations.Count);
-            Assert.AreEqual(LogLevel.Error, configProviderLogger.Invocations[0].Arguments[0]);
         }
 
         #endregion Negative Tests

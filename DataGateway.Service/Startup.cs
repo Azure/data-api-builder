@@ -300,11 +300,19 @@ namespace Azure.DataGateway.Service
                         options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
                     });
                 }
-                else
-                // If no authentication configuration section specified, defaults to EasyAuth.
+                else if (runtimeConfig!.AuthNConfig != null)
                 {
                     services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                        .AddEasyAuthAuthentication();
+                        .AddEasyAuthAuthentication(
+                            (EasyAuthType)Enum.Parse(typeof(EasyAuthType),
+                                runtimeConfig.AuthNConfig.Provider,
+                                ignoreCase: true));
+                }
+                else
+                // If no authentication configuration section specified, defaults to StaticWebApps EasyAuth.
+                {
+                    services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                        .AddEasyAuthAuthentication(EasyAuthType.StaticWebApps);
                 }
             }
         }

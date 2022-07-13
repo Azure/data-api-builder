@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         public void ValidateEasyAuthConfig()
         {
             RuntimeConfig config =
-                CreateRuntimeConfigWithAuthN(new AuthenticationConfig());
+                CreateRuntimeConfigWithAuthN(new AuthenticationConfig(EasyAuthType.StaticWebApps.ToString()));
 
             RuntimeConfigValidator configValidator = GetMockConfigValidator(ref config);
 

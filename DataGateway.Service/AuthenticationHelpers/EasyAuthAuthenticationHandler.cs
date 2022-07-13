@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,18 +15,14 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     /// and utilizes the base class default handler for
     /// - AuthenticateAsync: Authenticates the current request.
     /// - Forbid Async: Creates 403 HTTP Response.
-    /// Usage modelled from Microsoft.Identity.Web.
-    ///     Ref: https://github.com/AzureAD/microsoft-identity-web/blob/master/src/Microsoft.Identity.Web/AppServicesAuth/AppServicesAuthenticationHandler.cs
     /// </summary>
     public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthenticationOptions>
     {
-        private const string EASY_AUTH_HEADER = "X-MS-CLIENT-PRINCIPAL";
-
         /// <summary>
         /// Constructor for the EasyAuthAuthenticationHandler.
         /// Note the parameters are required by the base class.
         /// </summary>
-        /// <param name="options">App service authentication options.</param>
+        /// <param name="options">Easy Auth authentication options.</param>
         /// <param name="logger">Logger factory.</param>
         /// <param name="encoder">URL encoder.</param>
         /// <param name="clock">System clock.</param>
@@ -47,16 +44,22 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         /// <returns>An authentication result to ASP.NET Core library authentication mechanisms</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            if (Context.Request.Headers[EASY_AUTH_HEADER].Count > 0)
+            if (Context.Request.Headers[AuthenticationConfig.CLIENT_PRINCIPAL_HEADER].Count > 0)
             {
-                ClaimsIdentity? identity = EasyAuthAuthentication.Parse(Context);
+                ClaimsIdentity? identity = Options.EasyAuthProvider switch
+                {
+                    EasyAuthType.StaticWebApps => StaticWebAppsAuthentication.Parse(Context),
+                    EasyAuthType.AppService => AppServiceAuthentication.Parse(Context),
+                    _ => null
+                };
 
                 if (identity is null)
                 {
-                    return Task.FromResult(AuthenticateResult.Fail(failureMessage: "Invalid EasyAuth token."));
+                    return Task.FromResult(AuthenticateResult.Fail(failureMessage: $"Invalid {Options.EasyAuthProvider} EasyAuth token."));
                 }
 
                 ClaimsPrincipal? claimsPrincipal = new(identity);
+
                 if (claimsPrincipal is not null)
                 {
                     // AuthenticationTicket is Asp.Net Core Abstraction of Authentication information

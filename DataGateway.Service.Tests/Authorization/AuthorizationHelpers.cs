@@ -34,6 +34,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Mock<ISqlMetadataProvider> metadataProvider = new();
             TableDefinition sampleTable = CreateSampleTable();
             metadataProvider.Setup(x => x.GetTableDefinition(TEST_ENTITY)).Returns(sampleTable);
+            metadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.mssql);
 
             string outParam;
             Dictionary<string, Dictionary<string, string>> _exposedNameToBackingColumnMapping = CreateColumnMappingTable();

@@ -66,9 +66,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// customized for testing purposes.
         /// </summary>
         /// <param name="configPath"></param>
-        public static void AddMissingEntitiesToConfig(RuntimeConfig config, string dbObjectName, string nameSpace="")
+        public static void AddMissingEntitiesToConfig(RuntimeConfig config, string dbObjectName, string nameSpace = "")
         {
-            string source = config.DatabaseType is DatabaseType.mysql || string.IsNullOrEmpty(nameSpace)? $"\"{dbObjectName}\"" : $"\"{nameSpace}.{dbObjectName}\"";
+            string source = config.DatabaseType is DatabaseType.mysql || string.IsNullOrEmpty(nameSpace) ? $"\"{dbObjectName}\"" : $"\"{nameSpace}.{dbObjectName}\"";
             string entityJsonString =
               @"{
                     ""source"":  " + source + @",

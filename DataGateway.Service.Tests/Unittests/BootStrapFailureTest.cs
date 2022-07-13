@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
             {
                 await _sqlMetadataProvider.InitializeAsync();
             }
-            catch(DataGatewayException ex)
+            catch (DataGatewayException ex)
             {
                 Assert.AreEqual(HttpStatusCode.NotImplemented, ex.StatusCode);
                 Assert.AreEqual("Primary key not configured on the given database object books_authors", ex.Message);

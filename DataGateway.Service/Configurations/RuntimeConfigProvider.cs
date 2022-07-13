@@ -13,14 +13,19 @@ namespace Azure.DataGateway.Service.Configurations
     /// </summary>
     public class RuntimeConfigProvider
     {
-        private readonly ILogger<RuntimeConfigProvider> _logger;
-
         public event EventHandler<RuntimeConfig>? RuntimeConfigLoaded;
+
+        /// <summary>
+        /// The config provider logger is a static member because we use it in static methods
+        /// like LoadRuntimeConfigValue, GetRuntimeConfigJsonString which themselves are static
+        /// to be used by tests.
+        /// </summary>
+        public static ILogger<RuntimeConfigProvider>? ConfigProviderLogger;
 
         /// <summary>
         /// Represents the path to the runtime configuration file.
         /// </summary>
-        public RuntimeConfigPath? RuntimeConfigPath { get; set; }
+        protected RuntimeConfigPath? RuntimeConfigPath { get; private set; }
 
         /// <summary>
         /// Represents the loaded and deserialized runtime configuration.
@@ -32,29 +37,49 @@ namespace Azure.DataGateway.Service.Configurations
             get { return RuntimeConfiguration is not null ? RuntimeConfiguration.RestGlobalSettings.Path : string.Empty; }
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RuntimeConfigProvider"/> class.
+        /// </summary>
+        /// <param name="runtimeConfigPath"></param>
+        /// <param name="logger"></param>
         public RuntimeConfigProvider(
-            RuntimeConfigPath? runtimeConfigPath,
+            RuntimeConfigPath runtimeConfigPath,
             ILogger<RuntimeConfigProvider> logger)
         {
             RuntimeConfigPath = runtimeConfigPath;
-            _logger = logger;
-            if (runtimeConfigPath != null && TryLoadRuntimeConfigValue())
+
+            if (ConfigProviderLogger is null)
             {
-                _logger.LogInformation("Runtime config loaded from file.");
+                ConfigProviderLogger = logger;
+            }
+
+            if (TryLoadRuntimeConfigValue())
+            {
+                ConfigProviderLogger.LogInformation("Runtime config loaded from file.");
             }
             else
             {
-                _logger.LogInformation("Runtime config provided didn't load config at construction.");
+                ConfigProviderLogger.LogInformation("Runtime config provided didn't load config at construction.");
             }
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RuntimeConfigProvider"/> class.
+        /// </summary>
+        /// <param name="runtimeConfig"></param>
+        /// <param name="logger"></param>
         public RuntimeConfigProvider(
             RuntimeConfig runtimeConfig,
             ILogger<RuntimeConfigProvider> logger)
         {
             RuntimeConfiguration = runtimeConfig;
-            _logger = logger;
-            _logger.LogInformation("Using the provided runtime configuration object.");
+
+            if (ConfigProviderLogger is null)
+            {
+                ConfigProviderLogger = logger;
+            }
+
+            ConfigProviderLogger.LogInformation("Using the provided runtime configuration object.");
         }
 
         /// <summary>
@@ -66,11 +91,17 @@ namespace Azure.DataGateway.Service.Configurations
         {
             try
             {
-                return RuntimeConfiguration is not null || LoadRuntimeConfigValue();
+                if(RuntimeConfiguration is null &&
+                   LoadRuntimeConfigValue(RuntimeConfigPath, out RuntimeConfig? runtimeConfig))
+                {
+                    RuntimeConfiguration = runtimeConfig;
+                }
+
+                return RuntimeConfiguration is not null;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Failed to load the runtime" +
+                ConfigProviderLogger!.LogError($"Failed to load the runtime" +
                     $" configuration file due to: \n{ex}");
             }
 
@@ -81,28 +112,33 @@ namespace Azure.DataGateway.Service.Configurations
         /// Reads the contents of the json config file if it exists,
         /// and sets the deserialized RuntimeConfig object.
         /// </summary>
-        public virtual bool LoadRuntimeConfigValue()
+        public static bool LoadRuntimeConfigValue(
+            RuntimeConfigPath? configPath,
+            out RuntimeConfig? runtimeConfig)
         {
-            string? configFileName = RuntimeConfigPath?.ConfigFileName;
+            string? configFileName = configPath?.ConfigFileName;
             string? runtimeConfigJson = GetRuntimeConfigJsonString(configFileName);
 
             if (!string.IsNullOrEmpty(runtimeConfigJson) &&
                 RuntimeConfig.TryGetDeserializedConfig(
                     runtimeConfigJson,
-                    out RuntimeConfig? runtimeConfig))
+                    out runtimeConfig))
             {
-                RuntimeConfiguration = runtimeConfig;
-                RuntimeConfiguration!.DetermineGlobalSettings();
-                if (!string.IsNullOrWhiteSpace(RuntimeConfigPath?.CONNSTRING))
+                runtimeConfig!.DetermineGlobalSettings();
+                if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
                 {
-                    RuntimeConfiguration!.ConnectionString = RuntimeConfigPath.CONNSTRING;
+                    runtimeConfig!.ConnectionString = configPath.CONNSTRING;
                 }
 
-                _logger.LogInformation($"Runtime configuration has been successfully loaded.");
+                if (ConfigProviderLogger is not null)
+                {
+                    ConfigProviderLogger.LogInformation($"Runtime configuration has been successfully loaded.");
+                }
 
                 return true;
             }
 
+            runtimeConfig = null;
             return false;
         }
 
@@ -114,14 +150,18 @@ namespace Azure.DataGateway.Service.Configurations
         /// <returns></returns>
         /// <exception cref="FileNotFoundException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
-        public string? GetRuntimeConfigJsonString(string? configFileName)
+        public static string? GetRuntimeConfigJsonString(string? configFileName)
         {
             string? runtimeConfigJson;
             if (!string.IsNullOrEmpty(configFileName))
             {
                 if (File.Exists(configFileName))
                 {
-                    _logger.LogInformation($"Using file {configFileName} to configure the runtime.");
+                    if (ConfigProviderLogger is not null)
+                    {
+                        ConfigProviderLogger.LogInformation($"Using file {configFileName} to configure the runtime.");
+                    }
+
                     runtimeConfigJson = RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(File.ReadAllText(configFileName));
                 }
                 else

@@ -159,7 +159,10 @@ namespace Azure.DataGateway.Service.Services
             switch (operationType)
             {
                 case Operation.Find:
-                    return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
+                {
+                    using JsonDocument jsonDoc = await _queryEngine.ExecuteAsync(context);
+                    return FormatFindResult(jsonDoc, (FindRequestContext)context);
+                }
                 case Operation.Insert:
                 case Operation.Delete:
                 case Operation.Update:
@@ -238,7 +241,7 @@ namespace Azure.DataGateway.Service.Services
             // no nextLink is needed, return JsonDocument as is
             if (jsonElement.ValueKind != JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
             {
-                return OkResponse(jsonDoc.RootElement.Clone());
+                return OkResponse(jsonDoc.RootElement);
             }
 
             // More records exist than requested, we know this by requesting 1 extra record,

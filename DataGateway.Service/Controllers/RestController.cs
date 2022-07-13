@@ -185,8 +185,13 @@ namespace Azure.DataGateway.Service.Controllers
 
                 if (result is CreatedResult)
                 {
-                    // Location is already populated by the primary key route
-                    // so we just update with the portion from httpcontext.
+                    // Location is made up of two parts, the first being constructed
+                    // from the HttpRequest found in the HttpContext. The other part
+                    // is the primary key route, which has already been saved in the
+                    // Location of the created result. So we form the entire location
+                    // from appending the primary key route  already stored in the
+                    // created result to the url constructed from the HttpRequest. We
+                    // then update the Location of the created result to this value.
                     CreatedResult createdResult = (result as CreatedResult)!;
                     string location =
                         UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + createdResult.Location;

@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
@@ -32,12 +33,15 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         internal static CosmosQueryEngine _queryEngine;
         internal static CosmosMutationEngine _mutationEngine;
         internal static GraphQLController _controller;
+        internal static RuntimeConfigProvider _configProvider;
+
         internal static CosmosClient Client { get; private set; }
 
         [ClassInitialize]
         public static void Init(TestContext context)
         {
-            _clientProvider = new CosmosClientProvider(CosmosTestHelper.ConfigProvider);
+            _configProvider = TestHelper.GetRuntimeConfigProvider(CosmosTestHelper.ConfigPath);
+            _clientProvider = new CosmosClientProvider(_configProvider);
             string jsonString = @"
 type Character @model {
     id : ID,
@@ -59,7 +63,7 @@ type Planet @model {
                 { @"./schema.gql", new MockFileData(jsonString) }
             });
 
-            CosmosSqlMetadataProvider _metadataStoreProvider = new(CosmosTestHelper.ConfigProvider, fileSystem);
+            CosmosSqlMetadataProvider _metadataStoreProvider = new(_configProvider, fileSystem);
 
             //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.
             Mock<IAuthorizationResolver> authorizationResolverCosmos = new();
@@ -68,7 +72,7 @@ type Planet @model {
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(
-                CosmosTestHelper.ConfigProvider,
+                _configProvider,
                 _queryEngine,
                 _mutationEngine,
                 new DocumentCache(),
@@ -130,7 +134,8 @@ type Planet @model {
         /// <param name="containerName">the container name</param>
         internal static void OverrideEntityContainer(string entityName, string containerName)
         {
-            Entity entity = CosmosTestHelper.Config.Entities[entityName];
+            RuntimeConfig config = _configProvider.GetRuntimeConfiguration();
+            Entity entity = config.Entities[entityName];
 
             System.Reflection.PropertyInfo prop = entity.GetType().GetProperty("Source");
             // Use reflection to set the entity Source (since `entity` is a record type and technically immutable)

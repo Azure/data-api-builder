@@ -1,6 +1,5 @@
 using System;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
 {
@@ -15,22 +14,6 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             get
             {
                 return _runtimeConfigPath.Value;
-            }
-        }
-
-        public static RuntimeConfigProvider ConfigProvider
-        {
-            get
-            {
-                return GetRuntimeConfigProvider(ConfigPath);
-            }
-        }
-
-        public static RuntimeConfig Config
-        {
-            get
-            {
-                return GetRuntimeConfig(ConfigProvider);
             }
         }
 

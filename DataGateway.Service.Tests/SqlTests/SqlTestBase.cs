@@ -69,8 +69,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             TestHelper.AddMissingEntitiesToConfig(_runtimeConfig);
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
 
-            _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
-
             SetUpSQLMetadataProvider();
             // Setup AuthorizationService to always return Authorized.
             _authorizationService = new Mock<IAuthorizationService>();
@@ -103,6 +101,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         protected static void SetUpSQLMetadataProvider()
         {
+            _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
+
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:

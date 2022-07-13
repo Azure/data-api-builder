@@ -130,16 +130,10 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             try
             {
-                // Send in a null for runtime config path  so that it does
-                // not invoke TryLoadRuntimeConfig since the test intends to test
-                // the exceptions thrown from LoadRuntimeConfig.
-                RuntimeConfigProvider runtimeConfigProvider
-                    = new(runtimeConfigPath: null,
-                          configProviderLogger.Object)
-                    {
-                        RuntimeConfigPath = configPath
-                    };
-                runtimeConfigProvider.LoadRuntimeConfigValue();
+                RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
+                RuntimeConfigProvider.LoadRuntimeConfigValue(
+                    configPath,
+                    out RuntimeConfig runtimeConfig);
             }
             catch (Exception ex)
             {

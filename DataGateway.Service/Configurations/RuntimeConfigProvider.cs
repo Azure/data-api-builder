@@ -91,7 +91,7 @@ namespace Azure.DataGateway.Service.Configurations
         {
             try
             {
-                if(RuntimeConfiguration is null &&
+                if (RuntimeConfiguration is null &&
                    LoadRuntimeConfigValue(RuntimeConfigPath, out RuntimeConfig? runtimeConfig))
                 {
                     RuntimeConfiguration = runtimeConfig;

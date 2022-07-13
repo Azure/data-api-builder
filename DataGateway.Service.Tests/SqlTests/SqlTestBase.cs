@@ -63,9 +63,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             _testCategory = testCategory;
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{_testCategory}");
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(configPath);
-            _runtimeConfig = TestHelper.GetRuntimeConfig(_runtimeConfigProvider);
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
+            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
             TestHelper.AddMissingEntitiesToConfig(_runtimeConfig);
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
 
             _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
 

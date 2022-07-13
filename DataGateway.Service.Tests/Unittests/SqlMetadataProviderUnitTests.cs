@@ -1,8 +1,11 @@
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.SqlTests;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataGateway.Service.Tests.UnitTests
 {
@@ -43,10 +46,12 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         public async Task CheckNoExceptionForNoForiegnKey()
         {
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(TestCategory.POSTGRESQL);
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(configPath);
-            _runtimeConfig = TestHelper.GetRuntimeConfig(_runtimeConfigProvider);
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
+            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
-            SqlTestBase.SetUpSQLMetadataProvider();
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
+            SetUpSQLMetadataProvider();
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
         }

@@ -88,7 +88,7 @@ namespace Azure.DataGateway.Service.Tests
                       configProviderLogger.Object);
             mockRuntimeConfigProvider.Setup(x => x.RestPath).Returns(path);
             mockRuntimeConfigProvider.Setup(x => x.TryLoadRuntimeConfigValue()).Returns(true);
-            string configJson = mockRuntimeConfigProvider.Object.GetRuntimeConfigJsonString(configPath.ConfigFileName);
+            string configJson = RuntimeConfigProvider.GetRuntimeConfigJsonString(configPath.ConfigFileName);
             RuntimeConfig.TryGetDeserializedConfig(configJson, out RuntimeConfig runtimeConfig);
             mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
             return mockRuntimeConfigProvider.Object;
@@ -133,7 +133,7 @@ namespace Azure.DataGateway.Service.Tests
                       },
                       {
                         ""role"": ""authenticated"",
-                        ""actions"": [ ""create"", ""read"", ""delete"" ]
+                        ""actions"": [ ""create"", ""update"", ""read"", ""delete"" ]
                       }
                     ]
                 }";

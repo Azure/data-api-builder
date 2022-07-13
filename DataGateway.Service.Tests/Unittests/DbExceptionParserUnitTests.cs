@@ -1,8 +1,10 @@
 using System.Data.Common;
 using System.Reflection;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -25,7 +27,9 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [DataRow(false, "While processing your request the database ran into an error.")]
         public void VerifyCorrectErrorMessage(bool isDeveloperMode, string expected)
         {
-            Mock<RuntimeConfigProvider> provider = new();
+            Mock<RuntimeConfigPath> configPath = new();
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            Mock<RuntimeConfigProvider> provider = new(configPath.Object, configProviderLogger.Object);
             provider.Setup(x => x.IsDeveloperMode()).Returns(isDeveloperMode);
             DbExceptionParser parser = new(provider.Object);
             DbException e = CreateSqlException();

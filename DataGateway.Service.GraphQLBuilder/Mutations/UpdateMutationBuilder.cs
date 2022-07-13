@@ -153,7 +153,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             DocumentNode root,
             Entity entity,
             DatabaseType databaseType,
-            IEnumerable<string>? rolesAllowedForMutation = null)
+            IEnumerable<string>? rolesAllowedForMutation = null,
+            Dictionary<string, Dictionary<string, List<string>>> fieldsRoles = null
+            )
         {
             InputObjectTypeDefinitionNode input = GenerateUpdateInputType(inputs, objectTypeDefinitionNode, name, root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(), entity, databaseType);
             List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode, databaseType);

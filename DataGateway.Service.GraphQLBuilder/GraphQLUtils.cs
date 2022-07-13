@@ -125,7 +125,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
         /// </summary>
         /// <param name="roles">Collection of roles to set on the directive </param>
         /// <returns>DirectiveNode such as: @authorize(roles: ["role1", ..., "roleN"]) </returns>
-        public static DirectiveNode CreateAuthorizationDirective(IEnumerable<string> roles)
+        public static DirectiveNode CreateAuthorizationDirective(IEnumerable<string> roles, string policy = null)
         {
             List<IValueNode> roleList = new();
             foreach (string rolename in roles)
@@ -134,7 +134,17 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             }
 
             ListValueNode roleListNode = new(items: roleList);
-            return new(name: AUTHORIZE_DIRECTIVE, new ArgumentNode(name: AUTHORIZE_DIRECTIVE_ARGUMENT_ROLES, roleListNode));
+            if (policy is null)
+            {
+                return new(name: AUTHORIZE_DIRECTIVE, new ArgumentNode(name: AUTHORIZE_DIRECTIVE_ARGUMENT_ROLES, roleListNode));
+            }
+            else
+            {
+                return new(name: AUTHORIZE_DIRECTIVE,
+                    new ArgumentNode(name: AUTHORIZE_DIRECTIVE_ARGUMENT_ROLES, roleListNode),
+                    new ArgumentNode(name: "policy", new StringValueNode(policy))
+                    );
+            }
         }
     }
 }

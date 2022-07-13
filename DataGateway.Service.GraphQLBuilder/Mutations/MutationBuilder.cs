@@ -75,15 +75,16 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             )
         {
             IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, actionName: actionName, entityPermissionsMap);
+            Dictionary<string, Dictionary<string, List<string>>>? rolesAllowedForFields = entityPermissionsMap[dbEntityName].FieldToRolesMap;
             if (rolesAllowedForMutation.Count() > 0)
             {
                 switch (actionName)
                 {
                     case "create":
-                        mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity, rolesAllowedForMutation));
+                        mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity, rolesAllowedForMutation, rolesAllowedForFields));
                         break;
                     case "update":
-                        mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType, rolesAllowedForMutation));
+                        mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType, rolesAllowedForMutation, rolesAllowedForFields));
                         break;
                     case "delete":
                         mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity, databaseType, rolesAllowedForMutation));

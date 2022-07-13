@@ -93,7 +93,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         FieldDefinitionNode field = new(
                             location: null,
                             new(FormatNameForField(columnName)),
-                            description: null,
+                            description: new StringValueNode(columnName),
                             new List<InputValueDefinitionNode>(),
                             column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
                             directives);

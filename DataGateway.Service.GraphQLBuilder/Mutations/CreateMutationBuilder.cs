@@ -30,8 +30,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             NameNode name,
             IEnumerable<HotChocolate.Language.IHasName> definitions,
             DatabaseType databaseType,
-            Entity entity,
-            Dictionary<string, Dictionary<string, List<string>>> fieldsRoles = null
+            Entity entity
             )
         {
             NameNode inputName = GenerateInputTypeName(name.Value, entity);
@@ -62,8 +61,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                         }
                     }
 
-                    List<string> allowedRoles = fieldsRoles[f.Description.Value]["create"];
-                    return GenerateSimpleInputType(name, f, entity, allowedRoles);
+                    return GenerateSimpleInputType(name, f, entity);
                 });
 
             InputObjectTypeDefinitionNode input =
@@ -115,20 +113,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             return true;
         }
 
-        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, Entity entity, List<string> allowedRoles)
+        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, Entity entity)
         {
             IValueNode? defaultValue = null;
-            List<DirectiveNode> directives = new();
 
             if (DefaultValueDirectiveType.TryGetDefaultValue(f, out ObjectValueNode? value))
             {
                 defaultValue = value.Fields[0].Value;
-            }
-
-            // check field level permissions to add @authorize directive on each field of the create mutation input
-            if (allowedRoles.Count > 0)
-            {
-                //directives.Add(GraphQLUtils.CreateAuthorizationDirective(allowedRoles));
             }
 
             return new(
@@ -137,7 +128,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value, entity)}"),
                 f.Type,
                 defaultValue,
-                directives
+                new List<DirectiveNode>()
             );
         }
 
@@ -245,15 +236,14 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 name,
                 root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),
                 databaseType,
-                entity,
-                fieldsToRoles
+                entity
                 );
 
             // Create authorize directive denoting allowed roles
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
             if (rolesAllowedForMutation is not null)
             {
-                //fieldDefinitionNodeDirectives.Add(new(name: AUTHORIZE_DIRECTIVE, new ArgumentNode(name: "policy", new StringValueNode("MutationFieldAuthorization"))));
+                // Adds roles AND policy to @authorize directive. The policy will evaluate field authorization.
                 fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForMutation, policy: "MutationFieldAuthorization"));
             }
 

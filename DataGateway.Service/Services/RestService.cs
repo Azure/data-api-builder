@@ -241,7 +241,7 @@ namespace Azure.DataGateway.Service.Services
             // no nextLink is needed, return JsonDocument as is
             if (jsonElement.ValueKind != JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
             {
-                return OkResponse(jsonDoc.RootElement);
+                return OkResponse(jsonDoc.RootElement.Clone());
             }
 
             // More records exist than requested, we know this by requesting 1 extra record,

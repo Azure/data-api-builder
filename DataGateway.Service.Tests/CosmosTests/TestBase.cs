@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         [ClassInitialize]
         public static void Init(TestContext context)
         {
-            _clientProvider = new CosmosClientProvider(TestHelper.ConfigProvider);
+            _clientProvider = new CosmosClientProvider(CosmosTestHelper.ConfigProvider);
             string jsonString = @"
 type Character @model {
     id : ID,
@@ -59,7 +59,7 @@ type Planet @model {
                 { @"./schema.gql", new MockFileData(jsonString) }
             });
 
-            CosmosSqlMetadataProvider _metadataStoreProvider = new(TestHelper.ConfigProvider, fileSystem);
+            CosmosSqlMetadataProvider _metadataStoreProvider = new(CosmosTestHelper.ConfigProvider, fileSystem);
 
             //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.
             Mock<IAuthorizationResolver> authorizationResolverCosmos = new();
@@ -68,7 +68,7 @@ type Planet @model {
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(
-                TestHelper.ConfigProvider,
+                CosmosTestHelper.ConfigProvider,
                 _queryEngine,
                 _mutationEngine,
                 new DocumentCache(),
@@ -95,7 +95,7 @@ type Planet @model {
             {
                 string uid = Guid.NewGuid().ToString();
                 idList.Add(uid);
-                dynamic sourceItem = TestHelper.GetItem(uid, _planets[i % (_planets.Length)], i);
+                dynamic sourceItem = CosmosTestHelper.GetItem(uid, _planets[i % (_planets.Length)], i);
                 Client.GetContainer(dbName, containerName)
                     .CreateItemAsync(sourceItem, new PartitionKey(uid)).Wait();
             }
@@ -130,7 +130,7 @@ type Planet @model {
         /// <param name="containerName">the container name</param>
         internal static void OverrideEntityContainer(string entityName, string containerName)
         {
-            Entity entity = TestHelper.Config.Entities[entityName];
+            Entity entity = CosmosTestHelper.Config.Entities[entityName];
 
             System.Reflection.PropertyInfo prop = entity.GetType().GetProperty("Source");
             // Use reflection to set the entity Source (since `entity` is a record type and technically immutable)

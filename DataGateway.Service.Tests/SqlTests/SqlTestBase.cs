@@ -62,7 +62,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static async Task InitializeTestFixture(TestContext context, string testCategory)
         {
             _testCategory = testCategory;
-            _runtimeConfig = SqlTestHelper.LoadConfig($"{_testCategory}").CurrentValue;
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{_testCategory}");
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(configPath);
+            _runtimeConfig = TestHelper.GetRuntimeConfig(_runtimeConfigProvider);
+            TestHelper.AddMissingEntitiesToConfig(_runtimeConfig);
+
             _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
 
             SetUpSQLMetadataProvider();
@@ -97,13 +101,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         protected static void SetUpSQLMetadataProvider()
         {
-            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
-            mockRuntimeConfigProvider.Setup(x => x.IsDeveloperMode()).Returns(true);
-            mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out _runtimeConfig)).Returns(true);
-            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(_runtimeConfig);
-            mockRuntimeConfigProvider.Setup(x => x.RestPath).Returns("/api");
-            _runtimeConfigProvider = mockRuntimeConfigProvider.Object;
-
             switch (_testCategory)
             {
                 case TestCategory.POSTGRESQL:

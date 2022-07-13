@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.IO;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -99,7 +100,6 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [TestMethod("Validates that JSON deserialization failures are gracefully caught.")]
         public void TestDeserializationFailures()
         {
-            Mock<ILogger<RuntimeConfigPath>> configLogger = new();
             string configJson = @"
 {
     ""data-source"": {
@@ -108,11 +108,8 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
 }";
             Assert.IsFalse(RuntimeConfig.TryGetDeserializedConfig
                              (configJson,
-                             out RuntimeConfig deserializedConfig,
-                             configLogger.Object));
+                             out RuntimeConfig deserializedConfig));
             Assert.IsNull(deserializedConfig);
-            Assert.AreEqual(expected: 1, configLogger.Invocations.Count);
-            Assert.AreEqual(LogLevel.Error, configLogger.Invocations[0].Arguments[0]);
         }
 
         [DataRow("", typeof(ArgumentNullException),
@@ -125,16 +122,18 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             Type exceptionType,
             string exceptionMessage)
         {
-            Mock<ILogger<RuntimeConfigPath>> configLogger = new();
-            RuntimeConfigPath runtimeConfigPath = new()
-            {
-                ConfigFileName = configFileName,
-                Logger = configLogger.Object
-            };
+            RuntimeConfigPath configPath = new()
+                {
+                    ConfigFileName = configFileName
+                };
 
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            RuntimeConfigProvider runtimeConfigProvider
+                = new(configPath,
+                      configProviderLogger.Object);
             try
             {
-                runtimeConfigPath.LoadRuntimeConfigValue();
+                runtimeConfigProvider.LoadRuntimeConfigValue();
                 Assert.Fail();
             }
             catch (Exception ex)
@@ -142,12 +141,12 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
                 Console.WriteLine(ex.Message);
                 Assert.AreEqual(exceptionType, ex.GetType());
                 Assert.AreEqual(exceptionMessage, ex.Message);
-                Assert.AreEqual(0, configLogger.Invocations.Count);
+                Assert.AreEqual(0, configProviderLogger.Invocations.Count);
             }
 
-            Assert.IsFalse(runtimeConfigPath.TryLoadRuntimeConfigValue());
-            Assert.AreEqual(1, configLogger.Invocations.Count);
-            Assert.AreEqual(LogLevel.Error, configLogger.Invocations[0].Arguments[0]);
+            Assert.IsFalse(runtimeConfigProvider.TryLoadRuntimeConfigValue());
+            Assert.AreEqual(1, configProviderLogger.Invocations.Count);
+            Assert.AreEqual(LogLevel.Error, configProviderLogger.Invocations[0].Arguments[0]);
         }
 
         #endregion Negative Tests

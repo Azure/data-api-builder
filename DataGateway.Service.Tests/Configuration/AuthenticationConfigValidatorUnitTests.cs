@@ -154,13 +154,12 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
         public static RuntimeConfigValidator GetMockConfigValidator(ref RuntimeConfig config)
         {
-            RuntimeConfig conf = config;
-            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
-            mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out conf)).Returns(true);
-            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(config);
-            RuntimeConfigProvider runtimeConfigProvider = mockRuntimeConfigProvider.Object;
-            Mock<ILogger<RuntimeConfigValidator>> logger = new();
-            RuntimeConfigValidator configValidator = new(runtimeConfigProvider, new MockFileSystem(), logger.Object);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(config);
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            RuntimeConfigValidator configValidator =
+                new(configProvider,
+                    new MockFileSystem(),
+                    configValidatorLogger.Object);
             return configValidator;
         }
         #endregion

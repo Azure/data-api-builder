@@ -375,19 +375,14 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates the runtime configuration file.")]
         public void TestConfigIsValid()
         {
-            IOptionsMonitor<RuntimeConfig> config =
-                SqlTestHelper.LoadConfig(MSSQL_ENVIRONMENT);
+            RuntimeConfigPath configPath =
+                TestHelper.GetRuntimeConfigPath(MSSQL_ENVIRONMENT);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configPath);
 
-            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
-            RuntimeConfig runtimeConfig = config.CurrentValue;
-            mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out runtimeConfig)).Returns(true);
-            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
-            RuntimeConfigProvider runtimeConfigProvider = mockRuntimeConfigProvider.Object;
             Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
-
             IConfigValidator configValidator =
                 new RuntimeConfigValidator(
-                    runtimeConfigProvider,
+                    configProvider,
                     new MockFileSystem(),
                     configValidatorLogger.Object);
 

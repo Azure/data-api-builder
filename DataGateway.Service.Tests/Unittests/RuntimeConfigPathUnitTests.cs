@@ -123,9 +123,9 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             string exceptionMessage)
         {
             RuntimeConfigPath configPath = new()
-                {
-                    ConfigFileName = configFileName
-                };
+            {
+                ConfigFileName = configFileName
+            };
 
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             RuntimeConfigProvider runtimeConfigProvider

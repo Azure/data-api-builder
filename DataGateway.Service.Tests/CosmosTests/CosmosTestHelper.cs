@@ -4,7 +4,7 @@ using Azure.DataGateway.Service.Configurations;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
 {
-    public class CosmosTestHelper: TestHelper
+    public class CosmosTestHelper : TestHelper
     {
         public static readonly string DB_NAME = "graphqlTestDb";
         private static Lazy<RuntimeConfigPath>

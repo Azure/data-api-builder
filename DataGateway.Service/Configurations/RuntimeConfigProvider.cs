@@ -186,6 +186,8 @@ namespace Azure.DataGateway.Service.Configurations
 
         /// <summary>
         /// Initialize the runtime configuration provider with the specified configurations.
+        /// This initialization method is used when the configuration is sent to the ConfigurationController
+        /// in the form of a string instead of reading the configuration from a configuration file.
         /// </summary>
         /// <param name="configuration">The engine configuration.</param>
         /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>

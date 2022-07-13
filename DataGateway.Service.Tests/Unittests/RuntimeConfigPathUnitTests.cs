@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Data;
 using System.IO;
 using Azure.DataGateway.Config;
@@ -113,9 +114,11 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         }
 
         [DataRow("", typeof(ArgumentNullException),
-            "Could not determine a configuration file name that exists. (Parameter 'Configuration file name')")]
+            "Could not determine a configuration file name that exists. (Parameter 'Configuration file name')",
+            DisplayName = "Empty configuration file name.")]
         [DataRow("NonExistentConfigFile.json", typeof(FileNotFoundException),
-            "Requested configuration file 'NonExistentConfigFile.json' does not exist.")]
+            "Requested configuration file 'NonExistentConfigFile.json' does not exist.",
+            DisplayName = "Non existent configuration file name.")]
         [TestMethod("Validates that loading of runtime config value can handle failures gracefully.")]
         public void TestLoadRuntimeConfigFailures(
             string configFileName,

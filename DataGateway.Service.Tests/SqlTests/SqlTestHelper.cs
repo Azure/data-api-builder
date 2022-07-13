@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
             RuntimeConfig runtimeConfig = configPath.LoadRuntimeConfigValue();
-            AddMissingEntitiesToConfig(runtimeConfig);
+            AddMissingEntitiesToConfig(runtimeConfig, "magazines", "foo");
             return Mock.Of<IOptionsMonitor<RuntimeConfig>>(_ => _.CurrentValue == runtimeConfig);
         }
 
@@ -66,12 +66,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// customized for testing purposes.
         /// </summary>
         /// <param name="configPath"></param>
-        private static void AddMissingEntitiesToConfig(RuntimeConfig config)
+        public static void AddMissingEntitiesToConfig(RuntimeConfig config, string dbObjectName, string nameSpace="")
         {
-            string magazineSource = config.DatabaseType is DatabaseType.mysql ? "\"magazines\"" : "\"foo.magazines\"";
-            string magazineEntityJsonString =
+            string source = config.DatabaseType is DatabaseType.mysql || string.IsNullOrEmpty(nameSpace)? $"\"{dbObjectName}\"" : $"\"{nameSpace}.{dbObjectName}\"";
+            string entityJsonString =
               @"{
-                    ""source"":  " + magazineSource + @",
+                    ""source"":  " + source + @",
                     ""graphql"": true,
                     ""permissions"": [
                       {
@@ -94,10 +94,42 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 }
             };
 
-            Entity magazineEntity = JsonSerializer.Deserialize<Entity>(magazineEntityJsonString, options);
-            config.Entities.Add("Magazine", magazineEntity);
+            Entity entity = JsonSerializer.Deserialize<Entity>(entityJsonString, options);
+            string entityKey = dbObjectName.Equals("magazines") ? "Magazine" : dbObjectName;
+            config.Entities.Add(entityKey, entity);
         }
 
+        public static void AddCompositeViewToConfig(RuntimeConfig runtimeConfig)
+        {
+            string compositeViewSource = "\"books_authors\"";
+            string entityJsonString =
+              @"{
+                    ""source"":  " + compositeViewSource + @",
+                    ""graphql"": true,
+                    ""permissions"": [
+                      {
+                        ""role"": ""anonymous"",
+                        ""actions"": [ ""read"" ]
+                      },
+                      {
+                        ""role"": ""authenticated"",
+                        ""actions"": [" + $" \"{ActionType.CREATE}\", \"{ActionType.READ}\", \"{ActionType.DELETE}\", \"{ActionType.UPDATE}\" ]" +
+                      @"}
+                    ]
+                }";
+
+            JsonSerializerOptions options = new()
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters =
+                {
+                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+                }
+            };
+
+            Entity entity = JsonSerializer.Deserialize<Entity>(entityJsonString, options);
+            runtimeConfig.Entities.Add("books_authors", entity);
+        }
         /// <summary>
         /// Converts strings to JSON objects and does a deep compare
         /// </summary>

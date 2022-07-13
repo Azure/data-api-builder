@@ -45,7 +45,8 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [TestMethod]
         public async Task CheckNoExceptionForNoForiegnKey()
         {
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(TestCategory.POSTGRESQL);
+            _testCategory = TestCategory.POSTGRESQL;
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(_testCategory);
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);

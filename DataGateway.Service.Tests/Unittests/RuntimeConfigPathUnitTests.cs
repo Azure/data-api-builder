@@ -131,6 +131,9 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             try
             {
                 RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
+                // This tests the logger from the constructor.
+                RuntimeConfigProvider configProvider =
+                    new(configPath, configProviderLogger.Object);
                 RuntimeConfigProvider.LoadRuntimeConfigValue(
                     configPath,
                     out RuntimeConfig runtimeConfig);
@@ -140,9 +143,11 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
                 Console.WriteLine(ex.Message);
                 Assert.AreEqual(exceptionType, ex.GetType());
                 Assert.AreEqual(exceptionMessage, ex.Message);
-                Assert.AreEqual(1, configProviderLogger.Invocations.Count);
+                Assert.AreEqual(2, configProviderLogger.Invocations.Count);
+                // This is the error logged by TryLoadRuntimeConfigValue()
+                Assert.AreEqual(LogLevel.Error, configProviderLogger.Invocations[0].Arguments[0]);
                 // This is the information logged by the RuntimeConfigProvider constructor.
-                Assert.AreEqual(LogLevel.Information, configProviderLogger.Invocations[0].Arguments[0]);
+                Assert.AreEqual(LogLevel.Information, configProviderLogger.Invocations[1].Arguments[0]);
             }
         }
 

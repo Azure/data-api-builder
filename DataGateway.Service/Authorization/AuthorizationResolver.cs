@@ -94,7 +94,7 @@ namespace Azure.DataGateway.Service.Authorization
 
             // IsInRole looks at all the claims present in the request
             // Reference: https://github.com/microsoft/referencesource/blob/master/mscorlib/system/security/claims/ClaimsPrincipal.cs
-            return (httpContext.User.Identity!.IsAuthenticated && clientRoleHeader[0].Equals(AuthorizationType.Authenticated.ToString().ToLower()))
+            return (httpContext.User.Identity!.IsAuthenticated && clientRoleHeaderValue.Equals(AuthorizationType.Authenticated.ToString(), StringComparison.OrdinalIgnoreCase))
                 || httpContext.User.IsInRole(clientRoleHeaderValue);
         }
 
@@ -354,7 +354,7 @@ namespace Azure.DataGateway.Service.Authorization
             }
 
             // Add role claim to the claimsInRequestContext as it is not added later.
-            string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER][0];
+            string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
             claimsInRequestContext.Add("roles", new Claim("roles", clientRoleHeader, ClaimValueTypes.String));
 
             foreach (Claim claim in identity.Claims)

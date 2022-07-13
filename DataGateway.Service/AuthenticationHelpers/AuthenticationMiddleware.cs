@@ -38,12 +38,8 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             // When calling parameterless version of AddAuthentication()
             // the default scheme is used to hydrate the httpContext.User object.
             AuthenticateResult authNResult = await httpContext.AuthenticateAsync();
-            if (authNResult is not null)
-            {
-                httpContext.User = authNResult.Principal!;
-            }
 
-            if (authNResult!.None)
+            if (authNResult.None)
             {
                 // The request is to be considered anonymous
                 httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = AuthorizationType.Anonymous.ToString().ToLower();
@@ -66,6 +62,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                 });
                 return;
             }
+
             //Add a claim for the X-MS-API-ROLE header to the request.
             Claim claim = new(ClaimTypes.Role, httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER], ClaimValueTypes.String);
             // To set the IsAuthenticated value as false, omit the authenticationType.

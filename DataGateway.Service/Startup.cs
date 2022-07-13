@@ -32,7 +32,9 @@ namespace Azure.DataGateway.Service
         private ILogger<Startup> _logger;
         private ILogger<RuntimeConfigProvider> _configProviderLogger;
 
-        public Startup(IConfiguration configuration, ILogger<Startup> logger, ILogger<RuntimeConfigProvider> configProviderLogger)
+        public Startup(IConfiguration configuration,
+            ILogger<Startup> logger,
+            ILogger<RuntimeConfigProvider> configProviderLogger)
         {
             Configuration = configuration;
             _logger = logger;

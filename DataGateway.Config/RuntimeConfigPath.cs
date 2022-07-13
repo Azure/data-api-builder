@@ -2,7 +2,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataGateway.Service.Exceptions;
-using Microsoft.Extensions.Logging;
 
 namespace Azure.DataGateway.Config
 {

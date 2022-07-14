@@ -41,6 +41,7 @@ namespace Azure.DataGateway.Service.Services
         public ISchema? Schema { private set; get; }
         public IRequestExecutor? Executor { private set; get; }
         public ISchemaBuilder SchemaBuilderObj { private set; get; }
+        public DocumentNode RootDocNode { private set; get; }
 
         public GraphQLService(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -77,6 +78,7 @@ namespace Azure.DataGateway.Service.Services
         /// <exception cref="DataGatewayException">Error will be raised if no database type is set</exception>
         private void Parse(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
+            RootDocNode = root;
             SchemaBuilderObj = SchemaBuilder.New()
                 .AddDocument(root)
                 .AddDirectiveType<ModelDirectiveType>()

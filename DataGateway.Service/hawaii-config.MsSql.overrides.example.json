@@ -24,11 +24,7 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "EasyAuth",
-        "jwt": {
-          "audience": "",
-          "issuer": ""
-        }
+        "provider": "StaticWebApps"
       }
     }
   },

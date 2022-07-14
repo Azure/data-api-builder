@@ -1,3 +1,4 @@
+using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Azure.DataGateway.Service.AuthenticationHelpers
@@ -12,5 +13,6 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     /// </summary>
     public class EasyAuthAuthenticationOptions : AuthenticationSchemeOptions
     {
+        public EasyAuthType EasyAuthProvider { get; set; }
     }
 }

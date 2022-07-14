@@ -184,9 +184,14 @@ namespace Azure.DataGateway.Service.Services
 
             foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
             {
-                sqlMetadataProvider.TryGetExposedColumnName(entityName: insertRequestCtx.EntityName,
-                                                            backingFieldName: column.Key,
-                                                            out string? exposedName);
+                if (!sqlMetadataProvider.TryGetExposedColumnName(
+                    entityName: insertRequestCtx.EntityName,
+                    backingFieldName: column.Key,
+                    out string? exposedName))
+                {
+                    continue;
+                }
+                
                 // Request body must have value defined for included non-nullable columns
                 if (!column.Value.IsNullable && fieldsInRequestBody.Contains(exposedName))
                 {

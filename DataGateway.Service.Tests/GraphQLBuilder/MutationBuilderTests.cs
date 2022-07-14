@@ -704,8 +704,6 @@ type Bar {
 }
                 ";
 
-
-
             (DocumentNode mutationRoot, FieldDefinitionNode field) = GenerateTestMutationFieldNodes(gql);
             InputValueDefinitionNode inputArg = field.Arguments[2];
             InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);

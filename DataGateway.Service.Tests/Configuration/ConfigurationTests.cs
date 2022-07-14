@@ -15,11 +15,10 @@ using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Services.MetadataProviders;
-using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
@@ -374,16 +373,16 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates the runtime configuration file.")]
         public void TestConfigIsValid()
         {
-            IOptionsMonitor<RuntimeConfig> config =
-                SqlTestHelper.LoadConfig(MSSQL_ENVIRONMENT);
+            RuntimeConfigPath configPath =
+                TestHelper.GetRuntimeConfigPath(MSSQL_ENVIRONMENT);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configPath);
 
-            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
-            RuntimeConfig runtimeConfig = config.CurrentValue;
-            mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out runtimeConfig)).Returns(true);
-            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
-            RuntimeConfigProvider runtimeConfigProvider = mockRuntimeConfigProvider.Object;
-
-            IConfigValidator configValidator = new RuntimeConfigValidator(runtimeConfigProvider, new MockFileSystem());
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            IConfigValidator configValidator =
+                new RuntimeConfigValidator(
+                    configProvider,
+                    new MockFileSystem(),
+                    configValidatorLogger.Object);
 
             configValidator.ValidateConfig();
         }
@@ -410,19 +409,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
 
             }
-        }
-
-        [TestMethod("Validates that an exception is thrown if config file for the runtime engine is not found.")]
-        public void TestConfigFileNotFound()
-        {
-            RuntimeConfigPath runtimeConfigPath = new()
-            {
-                ConfigFileName = "NonExistentConfigFile.json"
-            };
-
-            Exception ex = Assert.ThrowsException<FileNotFoundException>(() => runtimeConfigPath.LoadRuntimeConfigValue());
-            Console.WriteLine(ex.Message);
-            Assert.AreEqual(ex.Message, "Requested configuration file NonExistentConfigFile.json does not exist.");
         }
 
         [TestCleanup]

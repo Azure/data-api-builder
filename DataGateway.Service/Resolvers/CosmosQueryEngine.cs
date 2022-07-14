@@ -11,6 +11,7 @@ using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
 
@@ -162,7 +163,7 @@ namespace Azure.DataGateway.Service.Resolvers
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend.
         // </summary>
-        public Task<JsonDocument> ExecuteAsync(RestRequestContext queryStructure)
+        public Task<IActionResult> ExecuteAsync(RestRequestContext context)
         {
             throw new NotImplementedException();
         }

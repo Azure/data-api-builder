@@ -77,7 +77,8 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         [TestMethod]
         public async Task TestMissingEasyAuthToken()
         {
-            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(null, EasyAuthType.StaticWebApps);
+            string? token = null;
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token, EasyAuthType.StaticWebApps);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);

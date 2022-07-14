@@ -27,9 +27,13 @@ namespace Hawaii.Cli.Models
         public static object? GetRestDetails(string? rest)
         {
             object? rest_detail;
-            if (rest is null || bool.TryParse(rest, out _))
+            if (rest is null)
+                return rest;
+
+            bool trueOrFalse;
+            if (bool.TryParse(rest, out trueOrFalse))
             {
-                rest_detail = rest;
+                rest_detail = trueOrFalse;
             }
             else
             {
@@ -47,9 +51,15 @@ namespace Hawaii.Cli.Models
         public static object? GetGraphQLDetails(string? graphQL)
         {
             object? graphQL_detail;
-            if (graphQL is null || bool.TryParse(graphQL, out _))
+            if (graphQL is null)
             {
-                graphQL_detail = graphQL;
+                return graphQL;
+            }
+
+            bool trueOrFalse;
+            if (bool.TryParse(graphQL, out trueOrFalse))
+            {
+                graphQL_detail = trueOrFalse;
             }
             else
             {
@@ -92,7 +102,10 @@ namespace Hawaii.Cli.Models
             {
                 string[]? fieldsToIncludeArray = fieldsToInclude is not null ? fieldsToInclude.Split(",") : null;
                 string[]? fieldsToExcludeArray = fieldsToExclude is not null ? fieldsToExclude.Split(",") : null;
-                actionObject = new Action(action, Policy: null, Fields: new Field(fieldsToIncludeArray, fieldsToExcludeArray));
+                HashSet<string>? fieldsToIncludeSet = fieldsToIncludeArray is not null ? new HashSet<string>(fieldsToIncludeArray) : null;
+                HashSet<string>? fieldsToExcludeSet = fieldsToExcludeArray is not null ? new HashSet<string>(fieldsToExcludeArray) : null;
+
+                actionObject = new Action(action, Policy: null, Fields: new Field(fieldsToIncludeSet, fieldsToExcludeSet));
             }
 
             return actionObject;

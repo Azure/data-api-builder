@@ -121,7 +121,10 @@ public class EndToEndTests
         Assert.IsTrue(runtimeConfig.Entities.ContainsKey("todo"));
         Entity entity = runtimeConfig.Entities["todo"];
         Assert.AreEqual("{\"route\":\"/todo\"}", JsonSerializer.Serialize(entity.Rest));
-        Assert.AreEqual("true", entity.GraphQL!.ToString());
+        Assert.IsNotNull(entity.GraphQL);
+        Assert.IsTrue(((JsonElement)entity.GraphQL).Deserialize<bool>());
+        //The value isn entity.GraphQL is true/false, we expect the serialization to be a string.
+        Assert.AreEqual("true", JsonSerializer.Serialize(entity.GraphQL), ignoreCase: true);
         Assert.AreEqual(1, entity.Permissions.Length);
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
         Assert.AreEqual(4, entity.Permissions[0].Actions.Length);

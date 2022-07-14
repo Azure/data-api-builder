@@ -16,7 +16,24 @@ namespace Hawaii.Cli.Tests
         {
             // when the rest is a boolean object
             object? restDetails = GetRestDetails("true");
-            Assert.AreEqual("true", restDetails);
+            Assert.IsNotNull(restDetails);
+            Assert.IsInstanceOfType(restDetails, typeof(bool));
+            Assert.IsTrue((bool)restDetails);
+
+            restDetails = GetRestDetails("True");
+            Assert.IsNotNull(restDetails);
+            Assert.IsInstanceOfType(restDetails, typeof(bool));
+            Assert.IsTrue((bool)restDetails);
+
+            restDetails = GetRestDetails("false");
+            Assert.IsNotNull(restDetails);
+            Assert.IsInstanceOfType(restDetails, typeof(bool));
+            Assert.IsFalse((bool)restDetails);
+
+            restDetails = GetRestDetails("False");
+            Assert.IsNotNull(restDetails);
+            Assert.IsInstanceOfType(restDetails, typeof(bool));
+            Assert.IsFalse((bool)restDetails);
 
             // when rest is non-boolean string
             restDetails = GetRestDetails("book");
@@ -30,9 +47,28 @@ namespace Hawaii.Cli.Tests
         [TestMethod]
         public void TestGetGraphQLDetails()
         {
-            // when graphql is a boolean object
             object? graphQlDetails = GetGraphQLDetails("true");
-            Assert.AreEqual("true", graphQlDetails);
+            Assert.IsNotNull(graphQlDetails);
+            Assert.IsInstanceOfType(graphQlDetails, typeof(bool));
+            Assert.IsTrue((bool)graphQlDetails);
+
+            graphQlDetails = GetGraphQLDetails("True");
+            Assert.IsNotNull(graphQlDetails);
+            Assert.IsInstanceOfType(graphQlDetails, typeof(bool));
+            Assert.IsTrue((bool)graphQlDetails);
+
+            graphQlDetails = GetGraphQLDetails("false");
+            Assert.IsNotNull(graphQlDetails);
+            Assert.IsInstanceOfType(graphQlDetails, typeof(bool));
+            Assert.IsFalse((bool)graphQlDetails);
+
+            graphQlDetails = GetGraphQLDetails("False");
+            Assert.IsNotNull(graphQlDetails);
+            Assert.IsInstanceOfType(graphQlDetails, typeof(bool));
+            Assert.IsFalse((bool)graphQlDetails);
+
+            //when graphql is null
+            Assert.IsNull(GetGraphQLDetails(null));
 
             // when graphql is non-boolean string
             graphQlDetails = GetGraphQLDetails("book");

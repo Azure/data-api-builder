@@ -275,13 +275,15 @@ namespace Hawaii.Cli.Tests
                                             {
                                                 ""action"": ""read"",
                                                 ""fields"": {
-                                                    ""include"": [""id"", ""type"", ""quantity""]
+                                                    ""include"": [""id"", ""type"", ""quantity""],
+                                                    ""exclude"": []
                                                 }
                                             },
                                             {
                                                 ""action"": ""delete"",
                                                 ""fields"": {
-                                                    ""include"": [""id"", ""type"", ""quantity""]
+                                                    ""include"": [""id"", ""type"", ""quantity""],
+                                                    ""exclude"": []
                                                 }
                                             },
                                             {

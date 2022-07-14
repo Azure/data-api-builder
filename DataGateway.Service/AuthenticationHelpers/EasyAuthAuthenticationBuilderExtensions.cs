@@ -1,3 +1,4 @@
+using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Azure.DataGateway.Service.AuthenticationHelpers
@@ -13,9 +14,10 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         /// Add authentication with Static Web Apps.
         /// </summary>
         /// <param name="builder">Authentication builder.</param>
+        /// <param name="easyAuthAuthenticationProvider">EasyAuth provider type. StaticWebApps or AppService</param>
         /// <returns>The builder, to chain commands.</returns>
         public static AuthenticationBuilder AddEasyAuthAuthentication(
-             this AuthenticationBuilder builder)
+             this AuthenticationBuilder builder, EasyAuthType easyAuthAuthenticationProvider)
         {
             if (builder is null)
             {
@@ -25,8 +27,17 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
                 authenticationScheme: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME,
                 displayName: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME,
-                options => { });
-
+                options =>
+                {
+                    if (easyAuthAuthenticationProvider is EasyAuthType.StaticWebApps)
+                    {
+                        options.EasyAuthProvider = EasyAuthType.StaticWebApps;
+                    }
+                    else if (easyAuthAuthenticationProvider is EasyAuthType.AppService)
+                    {
+                        options.EasyAuthProvider = EasyAuthType.AppService;
+                    }
+                });
             return builder;
         }
     }

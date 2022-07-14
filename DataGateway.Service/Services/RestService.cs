@@ -159,10 +159,7 @@ namespace Azure.DataGateway.Service.Services
             switch (operationType)
             {
                 case Operation.Find:
-                {
-                    using JsonDocument jsonDoc = await _queryEngine.ExecuteAsync(context);
-                    return FormatFindResult(jsonDoc, (FindRequestContext)context);
-                }
+                    return await _queryEngine.ExecuteAsync(context);
                 case Operation.Insert:
                 case Operation.Delete:
                 case Operation.Update:
@@ -218,98 +215,6 @@ namespace Azure.DataGateway.Service.Services
             }
 
             return (entityName, primaryKeyRoute);
-        }
-
-        /// <summary>
-        /// Format the results from a Find operation. Check if there is a requirement
-        /// for a nextLink, and if so, add this value to the array of JsonElements to
-        /// be used as part of the response.
-        /// </summary>
-        /// <param name="jsonDoc">The JsonDocument from the query.</param>
-        /// <param name="context">The RequestContext.</param>
-        /// <returns>An OkObjectResult from a Find operation that has been correctly formatted.</returns>
-        private OkObjectResult? FormatFindResult(JsonDocument? jsonDoc, FindRequestContext context)
-        {
-            if (jsonDoc is null)
-            {
-                return null;
-            }
-
-            JsonElement jsonElement = jsonDoc.RootElement;
-
-            // If the results are not a collection or if the query does not have a next page
-            // no nextLink is needed, return JsonDocument as is
-            if (jsonElement.ValueKind != JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
-            {
-                return OkResponse(jsonDoc.RootElement.Clone());
-            }
-
-            // More records exist than requested, we know this by requesting 1 extra record,
-            // that extra record is removed here.
-            IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
-
-            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
-            string after = SqlPaginationUtil.MakeCursorFromJsonElement(
-                               element: rootEnumerated.Last(),
-                               orderByColumns: context.OrderByClauseInUrl,
-                               primaryKey: _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
-                               entityName: context.EntityName,
-                               schemaName: context.DatabaseObject.SchemaName,
-                               tableName: context.DatabaseObject.Name,
-                               sqlMetadataProvider: _sqlMetadataProvider);
-
-            // nextLink is the URL needed to get the next page of records using the same query options
-            // with $after base64 encoded for opaqueness
-            string path = UriHelper.GetEncodedUrl(GetHttpContext().Request).Split('?')[0];
-            JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
-                                  path,
-                                  nvc: context!.ParsedQueryString,
-                                  after);
-            rootEnumerated = rootEnumerated.Append(nextLink);
-            return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated));
-        }
-
-        /// <summary>
-        /// Helper function returns an OkObjectResult with provided arguments in a
-        /// form that complies with vNext Api guidelines.
-        /// </summary>
-        /// <param name="jsonResult">Value representing the Json results of the client's request.</param>
-        /// <returns>Correctly formatted OkObjectResult.</returns>
-        public OkObjectResult OkResponse(JsonElement jsonResult)
-        {
-            // For consistency we return all values as type Array
-            if (jsonResult.ValueKind != JsonValueKind.Array)
-            {
-                string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
-                jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
-            }
-
-            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
-            // More than 0 records, and the last element is of type array, then we have pagination
-            if (resultEnumerated.Count() > 0 && resultEnumerated.Last().ValueKind == JsonValueKind.Array)
-            {
-                // Get the nextLink
-                // resultEnumerated will be an array of the form
-                // [{object1}, {object2},...{objectlimit}, [{nextLinkObject}]]
-                // if the last element is of type array, we know it is nextLink
-                // we strip the "[" and "]" and then save the nextLink element
-                // into a dictionary with a key of "nextLink" and a value that
-                // represents the nextLink data we require.
-                string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated.Last());
-                Dictionary<string, object> nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString[1..^1])!;
-                IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count() - 1);
-                return new OkObjectResult(new
-                {
-                    value = value,
-                    @nextLink = nextLink["nextLink"]
-                });
-            }
-
-            // no pagination, do not need nextLink
-            return new OkObjectResult(new
-            {
-                value = resultEnumerated
-            });
         }
 
         private HttpContext GetHttpContext()

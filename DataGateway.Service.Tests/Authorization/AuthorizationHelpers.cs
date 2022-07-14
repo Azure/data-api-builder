@@ -1,3 +1,4 @@
+#nullable enable
 using System.Collections.Generic;
 using System.Text.Json;
 using Azure.DataGateway.Config;
@@ -26,13 +27,11 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// <returns>AuthorizationResolver object</returns>
         public static AuthorizationResolver InitAuthorizationResolver(RuntimeConfig runtimeConfig)
         {
-            Mock<RuntimeConfigProvider> runtimeConfigProvider = new();
-            runtimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
-            runtimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out runtimeConfig)).Returns(true);
-
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(runtimeConfig);
             Mock<ISqlMetadataProvider> metadataProvider = new();
             TableDefinition sampleTable = CreateSampleTable();
             metadataProvider.Setup(x => x.GetTableDefinition(TEST_ENTITY)).Returns(sampleTable);
+            metadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.mssql);
 
             string outParam;
             Dictionary<string, Dictionary<string, string>> _exposedNameToBackingColumnMapping = CreateColumnMappingTable();
@@ -40,7 +39,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                               .Callback(new metaDataCallback((string entity, string exposedField, out string backingColumn) => _ = _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn)))
                               .Returns((string entity, string exposedField, string backingColumn) => _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn));
 
-            return new AuthorizationResolver(runtimeConfigProvider.Object, metadataProvider.Object);
+            return new AuthorizationResolver(runtimeConfigProvider, metadataProvider.Object);
         }
 
         /// <summary>
@@ -57,22 +56,26 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string entityName = "SampleEntity",
             string roleName = "Reader",
             string actionName = ActionType.CREATE,
-            string[] includedCols = null,
-            string[] excludedCols = null
+            HashSet<string>? includedCols = null,
+            HashSet<string>? excludedCols = null,
+            string? databasePolicy = null,
+            string? requestPolicy = null
             )
         {
             Field fieldsForRole = new(
-                Include: includedCols,
-                Exclude: excludedCols);
+                include: includedCols,
+                exclude: excludedCols);
+
+            Policy policy = new(requestPolicy, databasePolicy);
 
             Action actionForRole = new(
                 Name: actionName,
                 Fields: fieldsForRole,
-                Policy: null);
+                Policy: policy);
 
             PermissionSetting permissionForEntity = new(
-                Role: roleName,
-                Actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+                role: roleName,
+                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
                 Source: TEST_ENTITY,

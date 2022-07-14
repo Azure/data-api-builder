@@ -24,41 +24,6 @@ namespace Azure.DataGateway.Config
         public string? CONNSTRING { get; set; }
 
         /// <summary>
-        /// Reads the contents of the json config file if it exists,
-        /// and sets the deserialized RuntimeConfig object.
-        /// </summary>
-        public RuntimeConfig? LoadRuntimeConfigValue()
-        {
-            string? runtimeConfigJson = null;
-            if (!string.IsNullOrEmpty(ConfigFileName))
-            {
-                if (File.Exists(ConfigFileName))
-                {
-                    runtimeConfigJson = ParseConfigJsonAndReplaceEnvVariables(File.ReadAllText(ConfigFileName));
-                }
-                else
-                {
-                    throw new FileNotFoundException($"Requested configuration file {ConfigFileName} does not exist.");
-                }
-            }
-
-            if (!string.IsNullOrEmpty(runtimeConfigJson))
-            {
-                RuntimeConfig configValue = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(runtimeConfigJson);
-                configValue.DetermineGlobalSettings();
-
-                if (!string.IsNullOrWhiteSpace(CONNSTRING))
-                {
-                    configValue.ConnectionString = CONNSTRING;
-                }
-
-                return configValue;
-            }
-
-            return null;
-        }
-
-        /// <summary>
         /// Parse Json and replace @env('ENVIRONMENT_VARIABLE_NAME') with
         /// the environment variable's value that corresponds to ENVIRONMENT_VARIABLE_NAME.
         /// If no environment variable is found with that name, throw exception.

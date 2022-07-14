@@ -217,6 +217,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         /// <param name="root">The GraphQL document root to find GraphQL schema items in.</param>
         /// <param name="databaseType">Type of database we're generating the field for.</param>
         /// <param name="entity">Runtime config information for the type.</param>
+        /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
         /// <returns>A GraphQL field definition named <c>create*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
         public static FieldDefinitionNode Build(
             NameNode name,
@@ -224,7 +225,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             DocumentNode root,
             DatabaseType databaseType,
-            Entity entity)
+            Entity entity,
+            IEnumerable<string>? rolesAllowedForMutation = null)
         {
             InputObjectTypeDefinitionNode input = GenerateCreateInputType(
                 inputs,
@@ -233,6 +235,13 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                 root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),
                 databaseType,
                 entity);
+
+            // Create authorize directive denoting allowed roles
+            List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+            if (rolesAllowedForMutation is not null)
+            {
+                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForMutation));
+            }
 
             return new(
                 location: null,
@@ -248,7 +257,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     new List<DirectiveNode>())
                 },
                 new NamedTypeNode(FormatNameForObject(name, entity)),
-                new List<DirectiveNode>()
+                fieldDefinitionNodeDirectives
             );
         }
     }

@@ -7,15 +7,20 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Services.MetadataProviders;
+using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Cosmos;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
@@ -28,12 +33,15 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         internal static CosmosQueryEngine _queryEngine;
         internal static CosmosMutationEngine _mutationEngine;
         internal static GraphQLController _controller;
+        internal static RuntimeConfigProvider _configProvider;
+
         internal static CosmosClient Client { get; private set; }
 
         [ClassInitialize]
         public static void Init(TestContext context)
         {
-            _clientProvider = new CosmosClientProvider(TestHelper.ConfigProvider);
+            _configProvider = TestHelper.GetRuntimeConfigProvider(CosmosTestHelper.ConfigPath);
+            _clientProvider = new CosmosClientProvider(_configProvider);
             string jsonString = @"
 type Character @model {
     id : ID,
@@ -61,16 +69,22 @@ type Star @model {
                 { @"./schema.gql", new MockFileData(jsonString) }
             });
 
-            CosmosSqlMetadataProvider _metadataStoreProvider = new(TestHelper.ConfigProvider, fileSystem);
+            CosmosSqlMetadataProvider _metadataStoreProvider = new(_configProvider, fileSystem);
+
+            //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.
+            Mock<IAuthorizationResolver> authorizationResolverCosmos = new();
+            authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet", "Star" }));
+
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
             _graphQLService = new GraphQLService(
-                TestHelper.ConfigProvider,
+                _configProvider,
                 _queryEngine,
                 _mutationEngine,
                 new DocumentCache(),
                 new Sha256DocumentHashProvider(),
-                _metadataStoreProvider);
+                _metadataStoreProvider,
+                authorizationResolverCosmos.Object);
             _controller = new GraphQLController(_graphQLService);
             Client = _clientProvider.Client;
         }
@@ -91,7 +105,7 @@ type Star @model {
             {
                 string uid = Guid.NewGuid().ToString();
                 idList.Add(uid);
-                dynamic sourceItem = TestHelper.GetItem(uid, _planets[i % (_planets.Length)], i);
+                dynamic sourceItem = CosmosTestHelper.GetItem(uid, _planets[i % (_planets.Length)], i);
                 Client.GetContainer(dbName, containerName)
                     .CreateItemAsync(sourceItem, new PartitionKey(uid)).Wait();
             }
@@ -104,7 +118,13 @@ type Star @model {
             HttpRequestMessage request = new();
             MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
             request.Method = HttpMethod.Post;
-            ClaimsPrincipal user = new(new ClaimsIdentity(authenticationType: "Bearer"));
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identity = new(authenticationType: "Bearer");
+            identity.AddClaim(new Claim(ClaimTypes.Role, "anonymous"));
+            identity.AddClaim(new Claim(ClaimTypes.Role, "authenticated"));
+
+            ClaimsPrincipal user = new(identity);
             DefaultHttpContext httpContext = new()
             {
                 Request = { Body = stream, ContentLength = stream.Length },
@@ -120,7 +140,8 @@ type Star @model {
         /// <param name="containerName">the container name</param>
         internal static void OverrideEntityContainer(string entityName, string containerName)
         {
-            Entity entity = TestHelper.Config.Entities[entityName];
+            RuntimeConfig config = _configProvider.GetRuntimeConfiguration();
+            Entity entity = config.Entities[entityName];
 
             System.Reflection.PropertyInfo prop = entity.GetType().GetProperty("Source");
             // Use reflection to set the entity Source (since `entity` is a record type and technically immutable)
@@ -176,6 +197,15 @@ type Star @model {
 
             return JsonDocument.Parse(jarray.ToString().Trim());
 
+        }
+
+        private static Dictionary<string, EntityMetadata> GetEntityPermissionsMap(string[] entities)
+        {
+            return GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    entityNames: entities,
+                    actionNames: new string[] { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE },
+                    roles: new string[] { "anonymous", "authenticated" }
+                );
         }
 
     }

@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,7 +7,6 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -441,7 +438,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PutOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                "PutOne_Update_IfMatchHeaders_Test",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE id = 1 AND title = 'The Return of the King' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -591,7 +588,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PatchOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                "PatchOne_Update_IfMatchHeaders_Test",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE id = 1 AND title = 'The Hobbit Returns to The Shire' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -599,7 +596,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
             {
                 "PatchOne_Update_Default_Test",
                 $"SELECT [id], [book_id], [content] FROM { _tableWithCompositePrimaryKey } " +
-                $"WHERE id = 567 AND [book_id] = 1 AND [content] = 'That's a great book' " +
+                $"WHERE id = 567 AND [book_id] = 1 AND [content] = 'That''s a great book' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -622,7 +619,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "PatchOne_Update_Nulled_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'books' " +
+                $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] is NULL AND [piecesRequired] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
@@ -660,7 +657,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 _sqlMetadataProvider,
                 _httpContextAccessor.Object,
                 _authorizationService.Object,
-                _authZResolver,
+                _authorizationResolver,
                 _runtimeConfigProvider);
             _restController = new RestController(_restService);
         }
@@ -692,15 +689,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
             HeaderDictionary headers = new();
             headers.Add("x-ms-client-principal", Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"hello\":\"world\"}")));
 
-            // Features are used to setup the httpcontext such that the test will run without null references
-            IFeatureCollection features = new FeatureCollection();
-            features.Set<IHttpRequestFeature>(new HttpRequestFeature { Headers = headers });
-            features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(new MemoryStream()));
-            features.Set<IHttpResponseFeature>(new HttpResponseFeature { StatusCode = (int)HttpStatusCode.OK });
-            DefaultHttpContext httpContext = new(features);
-
-            ConfigureRestController(_restController, string.Empty);
-            _restController.ControllerContext.HttpContext = httpContext;
+            ConfigureRestController(_restController, string.Empty, Operation.None);
 
             // Setup params to invoke function with
             // Must use valid entity name

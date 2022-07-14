@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -32,9 +33,9 @@ namespace Azure.DataGateway.Service.Resolvers
         public Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters);
 
         /// <summary>
-        /// Given the RestRequestContext structure, obtains the query text and executes it against the backend.
+        /// Given the RestRequestContext, obtains the query text and executes it against the backend.
         /// </summary>
-        public Task<JsonDocument> ExecuteAsync(RestRequestContext queryStructure);
+        public Task<IActionResult> ExecuteAsync(RestRequestContext context);
 
         /// <summary>
         /// Resolves a jsonElement representing an inner object based on the field's schema and metadata

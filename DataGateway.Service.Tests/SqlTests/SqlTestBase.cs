@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
@@ -48,8 +49,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
         protected static RuntimeConfigProvider _runtimeConfigProvider;
-        protected static IAuthorizationResolver _authZResolver;
+        protected static IAuthorizationResolver _authorizationResolver;
         protected static RuntimeConfig _runtimeConfig;
+        protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -60,7 +62,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static async Task InitializeTestFixture(TestContext context, string testCategory)
         {
             _testCategory = testCategory;
-            _runtimeConfig = SqlTestHelper.LoadConfig($"{_testCategory}").CurrentValue;
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{_testCategory}");
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
+            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
+            TestHelper.AddMissingEntitiesToConfig(_runtimeConfig);
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
 
             SetUpSQLMetadataProvider();
             // Setup AuthorizationService to always return Authorized.
@@ -78,7 +85,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _queryEngine = new SqlQueryEngine(
                 _queryExecutor,
                 _queryBuilder,
-                _sqlMetadataProvider);
+                _sqlMetadataProvider,
+                _httpContextAccessor.Object);
             _mutationEngine =
                 new SqlMutationEngine(
                 _queryEngine,
@@ -89,17 +97,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await _sqlMetadataProvider.InitializeAsync();
 
             //Initialize the authorization resolver object
-            _authZResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
+            _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
         }
 
         protected static void SetUpSQLMetadataProvider()
         {
-            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
-            mockRuntimeConfigProvider.Setup(x => x.IsDeveloperMode()).Returns(true);
-            mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out _runtimeConfig)).Returns(true);
-            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(_runtimeConfig);
-            mockRuntimeConfigProvider.Setup(x => x.RestPath).Returns("/api");
-            _runtimeConfigProvider = mockRuntimeConfigProvider.Object;
+            _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
 
             switch (_testCategory)
             {
@@ -112,16 +115,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         new PostgreSqlMetadataProvider(
                             _runtimeConfigProvider,
                             _queryExecutor,
-                            _queryBuilder);
+                            _queryBuilder,
+                            _sqlMetadataLogger);
                     break;
                 case TestCategory.MSSQL:
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
-                    _sqlMetadataProvider = new MsSqlMetadataProvider(
-                        _runtimeConfigProvider,
-                        _queryExecutor, _queryBuilder);
+                    _sqlMetadataProvider =
+                        new MsSqlMetadataProvider(
+                            _runtimeConfigProvider,
+                            _queryExecutor, _queryBuilder,
+                            _sqlMetadataLogger);
                     break;
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
@@ -132,7 +138,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                          new MySqlMetadataProvider(
                              _runtimeConfigProvider,
                              _queryExecutor,
-                             _queryBuilder);
+                             _queryBuilder,
+                             _sqlMetadataLogger);
                     break;
             }
         }
@@ -147,26 +154,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         /// <param name="queryStringUrl">query</param>
         /// <param name="bodyData">The data to be put in the request body e.g. GraphQLQuery</param>
+        /// <param name="operation">The operation used to define the HttpContext HTTP Method</param>
         /// <returns>The http context with request consisting of the given query string (if any)
         /// and request body (if any) as a stream of utf-8 bytes.</returns>
         protected static DefaultHttpContext GetRequestHttpContext(
             string queryStringUrl = null,
             IHeaderDictionary headers = null,
-            string bodyData = null)
+            string bodyData = null,
+            Operation operation = Operation.Find)
         {
             DefaultHttpContext httpContext;
+            IFeatureCollection features = new FeatureCollection();
+            //Add response features
+            features.Set<IHttpResponseFeature>(new HttpResponseFeature());
+            features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(new MemoryStream()));
+
             if (headers is not null)
             {
-                IFeatureCollection features = new FeatureCollection();
-                features.Set<IHttpRequestFeature>(new HttpRequestFeature { Headers = headers });
-                features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(new MemoryStream()));
-                // set Response StatusCode here to avoid null reference when returning exception in test with supplied headers
-                features.Set<IHttpResponseFeature>(new HttpResponseFeature { StatusCode = 200 });
+                features.Set<IHttpRequestFeature>(new HttpRequestFeature { Headers = headers, Method = SqlTestHelper.OperationTypeToHTTPVerb(operation) });
                 httpContext = new(features);
             }
             else
             {
-                httpContext = new();
+                features.Set<IHttpRequestFeature>(new HttpRequestFeature { Method = SqlTestHelper.OperationTypeToHTTPVerb(operation) });
+                httpContext = new(features);
             }
 
             if (!string.IsNullOrEmpty(queryStringUrl))
@@ -180,6 +191,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 httpContext.Request.Body = stream;
                 httpContext.Request.ContentLength = stream.Length;
             }
+
+            // Add identity object to the Mock context object.
+            ClaimsIdentity identity = new(authenticationType: "Bearer");
+            identity.AddClaim(new Claim(ClaimTypes.Role, "anonymous"));
+            identity.AddClaim(new Claim(ClaimTypes.Role, "authenticated"));
+
+            ClaimsPrincipal user = new(identity);
+            httpContext.User = user;
 
             // Set the user role as authenticated to allow tests to execute with all privileges.
             httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = "authenticated";
@@ -256,8 +275,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             ConfigureRestController(
                 controller,
                 queryString,
+                operationType,
                 headers,
-                requestBody);
+                requestBody
+                );
             string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
             if (expectedLocationHeader != null)
             {
@@ -366,14 +387,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static void ConfigureRestController(
             RestController restController,
             string queryString,
+            Operation operation,
             IHeaderDictionary headers = null,
-            string requestBody = null)
+            string requestBody = null
+            )
         {
             restController.ControllerContext.HttpContext =
                 GetRequestHttpContext(
                     queryString,
                     headers,
-                    bodyData: requestBody);
+                    bodyData: requestBody,
+                    operation);
 
             // Set the mock context accessor's request same as the controller's request.
             _httpContextAccessor.Setup(x => x.HttpContext.Request).Returns(restController.ControllerContext.HttpContext.Request);

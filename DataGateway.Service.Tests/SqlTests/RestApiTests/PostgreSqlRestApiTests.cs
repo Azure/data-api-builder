@@ -695,7 +695,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
-                "PutOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                "PutOne_Update_IfMatchHeaders_Test",
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
@@ -713,7 +713,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                         SELECT id, book_id, content
                         FROM " + _tableWithCompositePrimaryKey + @"
                         WHERE id = 568 AND book_id = 1 AND content ='Good book to read'
-                            AND publisher_id = 1234
                     ) AS subq
                 "
             },
@@ -926,7 +925,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
-                "PatchOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                "PatchOne_Update_IfMatchHeaders_Test",
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
@@ -943,7 +942,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     FROM (
                         SELECT id, book_id, content
                         FROM " + _tableWithCompositePrimaryKey + @"
-                        WHERE id = 567 AND book_id = 1 AND content = 'That's a great book'
+                        WHERE id = 567 AND book_id = 1 AND content = 'That''s a great book'
                     ) AS subq
                 "
             },
@@ -1020,7 +1019,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 _sqlMetadataProvider,
                 _httpContextAccessor.Object,
                 _authorizationService.Object,
-                _authZResolver,
+                _authorizationResolver,
                 _runtimeConfigProvider);
             _restController = new RestController(_restService);
         }

@@ -1,8 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
@@ -57,50 +54,6 @@ namespace Azure.DataGateway.Service.Controllers
                     message = message,
                     status = (int)status
                 }
-            });
-        }
-
-        /// <summary>
-        /// Helper function returns an OkObjectResult with provided arguments in a
-        /// form that complies with vNext Api guidelines.
-        /// </summary>
-        /// <param name="jsonElement">Value representing the Json results of the client's request.</param>
-        /// <param name="url">Value represents the complete url needed to continue with paged results.</param>
-        /// <returns></returns>
-        private OkObjectResult OkResponse(JsonElement jsonResult)
-        {
-            // For consistency we return all values as type Array
-            if (jsonResult.ValueKind != JsonValueKind.Array)
-            {
-                string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
-                jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
-            }
-
-            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
-            // More than 0 records, and the last element is of type array, then we have pagination
-            if (resultEnumerated.Count() > 0 && resultEnumerated.Last().ValueKind == JsonValueKind.Array)
-            {
-                // Get the nextLink
-                // resultEnumerated will be an array of the form
-                // [{object1}, {object2},...{objectlimit}, [{nextLinkObject}]]
-                // if the last element is of type array, we know it is nextLink
-                // we strip the "[" and "]" and then save the nextLink element
-                // into a dictionary with a key of "nextLink" and a value that
-                // represents the nextLink data we require.
-                string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated.Last());
-                Dictionary<string, object> nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString[1..^1])!;
-                IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count() - 1);
-                return Ok(new
-                {
-                    value = value,
-                    @nextLink = nextLink["nextLink"]
-                });
-            }
-
-            // no pagination, do not need nextLink
-            return Ok(new
-            {
-                value = resultEnumerated
             });
         }
 
@@ -216,57 +169,37 @@ namespace Azure.DataGateway.Service.Controllers
                 (string entityName, string primaryKeyRoute) =
                     _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
                 // Utilizes C#8 using syntax which does not require brackets.
-                using JsonDocument? result
+                IActionResult? result
                     = await _restService.ExecuteAsync(
                             entityName,
                             operationType,
                             primaryKeyRoute);
 
-                if (result != null)
+                if (result is null)
                 {
-                    // Clones the root element to a new JsonElement that can be
-                    // safely stored beyond the lifetime of the original JsonDocument.
-                    JsonElement resultElement = result.RootElement.Clone();
-                    OkObjectResult formattedResult = OkResponse(resultElement);
+                    throw new DataGatewayException(
+                        message: $"Not Found",
+                        statusCode: HttpStatusCode.NotFound,
+                        subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
+                }
 
-                    switch (operationType)
-                    {
-                        case Operation.Find:
-                            return formattedResult;
-                        case Operation.Insert:
-                            primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
-                            string location =
-                                UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
-                            return new CreatedResult(location: location, formattedResult.Value);
-                        case Operation.Delete:
-                            return new NoContentResult();
-                        case Operation.Upsert:
-                        case Operation.UpsertIncremental:
-                            primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
-                            location =
-                                UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
-                            return new CreatedResult(location: location, formattedResult.Value);
-                        default:
-                            throw new NotSupportedException($"Unsupported Operation: \" {operationType}\".");
-                    }
-                }
-                else
+                if (result is CreatedResult)
                 {
-                    switch (operationType)
-                    {
-                        case Operation.Update:
-                        case Operation.UpdateIncremental:
-                        case Operation.Upsert:
-                        case Operation.UpsertIncremental:
-                            // Empty result set indicates an Update successfully occurred.
-                            return new NoContentResult();
-                        default:
-                            throw new DataGatewayException(
-                                message: $"Not Found",
-                                statusCode: HttpStatusCode.NotFound,
-                                subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
-                    }
+                    // Location is made up of two parts, the first being constructed
+                    // from the HttpRequest found in the HttpContext. The other part
+                    // is the primary key route, which has already been saved in the
+                    // Location of the created result. So we form the entire location
+                    // from appending the primary key route  already stored in the
+                    // created result to the url constructed from the HttpRequest. We
+                    // then update the Location of the created result to this value.
+                    CreatedResult createdResult = (result as CreatedResult)!;
+                    string location =
+                        UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + createdResult.Location;
+                    createdResult.Location = location;
+                    result = createdResult;
                 }
+
+                return result;
             }
             catch (DataGatewayException ex)
             {

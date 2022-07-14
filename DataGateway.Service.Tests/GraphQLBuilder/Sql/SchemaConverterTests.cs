@@ -461,7 +461,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         /// </summary>
         [DataTestMethod]
         [DataRow(new string[] { "anonymous" }, DisplayName = "Anonymous is only role for field")]
-        [DataRow(new string[] { "anonymous" , "Role1" }, DisplayName = "Anonymous is 1 of many roles for field")]
+        [DataRow(new string[] { "anonymous", "Role1" }, DisplayName = "Anonymous is 1 of many roles for field")]
         [DataRow(new string[] { "authenticated", "anonymous" }, DisplayName = "Anonymous and authenticated are present and randomly ordered, anonymous wins.")]
         public void FieldWithAnonymousAccessHasNoAuthorizeDirective(string[] rolesForField)
         {

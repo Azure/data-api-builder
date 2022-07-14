@@ -243,7 +243,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         public void TestReadingRuntimeConfig()
         {
             string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
-            RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig runtimeConfig);
+            RuntimeConfig runtimeConfig = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(jsonString);
             Assert.IsNotNull(runtimeConfig.Schema);
             Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
             Assert.IsTrue(runtimeConfig.CosmosDb == null

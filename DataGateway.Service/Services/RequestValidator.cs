@@ -191,7 +191,7 @@ namespace Azure.DataGateway.Service.Services
                 {
                     continue;
                 }
-                
+
                 // Request body must have value defined for included non-nullable columns
                 if (!column.Value.IsNullable && fieldsInRequestBody.Contains(exposedName))
                 {

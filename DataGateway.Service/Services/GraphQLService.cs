@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
@@ -20,7 +21,6 @@ using HotChocolate;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
 using HotChocolate.Language;
-using HotChocolate.Types;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Azure.DataGateway.Service.Services
@@ -35,9 +35,12 @@ namespace Azure.DataGateway.Service.Services
         private readonly DatabaseType _databaseType;
         private readonly Dictionary<string, Entity> _entities;
         private IAuthorizationResolver _authorizationResolver;
+        private IRequestExecutorResolver _requestExecutorResolver;
+        private IServiceProvider _serviceProvider;
 
         public ISchema? Schema { private set; get; }
         public IRequestExecutor? Executor { private set; get; }
+        public ISchemaBuilder SchemaBuilderObj { private set; get; }
 
         public GraphQLService(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -46,7 +49,10 @@ namespace Azure.DataGateway.Service.Services
             IDocumentCache documentCache,
             IDocumentHashProvider documentHashProvider,
             ISqlMetadataProvider sqlMetadataProvider,
-            IAuthorizationResolver authorizationResolver)
+            IAuthorizationResolver authorizationResolver,
+            IRequestExecutorResolver requestExecutorResolver,
+            IServiceProvider serviceProvider
+            )
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
@@ -57,6 +63,7 @@ namespace Azure.DataGateway.Service.Services
             _sqlMetadataProvider = sqlMetadataProvider;
             _documentCache = documentCache;
             _documentHashProvider = documentHashProvider;
+            _requestExecutorResolver = requestExecutorResolver;
             _authorizationResolver = authorizationResolver;
 
             InitializeSchemaAndResolvers();
@@ -70,7 +77,7 @@ namespace Azure.DataGateway.Service.Services
         /// <exception cref="DataGatewayException">Error will be raised if no database type is set</exception>
         private void Parse(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
-            ISchemaBuilder sb = SchemaBuilder.New()
+            SchemaBuilderObj = SchemaBuilder.New()
                 .AddDocument(root)
                 .AddDirectiveType<ModelDirectiveType>()
                 .AddDirectiveType<RelationshipDirectiveType>()
@@ -81,59 +88,68 @@ namespace Azure.DataGateway.Service.Services
                 .AddType<OrderByType>()
                 .AddType<DefaultValueType>()
                 .AddDocument(QueryBuilder.Build(root, _databaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap))
-                .AddDocument(MutationBuilder.Build(root, _databaseType, _entities, _authorizationResolver.EntityPermissionsMap));
-
-            Schema = sb
+                .AddDocument(MutationBuilder.Build(root, _databaseType, _entities, _authorizationResolver.EntityPermissionsMap))
                 .ModifyOptions(o => o.EnableOneOf = true)
-                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine))
-                .Create();
+                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine));
 
-            MakeSchemaExecutable();
+            Schema = SchemaBuilderObj.Create();
+
+           // MakeSchemaExecutable();
         }
 
-        private void MakeSchemaExecutable()
+        private static void MakeSchemaExecutable()
         {
             // Below is pretty much an inlined version of
             // ISchema.MakeExecutable. The reason that we inline it is that
             // same changes need to be made in the middle of it, such as
             // AddErrorFilter.
-            IRequestExecutorBuilder builder = new ServiceCollection()
-                .AddGraphQL()
-                .AddAuthorization()
-                .AddErrorFilter(error =>
-                {
-                    if (error.Exception != null)
-                    {
-                        Console.Error.WriteLine(error.Exception.Message);
-                        Console.Error.WriteLine(error.Exception.StackTrace);
-                        return error.WithMessage(error.Exception.Message);
-                    }
+            /*            IRequestExecutorBuilder builder = new ServiceCollection()
+                            .AddGraphQLServer()
+                            .AddHttpRequestInterceptor<HttpRequestInterceptor>()
+                            .AddSocketSessionInterceptor<SocketSessionInterceptor>()
+                            .RegisterService<IAuthorizationResolver>()
+                            .ModifyRequestOptions((sp,options) => { sp.CreateScope();})
+                            .AddAuthorization()
+                            .AddErrorFilter(error =>
+                            {
+                                if (error.Exception != null)
+                                {
+                                    Console.Error.WriteLine(error.Exception.Message);
+                                    Console.Error.WriteLine(error.Exception.StackTrace);
+                                    return error.WithMessage(error.Exception.Message);
+                                }
 
-                    return error;
-                })
-                .AddErrorFilter(error =>
-                {
-                    if (error.Exception is DataGatewayException)
-                    {
-                        DataGatewayException thrownException = (DataGatewayException)error.Exception;
-                        return error.RemoveException()
-                                .RemoveLocations()
-                                .RemovePath()
-                                .WithMessage(thrownException.Message)
-                                .WithCode($"{thrownException.SubStatusCode}");
-                    }
+                                return error;
+                            })
+                            .AddErrorFilter(error =>
+                            {
+                                if (error.Exception is DataGatewayException)
+                                {
+                                    DataGatewayException thrownException = (DataGatewayException)error.Exception;
+                                    return error.RemoveException()
+                                            .RemoveLocations()
+                                            .RemovePath()
+                                            .WithMessage(thrownException.Message)
+                                            .WithCode($"{thrownException.SubStatusCode}");
+                                }
 
-                    return error;
-                });
+                                return error;
+                            });*/
 
             // Sadly IRequestExecutorBuilder.Configure is internal, so we also
             // inline that one here too
-            Executor = builder.Services
-                .Configure(builder.Name, (RequestExecutorSetup o) => o.Schema = Schema)
-                .BuildServiceProvider()
-                .GetRequiredService<IRequestExecutorResolver>()
-                .GetRequestExecutorAsync()
-                .Result;
+            /*            Executor = builder.Services
+                            .Configure(builder.Name, (RequestExecutorSetup o) => o.Schema = Schema)
+                            .AddAuthorization(options =>
+                            {
+                                options.AddPolicy("MutationFieldAuthorization", policy => policy.Requirements.Add(new ColumnsPermissionsRequirement()));
+                            })
+                            .BuildServiceProvider()
+                            .GetRequiredService<IRequestExecutorResolver>()
+                            .GetRequestExecutorAsync()
+                            .Result;*/
+
+            //RequestExecutorSetup setup = new();
         }
 
         /// <summary>

@@ -1,5 +1,6 @@
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
@@ -16,8 +17,9 @@ namespace Azure.DataGateway.Service.Services
         public PostgreSqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
-            IQueryBuilder sqlQueryBuilder)
-            : base(runtimeConfigProvider, queryExecutor, sqlQueryBuilder)
+            IQueryBuilder sqlQueryBuilder,
+            ILogger<ISqlMetadataProvider> logger)
+            : base(runtimeConfigProvider, queryExecutor, sqlQueryBuilder, logger)
         {
         }
 

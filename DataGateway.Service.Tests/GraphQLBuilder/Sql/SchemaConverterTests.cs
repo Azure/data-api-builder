@@ -330,7 +330,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
         /// <summary>
         /// When schema ObjectTypeDefinition is created,
-        /// it's fields contain the @authorize directive
+        /// its fields contain the @authorize directive
         /// when rolesAllowedForFields() returns a role list
         /// </summary>
         [TestMethod]

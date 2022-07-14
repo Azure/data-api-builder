@@ -125,7 +125,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
             // Any roles passed in will be added to the authorize directive for this ObjectType
             // taking the form: @authorize(roles: [“role1”, ..., “roleN”]) 
-            if (rolesAllowedForEntity is not null)
+            if (rolesAllowedForEntity.Count() >= 1 && !rolesAllowedForEntity.Contains(GraphQLUtils.SYSTEM_ROLE_ANONYMOUS))
             {
                 objectTypeDirectives.Add(GraphQLUtils.CreateAuthorizationDirective(rolesAllowedForEntity));
             }

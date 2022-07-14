@@ -192,9 +192,13 @@ namespace Azure.DataGateway.Service.Services
                 // of the objectTypeDefinitionNode. The authorize Directive is one of many directives created.
                 IEnumerable<string> rolesAllowedForEntity = _authorizationResolver.GetRolesForEntity(entityName);
 
-                ObjectTypeDefinitionNode node = SchemaConverter.FromTableDefinition(entityName, tableDefinition, entity, entities, rolesAllowedForEntity);
-                InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
-                objectTypes.Add(entityName, node);
+                // Only add objectTypeDefinition for GraphQL if it has a role definition defined for access.
+                if (rolesAllowedForEntity.Count() > 0)
+                {
+                    ObjectTypeDefinitionNode node = SchemaConverter.FromTableDefinition(entityName, tableDefinition, entity, entities, rolesAllowedForEntity);
+                    InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
+                    objectTypes.Add(entityName, node);
+                }
             }
 
             // Pass two - Add the arguments to the many-to-* relationship fields

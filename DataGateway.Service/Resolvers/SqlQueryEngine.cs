@@ -128,15 +128,15 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>An OkObjectResult from a Find operation that has been correctly formatted.</returns>
         private OkObjectResult FormatFindResult(JsonDocument jsonDoc, FindRequestContext context)
         {
-            JsonElement jsonElement = jsonDoc.RootElement;
+            JsonElement jsonElement = jsonDoc.RootElement.Clone();
 
             // If the results are not a collection or if the query does not have a next page
             // no nextLink is needed, return JsonDocument as is
-            if (jsonElement.ValueKind != JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
+            if (jsonElement.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
             {
                 // Clones the root element to a new JsonElement that can be
                 // safely stored beyond the lifetime of the original JsonDocument.
-                return OkResponse(jsonDoc.RootElement.Clone());
+                return OkResponse(jsonElement);
             }
 
             // More records exist than requested, we know this by requesting 1 extra record,

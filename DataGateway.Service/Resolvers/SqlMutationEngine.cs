@@ -249,7 +249,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;
                 case Operation.UpdateGraphQL:
-                    if(context is null)
+                    if (context is null)
                     {
                         throw new ArgumentNullException("Context should not be null for a GraphQL operation.");
                     }

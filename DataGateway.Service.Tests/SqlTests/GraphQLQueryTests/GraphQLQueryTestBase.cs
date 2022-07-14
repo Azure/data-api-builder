@@ -793,7 +793,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
-
         #endregion
 
         #region Negative Tests

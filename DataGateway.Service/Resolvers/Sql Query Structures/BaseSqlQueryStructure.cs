@@ -5,9 +5,9 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
@@ -226,11 +226,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
                     return mutationInput;
                 }
-                else {
+                else
+                {
                     errMsg = $"Unexpected {CreateMutationBuilder.INPUT_ARGUMENT_NAME} argument format.";
                 }
             }
-            else {
+            else
+            {
                 errMsg = $"Expected {CreateMutationBuilder.INPUT_ARGUMENT_NAME} argument in mutation arguments.";
             }
 

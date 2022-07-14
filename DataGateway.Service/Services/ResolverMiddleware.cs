@@ -154,7 +154,7 @@ namespace Azure.DataGateway.Service.Services
         public static object? ExtractValueFromIValueNode(IValueNode value, IInputField argumentSchema, IVariableValueCollection variables)
         {
             // extract value from the variable if the the IValueNode is a variable
-            if(value.Kind == SyntaxKind.Variable)
+            if (value.Kind == SyntaxKind.Variable)
             {
                 string variableName = ((VariableNode)value).Name.Value;
 
@@ -174,12 +174,13 @@ namespace Azure.DataGateway.Service.Services
                 return variables.GetVariable<object?>(variableName);
             }
 
-            if(value is NullValueNode)
+            if (value is NullValueNode)
             {
                 return null;
             }
 
-            return argumentSchema.Type.TypeName().Value switch {
+            return argumentSchema.Type.TypeName().Value switch
+            {
                 "Byte" => ((IntValueNode)value).ToByte(),
                 "Short" => ((IntValueNode)value).ToInt16(),
                 "Int" => ((IntValueNode)value).ToInt32(),

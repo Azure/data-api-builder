@@ -5,7 +5,6 @@ using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
-using Newtonsoft.Json;
 
 namespace Azure.DataGateway.Service.Models
 {
@@ -139,7 +138,7 @@ namespace Azure.DataGateway.Service.Models
                     argumentSchema: argumentSchema,
                     ctx.Variables);
 
-                if(predicateValue is null)
+                if (predicateValue is null)
                 {
                     continue;
                 }

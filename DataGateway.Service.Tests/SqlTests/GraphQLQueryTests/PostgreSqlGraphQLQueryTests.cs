@@ -1,6 +1,4 @@
-using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;

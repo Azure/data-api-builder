@@ -61,7 +61,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController, new() {{"title", "My New Book"}, {"publisher_id", 1234}});
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController, new() { { "title", "My New Book" }, { "publisher_id", 1234 } });
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);

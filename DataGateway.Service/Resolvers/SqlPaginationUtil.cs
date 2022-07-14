@@ -184,7 +184,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             if (queryParams.TryGetValue(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME, out object? continuationObject))
             {
-                if(continuationObject is not null)
+                if (continuationObject is not null)
                 {
                     string afterPlainText = (string)continuationObject;
                     return ParseAfterFromJsonString(afterPlainText, paginationMetadata);

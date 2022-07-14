@@ -4,12 +4,8 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Services;
-using HotChocolate.Execution;
-using HotChocolate.Language;
 using HotChocolate.Resolvers;
-using HotChocolate.Types;
 namespace Azure.DataGateway.Service.Resolvers
 {
     /// <summary>
@@ -37,11 +33,11 @@ namespace Azure.DataGateway.Service.Resolvers
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams
-        ): this(
+        ) : this(
             entityName,
             sqlMetadataProvider,
             GQLMutationArgumentsToMutationParams(context, mutationParams))
-        {}
+        { }
 
         public SqlInsertStructure(
             string entityName,

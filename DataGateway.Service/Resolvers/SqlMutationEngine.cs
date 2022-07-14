@@ -145,7 +145,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 case Operation.Insert:
                     if (resultRecord is null)
                     {
-                        break;
+                        // this case should not happen, we throw an exception
+                        // which will be returned as an Unexpected Internal Server Error
+                        throw new Exception();
                     }
 
                     primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRecord);

@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.Resolvers
             return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"WHERE {Build(structure.Predicates)} " +
-                    $"RETURNING {Build(structure.PrimaryKey())};";
+                    $"RETURNING {Build(structure.OutputColumns)};";
         }
 
         /// <inheritdoc />

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -65,12 +66,19 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                 return;
             }
 
-            //Add a claim for the X-MS-API-ROLE header to the request.
-            Claim claim = new(ClaimTypes.Role, httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER], ClaimValueTypes.String);
-            // To set the IsAuthenticated value as false, omit the authenticationType.
-            ClaimsIdentity identity = new();
-            identity.AddClaim(claim);
-            httpContext.User.AddIdentity(identity);
+            string clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
+
+            if (clientRoleHeader.Equals(AuthorizationType.Authenticated.ToString(),StringComparison.OrdinalIgnoreCase)
+                || clientRoleHeader.Equals(AuthorizationType.Anonymous.ToString(), StringComparison.OrdinalIgnoreCase)){
+
+                //Add a claim for the X-MS-API-ROLE header to the request.
+                Claim claim = new(ClaimTypes.Role, clientRoleHeader, ClaimValueTypes.String);
+
+                // To set the IsAuthenticated value as false, omit the authenticationType.
+                ClaimsIdentity identity = new();
+                identity.AddClaim(claim);
+                httpContext.User.AddIdentity(identity);
+            }
 
             await _nextMiddleware(httpContext);
         }

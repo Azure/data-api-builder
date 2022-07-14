@@ -67,7 +67,7 @@ namespace Azure.DataGateway.Service.Authorization
         {
             StringValues clientRoleHeader = httpContext.Request.Headers[CLIENT_ROLE_HEADER];
 
-            if (clientRoleHeader.Count == 0 || clientRoleHeader.Count > 1)
+            if (clientRoleHeader.Count != 1)
             {
                 // When count = 0, the clientRoleHeader is absent on requests.
                 // Consequentially, anonymous requests must specifically set

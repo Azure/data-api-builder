@@ -438,7 +438,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PutOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                "PutOne_Update_IfMatchHeaders_Test",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE id = 1 AND title = 'The Return of the King' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -588,7 +588,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PatchOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                "PatchOne_Update_IfMatchHeaders_Test",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE id = 1 AND title = 'The Hobbit Returns to The Shire' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -596,7 +596,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
             {
                 "PatchOne_Update_Default_Test",
                 $"SELECT [id], [book_id], [content] FROM { _tableWithCompositePrimaryKey } " +
-                $"WHERE id = 567 AND [book_id] = 1 AND [content] = 'That's a great book' " +
+                $"WHERE id = 567 AND [book_id] = 1 AND [content] = 'That''s a great book' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -619,7 +619,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "PatchOne_Update_Nulled_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'books' " +
+                $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] is NULL AND [piecesRequired] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },

@@ -78,7 +78,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _queryEngine = new SqlQueryEngine(
                 _queryExecutor,
                 _queryBuilder,
-                _sqlMetadataProvider);
+                _sqlMetadataProvider,
+                _httpContextAccessor.Object);
             _mutationEngine =
                 new SqlMutationEngine(
                 _queryEngine,

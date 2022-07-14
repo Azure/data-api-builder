@@ -310,8 +310,8 @@ namespace Azure.DataGateway.Service
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapGraphQL(path: "/gqlservice");
-                endpoints.MapBananaCakePop(toolPath: "/graphql");
+                endpoints.MapGraphQL(path: "/graphqlservice");
+                endpoints.MapBananaCakePop(toolPath: "/bcp");
                 endpoints.MapHealthChecks("/");
             });
         }

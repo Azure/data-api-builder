@@ -74,13 +74,13 @@ namespace Azure.DataGateway.Config
         // convert Enum to strings
         // case insensitive
         public static JsonSerializerOptions SerializerOptions = new()
-            {
-                PropertyNameCaseInsensitive = true,
-                Converters =
+        {
+            PropertyNameCaseInsensitive = true,
+            Converters =
                     {
                         new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
                     }
-            };
+        };
 
         /// <summary>
         /// Pick up the global runtime settings from the dictionary if present
@@ -114,20 +114,15 @@ namespace Azure.DataGateway.Config
 
         public static T GetDeserializedConfig<T>(string configJson)
         {
-            JsonSerializerOptions options = GetDeserializationOptions();
-
             // This feels verbose but it avoids having to make _config nullable - which would result in more
             // down the line issues and null check requirements
             T? deserializedConfig;
-            if ((deserializedConfig = JsonSerializer.Deserialize<T>(configJson, options)) is null)
+            if ((deserializedConfig = JsonSerializer.Deserialize<T>(configJson, SerializerOptions)) is null)
             {
-                deserializedConfig = JsonSerializer.Deserialize<T>(configJson, SerializerOptions);
-                return true;
+                throw new JsonException("Failed to get a deserialized config from the provided config.");
             }
 
-                deserializedConfig = default(T);
-                return false;
-            }
+            return deserializedConfig;
         }
 
         [JsonIgnore]

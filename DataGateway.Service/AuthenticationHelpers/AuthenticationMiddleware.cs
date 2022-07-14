@@ -68,8 +68,8 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
 
             string clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
 
-            if (clientRoleHeader.Equals(AuthorizationType.Authenticated.ToString(),StringComparison.OrdinalIgnoreCase)
-                || clientRoleHeader.Equals(AuthorizationType.Anonymous.ToString(), StringComparison.OrdinalIgnoreCase)){
+            if (clientRoleHeader.Equals(AuthorizationType.Authenticated.ToString(), StringComparison.OrdinalIgnoreCase) ||
+                clientRoleHeader.Equals(AuthorizationType.Anonymous.ToString(), StringComparison.OrdinalIgnoreCase)){
 
                 //Add a claim for the X-MS-API-ROLE header to the request.
                 Claim claim = new(ClaimTypes.Role, clientRoleHeader, ClaimValueTypes.String);

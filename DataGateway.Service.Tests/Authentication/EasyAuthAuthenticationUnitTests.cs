@@ -68,6 +68,20 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
         }
+
+        /// <summary>
+        /// Ensures that when the EasyAurh token is missing from the request, it is treated as anonymous and the
+        /// request passes through.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task TestMissingEasyAuthToken()
+        {
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(null, EasyAuthType.StaticWebApps);
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+        }
         #endregion
         #region Negative Tests
         /// <summary>

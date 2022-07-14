@@ -63,7 +63,7 @@ namespace Azure.DataGateway.Config
         [property: JsonPropertyName(MySqlOptions.JSON_PROPERTY_NAME)]
         MySqlOptions? MySql,
         [property: JsonPropertyName(GlobalSettings.JSON_PROPERTY_NAME)]
-        Dictionary<GlobalSettingsType, object> RuntimeSettings,
+        Dictionary<GlobalSettingsType, object>? RuntimeSettings,
         [property: JsonPropertyName(Entity.JSON_PROPERTY_NAME)]
         Dictionary<string, Entity> Entities)
     {
@@ -88,41 +88,56 @@ namespace Azure.DataGateway.Config
         /// </summary>
         public void DetermineGlobalSettings()
         {
-            foreach (
-                (GlobalSettingsType settingsType, object settingsJson) in RuntimeSettings)
+            if (RuntimeSettings is not null)
             {
-                switch (settingsType)
+                foreach (
+                (GlobalSettingsType settingsType, object settingsJson) in RuntimeSettings)
                 {
-                    case GlobalSettingsType.Rest:
-                        RestGlobalSettings
-                            = ((JsonElement)settingsJson).Deserialize<RestGlobalSettings>(SerializerOptions)!;
-                        break;
-                    case GlobalSettingsType.GraphQL:
-                        GraphQLGlobalSettings =
-                            ((JsonElement)settingsJson).Deserialize<GraphQLGlobalSettings>(SerializerOptions)!;
-                        break;
-                    case GlobalSettingsType.Host:
-                        HostGlobalSettings =
-                            ((JsonElement)settingsJson).Deserialize<HostGlobalSettings>(SerializerOptions)!;
-                        break;
-                    default:
-                        throw new NotSupportedException("The runtime does not " +
-                            " support this global settings type.");
+                    switch (settingsType)
+                    {
+                        case GlobalSettingsType.Rest:
+                            RestGlobalSettings
+                                = ((JsonElement)settingsJson).Deserialize<RestGlobalSettings>(SerializerOptions)!;
+                            break;
+                        case GlobalSettingsType.GraphQL:
+                            GraphQLGlobalSettings =
+                                ((JsonElement)settingsJson).Deserialize<GraphQLGlobalSettings>(SerializerOptions)!;
+                            break;
+                        case GlobalSettingsType.Host:
+                            HostGlobalSettings =
+                                ((JsonElement)settingsJson).Deserialize<HostGlobalSettings>(SerializerOptions)!;
+                            break;
+                        default:
+                            throw new NotSupportedException("The runtime does not " +
+                                " support this global settings type.");
+                    }
                 }
             }
         }
 
-        public static T GetDeserializedConfig<T>(string configJson)
+        /// <summary>
+        /// Try to deserialize the given json string into its object form.
+        /// </summary>
+        /// <typeparam name="T">The object type.</typeparam>
+        /// <param name="configJson">Json string to be deserialized.</param>
+        /// <param name="deserializedConfig">Deserialized json object upon success.</param>
+        /// <returns>True on success, false otherwise.</returns>
+        public static bool TryGetDeserializedConfig<T>(
+            string configJson,
+            out T? deserializedConfig)
         {
-            // This feels verbose but it avoids having to make _config nullable - which would result in more
-            // down the line issues and null check requirements
-            T? deserializedConfig;
-            if ((deserializedConfig = JsonSerializer.Deserialize<T>(configJson, SerializerOptions)) is null)
+            try
             {
-                throw new JsonException("Failed to get a deserialized config from the provided config.");
+                deserializedConfig = JsonSerializer.Deserialize<T>(configJson, RuntimeConfig.SerializerOptions);
+                return true;
             }
+            catch (JsonException ex)
+            {
+                Console.WriteLine($"Deserialization failed due to: \n{ex}");
 
-            return deserializedConfig;
+                deserializedConfig = default(T);
+                return false;
+            }
         }
 
         [JsonIgnore]

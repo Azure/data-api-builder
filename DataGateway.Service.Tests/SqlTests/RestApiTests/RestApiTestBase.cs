@@ -1126,7 +1126,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
             requestBody = @"
@@ -1143,7 +1143,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
                 );
 
@@ -1163,7 +1163,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
                 );
 
@@ -1184,7 +1184,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
             );
 
@@ -1204,7 +1204,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
                 );
         }
@@ -1229,21 +1229,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     primaryKeyRoute: "id/1",
                     queryString: null,
                     entity: _integrationEntityName,
-                    sqlQuery: string.Empty,
+                    sqlQuery: GetQuery(nameof(PutOne_Update_IfMatchHeaders_Test)),
                     controller: _restController,
                     operationType: Operation.Upsert,
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
-            await SetupAndRunRestApiTest(
-                  primaryKeyRoute: "id/1",
-                  queryString: "?$filter=title eq 'The Return of the King'",
-                  entity: _integrationEntityName,
-                  sqlQuery: GetQuery("PutOne_Update_IfMatchHeaders_Test_Confirm_Update"),
-                  controller: _restController,
-                  operationType: Operation.Find,
-                  expectedStatusCode: HttpStatusCode.OK);
         }
 
         /// <summary>
@@ -1426,7 +1418,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
                 );
         }
@@ -1476,7 +1468,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
         }
@@ -1572,7 +1564,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         /// Tests REST PatchOne which results in incremental update
         /// URI Path: PK of existing record.
         /// Req Body: Valid Parameter with intended update.
-        /// Expects: 201 Created where sqlQuery validates update.
+        /// Expects: 200 OK where sqlQuery validates update.
         /// </summary>
         [TestMethod]
         public virtual async Task PatchOne_Update_Test()
@@ -1590,7 +1582,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
             requestBody = @"
@@ -1606,7 +1598,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
             requestBody = @"
@@ -1622,7 +1614,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
             requestBody = @"
@@ -1639,7 +1631,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
         }
         /// <summary>
@@ -1662,21 +1654,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     primaryKeyRoute: "id/1",
                     queryString: null,
                     entity: _integrationEntityName,
-                    sqlQuery: string.Empty,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_IfMatchHeaders_Test)),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
-                );
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/1",
-                    queryString: "?$filter=title eq 'The Hobbit Returns to The Shire' and publisher_id eq 1234",
-                    entity: _integrationEntityName,
-                    sqlQuery: GetQuery("PatchOne_Update_IfMatchHeaders_Test_Confirm_Update"),
-                    controller: _restController,
-                    operationType: Operation.Find
+                    expectedStatusCode: HttpStatusCode.OK
                 );
         }
 

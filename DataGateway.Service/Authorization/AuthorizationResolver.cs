@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
@@ -29,6 +30,7 @@ namespace Azure.DataGateway.Service.Authorization
         public const string FIELD_PREFIX = "@item.";
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
         private const string SHORT_CLAIM_TYPE_NAME = "http://schemas.xmlsoap.org/ws/2005/05/identity/claimproperties/ShortTypeName";
+
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
         public AuthorizationResolver(
@@ -348,10 +350,7 @@ namespace Azure.DataGateway.Service.Authorization
                 return claimsInRequestContext;
             }
 
-            // Add role claim to the claimsInRequestContext as it is not added later.
-            string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
-            claimsInRequestContext.Add("roles", new Claim("roles", clientRoleHeader, ClaimValueTypes.String));
-
+            string roleClaimShortName = string.Empty;
             foreach (Claim claim in identity.Claims)
             {
                 /*
@@ -373,7 +372,16 @@ namespace Azure.DataGateway.Service.Authorization
                         subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                         );
                 }
+
+                if (claim.Type is ClaimTypes.Role)
+                {
+                    roleClaimShortName = type;
+                }
             }
+
+            // Add role claim to the claimsInRequestContext as it is not added above.
+            string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
+            claimsInRequestContext.Add(roleClaimShortName, new Claim(roleClaimShortName, clientRoleHeader, ClaimValueTypes.String));
 
             return claimsInRequestContext;
         }

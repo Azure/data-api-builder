@@ -240,8 +240,8 @@ namespace Azure.DataGateway.Service.Authorization
                         {
                             // If not a string, the actionObj is expected to be an object that can be deserialised into Action object.
                             // We will put validation checks later to make sure this is the case.
-                            Action actionObj = RuntimeConfig.GetDeserializedConfig<Action>(actionElement.ToString());
-                            if (actionObj is not null)
+                            if (RuntimeConfig.TryGetDeserializedConfig(actionElement.ToString(), out Action? actionObj)
+                                && actionObj is not null)
                             {
                                 actionName = actionObj.Name;
                                 if (actionObj.Fields!.Include is not null)

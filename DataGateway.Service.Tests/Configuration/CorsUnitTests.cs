@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         public void TestCorsConfigReadCorrectly()
         {
             string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
-            RuntimeConfig runtimeConfig = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(jsonString);
+            RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig runtimeConfig);
             HostGlobalSettings hostGlobalSettings =
                 JsonSerializer.Deserialize<HostGlobalSettings>(
                     (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Host],

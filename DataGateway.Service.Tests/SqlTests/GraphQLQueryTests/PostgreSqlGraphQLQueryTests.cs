@@ -41,14 +41,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task MultipleResultQuery()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id) as table0 LIMIT 100";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id LIMIT 100) as table0";
             await MultipleResultQuery(postgresQuery);
         }
 
         [TestMethod]
         public async Task MultipleResultQueryWithVariables()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id) as table0 LIMIT 100";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id LIMIT 100) as table0";
             await MultipleResultQueryWithVariables(postgresQuery);
         }
 
@@ -209,7 +209,7 @@ FROM
         [TestMethod]
         public async Task TestQueryingTypeWithNullableIntFields()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title, \"issue_number\" FROM foo.magazines ORDER BY id) as table0 LIMIT 100";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title, \"issue_number\" FROM foo.magazines ORDER BY id LIMIT 100) as table0";
             await TestQueryingTypeWithNullableIntFields(postgresQuery);
 
         }
@@ -220,7 +220,7 @@ FROM
         [TestMethod]
         public async Task TestQueryingTypeWithNullableStringFields()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, username FROM website_users ORDER BY id) as table0 LIMIT 100";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, username FROM website_users ORDER BY id LIMIT 100) as table0";
             await TestQueryingTypeWithNullableStringFields(postgresQuery);
         }
 
@@ -281,7 +281,7 @@ FROM
         [TestMethod]
         public async Task TestOrderByInListQuery()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY title DESC, id ASC) as table0 LIMIT 100";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY title DESC, id ASC LIMIT 100) as table0";
             await TestOrderByInListQuery(postgresQuery);
         }
 
@@ -291,7 +291,7 @@ FROM
         [TestMethod]
         public async Task TestOrderByInListQueryOnCompPkType()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, content FROM reviews ORDER BY content ASC, id DESC, book_id ASC) as table0 LIMIT 100";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, content FROM reviews ORDER BY content ASC, id DESC, book_id ASC LIMIT 100) as table0";
             await TestOrderByInListQueryOnCompPkType(postgresQuery);
         }
 
@@ -303,7 +303,7 @@ FROM
         [TestMethod]
         public async Task TestNullFieldsInOrderByAreIgnored()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY title DESC, id ASC) as table0 LIMIT 100";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY title DESC, id ASC LIMIT 100) as table0";
             await TestNullFieldsInOrderByAreIgnored(postgresQuery);
         }
 
@@ -313,30 +313,15 @@ FROM
         [TestMethod]
         public async Task TestOrderByWithOnlyNullFieldsDefaultsToPkSorting()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id ASC) as table0 LIMIT 100";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id ASC LIMIT 100) as table0";
             await TestOrderByWithOnlyNullFieldsDefaultsToPkSorting(postgresQuery);
         }
 
-        /// <summary>
-        /// Tests that orderBy order can be set using variable
-        /// </summary>
         [TestMethod]
         public async Task TestSettingOrderByOrderUsingVariable()
         {
-            string graphQLQueryName = "getBooks";
-            string graphQLQuery = @"query($order: SortOrder)
-            {
-                getBooks(first: 100 orderBy: {id: $order}) {
-                    id
-                    title
-                }
-            }";
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id DESC) as table0 LIMIT 100";
-
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController, new() { { "order", "Desc" } });
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id DESC LIMIT 4) as table0";
+            await TestSettingOrderByOrderUsingVariable(postgresQuery);
         }
 
         #endregion
@@ -355,23 +340,10 @@ FROM
             await base.TestInvalidFilterParamQuery();
         }
 
-        /// <summary>
-        /// Tests setting complex types using variable shows an appropriate error
-        /// </summary>
         [TestMethod]
-        public async Task TestSettingComplexArgumentUsingVariables()
+        public override async Task TestSettingComplexArgumentUsingVariables()
         {
-            string graphQLQueryName = "getBooks";
-            string graphQLQuery = @"query($orderBy: BookOrderByInput)
-            {
-                getBooks(first: 100 orderBy: $orderBy) {
-                    id
-                    title
-                }
-            }";
-
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController, new() { { "orderBy", new { id = "Asc" } } });
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.NotSupported}");
+            await base.TestSettingComplexArgumentUsingVariables();
         }
 
         #endregion

@@ -6,6 +6,7 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
+using HotChocolate.Resolvers;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -68,6 +69,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// as one of the mutation params.
         /// </summary>
         public SqlUpdateStructure(
+            IMiddlewareContext context,
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams)
@@ -87,7 +89,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (param.Key == UpdateMutationBuilder.INPUT_ARGUMENT_NAME)
                 {
                     IDictionary<string, object?> updateFields =
-                        InputArgumentToMutationParams(mutationParams, UpdateMutationBuilder.INPUT_ARGUMENT_NAME);
+                        GQLMutationArgumentsToMutationParams(context, mutationParams);
 
                     foreach (KeyValuePair<string, object?> field in updateFields)
                     {

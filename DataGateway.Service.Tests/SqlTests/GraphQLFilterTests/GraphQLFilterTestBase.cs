@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -596,6 +597,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         /// <summary>
         /// Passes null to nullable fields and makes sure they are ignored
         /// </summary>
+        [TestMethod]
         public async Task TestExplicitNullFieldsAreIgnored()
         {
             string graphQLQueryName = "books";
@@ -606,15 +608,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                                     or: null
                                   })
                 {
-                    id
-                    title
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id", "title" },
-                @"id >= 2");
+                @"id >= 2",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -626,18 +631,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         /// </summary>
         public async Task TestInputObjectWithOnlyNullFieldsEvaluatesToFalse()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
-                getBooks(_filter: {id: {lte: null}})
+                books(_filter: {id: {lte: null}})
                 {
-                    id
+                    items {
+                        id
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id" },
-                @"1 != 1");
+                @"1 != 1",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -650,19 +658,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         [TestMethod]
         public async Task TestPassingVariablesToFilter()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"query($lteValue: Int!, $gteValue: Int!)
             {
-                getBooks(_filter: {id: {lte: $lteValue} and: [{id: {gte: $gteValue}}]})
+                books(_filter: {id: {lte: $lteValue} and: [{id: {gte: $gteValue}}]})
                 {
-                    id
+                    items {
+                        id
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id" },
-                @"id <= 4 AND id >= 2");
+                @"id <= 4 AND id >= 2",
+                GetDefaultSchema());
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController, new() { { "lteValue", 4 }, { "gteValue", 2 } });
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -679,12 +690,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         [TestMethod]
         public async Task TestPassingVariablesToUnsupportedField()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"query($and: [BookFilterInput!])
             {
-                getBooks(_filter: {and: $and})
+                books(_filter: {and: $and})
                 {
-                    id
+                    items {
+                        id
+                    }
                 }
             }";
 

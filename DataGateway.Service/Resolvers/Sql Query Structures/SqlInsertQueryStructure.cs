@@ -6,7 +6,10 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Services;
-
+using HotChocolate.Execution;
+using HotChocolate.Language;
+using HotChocolate.Resolvers;
+using HotChocolate.Types;
 namespace Azure.DataGateway.Service.Resolvers
 {
     /// <summary>
@@ -30,9 +33,21 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<string> ReturnColumns { get; }
 
         public SqlInsertStructure(
+            IMiddlewareContext context,
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
-            IDictionary<string, object?> mutationParams)
+            IDictionary<string, object?> mutationParams
+        ): this(
+            entityName,
+            sqlMetadataProvider,
+            GQLMutationArgumentsToMutationParams(context, mutationParams))
+        {}
+
+        public SqlInsertStructure(
+            string entityName,
+            ISqlMetadataProvider sqlMetadataProvider,
+            IDictionary<string, object?> mutationParams
+            )
         : base(sqlMetadataProvider, entityName: entityName)
         {
             InsertColumns = new();
@@ -42,10 +57,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             ReturnColumns = tableDefinition.Columns.Keys.ToList();
 
-            IDictionary<string, object?> createInput =
-                InputArgumentToMutationParams(mutationParams, CreateMutationBuilder.INPUT_ARGUMENT_NAME);
-
-            foreach (KeyValuePair<string, object?> param in createInput)
+            foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 PopulateColumnsAndParams(param.Key, param.Value);
             }

@@ -147,34 +147,51 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Extract the value from a IValueNode
-        /// Note that if the node type is Variable, the parameter variables needs to be specified
-        /// as well in order to extract the value.
+        /// Extract the variable argument's value if the IValueNode is a variable, return the IValueNode otherwise
         /// </summary>
-        public static object? ArgumentValue(IValueNode value, IVariableValueCollection? variableValues = null)
+        /// <param name="variables">if null is passed for this parameter, it is inferred that passing a
+        /// variable for the IValueNode is not supported.</param>
+        public static object? ExtractValueFromIValueNode(IValueNode value, IInputField argumentSchema, IVariableValueCollection variables)
         {
-            switch (value.Kind)
+            Console.WriteLine("ARGUMENT SCHEMA: " + argumentSchema.ToString());
+            Console.WriteLine("ARGUMENT TYPE: " + argumentSchema.Type.TypeName());
+
+            // extract value from the variable if the the IValueNode is a variable
+            if(value.Kind == SyntaxKind.Variable)
             {
-                case SyntaxKind.IntValue:
-                    return ((IntValueNode)value).ToInt32();
+                string variableName = ((VariableNode)value).Name.Value;
 
-                case SyntaxKind.Variable:
-                    string variableName = ((VariableNode)value).Name.Value;
-                    if (variableValues is null)
-                    {
-                        throw new DataGatewayException(
-                            $"Passing variables into the field where variable ${variableName} is used is not supported. " +
-                            "Only scalar and enum fields are currently supported.",
-                            HttpStatusCode.NotImplemented,
-                            DataGatewayException.SubStatusCodes.NotSupported
-                        );
-                    }
+                // IsLeafType checks for IsScalarType || IsEnumType
+                // https://github.com/ChilliCream/hotchocolate/blob/2ba023b7211fdc6db80a4db55a4629db30d82967/src/HotChocolate/Core/src/Types/Types/Extensions/TypeExtensions.cs#L65-L74
+                // The other types are trickier to parse so for now disallow to pass them as variables
+                if (!argumentSchema.Type.IsLeafType())
+                {
+                    throw new DataGatewayException(
+                        $"Passing variables into the argument {argumentSchema.Name.Value} is not supported. " +
+                        "Only scalar and enum arguments are currently supported.",
+                        HttpStatusCode.NotImplemented,
+                        DataGatewayException.SubStatusCodes.NotSupported
+                    );
+                }
 
-                    return variableValues.GetVariable<object>(variableName);
-
-                default:
-                    return value.Value;
+                return variables.GetVariable<object?>(variableName);
             }
+
+            if(value is NullValueNode)
+            {
+                return null;
+            }
+
+            return argumentSchema.Type.TypeName().Value switch {
+                "Byte" => ((IntValueNode)value).ToByte(),
+                "Short" => ((IntValueNode)value).ToInt16(),
+                "Int" => ((IntValueNode)value).ToInt32(),
+                "Long" => ((IntValueNode)value).ToInt64(),
+                "Single" => ((FloatValueNode)value).ToSingle(),
+                "Float" => ((FloatValueNode)value).ToDouble(),
+                "Decimal" => ((FloatValueNode)value).ToDecimal(),
+                _ => value.Value
+            };
         }
 
         /// <summary>
@@ -187,20 +204,18 @@ namespace Azure.DataGateway.Service.Services
             IDictionary<string, object?> parameters = new Dictionary<string, object?>();
 
             // Fill the parameters dictionary with the default argument values
-            IFieldCollection<IInputField> availableArguments = schema.Arguments;
-            Dictionary<string, bool> canSetWithVariable = new();
-            foreach (IInputField argument in availableArguments)
+            IFieldCollection<IInputField> argumentSchemas = schema.Arguments;
+            foreach (IInputField argument in argumentSchemas)
             {
-                // IsLeafType checks for IsScalarType || IsEnumType
-                // https://github.com/ChilliCream/hotchocolate/blob/2ba023b7211fdc6db80a4db55a4629db30d82967/src/HotChocolate/Core/src/Types/Types/Extensions/TypeExtensions.cs#L65-L74
-                // The other types are trickier to parse so for now disallow to pass them as variables
-                canSetWithVariable.Add(argument.Name, argument.Type.IsLeafType());
-
+                // argument.Type
                 if (argument.DefaultValue != null)
                 {
                     parameters.Add(
                         argument.Name.Value,
-                        ArgumentValue(argument.DefaultValue, canSetWithVariable[argument.Name] ? variables : null));
+                        ExtractValueFromIValueNode(
+                            value: argument.DefaultValue,
+                            argumentSchema: argument,
+                            variables: variables));
                 }
             }
 
@@ -208,20 +223,54 @@ namespace Azure.DataGateway.Service.Services
             IReadOnlyList<ArgumentNode> passedArguments = query.Arguments;
             foreach (ArgumentNode argument in passedArguments)
             {
-                if (parameters.ContainsKey(argument.Name.Value))
+                string argumentName = argument.Name.Value;
+                IInputField argumentSchema = argumentSchemas[argumentName];
+
+                if (parameters.ContainsKey(argumentName))
                 {
-                    parameters[argument.Name.Value] =
-                        ArgumentValue(argument.Value, canSetWithVariable[argument.Name.Value] ? variables : null);
+                    parameters[argumentName] =
+                        ExtractValueFromIValueNode(
+                            value: argument.Value,
+                            argumentSchema: argumentSchema,
+                            variables: variables);
                 }
                 else
                 {
                     parameters.Add(
-                        argument.Name.Value,
-                        ArgumentValue(argument.Value, canSetWithVariable[argument.Name.Value] ? variables : null));
+                        argumentName,
+                        ExtractValueFromIValueNode(
+                            value: argument.Value,
+                            argumentSchema: argumentSchema,
+                            variables: variables));
                 }
             }
 
             return parameters;
+        }
+
+        /// <summary>
+        /// InnerMostType is innermost type of the passed Graph QL type.
+        /// This strips all modifiers, such as List and Non-Null.
+        /// So the following GraphQL types would all have the underlyingType Book:
+        /// - Book
+        /// - [Book]
+        /// - Book!
+        /// - [Book]!
+        /// - [Book!]!
+        /// </summary>
+        internal static IType InnerMostType(IType type)
+        {
+            if (type.ToString() == type.InnerType().ToString())
+            {
+                return type;
+            }
+
+            return InnerMostType(type.InnerType());
+        }
+
+        public static InputObjectType InputObjectTypeFromIInputField(IInputField field)
+        {
+            return (InputObjectType)(InnerMostType(field.Type));
         }
 
         protected static IDictionary<string, object?> GetParametersFromContext(IMiddlewareContext context)

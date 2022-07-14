@@ -4,6 +4,8 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using HotChocolate.Types;
+using Newtonsoft.Json;
 
 namespace Azure.DataGateway.Service.Models
 {
@@ -23,6 +25,7 @@ namespace Azure.DataGateway.Service.Models
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
         public static Predicate Parse(
             IMiddlewareContext ctx,
+            IInputField filterArgumentSchema,
             List<ObjectFieldNode> fields,
             string schemaName,
             string tableName,
@@ -30,11 +33,16 @@ namespace Azure.DataGateway.Service.Models
             TableDefinition table,
             Func<object, string> processLiterals)
         {
-            List<PredicateOperand> predicates = new();
+            InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
 
+            List<PredicateOperand> predicates = new();
             foreach (ObjectFieldNode field in fields)
             {
-                object? fieldValue = ResolverMiddleware.ArgumentValue(field.Value);
+                object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+                    value: field.Value,
+                    argumentSchema: filterArgumentObject.Fields[field.Name.Value],
+                    variables: ctx.Variables);
+
                 if (fieldValue is null)
                 {
                     continue;
@@ -50,12 +58,30 @@ namespace Azure.DataGateway.Service.Models
                     PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
 
                     List<IValueNode> otherPredicates = (List<IValueNode>)fieldValue;
-                    predicates.Push(new PredicateOperand(ParseAndOr(ctx, otherPredicates, schemaName, tableName, tableAlias, table, op, processLiterals)));
+                    predicates.Push(new PredicateOperand(ParseAndOr(
+                        ctx,
+                        argumentSchema: filterArgumentObject.Fields[name],
+                        filterArgumentSchema: filterArgumentSchema,
+                        otherPredicates,
+                        schemaName,
+                        tableName,
+                        tableAlias,
+                        table,
+                        op,
+                        processLiterals)));
                 }
                 else
                 {
                     List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
-                    predicates.Push(new PredicateOperand(ParseScalarType(ctx, name, subfields, schemaName, tableName, tableAlias, processLiterals)));
+                    predicates.Push(new PredicateOperand(ParseScalarType(
+                        ctx,
+                        argumentSchema: filterArgumentObject.Fields[name],
+                        name,
+                        subfields,
+                        schemaName,
+                        tableName,
+                        tableAlias,
+                        processLiterals)));
                 }
             }
 
@@ -68,6 +94,7 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         private static Predicate ParseScalarType(
             IMiddlewareContext ctx,
+            IInputField argumentSchema,
             string name,
             List<ObjectFieldNode> fields,
             string schemaName,
@@ -77,7 +104,7 @@ namespace Azure.DataGateway.Service.Models
         {
             Column column = new(schemaName, tableName, columnName: name, tableAlias);
 
-            return FieldFilterParser.Parse(ctx, column, fields, processLiterals);
+            return FieldFilterParser.Parse(ctx, argumentSchema, column, fields, processLiterals);
         }
 
         /// <summary>
@@ -89,6 +116,8 @@ namespace Azure.DataGateway.Service.Models
         /// </returns>
         private static Predicate ParseAndOr(
             IMiddlewareContext ctx,
+            IInputField argumentSchema,
+            IInputField filterArgumentSchema,
             List<IValueNode> predicates,
             string schemaName,
             string tableName,
@@ -105,8 +134,18 @@ namespace Azure.DataGateway.Service.Models
             List<PredicateOperand> operands = new();
             foreach (IValueNode predicate in predicates)
             {
-                List<ObjectFieldNode> fields = (List<ObjectFieldNode>)predicate.Value!;
-                operands.Add(new PredicateOperand(Parse(ctx, fields, schemaName, tableName, tableAlias, table, processLiterals)));
+                object? predicateValue = ResolverMiddleware.ExtractValueFromIValueNode(
+                    value: predicate,
+                    argumentSchema: argumentSchema,
+                    ctx.Variables);
+
+                if(predicateValue is null)
+                {
+                    continue;
+                }
+
+                List<ObjectFieldNode> fields = (List<ObjectFieldNode>)predicateValue;
+                operands.Add(new PredicateOperand(Parse(ctx, filterArgumentSchema, fields, schemaName, tableName, tableAlias, table, processLiterals)));
             }
 
             return MakeChainPredicate(operands, op);
@@ -144,16 +183,21 @@ namespace Azure.DataGateway.Service.Models
     {
         public static Predicate Parse(
             IMiddlewareContext ctx,
+            IInputField argumentSchema,
             Column column,
             List<ObjectFieldNode> fields,
             Func<object, string> processLiterals)
         {
             List<PredicateOperand> predicates = new();
 
+            InputObjectType argumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(argumentSchema);
             foreach (ObjectFieldNode field in fields)
             {
                 string name = field.Name.ToString();
-                object? value = ResolverMiddleware.ArgumentValue(field.Value, ctx.Variables);
+                object? value = ResolverMiddleware.ExtractValueFromIValueNode(
+                    value: field.Value,
+                    argumentSchema: argumentObject.Fields[field.Name.Value],
+                    variables: ctx.Variables);
 
                 bool processLiteral = true;
 

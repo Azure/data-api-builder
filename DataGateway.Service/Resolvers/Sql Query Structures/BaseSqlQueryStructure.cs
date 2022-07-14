@@ -7,7 +7,10 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using HotChocolate.Language;
+using HotChocolate.Resolvers;
+using HotChocolate.Types;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -192,15 +195,20 @@ namespace Azure.DataGateway.Service.Resolvers
         /// to be set in the mutation from the MutationInput argument name "item".
         /// This is only applicable for GraphQL since the input we get from the request
         /// is of the EntityInput object form.
-        /// For REST, we simply get the mutation values in the request body as is - so
-        /// we will not find the argument of name "item" in the mutationParams.
         /// </summary>
         /// <exception cref="InvalidDataException"></exception>
-        internal static IDictionary<string, object?> InputArgumentToMutationParams(
-            IDictionary<string, object?> mutationParams, string argumentName)
+        internal static IDictionary<string, object?> GQLMutationArgumentsToMutationParams(
+            IMiddlewareContext context,
+            IDictionary<string, object?> mutationParams)
         {
-            if (mutationParams.TryGetValue(argumentName, out object? item))
+            string errMsg;
+
+            if (mutationParams.TryGetValue(CreateMutationBuilder.INPUT_ARGUMENT_NAME, out object? item))
             {
+                IObjectField fieldSchema = context.Selection.Field;
+                IInputField itemsArgumentSchema = fieldSchema.Arguments[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+                InputObjectType itemsArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(itemsArgumentSchema);
+
                 Dictionary<string, object?> mutationInput;
                 // An inline argument was set
                 // TODO: This assumes the input was NOT nullable.
@@ -209,28 +217,28 @@ namespace Azure.DataGateway.Service.Resolvers
                     mutationInput = new Dictionary<string, object?>();
                     foreach (ObjectFieldNode node in mutationInputRaw)
                     {
-                        mutationInput.Add(node.Name.Value, node.Value.Value);
+                        string nodeName = node.Name.Value;
+                        mutationInput.Add(nodeName, ResolverMiddleware.ExtractValueFromIValueNode(
+                            value: node.Value,
+                            argumentSchema: itemsArgumentObject.Fields[nodeName],
+                            variables: context.Variables));
                     }
-                }
-                // Variables were provided to the mutation
-                else if (item is Dictionary<string, object?> dict)
-                {
-                    mutationInput = dict;
-                }
-                else
-                {
-                    throw new DataGatewayException(
-                        message: "The type of argument for the provided data is unsupported.",
-                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest,
-                        statusCode: HttpStatusCode.BadRequest);
-                }
 
-                return mutationInput;
+                    return mutationInput;
+                }
+                else {
+                    errMsg = $"Unexpected {CreateMutationBuilder.INPUT_ARGUMENT_NAME} argument format.";
+                }
+            }
+            else {
+                errMsg = $"Expected {CreateMutationBuilder.INPUT_ARGUMENT_NAME} argument in mutation arguments.";
             }
 
-            // Its ok to not find the input argument name in the mutation params dictionary
-            // because it indicates the REST scenario.
-            return mutationParams;
+            // should not happen due to gql schema validation
+            throw new DataGatewayException(
+                message: errMsg,
+                subStatusCode: DataGatewayException.SubStatusCodes.BadRequest,
+                statusCode: HttpStatusCode.BadRequest);
         }
     }
 }

@@ -44,6 +44,7 @@ namespace Azure.DataGateway.Service
             services.AddSingleton<RuntimeConfigValidator>();
 
             services.AddSingleton<CosmosClientProvider>();
+            services.AddHealthChecks();
 
             services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
             {
@@ -214,9 +215,10 @@ namespace Azure.DataGateway.Service
 
             app.Use(async (context, next) =>
             {
+                bool isHealthCheckRequest = context.Request.Path == "/" && context.Request.Method == HttpMethod.Get.Method;
                 bool isSettingConfig = context.Request.Path.StartsWithSegments("/configuration")
                     && context.Request.Method == HttpMethod.Post.Method;
-                if (isRuntimeReady)
+                if (isRuntimeReady || isHealthCheckRequest)
                 {
                     await next.Invoke();
                 }
@@ -261,6 +263,7 @@ namespace Azure.DataGateway.Service
             {
                 endpoints.MapControllers();
                 endpoints.MapBananaCakePop(toolPath: "/graphql");
+                endpoints.MapHealthChecks("/");
             });
         }
 

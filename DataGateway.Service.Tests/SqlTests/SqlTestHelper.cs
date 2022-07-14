@@ -99,37 +99,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             config.Entities.Add(entityKey, entity);
         }
 
-        public static void AddCompositeViewToConfig(RuntimeConfig runtimeConfig)
-        {
-            string compositeViewSource = "\"books_authors\"";
-            string entityJsonString =
-              @"{
-                    ""source"":  " + compositeViewSource + @",
-                    ""graphql"": true,
-                    ""permissions"": [
-                      {
-                        ""role"": ""anonymous"",
-                        ""actions"": [ ""read"" ]
-                      },
-                      {
-                        ""role"": ""authenticated"",
-                        ""actions"": [" + $" \"{ActionType.CREATE}\", \"{ActionType.READ}\", \"{ActionType.DELETE}\", \"{ActionType.UPDATE}\" ]" +
-                      @"}
-                    ]
-                }";
-
-            JsonSerializerOptions options = new()
-            {
-                PropertyNameCaseInsensitive = true,
-                Converters =
-                {
-                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
-                }
-            };
-
-            Entity entity = JsonSerializer.Deserialize<Entity>(entityJsonString, options);
-            runtimeConfig.Entities.Add("books_authors", entity);
-        }
         /// <summary>
         /// Converts strings to JSON objects and does a deep compare
         /// </summary>

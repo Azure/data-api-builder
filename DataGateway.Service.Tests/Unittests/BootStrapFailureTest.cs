@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
     public class BootStrapFailureTest : SqlTestBase
     {
         /// <summary>
-        /// Test to validate that the runtime fails during bootstrap if the primary
+        /// Test to validate that the runtime fails and throws an exception during bootstrap when the primary
         /// key cannot be determined for a database object.
         /// </summary>
         /// <returns></returns>
@@ -46,13 +46,8 @@ namespace Azure.DataGateway.Service.Tests.Unittests
             {
                 string dropViewQuery = "DROP VIEW IF EXISTS books_authors";
                 await _queryExecutor.ExecuteQueryAsync(dropViewQuery, parameters: null);
+                await _queryExecutor.ExecuteQueryAsync(dbQuery, parameters: null);
             }
-        }
-
-        [TestCleanup]
-        public async Task TestCleanup()
-        {
-            await ResetDbStateAsync();
         }
     }
 }

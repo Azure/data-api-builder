@@ -39,6 +39,10 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             // When calling parameterless version of AddAuthentication()
             // the default scheme is used to hydrate the httpContext.User object.
             AuthenticateResult authNResult = await httpContext.AuthenticateAsync();
+
+            // Set the httpContext.user as the authNResult.Principal, which is never null.
+            // Only the properties of the Principal.Identity changes depending on the
+            // authentication result.
             httpContext.User = authNResult.Principal!;
 
             // Check for different scenarios of authentication results.

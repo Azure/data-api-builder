@@ -261,6 +261,34 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Returns the HTTP verb for a provided Operation.
+        /// </summary>
+        /// <param name="operationType">Operation such as Find, Upsert, Delete, etc.
+        /// When Operation.None is provided from some tests, return empty string.</param>
+        /// <returns>Matching HttpConstants value</returns>
+        /// <exception cref="ArgumentException"></exception>
+        public static string OperationTypeToHTTPVerb(Operation operationType)
+        {
+            switch (operationType)
+            {
+                case Operation.Find:
+                    return HttpConstants.GET;
+                case Operation.Insert:
+                    return HttpConstants.POST;
+                case Operation.Upsert:
+                    return HttpConstants.PUT;
+                case Operation.UpsertIncremental:
+                    return HttpConstants.PATCH;
+                case Operation.Delete:
+                    return HttpConstants.DELETE;
+                case Operation.None:
+                    return string.Empty;
+                default:
+                    throw new ArgumentException(message: $"Invalid operationType {operationType} provided");
+            }
+        }
+
+        /// <summary>
         /// For testing we use a JSON string that represents
         /// the runtime config that would otherwise be generated
         /// by the client for use by the runtime. This makes it

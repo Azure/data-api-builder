@@ -572,7 +572,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'name', name, 'birthdate', birthdate)) AS data
                   FROM (
                       SELECT *
-                      FROM " + _integrationTieBreakTable + @" 
+                      FROM " + _integrationTieBreakTable + @"
                       ORDER BY birthdate, name, id desc
                       LIMIT 2
                   ) AS subq"
@@ -584,9 +584,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                   FROM (
                       SELECT *
                       FROM " + _integrationTieBreakTable + @"
-                      WHERE ((birthdate > '2001-01-01') OR(birthdate = '2001-01-01' AND name > 'Aniruddh') OR 
-                      (birthdate = '2001-01-01' AND name = 'Aniruddh' AND id > 125)) 
-                      ORDER BY birthdate, name, id 
+                      WHERE ((birthdate > '2001-01-01') OR(birthdate = '2001-01-01' AND name > 'Aniruddh') OR
+                      (birthdate = '2001-01-01' AND name = 'Aniruddh' AND id > 125))
+                      ORDER BY birthdate, name, id
                       LIMIT 2
                   ) AS subq"
             },
@@ -857,7 +857,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
-                        WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='FairyTales' AND piecesAvailable is NULL 
+                        WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='FairyTales' AND piecesAvailable is NULL
                         AND piecesRequired = 4
                     ) AS subq
                 "
@@ -1080,7 +1080,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
-                        WHERE categoryid = 1 AND pieceid = 1 AND categoryName ='books' AND piecesAvailable is NULL 
+                        WHERE categoryid = 1 AND pieceid = 1 AND categoryName ='books' AND piecesAvailable is NULL
                         AND piecesRequired = 0
                     ) AS subq
                 "
@@ -1129,7 +1129,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 _sqlMetadataProvider,
                 _httpContextAccessor.Object,
                 _authorizationService.Object,
-                _authZResolver,
+                _authorizationResolver,
                 _runtimeConfigProvider);
             _restController = new RestController(_restService);
         }

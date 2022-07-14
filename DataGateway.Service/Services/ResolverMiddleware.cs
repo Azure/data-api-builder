@@ -153,9 +153,6 @@ namespace Azure.DataGateway.Service.Services
         /// variable for the IValueNode is not supported.</param>
         public static object? ExtractValueFromIValueNode(IValueNode value, IInputField argumentSchema, IVariableValueCollection variables)
         {
-            Console.WriteLine("ARGUMENT SCHEMA: " + argumentSchema.ToString());
-            Console.WriteLine("ARGUMENT TYPE: " + argumentSchema.Type.TypeName());
-
             // extract value from the variable if the the IValueNode is a variable
             if(value.Kind == SyntaxKind.Variable)
             {

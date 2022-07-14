@@ -25,26 +25,49 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "EasyAuth"
+        "provider": "StaticWebApps"
       }
     }
   },
   "entities": {
     "Planet": {
-      "source": "planet",
+      "source": "graphqldb.planet",
+      "rest": false,
+      "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "*" ]
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ]
     },
     "Character": {
-      "source": "planet",
+      "source": "graphqldb.character",
+      "rest": false,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
+    },
+    "Star": {
+      "source": "graphqldb.star",
+      "rest": false,
+      "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "*" ]
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ]
     }

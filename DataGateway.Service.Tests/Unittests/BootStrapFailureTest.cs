@@ -46,7 +46,6 @@ namespace Azure.DataGateway.Service.Tests.Unittests
             {
                 string dropViewQuery = "DROP VIEW IF EXISTS books_authors";
                 await _queryExecutor.ExecuteQueryAsync(dropViewQuery, parameters: null);
-                await _queryExecutor.ExecuteQueryAsync(dbQuery, parameters: null);
             }
         }
     }

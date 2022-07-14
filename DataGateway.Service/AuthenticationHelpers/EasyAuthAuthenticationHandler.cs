@@ -69,8 +69,10 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                     return Task.FromResult(success);
                 }
             }
-            // Try another handler
-            return Task.FromResult(AuthenticateResult.NoResult());
+
+            // Fail authentication with status code 401 when no EasyAuth header is present,
+            // because AppService/StaticWebApps guarantee an EasyAuth header even for anonymous user.
+            return Task.FromResult(AuthenticateResult.Fail(failureMessage: $"Invalid {Options.EasyAuthProvider} EasyAuth token."));
         }
     }
 }

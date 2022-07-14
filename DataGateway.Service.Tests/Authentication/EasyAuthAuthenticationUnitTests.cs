@@ -69,20 +69,6 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
         }
 
-        /// <summary>
-        /// Ensures that when the EasyAurh token is missing from the request, it is treated as anonymous and the
-        /// request passes through.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public async Task TestMissingEasyAuthToken()
-        {
-            string? token = null;
-            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token, EasyAuthType.StaticWebApps);
-            Assert.IsNotNull(postMiddlewareContext.User.Identity);
-            Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
-        }
         #endregion
         #region Negative Tests
         /// <summary>
@@ -97,8 +83,10 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         [DataTestMethod]
         [DataRow("", DisplayName = "No EasyAuth header value provided")]
         [DataRow("ey==", DisplayName = "Corrupt EasyAuth header value provided")]
+        [DataRow(null, DisplayName = "No EasyAuth header provided")]
         [DataRow("", true, DisplayName = "No EasyAuth header value provided, include authorization header")]
         [DataRow("ey==", true, DisplayName = "Corrupt EasyAuth header value provided, include authorization header")]
+        [DataRow(null, true, DisplayName = "No EasyAuth header provided, include authorization header")]
         [TestMethod]
         public async Task TestInvalidEasyAuthToken(string token, bool sendAuthorizationHeader = false)
         {

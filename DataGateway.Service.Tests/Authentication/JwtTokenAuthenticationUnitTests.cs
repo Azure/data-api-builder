@@ -63,6 +63,21 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
         }
+
+        /// <summary>
+        /// Test to validate that the user request is treated with anonymous role when
+        /// the jwt token is missing.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task TestMissingJwtToken()
+        {
+            RsaSecurityKey key = new(RSA.Create(2048));
+            string token = null;
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
+            Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+        }
         #endregion
         #region Negative Tests
         /// <summary>
@@ -302,9 +317,13 @@ namespace Azure.DataGateway.Service.Tests.Authentication
 
             return await server.SendAsync(context =>
             {
-                StringValues headerValue = new(new string[] { $"Bearer {token}" });
-                KeyValuePair<string, StringValues> authHeader = new("Authorization", headerValue);
-                context.Request.Headers.Add(authHeader);
+                if (token is not null)
+                {
+                    StringValues headerValue = new(new string[] { $"Bearer {token}" });
+                    KeyValuePair<string, StringValues> authHeader = new("Authorization", headerValue);
+                    context.Request.Headers.Add(authHeader);
+                }
+
                 context.Request.Scheme = "https";
             });
         }

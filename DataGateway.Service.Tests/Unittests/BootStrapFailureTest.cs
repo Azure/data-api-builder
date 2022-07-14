@@ -7,7 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.Unittests
 {
-    [TestClass]
+    [TestClass, TestCategory(TestCategory.MSSQL)]
     public class BootStrapFailureTest : SqlTestBase
     {
         /// <summary>

@@ -288,6 +288,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             await TestSettingOrderByOrderUsingVariable(msSqlQuery);
         }
 
+        [TestMethod]
+        public async Task TestSettingComplexArgumentUsingVariables()
+        {
+            string msSqlQuery = $"SELECT TOP 100 id, title FROM books ORDER BY id ASC FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await base.TestSettingComplexArgumentUsingVariables(msSqlQuery);
+        }
+
         #endregion
 
         #region Negative Tests
@@ -302,12 +309,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
         public override async Task TestInvalidFilterParamQuery()
         {
             await base.TestInvalidFilterParamQuery();
-        }
-
-        [TestMethod]
-        public override async Task TestSettingComplexArgumentUsingVariables()
-        {
-            await base.TestSettingComplexArgumentUsingVariables();
         }
 
         #endregion

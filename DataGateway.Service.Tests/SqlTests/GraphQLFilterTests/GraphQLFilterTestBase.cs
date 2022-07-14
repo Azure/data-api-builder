@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -679,15 +678,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
-        #endregion
-
-        #region Negative Tests
-
         /// <summary>
-        /// Test passing variable to unsupported filter input type field gives appropriate error
+        /// Test passing variable to and field
         /// </summary>
         [TestMethod]
-        public async Task TestPassingVariablesToUnsupportedField()
+        public async Task TestPassingVariablesToAndField()
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"query($and: [BookFilterInput!])
@@ -700,8 +695,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(gqlQuery, graphQLQueryName, _graphQLController, new() { { "and", new[] { new { id = new { lt = 3 } } } } });
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.NotSupported}");
+            string dbQuery = MakeQueryOn(
+                "books",
+                new List<string> { "id" },
+                @"id < 3",
+                GetDefaultSchema());
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController, new() { { "and", new[] { new { id = new { lt = 3 } } } } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
         #endregion

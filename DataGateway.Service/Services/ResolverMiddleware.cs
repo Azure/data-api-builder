@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
@@ -161,17 +159,26 @@ namespace Azure.DataGateway.Service.Services
                 // IsLeafType checks for IsScalarType || IsEnumType
                 // https://github.com/ChilliCream/hotchocolate/blob/2ba023b7211fdc6db80a4db55a4629db30d82967/src/HotChocolate/Core/src/Types/Types/Extensions/TypeExtensions.cs#L65-L74
                 // The other types are trickier to parse so for now disallow to pass them as variables
-                if (!argumentSchema.Type.IsLeafType())
+                // if (!argumentSchema.Type.IsLeafType())
+                // {
+                //     throw new DataGatewayException(
+                //         $"Passing variables into the argument {argumentSchema.Name.Value} is not supported. " +
+                //         "Only scalar and enum arguments are currently supported.",
+                //         HttpStatusCode.NotImplemented,
+                //         DataGatewayException.SubStatusCodes.NotSupported
+                //     );
+                // }
+                // IValueNode
+                // argumentSchema.Type.ToTypeNode()
+
+                IValueNode? variableValue = variables.GetVariable<IValueNode>(variableName);
+
+                if (variableValue is null)
                 {
-                    throw new DataGatewayException(
-                        $"Passing variables into the argument {argumentSchema.Name.Value} is not supported. " +
-                        "Only scalar and enum arguments are currently supported.",
-                        HttpStatusCode.NotImplemented,
-                        DataGatewayException.SubStatusCodes.NotSupported
-                    );
+                    return null;
                 }
 
-                return variables.GetVariable<object?>(variableName);
+                return ExtractValueFromIValueNode(variableValue, argumentSchema, variables);
             }
 
             if (value is NullValueNode)

@@ -323,6 +323,13 @@ FROM
             await TestSettingOrderByOrderUsingVariable(postgresQuery);
         }
 
+        [TestMethod]
+        public async Task TestSettingComplexArgumentUsingVariables()
+        {
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id ASC LIMIT 100) as table0";
+            await base.TestSettingComplexArgumentUsingVariables(postgresQuery);
+        }
+
         #endregion
 
         #region Negative Tests
@@ -337,12 +344,6 @@ FROM
         public override async Task TestInvalidFilterParamQuery()
         {
             await base.TestInvalidFilterParamQuery();
-        }
-
-        [TestMethod]
-        public override async Task TestSettingComplexArgumentUsingVariables()
-        {
-            await base.TestSettingComplexArgumentUsingVariables();
         }
 
         #endregion

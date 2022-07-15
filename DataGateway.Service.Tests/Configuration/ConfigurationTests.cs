@@ -140,6 +140,9 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, POSTGRESQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
+            object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
+            Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
+
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
             Assert.IsInstanceOfType(queryEngine, typeof(SqlQueryEngine));
 
@@ -148,9 +151,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<NpgsqlConnection>));
-
-            object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
-            Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
 
             object authorizationResolver = server.Services.GetService(typeof(IAuthorizationResolver));
             Assert.IsInstanceOfType(authorizationResolver, typeof(IAuthorizationResolver));

@@ -139,11 +139,11 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, POSTGRESQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
-            object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
-            Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
-
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
             Assert.IsInstanceOfType(queryEngine, typeof(SqlQueryEngine));
+
+            object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
+            Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
 
             object queryBuilder = server.Services.GetService(typeof(IQueryBuilder));
             Assert.IsInstanceOfType(queryBuilder, typeof(PostgresQueryBuilder));
@@ -151,8 +151,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<NpgsqlConnection>));
 
-            object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
-            Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
+            object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
+            Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
         }
 
         [TestMethod("Validates that local MySql settings can be loaded and the correct classes are in the service provider.")]

@@ -76,6 +76,7 @@ namespace Azure.DataGateway.Service
         {
             string configFileName
                 = RuntimeConfigPath.GetFileNameForEnvironment(env.EnvironmentName);
+            Console.WriteLine("CONFIGFILE: " + configFileName);
             Dictionary<string, string> configFileNameMap = new()
             {
                 {

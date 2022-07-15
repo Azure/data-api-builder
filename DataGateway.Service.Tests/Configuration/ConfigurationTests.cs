@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
@@ -142,9 +143,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             object queryEngine = server.Services.GetService(typeof(IQueryEngine));
             Assert.IsInstanceOfType(queryEngine, typeof(SqlQueryEngine));
 
-            object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
-            Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
-
             object queryBuilder = server.Services.GetService(typeof(IQueryBuilder));
             Assert.IsInstanceOfType(queryBuilder, typeof(PostgresQueryBuilder));
 
@@ -153,6 +151,12 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
             object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
+
+            object authorizationResolver = server.Services.GetService(typeof(IAuthorizationResolver));
+            Assert.IsInstanceOfType(authorizationResolver, typeof(IAuthorizationResolver));
+
+            object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
+            Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
         }
 
         [TestMethod("Validates that local MySql settings can be loaded and the correct classes are in the service provider.")]

@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
 
         /// <summary>
         /// For EasyAuth, this middleware is triggered after the EasyAuthHandler
-        /// validates the token. For JWT, authentication scheme we explicitly authenticate here.
+        /// validates the token. For JWT authentication scheme, we explicitly authenticate here.
         /// A successful result contains validated token data that is
         /// used to retrieve the `identity` from within the Principal in the HttpContext for use
         /// in downstream middleware.
@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                     AuthorizationResolver.CLIENT_ROLE_HEADER,
                     clientRoleHeader))
             {
-                // if we are unable to add the role, it means it already exists,
+                // if we are unable to add the role, it means it already exists.
                 if (authNResult.Succeeded)
                 {
                     // honor and pick up the existing role value.
@@ -65,7 +65,8 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                 }
                 else
                 {
-                    // then replace its value only when it is NOT in an authenticated scenario.
+                    // replace its value with anonymous
+                    // only when it is NOT in an authenticated scenario.
                     httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]
                         = clientRoleHeader;
                 }

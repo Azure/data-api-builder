@@ -145,7 +145,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
             objectTypeDirectives.Add(new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName)));
 
             // Any roles passed in will be added to the authorize directive for this ObjectType
-            // taking the form: @authorize(roles: [“role1”, ..., “roleN”]) 
+            // taking the form: @authorize(roles: [“role1”, ..., “roleN”])
+            // If the 'anonymous' role is present in the role list, no @authorize directive will be added
+            // because HotChocolate requires an authenticated user when the authorize directive is evaluated.
             if (rolesAllowedForEntity.Count() >= 1 && !rolesAllowedForEntity.Contains(GraphQLUtils.SYSTEM_ROLE_ANONYMOUS))
             {
                 objectTypeDirectives.Add(GraphQLUtils.CreateAuthorizationDirective(rolesAllowedForEntity));

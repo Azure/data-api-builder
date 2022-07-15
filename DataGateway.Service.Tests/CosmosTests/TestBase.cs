@@ -56,7 +56,13 @@ type Planet @model {
     name : String,
     character: Character,
     age : Int,
-    dimension : String
+    dimension : String,
+    stars: [Star]
+}
+
+type Star @model {
+    id : ID,
+    name : String
 }";
             MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
             {
@@ -67,7 +73,7 @@ type Planet @model {
 
             //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.
             Mock<IAuthorizationResolver> authorizationResolverCosmos = new();
-            authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet" }));
+            authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet", "Star" }));
 
             _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
             _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);

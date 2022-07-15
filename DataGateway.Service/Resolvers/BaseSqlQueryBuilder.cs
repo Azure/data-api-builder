@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected virtual string Build(KeysetPaginationPredicate? predicate)
         {
-            if (predicate == null)
+            if (predicate is null)
             {
                 return string.Empty;
             }

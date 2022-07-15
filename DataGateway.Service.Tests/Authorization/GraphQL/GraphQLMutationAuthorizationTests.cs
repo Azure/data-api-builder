@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Service.Exceptions;
@@ -14,25 +15,40 @@ using Moq;
 namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
 {
     /// <summary>
-    /// Base class for GraphQL Mutation tests targetting Sql databases.
+    /// Unit Tests validating mutation field authorization for GraphQL.
+    /// Ensures the authorization decision from the authorizationResolver properly triggers
+    /// an exception for failure (DataGatewayException.Forbidden), and proceeds normally for success.
     /// </summary>
     [TestClass]
-    public class GraphQLMutationAuthorizationTests : SqlTestBase
+    public class GraphQLMutationAuthorizationTests
     {
         private const string TEST_ENTITY = "TEST_ENTITY";
         private const string TEST_COLUMN_VALUE = "COLUMN_VALUE";
         private const string MIDDLEWARE_CONTEXT_ROLEHEADER_KEY = "role";
         private const string MIDDLEWARE_CONTEXT_ROLEHEADER_VALUE = "roleName";
 
+        /// <summary>
+        /// This test ensures that data passed into AuthorizeMutationFields() within the SqlMutationEngine
+        /// are evaluated and provided to the authorization resolver for an authorization decision.
+        /// If authorization fails, an exception is thrown and this test validates that scenario.
+        /// If authorization succeeds, no exceptions are thrown for authorization, and function resolves silently.
+        /// </summary>
+        /// <param name="isAuthorized"></param>
+        /// <param name="columnsAllowed"></param>
+        /// <param name="columnsRequested"></param>
+        /// <param name="operation"></param>
         [DataTestMethod]
-        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.Create, DisplayName = "Create Mutation Field Authorization")]
-        [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col4" }, Config.Operation.Update, DisplayName = "Update Mutation Field Authorization")]
+        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.Create, DisplayName = "Create Mutation Field Authorization - Success, Columns Allowed")]
+        [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.Create, DisplayName = "Create Mutation Field Authorization - Failure, Columns Forbidden")]
+        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.UpdateGraphQL, DisplayName = "Update Mutation Field Authorization - Success, Columns Allowed")]
+        [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col4" }, Config.Operation.UpdateGraphQL, DisplayName = "Update Mutation Field Authorization - Failure, Columns Forbidden")]
 
         public void MutationFields_AuthorizationEvaluation(bool isAuthorized, string[] columnsAllowed, string[] columnsRequested, Config.Operation operation)
         {
             SqlMutationEngine engine = SetupTestFixture(isAuthorized);
 
             // Setup mock mutation input, utilized in BaseSqlQueryStructure.InputArgumentToMutationParams() helper.
+            // This takes the test's "columnsRequested" and adds them to the mutation input.
             List<ObjectFieldNode> mutationInputRaw = new();
             foreach (string column in columnsRequested)
             {
@@ -64,9 +80,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
 
                 authorizationResult = true;
             }
-            catch (DataGatewayException)
+            catch (DataGatewayException dgException)
             {
-                Assert.IsFalse(isAuthorized, message: "Mutation fields authorized erroneously.");
+                Console.Error.WriteLine(dgException.Message);
+                Assert.IsFalse(isAuthorized, message: "Mutation fields authorized erroneously, no exception expected.");
             }
 
             Assert.AreEqual(actual: authorizationResult, expected: isAuthorized, message: "Mutation field authorization incorrectly evaluated.");
@@ -77,7 +94,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
         /// MSTest decorator.
         /// </summary>
         /// <param name="context"></param>
-        private SqlMutationEngine SetupTestFixture(bool areColumnsAllowed)
+        private static SqlMutationEngine SetupTestFixture(bool isAuthorized)
         {
             Mock<IQueryEngine> _queryEngine = new();
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
@@ -91,7 +108,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<IEnumerable<string>>() // Can be any IEnumerable<string>, as find request result field list is depedent on AllowedColumns.
-                )).Returns(areColumnsAllowed);
+                )).Returns(isAuthorized);
 
             return new SqlMutationEngine(
                 _queryEngine.Object,

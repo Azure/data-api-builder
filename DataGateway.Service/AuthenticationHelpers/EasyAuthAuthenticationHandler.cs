@@ -55,7 +55,11 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
 
                 if (identity is null)
                 {
-                    // Even for invalid token, the user is always in anonymous role.
+                    // Even for invalid token, we don't terminate the pipeline
+                    // since the request is always in anonymous role.
+                    // It means that anything that is exposed anonymously will still be visible.
+                    // This also represents the scenario where the user attempted to logon
+                    // but failed authentication. So, the role assigned to X-MS-API-ROLE will be anonymous.
                     return Task.FromResult(AuthenticateResult.NoResult());
                 }
 
@@ -72,7 +76,10 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             }
 
             // Return no result when no EasyAuth header is present,
-            // because a user is always in anonymous role in EasyAuth.
+            // because a request is always in anonymous role in EasyAuth
+            // This scenario is not possible when front loaded with EasyAuth
+            // since the X-MS-CLIENT-PRINCIPAL header will always be present in that case.
+            // This is applicable when engine is being tested without front loading with EasyAuth.
             return Task.FromResult(AuthenticateResult.NoResult());
         }
     }

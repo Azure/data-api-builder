@@ -152,9 +152,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
             Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<NpgsqlConnection>));
 
-            object authorizationResolver = server.Services.GetService(typeof(IAuthorizationResolver));
-            Assert.IsInstanceOfType(authorizationResolver, typeof(IAuthorizationResolver));
-
             object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
             Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
         }

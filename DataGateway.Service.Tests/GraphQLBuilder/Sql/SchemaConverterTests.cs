@@ -7,6 +7,7 @@ using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
+using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
@@ -524,9 +525,13 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 rolesAllowedForFields: GetFieldToRolesMap(rolesForField: roles)
                 );
 
-            // Ensures no field has the @authorize directive.
+            // Prepares error message, only used if assertion fails.
+            string errorMessage = !authorizeDirectiveExpected ? $"@authorize directive must not be present for field with anonymous access permissions."
+                : $"@authorize directive must not be present for field with anonymous access permissions.";
+
+            // Ensures no field has the @authorize directive if it is NOT authorizeDirectiveExpected
             Assert.AreEqual(expected: authorizeDirectiveExpected, actual: od.Directives.Any(d => d.Name.Value == GraphQLUtils.AUTHORIZE_DIRECTIVE),
-                message: "@authorize directive must not be present for field with anonymous access permissions.");
+                 message: errorMessage);
         }
 
         /// <summary>

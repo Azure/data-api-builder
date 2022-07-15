@@ -75,7 +75,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlUpdateStructure structure)
         {
-            (string sets, string updates, string select) = MakeStoreUpdatePK(structure.PrimaryKey());
+            (string sets, string updates, string select) = MakeStoreUpdatePK(structure.AllColumns());
 
             return sets + ";\n" +
                     $"UPDATE {QuoteIdentifier(structure.DatabaseObject.Name)} " +
@@ -96,7 +96,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlUpsertQueryStructure structure)
         {
-            (string sets, string updates, string select) = MakeStoreUpdatePK(structure.PrimaryKey());
+            (string sets, string updates, string select) = MakeStoreUpdatePK(structure.AllColumns());
 
             if (structure.IsFallbackToUpdate)
             {
@@ -162,17 +162,17 @@ WHERE
         /// <summary>
         /// Makes the query segments to store PK during an update
         /// </summary>
-        private (string, string, string) MakeStoreUpdatePK(List<string> primaryKey)
+        private (string, string, string) MakeStoreUpdatePK(List<string> columns)
         {
             // Create local variables to store the pk columns
-            string sets = String.Join(";\n", primaryKey.Select((x, index) => $"SET {"@LU_" + index.ToString()} := 0"));
+            string sets = String.Join(";\n", columns.Select((x, index) => $"SET {"@LU_" + index.ToString()} := 0"));
 
             // Fetch the value to local variables
-            string updates = String.Join(", ", primaryKey.Select((x, index) =>
+            string updates = String.Join(", ", columns.Select((x, index) =>
                 $"{QuoteIdentifier(x)} = (SELECT {"@LU_" + index.ToString()} := {QuoteIdentifier(x)})"));
 
             // Select local variables and mapping to original column name
-            string select = String.Join(", ", primaryKey.Select((x, index) => $"{"@LU_" + index.ToString()} AS {QuoteIdentifier(x)}"));
+            string select = String.Join(", ", columns.Select((x, index) => $"{"@LU_" + index.ToString()} AS {QuoteIdentifier(x)}"));
 
             return (sets, updates, select);
         }

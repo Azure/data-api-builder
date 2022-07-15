@@ -79,10 +79,10 @@ namespace Azure.DataGateway.Auth
         /// Applicable to GraphQL field directive @authorize on ObjectType fields.
         /// </summary>
         /// <param name="entityName">EntityName whose actionMetadata will be searched.</param>
-        /// <param name="actionName">ActionName to lookup field permissions</param>
-        /// <param name="field">Specific field to get collection of roles</param>
-        /// <returns>Collection of role names allowed to perform actionType on Entity's field.</returns>
-        public IEnumerable<string> GetRolesForField(string entityName, string actionName, string field);
+        /// <param name="field">Field to lookup action permissions</param>
+        /// <param name="actionName">Specific action to get collection of roles</param>
+        /// <returns>Collection of role names allowed to perform actionName on Entity's field.</returns>
+        public IEnumerable<string> GetRolesForField(string entityName, string field, string actionName);
 
         /// <summary>
         /// Returns a list of roles which define permissions for the provided action.

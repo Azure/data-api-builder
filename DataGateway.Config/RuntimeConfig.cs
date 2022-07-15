@@ -63,12 +63,24 @@ namespace Azure.DataGateway.Config
         [property: JsonPropertyName(MySqlOptions.JSON_PROPERTY_NAME)]
         MySqlOptions? MySql,
         [property: JsonPropertyName(GlobalSettings.JSON_PROPERTY_NAME)]
-        Dictionary<GlobalSettingsType, object> RuntimeSettings,
+        Dictionary<GlobalSettingsType, object>? RuntimeSettings,
         [property: JsonPropertyName(Entity.JSON_PROPERTY_NAME)]
         Dictionary<string, Entity> Entities)
     {
         public const string SCHEMA_PROPERTY_NAME = "$schema";
         public const string SCHEMA = "hawaii.draft-01.schema.json";
+
+        // use camel case
+        // convert Enum to strings
+        // case insensitive
+        public readonly static JsonSerializerOptions SerializerOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            Converters =
+                {
+                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+                }
+        };
 
         /// <summary>
         /// Pick up the global runtime settings from the dictionary if present
@@ -76,61 +88,56 @@ namespace Azure.DataGateway.Config
         /// </summary>
         public void DetermineGlobalSettings()
         {
-            JsonSerializerOptions options = GetDeserializationOptions();
-            foreach (
+            if (RuntimeSettings is not null)
+            {
+                foreach (
                 (GlobalSettingsType settingsType, object settingsJson) in RuntimeSettings)
-            {
-                switch (settingsType)
                 {
-                    case GlobalSettingsType.Rest:
-                        RestGlobalSettings
-                            = ((JsonElement)settingsJson).Deserialize<RestGlobalSettings>(options)!;
-                        break;
-                    case GlobalSettingsType.GraphQL:
-                        GraphQLGlobalSettings =
-                            ((JsonElement)settingsJson).Deserialize<GraphQLGlobalSettings>(options)!;
-                        break;
-                    case GlobalSettingsType.Host:
-                        HostGlobalSettings =
-                           ((JsonElement)settingsJson).Deserialize<HostGlobalSettings>(options)!;
-                        break;
-                    default:
-                        throw new NotSupportedException("The runtime does not " +
-                            " support this global settings type.");
+                    switch (settingsType)
+                    {
+                        case GlobalSettingsType.Rest:
+                            RestGlobalSettings
+                                = ((JsonElement)settingsJson).Deserialize<RestGlobalSettings>(SerializerOptions)!;
+                            break;
+                        case GlobalSettingsType.GraphQL:
+                            GraphQLGlobalSettings =
+                                ((JsonElement)settingsJson).Deserialize<GraphQLGlobalSettings>(SerializerOptions)!;
+                            break;
+                        case GlobalSettingsType.Host:
+                            HostGlobalSettings =
+                                ((JsonElement)settingsJson).Deserialize<HostGlobalSettings>(SerializerOptions)!;
+                            break;
+                        default:
+                            throw new NotSupportedException("The runtime does not " +
+                                " support this global settings type.");
+                    }
                 }
             }
         }
 
-        public static T GetDeserializedConfig<T>(string configJson)
+        /// <summary>
+        /// Try to deserialize the given json string into its object form.
+        /// </summary>
+        /// <typeparam name="T">The object type.</typeparam>
+        /// <param name="configJson">Json string to be deserialized.</param>
+        /// <param name="deserializedConfig">Deserialized json object upon success.</param>
+        /// <returns>True on success, false otherwise.</returns>
+        public static bool TryGetDeserializedConfig<T>(
+            string configJson,
+            out T? deserializedConfig)
         {
-            JsonSerializerOptions options = GetDeserializationOptions();
-
-            // This feels verbose but it avoids having to make _config nullable - which would result in more
-            // down the line issues and null check requirements
-            T? deserializedConfig;
-            if ((deserializedConfig = JsonSerializer.Deserialize<T>(configJson, options)) is null)
+            try
             {
-                throw new JsonException("Failed to get a deserialized config from the provided config.");
+                deserializedConfig = JsonSerializer.Deserialize<T>(configJson, SerializerOptions);
+                return true;
             }
-
-            return deserializedConfig;
-        }
-
-        public static JsonSerializerOptions GetDeserializationOptions()
-        {
-            // use camel case
-            // convert Enum to strings
-            // case insensitive
-            JsonSerializerOptions options = new()
+            catch (JsonException ex)
             {
-                PropertyNameCaseInsensitive = true,
-                Converters =
-                {
-                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
-                }
-            };
+                Console.WriteLine($"Deserialization failed due to: \n{ex}");
 
-            return options;
+                deserializedConfig = default(T);
+                return false;
+            }
         }
 
         [JsonIgnore]
@@ -144,9 +151,10 @@ namespace Azure.DataGateway.Config
 
         public bool IsEasyAuthAuthenticationProvider()
         {
-            return AuthNConfig != null
-                   ? AuthNConfig.IsEasyAuthAuthenticationProvider()
-                    : false;
+            // by default, if there is no AuthenticationSection,
+            // EasyAuth StaticWebApps is the authentication scheme.
+            return AuthNConfig is null ||
+                   AuthNConfig!.IsEasyAuthAuthenticationProvider();
         }
 
         [JsonIgnore]

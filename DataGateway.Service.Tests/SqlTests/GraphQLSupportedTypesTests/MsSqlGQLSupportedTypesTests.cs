@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
@@ -7,7 +8,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlGQLSupportedTypesTests : GraphQLSupportedTypesTestBase
     {
-        protected override string DatabaseEngine => TestCategory.MSSQL;
+        /// <summary>
+        /// Set the database engine for the tests
+        /// </summary>
+        [ClassInitialize]
+        public static async Task SetupAsync(TestContext context)
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            await InitializeTestFixture(context);
+        }
 
         protected override string MakeQueryOnTypeTable(List<string> queriedColumns, int id)
         {

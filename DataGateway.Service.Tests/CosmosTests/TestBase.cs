@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -15,10 +16,10 @@ using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json.Linq;
@@ -47,13 +48,13 @@ type Planet @model {
 
         private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };
 
-        internal CosmosClient CosmosClient { get; private set; }
+        internal static CosmosClient CosmosClient { get; private set; }
 
-        private HttpClient _client;
-        private WebApplicationFactory<Program> _application;
+        private static HttpClient _client;
+        private static WebApplicationFactory<Startup> _application;
 
-        [ClassInitialize]
-        public void Init(TestContext context)
+        [ClassInitialize(InheritanceBehavior.BeforeEachDerivedClass)]
+        public static void Init(TestContext context)
         {
             MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
             {
@@ -64,18 +65,13 @@ type Planet @model {
             Mock<IAuthorizationResolver> authorizationResolverCosmos = new();
             _ = authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet" }));
 
-            _application = new WebApplicationFactory<Program>()
+            _application = new WebApplicationFactory<Startup>()
                 .WithWebHostBuilder(builder =>
                 {
-                    _ = builder.ConfigureServices(services =>
+                    _ = builder.ConfigureTestServices(services =>
                     {
-                        services.RemoveAll<IFileSystem>();
                         services.AddSingleton<IFileSystem>(fileSystem);
-
-                        services.RemoveAll<RuntimeConfigProvider>();
                         services.AddSingleton(TestHelper.ConfigProvider);
-
-                        services.RemoveAll<IAuthorizationResolver>();
                         services.AddSingleton(authorizationResolverCosmos.Object);
                     });
                 });
@@ -91,7 +87,7 @@ type Planet @model {
         /// <param name="dbName">the database name</param>
         /// <param name="containerName">the container name</param>
         /// <param name="numItems">number of items to be created</param>
-        internal List<string> CreateItems(string dbName, string containerName, int numItems)
+        internal static List<string> CreateItems(string dbName, string containerName, int numItems)
         {
             List<string> idList = new();
             for (int i = 0; i < numItems; i++)
@@ -148,20 +144,23 @@ type Planet @model {
         /// <param name="query"> The GraphQL query/mutation</param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns></returns>
-        internal async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null)
+        internal static async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null)
         {
-            string queryJson = variables == null ?
-                JObject.FromObject(new { query }).ToString() :
-                JObject.FromObject(new
+            object payload = variables == null ?
+                new { query } :
+                new
                 {
                     query,
                     variables
-                }).ToString();
+                };
 
-            string graphQLEndpoint = TestHelper.ConfigProvider.GetRuntimeConfiguration().GraphQLGlobalSettings.Path;
+            string graphQLEndpoint = _application.Services.GetService<RuntimeConfigProvider>()
+                .GetRuntimeConfiguration()
+                .GraphQLGlobalSettings.Path;
 
             // todo: set the stuff that use to be on HttpContext
-            HttpResponseMessage responseMessage = await _client.PostAsync(graphQLEndpoint, new StringContent(queryJson));
+            _client.DefaultRequestHeaders.Add("X-MS-CLIENT-PRINCIPAL", "eyJ1c2VySWQiOiIyNTllM2JjNTE5NzU3Mzk3YTE2ZjdmMDBjMTI0NjQxYSIsInVzZXJSb2xlcyI6WyJhbm9ueW1vdXMiLCJhdXRoZW50aWNhdGVkIl0sImlkZW50aXR5UHJvdmlkZXIiOiJnaXRodWIiLCJ1c2VyRGV0YWlscyI6ImFhcm9ucG93ZWxsIiwiY2xhaW1zIjpbXX0=");
+            HttpResponseMessage responseMessage = await _client.PostAsJsonAsync(graphQLEndpoint, payload);
             string body = await responseMessage.Content.ReadAsStringAsync();
 
             JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
@@ -175,7 +174,7 @@ type Planet @model {
             return graphQLResult.GetProperty("data").GetProperty(queryName);
         }
 
-        internal async Task<JsonDocument> ExecuteCosmosRequestAsync(string query, int pagesize, string continuationToken, string containerName)
+        internal static async Task<JsonDocument> ExecuteCosmosRequestAsync(string query, int pagesize, string continuationToken, string containerName)
         {
             QueryRequestOptions options = new()
             {
@@ -194,7 +193,6 @@ type Planet @model {
             }
 
             return JsonDocument.Parse(jarray.ToString().Trim());
-
         }
 
         private static Dictionary<string, EntityMetadata> GetEntityPermissionsMap(string[] entities)

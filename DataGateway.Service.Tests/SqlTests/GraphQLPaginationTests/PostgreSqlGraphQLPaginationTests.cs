@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
@@ -9,6 +10,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlGraphQLPaginationTests : GraphQLPaginationTestBase
     {
-        protected override string DatabaseEngine => TestCategory.POSTGRESQL;
+        /// <summary>
+        /// Set the database engine for the tests
+        /// </summary>
+        [ClassInitialize]
+        public static async Task SetupAsync(TestContext context)
+        {
+            DatabaseEngine = TestCategory.POSTGRESQL;
+            await InitializeTestFixture(context);
+        }
+
     }
 }

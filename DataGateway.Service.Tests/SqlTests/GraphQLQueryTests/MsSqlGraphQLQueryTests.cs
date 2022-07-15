@@ -9,7 +9,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlGraphQLQueryTests : GraphQLQueryTestBase
     {
-        protected override string DatabaseEngine => TestCategory.MSSQL;
+        /// <summary>
+        /// Set the database engine for the tests
+        /// </summary>
+        [ClassInitialize]
+        public static async Task SetupAsync(TestContext context)
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            await InitializeTestFixture(context);
+        }
 
         #region Tests
         /// <summary>

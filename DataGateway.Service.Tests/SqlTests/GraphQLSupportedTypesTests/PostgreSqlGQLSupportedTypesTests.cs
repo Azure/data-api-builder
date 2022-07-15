@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
@@ -8,7 +9,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlGQLSupportedTypesTests : GraphQLSupportedTypesTestBase
     {
-        protected override string DatabaseEngine => TestCategory.POSTGRESQL;
+        /// <summary>
+        /// Set the database engine for the tests
+        /// </summary>
+        [ClassInitialize]
+        public static async Task SetupAsync(TestContext context)
+        {
+            DatabaseEngine = TestCategory.POSTGRESQL;
+            await InitializeTestFixture(context);
+        }
 
         protected override string MakeQueryOnTypeTable(List<string> queriedColumns, int id)
         {

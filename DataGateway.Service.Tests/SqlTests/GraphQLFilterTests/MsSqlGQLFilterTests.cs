@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
@@ -10,7 +11,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
     {
         protected static string DEFAULT_SCHEMA = "dbo";
 
-        protected override string DatabaseEngine => TestCategory.MSSQL;
+        /// <summary>
+        /// Set the database engine for the tests
+        /// </summary>
+        [ClassInitialize]
+        public static async Task Setup(TestContext context)
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            await InitializeTestFixture(context);
+        }
 
         /// <summary>
         /// Gets the default schema for

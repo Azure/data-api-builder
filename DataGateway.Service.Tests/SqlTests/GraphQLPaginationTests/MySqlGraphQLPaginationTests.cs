@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
@@ -9,6 +10,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
     [TestClass, TestCategory(TestCategory.MYSQL)]
     public class MySqlGraphQLPaginationTests : GraphQLPaginationTestBase
     {
-        protected override string DatabaseEngine => TestCategory.MYSQL;
+        /// <summary>
+        /// Set the database engine for the tests
+        /// </summary>
+        [ClassInitialize]
+        public static async Task SetupAsync(TestContext context)
+        {
+            DatabaseEngine = TestCategory.MYSQL;
+            await InitializeTestFixture(context);
+        }
+
     }
 }

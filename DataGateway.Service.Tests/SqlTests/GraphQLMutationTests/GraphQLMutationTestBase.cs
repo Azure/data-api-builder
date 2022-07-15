@@ -275,7 +275,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Do: </code>insert a new Book with an invalid foreign key
         /// <code>Check: </code>that GraphQL returns an error and that the book has not actually been added
         /// </summary>
-        public async Task InsertWithInvalidForeignKey(string dbQuery, string errorMessage)
+        public static async Task InsertWithInvalidForeignKey(string dbQuery, string errorMessage)
         {
             string graphQLMutationName = "createBook";
             string graphQLMutation = @"
@@ -304,7 +304,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Do: </code>edit a book with an invalid foreign key
         /// <code>Check: </code>that GraphQL returns an error and the book has not been editted
         /// </summary>
-        public async Task UpdateWithInvalidForeignKey(string dbQuery, string errorMessage)
+        public static async Task UpdateWithInvalidForeignKey(string dbQuery, string errorMessage)
         {
             string graphQLMutationName = "updateBook";
             string graphQLMutation = @"
@@ -373,7 +373,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         /// Test adding a website placement to a book which already has a website
         /// placement
         /// </summary>
-        public async Task TestViolatingOneToOneRelashionShip(string errorMessage)
+        public static async Task TestViolatingOneToOneRelashionShip(string errorMessage)
         {
             string graphQLMutationName = "createBookWebsitePlacement";
             string graphQLMutation = @"

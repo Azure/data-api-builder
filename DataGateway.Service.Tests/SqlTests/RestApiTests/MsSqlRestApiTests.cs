@@ -638,9 +638,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 $"VALUES (1000,'The Hobbit Returns to The Shire',1234)"
             }
         };
-
-        protected override string DatabaseEngine => TestCategory.MSSQL;
-
         #region Test Fixture Setup
 
         /// <summary>
@@ -649,10 +646,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        public override async Task InitializeTestFixture(TestContext context)
+        public static async Task SetupAsync(TestContext context)
         {
-            await base.InitializeTestFixture(context);
-
+            DatabaseEngine = TestCategory.MSSQL;
+            await InitializeTestFixture(context);
             // Setup REST Components
             _restService = new RestService(_queryEngine,
                 _mutationEngine,

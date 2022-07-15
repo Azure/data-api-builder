@@ -11,9 +11,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
             "23503: insert or update on table \\u0022books\\u0022 " +
             "violates foreign key constraint \\u0022book_publisher_fk\\u0022\"";
 
-        protected override string DatabaseEngine => TestCategory.POSTGRESQL;
-
         #region Test Fixture Setup
+        /// <summary>
+        /// Set the database engine for the tests
+        /// </summary>
+        [ClassInitialize]
+        public static async Task SetupAsync(TestContext context)
+        {
+            DatabaseEngine = TestCategory.POSTGRESQL;
+            await InitializeTestFixture(context);
+        }
+
         /// <summary>
         /// Runs after every test to reset the database state
         /// </summary>

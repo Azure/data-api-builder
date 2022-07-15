@@ -15,7 +15,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         private static readonly string _graphQLQueryName = "planets";
 
         [ClassInitialize]
-        public void TestFixtureSetup(TestContext context)
+        public static void TestFixtureSetup(TestContext context)
         {
             Init(context);
             CosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 
         }
 
-        private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
+        private static async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
         {
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery);
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);

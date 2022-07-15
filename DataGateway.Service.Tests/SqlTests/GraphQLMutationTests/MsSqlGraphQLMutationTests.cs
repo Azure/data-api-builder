@@ -7,9 +7,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlGraphQLMutationTests : GraphQLMutationTestBase
     {
-        protected override string DatabaseEngine => TestCategory.MSSQL;
-
         #region Test Fixture Setup
+        /// <summary>
+        /// Set the database engine for the tests
+        /// </summary>
+        [ClassInitialize]
+        public static async Task SetupAsync(TestContext context)
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            await InitializeTestFixture(context);
+        }
+
         /// <summary>
         /// Runs after every test to reset the database state
         /// </summary>

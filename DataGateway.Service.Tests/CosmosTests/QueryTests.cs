@@ -47,7 +47,7 @@ query{
         private const int TOTAL_ITEM_COUNT = 10;
 
         [ClassInitialize]
-        public void TestFixtureSetup(TestContext context)
+        public static void TestFixtureSetup(TestContext context)
         {
             Init(context);
             CosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
@@ -225,7 +225,7 @@ query {{
         }
 
         [ClassCleanup]
-        public void TestFixtureTearDown()
+        public static void TestFixtureTearDown()
         {
             CosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }

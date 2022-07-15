@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -17,20 +18,18 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Service.Tests.CosmosTests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
-using Newtonsoft.Json.Linq;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -53,10 +52,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static string _defaultSchemaVersion;
         protected static RuntimeConfigProvider _runtimeConfigProvider;
         protected static IAuthorizationResolver _authorizationResolver;
+        private static WebApplicationFactory<Program> _application;
         protected static RuntimeConfig _runtimeConfig;
 
-        protected abstract string DatabaseEngine { get; }
-        protected HttpClient HttpClient { get; private set; }
+        protected static string DatabaseEngine { get; set; }
+        protected static HttpClient HttpClient { get; private set; }
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -64,8 +64,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// this class.
         /// </summary>
         /// <param name="context"></param>
-        [ClassInitialize]
-        public virtual async Task InitializeTestFixture(TestContext context)
+        protected static async Task InitializeTestFixture(TestContext context)
         {
             _runtimeConfig = SqlTestHelper.LoadConfig($"{DatabaseEngine}").CurrentValue;
 
@@ -98,29 +97,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             //Initialize the authorization resolver object
             _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
 
-            WebApplicationFactory<Program> application = new WebApplicationFactory<Program>()
+            _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
                 {
-                    builder.ConfigureServices(services =>
+                    builder.ConfigureTestServices(services =>
                     {
-                        services.RemoveAll<RuntimeConfigProvider>();
                         services.AddSingleton(_runtimeConfigProvider);
-
-                        services.RemoveAll<IQueryEngine>();
                         services.AddSingleton(_queryEngine);
-
-                        services.RemoveAll<IMutationEngine>();
                         services.AddSingleton(_mutationEngine);
-
-                        services.RemoveAll<ISqlMetadataProvider>();
                         services.AddSingleton(_sqlMetadataProvider);
                     });
                 });
 
-            HttpClient = application.CreateClient();
+            HttpClient = _application.CreateClient();
         }
 
-        protected void SetUpSQLMetadataProvider()
+        protected static void SetUpSQLMetadataProvider()
         {
             Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
             mockRuntimeConfigProvider.Setup(x => x.IsDeveloperMode()).Returns(true);
@@ -165,7 +157,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
         }
 
-        protected async Task ResetDbStateAsync()
+        protected static async Task ResetDbStateAsync()
         {
             using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{DatabaseEngine}Books.sql"), parameters: null);
         }
@@ -462,20 +454,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <returns>JsonElement</returns>
         protected static async Task<JsonElement> GetGraphQLControllerResultAsync(string query, string graphQLQueryName, HttpClient httpClient, Dictionary<string, object> variables = null)
         {
-            string graphqlQueryJson = variables == null ?
-                JObject.FromObject(new { query }).ToString() :
-                JObject.FromObject(new
+            object payload = variables == null ?
+                new { query } :
+                new
                 {
                     query,
                     variables
-                }).ToString();
-
-            Console.WriteLine(graphqlQueryJson);
-
-            string graphQLEndpoint = TestHelper.ConfigProvider.GetRuntimeConfiguration().GraphQLGlobalSettings.Path;
+                };
+            string graphQLEndpoint = _application.Services.GetService<RuntimeConfigProvider>()
+                .GetRuntimeConfiguration()
+                .GraphQLGlobalSettings.Path;
 
             // todo: set the stuff that use to be on HttpContext
-            HttpResponseMessage responseMessage = await httpClient.PostAsync(graphQLEndpoint, new StringContent(graphqlQueryJson));
+            httpClient.DefaultRequestHeaders.Add("X-MS-CLIENT-PRINCIPAL", "eyJ1c2VySWQiOiIyNTllM2JjNTE5NzU3Mzk3YTE2ZjdmMDBjMTI0NjQxYSIsInVzZXJSb2xlcyI6WyJhbm9ueW1vdXMiLCJhdXRoZW50aWNhdGVkIl0sImlkZW50aXR5UHJvdmlkZXIiOiJnaXRodWIiLCJ1c2VyRGV0YWlscyI6ImFhcm9ucG93ZWxsIiwiY2xhaW1zIjpbXX0=");
+            HttpResponseMessage responseMessage = await httpClient.PostAsJsonAsync(graphQLEndpoint, payload);
             string body = await responseMessage.Content.ReadAsStringAsync();
 
             return JsonSerializer.Deserialize<JsonElement>(body);

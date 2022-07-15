@@ -296,10 +296,21 @@ namespace Azure.DataGateway.Service
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapGet("/foo", () => "Hello World!");
+
                 endpoints.MapControllers();
-                endpoints.MapGraphQL();
-                endpoints.MapBananaCakePop();
+                if (runtimeConfig is not null && runtimeConfig.GraphQLGlobalSettings.Enabled)
+                {
+                    endpoints.MapGraphQL(runtimeConfig.GraphQLGlobalSettings.Path);
+                    endpoints.MapBananaCakePop();
+                }
             });
+
+            //app.Use(async (context, next) =>
+            //{
+            //    await context.Response.WriteAsync("Hello");
+            //});
+
         }
 
         /// <summary>

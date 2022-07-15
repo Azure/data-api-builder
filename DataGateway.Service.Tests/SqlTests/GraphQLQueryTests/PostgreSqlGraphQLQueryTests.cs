@@ -7,7 +7,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlGraphQLQueryTests : GraphQLQueryTestBase
     {
-        protected override string DatabaseEngine => TestCategory.POSTGRESQL;
+        /// <summary>
+        /// Set the database engine for the tests
+        /// </summary>
+        [ClassInitialize]
+        public static async Task SetupAsync(TestContext context)
+        {
+            DatabaseEngine = TestCategory.POSTGRESQL;
+            await InitializeTestFixture(context);
+        }
 
         #region Tests
         [TestMethod]

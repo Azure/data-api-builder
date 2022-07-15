@@ -38,11 +38,11 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         public void TestCorsConfigReadCorrectly()
         {
             string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
-            JsonSerializerOptions options = RuntimeConfig.GetDeserializationOptions();
-            RuntimeConfig runtimeConfig =
-                    JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
+            RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig runtimeConfig);
             HostGlobalSettings hostGlobalSettings =
-                JsonSerializer.Deserialize<HostGlobalSettings>((JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Host], options);
+                JsonSerializer.Deserialize<HostGlobalSettings>(
+                    (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Host],
+                    RuntimeConfig.SerializerOptions);
 
             Assert.IsInstanceOfType(hostGlobalSettings.Cors.Origins, typeof(string[]));
             Assert.IsInstanceOfType(hostGlobalSettings.Cors.AllowCredentials, typeof(bool));

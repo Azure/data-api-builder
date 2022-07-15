@@ -167,10 +167,11 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
 
                 outputColumns.Add(new(
-                    tableSchema: string.Empty,
-                    tableName: string.Empty,
+                    tableSchema: DatabaseObject.SchemaName,
+                    tableName: DatabaseObject.Name,
                     columnName: columnName,
-                    label: exposedName!));
+                    label: exposedName!,
+                    tableAlias: TableAlias));
             }
 
             return outputColumns;

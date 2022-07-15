@@ -77,55 +77,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 result = await _queryEngine.ExecuteAsync(context, parameters);
             }
 
-            string role = string.Empty;
-            if (context.ContextData.TryGetValue(key: "role", out object? value))
-            {
-                if (value is not null)
-                {
-                    role = (StringValues)value.ToString();
-                }
-            }
-
-            if (string.IsNullOrEmpty(role))
-            {
-                throw new DataGatewayException(
-                    message: "No ClientRoleHeader available to perform authorization.",
-                    statusCode: HttpStatusCode.Unauthorized,
-                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
-            }
-
-            List<string> inputArgumentKeys = BaseSqlQueryStructure.InputArgumentToMutationParams(parameters, INPUT_ARGUMENT_NAME).Keys.ToList();
-            bool isAuthorized = false;
-            switch (mutationOperation)
-            {
-                case Operation.UpdateGraphQL:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: ActionType.UPDATE, inputArgumentKeys);
-                    break;
-                case Operation.Create:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: ActionType.CREATE, inputArgumentKeys);
-                    break;
-                case Operation.Delete:
-                    // Delete operations are not checked for authorization on field level,
-                    // and instead at the mutation level and would be rejected before this time in the pipeline.
-                    // Continuing on with operation.
-                    isAuthorized = true;
-                    break;
-                default:
-                    throw new DataGatewayException(
-                        message: "Invalid operation for GraphQL Mutation, must be Create, UpdateGraphQL, or Delete",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest
-                        );
-            }
-
-            if (!isAuthorized)
-            {
-                throw new DataGatewayException(
-                    message: "Unauthorized due to one or more fields in this mutation.",
-                    statusCode: HttpStatusCode.Unauthorized,
-                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
-                );
-            }
+            // If authorization fails, an exception will be thrown and request execution halts.
+            AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
 
             using DbDataReader dbDataReader =
                 await PerformMutationOperation(
@@ -434,6 +387,74 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return parameters;
+        }
+
+        /// <summary>
+        /// Authorization check on mutation fields provided in a GraphQL Mutation request.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="parameters"></param>
+        /// <param name="entityName"></param>
+        /// <param name="graphQLMutationName"></param>
+        /// <param name="mutationOperation"></param>
+        /// <returns></returns>
+        /// <exception cref="DataGatewayException"></exception>
+        public void AuthorizeMutationFields(
+            IMiddlewareContext context,
+            IDictionary<string, object?> parameters,
+            string entityName,
+            Operation mutationOperation)
+        {
+            string role = string.Empty;
+            if (context.ContextData.TryGetValue(key: "role", out object? value))
+            {
+                if (value is not null)
+                {
+                    role = (StringValues)value.ToString();
+                }
+            }
+
+            if (string.IsNullOrEmpty(role))
+            {
+                throw new DataGatewayException(
+                    message: "No ClientRoleHeader available to perform authorization.",
+                    statusCode: HttpStatusCode.Unauthorized,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
+            List<string> inputArgumentKeys = BaseSqlQueryStructure.InputArgumentToMutationParams(parameters, INPUT_ARGUMENT_NAME).Keys.ToList();
+            bool isAuthorized;
+
+            switch (mutationOperation)
+            {
+                case Operation.UpdateGraphQL:
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: ActionType.UPDATE, inputArgumentKeys);
+                    break;
+                case Operation.Create:
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: ActionType.CREATE, inputArgumentKeys);
+                    break;
+                case Operation.Delete:
+                    // Delete operations are not checked for authorization on field level,
+                    // and instead at the mutation level and would be rejected before this time in the pipeline.
+                    // Continuing on with operation.
+                    isAuthorized = true;
+                    break;
+                default:
+                    throw new DataGatewayException(
+                        message: "Invalid operation for GraphQL Mutation, must be Create, UpdateGraphQL, or Delete",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest
+                        );
+            }
+
+            if (!isAuthorized)
+            {
+                throw new DataGatewayException(
+                    message: "Unauthorized due to one or more fields in this mutation.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
+                );
+            }
         }
     }
 }

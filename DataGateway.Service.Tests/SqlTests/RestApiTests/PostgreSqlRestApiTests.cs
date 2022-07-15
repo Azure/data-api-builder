@@ -635,6 +635,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
                     ) AS subq
                 "
+            },{
+                "InsertOneWithMappingTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT  ""treeId"", ""species"" AS ""Scientific Name"", ""region""
+                            AS ""United State's Region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                        WHERE ""treeId"" = 3
+                    ) AS subq
+                "
             },
             {
                 "InsertOneInCompositeNonAutoGenPKTest",
@@ -765,6 +776,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
+                "PutOne_Update_With_Mapping_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT  ""treeId"", ""species"" AS ""Scientific Name"", ""region""
+                            AS ""United State's Region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                        WHERE ""treeId"" = 1
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Insert_Test",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -851,6 +874,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 4 AND pieceid = 1 AND ""categoryName"" = 'SciFi'
                             AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 4
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOne_Insert_Mapping_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT  ""treeId"", ""species"" AS ""Scientific Name"", ""region""
+                            AS ""United State's Region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                        WHERE ""treeId"" = 4
                     ) AS subq
                 "
             },

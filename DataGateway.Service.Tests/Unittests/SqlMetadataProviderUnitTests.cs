@@ -12,6 +12,8 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class SqlMetadataProviderUnitTests : SqlTestBase
     {
+        protected override string DatabaseEngine => TestCategory.POSTGRESQL;
+
         /// <summary>
         /// Verify we parse the connection string for the
         /// schema correctly when it is of various relevant
@@ -41,10 +43,9 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [TestMethod]
         public async Task CheckNoExceptionForNoForiegnKey()
         {
-            _testCategory = TestCategory.POSTGRESQL;
-            _runtimeConfig = SqlTestHelper.LoadConfig(_testCategory).CurrentValue;
+            _runtimeConfig = SqlTestHelper.LoadConfig(DatabaseEngine).CurrentValue;
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
-            SqlTestBase.SetUpSQLMetadataProvider();
+            SetUpSQLMetadataProvider();
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
         }

@@ -29,11 +29,11 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        public static void TestFixtureSetup(TestContext context)
+        public void TestFixtureSetup(TestContext context)
         {
             Init(context);
-            Client.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
-            Client.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
+            CosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
+            CosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             CreateItems(DATABASE_NAME, _containerName, 10);
             OverrideEntityContainer("Planet", _containerName);
         }
@@ -237,9 +237,9 @@ mutation {{
         /// Runs once after all tests in this class are executed
         /// </summary>
         [ClassCleanup]
-        public static void TestFixtureTearDown()
+        public void TestFixtureTearDown()
         {
-            Client.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
+            CosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }
 }

@@ -25,12 +25,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         protected const string DATETIME_TYPE = "datetime";
         protected const string BYTEARRAY_TYPE = "bytearray";
 
-        #region Test Fixture Setup
-        protected static GraphQLService _graphQLService;
-        protected static GraphQLController _graphQLController;
-
-        #endregion
-
         #region Tests
 
         [DataTestMethod]
@@ -90,7 +84,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { $"{type}_types" }, id);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, HttpClient);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
@@ -158,7 +152,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 5001);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, HttpClient);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
@@ -228,7 +222,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, HttpClient);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)

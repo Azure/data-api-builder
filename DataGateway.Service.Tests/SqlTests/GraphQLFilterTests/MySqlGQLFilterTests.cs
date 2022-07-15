@@ -14,27 +14,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
     {
         protected static string DEFAULT_SCHEMA = string.Empty;
 
-        /// <summary>
-        /// Sets up test fixture for class, only to be run once per test run, as defined by
-        /// MSTest decorator.
-        /// </summary>
-        /// <param name="context"></param>
-        [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
-        {
-            await InitializeTestFixture(context, TestCategory.MYSQL);
-
-            // Setup GraphQL Components
-            _graphQLService = new GraphQLService(
-                _runtimeConfigProvider,
-                _queryEngine,
-                _mutationEngine,
-                new DocumentCache(),
-                new Sha256DocumentHashProvider(),
-                _sqlMetadataProvider,
-                _authorizationResolver);
-            _graphQLController = new GraphQLController(_graphQLService);
-        }
+        protected override string DatabaseEngine => TestCategory.MYSQL;
 
         /// <summary>
         /// Gets the default schema for

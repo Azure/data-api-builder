@@ -17,8 +17,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
     public abstract class GraphQLPaginationTestBase : SqlTestBase
     {
         #region Test Fixture Setup
-        protected static GraphQLService _graphQLService;
-        protected static GraphQLController _graphQLController;
         protected static readonly string _integrationTableName = "books";
 
         #endregion
@@ -46,7 +44,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             string expected = @"{
               ""items"": [
                 {
@@ -88,7 +86,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             string expected = @"{
               ""items"": [
                 {
@@ -148,7 +146,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             string expected = @"{
               ""items"": [
                 {
@@ -183,7 +181,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement root = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement root = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             root = root.GetProperty("data").GetProperty(graphQLQueryName);
             string actual = SqlPaginationUtil.Base64Decode(root.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME).GetString());
             string expected = "[{\"Value\":3,\"Direction\":0, \"TableSchema\":\"\",\"TableName\":\"\", \"ColumnName\":\"id\"}]";
@@ -209,7 +207,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement root = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement root = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             root = root.GetProperty("data").GetProperty(graphQLQueryName);
             bool actual = root.GetProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME).GetBoolean();
 
@@ -234,7 +232,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement root = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement root = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             root = root.GetProperty("data").GetProperty(graphQLQueryName);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected: "[]", root.GetProperty("items").ToString());
@@ -271,7 +269,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             string expected = @"{
               ""items"": [
                 {
@@ -342,7 +340,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                     }
                 }
             ";
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, HttpClient);
             string expected = @"{
               ""publishers"": {
                 ""books"": {
@@ -411,7 +409,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
 
             string after = "[{\"Value\":1,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"book_id\"}," +
                             "{\"Value\":568,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]";
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             string expected = @"
 {
   ""items"": [
@@ -528,7 +526,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
 
             after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"book_id\"}," +
                                                     "{\"Value\":569,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             string expected = @"{
               ""items"": [
                 {
@@ -566,7 +564,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             string expected = @"{
               ""items"": [
                 {
@@ -603,7 +601,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             string expected = @"{
               ""items"": [
                 {
@@ -644,7 +642,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual1 = await GetGraphQLResultAsync(graphQLQuery1, graphQLQueryName, _graphQLController);
+            string actual1 = await GetGraphQLResultAsync(graphQLQuery1, graphQLQueryName, HttpClient);
 
             string expectedAfter1 = SqlPaginationUtil.Base64Encode(
                   "[{\"Value\":\"Time to Eat\",\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"title\"}," +
@@ -682,7 +680,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual2 = await GetGraphQLResultAsync(graphQLQuery2, graphQLQueryName, _graphQLController);
+            string actual2 = await GetGraphQLResultAsync(graphQLQuery2, graphQLQueryName, HttpClient);
 
             string expectedAfter2 = SqlPaginationUtil.Base64Encode(
                   "[{\"Value\":\"The Groovy Bar\",\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"title\"}," +
@@ -728,7 +726,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual1 = await GetGraphQLResultAsync(graphQLQuery1, graphQLQueryName, _graphQLController);
+            string actual1 = await GetGraphQLResultAsync(graphQLQuery1, graphQLQueryName, HttpClient);
 
             string expectedAfter1 = SqlPaginationUtil.Base64Encode(
                   "[{\"Value\":2324,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"publisher_id\"}," +
@@ -770,7 +768,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual2 = await GetGraphQLResultAsync(graphQLQuery2, graphQLQueryName, _graphQLController);
+            string actual2 = await GetGraphQLResultAsync(graphQLQuery2, graphQLQueryName, HttpClient);
 
             string expectedAfter2 = SqlPaginationUtil.Base64Encode(
                   "[{\"Value\":2323,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"publisher_id\"}," +
@@ -813,7 +811,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -832,7 +830,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -851,7 +849,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -870,7 +868,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -890,7 +888,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -912,7 +910,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -933,7 +931,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -956,7 +954,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -978,7 +976,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, HttpClient);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 

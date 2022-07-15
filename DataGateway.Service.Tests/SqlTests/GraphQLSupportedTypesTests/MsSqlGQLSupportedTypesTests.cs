@@ -11,27 +11,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlGQLSupportedTypesTests : GraphQLSupportedTypesTestBase
     {
-        /// <summary>
-        /// Sets up test fixture for class, only to be run once per test run, as defined by
-        /// MSTest decorator.
-        /// </summary>
-        /// <param name="context"></param>
-        [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
-        {
-            await InitializeTestFixture(context, TestCategory.MSSQL);
-
-            // Setup GraphQL Components
-            _graphQLService = new GraphQLService(
-                _runtimeConfigProvider,
-                _queryEngine,
-                _mutationEngine,
-                new DocumentCache(),
-                new Sha256DocumentHashProvider(),
-                _sqlMetadataProvider,
-                _authorizationResolver);
-            _graphQLController = new GraphQLController(_graphQLService);
-        }
+        protected override string DatabaseEngine => TestCategory.MSSQL;
 
         protected override string MakeQueryOnTypeTable(List<string> queriedColumns, int id)
         {

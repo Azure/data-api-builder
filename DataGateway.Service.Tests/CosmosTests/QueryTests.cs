@@ -47,11 +47,11 @@ query{
         private const int TOTAL_ITEM_COUNT = 10;
 
         [ClassInitialize]
-        public static void TestFixtureSetup(TestContext context)
+        public void TestFixtureSetup(TestContext context)
         {
             Init(context);
-            Client.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
-            Client.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
+            CosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
+            CosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
             OverrideEntityContainer("Planet", _containerName);
         }
@@ -225,9 +225,9 @@ query {{
         }
 
         [ClassCleanup]
-        public static void TestFixtureTearDown()
+        public void TestFixtureTearDown()
         {
-            Client.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
+            CosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }
 }

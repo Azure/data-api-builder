@@ -161,8 +161,6 @@ namespace Azure.DataGateway.Service
                 }
             });
 
-            services.AddSingleton<IDocumentHashProvider, Sha256DocumentHashProvider>();
-            services.AddSingleton<IDocumentCache, DocumentCache>();
             services.AddSingleton<GraphQLService>();
             services.AddSingleton<RestService>();
             services.AddSingleton<IFileSystem, FileSystem>();

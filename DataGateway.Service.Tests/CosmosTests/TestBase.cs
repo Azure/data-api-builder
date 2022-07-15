@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Net.Http;
 using System.Security.Claims;
@@ -9,15 +10,15 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
-using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Service.Services.MetadataProviders;
 using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
-using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Azure.Cosmos.Fluent;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json.Linq;
@@ -27,18 +28,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
     public class TestBase
     {
         internal const string DATABASE_NAME = "graphqldb";
-        internal static GraphQLService _graphQLService;
-        internal static CosmosClientProvider _clientProvider;
-        internal static CosmosQueryEngine _queryEngine;
-        internal static CosmosMutationEngine _mutationEngine;
-        internal static GraphQLController _controller;
-        internal static CosmosClient Client { get; private set; }
-
-        [ClassInitialize]
-        public static void Init(TestContext context)
-        {
-            _clientProvider = new CosmosClientProvider(TestHelper.ConfigProvider);
-            string jsonString = @"
+        private const string GRAPHQL_SCHEMA = @"
 type Character @model {
     id : ID,
     name : String,
@@ -54,33 +44,46 @@ type Planet @model {
     age : Int,
     dimension : String
 }";
+
+        private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial"};
+
+        internal CosmosClient CosmosClient { get; private set; }
+
+        private HttpClient _client;
+        private WebApplicationFactory<Program> _application;
+
+        [ClassInitialize]
+        public void Init(TestContext context)
+        {
             MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
             {
-                { @"./schema.gql", new MockFileData(jsonString) }
+                { @"./schema.gql", new MockFileData(GRAPHQL_SCHEMA) }
             });
-
-            CosmosSqlMetadataProvider _metadataStoreProvider = new(TestHelper.ConfigProvider, fileSystem);
 
             //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.
             Mock<IAuthorizationResolver> authorizationResolverCosmos = new();
-            authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet" }));
+            _ = authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet" }));
 
-            _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
-            _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
-            _graphQLService = new GraphQLService(
-                TestHelper.ConfigProvider,
-                _queryEngine,
-                _mutationEngine,
-                new DocumentCache(),
-                new Sha256DocumentHashProvider(),
-                _metadataStoreProvider,
-                authorizationResolverCosmos.Object);
-            _controller = new GraphQLController(_graphQLService);
-            Client = _clientProvider.Client;
+            _application = new WebApplicationFactory<Program>()
+                .WithWebHostBuilder(builder =>
+                {
+                    _ = builder.ConfigureServices(services =>
+                    {
+                        services.RemoveAll<IFileSystem>();
+                        services.AddSingleton<IFileSystem>(fileSystem);
+
+                        services.RemoveAll<RuntimeConfigProvider>();
+                        services.AddSingleton(TestHelper.ConfigProvider);
+
+                        services.RemoveAll<IAuthorizationResolver>();
+                        services.AddSingleton(authorizationResolverCosmos.Object);
+                    });
+                });
+
+            CosmosClient = new CosmosClientBuilder(TestHelper.ConfigProvider.GetRuntimeConfiguration().ConnectionString).Build();
+
+            _client = _application.CreateClient();
         }
-
-        private static string[] _planets = { "Earth", "Mars", "Jupiter",
-            "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial"};
 
         /// <summary>
         /// Creates items on the specified container
@@ -88,15 +91,15 @@ type Planet @model {
         /// <param name="dbName">the database name</param>
         /// <param name="containerName">the container name</param>
         /// <param name="numItems">number of items to be created</param>
-        internal static List<string> CreateItems(string dbName, string containerName, int numItems)
+        internal List<string> CreateItems(string dbName, string containerName, int numItems)
         {
-            List<String> idList = new();
+            List<string> idList = new();
             for (int i = 0; i < numItems; i++)
             {
                 string uid = Guid.NewGuid().ToString();
                 idList.Add(uid);
                 dynamic sourceItem = TestHelper.GetItem(uid, _planets[i % (_planets.Length)], i);
-                Client.GetContainer(dbName, containerName)
+                CosmosClient.GetContainer(dbName, containerName)
                     .CreateItemAsync(sourceItem, new PartitionKey(uid)).Wait();
             }
 
@@ -145,7 +148,7 @@ type Planet @model {
         /// <param name="query"> The GraphQL query/mutation</param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns></returns>
-        internal static async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null)
+        internal async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null)
         {
             string queryJson = variables == null ?
                 JObject.FromObject(new { query }).ToString() :
@@ -154,8 +157,14 @@ type Planet @model {
                     query,
                     variables
                 }).ToString();
-            _controller.ControllerContext.HttpContext = GetHttpContextWithBody(queryJson);
-            JsonElement graphQLResult = await _controller.PostAsync();
+
+            string graphQLEndpoint = TestHelper.ConfigProvider.GetRuntimeConfiguration().GraphQLGlobalSettings.Path;
+
+            // todo: set the stuff that use to be on HttpContext
+            HttpResponseMessage responseMessage = await _client.PostAsync(graphQLEndpoint, new StringContent(queryJson));
+            string body = await responseMessage.Content.ReadAsStringAsync();
+
+            JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
 
             if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
             {
@@ -166,13 +175,13 @@ type Planet @model {
             return graphQLResult.GetProperty("data").GetProperty(queryName);
         }
 
-        internal static async Task<JsonDocument> ExecuteCosmosRequestAsync(string query, int pagesize, string continuationToken, string containerName)
+        internal async Task<JsonDocument> ExecuteCosmosRequestAsync(string query, int pagesize, string continuationToken, string containerName)
         {
             QueryRequestOptions options = new()
             {
                 MaxItemCount = pagesize,
             };
-            Container c = Client.GetContainer(DATABASE_NAME, containerName);
+            Container c = CosmosClient.GetContainer(DATABASE_NAME, containerName);
             QueryDefinition queryDef = new(query);
             FeedIterator<JObject> resultSetIterator = c.GetItemQueryIterator<JObject>(queryDef, continuationToken, options);
             FeedResponse<JObject> firstPage = await resultSetIterator.ReadNextAsync();

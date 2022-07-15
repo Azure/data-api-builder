@@ -1112,6 +1112,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
             }
         };
 
+        protected override string DatabaseEngine => TestCategory.MYSQL;
+
         #region Test Fixture Setup
 
         /// <summary>
@@ -1120,9 +1122,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
+        public override async Task InitializeTestFixture(TestContext context)
         {
-            await InitializeTestFixture(context, TestCategory.MYSQL);
+            await base.InitializeTestFixture(context);
 
             _restService = new RestService(_queryEngine,
                 _mutationEngine,

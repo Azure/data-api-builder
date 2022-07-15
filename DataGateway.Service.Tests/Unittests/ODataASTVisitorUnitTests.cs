@@ -24,11 +24,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         private const string DEFAULT_SCHEMA_NAME = "dbo";
         private const string DEFAULT_TABLE_NAME = "books";
 
-        [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
-        {
-            await InitializeTestFixture(context, TestCategory.MSSQL);
-        }
+        protected override string DatabaseEngine => TestCategory.MSSQL;
 
         #region Positive Tests
         /// <summary>

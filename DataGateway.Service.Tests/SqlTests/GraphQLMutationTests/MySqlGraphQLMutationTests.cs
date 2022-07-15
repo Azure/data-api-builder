@@ -14,28 +14,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
             "Cannot add or update a child row: a foreign key constraint fails " +
             "(\\u0060datagateway\\u0060.\\u0060books\\u0060";
 
-        #region Test Fixture Setup
-        /// <summary>
-        /// Sets up test fixture for class, only to be run once per test run, as defined by
-        /// MSTest decorator.
-        /// </summary>
-        /// <param name="context"></param>
-        [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
-        {
-            await InitializeTestFixture(context, TestCategory.MYSQL);
+        protected override string DatabaseEngine => TestCategory.MYSQL;
 
-            // Setup GraphQL Components
-            _graphQLService = new GraphQLService(
-                _runtimeConfigProvider,
-                _queryEngine,
-                _mutationEngine,
-                new DocumentCache(),
-                new Sha256DocumentHashProvider(),
-                _sqlMetadataProvider,
-                _authorizationResolver);
-            _graphQLController = new GraphQLController(_graphQLService);
-        }
+        #region Test Fixture Setup
 
         /// <summary>
         /// Runs after every test to reset the database state

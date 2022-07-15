@@ -26,9 +26,10 @@ public class EndToEndTests
         Assert.AreEqual("graphqldb", runtimeConfig.CosmosDb.Database);
         Assert.AreEqual("planet", runtimeConfig.CosmosDb.Container);
         Assert.AreEqual("schema.gql", runtimeConfig.CosmosDb.GraphQLSchemaPath);
+        Assert.IsNotNull(runtimeConfig.RuntimeSettings);
         JsonElement jsonRestSettings = (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Rest];
 
-        RestGlobalSettings? restGlobalSettings = JsonSerializer.Deserialize<RestGlobalSettings>(jsonRestSettings, RuntimeConfig.GetDeserializationOptions());
+        RestGlobalSettings? restGlobalSettings = JsonSerializer.Deserialize<RestGlobalSettings>(jsonRestSettings, RuntimeConfig.SerializerOptions);
         Assert.IsNotNull(restGlobalSettings);
         Assert.IsFalse(restGlobalSettings.Enabled);
         Assert.IsNotNull(runtimeConfig.HostGlobalSettings);
@@ -155,7 +156,7 @@ public class EndToEndTests
             return null;
         }
 
-        RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, RuntimeConfig.GetDeserializationOptions());
+        RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, RuntimeConfig.SerializerOptions);
 
         if (runtimeConfig is null)
         {

@@ -23,6 +23,9 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
 
+      - name: Update Submodules
+        run: git submodule foreach git pull origin main
+
       # line ending is set to 'lf' for this project hence running format check only for ubuntu
       - name: Check Formatting
         run: dotnet format --verify-no-changes

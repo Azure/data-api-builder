@@ -71,6 +71,8 @@ namespace Hawaii.Cli.Models
             string? graphQLType,
             string? fieldsToInclude,
             string? fieldsToExclude,
+            string? policyRequest,
+            string? policyDatabase,
             string name)
             : base(name)
         {
@@ -79,6 +81,8 @@ namespace Hawaii.Cli.Models
             this.GraphQLType = graphQLType;
             this.FieldsToInclude = fieldsToInclude;
             this.FieldsToExclude = fieldsToExclude;
+            this.PolicyRequest = policyRequest;
+            this.PolicyDatabase = policyDatabase;
         }
 
         [Value(0, MetaName = "Entity", Required = true, HelpText = "Name of the entity.")]
@@ -95,6 +99,12 @@ namespace Hawaii.Cli.Models
 
         [Option("fields.exclude", Required = false, HelpText = "Fields that are excluded from the action lists.")]
         public string? FieldsToExclude { get; }
+
+        [Option("policy-request", Required = false, HelpText = "Specify the rule to be checked before sending any request to the database.")]
+        public string? PolicyRequest { get; }
+
+        [Option("policy-database", Required = false, HelpText = "Specify an OData style filter rule that will be injected in the query sent to the database.")]
+        public string? PolicyDatabase { get; }
     }
 
     /// <summary>
@@ -111,12 +121,16 @@ namespace Hawaii.Cli.Models
             string? graphQLType,
             string? fieldsToInclude,
             string? fieldsToExclude,
+            string? policyRequest,
+            string? policyDatabase,
             string name)
             : base(entity,
                   restRoute,
                   graphQLType,
                   fieldsToInclude,
                   fieldsToExclude,
+                  policyRequest,
+                  policyDatabase,
                   name)
         {
             this.Source = source;
@@ -144,6 +158,8 @@ namespace Hawaii.Cli.Models
             string? graphQLType,
             string? fieldsToInclude,
             string? fieldsToExclude,
+            string? policyRequest,
+            string? policyDatabase,
             string? relationship,
             string? cardinality,
             string? targetEntity,
@@ -157,6 +173,8 @@ namespace Hawaii.Cli.Models
                   graphQLType,
                   fieldsToInclude,
                   fieldsToExclude,
+                  policyRequest,
+                  policyDatabase,
                   name)
         {
             this.Source = source;

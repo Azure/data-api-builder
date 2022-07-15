@@ -6,6 +6,8 @@ namespace Hawaii.Cli.Tests
     [TestClass]
     public class AddEntityTests
     {
+        #region Positive Tests
+
         /// <summary>
         /// Simple test to add a new entity to json config when there is no existing entity.
         /// By Default an empty collection is generated during initialization
@@ -22,10 +24,12 @@ namespace Hawaii.Cli.Tests
                 graphQLType: null,
                 fieldsToInclude: null,
                 fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile");
 
-            string initialConfiguration = GetInitialConfiguration();
-            string expectedConfiguration = AddEntityPropertiesToConfiguration(GetInitialConfiguration(), GetFirstEntityConfiguration());
+            string initialConfiguration = GetInitialConfiguration;
+            string expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
             RunTest(options, initialConfiguration, expectedConfiguration);
         }
 
@@ -43,11 +47,13 @@ namespace Hawaii.Cli.Tests
                 graphQLType: null,
                 fieldsToInclude: null,
                 fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile");
 
-            string initialConfiguration = AddEntityPropertiesToConfiguration(GetInitialConfiguration(), GetFirstEntityConfiguration());
-            string configurationWithOneEntity = AddEntityPropertiesToConfiguration(GetInitialConfiguration(), GetFirstEntityConfiguration());
-            string expectedConfiguration = AddEntityPropertiesToConfiguration(configurationWithOneEntity, GetSecondEntityConfiguration());
+            string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
+            string configurationWithOneEntity = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
+            string expectedConfiguration = AddPropertiesToJson(configurationWithOneEntity, GetSecondEntityConfiguration());
             RunTest(options, initialConfiguration, expectedConfiguration);
 
         }
@@ -66,9 +72,11 @@ namespace Hawaii.Cli.Tests
                 graphQLType: null,
                 fieldsToInclude: null,
                 fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile");
 
-            string initialConfiguration = AddEntityPropertiesToConfiguration(GetInitialConfiguration(), GetFirstEntityConfiguration());
+            string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
             Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref initialConfiguration));
         }
 
@@ -88,14 +96,62 @@ namespace Hawaii.Cli.Tests
                 graphQLType: null,
                 fieldsToInclude: null,
                 fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile"
             );
 
-            string initialConfiguration = AddEntityPropertiesToConfiguration(GetInitialConfiguration(), GetFirstEntityConfiguration());
-            string configurationWithOneEntity = AddEntityPropertiesToConfiguration(GetInitialConfiguration(), GetFirstEntityConfiguration());
-            string expectedConfiguration = AddEntityPropertiesToConfiguration(configurationWithOneEntity, GetConfigurationWithCaseSensitiveEntityName());
+            string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
+            string configurationWithOneEntity = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
+            string expectedConfiguration = AddPropertiesToJson(configurationWithOneEntity, GetConfigurationWithCaseSensitiveEntityName());
             RunTest(options, initialConfiguration, expectedConfiguration);
         }
+
+        /// <summary>
+        /// Add Entity with Policy and Field properties
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("*", "level,rating", "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "PolicyAndFields", DisplayName = "Check adding new Entity with both Policy and Fields")]
+        [DataRow(null, null, "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "Policy", DisplayName = "Check adding new Entity with Policy")]
+        [DataRow("*", "level,rating", null, null, "Fields", DisplayName = "Check adding new Entity with fieldsToInclude and FieldsToExclude")]
+        public void AddEntityWithPolicyAndFieldProperties(string? fieldsToInclude,
+                                                            string? fieldsToExclude,
+                                                            string? policyRequest,
+                                                            string? policyDatabase,
+                                                            string check)
+        {
+
+            AddOptions options = new(
+               source: "MyTable",
+               permissions: "anonymous:delete",
+                entity: "MyEntity",
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: fieldsToInclude,
+                fieldsToExclude: fieldsToExclude,
+                policyRequest: policyRequest,
+                policyDatabase: policyDatabase,
+                name: "outputfile"
+            );
+
+            string? expectedConfiguration = null;
+            switch (check)
+            {
+                case "PolicyAndFields":
+                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyAndFields);
+                    break;
+                case "Policy":
+                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicy);
+                    break;
+                case "Fields":
+                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithFields);
+                    break;
+            }
+
+            RunTest(options, GetInitialConfiguration, expectedConfiguration!);
+        }
+
+        #endregion
 
         #region Negative Tests
 
@@ -119,9 +175,11 @@ namespace Hawaii.Cli.Tests
                 graphQLType: null,
                 fieldsToInclude: "id,rating",
                 fieldsToExclude: "level",
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile");
 
-            string runtimeConfig = GetInitialConfiguration();
+            string runtimeConfig = GetInitialConfiguration;
 
             Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
         }
@@ -142,60 +200,6 @@ namespace Hawaii.Cli.Tests
             JObject actualJson = JObject.Parse(initialConfig);
 
             Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
-        }
-
-        /// <summary>
-        /// Adds the entity properties to the configuration and returns the updated configuration json as a string.
-        /// </summary>
-        /// <param name="configuration">Configuration Json.</param>
-        /// <param name="entityProperties">Entity properties to be added to the configuration.</param>
-        private static string AddEntityPropertiesToConfiguration(string configuration, string entityProperties)
-        {
-            JObject configurationJson = JObject.Parse(configuration);
-            JObject entityPropertiesJson = JObject.Parse(entityProperties);
-
-            configurationJson.Merge(entityPropertiesJson, new JsonMergeSettings
-            {
-                MergeArrayHandling = MergeArrayHandling.Union
-            });
-            return configurationJson.ToString();
-        }
-
-        private static string GetInitialConfiguration()
-        {
-            return @"{
-            ""$schema"": ""hawaii.draft-01.schema.json"",
-            ""data-source"": {
-              ""database-type"": ""mssql"",
-              ""connection-string"": ""testconnectionstring""
-            },
-            ""mssql"": {
-              ""set-session-context"": true
-            },
-            ""runtime"": {
-              ""rest"": {
-                ""enabled"": true,
-                ""path"": ""/api""
-              },
-              ""graphql"": {
-                ""allow-introspection"": true,
-                ""enabled"": true,
-                ""path"": ""/graphql""
-              },
-              ""host"": {
-                ""mode"": ""development"",
-                ""cors"": {
-                  ""origins"": [],
-                  ""allow-credentials"": true
-                },
-                ""authentication"": {
-                  ""provider"": ""EasyAuth""
-                }
-              }
-            },
-            ""entities"": {}
-          }";
-
         }
 
         private static string GetFirstEntityConfiguration()

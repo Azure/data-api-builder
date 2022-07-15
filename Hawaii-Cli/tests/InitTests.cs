@@ -49,7 +49,7 @@ namespace Hawaii.Cli.Tests
         ""allow-credentials"": false
       },
       ""authentication"": {
-        ""provider"": ""EasyAuth""
+        ""provider"": ""StaticWebApps""
       }
     }
   },
@@ -102,7 +102,7 @@ namespace Hawaii.Cli.Tests
         ""allow-credentials"": false
       },
       ""authentication"": {
-        ""provider"": ""EasyAuth""
+        ""provider"": ""StaticWebApps""
       }
     }
   },

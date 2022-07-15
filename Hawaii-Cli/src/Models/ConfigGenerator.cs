@@ -153,7 +153,10 @@ namespace Hawaii.Cli.Models
                 return false;
             }
 
-            PermissionSetting[]? permissionSettings = ParsePermission(options.Permissions, options.FieldsToInclude, options.FieldsToExclude);
+            Policy? policy = GetPolicyForAction(options.PolicyRequest, options.PolicyDatabase);
+            Field? field = GetFieldsForAction(options.FieldsToInclude, options.FieldsToExclude);
+
+            PermissionSetting[]? permissionSettings = ParsePermission(options.Permissions, policy, field);
             if (permissionSettings is null)
             {
                 Console.Error.WriteLine("Please add permission in the following format. --permission \"<<role>>:<<actions>>\"");
@@ -188,7 +191,7 @@ namespace Hawaii.Cli.Models
         /// <param name="fieldsToInclude">fields to include for this permission.</param>
         /// <param name="fieldsToExclude">fields to exclude for this permission.</param>
         /// <returns></returns>
-        public static PermissionSetting[]? ParsePermission(string permissions, string? fieldsToInclude, string? fieldsToExclude)
+        public static PermissionSetting[]? ParsePermission(string permissions, Policy? policy, Field? fields)
         {
             // Getting Role and Actions from permission string
             //
@@ -202,13 +205,12 @@ namespace Hawaii.Cli.Models
             // Check if provided actions are valid
             if (!VerifyActions(actions!.Split(",")))
             {
-                Console.Error.WriteLine("Invalid action provided.");
                 return null;
             }
 
             PermissionSetting[] permissionSettings = new PermissionSetting[]
             {
-                CreatePermissions(role!, actions!, fieldsToInclude, fieldsToExclude)
+                CreatePermissions(role!, actions!, policy, fields)
             };
 
             return permissionSettings;
@@ -253,6 +255,8 @@ namespace Hawaii.Cli.Models
             string? permissions = options.Permissions;
             string? fieldsToInclude = options.FieldsToInclude;
             string? fieldsToExclude = options.FieldsToExclude;
+            string? policyRequest = options.PolicyRequest;
+            string? policyDatabase = options.PolicyDatabase;
             string? relationship = options.Relationship;
             string? cardinality = options.Cardinality;
             string? targetEntity = options.TargetEntity;
@@ -290,12 +294,14 @@ namespace Hawaii.Cli.Models
             PermissionSetting[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, Relationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;
+            Policy? updatedPolicy = GetPolicyForAction(policyRequest, policyDatabase);
+            Field? updatedFields = GetFieldsForAction(fieldsToInclude, fieldsToExclude);
 
             if (permissions is not null)
             {
                 // Get the Updated Permission Settings
                 //
-                updatedPermissions = GetUpdatedPermissionSettings(entity, permissions, fieldsToInclude, fieldsToExclude);
+                updatedPermissions = GetUpdatedPermissionSettings(entity, permissions, updatedPolicy, updatedFields);
 
                 if (updatedPermissions is null)
                 {
@@ -308,6 +314,12 @@ namespace Hawaii.Cli.Models
                 if (fieldsToInclude is not null || fieldsToExclude is not null)
                 {
                     Console.WriteLine($"--permission is mandatory with --fields.include and --fields.exclude.");
+                    return false;
+                }
+
+                if (policyRequest is not null || policyDatabase is not null)
+                {
+                    Console.WriteLine($"--permission is mandatory with --policy-request and --policy-database.");
                     return false;
                 }
             }
@@ -355,8 +367,8 @@ namespace Hawaii.Cli.Models
         /// <returns> On failure, returns null. Else updated PermissionSettings array will be returned.</returns>
         private static PermissionSetting[]? GetUpdatedPermissionSettings(Entity entityToUpdate,
                                                                         string permissions,
-                                                                        string? fieldsToInclude,
-                                                                        string? fieldsToExclude)
+                                                                        Policy? policy,
+                                                                        Field? fields)
         {
             string? newRole, newActions;
 
@@ -388,7 +400,7 @@ namespace Hawaii.Cli.Models
                     {
                         // If the user inputs WILDCARD as actions, we overwrite the existing actions.
                         //
-                        updatedPermissionsList.Add(CreatePermissions(newRole!, WILDCARD, fieldsToInclude, fieldsToExclude));
+                        updatedPermissionsList.Add(CreatePermissions(newRole!, WILDCARD, policy, fields));
                     }
                     else
                     {
@@ -403,7 +415,7 @@ namespace Hawaii.Cli.Models
                         }
 
                         // updating the current action list
-                        object[] updatedActionArray = GetUpdatedActionArray(newActionArray, fieldsToInclude, fieldsToExclude, actionList);
+                        object[] updatedActionArray = GetUpdatedActionArray(newActionArray, policy, fields, actionList);
 
                         updatedPermissionsList.Add(new PermissionSetting(newRole, updatedActionArray));
                     }
@@ -418,7 +430,7 @@ namespace Hawaii.Cli.Models
             // and add it to permissionSettings list.
             if (!role_found)
             {
-                updatedPermissionsList.Add(CreatePermissions(newRole!, newActions!, fieldsToInclude, fieldsToExclude));
+                updatedPermissionsList.Add(CreatePermissions(newRole!, newActions!, policy, fields));
             }
 
             return updatedPermissionsList.ToArray();
@@ -435,7 +447,7 @@ namespace Hawaii.Cli.Models
             List<object> actionList = new();
             Action? action = ToActionObject((JsonElement)permission.Actions[0]);
 
-            if (action!.Fields is null)
+            if (action!.Policy is null && action!.Fields is null)
             {
                 actionList = Enum.GetNames(typeof(CRUD)).ToList<object>();
             }
@@ -443,9 +455,7 @@ namespace Hawaii.Cli.Models
             {
                 foreach (string op in Enum.GetNames(typeof(CRUD)))
                 {
-                    // TODO: Add Support for Policy in Action
-                    //
-                    actionList.Add(new Action(op, Policy: null, Fields: new Field(action.Fields.Include, action.Fields.Exclude)));
+                    actionList.Add(new Action(Name: op, Policy: action.Policy, Fields: action.Fields));
                 }
             }
 
@@ -463,8 +473,8 @@ namespace Hawaii.Cli.Models
         /// <param name="existingActions">action items present in the config.</param>
         /// <returns>Array of updated Action objects</returns>
         private static object[] GetUpdatedActionArray(string[] newActions,
-                                                        string? fieldsToInclude,
-                                                        string? fieldsToExclude,
+                                                        Policy? newPolicy,
+                                                        Field? newFields,
                                                         List<object> existingActions)
         {
             // a new list to store merged result.
@@ -473,10 +483,24 @@ namespace Hawaii.Cli.Models
             // create a hash table of new action
             HashSet<string> newActionSet = newActions.ToHashSet();
 
+            Dictionary<string, Action> existingActionMap = GetDictionaryFromActionObjectList(existingActions);
+            Policy? existingPolicy = null;
+            Field? existingFields = null;
             // Adding the new Actions in the updatedActionList
             foreach (string action in newActionSet)
             {
-                updatedActionList.Add(GetAction(action, fieldsToInclude, fieldsToExclude));
+                // Getting existing Policy and Fields
+                if (existingActionMap.ContainsKey(action))
+                {
+                    existingPolicy = existingActionMap[action].Policy;
+                    existingFields = existingActionMap[action].Fields;
+                }
+
+                // Checking if Policy and Field update is required
+                Policy? updatedPolicy = newPolicy is null ? existingPolicy : newPolicy;
+                Field? updatedFields = newFields is null ? existingFields : newFields;
+
+                updatedActionList.Add(new Action(action, updatedPolicy, updatedFields));
             }
 
             // Looping through existing actions

@@ -29,6 +29,8 @@ namespace Hawaii.Cli.Tests
                 linkingSourceFields: null,
                 linkingTargetFields: null,
                 mappingFields: null,
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -98,6 +100,8 @@ namespace Hawaii.Cli.Tests
                 linkingSourceFields: null,
                 linkingTargetFields: null,
                 mappingFields: null,
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -172,6 +176,8 @@ namespace Hawaii.Cli.Tests
                 linkingSourceFields: null,
                 linkingTargetFields: null,
                 mappingFields: null,
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -240,6 +246,8 @@ namespace Hawaii.Cli.Tests
                 linkingSourceFields: null,
                 linkingTargetFields: null,
                 mappingFields: null,
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -333,6 +341,8 @@ namespace Hawaii.Cli.Tests
                 linkingSourceFields: null,
                 linkingTargetFields: null,
                 mappingFields: null,
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -399,6 +409,8 @@ namespace Hawaii.Cli.Tests
                 linkingSourceFields: null,
                 linkingTargetFields: null,
                 mappingFields: null,
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -505,6 +517,8 @@ namespace Hawaii.Cli.Tests
                 linkingSourceFields: "eid1",
                 linkingTargetFields: "eid2,fid2",
                 mappingFields: "e1:e2,t2",
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -621,6 +635,8 @@ namespace Hawaii.Cli.Tests
                 linkingSourceFields: "eid1",
                 linkingTargetFields: "eid2,fid2",
                 mappingFields: "e1:e2,t2",
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile");
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
@@ -634,6 +650,117 @@ namespace Hawaii.Cli.Tests
             CollectionAssert.AreEqual(new string[] { "eid1" }, relationship.LinkingSourceFields);
             CollectionAssert.AreEqual(new string[] { "eid2", "fid2" }, relationship.LinkingTargetFields);
 
+        }
+
+        /// <summary>
+        /// Update Entity with new Policy and Field properties
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("*", "level,rating", "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "PolicyAndFields", DisplayName = "Check adding new Policy and Fields to Action")]
+        [DataRow(null, null, "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "Policy", DisplayName = "Check adding new Policy to Action")]
+        [DataRow("*", "level,rating", null, null, "Fields", DisplayName = "Check adding new fieldsToInclude and FieldsToExclude to Action")]
+        public void TestUpdateEntityWithPolicyAndFieldProperties(string? fieldsToInclude,
+                                                            string? fieldsToExclude,
+                                                            string? policyRequest,
+                                                            string? policyDatabase,
+                                                            string check)
+        {
+
+            UpdateOptions options = new(
+               source: "MyTable",
+               permissions: "anonymous:delete",
+                entity: "MyEntity",
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: fieldsToInclude,
+                fieldsToExclude: fieldsToExclude,
+                policyRequest: policyRequest,
+                policyDatabase: policyDatabase,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: null,
+                linkingTargetFields: null,
+                mappingFields: null,
+                name: "outputfile"
+            );
+
+            string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntity);
+            string? expectedConfiguration = null;
+            switch (check)
+            {
+                case "PolicyAndFields":
+                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyAndFields);
+                    break;
+                case "Policy":
+                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicy);
+                    break;
+                case "Fields":
+                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithFields);
+                    break;
+            }
+
+            Assert.IsTrue(TryUpdateExistingEntity(options, ref actualConfig));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration!), JObject.Parse(actualConfig)));
+        }
+
+        /// <summary>
+        /// Update Policy for an action
+        /// </summary>
+        [TestMethod]
+        public void TestUpdatePolicy()
+        {
+            UpdateOptions options = new(
+               source: "MyTable",
+               permissions: "anonymous:delete",
+                entity: "MyEntity",
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                policyRequest: "@claims.name eq 'api_builder'",
+                policyDatabase: "@claims.name eq @item.name",
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: null,
+                linkingTargetFields: null,
+                mappingFields: null,
+                name: "outputfile"
+            );
+
+            string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyAndFields);
+            string updatedEntityConfigurationWithPolicyAndFields = @"
+              {
+                ""entities"": {
+                    ""MyEntity"": {
+                      ""source"": ""MyTable"",
+                      ""permissions"": [
+                          {
+                          ""role"": ""anonymous"",
+                          ""actions"": [
+                                {
+                                    ""action"": ""delete"",
+                                    ""policy"": {
+                                        ""request"": ""@claims.name eq 'api_builder'"",
+                                        ""database"": ""@claims.name eq @item.name""
+                                    },
+                                    ""fields"": {
+                                        ""include"": [ ""*"" ],
+                                        ""exclude"": [ ""level"", ""rating"" ]
+                                    }
+                                }
+                            ]
+                          }
+                        ]
+                    }
+                }
+            }";
+            string? expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, updatedEntityConfigurationWithPolicyAndFields);
+            Assert.IsTrue(TryUpdateExistingEntity(options, ref actualConfig));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration!), JObject.Parse(actualConfig)));
         }
 
         #endregion
@@ -663,6 +790,8 @@ namespace Hawaii.Cli.Tests
                 linkingSourceFields: null,
                 linkingTargetFields: null,
                 mappingFields: null,
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -722,6 +851,8 @@ namespace Hawaii.Cli.Tests
                 linkingSourceFields: "eid1",
                 linkingTargetFields: "eid2,fid2",
                 mappingFields: "e1,e2,t2", // Invalid value. Correct format uses ':' to separate source and target fields
+                policyRequest: null,
+                policyDatabase: null,
                 name: "outputfile");
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
@@ -791,7 +922,7 @@ namespace Hawaii.Cli.Tests
                                     ""allow-credentials"": false
                                 },
                                 ""authentication"": {
-                                    ""provider"": ""EasyAuth"",
+                                    ""provider"": ""StaticWebApps"",
                                     ""jwt"": {
                                     ""audience"": """",
                                     ""issuer"": """"

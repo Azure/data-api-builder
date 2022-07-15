@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Config;
@@ -92,26 +93,6 @@ namespace Hawaii.Cli.Models
         }
 
         /// <summary>
-        /// creates an Action element which contains one of the CRUD operation and
-        /// fields to which this action is allowed as permission setting.
-        /// </summary>
-        public static Action GetAction(string action, string? fieldsToInclude, string? fieldsToExclude)
-        {
-            Action? actionObject = new(action, Policy: null, Fields: null);
-            if (fieldsToInclude is not null || fieldsToExclude is not null)
-            {
-                string[]? fieldsToIncludeArray = fieldsToInclude is not null ? fieldsToInclude.Split(",") : null;
-                string[]? fieldsToExcludeArray = fieldsToExclude is not null ? fieldsToExclude.Split(",") : null;
-                HashSet<string>? fieldsToIncludeSet = fieldsToIncludeArray is not null ? new HashSet<string>(fieldsToIncludeArray) : null;
-                HashSet<string>? fieldsToExcludeSet = fieldsToExcludeArray is not null ? new HashSet<string>(fieldsToExcludeArray) : null;
-
-                actionObject = new Action(action, Policy: null, Fields: new Field(fieldsToIncludeSet, fieldsToExcludeSet));
-            }
-
-            return actionObject;
-        }
-
-        /// <summary>
         /// translates the JsonElement to the Action Object
         /// </summary>
         public static Action? ToActionObject(JsonElement element)
@@ -129,27 +110,27 @@ namespace Hawaii.Cli.Models
         /// creates an array of Action element which contains one of the CRUD operation and
         /// fields to which this action is allowed as permission setting based on the given input.
         /// </summary>
-        public static object[] CreateActions(string actions, string? fieldsToInclude, string? fieldsToExclude)
+        public static object[] CreateActions(string actions, Policy? policy, Field? fields)
         {
             object[] action_items;
-            if (fieldsToInclude is null && fieldsToExclude is null)
+            if (policy is null && fields is null)
             {
                 return actions.Split(",");
             }
 
             if (actions is WILDCARD)
             {
-                action_items = new object[] { GetAction(actions, fieldsToInclude, fieldsToExclude) };
+                action_items = new object[] { new Action(actions, policy, fields) };
             }
             else
             {
                 string[]? action_elements = actions.Split(",");
-                if (fieldsToInclude is not null || fieldsToExclude is not null)
+                if (policy is not null || fields is not null)
                 {
                     List<object>? action_list = new();
                     foreach (string? action_element in action_elements)
                     {
-                        Action? action_item = GetAction(action_element, fieldsToInclude, fieldsToExclude);
+                        Action? action_item = new(action_element, policy, fields);
                         action_list.Add(action_item);
                     }
 
@@ -165,11 +146,28 @@ namespace Hawaii.Cli.Models
         }
 
         /// <summary>
+        /// creates a Dictionary with Key as the action name and value as the Action object
+        /// </summary>
+        public static Dictionary<string, Action> GetDictionaryFromActionObjectList(IEnumerable<object> actionList)
+        {
+            Dictionary<string, Action> actionMap = new();
+            foreach (object action in actionList)
+            {
+                JsonElement actionJsonElement = JsonSerializer.SerializeToElement(action);
+                string actionName = GetCRUDOperation(actionJsonElement);
+                Action actionObject = ToActionObject(actionJsonElement)!;
+                actionMap.Add(actionName, actionObject);
+            }
+
+            return actionMap;
+        }
+
+        /// <summary>
         /// creates a single PermissionSetting Object based on role, actions, fieldsToInclude, and fieldsToExclude.
         /// </summary>
-        public static PermissionSetting CreatePermissions(string role, string actions, string? fieldsToInclude, string? fieldsToExclude)
+        public static PermissionSetting CreatePermissions(string role, string actions, Policy? policy, Field? fields)
         {
-            return new PermissionSetting(role, CreateActions(actions, fieldsToInclude, fieldsToExclude));
+            return new PermissionSetting(role, CreateActions(actions, policy, fields));
         }
 
         /// <summary>
@@ -244,15 +242,45 @@ namespace Hawaii.Cli.Models
         //         "allow-credentials": true
         //     },
         //     "authentication": {
-        //         "provider": "EasyAuth"
+        //         "provider": "StaticWebApps"
         //     }
         // }
         /// </summary>
         public static HostGlobalSettings GetDefaultHostGlobalSettings(HostModeType hostMode)
         {
             Cors cors = new(new string[] { });
-            AuthenticationConfig authenticationConfig = new();
+            AuthenticationConfig authenticationConfig = new(Provider: EasyAuthType.StaticWebApps.ToString());
             return new HostGlobalSettings(hostMode, cors, authenticationConfig);
+        }
+
+        /// <summary>
+        /// returns an object of type Policy
+        /// if policyRequest or policyDatabase is provided. Otherwise, returns null.
+        /// </summary>
+        public static Policy? GetPolicyForAction(string? policyRequest, string? policyDatabase)
+        {
+            if (policyRequest is not null || policyDatabase is not null)
+            {
+                return new Policy(policyRequest, policyDatabase);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// returns an object of type Field
+        /// if fieldsToInclude or fieldsToExclude is provided. Otherwise, returns null.
+        /// </summary>
+        public static Field? GetFieldsForAction(string? fieldsToInclude, string? fieldsToExclude)
+        {
+            if (fieldsToInclude is not null || fieldsToExclude is not null)
+            {
+                HashSet<string>? fieldsToIncludeSet = fieldsToInclude is not null ? fieldsToInclude.Split(",").ToHashSet() : null;
+                HashSet<string>? fieldsToExcludeSet = fieldsToExclude is not null ? fieldsToExclude.Split(",").ToHashSet() : null;
+                return new Field(fieldsToIncludeSet, fieldsToExcludeSet);
+            }
+
+            return null;
         }
 
         /// <summary>

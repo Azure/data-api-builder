@@ -9,6 +9,7 @@ using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -229,6 +230,9 @@ namespace Azure.DataGateway.Service.Authorization
                         string actionName = string.Empty;
                         ActionMetadata actionToColumn = new();
                         IEnumerable<string> allTableColumns = ResolveTableDefinitionColumns(entityName);
+
+                        // Implicitly, all table columns are 'allowed' when an actiontype is a string.
+                        // Since no granular field permissions exist for this action within the current role.
                         if (actionElement.ValueKind is JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();
@@ -239,8 +243,8 @@ namespace Azure.DataGateway.Service.Authorization
                         {
                             // If not a string, the actionObj is expected to be an object that can be deserialised into Action object.
                             // We will put validation checks later to make sure this is the case.
-                            Action? actionObj = JsonSerializer.Deserialize<Action>(actionElement.ToString(), RuntimeConfig.GetDeserializationOptions());
-                            if (actionObj is not null)
+                            if (RuntimeConfig.TryGetDeserializedConfig(actionElement.ToString(), out Action? actionObj)
+                                && actionObj is not null)
                             {
                                 actionName = actionObj.Name;
                                 if (actionObj.Fields!.Include is not null)
@@ -288,6 +292,12 @@ namespace Azure.DataGateway.Service.Authorization
                         if (!string.IsNullOrWhiteSpace(actionName) && !entityToRoleMap.ActionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
                         {
                             entityToRoleMap.ActionToRolesMap[actionName].Add(role);
+                        }
+
+                        foreach (string allowedColumn in actionToColumn.Allowed)
+                        {
+                            entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
+                            entityToRoleMap.FieldToRolesMap[allowedColumn][actionName].Add(role);
                         }
 
                         roleToAction.ActionToColumnMap[actionName] = actionToColumn;
@@ -501,12 +511,12 @@ namespace Azure.DataGateway.Service.Authorization
         /// Applicable to GraphQL field directive @authorize on ObjectType fields.
         /// </summary>
         /// <param name="entityName">EntityName whose actionMetadata will be searched.</param>
-        /// <param name="actionName">ActionName to lookup field permissions</param>
-        /// <param name="field">Specific field to get collection of roles</param>
+        /// <param name="field">Field to lookup action permissions</param>
+        /// <param name="actionName">Specific action to get collection of roles</param>
         /// <returns>Collection of role names allowed to perform actionName on Entity's field.</returns>
-        public IEnumerable<string> GetRolesForField(string entityName, string actionName, string field)
+        public IEnumerable<string> GetRolesForField(string entityName, string field, string actionName)
         {
-            return EntityPermissionsMap[entityName].FieldToRolesMap[actionName][field];
+            return EntityPermissionsMap[entityName].FieldToRolesMap[field][actionName];
         }
 
         /// <summary>
@@ -524,6 +534,25 @@ namespace Azure.DataGateway.Service.Authorization
 
             return _metadataProvider.GetTableDefinition(entityName).Columns.Keys;
         }
+
+        /// <summary>
+        /// Creates new key value map of
+        /// Key: ActionType
+        /// Value: Collection of role names.
+        /// There are only four possible actions
+        /// </summary>
+        /// <returns></returns>
+        private static Dictionary<string, List<string>> CreateActionToRoleMap()
+        {
+            return new Dictionary<string, List<string>>()
+            {
+                { ActionType.CREATE, new List<string>()},
+                { ActionType.READ, new List<string>()},
+                { ActionType.UPDATE, new List<string>()},
+                { ActionType.DELETE, new List<string>()}
+            };
+        }
+
         #endregion
     }
 }

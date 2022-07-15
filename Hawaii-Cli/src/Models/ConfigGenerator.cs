@@ -88,7 +88,7 @@ namespace Hawaii.Cli.Models
                 MsSql: msSqlOptions,
                 PostgreSql: postgreSqlOptions,
                 MySql: mySqlOptions,
-                RuntimeSettings: GetDefaultGlobalSettings(dbType, options.HostMode),
+                RuntimeSettings: GetDefaultGlobalSettings(dbType, options.HostMode, options.CorsOrigin),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());

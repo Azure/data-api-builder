@@ -240,7 +240,9 @@ namespace Hawaii.Cli.Models
         /// <summary>
         /// returns the default global settings based on dbType.
         /// </summary>
-        public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(DatabaseType dbType, HostModeType hostMode)
+        public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(DatabaseType dbType,
+                                                                                        HostModeType hostMode,
+                                                                                        IEnumerable<string>? corsOrigin)
         {
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
             if (DatabaseType.cosmos.Equals(dbType))
@@ -253,7 +255,7 @@ namespace Hawaii.Cli.Models
             }
 
             defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
-            defaultGlobalSettings.Add(GlobalSettingsType.Host, GetDefaultHostGlobalSettings(hostMode));
+            defaultGlobalSettings.Add(GlobalSettingsType.Host, GetDefaultHostGlobalSettings(hostMode, corsOrigin));
             return defaultGlobalSettings;
         }
 
@@ -272,9 +274,10 @@ namespace Hawaii.Cli.Models
         //     }
         // }
         /// </summary>
-        public static HostGlobalSettings GetDefaultHostGlobalSettings(HostModeType hostMode)
+        public static HostGlobalSettings GetDefaultHostGlobalSettings(HostModeType hostMode, IEnumerable<string>? corsOrigin)
         {
-            Cors cors = new(new string[] { });
+            string[]? corsOriginArray = corsOrigin is null ? new string[] { } : corsOrigin.ToArray();
+            Cors cors = new(Origins: corsOriginArray);
             AuthenticationConfig authenticationConfig = new(Provider: EasyAuthType.StaticWebApps.ToString());
             return new HostGlobalSettings(hostMode, cors, authenticationConfig);
         }

@@ -30,6 +30,7 @@ namespace Hawaii.Cli.Models
             string? cosmosContainer,
             string? graphQLSchemaPath,
             HostModeType hostMode,
+            IEnumerable<string>? corsOrigin,
             string name)
             : base(name)
         {
@@ -39,6 +40,7 @@ namespace Hawaii.Cli.Models
             this.CosmosContainer = cosmosContainer;
             this.GraphQLSchemaPath = graphQLSchemaPath;
             this.HostMode = hostMode;
+            this.CorsOrigin = corsOrigin;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmos, mysql, postgresql")]
@@ -58,6 +60,9 @@ namespace Hawaii.Cli.Models
 
         [Option("host-mode", Default = HostModeType.Production, Required = false, HelpText = "Specify the Host mode - Development or Production")]
         public HostModeType HostMode { get; }
+
+        [Option("cors-origin", Separator = ',', Required = false, HelpText = "Specify the list of allowed origins.")]
+        public IEnumerable<string>? CorsOrigin { get; }
     }
 
     /// <summary>

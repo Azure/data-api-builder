@@ -15,7 +15,7 @@ public class EndToEndTests
     {
         string[] args = { "init", "-n", "hawaii-config-test", "--database-type", "cosmos",
                           "--connection-string", "localhost:5000", "--cosmos-database",
-                          "graphqldb", "--cosmos-container", "planet", "--graphql-schema", "schema.gql" };
+                          "graphqldb", "--cosmos-container", "planet", "--graphql-schema", "schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
@@ -33,8 +33,11 @@ public class EndToEndTests
         Assert.IsNotNull(restGlobalSettings);
         Assert.IsFalse(restGlobalSettings.Enabled);
         Assert.IsNotNull(runtimeConfig.HostGlobalSettings);
-        Assert.AreEqual(HostModeType.Production, runtimeConfig.HostGlobalSettings.Mode);
 
+        Assert.IsTrue(runtimeConfig.RuntimeSettings.ContainsKey(GlobalSettingsType.Host));
+        HostGlobalSettings? hostGlobalSettings = JsonSerializer.Deserialize<HostGlobalSettings>((JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Host], RuntimeConfig.SerializerOptions);
+        Assert.IsNotNull(hostGlobalSettings);
+        CollectionAssert.AreEqual(new string[] { "localhost:3000", "www.nolocalhost.com:80" }, hostGlobalSettings.Cors!.Origins);
     }
 
     /// <summary>

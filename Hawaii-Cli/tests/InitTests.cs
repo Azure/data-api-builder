@@ -20,6 +20,7 @@ namespace Hawaii.Cli.Tests
                 cosmosContainer: null,
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
+                corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 name: "outputfile");
 
             string expectedRuntimeConfig =
@@ -45,7 +46,7 @@ namespace Hawaii.Cli.Tests
     ""host"": {
       ""mode"": ""development"",
       ""cors"": {
-        ""origins"": [],
+        ""origins"": [""http://localhost:3000"", ""http://nolocalhost:80""],
         ""allow-credentials"": false
       },
       ""authentication"": {
@@ -72,6 +73,7 @@ namespace Hawaii.Cli.Tests
                 cosmosContainer: "testcontainer",
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
+                corsOrigin: null,
                 name: "outputfile");
 
             string expectedRuntimeConfig = @"{
@@ -127,6 +129,7 @@ namespace Hawaii.Cli.Tests
                 cosmosContainer: "testcontainer",
                 graphQLSchemaPath: string.Empty,
                 hostMode: HostModeType.Production,
+                corsOrigin: null,
                 name: "outputfile");
 
             Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));
@@ -140,6 +143,7 @@ namespace Hawaii.Cli.Tests
                 cosmosContainer: "testcontainer",
                 graphQLSchemaPath: "testschema",
                 hostMode: HostModeType.Production,
+                corsOrigin: null,
                 name: "outputfile");
 
             Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));
@@ -153,6 +157,7 @@ namespace Hawaii.Cli.Tests
                 cosmosContainer: "testcontainer",
                 graphQLSchemaPath: string.Empty,
                 hostMode: HostModeType.Production,
+                corsOrigin: null,
                 name: "outputfile");
 
             Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));

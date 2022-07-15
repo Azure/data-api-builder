@@ -22,7 +22,7 @@ Update hawaii-config.json (and schema.gql if using CosmosDb).
 
     3.1. Open the docker-compose file and update the "image" with the tag you want to use. (hawaii:latest is manually created, it doesn't always point to the latest image)
 
-    3.2. If you are not using the configuration from the repo, update the path to your config/schema to point to your files and map them to /App/hawaii-config.json and /App/schema.gql.
+    3.2. If you are not using the configuration from the repo, update the path to your config/schema to point to your files and map them to /App/hawaii-config.json and for CosmosDb - /App/schema.gql as well.
 
     3.3. Run docker compose up to start the container:
 

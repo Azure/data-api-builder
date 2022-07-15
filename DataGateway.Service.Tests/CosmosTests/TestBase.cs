@@ -45,7 +45,7 @@ type Planet @model {
     dimension : String
 }";
 
-        private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial"};
+        private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };
 
         internal CosmosClient CosmosClient { get; private set; }
 

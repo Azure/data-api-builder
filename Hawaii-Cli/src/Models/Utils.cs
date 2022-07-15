@@ -212,6 +212,32 @@ namespace Hawaii.Cli.Models
         }
 
         /// <summary>
+        /// return true on successful parsing of mappings Dictionary from IEnumerable list.
+        /// returns false in case the format of the input is not correct.
+        /// </summary>
+        /// <param name="mappingList">List of ':' separated values indicating exposed and backend names.</param>
+        /// <param name="mappings">Output a Dictionary containing mapping from backend name to exposed name.</param>
+        /// <returns> Returns true when successful else on failure, returns false. Else updated PermissionSettings array will be returned.</returns>
+        public static bool TryParseMappingDictionary(IEnumerable<string> mappingList, out Dictionary<string, string> mappings)
+        {
+            mappings = new();
+            foreach (string item in mappingList)
+            {
+                string[] map = item.Split(":");
+                if (map.Length != 2)
+                {
+                    Console.Error.WriteLine("Invalid format for --map");
+                    Console.WriteLine("It should be in this format --map \"backendName1:exposedName1,backendName2:exposedName2,...\".");
+                    return false;
+                }
+
+                mappings.Add(map[0], map[1]);
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// returns the default global settings based on dbType.
         /// </summary>
         public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(DatabaseType dbType, HostModeType hostMode)

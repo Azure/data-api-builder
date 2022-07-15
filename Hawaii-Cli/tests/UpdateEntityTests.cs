@@ -31,6 +31,7 @@ namespace Hawaii.Cli.Tests
                 mappingFields: null,
                 policyRequest: null,
                 policyDatabase: null,
+                map: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -102,6 +103,7 @@ namespace Hawaii.Cli.Tests
                 mappingFields: null,
                 policyRequest: null,
                 policyDatabase: null,
+                map: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -178,6 +180,7 @@ namespace Hawaii.Cli.Tests
                 mappingFields: null,
                 policyRequest: null,
                 policyDatabase: null,
+                map: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -248,6 +251,7 @@ namespace Hawaii.Cli.Tests
                 mappingFields: null,
                 policyRequest: null,
                 policyDatabase: null,
+                map: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -343,6 +347,7 @@ namespace Hawaii.Cli.Tests
                 mappingFields: null,
                 policyRequest: null,
                 policyDatabase: null,
+                map: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -411,6 +416,7 @@ namespace Hawaii.Cli.Tests
                 mappingFields: null,
                 policyRequest: null,
                 policyDatabase: null,
+                map: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -519,6 +525,7 @@ namespace Hawaii.Cli.Tests
                 mappingFields: "e1:e2,t2",
                 policyRequest: null,
                 policyDatabase: null,
+                map: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -637,6 +644,7 @@ namespace Hawaii.Cli.Tests
                 mappingFields: "e1:e2,t2",
                 policyRequest: null,
                 policyDatabase: null,
+                map: null,
                 name: "outputfile");
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
@@ -683,6 +691,7 @@ namespace Hawaii.Cli.Tests
                 linkingSourceFields: null,
                 linkingTargetFields: null,
                 mappingFields: null,
+                map: null,
                 name: "outputfile"
             );
 
@@ -728,6 +737,7 @@ namespace Hawaii.Cli.Tests
                 linkingSourceFields: null,
                 linkingTargetFields: null,
                 mappingFields: null,
+                map: null,
                 name: "outputfile"
             );
 
@@ -763,6 +773,128 @@ namespace Hawaii.Cli.Tests
             Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration!), JObject.Parse(actualConfig)));
         }
 
+        /// <summary>
+        /// Test to Update Entity with New mappings
+        /// </summary>
+        [TestMethod]
+        public void TestUpdateEntityWithMappings()
+        {
+            UpdateOptions options = new(
+                source: null,
+                permissions: null,
+                entity: "MyEntity",
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: null,
+                linkingTargetFields: null,
+                mappingFields: null,
+                map: new string[] { "id:Identity", "name:Company Name" },
+                name: "outputfile");
+
+            string runtimeConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": ""MyTable"",
+                                ""permissions"": [
+                                    {
+                                        ""role"": ""anonymous"",
+                                        ""actions"": [
+                                            ""read"",
+                                            ""update""
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }";
+
+            string expectedConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": ""MyTable"",
+                                ""permissions"": [
+                                    {
+                                        ""role"": ""anonymous"",
+                                        ""actions"": [
+                                            ""read"",
+                                            ""update""
+                                        ]
+                                    }
+                                ],
+                                ""mappings"": {
+                                    ""id"": ""Identity"",
+                                    ""name"": ""Company Name""
+                                }
+                            }
+                        }
+                    }";
+
+            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+        }
+
+        /// <summary>
+        /// Test to Update existing mappings of an entity
+        /// </summary>
+        [TestMethod]
+        public void TestUpdateExistingMappings()
+        {
+            UpdateOptions options = new(
+                source: null,
+                permissions: null,
+                entity: "MyEntity",
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: null,
+                linkingTargetFields: null,
+                mappingFields: null,
+                map: new string[] { "name:Company Name", "addr:Company Address", "number:Contact Details" },
+                name: "outputfile");
+
+            string runtimeConfig = GetConfigWithMappings();
+
+            string expectedConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": ""MyTable"",
+                                ""permissions"": [
+                                    {
+                                        ""role"": ""anonymous"",
+                                        ""actions"": [
+                                            ""read"",
+                                            ""update""
+                                        ]
+                                    }
+                                ],
+                                ""mappings"": {
+                                    ""name"": ""Company Name"",
+                                    ""addr"": ""Company Address"",
+                                    ""number"": ""Contact Details""
+                                }
+                            }
+                        }
+                    }";
+
+            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+        }
+
         #endregion
 
         #region  Negative Tests
@@ -792,6 +924,7 @@ namespace Hawaii.Cli.Tests
                 mappingFields: null,
                 policyRequest: null,
                 policyDatabase: null,
+                map: null,
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -853,12 +986,61 @@ namespace Hawaii.Cli.Tests
                 mappingFields: "e1,e2,t2", // Invalid value. Correct format uses ':' to separate source and target fields
                 policyRequest: null,
                 policyDatabase: null,
+                map: null,
                 name: "outputfile");
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
             Assert.IsNull(relationship);
 
+        }
+
+        /// <summary>
+        /// Test to Update Entity with Invalid mappings
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("id:identity:id,name:Company Name", DisplayName = "Invalid format for mappings value, required: 2, provided: 3.")]
+        [DataRow("id:identity:id,name:", DisplayName = "Invalid format for mappings value, required: 2, provided: 1.")]
+        public void TestUpdateEntityWithInvalidMappings(string mappings)
+        {
+            UpdateOptions options = new(
+                source: null,
+                permissions: null,
+                entity: "MyEntity",
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: null,
+                linkingTargetFields: null,
+                mappingFields: null,
+                map: mappings.Split(','),
+                name: "outputfile");
+
+            string runtimeConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": ""MyTable"",
+                                ""permissions"": [
+                                    {
+                                        ""role"": ""anonymous"",
+                                        ""actions"": [
+                                            ""read"",
+                                            ""update""
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }";
+
+            Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
         }
 
         /// <summary>
@@ -930,6 +1112,30 @@ namespace Hawaii.Cli.Tests
                                 }
                             }
                         }";
+        }
+
+        private static string GetConfigWithMappings()
+        {
+            return GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": ""MyTable"",
+                                ""permissions"": [
+                                    {
+                                        ""role"": ""anonymous"",
+                                        ""actions"": [
+                                            ""read"",
+                                            ""update""
+                                        ]
+                                    }
+                                ],
+                                ""mappings"": {
+                                    ""id"": ""Identity"",
+                                    ""name"": ""Company Name""
+                                }
+                            }
+                        }
+                    }";
         }
     }
 }

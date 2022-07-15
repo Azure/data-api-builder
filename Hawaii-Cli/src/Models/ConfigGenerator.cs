@@ -260,6 +260,7 @@ namespace Hawaii.Cli.Models
             string? relationship = options.Relationship;
             string? cardinality = options.Cardinality;
             string? targetEntity = options.TargetEntity;
+            IEnumerable<string>? mappings = options.Map;
 
             // Deserialize the json string to RuntimeConfig object.
             //
@@ -343,6 +344,15 @@ namespace Hawaii.Cli.Models
                 }
 
                 updatedRelationships[relationship] = new_relationship;
+            }
+
+            if (mappings is not null)
+            {
+                // Parsing mappings dictionary from Collection
+                if (!TryParseMappingDictionary(mappings, out updatedMappings))
+                {
+                    return false;
+                }
             }
 
             runtimeConfig.Entities[options.Entity] = new Entity(updatedSource,

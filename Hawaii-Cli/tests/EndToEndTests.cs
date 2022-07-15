@@ -112,7 +112,8 @@ public class EndToEndTests
                                 "--target.entity", "books", "--mapping.fields", "id:book_id",
                                 "--linking.object", "todo_books",
                                 "--linking.source.fields", "todo_id",
-                                "--linking.target.fields", "id" };
+                                "--linking.target.fields", "id",
+                                "--map", "id:identity,name:Company Name"};
         Program.Main(updateArgs);
 
         runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
@@ -145,6 +146,9 @@ public class EndToEndTests
         CollectionAssert.AreEqual(new string[] { "book_id" }, relationship.TargetFields);
         CollectionAssert.AreEqual(new string[] { "todo_id" }, relationship.LinkingSourceFields);
         CollectionAssert.AreEqual(new string[] { "id" }, relationship.LinkingTargetFields);
+
+        Assert.IsNotNull(entity.Mappings);
+        Assert.AreEqual("{\"id\":\"identity\",\"name\":\"Company Name\"}", JsonSerializer.Serialize(entity.Mappings));
     }
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)

@@ -153,13 +153,6 @@ namespace Hawaii.Cli.Models
         public UpdateOptions(
             string? source,
             string? permissions,
-            string entity,
-            string? restRoute,
-            string? graphQLType,
-            string? fieldsToInclude,
-            string? fieldsToExclude,
-            string? policyRequest,
-            string? policyDatabase,
             string? relationship,
             string? cardinality,
             string? targetEntity,
@@ -167,6 +160,14 @@ namespace Hawaii.Cli.Models
             string? linkingSourceFields,
             string? linkingTargetFields,
             string? mappingFields,
+            IEnumerable<string>? map,
+            string entity,
+            string? restRoute,
+            string? graphQLType,
+            string? fieldsToInclude,
+            string? fieldsToExclude,
+            string? policyRequest,
+            string? policyDatabase,
             string name)
             : base(entity,
                   restRoute,
@@ -186,6 +187,7 @@ namespace Hawaii.Cli.Models
             this.LinkingSourceFields = linkingSourceFields;
             this.LinkingTargetFields = linkingTargetFields;
             this.MappingFields = mappingFields;
+            this.Map = map;
         }
 
         [Option('s', "source", Required = false, HelpText = "Name of the source table or container.")]
@@ -214,5 +216,8 @@ namespace Hawaii.Cli.Models
 
         [Option("mapping.fields", Required = false, HelpText = "Specify fields to be used for mapping the entities.")]
         public string? MappingFields { get; }
+
+        [Option('m', "map", Separator = ',', Required = false, HelpText = "Specify mappings between database fields and GraphQL and REST fields. format: --map \"backendName1:exposedName1,backendName2:exposedName2,...\".")]
+        public IEnumerable<string>? Map { get; }
     }
 }

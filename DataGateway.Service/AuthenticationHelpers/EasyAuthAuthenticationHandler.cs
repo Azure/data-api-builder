@@ -55,7 +55,8 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
 
                 if (identity is null)
                 {
-                    return Task.FromResult(AuthenticateResult.Fail(failureMessage: $"Invalid {Options.EasyAuthProvider} EasyAuth token."));
+                    // Even for invalid token, the user is always in anonymous role.
+                    return Task.FromResult(AuthenticateResult.NoResult());
                 }
 
                 ClaimsPrincipal? claimsPrincipal = new(identity);
@@ -70,9 +71,9 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                 }
             }
 
-            // Fail authentication with status code 401 when no EasyAuth header is present,
-            // because AppService/StaticWebApps guarantee an EasyAuth header even for anonymous user.
-            return Task.FromResult(AuthenticateResult.Fail(failureMessage: $"Invalid {Options.EasyAuthProvider} EasyAuth token."));
+            // Return no result when no EasyAuth header is present,
+            // because a user is always in anonymous role in EasyAuth.
+            return Task.FromResult(AuthenticateResult.NoResult());
         }
     }
 }

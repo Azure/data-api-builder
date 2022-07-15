@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.AuthenticationHelpers;
+using Azure.DataGateway.Service.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -57,16 +58,31 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         /// then there is improper JWT validation occurring.
         /// </summary>
         [DataTestMethod]
-        [DataRow(false, DisplayName = "Valid StaticWebApps EasyAuth header only")]
-        [DataRow(true, DisplayName = "Valid StaticWebApps EasyAuth header and authorization header")]
+        [DataRow(false, true, DisplayName = "Valid StaticWebApps EasyAuth header only")]
+        [DataRow(true, true, DisplayName = "Valid StaticWebApps EasyAuth header and authorization header")]
         [TestMethod]
-        public async Task TestValidStaticWebAppsEasyAuthToken(bool sendAuthorizationHeader)
+        public async Task TestValidStaticWebAppsEasyAuthToken(bool sendAuthorizationHeader, bool addAuthenticated)
         {
-            string generatedToken = CreateStaticWebAppsEasyAuthToken();
-            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(generatedToken, EasyAuthType.StaticWebApps);
+            string generatedToken = CreateStaticWebAppsEasyAuthToken(addAuthenticated);
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(generatedToken, EasyAuthType.StaticWebApps, sendAuthorizationHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+        }
+
+        /// <summary>
+        /// When the user request gets authenticated even when it has only anonymous role,
+        /// we return unauthorized error.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task TestValidStaticWebAppsEasyAuthTokenWithAnonymousRoleOnly()
+        {
+            string generatedToken = CreateStaticWebAppsEasyAuthToken(false);
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(generatedToken, EasyAuthType.StaticWebApps);
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
         }
 
         #endregion
@@ -93,7 +109,8 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token, EasyAuthType.StaticWebApps, sendAuthorizationHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: "anonymous", postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString());
         }
 
         #endregion
@@ -184,15 +201,22 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                 Typ = ClaimTypes.Upn
             };
 
-            AppServiceClaim roleClaim = new()
+            AppServiceClaim roleClaimAnonymous = new()
             {
                 Val = "Anonymous",
                 Typ = ClaimTypes.Role
             };
 
+            AppServiceClaim roleClaimAuthenticated = new()
+            {
+                Val = "Authenticated",
+                Typ = ClaimTypes.Role
+            };
+
             List<AppServiceClaim> claims = new();
             claims.Add(emailClaim);
-            claims.Add(roleClaim);
+            claims.Add(roleClaimAnonymous);
+            claims.Add(roleClaimAuthenticated);
 
             AppServiceClientPrincipal token = new()
             {
@@ -210,11 +234,16 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         /// Creates a mocked EasyAuth token, namely, the value of the header injected by EasyAuth.
         /// </summary>
         /// <returns>A Base64 encoded string of a serialized EasyAuthClientPrincipal object</returns>
-        private static string CreateStaticWebAppsEasyAuthToken()
+        private static string CreateStaticWebAppsEasyAuthToken(bool addAuthenticated = true)
         {
             List<string> roles = new();
             roles.Add("anonymous");
-            roles.Add("authenticated");
+
+            // Add authenticated role conditionally
+            if (addAuthenticated)
+            {
+                roles.Add("authenticated");
+            }
 
             StaticWebAppsClientPrincipal token = new()
             {

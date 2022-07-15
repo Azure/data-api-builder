@@ -238,8 +238,8 @@ namespace Azure.DataGateway.Service
             });
             app.UseAuthentication();
 
-            // Conditionally add authentication middleware in Production Mode
-            if (runtimeConfig is not null && !runtimeConfigProvider.IsDeveloperMode())
+            // Add authentication middleware to the pipeline.
+            if (runtimeConfig is not null)
             {
                 app.UseAuthenticationMiddleware();
             }

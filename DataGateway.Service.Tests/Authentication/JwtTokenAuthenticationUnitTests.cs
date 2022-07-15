@@ -78,6 +78,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
         }
+
         #endregion
         #region Negative Tests
         /// <summary>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
@@ -53,6 +54,13 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             }
             else if (authNResult.Succeeded)
             {
+                if (IsUserAnonymousOnly(httpContext.User))
+                {
+                    // If the user is only in anonymous role and gets authenticated,
+                    // we terminate the pipeline.
+                    await TerminatePipeLine(httpContext);
+                    return;
+                }
                 // Honor existing role if any, else assign authenticated role.
                 httpContext.Request.Headers.TryAdd(AuthorizationResolver.CLIENT_ROLE_HEADER, AuthorizationType.Authenticated.ToString().ToLower());
             }
@@ -62,11 +70,7 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                 // A challenge result will add WWW-Authenticate header to indicate failure reason
                 // Failure reasons: invalid token (specific validation failure).
                 // Terminate middleware request pipeline.
-                IActionResult result = new ChallengeResult();
-                await result.ExecuteResultAsync(new ActionContext
-                {
-                    HttpContext = httpContext
-                });
+                await TerminatePipeLine(httpContext);
                 return;
             }
 
@@ -75,7 +79,6 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             if (clientRoleHeader.Equals(AuthorizationType.Authenticated.ToString(), StringComparison.OrdinalIgnoreCase) ||
                 clientRoleHeader.Equals(AuthorizationType.Anonymous.ToString(), StringComparison.OrdinalIgnoreCase))
             {
-
                 //Add a claim for the X-MS-API-ROLE header to the request.
                 Claim claim = new(ClaimTypes.Role, clientRoleHeader, ClaimValueTypes.String);
 
@@ -86,6 +89,50 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             }
 
             await _nextMiddleware(httpContext);
+        }
+
+        /// <summary>
+        /// Helper method to check if the user is only present in the anonymous role.
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        private static bool IsUserAnonymousOnly(ClaimsPrincipal user)
+        {
+            bool isUserAnonymousOnly = false;
+            foreach(ClaimsIdentity identity in user.Identities)
+            {
+                foreach(Claim claim in identity.Claims)
+                {
+                    if (claim.Type is ClaimTypes.Role)
+                    {
+                        if (claim.Value.Equals(AuthorizationType.Anonymous.ToString(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            isUserAnonymousOnly = true;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return isUserAnonymousOnly;
+        }
+
+        /// <summary>
+        /// Method to terminate the middleware pipeline.
+        /// </summary>
+        /// <param name="httpContext"></param>
+        /// <returns></returns>
+        private static async Task TerminatePipeLine(HttpContext httpContext)
+        {
+            IActionResult result = new ChallengeResult();
+            await result.ExecuteResultAsync(new ActionContext
+            {
+                HttpContext = httpContext
+            });
+            return;
         }
     }
 

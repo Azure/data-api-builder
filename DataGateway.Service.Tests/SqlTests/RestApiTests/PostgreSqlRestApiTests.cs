@@ -776,6 +776,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
+                "PutOne_Update_With_Mapping_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT  ""treeId"", ""species"" AS ""Scientific Name"", ""region""
+                            AS ""United State's Region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                        WHERE ""treeId"" = 1
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Insert_Test",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -876,7 +888,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                         WHERE ""treeId"" = 4
                     ) AS subq
                 "
-            },{
+            },
+            {
                 "PatchOne_Insert_NonAutoGenPK_Test",
                 @"
                     SELECT to_jsonb(subq) AS data

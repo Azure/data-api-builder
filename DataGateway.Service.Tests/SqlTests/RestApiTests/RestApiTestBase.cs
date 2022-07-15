@@ -1475,6 +1475,34 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
+        /// Tests REST PutOne which results in update with
+        /// and entity that has remapped column names.
+        /// URI Path: PK of existing record.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects: 200 OK where sqlQuery validates update.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Update_With_Mapping_Test()
+        {
+            string requestBody = @"
+            {
+                ""Scientific Name"": ""Humulus Lupulus"",
+                ""United State's Region"": ""Pacific North West""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "treeId/1",
+                    queryString: null,
+                    entity: _integrationMappingEntity,
+                    sqlQuery: GetQuery(nameof(PutOne_Update_With_Mapping_Test)),
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
+        /// <summary>
         /// Tests the PatchOne functionality with a REST PATCH request
         /// with a nullable column specified as NULL.
         /// The test should pass successfully for update as well as insert.

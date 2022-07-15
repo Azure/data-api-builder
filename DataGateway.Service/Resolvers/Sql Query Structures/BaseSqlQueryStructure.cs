@@ -157,7 +157,15 @@ namespace Azure.DataGateway.Service.Resolvers
             List<LabelledColumn> outputColumns = new();
             foreach (string columnName in GetUnderlyingTableDefinition().Columns.Keys)
             {
-                SqlMetadataProvider.TryGetExposedColumnName(EntityName, columnName, out string? exposedName);
+                // if column is not exposed we skip
+                if (!SqlMetadataProvider.TryGetExposedColumnName(
+                    entityName: EntityName,
+                    backingFieldName: columnName,
+                    out string? exposedName))
+                {
+                    continue;
+                }
+
                 outputColumns.Add(new(
                     tableSchema: string.Empty,
                     tableName: string.Empty,

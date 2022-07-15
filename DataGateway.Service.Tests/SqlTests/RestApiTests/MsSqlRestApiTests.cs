@@ -492,6 +492,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PutOne_Update_With_Mapping_Test",
+                $"SELECT [treeId], [species] AS [Scientific Name], [region] AS " +
+                $"[United State's Region], [height] FROM { _integrationMappingTable } " +
+                $"WHERE treeId = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PutOne_Insert_Test",
                 $"SELECT [id], [title], [issue_number] FROM [foo].{ _integration_NonAutoGenPK_TableName } " +
                 $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Batman Returns' " +

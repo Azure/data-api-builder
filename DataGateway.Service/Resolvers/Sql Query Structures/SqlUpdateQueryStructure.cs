@@ -40,6 +40,7 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 Predicate predicate = CreatePredicateForParam(param);
+                // since we have already validated mutationParams we know backing column exists
                 SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 // primary keys used as predicates
                 if (primaryKeys.Contains(backingColumn!))
@@ -119,6 +120,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
             Predicate predicate;
+            // since we have already validated param we know backing column exists
             SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
             if (param.Value is null && !tableDefinition.Columns[backingColumn!].IsNullable)
             {

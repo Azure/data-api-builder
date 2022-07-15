@@ -104,7 +104,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
             // When creating, you don't need to provide the data for nested models, but you will for other nested types
-            if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType))
+            // For cosmos, allow updating nested objects
+            if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType) && databaseType != DatabaseType.cosmos)
             {
                 return false;
             }

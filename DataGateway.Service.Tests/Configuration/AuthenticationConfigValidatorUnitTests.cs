@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         public void ValidateEasyAuthConfig()
         {
             RuntimeConfig config =
-                CreateRuntimeConfigWithAuthN(new AuthenticationConfig(EasyAuthType.StaticWebApps.ToString()));
+                CreateRuntimeConfigWithOptionalAuthN(new AuthenticationConfig(EasyAuthType.StaticWebApps.ToString()));
 
             RuntimeConfigValidator configValidator = GetMockConfigValidator(ref config);
 
@@ -45,7 +45,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             AuthenticationConfig authNConfig = new(
                 Provider: "AzureAD",
                 Jwt: jwt);
-            RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
+            RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
 
             RuntimeConfigValidator configValidator = GetMockConfigValidator(ref config);
 
@@ -58,6 +58,23 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 Assert.Fail(message: e.Message);
             }
         }
+
+        [TestMethod("AuthN validation passes when no authN section in the config.")]
+        public void ValidateAuthNSectionNotNecessary()
+        {
+            RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN();
+            RuntimeConfigValidator configValidator = GetMockConfigValidator(ref config);
+
+            try
+            {
+                configValidator.ValidateConfig();
+            }
+            catch (NotSupportedException e)
+            {
+                Assert.Fail(message: e.Message);
+            }
+        }
+
         #endregion
 
         #region Negative Tests
@@ -72,7 +89,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 Provider: "AzureAD",
                 Jwt: jwt);
 
-            RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
+            RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
 
             RuntimeConfigValidator configValidator = GetMockConfigValidator(ref config);
 
@@ -87,7 +104,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             authNConfig = new(
                 Provider: "AzureAD",
                 Jwt: jwt);
-            config = CreateRuntimeConfigWithAuthN(authNConfig);
+            config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {
@@ -102,7 +119,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 Audience: "12345",
                 Issuer: string.Empty);
             AuthenticationConfig authNConfig = new(Provider: "EasyAuth", Jwt: jwt);
-            RuntimeConfig config = CreateRuntimeConfigWithAuthN(authNConfig);
+            RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
 
             RuntimeConfigValidator configValidator = GetMockConfigValidator(ref config);
 
@@ -115,7 +132,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 Audience: string.Empty,
                 Issuer: DEFAULT_ISSUER);
             authNConfig = new(Provider: "EasyAuth", Jwt: jwt);
-            config = CreateRuntimeConfigWithAuthN(authNConfig);
+            config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {
@@ -125,13 +142,15 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         #endregion
 
         #region Helper Functions
-        private static RuntimeConfig CreateRuntimeConfigWithAuthN(AuthenticationConfig authNConfig)
+        private static RuntimeConfig
+            CreateRuntimeConfigWithOptionalAuthN(AuthenticationConfig authNConfig = null)
         {
             DataSource dataSource = new(
                 DatabaseType: DatabaseType.mssql)
             {
                 ConnectionString = DEFAULT_CONNECTION_STRING
             };
+
             HostGlobalSettings hostGlobal = new(Authentication: authNConfig);
             JsonElement hostGlobalJson = JsonSerializer.SerializeToElement(hostGlobal);
             Dictionary<GlobalSettingsType, object> runtimeSettings = new();

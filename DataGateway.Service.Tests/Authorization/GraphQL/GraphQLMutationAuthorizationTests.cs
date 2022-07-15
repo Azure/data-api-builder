@@ -4,13 +4,14 @@ using Azure.DataGateway.Auth;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Tests.SqlTests;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
-namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
+namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
 {
     /// <summary>
     /// Base class for GraphQL Mutation tests targetting Sql databases.
@@ -24,10 +25,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
         private const string MIDDLEWARE_CONTEXT_ROLEHEADER_VALUE = "roleName";
 
         [DataTestMethod]
-        [DataRow(Config.Operation.Create, true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, DisplayName = "Anonymous Mutation Fields")]
-        [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col4" }, DisplayName = "Anonymous Mutation Fields")]
+        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.Create, DisplayName = "Create Mutation Field Authorization")]
+        [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col4" }, Config.Operation.Update, DisplayName = "Update Mutation Field Authorization")]
 
-        public void MutationFields_AuthorizationEvaluation(bool isAuthorized, string[] columnsAllowed, string[] columnsRequested)
+        public void MutationFields_AuthorizationEvaluation(bool isAuthorized, string[] columnsAllowed, string[] columnsRequested, Config.Operation operation)
         {
             SqlMutationEngine engine = SetupTestFixture(isAuthorized);
 
@@ -58,7 +59,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                     graphQLMiddlewareContext.Object,
                     parameters,
                     entityName: TEST_ENTITY,
-                    mutationOperation: Config.Operation.Create
+                    mutationOperation: operation
                 );
 
                 authorizationResult = true;

@@ -143,7 +143,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
 
         #region Helper Functions
         private static RuntimeConfig
-            CreateRuntimeConfigWithOptionalAuthN(AuthenticationConfig authNConfig = null)
+            CreateRuntimeConfigWithOptionalAuthN(
+                AuthenticationConfig authNConfig = null)
         {
             DataSource dataSource = new(
                 DatabaseType: DatabaseType.mssql)

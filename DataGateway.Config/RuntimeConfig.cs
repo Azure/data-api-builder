@@ -70,31 +70,42 @@ namespace Azure.DataGateway.Config
         public const string SCHEMA_PROPERTY_NAME = "$schema";
         public const string SCHEMA = "hawaii.draft-01.schema.json";
 
+        // use camel case
+        // convert Enum to strings
+        // case insensitive
+        public static JsonSerializerOptions SerializerOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            Converters =
+                    {
+                        new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+                    }
+        };
+
         /// <summary>
         /// Pick up the global runtime settings from the dictionary if present
         /// otherwise initialize with default.
         /// </summary>
         public void DetermineGlobalSettings()
         {
-            JsonSerializerOptions options = GetDeserializationOptions();
             if (RuntimeSettings is not null)
             {
                 foreach (
-                    (GlobalSettingsType settingsType, object settingsJson) in RuntimeSettings)
+                (GlobalSettingsType settingsType, object settingsJson) in RuntimeSettings)
                 {
                     switch (settingsType)
                     {
                         case GlobalSettingsType.Rest:
                             RestGlobalSettings
-                                = ((JsonElement)settingsJson).Deserialize<RestGlobalSettings>(options)!;
+                                = ((JsonElement)settingsJson).Deserialize<RestGlobalSettings>(SerializerOptions)!;
                             break;
                         case GlobalSettingsType.GraphQL:
                             GraphQLGlobalSettings =
-                                ((JsonElement)settingsJson).Deserialize<GraphQLGlobalSettings>(options)!;
+                                ((JsonElement)settingsJson).Deserialize<GraphQLGlobalSettings>(SerializerOptions)!;
                             break;
                         case GlobalSettingsType.Host:
                             HostGlobalSettings =
-                               ((JsonElement)settingsJson).Deserialize<HostGlobalSettings>(options)!;
+                                ((JsonElement)settingsJson).Deserialize<HostGlobalSettings>(SerializerOptions)!;
                             break;
                         default:
                             throw new NotSupportedException("The runtime does not " +
@@ -110,7 +121,6 @@ namespace Azure.DataGateway.Config
         /// <typeparam name="T">The object type.</typeparam>
         /// <param name="configJson">Json string to be deserialized.</param>
         /// <param name="deserializedConfig">Deserialized json object upon success.</param>
-        /// <param name="logger">Log provider to use to log exceptions</param>
         /// <returns>True on success, false otherwise.</returns>
         public static bool TryGetDeserializedConfig<T>(
             string configJson,
@@ -118,8 +128,7 @@ namespace Azure.DataGateway.Config
         {
             try
             {
-                JsonSerializerOptions options = GetDeserializationOptions();
-                deserializedConfig = JsonSerializer.Deserialize<T>(configJson, options);
+                deserializedConfig = JsonSerializer.Deserialize<T>(configJson, RuntimeConfig.SerializerOptions);
                 return true;
             }
             catch (JsonException ex)
@@ -129,23 +138,6 @@ namespace Azure.DataGateway.Config
                 deserializedConfig = default(T);
                 return false;
             }
-        }
-
-        public static JsonSerializerOptions GetDeserializationOptions()
-        {
-            // use camel case
-            // convert Enum to strings
-            // case insensitive
-            JsonSerializerOptions options = new()
-            {
-                PropertyNameCaseInsensitive = true,
-                Converters =
-                {
-                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
-                }
-            };
-
-            return options;
         }
 
         [JsonIgnore]

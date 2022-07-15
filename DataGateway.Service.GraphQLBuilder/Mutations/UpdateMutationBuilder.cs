@@ -71,7 +71,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                         }
                     }
 
-                    return GenerateSimpleInputType(name, f, entity);
+                    return GenerateSimpleInputType(name, f, entity, databaseType);
                 });
 
             InputObjectTypeDefinitionNode input =
@@ -87,13 +87,16 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             return input;
         }
 
-        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, Entity entity)
+        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, Entity entity, DatabaseType databaseType)
         {
             return new(
                 location: null,
                 f.Name,
                 new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value, entity)}"),
-                f.Type,
+                /// There is a different between Cosmos and relational databases on generating required simple field types for update mutations.
+                /// Cosmos is calling replace item whereas for sql is doing incremental update.
+                /// That's why sql allows nullable update input fields even for non-nullable simple fields. 
+                (databaseType == DatabaseType.cosmos) ? f.Type : f.Type.NullableType(),
                 defaultValue: null,
                 new List<DirectiveNode>()
             );

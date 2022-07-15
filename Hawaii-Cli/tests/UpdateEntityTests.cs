@@ -1046,12 +1046,17 @@ namespace Hawaii.Cli.Tests
         /// <summary>
         /// Test to verify Invalid inputs to create a relationship
         /// </summary>
-        [TestMethod]
-        public void TestVerifyCanUpdateRelationshipInvalidOptions()
+        [DataTestMethod]
+        [DataRow("cosmos", "one", "MyEntity", DisplayName = "CosmosDb does not support relationships")]
+        [DataRow("mssql", null, "MyEntity", DisplayName = "Cardinality should not be null")]
+        [DataRow("mssql", "manyx", "MyEntity", DisplayName = "Cardinality should be one/many")]
+        [DataRow("mssql", "one", null, DisplayName = "Target entity should not be null")]
+        [DataRow("mssql", "one", "InvalidEntity", DisplayName = "Target Entity should be present in config to create a relationship")]
+        public void TestVerifyCanUpdateRelationshipInvalidOptions(string db, string cardinality, string targetEntity)
         {
             RuntimeConfig runtimeConfig = new(
                 Schema: "schema",
-                DataSource: new DataSource(DatabaseType.mssql),
+                DataSource: new DataSource(Enum.Parse<DatabaseType>(db)),
                 CosmosDb: null,
                 MsSql: null,
                 PostgreSql: null,
@@ -1060,17 +1065,7 @@ namespace Hawaii.Cli.Tests
                 Entities: new Dictionary<string, Entity>()
             );
 
-            // Cardinality should not be null
-            Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: null, targetEntity: "MyEntity"));
-
-            // Cardinality should be one/many
-            Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: "manyx", targetEntity: "MyEntity"));
-
-            // Target entity should not be null
-            Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: "one", targetEntity: null));
-
-            // Target Entity should be present in config to create a relationship
-            Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: "one", targetEntity: "InvalidEntity"));
+            Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: cardinality, targetEntity: targetEntity));
         }
 
         #endregion

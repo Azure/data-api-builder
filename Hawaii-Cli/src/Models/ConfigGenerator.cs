@@ -538,6 +538,13 @@ namespace Hawaii.Cli.Models
         /// <returns>Boolean value specifying if given params for update is possible</returns>
         public static bool VerifyCanUpdateRelationship(RuntimeConfig runtimeConfig, string? cardinality, string? targetEntity)
         {
+            // CosmosDB doesn't support Relationship
+            if (runtimeConfig.DataSource.DatabaseType.Equals(DatabaseType.cosmos))
+            {
+                Console.Error.WriteLine("Adding/updating Relationships is currently not supported in CosmosDB.");
+                return false;
+            }
+
             // Checking if both cardinality and targetEntity is provided.
             //
             if (cardinality is null || targetEntity is null)

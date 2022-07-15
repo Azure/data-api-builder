@@ -75,6 +75,8 @@ namespace Azure.DataGateway.Service
                 }
             });
 
+            services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
+
             services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
             {
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
@@ -185,7 +187,6 @@ namespace Azure.DataGateway.Service
 
             services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
-            services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
 
             services.AddControllers();
         }

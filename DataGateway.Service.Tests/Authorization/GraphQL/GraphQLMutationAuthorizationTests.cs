@@ -5,7 +5,6 @@ using Azure.DataGateway.Auth;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Service.Tests.SqlTests;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.Extensions.Primitives;

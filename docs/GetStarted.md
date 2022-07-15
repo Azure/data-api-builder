@@ -45,7 +45,7 @@ N.B. Ensure you have docker running, with Linux containers chosen.
 docker build -t hawaii:<yourTag> -f Dockerfile .
 ```
 
-3. To run a container with the image you created, follow the instructions above (Running docker container from ACR (Prebuilt image)). Make sure to replace the image in the docker-compose file with the one you built.
+3. To run a container with the image you created, follow the instructions above (Running docker container from ACR (Prebuilt image)). Make sure to replace the image in the docker-compose file with the one you built. You can skip the login step.
 
 ### Deploying the Container
 

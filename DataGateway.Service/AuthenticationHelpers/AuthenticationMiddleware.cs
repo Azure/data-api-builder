@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
@@ -99,9 +98,9 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         private static bool IsUserAnonymousOnly(ClaimsPrincipal user)
         {
             bool isUserAnonymousOnly = false;
-            foreach(ClaimsIdentity identity in user.Identities)
+            foreach (ClaimsIdentity identity in user.Identities)
             {
-                foreach(Claim claim in identity.Claims)
+                foreach (Claim claim in identity.Claims)
                 {
                     if (claim.Type is ClaimTypes.Role)
                     {

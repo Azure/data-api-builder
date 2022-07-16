@@ -44,12 +44,16 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         private const string BAD_ISSUER = "https://badactor.com";
 
         #region Positive Tests
+
         /// <summary>
         /// JWT is valid as it contains no errors caught by negative tests
         /// library(Microsoft.AspNetCore.Authentication.JwtBearer) validation methods
         /// </summary>
+        [DataTestMethod]
+        [DataRow(false, null, DisplayName = "Authenticated role - X-MS-API-ROLE is not sent")]
+        [DataRow(true, "author", DisplayName = "Authenticated role - existing X-MS-API-ROLE is honored")]
         [TestMethod]
-        public async Task TestValidToken()
+        public async Task TestValidToken(bool sendClientRoleHeader, string clientRoleHeader)
         {
             RsaSecurityKey key = new(RSA.Create(2048));
             string token = CreateJwt(
@@ -60,10 +64,15 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                 signingKey: key
                 );
 
-            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(
+                    key,
+                    token,
+                    sendClientRoleHeader,
+                    clientRoleHeader);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
-            Assert.AreEqual(expected: AuthorizationType.Authenticated.ToString(),
+            Assert.AreEqual(expected: sendClientRoleHeader ? clientRoleHeader : AuthorizationType.Authenticated.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -73,12 +82,16 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         /// the jwt token is missing.
         /// </summary>
         /// <returns></returns>
+        [DataTestMethod]
+        [DataRow(false, null, DisplayName = "Anonymous role - X-MS-API-ROLE is not sent")]
+        [DataRow(true, "author", DisplayName = "Anonymous role - existing X-MS-API-ROLE is not honored")]
         [TestMethod]
-        public async Task TestMissingJwtToken()
+        public async Task TestMissingJwtToken(bool sendClientRoleHeader, string clientRoleHeader)
         {
             RsaSecurityKey key = new(RSA.Create(2048));
             string token = null;
-            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
+            HttpContext postMiddlewareContext
+                = await SendRequestAndGetHttpContextState(key, token, sendClientRoleHeader, clientRoleHeader);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
             Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
@@ -326,7 +339,11 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         /// <param name="key">The JST signing key to setup the TestServer</param>
         /// <param name="token">The JWT value to test against the TestServer</param>
         /// <returns></returns>
-        private static async Task<HttpContext> SendRequestAndGetHttpContextState(SecurityKey key, string token)
+        private static async Task<HttpContext> SendRequestAndGetHttpContextState(
+            SecurityKey key,
+            string token,
+            bool sendClientRoleHeader = false,
+            string? clientRoleHeader = null)
         {
             using IHost host = await CreateWebHostCustomIssuer(key);
             TestServer server = host.GetTestServer();
@@ -338,6 +355,13 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                     StringValues headerValue = new(new string[] { $"Bearer {token}" });
                     KeyValuePair<string, StringValues> authHeader = new("Authorization", headerValue);
                     context.Request.Headers.Add(authHeader);
+                }
+
+                if (sendClientRoleHeader)
+                {
+                    KeyValuePair<string, StringValues> easyAuthHeader =
+                        new(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader);
+                    context.Request.Headers.Add(easyAuthHeader);
                 }
 
                 context.Request.Scheme = "https";

@@ -101,12 +101,17 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                 ignoreCase: true);
         }
 
+        /// <summary>
+        /// Tests we honor the presence of X-MS-API-ROLE header when role is authenticated
+        /// otherwise - replace it as anonymous.
+        /// </summary>
         [DataTestMethod]
         [DataRow(false, "author",
-            DisplayName = "Anonymous role so X-MS-API-ROLE not honored")]
-        [DataRow(true, "author", DisplayName = "Valid StaticWebApps EasyAuth header and authorization header")]
+            DisplayName = "Anonymous role - X-MS-API-ROLE is not honored")]
+        [DataRow(true, "author",
+            DisplayName = "Authenticated role - existing X-MS-API-ROLE is honored")]
         [TestMethod]
-        public async Task TestClientRoleHeaderPresence(bool addAuthenticated, string? clientRoleHeader)
+        public async Task TestClientRoleHeaderPresence(bool addAuthenticated, string clientRoleHeader)
         {
             string generatedToken = CreateStaticWebAppsEasyAuthToken(addAuthenticated);
             HttpContext postMiddlewareContext =
@@ -123,9 +128,6 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                 ignoreCase: true);
         }
 
-        #endregion
-
-        #region Negative Tests
         /// <summary>
         /// - Ensures an invalid/no EasyAuth header/value results in HTTP 200 OK response
         /// but with the X-MS-API-ROLE assigned to be anonymous.
@@ -155,6 +157,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         }
 
         #endregion
+
         #region Helper Methods
         /// <summary>
         /// Configures test server with bare minimum middleware

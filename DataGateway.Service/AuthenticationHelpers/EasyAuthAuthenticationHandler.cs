@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
@@ -5,6 +7,7 @@ using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using static Azure.DataGateway.Service.AuthenticationHelpers.StaticWebAppsAuthentication;
 
 namespace Azure.DataGateway.Service.AuthenticationHelpers
 {
@@ -53,10 +56,11 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                     _ => null
                 };
 
-                if (identity is null)
+                if (identity is null || HasOnlyAnonymousRole(identity.Claims))
                 {
-                    // Even for invalid token, we don't terminate the pipeline
-                    // since the request is always in anonymous role.
+                    // Either the token is invalid, Or the role is only anonymous,
+                    // we don't terminate the pipeline since the request is
+                    // always at least in the anonymous role.
                     // It means that anything that is exposed anonymously will still be visible.
                     // This also represents the scenario where the user attempted to logon
                     // but failed authentication. So, the role assigned to X-MS-API-ROLE will be anonymous.
@@ -81,6 +85,33 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             // since the X-MS-CLIENT-PRINCIPAL header will always be present in that case.
             // This is applicable when engine is being tested without front loading with EasyAuth.
             return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
+        /// <summary>
+        /// Helper method to check if the only role assigned is the anonymous role.
+        /// </summary>
+        /// <param name="claims"></param>
+        /// <returns></returns>
+        private static bool HasOnlyAnonymousRole(IEnumerable<Claim> claims)
+        {
+            bool isUserAnonymousOnly = false;
+            foreach (Claim claim in claims)
+            {
+                if (claim.Type is ClaimTypes.Role)
+                {
+                    if (claim.Value.Equals(AuthorizationType.Anonymous.ToString(),
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        isUserAnonymousOnly = true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return isUserAnonymousOnly;
         }
     }
 }

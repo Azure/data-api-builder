@@ -33,7 +33,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
     {
         #region Positive Tests
         /// <summary>
-        /// Ensures a valid AppService EasyAuth header/value does NOT result in HTTP 401 Unauthorized response.
+        /// Ensures a valid AppService EasyAuth header/value does NOT result in HTTP 401 Unauthenticated response.
         /// 403 is okay, as it indicates authorization level failure, not authentication.
         /// When an authorization header is sent, it contains an invalid value, if the runtime returns an error
         /// then there is improper JWT validation occurring.
@@ -45,10 +45,17 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         public async Task TestValidAppServiceEasyAuthToken(bool sendAuthorizationHeader)
         {
             string generatedToken = CreateAppServiceEasyAuthToken();
-            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(generatedToken, EasyAuthType.AppService);
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
+                generatedToken,
+                EasyAuthType.AppService,
+                sendAuthorizationHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK,
+                actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: AuthorizationType.Authenticated.ToString(),
+                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
+                ignoreCase: true);
         }
 
         /// <summary>
@@ -64,33 +71,64 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         public async Task TestValidStaticWebAppsEasyAuthToken(bool sendAuthorizationHeader, bool addAuthenticated)
         {
             string generatedToken = CreateStaticWebAppsEasyAuthToken(addAuthenticated);
-            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(generatedToken, EasyAuthType.StaticWebApps, sendAuthorizationHeader);
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
+                generatedToken,
+                EasyAuthType.StaticWebApps,
+                sendAuthorizationHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: AuthorizationType.Authenticated.ToString(),
+                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
+                ignoreCase: true);
         }
 
         /// <summary>
-        /// When the user request gets authenticated even when it has only anonymous role,
-        /// we return unauthorized error.
+        /// When the user request is a valid token but only has an anonymous role,
+        /// we still return OK. We assign the client role header to be anonymous.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public async Task TestValidStaticWebAppsEasyAuthTokenWithAnonymousRoleOnly()
         {
-            string generatedToken = CreateStaticWebAppsEasyAuthToken(false);
-            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(generatedToken, EasyAuthType.StaticWebApps);
+            string generatedToken = CreateStaticWebAppsEasyAuthToken(addAuthenticated: false);
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(generatedToken, EasyAuthType.StaticWebApps);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
-            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
+                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
+                ignoreCase: true);
+        }
+
+        [DataTestMethod]
+        [DataRow(false, "author",
+            DisplayName = "Anonymous role so X-MS-API-ROLE not honored")]
+        [DataRow(true, "author", DisplayName = "Valid StaticWebApps EasyAuth header and authorization header")]
+        [TestMethod]
+        public async Task TestClientRoleHeaderPresence(bool addAuthenticated, string? clientRoleHeader)
+        {
+            string generatedToken = CreateStaticWebAppsEasyAuthToken(addAuthenticated);
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(
+                    generatedToken,
+                    EasyAuthType.StaticWebApps,
+                    sendClientRoleHeader: true,
+                    clientRoleHeader: clientRoleHeader);
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.AreEqual(expected: addAuthenticated, postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: addAuthenticated ? clientRoleHeader : AuthorizationType.Anonymous.ToString(),
+                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
+                ignoreCase: true);
         }
 
         #endregion
+
         #region Negative Tests
         /// <summary>
-        /// - Ensures an invalid/no EasyAuth header/value results in HTTP 401 Unauthorized response.
-        /// 403 is NOT okay here, this indicates authentication incorrectly succeeded, and authorization
-        /// rules are being checked.
+        /// - Ensures an invalid/no EasyAuth header/value results in HTTP 200 OK response
+        /// but with the X-MS-API-ROLE assigned to be anonymous.
         /// - Also, validate that if other auth headers are present (Authorization Bearer token), that it is never considered
         /// when the runtime is configured for EasyAuth authentication.
         /// </summary>
@@ -106,11 +144,14 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         [TestMethod]
         public async Task TestInvalidEasyAuthToken(string token, bool sendAuthorizationHeader = false)
         {
-            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token, EasyAuthType.StaticWebApps, sendAuthorizationHeader);
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(token, EasyAuthType.StaticWebApps, sendAuthorizationHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
-            Assert.AreEqual(expected: "anonymous", postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString());
+            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
+                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
+                ignoreCase: true);
         }
 
         #endregion
@@ -165,7 +206,12 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         /// <param name="token">The EasyAuth header value(base64 encoded token) to test against the TestServer</param>
         /// <param name="sendAuthorizationHeader">Whether to add authorization header to header dictionary</param>
         /// <returns></returns>
-        private static async Task<HttpContext> SendRequestAndGetHttpContextState(string? token, EasyAuthType easyAuthType, bool sendAuthorizationHeader = false)
+        private static async Task<HttpContext> SendRequestAndGetHttpContextState(
+            string? token,
+            EasyAuthType easyAuthType,
+            bool sendAuthorizationHeader = false,
+            bool sendClientRoleHeader = false,
+            string? clientRoleHeader = null)
         {
             using IHost host = await CreateWebHostEasyAuth(easyAuthType);
             TestServer server = host.GetTestServer();
@@ -182,6 +228,13 @@ namespace Azure.DataGateway.Service.Tests.Authentication
                 if (sendAuthorizationHeader)
                 {
                     KeyValuePair<string, StringValues> easyAuthHeader = new("Authorization", "Bearer eyxyz");
+                    context.Request.Headers.Add(easyAuthHeader);
+                }
+
+                if (sendClientRoleHeader)
+                {
+                    KeyValuePair<string, StringValues> easyAuthHeader =
+                        new(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader);
                     context.Request.Headers.Add(easyAuthHeader);
                 }
 

@@ -7,7 +7,6 @@ using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using static Azure.DataGateway.Service.AuthenticationHelpers.StaticWebAppsAuthentication;
 
 namespace Azure.DataGateway.Service.AuthenticationHelpers
 {

@@ -688,6 +688,72 @@ type Foo @model {
         }
 
         [TestMethod]
+        [TestCategory("Mutation Builder - Updated")]
+        [TestCategory("Schema Builder - Nested Type")]
+        public void UpdateMutationWithNestedInnerObject_NonNullableListTypeNonNullableItems()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID!
+    bar: [Bar!]!
+}
+
+type Bar {
+    baz: Int
+}
+                ";
+
+            (DocumentNode mutationRoot, FieldDefinitionNode field) = GenerateTestMutationFieldNodes(gql);
+            InputValueDefinitionNode inputArg = field.Arguments[2];
+            InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
+            Assert.AreEqual(2, inputObj.Fields.Count);
+
+            Assert.AreEqual("id", inputObj.Fields[0].Name.Value);
+            Assert.AreEqual("ID", inputObj.Fields[0].Type.NamedType().Name.Value);
+            Assert.IsTrue(inputObj.Fields[0].Type.IsNonNullType(), "id field shouldn't be null");
+
+            Assert.AreEqual("bar", inputObj.Fields[1].Name.Value);
+            Assert.AreEqual("UpdateBarInput", inputObj.Fields[1].Type.NamedType().Name.Value);
+            Assert.IsTrue(inputObj.Fields[1].Type.IsNonNullType(), "bar field shouldn't be null");
+            Assert.IsTrue(inputObj.Fields[1].Type.InnerType().IsListType(), "bar field should be a list");
+            Assert.IsTrue(inputObj.Fields[1].Type.InnerType().InnerType().IsNonNullType(), "list fields aren't nullable");
+        }
+
+        [TestMethod]
+        [TestCategory("Mutation Builder - Updated")]
+        [TestCategory("Schema Builder - Nested Type")]
+        public void UpdateMutationWithNestedInnerObject_NullableListTypeNullableItems()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID
+    bar: [Bar]
+}
+
+type Bar {
+    baz: Int
+}
+                ";
+
+            (DocumentNode mutationRoot, FieldDefinitionNode field) = GenerateTestMutationFieldNodes(gql);
+            InputValueDefinitionNode inputArg = field.Arguments[2];
+            InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
+            Assert.AreEqual(2, inputObj.Fields.Count);
+
+            Assert.AreEqual("id", inputObj.Fields[0].Name.Value);
+            Assert.AreEqual("ID", inputObj.Fields[0].Type.NamedType().Name.Value);
+            Assert.IsFalse(inputObj.Fields[0].Type.IsNonNullType(), "id field should allow null for schema validation");
+
+            Assert.AreEqual("bar", inputObj.Fields[1].Name.Value);
+            Assert.AreEqual("UpdateBarInput", inputObj.Fields[1].Type.NamedType().Name.Value);
+            Assert.IsFalse(inputObj.Fields[1].Type.IsNonNullType(), "bar field shouldn't be null");
+            Assert.IsTrue(inputObj.Fields[1].Type.IsListType(), "bar field should be a list");
+            Assert.IsFalse(inputObj.Fields[1].Type.InnerType().IsNonNullType(), "list fields should be nullable");
+        }
+
+        [TestMethod]
         [TestCategory("Mutation Builder - Create")]
         public void CreateMutationWontCreateNestedModelsOnInput()
         {
@@ -705,9 +771,10 @@ type Baz @model {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.cosmos,
+                DatabaseType.mssql,
                 new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Baz", GenerateEmptyEntity() } },
                 entityPermissionsMap: _entityPermissions
                 );
@@ -719,6 +786,41 @@ type Baz @model {
             InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[0].Type.NamedType().Name);
             Assert.AreEqual(1, argType.Fields.Count);
             Assert.AreEqual("id", argType.Fields[0].Name.Value);
+        }
+
+        [TestMethod]
+        [TestCategory("Mutation Builder - Create")]
+        public void CreateMutationWillCreateNestedModelsOnInputForCosmos()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID!
+    baz: Baz!
+}
+
+type Baz @model {
+    id: ID!
+    x: String!
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(
+                    root,
+                    DatabaseType.cosmos,
+                    new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Baz", GenerateEmptyEntity() } },
+                    entityPermissionsMap: _entityPermissions
+                    );
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
+            Assert.AreEqual(1, field.Arguments.Count);
+
+            InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[0].Type.NamedType().Name);
+            Assert.AreEqual(2, argType.Fields.Count);
+            Assert.AreEqual("id", argType.Fields[0].Name.Value);
+            Assert.AreEqual("baz", argType.Fields[1].Name.Value);
         }
 
         [DataTestMethod]
@@ -755,6 +857,22 @@ type Foo @model {{
         {
             return (ObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is ObjectTypeDefinitionNode node && node.Name.Value == "Mutation");
 
+        }
+
+        private (DocumentNode mutationRoot, FieldDefinitionNode field) GenerateTestMutationFieldNodes(string gql)
+        {
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(
+                root,
+                DatabaseType.cosmos,
+                new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                entityPermissionsMap: _entityPermissions
+                );
+
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
+            return (mutationRoot, field);
         }
     }
 }

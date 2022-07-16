@@ -1,9 +1,12 @@
 # Introduction
 
-# Deploy docker container from ACR (Prebuilt image)
-N.B. This section only applies if you want to use a prebuilt image, if you want to build it yourself, move on to the next section (Build and deploy as Docker Container)
+This document provides instruction for running the engine inside a Docker container.
 
-N.B. You might not have access to the container registry where the image is hosted. Reach out to someone on the team for us to give you permissions.
+## Running docker container from ACR (Prebuilt image)
+
+N.B. If you want to build your own image, use the next section (Build and deploy as Docker Container)
+
+N.B. You might not have access to the container registry where the image is hosted. Reach out to someone on the team to get access.
 
 1. You will need to login to the ACR:
 
@@ -11,78 +14,50 @@ N.B. You might not have access to the container registry where the image is host
 az acr login --name hawaiiacr
 ```
 
-2. update the configuration files for your environment:
+2. Update the configuration files for your environment:
 
-Update the config.json and the appsettings.json files for your chosen environment.
-
-## Running the container with docker compose
-This is the easiest way.
+Update hawaii-config.json (and schema.gql if using CosmosDb).
 
 3. Choose a docker-compose-*.yml file based on your environment (cosmos, sql, postgres)
 
+    3.1. Open the docker-compose file and update the "image" with the tag you want to use. (hawaii:latest is manually created, it doesn't always point to the latest image)
+
+    3.2. If you are not using the configuration from the repo, update the path to your config/schema to point to your files and map them to /App/hawaii-config.json and for CosmosDb - /App/schema.gql as well.
+
+    3.3. Run docker compose up to start the container:
 
 ```bash
 docker compose -f "./docker-compose.yml" up
 ```
 
-4 Your container should be accessible at localhost:5000
+4. Your container should be accessible at localhost:5000
 
-## Running the container manually
+## Build and deploy as Docker Container
 
-3. Pull the docker image
+If you want to build your own docker image, follow these instructions.
 
-```bash
-docker pull hawaiiacr.azurecr.io/hawaii:latest # Note to use the desired tag here.
-```
+N.B. Ensure you have docker running, with Linux containers chosen.
 
-4. Launch the docker container and map the config.json and appsettings.json files. The command should look something like this (depending on the path to your appsettings and config files, and the image you are using):
-
-```bash
-docker run --mount type=bind,source="$(pwd)\DataGateway.Service\appsettings.json",target="/App/appsettings.json" --mount type=bind,source="$(pwd)\DataGateway.Service\config.json",target="/App/config.json" -d -p 5000:5000 hawaiiacr.azurecr.io/hawaii:latest
-# Note to update to the correct tag
-```
-
-5. The container should be accessible at localhost:5000
-
-## Managing the Pipeline
-The pipeline has permissions to push to this ACR through this service connection in ADO: https://msdata.visualstudio.com/CosmosDB/_settings/adminservices?resourceId=6565800e-5e71-4e19-a610-6013655382b5.
-
-To push to a different container registry, we need to add a new service connection to the registry and modify the docker task in the build-pipeline.yml file to point to the new registry.
-
-# Build and deploy as Docker Container
-
-## Build Image
-
-Ensure you have docker running, with Linux containers chosen.
-Navigate to the root folder.
-
-On Windows you need to do this in a WSL terminal and run this to build a docker image
+1. Navigate to the root folder of the repo.
+2. Run docker build. If you are on Windows, you need to do this in a WSL terminal.
 
 ```bash
-docker build -t hawaii -f Dockerfile .
+docker build -t hawaii:<yourTag> -f Dockerfile .
 ```
 
-## Run Container
+3. To run a container with the image you created, follow the instructions above (Running docker container from ACR (Prebuilt image)). Make sure to replace the image in the docker-compose file with the one you built. You can skip the login step.
 
-Create and run container accessible on http://localhost:5000/ by running
-
-```bash
-docker run -d -p 5000:5000 hawaii
-```
-
-## Deploy Container
+### Deploying the Container
 
 If you are planning to deploy the container on Azure App service or elsewhere, you should deploy the image to an ACR.
 In the following example we are using `hawaiiacr.azurecr.io/hawaii` ACR, but you can use any other ACR to which have access to.
 
-### Push Image
+N.B. We automatically push images to the ACR on every CI build, so if you open a PR, it will generate an image with your changes and push it to the ACR automatically.
 
-To push the built image to the hawaiiacr ACR, do the following
-
-Tag the image correctly
+1. Update your image tag.
 
 ```bash
-docker tag hawaii hawaiiacr.azurecr.io/hawaii/<yourBranch>:<yourTag>
+docker tag hawaii:<yourTag> hawaiiacr.azurecr.io/hawaii/<yourBranch>:<yourTag>
 ```
 
 Choose something meaningful when tagging your images. This will make it easier to understand what each image is.
@@ -92,14 +67,20 @@ For example, on a user branch, one could use the branch name with the commit id 
 docker tag hawaii hawaiiacr.azurecr.io/hawaii/docker-registry:a046756c97d49347d0fc8584ecc5050029ed5840
 ```
 
-Login to the ACR with the correct credentials
+2. Login to the ACR with the correct credentials
 
 ```bash
 az acr login --name hawaiiacr
 ```
 
-Push the retagged image
+3. Push the image
 
 ```bash
 docker push hawaiiacr.azurecr.io/hawaii/<yourBranch>:<yourTag>
 ```
+
+## Managing the Pipeline
+
+The pipeline has permissions to push to this ACR through this service connection in ADO: <https://msdata.visualstudio.com/CosmosDB/_settings/adminservices?resourceId=6565800e-5e71-4e19-a610-6013655382b5>.
+
+To push to a different container registry, we need to add a new service connection to the registry and modify the docker task in the build-pipeline.yml file to point to the new registry.

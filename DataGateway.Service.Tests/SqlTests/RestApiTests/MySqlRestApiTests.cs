@@ -726,12 +726,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                         WHERE id = 5001
                     ) AS subq
                 "
+            },{
+                "InsertOneWithMappingTest",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species,
+                    'United State\'s Region', region)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationMappingTable + @"
+                      WHERE treeId = 3
+                    ) AS subq
+                "
             },
             {
                 "InsertOneInCompositeNonAutoGenPKTest",
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
-                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                      'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
@@ -863,6 +874,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
+                "PutOne_Update_With_Mapping_Test",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species,
+                    'United State\'s Region', region, 'height', height)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationMappingTable + @"
+                      WHERE treeId = 1
+                    ) as subq
+                "
+            },
+            {
                 "PutOne_Insert_Test",
                 @"
                     SELECT JSON_OBJECT('id', id, 'title', title, 'issue_number', issue_number ) AS data
@@ -956,6 +979,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                         FROM " + _integration_NonAutoGenPK_TableName + @"
                         WHERE id = 2 AND title = 'Batman Begins'
                         AND issue_number = 1234
+                    ) as subq
+                "
+            },
+            {
+                "PatchOne_Insert_Mapping_Test",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species,
+                    'United State\'s Region', region, 'height', height)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationMappingTable + @"
+                      WHERE treeId = 4
                     ) as subq
                 "
             },

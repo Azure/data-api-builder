@@ -310,8 +310,6 @@ namespace Azure.DataGateway.Service
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapGet("/foo", () => "Hello World!");
-
                 endpoints.MapControllers();
                 if (runtimeConfig is not null && runtimeConfig.GraphQLGlobalSettings.Enabled)
                 {
@@ -321,12 +319,6 @@ namespace Azure.DataGateway.Service
 
                 endpoints.MapHealthChecks("/");
             });
-
-            //app.Use(async (context, next) =>
-            //{
-            //    await context.Response.WriteAsync("Hello");
-            //});
-
         }
 
         /// <summary>

@@ -52,7 +52,6 @@ query{
         [ClassInitialize]
         public static void TestFixtureSetup(TestContext context)
         {
-            Init(context);
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();

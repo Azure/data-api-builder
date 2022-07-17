@@ -436,7 +436,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <returns>string in JSON format</returns>
         protected virtual async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, HttpClient httpClient, Dictionary<string, object> variables = null, bool failOnErrors = true)
         {
-            JsonElement graphQLResult = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, httpClient, variables);
+            JsonElement graphQLResult = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, httpClient, variables);
             Console.WriteLine(graphQLResult.ToString());
 
             if (failOnErrors && graphQLResult.TryGetProperty("errors", out JsonElement errors))
@@ -459,7 +459,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="httpClient"></param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns>JsonElement</returns>
-        protected static async Task<JsonElement> GetGraphQLControllerResultAsync(string query, string graphQLQueryName, HttpClient httpClient, Dictionary<string, object> variables = null)
+        protected static async Task<JsonElement> GetGraphQLResultAsync(string query, string graphQLQueryName, HttpClient httpClient, Dictionary<string, object> variables = null)
         {
             object payload = variables == null ?
                 new { query } :

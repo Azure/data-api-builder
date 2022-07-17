@@ -49,12 +49,14 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             var input = new
             {
                 id,
-                name = "test_name"
+                name = "test_name",
+                stars = new[] { new { id = "TestStar" } }
             };
             JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
+            Assert.AreEqual("test_name", response.GetProperty("name").GetString());
         }
 
         [TestMethod]
@@ -84,7 +86,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             const string name = "test_name";
             string mutation = $@"
 mutation {{
-    createPlanet (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+    createPlanet (item: {{ id: ""{id}"", name: ""{name}"", stars: [{{ id: ""{id}"" }}] }}) {{
         id
         name
     }}
@@ -153,7 +155,7 @@ mutation {{
     }}
 }}";
             JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
-            Assert.AreEqual("id field is mandatory", response[0].GetProperty("message").ToString());
+            Assert.IsTrue(response[0].GetProperty("message").ToString().Contains("The input content is invalid because the required properties - 'id; ' - are missing"));
         }
 
         [TestMethod]
@@ -174,7 +176,7 @@ mutation {{
             const string newName = "new_name";
             mutation = $@"
 mutation {{
-    updatePlanet (id: ""{id}"", _partitionKeyValue: ""{id}"", item: {{ id: ""{id}"", name: ""{newName}"" }}) {{
+    updatePlanet (id: ""{id}"", _partitionKeyValue: ""{id}"", item: {{ id: ""{id}"", name: ""{newName}"", stars: [{{ id: ""{id}"" }}] }}) {{
         id
         name
     }}
@@ -210,7 +212,8 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetInput!) {
             var update = new
             {
                 id = id,
-                name = "new_name"
+                name = "new_name",
+                stars = new[] { new { id = "TestStar" } }
             };
 
             JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });

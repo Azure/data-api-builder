@@ -412,8 +412,8 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Helper method to preprocess the policy by replacing "( " with "(", i.e. remove 
-        /// extra spaces after opening parenthesis. This will prevent allowed claimTypes 
+        /// Helper method to preprocess the policy by replacing "( " with "(", i.e. remove
+        /// extra spaces after opening parenthesis. This will prevent allowed claimTypes
         /// from being invalidated.
         /// </summary>
         /// <param name="policy"></param>

@@ -68,7 +68,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
                     $"VALUES ({string.Join(", ", (structure.Values))}) " +
-                    $"RETURNING {Build(structure.ReturnColumns)};";
+                    $"RETURNING {Build(structure.OutputColumns)};";
         }
 
         /// <inheritdoc />
@@ -77,7 +77,7 @@ namespace Azure.DataGateway.Service.Resolvers
             return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"WHERE {Build(structure.Predicates)} " +
-                    $"RETURNING {Build(structure.ReturnColumns)};";
+                    $"RETURNING {Build(structure.OutputColumns)};";
         }
 
         /// <inheritdoc />
@@ -94,7 +94,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"WHERE {Build(structure.Predicates)} " +
-                    $"RETURNING {Build(structure.ReturnColumns)}, '{UPDATE_UPSERT}' AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
+                    $"RETURNING {Build(structure.OutputColumns)}, '{UPDATE_UPSERT}' AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
             }
             else
             {
@@ -102,7 +102,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     $"VALUES ({string.Join(", ", (structure.Values))}) " +
                     $"ON CONFLICT ({Build(structure.PrimaryKey())}) DO UPDATE " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
-                    $"RETURNING {Build(structure.ReturnColumns)}, " +
+                    $"RETURNING {Build(structure.OutputColumns)}, " +
                     $"case when xmax::text::int > 0 then '{UPDATE_UPSERT}' else '{INSERT_UPSERT}' end AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
             }
         }

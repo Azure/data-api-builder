@@ -129,17 +129,21 @@ namespace Azure.DataGateway.Service.Services
                 }
 
                 // The roles allowed for Fields are the roles allowed to READ the fields, so any role that has a read definition for the field.
-                ObjectTypeDefinitionNode node = SchemaConverter.FromTableDefinition(
-                    entityName,
-                    tableDefinition,
-                    entity,
-                    entities,
-                    rolesAllowedForEntity,
-                    rolesAllowedForFields
+                // Only add objectTypeDefinition for GraphQL if it has a role definition defined for access.
+                if (rolesAllowedForEntity.Count() > 0)
+                {
+                    ObjectTypeDefinitionNode node = SchemaConverter.FromTableDefinition(
+                        entityName,
+                        tableDefinition,
+                        entity,
+                        entities,
+                        rolesAllowedForEntity,
+                        rolesAllowedForFields
                     );
 
-                InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
-                objectTypes.Add(entityName, node);
+                    InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
+                    objectTypes.Add(entityName, node);
+                }
             }
 
             // Pass two - Add the arguments to the many-to-* relationship fields

@@ -1,7 +1,11 @@
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.SqlTests;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataGateway.Service.Tests.UnitTests
 {
@@ -39,10 +43,15 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// </summary>
         [TestMethod]
-        public async Task CheckNoExceptionForNoForiegnKey()
+        public async Task CheckNoExceptionForNoForeignKey()
         {
-            _runtimeConfig = SqlTestHelper.LoadConfig(DatabaseEngine).CurrentValue;
+            string databaseEngine = TestCategory.POSTGRESQL;
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(databaseEngine);
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
+            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             SetUpSQLMetadataProvider();
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();

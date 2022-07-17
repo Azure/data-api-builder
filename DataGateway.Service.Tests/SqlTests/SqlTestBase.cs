@@ -27,6 +27,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
@@ -54,6 +55,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static IAuthorizationResolver _authorizationResolver;
         private static WebApplicationFactory<Program> _application;
         protected static RuntimeConfig _runtimeConfig;
+        protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
 
         protected static string DatabaseEngine { get; set; }
         protected static HttpClient HttpClient { get; private set; }
@@ -66,7 +68,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="context"></param>
         protected static async Task InitializeTestFixture(TestContext context)
         {
-            _runtimeConfig = SqlTestHelper.LoadConfig($"{DatabaseEngine}").CurrentValue;
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{DatabaseEngine}");
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
+            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
+            TestHelper.AddMissingEntitiesToConfig(_runtimeConfig);
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
 
             SetUpSQLMetadataProvider();
             // Setup AuthorizationService to always return Authorized.
@@ -84,7 +91,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _queryEngine = new SqlQueryEngine(
                 _queryExecutor,
                 _queryBuilder,
-                _sqlMetadataProvider);
+                _sqlMetadataProvider,
+                _httpContextAccessor.Object);
             _mutationEngine =
                 new SqlMutationEngine(
                 _queryEngine,
@@ -114,12 +122,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         protected static void SetUpSQLMetadataProvider()
         {
-            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
-            mockRuntimeConfigProvider.Setup(x => x.IsDeveloperMode()).Returns(true);
-            mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out _runtimeConfig)).Returns(true);
-            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(_runtimeConfig);
-            mockRuntimeConfigProvider.Setup(x => x.RestPath).Returns("/api");
-            _runtimeConfigProvider = mockRuntimeConfigProvider.Object;
+            _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
 
             switch (DatabaseEngine)
             {
@@ -132,16 +135,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         new PostgreSqlMetadataProvider(
                             _runtimeConfigProvider,
                             _queryExecutor,
-                            _queryBuilder);
+                            _queryBuilder,
+                            _sqlMetadataLogger);
                     break;
                 case TestCategory.MSSQL:
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
-                    _sqlMetadataProvider = new MsSqlMetadataProvider(
-                        _runtimeConfigProvider,
-                        _queryExecutor, _queryBuilder);
+                    _sqlMetadataProvider =
+                        new MsSqlMetadataProvider(
+                            _runtimeConfigProvider,
+                            _queryExecutor, _queryBuilder,
+                            _sqlMetadataLogger);
                     break;
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
@@ -152,7 +158,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                          new MySqlMetadataProvider(
                              _runtimeConfigProvider,
                              _queryExecutor,
-                             _queryBuilder);
+                             _queryBuilder,
+                             _sqlMetadataLogger);
                     break;
             }
         }

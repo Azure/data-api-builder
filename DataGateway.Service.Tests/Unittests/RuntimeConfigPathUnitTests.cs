@@ -1,8 +1,12 @@
 using System;
 using System.Data;
+using System.IO;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Tests.UnitTests
@@ -91,6 +95,62 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             string json = @"{ ""foo"" : ""@env('envVarName'), @env('" + invalidEnvVarName + @"')"" }";
             SetEnvVariables();
             Assert.ThrowsException<DataGatewayException>(() => RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(json));
+        }
+
+        [TestMethod("Validates that JSON deserialization failures are gracefully caught.")]
+        public void TestDeserializationFailures()
+        {
+            string configJson = @"
+{
+    ""data-source"": {
+        ""database-type"": ""notsupporteddb""
+     }
+}";
+            Assert.IsFalse(RuntimeConfig.TryGetDeserializedConfig
+                             (configJson,
+                             out RuntimeConfig deserializedConfig));
+            Assert.IsNull(deserializedConfig);
+        }
+
+        [DataRow("", typeof(ArgumentNullException),
+            "Could not determine a configuration file name that exists. (Parameter 'Configuration file name')",
+            DisplayName = "Empty configuration file name.")]
+        [DataRow("NonExistentConfigFile.json", typeof(FileNotFoundException),
+            "Requested configuration file 'NonExistentConfigFile.json' does not exist.",
+            DisplayName = "Non existent configuration file name.")]
+        [TestMethod("Validates that loading of runtime config value can handle failures gracefully.")]
+        public void TestLoadRuntimeConfigFailures(
+            string configFileName,
+            Type exceptionType,
+            string exceptionMessage)
+        {
+            RuntimeConfigPath configPath = new()
+            {
+                ConfigFileName = configFileName
+            };
+
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            try
+            {
+                RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
+                // This tests the logger from the constructor.
+                RuntimeConfigProvider configProvider =
+                    new(configPath, configProviderLogger.Object);
+                RuntimeConfigProvider.LoadRuntimeConfigValue(
+                    configPath,
+                    out RuntimeConfig runtimeConfig);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                Assert.AreEqual(exceptionType, ex.GetType());
+                Assert.AreEqual(exceptionMessage, ex.Message);
+                Assert.AreEqual(2, configProviderLogger.Invocations.Count);
+                // This is the error logged by TryLoadRuntimeConfigValue()
+                Assert.AreEqual(LogLevel.Error, configProviderLogger.Invocations[0].Arguments[0]);
+                // This is the information logged by the RuntimeConfigProvider constructor.
+                Assert.AreEqual(LogLevel.Information, configProviderLogger.Invocations[1].Arguments[0]);
+            }
         }
 
         #endregion Negative Tests

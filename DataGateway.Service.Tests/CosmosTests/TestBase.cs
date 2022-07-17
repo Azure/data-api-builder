@@ -13,12 +13,12 @@ using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
-using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -48,10 +48,8 @@ type Planet @model {
 
         private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };
 
-        internal static CosmosClient CosmosClient { get; private set; }
-
         private static HttpClient _client;
-        private static WebApplicationFactory<Startup> _application;
+        internal static WebApplicationFactory<Startup> _application;
 
         [ClassInitialize(InheritanceBehavior.BeforeEachDerivedClass)]
         public static void Init(TestContext context)
@@ -71,12 +69,12 @@ type Planet @model {
                     _ = builder.ConfigureTestServices(services =>
                     {
                         services.AddSingleton<IFileSystem>(fileSystem);
-                        services.AddSingleton(TestHelper.ConfigProvider);
+                        services.AddSingleton(TestHelper.GetRuntimeConfigProvider(CosmosTestHelper.ConfigPath));
                         services.AddSingleton(authorizationResolverCosmos.Object);
                     });
                 });
 
-            CosmosClient = new CosmosClientBuilder(TestHelper.ConfigProvider.GetRuntimeConfiguration().ConnectionString).Build();
+            RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
 
             _client = _application.CreateClient();
         }
@@ -90,12 +88,13 @@ type Planet @model {
         internal static List<string> CreateItems(string dbName, string containerName, int numItems)
         {
             List<string> idList = new();
+            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             for (int i = 0; i < numItems; i++)
             {
                 string uid = Guid.NewGuid().ToString();
                 idList.Add(uid);
-                dynamic sourceItem = TestHelper.GetItem(uid, _planets[i % (_planets.Length)], i);
-                CosmosClient.GetContainer(dbName, containerName)
+                dynamic sourceItem = CosmosTestHelper.GetItem(uid, _planets[i % (_planets.Length)], i);
+                cosmosClient.GetContainer(dbName, containerName)
                     .CreateItemAsync(sourceItem, new PartitionKey(uid)).Wait();
             }
 
@@ -129,7 +128,9 @@ type Planet @model {
         /// <param name="containerName">the container name</param>
         internal static void OverrideEntityContainer(string entityName, string containerName)
         {
-            Entity entity = TestHelper.Config.Entities[entityName];
+            RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
+            RuntimeConfig config = configProvider.GetRuntimeConfiguration();
+            Entity entity = config.Entities[entityName];
 
             System.Reflection.PropertyInfo prop = entity.GetType().GetProperty("Source");
             // Use reflection to set the entity Source (since `entity` is a record type and technically immutable)
@@ -180,7 +181,8 @@ type Planet @model {
             {
                 MaxItemCount = pagesize,
             };
-            Container c = CosmosClient.GetContainer(DATABASE_NAME, containerName);
+            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            Container c = cosmosClient.GetContainer(DATABASE_NAME, containerName);
             QueryDefinition queryDef = new(query);
             FeedIterator<JObject> resultSetIterator = c.GetItemQueryIterator<JObject>(queryDef, continuationToken, options);
             FeedResponse<JObject> firstPage = await resultSetIterator.ReadNextAsync();

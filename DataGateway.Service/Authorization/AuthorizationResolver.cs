@@ -30,6 +30,7 @@ namespace Azure.DataGateway.Service.Authorization
         public const string FIELD_PREFIX = "@item.";
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
         private const string SHORT_CLAIM_TYPE_NAME = "http://schemas.xmlsoap.org/ws/2005/05/identity/claimproperties/ShortTypeName";
+
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
         public AuthorizationResolver(
@@ -68,20 +69,16 @@ namespace Azure.DataGateway.Service.Authorization
         {
             StringValues clientRoleHeader = httpContext.Request.Headers[CLIENT_ROLE_HEADER];
 
-            // The clientRoleHeader must be present on requests.
-            // Consequentially, anonymous requests must specifically set
-            // the clientRoleHeader value to Anonymous.
-            if (clientRoleHeader.Count == 0)
+            if (clientRoleHeader.Count != 1)
             {
-                return false;
-            }
+                // When count = 0, the clientRoleHeader is absent on requests.
+                // Consequentially, anonymous requests must specifically set
+                // the clientRoleHeader value to Anonymous.
 
-            // Multiple header fields with the same field-name MAY be present in a message,
-            // but are NOT supported, specifically for the client role header.
-            // Valid scenario per HTTP Spec: http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
-            // Discussion: https://stackoverflow.com/a/3097052/18174950
-            if (clientRoleHeader.Count > 1)
-            {
+                // When count > 1, multiple header fields with the same field-name
+                // are present in a message, but are NOT supported, specifically for the client role header.
+                // Valid scenario per HTTP Spec: http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+                // Discussion: https://stackoverflow.com/a/3097052/18174950
                 return false;
             }
 
@@ -93,6 +90,8 @@ namespace Azure.DataGateway.Service.Authorization
                 return false;
             }
 
+            // IsInRole looks at all the claims present in the request
+            // Reference: https://github.com/microsoft/referencesource/blob/master/mscorlib/system/security/claims/ClaimsPrincipal.cs
             return httpContext.User.IsInRole(clientRoleHeaderValue);
         }
 
@@ -360,6 +359,7 @@ namespace Azure.DataGateway.Service.Authorization
                 return claimsInRequestContext;
             }
 
+            string roleClaimShortName = string.Empty;
             foreach (Claim claim in identity.Claims)
             {
                 /*
@@ -381,7 +381,16 @@ namespace Azure.DataGateway.Service.Authorization
                         subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                         );
                 }
+
+                if (claim.Type is ClaimTypes.Role)
+                {
+                    roleClaimShortName = type;
+                }
             }
+
+            // Add role claim to the claimsInRequestContext as it is not added above.
+            string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
+            claimsInRequestContext.Add(roleClaimShortName, new Claim(roleClaimShortName, clientRoleHeader, ClaimValueTypes.String));
 
             return claimsInRequestContext;
         }

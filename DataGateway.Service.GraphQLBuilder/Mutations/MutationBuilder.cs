@@ -8,6 +8,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
     public static class MutationBuilder
     {
+        public const string INPUT_ARGUMENT_NAME = "item";
+
         /// <summary>
         /// Creates a DocumentNode containing FieldDefinitionNodes representing mutations
         /// </summary>

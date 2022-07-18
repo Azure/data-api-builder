@@ -31,9 +31,6 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly IQueryBuilder _queryBuilder;
         private readonly IAuthorizationResolver _authorizationResolver;
 
-        // Used to parse out GraphQL input query arguments.
-        public const string INPUT_ARGUMENT_NAME = "item";
-
         /// <summary>
         /// Constructor
         /// </summary>
@@ -422,7 +419,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
             }
 
-            List<string> inputArgumentKeys = BaseSqlQueryStructure.InputArgumentToMutationParams(parameters, INPUT_ARGUMENT_NAME).Keys.ToList();
+            List<string> inputArgumentKeys = BaseSqlQueryStructure.InputArgumentToMutationParams(parameters, MutationBuilder.INPUT_ARGUMENT_NAME).Keys.ToList();
             bool isAuthorized;
 
             switch (mutationOperation)

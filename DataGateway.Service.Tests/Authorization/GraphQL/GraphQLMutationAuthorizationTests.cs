@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
@@ -56,7 +57,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
 
             Dictionary<string, object?> parameters = new()
             {
-                { SqlMutationEngine.INPUT_ARGUMENT_NAME, mutationInputRaw }
+                { MutationBuilder.INPUT_ARGUMENT_NAME, mutationInputRaw }
             };
 
             Dictionary<string, object?> middlewareContextData = new()

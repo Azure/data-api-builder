@@ -124,27 +124,6 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
     }
 
     /// <inheritdoc />
-    private static bool IsInAnyRole(
-        IPrincipal principal,
-        IReadOnlyList<string>? roles)
-    {
-        if (roles == null || roles.Count == 0)
-        {
-            return true;
-        }
-
-        for (int i = 0; i < roles.Count; i++)
-        {
-            if (principal.IsInRole(roles[i]))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /// <inheritdoc />
     private static bool NeedsPolicyValidation(AuthorizeDirective directive)
         => directive.Roles == null
            || directive.Roles.Count == 0

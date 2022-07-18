@@ -77,15 +77,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             List<InputValueDefinitionNode> inputValues = new();
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
 
-            // Any roles passed in will be added to the authorize directive for this field
-            // taking the form: @authorize(roles: [“role1”, ..., “roleN”])
-            // If the 'anonymous' role is present in the role list, no @authorize directive will be added
-            // because HotChocolate requires an authenticated user when the authorize directive is evaluated.
-            if (rolesAllowedForRead is not null &&
-                rolesAllowedForRead.Count() >= 1 &&
-                !rolesAllowedForRead.Contains(SYSTEM_ROLE_ANONYMOUS))
+            DirectiveNode? authorizeDirective = CreateAuthorizationDirectiveIfNecessary(rolesAllowedForRead);
+            if (authorizeDirective is not null)
             {
-                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForRead));
+                fieldDefinitionNodeDirectives.Add(authorizeDirective);
             }
 
             foreach (FieldDefinitionNode primaryKeyField in primaryKeyFields)
@@ -133,15 +128,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
 
-            // Any roles passed in will be added to the authorize directive for this field
-            // taking the form: @authorize(roles: [“role1”, ..., “roleN”])
-            // If the 'anonymous' role is present in the role list, no @authorize directive will be added
-            // because HotChocolate requires an authenticated user when the authorize directive is evaluated.
-            if (rolesAllowedForRead is not null &&
-                rolesAllowedForRead.Count() >= 1 &&
-                !rolesAllowedForRead.Contains(SYSTEM_ROLE_ANONYMOUS))
+            DirectiveNode? authorizeDirective = CreateAuthorizationDirectiveIfNecessary(rolesAllowedForRead);
+            if (authorizeDirective is not null)
             {
-                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForRead));
+                fieldDefinitionNodeDirectives.Add(authorizeDirective);
             }
 
             // Query field for the parent object type

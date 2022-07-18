@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
@@ -100,6 +101,7 @@ namespace Azure.DataGateway.Service.Services
             IRequestExecutorBuilder builder = new ServiceCollection()
                 .AddGraphQL()
                 .AddAuthorization()
+                .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
                 .AddErrorFilter(error =>
                 {
                     if (error.Exception != null)

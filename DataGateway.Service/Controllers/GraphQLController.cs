@@ -3,8 +3,10 @@ using System.IO;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataGateway.Service.Controllers
 {
@@ -35,6 +37,11 @@ namespace Azure.DataGateway.Service.Controllers
             // recognizes the authenticated user. Anonymous requests are possible so check
             // for the HttpContext.User existence is necessary.
             Dictionary<string, object> requestProperties = new();
+
+            if (HttpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues clientRoleHeader))
+            {
+                requestProperties.Add(key: AuthorizationResolver.CLIENT_ROLE_HEADER, value: clientRoleHeader);
+            }
 
             if (this.HttpContext.User.Identity != null && this.HttpContext.User.Identity.IsAuthenticated)
             {

@@ -238,7 +238,14 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
             // Create authorize directive denoting allowed roles
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
-            if (rolesAllowedForMutation is not null)
+
+            // Any roles passed in will be added to the authorize directive for this field
+            // taking the form: @authorize(roles: [“role1”, ..., “roleN”])
+            // If the 'anonymous' role is present in the role list, no @authorize directive will be added
+            // because HotChocolate requires an authenticated user when the authorize directive is evaluated.
+            if (rolesAllowedForMutation is not null &&
+                rolesAllowedForMutation.Count() >= 1 &&
+                !rolesAllowedForMutation.Contains(SYSTEM_ROLE_ANONYMOUS))
             {
                 fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForMutation));
             }

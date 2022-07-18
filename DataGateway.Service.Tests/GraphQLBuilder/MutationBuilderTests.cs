@@ -40,10 +40,18 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
             return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
         }
 
-        [TestMethod]
+        [DataTestMethod]
         [TestCategory("Mutation Builder - Create")]
         [TestCategory("Schema Builder - Simple Type")]
-        public void CanGenerateCreateMutationWith_SimpleType()
+        [DataRow(new string[] { "authenticated" }, true,
+            DisplayName = "Validates @authorize directive is added.")]
+        [DataRow(new string[] { "anonymous" }, false,
+            DisplayName = "Validates @authorize directive is NOT added.")]
+        [DataRow(new string[] { "anonymous", "authenticated" }, false,
+            DisplayName = "Validates @authorize directive is NOT added - multiple roles")]
+        public void CanGenerateCreateMutationWith_SimpleType(
+            IEnumerable<string> roles,
+            bool isAuthorizeDirectiveExpected)
         {
             string gql =
                 @"
@@ -54,15 +62,23 @@ type Foo @model {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, EntityMetadata> entityPermissionsMap
+                = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    new string[] { "Foo" },
+                    new string[] { ActionType.CREATE },
+                    roles);
             DocumentNode mutationRoot = MutationBuilder.Build(root,
                 DatabaseType.cosmos,
                 new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
-                entityPermissionsMap: _entityPermissions
+                entityPermissionsMap: entityPermissionsMap
                 );
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"createFoo"));
+            FieldDefinitionNode createField =
+                query.Fields.Where(f => f.Name.Value == $"createFoo").First();
+            Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
+                actual: createField.Directives.Count);
         }
 
         [TestMethod]
@@ -565,10 +581,18 @@ type Foo @model {
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"deleteFoo"));
         }
 
-        [TestMethod]
+        [DataTestMethod]
         [TestCategory("Mutation Builder - Delete")]
         [TestCategory("Schema Builder - Simple Type")]
-        public void DeleteMutationIdAsInput_SimpleType()
+        [DataRow(new string[] { "authenticated" }, true,
+            DisplayName = "Validates @authorize directive is added.")]
+        [DataRow(new string[] { "anonymous" }, false,
+            DisplayName = "Validates @authorize directive is NOT added.")]
+        [DataRow(new string[] { "anonymous", "authenticated" }, false,
+            DisplayName = "Validates @authorize directive is NOT added - multiple roles")]
+        public void DeleteMutationIdAsInput_SimpleType(
+            IEnumerable<string> roles,
+            bool isAuthorizeDirectiveExpected)
         {
             string gql =
                 @"
@@ -579,11 +603,15 @@ type Foo @model {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, EntityMetadata> entityPermissionsMap
+                = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    new string[] { "Foo" },
+                    new string[] { ActionType.DELETE },
+                    roles);
             DocumentNode mutationRoot = MutationBuilder.Build(root,
                 DatabaseType.cosmos,
                 new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
-                entityPermissionsMap: _entityPermissions
+                entityPermissionsMap: entityPermissionsMap
                 );
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
@@ -595,6 +623,11 @@ type Foo @model {
             Assert.AreEqual("_partitionKeyValue", field.Arguments[1].Name.Value);
             Assert.AreEqual("String", field.Arguments[1].Type.NamedType().Name.Value);
             Assert.IsTrue(field.Arguments[1].Type.IsNonNullType());
+
+            FieldDefinitionNode deleteField =
+                query.Fields.Where(f => f.Name.Value == $"deleteFoo").First();
+            Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
+                actual: deleteField.Directives.Count);
         }
 
         [TestMethod]
@@ -654,10 +687,18 @@ type Foo @model {
             Assert.AreEqual("bar", argType.Fields[1].Name.Value);
         }
 
-        [TestMethod]
+        [DataTestMethod]
         [TestCategory("Mutation Builder - Update")]
         [TestCategory("Schema Builder - Simple Type")]
-        public void UpdateMutationIdFieldAsArgument_SimpleType()
+        [DataRow(new string[] { "authenticated" }, true,
+            DisplayName = "Validates @authorize directive is added.")]
+        [DataRow(new string[] { "anonymous" }, false,
+            DisplayName = "Validates @authorize directive is NOT added.")]
+        [DataRow(new string[] { "anonymous", "authenticated" }, false,
+            DisplayName = "Validates @authorize directive is NOT added - multiple roles")]
+        public void UpdateMutationIdFieldAsArgument_SimpleType(
+            IEnumerable<string> roles,
+            bool isAuthorizeDirectiveExpected)
         {
             string gql =
                 @"
@@ -668,12 +709,16 @@ type Foo @model {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, EntityMetadata> entityPermissionsMap
+                = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    new string[] { "Foo" },
+                    new string[] { ActionType.UPDATE },
+                    roles);
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
                 DatabaseType.cosmos,
                 new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
-                entityPermissionsMap: _entityPermissions
+                entityPermissionsMap: entityPermissionsMap
                 );
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
@@ -685,6 +730,11 @@ type Foo @model {
             Assert.AreEqual("_partitionKeyValue", field.Arguments[1].Name.Value);
             Assert.AreEqual("String", field.Arguments[1].Type.NamedType().Name.Value);
             Assert.IsTrue(field.Arguments[1].Type.IsNonNullType());
+
+            FieldDefinitionNode collectionField =
+                query.Fields.Where(f => f.Name.Value == $"updateFoo").First();
+            Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
+                actual: collectionField.Directives.Count);
         }
 
         [TestMethod]

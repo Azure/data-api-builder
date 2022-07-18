@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;

@@ -611,7 +611,7 @@ type Foo @model {
             DocumentNode mutationRoot = MutationBuilder.Build(root,
                 DatabaseType.cosmos,
                 new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
-                entityPermissionsMap: _entityPermissions
+                entityPermissionsMap: entityPermissionsMap
                 );
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
@@ -625,7 +625,7 @@ type Foo @model {
             Assert.IsTrue(field.Arguments[1].Type.IsNonNullType());
 
             FieldDefinitionNode deleteField =
-            query.Fields.Where(f => f.Name.Value == $"deleteFoo").First();
+                query.Fields.Where(f => f.Name.Value == $"deleteFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
                 actual: deleteField.Directives.Count);
         }

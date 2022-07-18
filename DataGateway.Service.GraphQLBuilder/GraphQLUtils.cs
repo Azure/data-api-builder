@@ -121,10 +121,14 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 
         /// <summary>
         /// Creates a HotChocolate/GraphQL Authorize directive with a list of roles (if any) provided.
-        /// Typically used to lock down Object/Field types to users who are members of the roles allowed
+        /// Typically used to lock down Object/Field types to users who are members of the roles allowed.
+        /// Will not create such a directive if one of the roles is the system role: anonymous
+        /// since for that case, we don't want to lock down the field on which this directive is intended to be
+        /// added.
         /// </summary>
         /// <param name="roles">Collection of roles to set on the directive </param>
-        /// <returns>DirectiveNode such as: @authorize(roles: ["role1", ..., "roleN"]) </returns>
+        /// <returns>DirectiveNode such as: @authorize(roles: ["role1", ..., "roleN"])
+        /// where none of role1,..roleN is anonymous. Otherwise, returns null.</returns>
         public static DirectiveNode? CreateAuthorizationDirectiveIfNecessary(IEnumerable<string>? roles)
         {
             // Any roles passed in will be added to the authorize directive for this field

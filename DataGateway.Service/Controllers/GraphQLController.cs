@@ -37,6 +37,10 @@ namespace Azure.DataGateway.Service.Controllers
             // recognizes the authenticated user. Anonymous requests are possible so check
             // for the HttpContext.User existence is necessary.
             Dictionary<string, object> requestProperties = new();
+            if (HttpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues clientRoleHeader))
+            {
+                requestProperties.Add(key: AuthorizationResolver.CLIENT_ROLE_HEADER, value: clientRoleHeader);
+            }
 
             if (HttpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues clientRoleHeader))
             {
@@ -47,7 +51,6 @@ namespace Azure.DataGateway.Service.Controllers
             {
                 requestProperties.Add(nameof(ClaimsPrincipal), this.HttpContext.User);
             }
-
             // JsonElement returned so that JsonDocument is disposed when thread exits
             string resultJson = await this._schemaManager.ExecuteAsync(requestBody, requestProperties);
             using JsonDocument jsonDoc = JsonDocument.Parse(resultJson);

@@ -73,13 +73,13 @@ namespace Azure.DataGateway.Config
         // use camel case
         // convert Enum to strings
         // case insensitive
-        public static JsonSerializerOptions SerializerOptions = new()
+        public readonly static JsonSerializerOptions SerializerOptions = new()
         {
             PropertyNameCaseInsensitive = true,
             Converters =
-                    {
-                        new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
-                    }
+                {
+                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+                }
         };
 
         /// <summary>
@@ -128,7 +128,7 @@ namespace Azure.DataGateway.Config
         {
             try
             {
-                deserializedConfig = JsonSerializer.Deserialize<T>(configJson, RuntimeConfig.SerializerOptions);
+                deserializedConfig = JsonSerializer.Deserialize<T>(configJson, SerializerOptions);
                 return true;
             }
             catch (JsonException ex)
@@ -151,9 +151,10 @@ namespace Azure.DataGateway.Config
 
         public bool IsEasyAuthAuthenticationProvider()
         {
-            return AuthNConfig != null
-                   ? AuthNConfig.IsEasyAuthAuthenticationProvider()
-                    : false;
+            // by default, if there is no AuthenticationSection,
+            // EasyAuth StaticWebApps is the authentication scheme.
+            return AuthNConfig is null ||
+                   AuthNConfig!.IsEasyAuthAuthenticationProvider();
         }
 
         [JsonIgnore]

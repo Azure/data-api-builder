@@ -82,6 +82,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
+            await ResetDbStateAsync();
+            await _sqlMetadataProvider.InitializeAsync();
+
+            //Initialize the authorization resolver object
+            _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
+
             _queryEngine = new SqlQueryEngine(
                 _queryExecutor,
                 _queryBuilder,
@@ -92,12 +98,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _queryEngine,
                 _queryExecutor,
                 _queryBuilder,
-                _sqlMetadataProvider);
-            await ResetDbStateAsync();
-            await _sqlMetadataProvider.InitializeAsync();
+                _sqlMetadataProvider,
+                _authorizationResolver);
 
-            //Initialize the authorization resolver object
-            _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
         }
 
         protected static void SetUpSQLMetadataProvider()

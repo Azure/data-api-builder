@@ -42,6 +42,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Mock<HttpContext> context = new();
             context.SetupGet(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(clientRoleHeaderValue);
             context.Setup(x => x.User.IsInRole(clientRoleHeaderValue)).Returns(userIsInRole);
+            context.Setup(x => x.User.Identity!.IsAuthenticated).Returns(true);
 
             Assert.AreEqual(authZResolver.IsValidRoleContext(context.Object), expected);
         }
@@ -383,6 +384,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             identity.AddClaim(new Claim("emprating", "4.2", ClaimValueTypes.Double));
             ClaimsPrincipal principal = new(identity);
             context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             string parsedPolicy = authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_ACTION, context.Object);
             Assert.AreEqual(parsedPolicy, expectedParsedPolicy);
@@ -417,6 +419,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             identity.AddClaim(new Claim("isemployee", "true", ClaimValueTypes.Boolean));
             ClaimsPrincipal principal = new(identity);
             context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             try
             {
@@ -462,6 +465,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             ClaimsPrincipal principal = new(identity);
             context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             // We expect an exception if duplicate claims are present EXCEPT for role claim
             if (exceptionExpected)

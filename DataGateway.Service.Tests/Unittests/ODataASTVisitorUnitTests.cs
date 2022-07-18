@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
@@ -22,6 +23,16 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         private const string DEFAULT_ENTITY = "Book";
         private const string DEFAULT_SCHEMA_NAME = "dbo";
         private const string DEFAULT_TABLE_NAME = "books";
+
+        /// <summary>
+        /// Set the database engine for the tests
+        /// </summary>
+        [ClassInitialize]
+        public static async Task SetupAsync(TestContext context)
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            await InitializeTestFixture(context);
+        }
 
         #region Positive Tests
         /// <summary>

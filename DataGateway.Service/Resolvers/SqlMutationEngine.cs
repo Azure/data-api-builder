@@ -420,7 +420,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             List<string> inputArgumentKeys = BaseSqlQueryStructure.InputArgumentToMutationParams(parameters, MutationBuilder.INPUT_ARGUMENT_NAME).Keys.ToList();
-            bool isAuthorized;
+            bool isAuthorized; // False by default.
 
             switch (mutationOperation)
             {

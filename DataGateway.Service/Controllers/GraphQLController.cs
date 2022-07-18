@@ -39,7 +39,7 @@ namespace Azure.DataGateway.Service.Controllers
             Dictionary<string, object> requestProperties = new();
             if (HttpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues clientRoleHeader))
             {
-                requestProperties.Add(key: "role", value: clientRoleHeader);
+                requestProperties.Add(key: AuthorizationResolver.CLIENT_ROLE_HEADER, value: clientRoleHeader);
             }
 
             if (this.HttpContext.User.Identity != null && this.HttpContext.User.Identity.IsAuthenticated)

@@ -111,7 +111,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
-        [TestMethod("Validates that local MsSql settings can be loaded and the correct classes are in the service provider.")]
+        [TestMethod("Validates that local MsSql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.MSSQL)]
         public void TestLoadingLocalMsSqlSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
@@ -133,7 +133,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MsSqlMetadataProvider));
         }
 
-        [TestMethod("Validates that local PostgreSql settings can be loaded and the correct classes are in the service provider.")]
+        [TestMethod("Validates that local PostgreSql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.POSTGRESQL)]
         public void TestLoadingLocalPostgresSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, POSTGRESQL_ENVIRONMENT);
@@ -155,7 +155,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
         }
 
-        [TestMethod("Validates that local MySql settings can be loaded and the correct classes are in the service provider.")]
+        [TestMethod("Validates that local MySql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.MYSQL)]
         public void TestLoadingLocalMySqlSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MYSQL_ENVIRONMENT);

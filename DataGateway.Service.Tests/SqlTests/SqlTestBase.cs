@@ -28,6 +28,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
@@ -429,62 +430,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Read the data property of the GraphQLController result
         /// </summary>
-        /// <param name="graphQLQuery"></param>
-        /// <param name="graphQLQueryName"></param>
+        /// <param name="query"></param>
+        /// <param name="queryName"></param>
         /// <param name="httpClient"></param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns>string in JSON format</returns>
-        protected virtual async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, HttpClient httpClient, Dictionary<string, object> variables = null, bool failOnErrors = true)
+        protected virtual async Task<JsonElement> GetGraphQLResultAsync(string query, string queryName, Dictionary<string, object> variables = null, bool failOnErrors = true)
         {
-            JsonElement graphQLResult = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, httpClient, variables);
-            Console.WriteLine(graphQLResult.ToString());
-
-            if (failOnErrors && graphQLResult.TryGetProperty("errors", out JsonElement errors))
-            {
-                Assert.Fail(errors.GetRawText());
-            }
-
-            JsonElement graphQLResultData = graphQLResult.GetProperty("data").GetProperty(graphQLQueryName);
-
-            // JsonElement.ToString() prints null values as empty strings instead of "null"
-            return graphQLResultData.GetRawText();
-        }
-
-        /// <summary>
-        /// Sends graphQL query through graphQL service, consisting of gql engine processing (resolvers, object serialization)
-        /// returning the result as a JsonElement - the root of the JsonDocument.
-        /// </summary>
-        /// <param name="query"></param>
-        /// <param name="graphQLQueryName"></param>
-        /// <param name="httpClient"></param>
-        /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
-        /// <returns>JsonElement</returns>
-        protected static async Task<JsonElement> GetGraphQLResultAsync(string query, string graphQLQueryName, HttpClient httpClient, Dictionary<string, object> variables = null)
-        {
-            object payload = variables == null ?
-                new { query } :
-                new
-                {
-                    query,
-                    variables
-                };
-            string graphQLEndpoint = _application.Services.GetService<RuntimeConfigProvider>()
-                .GetRuntimeConfiguration()
-                .GraphQLGlobalSettings.Path;
-
-            // todo: set the stuff that use to be on HttpContext
-            httpClient.DefaultRequestHeaders.Add("X-MS-CLIENT-PRINCIPAL", "eyJ1c2VySWQiOiIyNTllM2JjNTE5NzU3Mzk3YTE2ZjdmMDBjMTI0NjQxYSIsInVzZXJSb2xlcyI6WyJhbm9ueW1vdXMiLCJhdXRoZW50aWNhdGVkIl0sImlkZW50aXR5UHJvdmlkZXIiOiJnaXRodWIiLCJ1c2VyRGV0YWlscyI6ImFhcm9ucG93ZWxsIiwiY2xhaW1zIjpbXX0=");
-            HttpResponseMessage responseMessage = await httpClient.PostAsJsonAsync(graphQLEndpoint, payload);
-            string body = await responseMessage.Content.ReadAsStringAsync();
-
-            return JsonSerializer.Deserialize<JsonElement>(body);
-
-            //httpClient.ControllerContext.HttpContext =
-            //    GetRequestHttpContext(
-            //        queryStringUrl: null,
-            //        bodyData: graphqlQueryJson);
-
-            //return await httpClient.PostAsync();
+            RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
+            return await GraphQLRequestExecutor.PostGraphQLRequestAsync(HttpClient, configProvider, queryName, query, variables);
         }
     }
 }

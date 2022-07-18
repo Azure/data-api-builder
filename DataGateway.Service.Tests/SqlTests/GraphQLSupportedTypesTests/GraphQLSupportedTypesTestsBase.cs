@@ -82,20 +82,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { $"{type}_types" }, id);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, HttpClient);
+            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
             {
-                CompareFloatResults(type, actual, expected);
+                CompareFloatResults(type, actual.ToString(), expected);
             }
             else if (type == DATETIME_TYPE)
             {
-                CompareDateTimeResults(actual, expected);
+                CompareDateTimeResults(actual.ToString(), expected);
             }
             else
             {
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
             }
         }
 
@@ -150,20 +150,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 5001);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, HttpClient);
+            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
             {
-                CompareFloatResults(type, actual, expected);
+                CompareFloatResults(type, actual.ToString(), expected);
             }
             else if (type == DATETIME_TYPE)
             {
-                CompareDateTimeResults(actual, expected);
+                CompareDateTimeResults(actual.ToString(), expected);
             }
             else
             {
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
             }
 
             await ResetDbStateAsync();
@@ -220,20 +220,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, HttpClient);
+            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
             {
-                CompareFloatResults(type, actual, expected);
+                CompareFloatResults(type, actual.ToString(), expected);
             }
             else if (type == DATETIME_TYPE)
             {
-                CompareDateTimeResults(actual, expected);
+                CompareDateTimeResults(actual.ToString(), expected);
             }
             else
             {
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
             }
 
             await ResetDbStateAsync();

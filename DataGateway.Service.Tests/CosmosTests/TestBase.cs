@@ -15,7 +15,6 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
@@ -107,26 +106,6 @@ type Star @model {
             return idList;
         }
 
-        private static DefaultHttpContext GetHttpContextWithBody(string data)
-        {
-            HttpRequestMessage request = new();
-            MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
-            request.Method = HttpMethod.Post;
-
-            //Add identity object to the Mock context object.
-            ClaimsIdentity identity = new(authenticationType: "Bearer");
-            identity.AddClaim(new Claim(ClaimTypes.Role, "anonymous"));
-            identity.AddClaim(new Claim(ClaimTypes.Role, "authenticated"));
-
-            ClaimsPrincipal user = new(identity);
-            DefaultHttpContext httpContext = new()
-            {
-                Request = { Body = stream, ContentLength = stream.Length },
-                User = user
-            };
-            return httpContext;
-        }
-
         /// <summary>
         /// Overrides the container than an entity will be saved to
         /// </summary>
@@ -151,34 +130,10 @@ type Star @model {
         /// <param name="query"> The GraphQL query/mutation</param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns></returns>
-        internal static async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null)
+        internal static Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null)
         {
-            object payload = variables == null ?
-                new { query } :
-                new
-                {
-                    query,
-                    variables
-                };
-
-            string graphQLEndpoint = _application.Services.GetService<RuntimeConfigProvider>()
-                .GetRuntimeConfiguration()
-                .GraphQLGlobalSettings.Path;
-
-            // todo: set the stuff that use to be on HttpContext
-            _client.DefaultRequestHeaders.Add("X-MS-CLIENT-PRINCIPAL", "eyJ1c2VySWQiOiIyNTllM2JjNTE5NzU3Mzk3YTE2ZjdmMDBjMTI0NjQxYSIsInVzZXJSb2xlcyI6WyJhbm9ueW1vdXMiLCJhdXRoZW50aWNhdGVkIl0sImlkZW50aXR5UHJvdmlkZXIiOiJnaXRodWIiLCJ1c2VyRGV0YWlscyI6ImFhcm9ucG93ZWxsIiwiY2xhaW1zIjpbXX0=");
-            HttpResponseMessage responseMessage = await _client.PostAsJsonAsync(graphQLEndpoint, payload);
-            string body = await responseMessage.Content.ReadAsStringAsync();
-
-            JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
-
-            if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
-            {
-                // to validate expected errors and error message
-                return errors;
-            }
-
-            return graphQLResult.GetProperty("data").GetProperty(queryName);
+            RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
+            return GraphQLRequestExecutor.PostGraphQLRequestAsync(_client, configProvider, queryName, query, variables);
         }
 
         internal static async Task<JsonDocument> ExecuteCosmosRequestAsync(string query, int pagesize, string continuationToken, string containerName)

@@ -1157,7 +1157,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         [ClassInitialize]
         public static async Task SetupAsync(TestContext context)
         {
-            DatabaseEngine = TestCategory.MSSQL;
+            DatabaseEngine = TestCategory.MYSQL;
             await InitializeTestFixture(context);
             _restService = new RestService(_queryEngine,
                 _mutationEngine,

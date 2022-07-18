@@ -33,24 +33,22 @@ namespace Azure.DataGateway.Service.Controllers
                 requestBody = await reader.ReadToEndAsync();
             }
 
-            // ClaimsPrincipal object must be added as a request property so HotChocolate
-            // recognizes the authenticated user. Anonymous requests are possible so check
-            // for the HttpContext.User existence is necessary.
+            // Ensures the validated client role header value is present in the HotChocolate request context (IMiddlewareContext)
+            // When used by downstream authorization handlers and resolvers via Dependency Injection.
             Dictionary<string, object> requestProperties = new();
             if (HttpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues clientRoleHeader))
             {
                 requestProperties.Add(key: AuthorizationResolver.CLIENT_ROLE_HEADER, value: clientRoleHeader);
             }
 
-            if (HttpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues clientRoleHeader))
-            {
-                requestProperties.Add(key: AuthorizationResolver.CLIENT_ROLE_HEADER, value: clientRoleHeader);
-            }
-
+            // ClaimsPrincipal object must be added as a request property so HotChocolate
+            // recognizes the authenticated user. Anonymous requests are possible so check
+            // for the HttpContext.User existence is necessary.
             if (this.HttpContext.User.Identity != null && this.HttpContext.User.Identity.IsAuthenticated)
             {
                 requestProperties.Add(nameof(ClaimsPrincipal), this.HttpContext.User);
             }
+
             // JsonElement returned so that JsonDocument is disposed when thread exits
             string resultJson = await this._schemaManager.ExecuteAsync(requestBody, requestProperties);
             using JsonDocument jsonDoc = JsonDocument.Parse(resultJson);

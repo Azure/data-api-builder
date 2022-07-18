@@ -446,7 +446,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
 
             JsonElement actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
 
-            SqlTestHelper.PerformTestEqualJsonStrings("null", actual.ToString());
+            Assert.IsNull(actual.GetString());
         }
 
         /// <sumary>
@@ -802,16 +802,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         #endregion
-
-        protected override async Task<JsonElement> GetGraphQLResultAsync(
-            string graphQLQuery, string graphQLQueryName,
-            Dictionary<string, object> variables = null,
-            bool failOnErrors = true)
-        {
-            JsonElement dataResult = await base.GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, variables, failOnErrors);
-
-            return dataResult.GetProperty("items");
-        }
     }
 }
 

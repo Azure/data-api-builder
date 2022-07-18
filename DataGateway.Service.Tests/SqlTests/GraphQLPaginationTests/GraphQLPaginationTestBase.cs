@@ -180,7 +180,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
             }";
 
             JsonElement root = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
-            root = root.GetProperty("data").GetProperty(graphQLQueryName);
             string actual = SqlPaginationUtil.Base64Decode(root.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME).GetString());
             string expected = "[{\"Value\":3,\"Direction\":0, \"TableSchema\":\"\",\"TableName\":\"\", \"ColumnName\":\"id\"}]";
 
@@ -206,7 +205,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
             }";
 
             JsonElement root = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
-            root = root.GetProperty("data").GetProperty(graphQLQueryName);
             bool actual = root.GetProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME).GetBoolean();
 
             Assert.AreEqual(true, actual);
@@ -231,7 +229,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
             }";
 
             JsonElement root = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
-            root = root.GetProperty("data").GetProperty(graphQLQueryName);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected: "[]", root.GetProperty("items").ToString());
             Assert.AreEqual(null, root.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME).GetString());

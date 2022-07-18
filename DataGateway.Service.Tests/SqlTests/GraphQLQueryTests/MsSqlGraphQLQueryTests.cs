@@ -152,30 +152,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             await QueryWithMultileColumnPrimaryKey(msSqlQuery);
         }
 
-        [TestMethod]
-        public override async Task QueryWithNullResult()
-        {
-            await base.QueryWithNullResult();
-        }
-
-        /// <sumary>
-        /// Test if first param successfully limits list quries
-        /// </summary>
-        [TestMethod]
-        public override async Task TestFirstParamForListQueries()
-        {
-            await base.TestFirstParamForListQueries();
-        }
-
-        /// <sumary>
-        /// Test if filter param successfully filters the query results
-        /// </summary>
-        [TestMethod]
-        public override async Task TestFilterParamForListQueries()
-        {
-            await base.TestFilterParamForListQueries();
-        }
-
         /// <summary>
         /// Get all instances of a type with nullable interger fields
         /// </summary>

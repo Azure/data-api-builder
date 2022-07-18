@@ -18,11 +18,11 @@ namespace Azure.DataGateway.Service.Tests
         {
             object payload = variables == null ?
                 new { query } :
-            new
-            {
-                query,
-                variables
-            };
+                new
+                {
+                    query,
+                    variables
+                };
 
             string graphQLEndpoint = configProvider
                 .GetRuntimeConfiguration()

@@ -17,6 +17,15 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
     public class SqlMetadataProviderUnitTests : SqlTestBase
     {
         /// <summary>
+        /// Set the database engine for the tests
+        /// </summary>
+        [ClassInitialize]
+        public static void Setup(TestContext context)
+        {
+            DatabaseEngine = TestCategory.POSTGRESQL;
+        }
+
+        /// <summary>
         /// Verify we parse the connection string for the
         /// schema correctly when it is of various relevant
         /// formats.

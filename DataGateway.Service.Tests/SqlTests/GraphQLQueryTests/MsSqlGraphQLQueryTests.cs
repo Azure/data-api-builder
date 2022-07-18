@@ -39,16 +39,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Gets array of results for querying more than one item.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public override async Task MultipleResultJoinQuery()
-        {
-            await base.MultipleResultJoinQuery();
-        }
-
-        /// <summary>
         /// Test One-To-One relationship both directions
         /// (book -> website placement, website placememnt -> book)
         /// <summary>
@@ -236,22 +226,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string msSqlQuery = $"SELECT TOP 100 id, title FROM books ORDER BY id ASC FOR JSON PATH, INCLUDE_NULL_VALUES";
             await TestOrderByWithOnlyNullFieldsDefaultsToPkSorting(msSqlQuery);
-        }
-
-        #endregion
-
-        #region Negative Tests
-
-        [TestMethod]
-        public override async Task TestInvalidFirstParamQuery()
-        {
-            await base.TestInvalidFirstParamQuery();
-        }
-
-        [TestMethod]
-        public override async Task TestInvalidFilterParamQuery()
-        {
-            await base.TestInvalidFilterParamQuery();
         }
 
         #endregion

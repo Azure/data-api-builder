@@ -31,7 +31,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         [TestMethod]
@@ -50,7 +50,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, new() { { "first", 100 } });
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <summary>
@@ -254,7 +254,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
 
             JsonElement actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <summary>
@@ -492,7 +492,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
 ]";
 
             JsonElement actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <sumary>
@@ -576,7 +576,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
 ]";
 
             JsonElement actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <summary>
@@ -599,7 +599,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <summary>
@@ -621,7 +621,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <summary>
@@ -645,7 +645,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <summary>
@@ -669,7 +669,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <summary>
@@ -691,7 +691,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <summary>
@@ -713,7 +713,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <summary>
@@ -737,7 +737,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <summary>
@@ -759,7 +759,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         #endregion

@@ -50,12 +50,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQueryWithVariables(mySqlQuery);
         }
 
-        [TestMethod]
-        public override async Task MultipleResultJoinQuery()
-        {
-            await base.MultipleResultJoinQuery();
-        }
-
         /// <summary>
         /// Test One-To-One relationship both directions
         /// (book -> website placement, website placememnt -> book)
@@ -93,28 +87,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             await OneToOneJoinQuery(mySqlQuery);
         }
 
-        /// <summary>
-        /// This deeply nests a many-to-one/one-to-many join multiple times to
-        /// show that it still results in a valid query.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public override async Task DeeplyNestedManyToOneJoinQuery()
-        {
-            await base.DeeplyNestedManyToOneJoinQuery();
-        }
-
-        /// <summary>
-        /// This deeply nests a many-to-many join multiple times to show that
-        /// it still results in a valid query.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public override async Task DeeplyNestedManyToManyJoinQuery()
-        {
-            await base.DeeplyNestedManyToManyJoinQuery();
-        }
-
         [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKey()
         {
@@ -147,30 +119,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             ";
 
             await QueryWithMultileColumnPrimaryKey(mySqlQuery);
-        }
-
-        [TestMethod]
-        public override async Task QueryWithNullResult()
-        {
-            await base.QueryWithNullResult();
-        }
-
-        /// <sumary>
-        /// Test if first param successfully limits list quries
-        /// </summary>
-        [TestMethod]
-        public override async Task TestFirstParamForListQueries()
-        {
-            await base.TestFirstParamForListQueries();
-        }
-
-        /// <sumary>
-        /// Test if filter param successfully filters the query results
-        /// </summary>
-        [TestMethod]
-        public override async Task TestFilterParamForListQueries()
-        {
-            await base.TestFilterParamForListQueries();
         }
 
         /// <summary>
@@ -333,22 +281,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
                    LIMIT 100) AS `subq1`";
 
             await TestOrderByWithOnlyNullFieldsDefaultsToPkSorting(mySqlQuery);
-        }
-
-        #endregion
-
-        #region Negative Tests
-
-        [TestMethod]
-        public override async Task TestInvalidFirstParamQuery()
-        {
-            await base.TestInvalidFilterParamQuery();
-        }
-
-        [TestMethod]
-        public override async Task TestInvalidFilterParamQuery()
-        {
-            await base.TestInvalidFilterParamQuery();
         }
 
         #endregion

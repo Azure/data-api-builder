@@ -406,10 +406,7 @@ namespace Azure.DataGateway.Service.Resolvers
             string role = string.Empty;
             if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value))
             {
-                if (value is not null)
-                {
-                    role = (StringValues)value.ToString();
-                }
+                role = (StringValues)value!.ToString();
             }
 
             if (string.IsNullOrEmpty(role))

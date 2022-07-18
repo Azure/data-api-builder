@@ -136,14 +136,16 @@ namespace Azure.DataGateway.Service.Tests.Unittests
                 sqlMetadataProvider,
                 httpContextAccessor.Object);
 
+            AuthorizationResolver authZResolver = new(runtimeConfigProvider, sqlMetadataProvider);
+
             SqlMutationEngine mutationEngine =
                 new(
                 queryEngine,
                 queryExecutor,
                 queryBuilder,
-                sqlMetadataProvider);
+                sqlMetadataProvider,
+                authZResolver);
 
-            AuthorizationResolver authZResolver = new(runtimeConfigProvider, sqlMetadataProvider);
             // Setup REST Service
             _restService = new RestService(
                 queryEngine,

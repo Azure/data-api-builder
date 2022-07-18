@@ -7,7 +7,9 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
@@ -15,6 +17,7 @@ using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -27,6 +30,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
+        private readonly IAuthorizationResolver _authorizationResolver;
 
         /// <summary>
         /// Constructor
@@ -35,12 +39,14 @@ namespace Azure.DataGateway.Service.Resolvers
             IQueryEngine queryEngine,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder,
-            ISqlMetadataProvider sqlMetadataProvider)
+            ISqlMetadataProvider sqlMetadataProvider,
+            IAuthorizationResolver authorizationResolver)
         {
             _queryEngine = queryEngine;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
             _sqlMetadataProvider = sqlMetadataProvider;
+            _authorizationResolver = authorizationResolver;
         }
 
         /// <summary>
@@ -64,9 +70,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
             if (mutationOperation is Operation.Delete)
             {
-                // compute the mutation result before removing the element
+                // compute the mutation result before removing the element,
+                // since typical GraphQL delete mutations return the metadata of the deleted item.
                 result = await _queryEngine.ExecuteAsync(context, parameters);
             }
+
+            // If authorization fails, an exception will be thrown and request execution halts.
+            AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
 
             using DbDataReader dbDataReader =
                 await PerformMutationOperation(
@@ -375,6 +385,71 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return parameters;
+        }
+
+        /// <summary>
+        /// Authorization check on mutation fields provided in a GraphQL Mutation request.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="parameters"></param>
+        /// <param name="entityName"></param>
+        /// <param name="graphQLMutationName"></param>
+        /// <param name="mutationOperation"></param>
+        /// <returns></returns>
+        /// <exception cref="DataGatewayException"></exception>
+        public void AuthorizeMutationFields(
+            IMiddlewareContext context,
+            IDictionary<string, object?> parameters,
+            string entityName,
+            Operation mutationOperation)
+        {
+            string role = string.Empty;
+            if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value))
+            {
+                role = (StringValues)value!.ToString();
+            }
+
+            if (string.IsNullOrEmpty(role))
+            {
+                throw new DataGatewayException(
+                    message: "No ClientRoleHeader available to perform authorization.",
+                    statusCode: HttpStatusCode.Unauthorized,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
+            List<string> inputArgumentKeys = BaseSqlQueryStructure.InputArgumentToMutationParams(parameters, MutationBuilder.INPUT_ARGUMENT_NAME).Keys.ToList();
+            bool isAuthorized; // False by default.
+
+            switch (mutationOperation)
+            {
+                case Operation.UpdateGraphQL:
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: ActionType.UPDATE, inputArgumentKeys);
+                    break;
+                case Operation.Create:
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: ActionType.CREATE, inputArgumentKeys);
+                    break;
+                case Operation.Delete:
+                    // Delete operations are not checked for authorization on field level,
+                    // and instead at the mutation level and would be rejected before this time in the pipeline.
+                    // Continuing on with operation.
+                    isAuthorized = true;
+                    break;
+                default:
+                    throw new DataGatewayException(
+                        message: "Invalid operation for GraphQL Mutation, must be Create, UpdateGraphQL, or Delete",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest
+                        );
+            }
+
+            if (!isAuthorized)
+            {
+                throw new DataGatewayException(
+                    message: "Unauthorized due to one or more fields in this mutation.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
+                );
+            }
         }
     }
 }

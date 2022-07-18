@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
 namespace Azure.DataGateway.Service.Resolvers
@@ -36,7 +37,7 @@ namespace Azure.DataGateway.Service.Resolvers
         ) : this(
             entityName,
             sqlMetadataProvider,
-            GQLMutationArgumentsToMutationParams(context, mutationParams))
+            GQLMutationArgumentsToMutationParams(context, CreateMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams))
         { }
 
         public SqlInsertStructure(

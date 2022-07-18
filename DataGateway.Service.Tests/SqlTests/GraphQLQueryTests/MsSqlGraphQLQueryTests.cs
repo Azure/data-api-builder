@@ -295,6 +295,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             await base.TestSettingComplexArgumentUsingVariables(msSqlQuery);
         }
 
+        [TestMethod]
+        public async Task TestQueryWithExplicitlyNullArguments()
+        {
+            string msSqlQuery = $"SELECT id, title FROM books ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await TestQueryWithExplicitlyNullArguments(msSqlQuery);
+        }
+
         #endregion
 
         #region Negative Tests

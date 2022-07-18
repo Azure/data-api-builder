@@ -145,32 +145,18 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Extract the variable argument's value if the IValueNode is a variable, return the IValueNode otherwise
+        /// Extracts the value from an IValueNode. That includes extracting the value of the variable
+        /// if the IValueNode is a variable and extracting the correct type from the IValueNode
         /// </summary>
-        /// <param name="variables">if null is passed for this parameter, it is inferred that passing a
-        /// variable for the IValueNode is not supported.</param>
+        /// <param name="value">the IValueNode from which to extract the value</param>
+        /// <param name="argumentSchema">describes the schema of the argument that the IValueNode represents</param>
+        /// <param name="variables">the request context variable values needed to resolve value nodes represented as variables</param>
         public static object? ExtractValueFromIValueNode(IValueNode value, IInputField argumentSchema, IVariableValueCollection variables)
         {
-            // extract value from the variable if the the IValueNode is a variable
+            // extract value from the variable if the IValueNode is a variable
             if (value.Kind == SyntaxKind.Variable)
             {
                 string variableName = ((VariableNode)value).Name.Value;
-
-                // IsLeafType checks for IsScalarType || IsEnumType
-                // https://github.com/ChilliCream/hotchocolate/blob/2ba023b7211fdc6db80a4db55a4629db30d82967/src/HotChocolate/Core/src/Types/Types/Extensions/TypeExtensions.cs#L65-L74
-                // The other types are trickier to parse so for now disallow to pass them as variables
-                // if (!argumentSchema.Type.IsLeafType())
-                // {
-                //     throw new DataGatewayException(
-                //         $"Passing variables into the argument {argumentSchema.Name.Value} is not supported. " +
-                //         "Only scalar and enum arguments are currently supported.",
-                //         HttpStatusCode.NotImplemented,
-                //         DataGatewayException.SubStatusCodes.NotSupported
-                //     );
-                // }
-                // IValueNode
-                // argumentSchema.Type.ToTypeNode()
-
                 IValueNode? variableValue = variables.GetVariable<IValueNode>(variableName);
 
                 if (variableValue is null)
@@ -212,7 +198,6 @@ namespace Azure.DataGateway.Service.Services
             IFieldCollection<IInputField> argumentSchemas = schema.Arguments;
             foreach (IInputField argument in argumentSchemas)
             {
-                // argument.Type
                 if (argument.DefaultValue != null)
                 {
                     parameters.Add(

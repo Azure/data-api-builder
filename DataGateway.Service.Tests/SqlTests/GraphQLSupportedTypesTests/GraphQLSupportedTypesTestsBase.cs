@@ -13,17 +13,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
     public abstract class GraphQLSupportedTypesTestBase : SqlTestBase
     {
         protected const string TYPE_TABLE = "TypeTable";
-        protected const string BYTE_TYPE = "byte";
-        protected const string SHORT_TYPE = "short";
-        protected const string INT_TYPE = "int";
-        protected const string LONG_TYPE = "long";
-        protected const string SINGLE_TYPE = "single";
-        protected const string FLOAT_TYPE = "float";
-        protected const string DECIMAL_TYPE = "decimal";
-        protected const string STRING_TYPE = "string";
-        protected const string BOOLEAN_TYPE = "boolean";
-        protected const string DATETIME_TYPE = "datetime";
-        protected const string BYTEARRAY_TYPE = "bytearray";
+        protected const string BYTE_TYPE = "Byte";
+        protected const string SHORT_TYPE = "Short";
+        protected const string INT_TYPE = "Int";
+        protected const string LONG_TYPE = "Long";
+        protected const string SINGLE_TYPE = "Single";
+        protected const string FLOAT_TYPE = "Float";
+        protected const string DECIMAL_TYPE = "Decimal";
+        protected const string STRING_TYPE = "String";
+        protected const string BOOLEAN_TYPE = "Boolean";
+        protected const string DATETIME_TYPE = "DateTime";
+        protected const string BYTEARRAY_TYPE = "ByteArray";
 
         #region Test Fixture Setup
         protected static GraphQLService _graphQLService;
@@ -85,26 +85,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 Assert.Inconclusive("Type not supported");
             }
 
+            string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "supportedType_by_pk";
-            string gqlQuery = "{ supportedType_by_pk(id: " + id + ") { " + type + "_types } }";
+            string gqlQuery = "{ supportedType_by_pk(id: " + id + ") { " + field + " } }";
 
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { $"{type}_types" }, id);
+            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id);
 
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
-            {
-                CompareFloatResults(type, actual, expected);
-            }
-            else if (type == DATETIME_TYPE)
-            {
-                CompareDateTimeResults(actual, expected);
-            }
-            else
-            {
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-            }
+            PerformTestEqualsForExtendedTypes(type, expected, actual);
         }
 
         [DataTestMethod]
@@ -147,12 +137,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BYTEARRAY_TYPE, "null")]
         public async Task InsertIntoTypeColumn(string type, string value)
         {
-            if (!IsSupportedType(type, value))
+            if (!IsSupportedType(type))
             {
                 Assert.Inconclusive("Type not supported");
             }
 
-            string field = $"{type}_types";
+            string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "createSupportedType";
             string gqlQuery = "mutation{ createSupportedType (item: {" + field + ": " + value + " }){ " + field + " } }";
 
@@ -161,18 +151,39 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
+            PerformTestEqualsForExtendedTypes(type, expected, actual);
+
+            await ResetDbStateAsync();
+        }
+
+        [DataTestMethod]
+        [DataRow(BYTE_TYPE, 255)]
+        [DataRow(SHORT_TYPE, 30000)]
+        [DataRow(INT_TYPE, 9999)]
+        [DataRow(LONG_TYPE, 9000000000000000000)]
+        [DataRow(STRING_TYPE, "aaaaaaaaaa")]
+        [DataRow(FLOAT_TYPE, -3.33)]
+        [DataRow(DECIMAL_TYPE, 1222222.00000929292)]
+        [DataRow(BOOLEAN_TYPE, true)]
+        [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54+8:00")]
+        [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
+        public async Task InsertIntoTypeColumnWithArgument(string type, object value)
+        {
+            if (!IsSupportedType(type))
             {
-                CompareFloatResults(type, actual, expected);
+                Assert.Inconclusive("Type not supported");
             }
-            else if (type == DATETIME_TYPE)
-            {
-                CompareDateTimeResults(actual, expected);
-            }
-            else
-            {
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
-            }
+
+            string field = $"{type.ToLowerInvariant()}_types";
+            string graphQLQueryName = "createSupportedType";
+            string gqlQuery = "mutation($param: " + type + "){ createSupportedType (item: {" + field + ": $param }){ " + field + " } }";
+
+            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 5001);
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController, new() { { "param", value } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            PerformTestEqualsForExtendedTypes(type, expected, actual);
 
             await ResetDbStateAsync();
         }
@@ -217,12 +228,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BYTEARRAY_TYPE, "null")]
         public async Task UpdateTypeColumn(string type, string value)
         {
-            if (!IsSupportedType(type, value))
+            if (!IsSupportedType(type))
             {
                 Assert.Inconclusive("Type not supported");
             }
 
-            string field = $"{type}_types";
+            string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "updateSupportedType";
             string gqlQuery = "mutation{ updateSupportedType (id: 1, item: {" + field + ": " + value + " }){ " + field + " } }";
 
@@ -231,6 +242,51 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
+            PerformTestEqualsForExtendedTypes(type, expected, actual);
+
+            await ResetDbStateAsync();
+        }
+
+        [DataTestMethod]
+        [DataRow(BYTE_TYPE, 255)]
+        [DataRow(SHORT_TYPE, 30000)]
+        [DataRow(INT_TYPE, 9999)]
+        [DataRow(LONG_TYPE, 9000000000000000000)]
+        [DataRow(STRING_TYPE, "aaaaaaaaaa")]
+        [DataRow(FLOAT_TYPE, -3.33)]
+        [DataRow(DECIMAL_TYPE, 1222222.00000929292)]
+        [DataRow(BOOLEAN_TYPE, true)]
+        [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54+8:00")]
+        [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
+        public async Task UpdateTypeColumnWithArgument(string type, object value)
+        {
+            if (!IsSupportedType(type))
+            {
+                Assert.Inconclusive("Type not supported");
+            }
+
+            string field = $"{type.ToLowerInvariant()}_types";
+            string graphQLQueryName = "updateSupportedType";
+            string gqlQuery = "mutation($param: " + type + "){ updateSupportedType (id: 1, item: {" + field + ": $param }){ " + field + " } }";
+
+            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
+
+            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController, new() { { "param", value } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            PerformTestEqualsForExtendedTypes(type, expected, actual);
+
+            await ResetDbStateAsync();
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Utility function to do special comparisons for some of the extended types
+        /// if json compare doesn't suffice
+        /// </summary>
+        private static void PerformTestEqualsForExtendedTypes(string type, string expected, string actual)
+        {
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
             {
                 CompareFloatResults(type, actual, expected);
@@ -243,11 +299,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
             }
-
-            await ResetDbStateAsync();
         }
-
-        #endregion
 
         /// <summary>
         /// HotChocolate will parse large floats to exponential notation
@@ -257,7 +309,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// </summary>
         private static void CompareFloatResults(string floatType, string actual, string expected)
         {
-            string fieldName = $"{floatType}_types";
+            string fieldName = $"{floatType.ToLowerInvariant()}_types";
 
             using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
             using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
@@ -315,7 +367,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         protected abstract string MakeQueryOnTypeTable(List<string> columnsToQuery, int id);
-        protected virtual bool IsSupportedType(string type, string value = null)
+        protected virtual bool IsSupportedType(string type)
         {
             return true;
         }

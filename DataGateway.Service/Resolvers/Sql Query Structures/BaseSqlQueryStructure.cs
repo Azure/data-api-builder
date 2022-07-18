@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
@@ -199,14 +198,15 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <exception cref="InvalidDataException"></exception>
         internal static IDictionary<string, object?> GQLMutationArgumentsToMutationParams(
             IMiddlewareContext context,
+            string fieldName,
             IDictionary<string, object?> mutationParams)
         {
             string errMsg;
 
-            if (mutationParams.TryGetValue(CreateMutationBuilder.INPUT_ARGUMENT_NAME, out object? item))
+            if (mutationParams.TryGetValue(fieldName, out object? item))
             {
                 IObjectField fieldSchema = context.Selection.Field;
-                IInputField itemsArgumentSchema = fieldSchema.Arguments[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+                IInputField itemsArgumentSchema = fieldSchema.Arguments[fieldName];
                 InputObjectType itemsArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(itemsArgumentSchema);
 
                 Dictionary<string, object?> mutationInput;
@@ -228,12 +228,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
                 else
                 {
-                    errMsg = $"Unexpected {CreateMutationBuilder.INPUT_ARGUMENT_NAME} argument format.";
+                    errMsg = $"Unexpected {fieldName} argument format.";
                 }
             }
             else
             {
-                errMsg = $"Expected {CreateMutationBuilder.INPUT_ARGUMENT_NAME} argument in mutation arguments.";
+                errMsg = $"Expected {fieldName} argument in mutation arguments.";
             }
 
             // should not happen due to gql schema validation

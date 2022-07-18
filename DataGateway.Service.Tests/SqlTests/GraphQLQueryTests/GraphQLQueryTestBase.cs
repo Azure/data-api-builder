@@ -815,6 +815,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
         }
 
+        /// <summary>
+        /// Set query arguments to null explicitly and test t
+        /// </summary>
+        [TestMethod]
+        public virtual async Task TestQueryWithExplicitlyNullArguments(string dbQuery)
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books(first: null, after: null, orderBy: null, _filter: null) {
+                    items {
+                        id
+                        title
+                    }
+                }
+            }";
+
+            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+        }
+
         #endregion
 
         #region Negative Tests

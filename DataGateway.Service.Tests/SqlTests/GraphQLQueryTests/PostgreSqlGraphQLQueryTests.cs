@@ -330,6 +330,13 @@ FROM
             await base.TestSettingComplexArgumentUsingVariables(postgresQuery);
         }
 
+        [TestMethod]
+        public async Task TestQueryWithExplicitlyNullArguments()
+        {
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id LIMIT 100) as table0";
+            await TestQueryWithExplicitlyNullArguments(postgresQuery);
+        }
+
         #endregion
 
         #region Negative Tests

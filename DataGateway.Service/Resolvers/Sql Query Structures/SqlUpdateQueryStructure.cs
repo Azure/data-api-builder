@@ -89,7 +89,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (param.Key == UpdateMutationBuilder.INPUT_ARGUMENT_NAME)
                 {
                     IDictionary<string, object?> updateFields =
-                        GQLMutationArgumentsToMutationParams(context, mutationParams);
+                        GQLMutationArgumentsToMutationParams(context, UpdateMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams);
 
                     foreach (KeyValuePair<string, object?> field in updateFields)
                     {

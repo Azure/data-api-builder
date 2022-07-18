@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
@@ -34,10 +35,18 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
                     );
         }
 
-        [TestMethod]
+        [DataTestMethod]
         [TestCategory("Query Generation")]
         [TestCategory("Single item access")]
-        public void CanGenerateByPKQuery()
+        [DataRow(new string[] { "authenticated" }, true,
+            DisplayName = "Validates @authorize directive is added.")]
+        [DataRow(new string[] { "anonymous" }, false,
+            DisplayName = "Validates @authorize directive is NOT added.")]
+        [DataRow(new string[] { "anonymous", "authenticated" }, false,
+            DisplayName = "Validates @authorize directive is NOT added - multiple roles")]
+        public void CanGenerateByPKQuery(
+            IEnumerable<string> roles,
+            bool isAuthorizeDirectiveExpected)
         {
             string gql =
                 @"
@@ -47,17 +56,25 @@ type Foo @model {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, EntityMetadata> entityPermissionsMap
+                = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    new string[] { "Foo" },
+                    new string[] { ActionType.READ },
+                    roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
                 DatabaseType.cosmos,
                 new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
-                entityPermissionsMap: _entityPermissions
+                entityPermissionsMap: entityPermissionsMap
                 );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"foo_by_pk"));
+            FieldDefinitionNode pkField =
+                query.Fields.Where(f => f.Name.Value == $"foo_by_pk").First();
+            Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
+                actual: pkField.Directives.Count);
         }
 
         [TestMethod]
@@ -93,10 +110,18 @@ type Foo @model {
             Assert.AreEqual("String", args.First(a => a.Name.Value == "_partitionKeyValue").Type.InnerType().NamedType().Name.Value);
         }
 
-        [TestMethod]
+        [DataTestMethod]
         [TestCategory("Query Generation")]
         [TestCategory("Collection access")]
-        public void CanGenerateCollectionQuery()
+        [DataRow(new string[] { "authenticated" }, true,
+            DisplayName = "Validates @authorize directive is added.")]
+        [DataRow(new string[] { "anonymous" }, false,
+            DisplayName = "Validates @authorize directive is NOT added.")]
+        [DataRow(new string[] { "anonymous", "authenticated" }, false,
+            DisplayName = "Validates @authorize directive is NOT added - multiple roles")]
+        public void CanGenerateCollectionQuery(
+            IEnumerable<string> roles,
+            bool isAuthorizeDirectiveExpected)
         {
             string gql =
                 @"
@@ -106,17 +131,25 @@ type Foo @model {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, EntityMetadata> entityPermissionsMap
+                = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    new string[] { "Foo" },
+                    new string[] { ActionType.READ },
+                    roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
                 DatabaseType.cosmos,
                 new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
-                entityPermissionsMap: _entityPermissions
+                entityPermissionsMap: entityPermissionsMap
                 );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"foos"));
+            FieldDefinitionNode collectionField =
+                query.Fields.Where(f => f.Name.Value == $"foos").First();
+            Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
+                actual: collectionField.Directives.Count);
         }
 
         [TestMethod]

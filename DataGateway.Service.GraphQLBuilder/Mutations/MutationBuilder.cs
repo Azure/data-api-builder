@@ -8,6 +8,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
     public static class MutationBuilder
     {
+        /// <summary>
+        /// Within a mutation operation, item represents the field holding the metadata
+        /// used to mutate the underlying database object record.
+        /// The item field's metadata is of type OperationEntityInput
+        /// i.e. CreateBookInput
+        /// </summary>
         public const string INPUT_ARGUMENT_NAME = "item";
 
         /// <summary>

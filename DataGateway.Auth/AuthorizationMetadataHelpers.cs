@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Auth
         /// Key(field): id -> Value(collection): permitted in {Role1, Role2, ..., RoleN}
         /// Key(field): title -> Value(collection): permitted in {Role1}
         /// </summary>
-        public Dictionary<string, Dictionary<string, IEnumerable<string>>> FieldToRolesMap { get; set; } = new();
+        public Dictionary<string, Dictionary<string, List<string>>> FieldToRolesMap { get; set; } = new();
 
         /// <summary>
         /// Given the key (actionName) returns a collection of roles

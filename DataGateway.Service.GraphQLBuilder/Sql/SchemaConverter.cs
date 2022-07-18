@@ -20,13 +20,18 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
         /// <param name="entityName">Name of the entity in the runtime config to generate the GraphQL object type for.</param>
         /// <param name="tableDefinition">SQL table definition information.</param>
         /// <param name="configEntity">Runtime config information for the table.</param>
+        /// <param name="entities">Key/Value Collection mapping entity name to the entity object,
+        /// currently used to lookup relationship metadata.</param>
+        /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
+        /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level (applies to mutations).</param>
         /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
         public static ObjectTypeDefinitionNode FromTableDefinition(
             string entityName,
             TableDefinition tableDefinition,
             [NotNull] Entity configEntity,
             Dictionary<string, Entity> entities,
-            IEnumerable<string>? rolesAllowedForEntity = null)
+            IEnumerable<string> rolesAllowedForEntity,
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
             List<DirectiveNode> objectTypeDirectives = new();
@@ -70,16 +75,32 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                     directives.Add(new DirectiveNode(DefaultValueDirectiveType.DirectiveName, new ArgumentNode("value", arg)));
                 }
 
-                NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
-                FieldDefinitionNode field = new(
-                    location: null,
-                    new(FormatNameForField(columnName)),
-                    description: null,
-                    new List<InputValueDefinitionNode>(),
-                    column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
-                    directives);
+                // If no roles are allowed for the field, we should not include it in the schema.
+                // Consequently, the field is only added to schema if this conditional evaluates to TRUE.
+                if (rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles))
+                {
+                    // Roles will not be null here if TryGetValue evaluates to true, so here we check if there are any roles to process.
+                    if (roles.Count() > 0)
+                    {
+                        // Add field to object definition but do not add @authorize directive
+                        // if anonymous is defined for field since authentication is not required.
+                        if (!roles.Contains(GraphQLUtils.SYSTEM_ROLE_ANONYMOUS))
+                        {
+                            directives.Add(GraphQLUtils.CreateAuthorizationDirective(roles));
+                        }
 
-                fields.Add(columnName, field);
+                        NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
+                        FieldDefinitionNode field = new(
+                            location: null,
+                            new(FormatNameForField(columnName)),
+                            description: null,
+                            new List<InputValueDefinitionNode>(),
+                            column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
+                            directives);
+
+                        fields.Add(columnName, field);
+                    }
+                }
             }
 
             if (configEntity.Relationships is not null)
@@ -124,8 +145,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
             objectTypeDirectives.Add(new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName)));
 
             // Any roles passed in will be added to the authorize directive for this ObjectType
-            // taking the form: @authorize(roles: [“role1”, ..., “roleN”]) 
-            if (rolesAllowedForEntity is not null)
+            // taking the form: @authorize(roles: [“role1”, ..., “roleN”])
+            // If the 'anonymous' role is present in the role list, no @authorize directive will be added
+            // because HotChocolate requires an authenticated user when the authorize directive is evaluated.
+            if (rolesAllowedForEntity.Count() >= 1 && !rolesAllowedForEntity.Contains(GraphQLUtils.SYSTEM_ROLE_ANONYMOUS))
             {
                 objectTypeDirectives.Add(GraphQLUtils.CreateAuthorizationDirective(rolesAllowedForEntity));
             }

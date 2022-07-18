@@ -1037,6 +1037,34 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
+        /// Tests the InsertOne functionality with a REST POST request
+        /// where the entity has mapping defined for its columns.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithMappingTest()
+        {
+            string requestBody = @"
+            {
+                ""treeId"" : 3,
+                ""Scientific Name"": ""Cupressus Sempervirens"",
+                ""United State's Region"": ""South East""
+            }";
+
+            string expectedLocationHeader = $"treeId/3";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entity: _integrationMappingEntity,
+                sqlQuery: GetQuery(nameof(InsertOneWithMappingTest)),
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
         /// Tests InsertOne into a table that has a composite primary key
         /// with a REST POST request.
         /// </summary>
@@ -1104,6 +1132,29 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
         }
+        /// <summary>
+        /// Operates on a single entity with mapping defined
+        /// for its columns, and with target object identified in the
+        /// primaryKeyRoute. No requestBody is used for this type of
+        /// request. sqlQuery is not used because we are confirming the
+        /// NoContent result of a successful delete operation.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeleteOneMappingTest()
+        {
+            //expected status code 204
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "treeId/1",
+                    queryString: null,
+                    entity: _integrationMappingEntity,
+                    sqlQuery: null,
+                    controller: _restController,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
 
         /// <summary>
         /// Tests the PutOne functionality with a REST PUT request
@@ -1126,7 +1177,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
             requestBody = @"
@@ -1143,7 +1194,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
                 );
 
@@ -1163,7 +1214,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
                 );
 
@@ -1184,7 +1235,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
             );
 
@@ -1204,7 +1255,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
                 );
         }
@@ -1229,21 +1280,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     primaryKeyRoute: "id/1",
                     queryString: null,
                     entity: _integrationEntityName,
-                    sqlQuery: string.Empty,
+                    sqlQuery: GetQuery(nameof(PutOne_Update_IfMatchHeaders_Test)),
                     controller: _restController,
                     operationType: Operation.Upsert,
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
-            await SetupAndRunRestApiTest(
-                  primaryKeyRoute: "id/1",
-                  queryString: "?$filter=title eq 'The Return of the King'",
-                  entity: _integrationEntityName,
-                  sqlQuery: GetQuery("PutOne_Update_IfMatchHeaders_Test_Confirm_Update"),
-                  controller: _restController,
-                  operationType: Operation.Find,
-                  expectedStatusCode: HttpStatusCode.OK);
         }
 
         /// <summary>
@@ -1426,8 +1469,36 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 controller: _restController,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.NoContent,
+                expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        /// <summary>
+        /// Tests REST PutOne which results in update with
+        /// and entity that has remapped column names.
+        /// URI Path: PK of existing record.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects: 200 OK where sqlQuery validates update.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Update_With_Mapping_Test()
+        {
+            string requestBody = @"
+            {
+                ""Scientific Name"": ""Humulus Lupulus"",
+                ""United State's Region"": ""Pacific North West""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "treeId/1",
+                    queryString: null,
+                    entity: _integrationMappingEntity,
+                    sqlQuery: GetQuery(nameof(PutOne_Update_With_Mapping_Test)),
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
                 );
         }
 
@@ -1476,10 +1547,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
         }
+
         /// <summary>
         /// Tests REST PatchOne which results in an insert.
         /// URI Path: PK of record that does not exist.
@@ -1566,13 +1638,33 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
                 );
+
+            // Entity with mapping defined for columns
+            requestBody = @"
+            {
+                ""Scientific Name"": ""Quercus"",
+                ""United State's Region"": ""South West""
+            }";
+            expectedLocationHeader = $"treeId/4";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entity: _integrationMappingEntity,
+                    sqlQuery: GetQuery("PatchOne_Insert_Mapping_Test"),
+                    controller: _restController,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
         }
 
         /// <summary>
         /// Tests REST PatchOne which results in incremental update
         /// URI Path: PK of existing record.
         /// Req Body: Valid Parameter with intended update.
-        /// Expects: 201 Created where sqlQuery validates update.
+        /// Expects: 200 OK where sqlQuery validates update.
         /// </summary>
         [TestMethod]
         public virtual async Task PatchOne_Update_Test()
@@ -1590,7 +1682,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
             requestBody = @"
@@ -1606,7 +1698,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
             requestBody = @"
@@ -1622,7 +1714,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
 
             requestBody = @"
@@ -1639,9 +1731,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
+                    expectedStatusCode: HttpStatusCode.OK
                 );
         }
+
         /// <summary>
         /// Tests the PatchOne functionality with a REST PUT request using
         /// headers that include as a key "If-Match" with an item that does exist,
@@ -1662,21 +1755,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     primaryKeyRoute: "id/1",
                     queryString: null,
                     entity: _integrationEntityName,
-                    sqlQuery: string.Empty,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_IfMatchHeaders_Test)),
                     controller: _restController,
                     operationType: Operation.UpsertIncremental,
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.NoContent
-                );
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/1",
-                    queryString: "?$filter=title eq 'The Hobbit Returns to The Shire' and publisher_id eq 1234",
-                    entity: _integrationEntityName,
-                    sqlQuery: GetQuery("PatchOne_Update_IfMatchHeaders_Test_Confirm_Update"),
-                    controller: _restController,
-                    operationType: Operation.Find
+                    expectedStatusCode: HttpStatusCode.OK
                 );
         }
 
@@ -2797,6 +2881,73 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
+        }
+
+        /// <summary>
+        /// Verifies that we throw exception when field
+        /// provided to insert is an exposed name that
+        /// maps to a backing column name that does not
+        /// exist in the table.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task InsertTestWithInvalidMapping()
+        {
+            string requestBody = @"
+            {
+                ""speciesid"" : 3,
+                ""hazards"": ""black mold"",
+                ""region"": ""Pacific North West""
+            }";
+
+            string expectedLocationHeader = $"speciedid/3";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationBrokenMappingEntity,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.Insert,
+                exception: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Invalid request body. Contained unexpected fields in body: hazards",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest",
+                expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        /// <summary>
+        /// Verifies that we throw exception when field
+        /// provided to upsert is an exposed name that
+        /// maps to a backing column name that does not
+        /// exist in the table.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task PatchTestWithInvalidMapping()
+        {
+            string requestBody = @"
+            {
+                ""hazards"": ""black mold"",
+                ""region"": ""Pacific North West""
+            }";
+
+            string expectedLocationHeader = $"speciedid/3";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: string.Empty,
+                entity: _integrationBrokenMappingEntity,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                operationType: Operation.UpsertIncremental,
+                exception: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Invalid request body. Either insufficient or extra fields supplied.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest",
+                expectedLocationHeader: expectedLocationHeader
+                );
         }
 
         /// <summary>

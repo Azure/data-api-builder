@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
@@ -50,6 +51,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static RuntimeConfigProvider _runtimeConfigProvider;
         protected static IAuthorizationResolver _authorizationResolver;
         protected static RuntimeConfig _runtimeConfig;
+        protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -60,7 +62,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static async Task InitializeTestFixture(TestContext context, string testCategory)
         {
             _testCategory = testCategory;
-            _runtimeConfig = SqlTestHelper.LoadConfig($"{_testCategory}").CurrentValue;
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{_testCategory}");
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
+            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
+            TestHelper.AddMissingEntitiesToConfig(_runtimeConfig);
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
 
             SetUpSQLMetadataProvider();
             // Setup AuthorizationService to always return Authorized.
@@ -75,31 +82,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
-            _queryEngine = new SqlQueryEngine(
-                _queryExecutor,
-                _queryBuilder,
-                _sqlMetadataProvider);
-            _mutationEngine =
-                new SqlMutationEngine(
-                _queryEngine,
-                _queryExecutor,
-                _queryBuilder,
-                _sqlMetadataProvider);
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
 
             //Initialize the authorization resolver object
             _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
+
+            _queryEngine = new SqlQueryEngine(
+                _queryExecutor,
+                _queryBuilder,
+                _sqlMetadataProvider,
+                _httpContextAccessor.Object);
+            _mutationEngine =
+                new SqlMutationEngine(
+                _queryEngine,
+                _queryExecutor,
+                _queryBuilder,
+                _sqlMetadataProvider,
+                _authorizationResolver);
+
         }
 
         protected static void SetUpSQLMetadataProvider()
         {
-            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
-            mockRuntimeConfigProvider.Setup(x => x.IsDeveloperMode()).Returns(true);
-            mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out _runtimeConfig)).Returns(true);
-            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(_runtimeConfig);
-            mockRuntimeConfigProvider.Setup(x => x.RestPath).Returns("/api");
-            _runtimeConfigProvider = mockRuntimeConfigProvider.Object;
+            _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
 
             switch (_testCategory)
             {
@@ -112,16 +118,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         new PostgreSqlMetadataProvider(
                             _runtimeConfigProvider,
                             _queryExecutor,
-                            _queryBuilder);
+                            _queryBuilder,
+                            _sqlMetadataLogger);
                     break;
                 case TestCategory.MSSQL:
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
-                    _sqlMetadataProvider = new MsSqlMetadataProvider(
-                        _runtimeConfigProvider,
-                        _queryExecutor, _queryBuilder);
+                    _sqlMetadataProvider =
+                        new MsSqlMetadataProvider(
+                            _runtimeConfigProvider,
+                            _queryExecutor, _queryBuilder,
+                            _sqlMetadataLogger);
                     break;
                 case TestCategory.MYSQL:
                     _queryBuilder = new MySqlQueryBuilder();
@@ -132,7 +141,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                          new MySqlMetadataProvider(
                              _runtimeConfigProvider,
                              _queryExecutor,
-                             _queryBuilder);
+                             _queryBuilder,
+                             _sqlMetadataLogger);
                     break;
             }
         }

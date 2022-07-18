@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Models;
 using HotChocolate.Resolvers;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -25,7 +26,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Executes the mutation query and returns result as JSON object asynchronously.
         /// </summary>
         /// <param name="context">context of REST mutation request.</param>
-        /// <returns>JSON object result</returns>
-        public Task<JsonDocument?> ExecuteAsync(RestRequestContext context);
+        /// <returns>IActionResult</returns>
+        public Task<IActionResult?> ExecuteAsync(RestRequestContext context);
     }
 }

@@ -10,6 +10,7 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
@@ -55,10 +56,13 @@ namespace Azure.DataGateway.Service.Services
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
             new(StringComparer.InvariantCulture);
 
+        private readonly ILogger<ISqlMetadataProvider> _logger;
+
         public SqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
-            IQueryBuilder queryBuilder)
+            IQueryBuilder queryBuilder,
+            ILogger<ISqlMetadataProvider> logger)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
@@ -68,7 +72,7 @@ namespace Azure.DataGateway.Service.Services
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
-
+            _logger = logger;
         }
 
         /// <inheritdoc />
@@ -152,7 +156,7 @@ namespace Azure.DataGateway.Service.Services
             GenerateExposedToBackingColumnMapsForEntities();
             InitFilterParser();
             timer.Stop();
-            Console.WriteLine($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
+            _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
         }
 
         /// <summary>

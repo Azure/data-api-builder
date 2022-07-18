@@ -148,6 +148,37 @@ namespace Azure.DataGateway.Service.Resolvers
             return GetUnderlyingTableDefinition().Columns.Select(col => col.Key).ToList();
         }
 
+        /// <summary>
+        /// Get a list of the output columns for this table.
+        /// An output column is a labelled column that holds
+        /// both the backing column and a label with the exposed name.
+        /// </summary>
+        /// <returns>List of LabelledColumns</returns>
+        protected List<LabelledColumn> GenerateOutputColumns()
+        {
+            List<LabelledColumn> outputColumns = new();
+            foreach (string columnName in GetUnderlyingTableDefinition().Columns.Keys)
+            {
+                // if column is not exposed we skip
+                if (!SqlMetadataProvider.TryGetExposedColumnName(
+                    entityName: EntityName,
+                    backingFieldName: columnName,
+                    out string? exposedName))
+                {
+                    continue;
+                }
+
+                outputColumns.Add(new(
+                    tableSchema: DatabaseObject.SchemaName,
+                    tableName: DatabaseObject.Name,
+                    columnName: columnName,
+                    label: exposedName!,
+                    tableAlias: TableAlias));
+            }
+
+            return outputColumns;
+        }
+
         ///<summary>
         /// Gets the value of the parameter cast as the system type
         /// of the column this parameter is associated with

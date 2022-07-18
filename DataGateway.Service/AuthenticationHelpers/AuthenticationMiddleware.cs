@@ -1,8 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.AuthenticationHelpers
 {
@@ -23,9 +27,10 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         }
 
         /// <summary>
-        /// Explicitly authenticates using JWT authentication scheme.
+        /// For EasyAuth, this middleware is triggered after the EasyAuthHandler
+        /// validates the token. For JWT authentication scheme, we explicitly authenticate here.
         /// A successful result contains validated token data that is
-        /// used to populate the user object in the HttpContext for use
+        /// used to retrieve the `identity` from within the Principal in the HttpContext for use
         /// in downstream middleware.
         /// </summary>
         /// <param name="httpContext"></param>
@@ -35,24 +40,48 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
             // the default scheme is used to hydrate the httpContext.User object.
             AuthenticateResult authNResult = await httpContext.AuthenticateAsync();
 
-            if (authNResult != null && authNResult.Succeeded)
+            // Set the httpContext.user as the authNResult.Principal, which is never null.
+            // Only the properties of the Principal.Identity changes depending on the
+            // authentication result.
+            httpContext.User = authNResult.Principal!;
+
+            string clientRoleHeader = authNResult.Succeeded
+                ? AuthorizationType.Authenticated.ToString().ToLower()
+                : AuthorizationType.Anonymous.ToString().ToLower();
+
+            // If authN result succeeded, the client role header i.e.
+            // X-MS-API-ROLE is set to authenticated (if not already present)
+            // otherwise it is either explicitly added to be `anonymous` or
+            // its existing value is replaced with anonymous.
+            if (!httpContext.Request.Headers.TryAdd(
+                    AuthorizationResolver.CLIENT_ROLE_HEADER,
+                    clientRoleHeader))
             {
-                httpContext.User = authNResult.Principal!;
+                // if we are unable to add the role, it means it already exists.
+                if (authNResult.Succeeded)
+                {
+                    // honor and pick up the existing role value.
+                    clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+                }
+                else
+                {
+                    // replace its value with anonymous
+                    // only when it is NOT in an authenticated scenario.
+                    httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]
+                        = clientRoleHeader;
+                }
             }
 
-            // User not being authenticated means validation failed.
-            // A challenge result will add WWW-Authenticate header to indicate failure reason
-            // Failure reasons: no bearer token, invalid token (specific validation failure)
-            if (!httpContext.User.Identity!.IsAuthenticated)
+            if (clientRoleHeader.Equals(AuthorizationType.Authenticated.ToString(), StringComparison.OrdinalIgnoreCase) ||
+                clientRoleHeader.Equals(AuthorizationType.Anonymous.ToString(), StringComparison.OrdinalIgnoreCase))
             {
-                IActionResult result = new ChallengeResult();
-                await result.ExecuteResultAsync(new ActionContext
-                {
-                    HttpContext = httpContext
-                });
+                //Add a claim for the X-MS-API-ROLE header to the request.
+                Claim claim = new(ClaimTypes.Role, clientRoleHeader, ClaimValueTypes.String);
 
-                // Terminate middleware request pipeline
-                return;
+                // To set the IsAuthenticated value as false, omit the authenticationType.
+                ClaimsIdentity identity = new();
+                identity.AddClaim(claim);
+                httpContext.User.AddIdentity(identity);
             }
 
             await _nextMiddleware(httpContext);

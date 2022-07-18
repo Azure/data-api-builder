@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
 namespace Azure.DataGateway.Service.Resolvers
@@ -25,9 +25,9 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<string> Values { get; }
 
         /// <summary>
-        /// The inserted columns that the insert will return
+        /// The inserted columns that the insert will OUTPUT
         /// </summary>
-        public List<string> ReturnColumns { get; }
+        public List<LabelledColumn> OutputColumns { get; }
 
         public SqlInsertStructure(
             IMiddlewareContext context,
@@ -49,14 +49,12 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             InsertColumns = new();
             Values = new();
-
-            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
-
-            ReturnColumns = tableDefinition.Columns.Keys.ToList();
+            OutputColumns = GenerateOutputColumns();
 
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
-                PopulateColumnsAndParams(param.Key, param.Value);
+                SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+                PopulateColumnsAndParams(backingColumn!, param.Value);
             }
         }
 

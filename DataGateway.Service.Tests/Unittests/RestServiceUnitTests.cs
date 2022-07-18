@@ -5,10 +5,10 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -115,34 +115,37 @@ namespace Azure.DataGateway.Service.Tests.Unittests
         /// runtimeconfigprovider.</param>
         public static void InitializeTest(string path)
         {
-            RuntimeConfig _runtimeConfig = SqlTestHelper.LoadConfig($"{_testCategory}").CurrentValue;
-            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
-            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(_runtimeConfig);
-            mockRuntimeConfigProvider.Setup(x => x.RestPath).Returns(path);
-            RuntimeConfigProvider runtimeConfigProvider = mockRuntimeConfigProvider.Object;
+            RuntimeConfigPath runtimeConfigPath = TestHelper.GetRuntimeConfigPath(_testCategory);
+            RuntimeConfigProvider runtimeConfigProvider =
+                TestHelper.GetMockRuntimeConfigProvider(runtimeConfigPath, path);
             MsSqlQueryBuilder queryBuilder = new();
             DbExceptionParser dbExceptionParser = new(runtimeConfigProvider);
             QueryExecutor<SqlConnection> queryExecutor = new(runtimeConfigProvider, dbExceptionParser);
+            Mock<ILogger<ISqlMetadataProvider>> sqlMetadataLogger = new();
             MsSqlMetadataProvider sqlMetadataProvider = new(
                 runtimeConfigProvider,
                 queryExecutor,
-                queryBuilder);
+                queryBuilder,
+                sqlMetadataLogger.Object);
 
             Mock<IAuthorizationService> authorizationService = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             SqlQueryEngine queryEngine = new(
                 queryExecutor,
                 queryBuilder,
-                sqlMetadataProvider);
+                sqlMetadataProvider,
+                httpContextAccessor.Object);
+
+            AuthorizationResolver authZResolver = new(runtimeConfigProvider, sqlMetadataProvider);
 
             SqlMutationEngine mutationEngine =
                 new(
                 queryEngine,
                 queryExecutor,
                 queryBuilder,
-                sqlMetadataProvider);
+                sqlMetadataProvider,
+                authZResolver);
 
-            AuthorizationResolver authZResolver = new(runtimeConfigProvider, sqlMetadataProvider);
             // Setup REST Service
             _restService = new RestService(
                 queryEngine,

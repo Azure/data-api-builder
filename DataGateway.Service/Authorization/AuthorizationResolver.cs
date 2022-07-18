@@ -9,6 +9,7 @@ using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -29,6 +30,7 @@ namespace Azure.DataGateway.Service.Authorization
         public const string FIELD_PREFIX = "@item.";
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
         private const string SHORT_CLAIM_TYPE_NAME = "http://schemas.xmlsoap.org/ws/2005/05/identity/claimproperties/ShortTypeName";
+
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
         public AuthorizationResolver(
@@ -67,20 +69,16 @@ namespace Azure.DataGateway.Service.Authorization
         {
             StringValues clientRoleHeader = httpContext.Request.Headers[CLIENT_ROLE_HEADER];
 
-            // The clientRoleHeader must be present on requests.
-            // Consequentially, anonymous requests must specifically set
-            // the clientRoleHeader value to Anonymous.
-            if (clientRoleHeader.Count == 0)
+            if (clientRoleHeader.Count != 1)
             {
-                return false;
-            }
+                // When count = 0, the clientRoleHeader is absent on requests.
+                // Consequentially, anonymous requests must specifically set
+                // the clientRoleHeader value to Anonymous.
 
-            // Multiple header fields with the same field-name MAY be present in a message,
-            // but are NOT supported, specifically for the client role header.
-            // Valid scenario per HTTP Spec: http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
-            // Discussion: https://stackoverflow.com/a/3097052/18174950
-            if (clientRoleHeader.Count > 1)
-            {
+                // When count > 1, multiple header fields with the same field-name
+                // are present in a message, but are NOT supported, specifically for the client role header.
+                // Valid scenario per HTTP Spec: http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+                // Discussion: https://stackoverflow.com/a/3097052/18174950
                 return false;
             }
 
@@ -92,6 +90,8 @@ namespace Azure.DataGateway.Service.Authorization
                 return false;
             }
 
+            // IsInRole looks at all the claims present in the request
+            // Reference: https://github.com/microsoft/referencesource/blob/master/mscorlib/system/security/claims/ClaimsPrincipal.cs
             return httpContext.User.IsInRole(clientRoleHeaderValue);
         }
 
@@ -230,6 +230,9 @@ namespace Azure.DataGateway.Service.Authorization
                         string actionName = string.Empty;
                         ActionMetadata actionToColumn = new();
                         IEnumerable<string> allTableColumns = ResolveTableDefinitionColumns(entityName);
+
+                        // Implicitly, all table columns are 'allowed' when an actiontype is a string.
+                        // Since no granular field permissions exist for this action within the current role.
                         if (actionElement.ValueKind is JsonValueKind.String)
                         {
                             actionName = actionElement.ToString();
@@ -240,8 +243,8 @@ namespace Azure.DataGateway.Service.Authorization
                         {
                             // If not a string, the actionObj is expected to be an object that can be deserialised into Action object.
                             // We will put validation checks later to make sure this is the case.
-                            Action? actionObj = JsonSerializer.Deserialize<Action>(actionElement.ToString(), RuntimeConfig.GetDeserializationOptions());
-                            if (actionObj is not null)
+                            if (RuntimeConfig.TryGetDeserializedConfig(actionElement.ToString(), out Action? actionObj)
+                                && actionObj is not null)
                             {
                                 actionName = actionObj.Name;
                                 if (actionObj.Fields!.Include is not null)
@@ -289,6 +292,12 @@ namespace Azure.DataGateway.Service.Authorization
                         if (!string.IsNullOrWhiteSpace(actionName) && !entityToRoleMap.ActionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
                         {
                             entityToRoleMap.ActionToRolesMap[actionName].Add(role);
+                        }
+
+                        foreach (string allowedColumn in actionToColumn.Allowed)
+                        {
+                            entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
+                            entityToRoleMap.FieldToRolesMap[allowedColumn][actionName].Add(role);
                         }
 
                         roleToAction.ActionToColumnMap[actionName] = actionToColumn;
@@ -350,6 +359,7 @@ namespace Azure.DataGateway.Service.Authorization
                 return claimsInRequestContext;
             }
 
+            string roleClaimShortName = string.Empty;
             foreach (Claim claim in identity.Claims)
             {
                 /*
@@ -371,7 +381,16 @@ namespace Azure.DataGateway.Service.Authorization
                         subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
                         );
                 }
+
+                if (claim.Type is ClaimTypes.Role)
+                {
+                    roleClaimShortName = type;
+                }
             }
+
+            // Add role claim to the claimsInRequestContext as it is not added above.
+            string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
+            claimsInRequestContext.Add(roleClaimShortName, new Claim(roleClaimShortName, clientRoleHeader, ClaimValueTypes.String));
 
             return claimsInRequestContext;
         }
@@ -492,12 +511,12 @@ namespace Azure.DataGateway.Service.Authorization
         /// Applicable to GraphQL field directive @authorize on ObjectType fields.
         /// </summary>
         /// <param name="entityName">EntityName whose actionMetadata will be searched.</param>
-        /// <param name="actionName">ActionName to lookup field permissions</param>
-        /// <param name="field">Specific field to get collection of roles</param>
+        /// <param name="field">Field to lookup action permissions</param>
+        /// <param name="actionName">Specific action to get collection of roles</param>
         /// <returns>Collection of role names allowed to perform actionName on Entity's field.</returns>
-        public IEnumerable<string> GetRolesForField(string entityName, string actionName, string field)
+        public IEnumerable<string> GetRolesForField(string entityName, string field, string actionName)
         {
-            return EntityPermissionsMap[entityName].FieldToRolesMap[actionName][field];
+            return EntityPermissionsMap[entityName].FieldToRolesMap[field][actionName];
         }
 
         /// <summary>
@@ -515,6 +534,25 @@ namespace Azure.DataGateway.Service.Authorization
 
             return _metadataProvider.GetTableDefinition(entityName).Columns.Keys;
         }
+
+        /// <summary>
+        /// Creates new key value map of
+        /// Key: ActionType
+        /// Value: Collection of role names.
+        /// There are only four possible actions
+        /// </summary>
+        /// <returns></returns>
+        private static Dictionary<string, List<string>> CreateActionToRoleMap()
+        {
+            return new Dictionary<string, List<string>>()
+            {
+                { ActionType.CREATE, new List<string>()},
+                { ActionType.READ, new List<string>()},
+                { ActionType.UPDATE, new List<string>()},
+                { ActionType.DELETE, new List<string>()}
+            };
+        }
+
         #endregion
     }
 }

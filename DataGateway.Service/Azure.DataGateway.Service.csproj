@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -33,10 +33,7 @@
     <Content Include="MySqlBooks.sql">
         <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Update="*config.json">
+    <Content Update="hawaii-config*.json">
       <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
     <Content Update="appsettings*.json">

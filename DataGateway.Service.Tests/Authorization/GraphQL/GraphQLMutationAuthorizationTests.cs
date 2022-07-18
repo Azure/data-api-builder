@@ -42,7 +42,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
         [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.Create, DisplayName = "Create Mutation Field Authorization - Failure, Columns Forbidden")]
         [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.UpdateGraphQL, DisplayName = "Update Mutation Field Authorization - Success, Columns Allowed")]
         [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col4" }, Config.Operation.UpdateGraphQL, DisplayName = "Update Mutation Field Authorization - Failure, Columns Forbidden")]
-
+        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.Delete, DisplayName = "Delete Mutation Field Authorization - Success, since authorization to perform the" +
+            "delete mutation operation occurs prior to column evaluation in the request pipeline.")]
         public void MutationFields_AuthorizationEvaluation(bool isAuthorized, string[] columnsAllowed, string[] columnsRequested, Config.Operation operation)
         {
             SqlMutationEngine engine = SetupTestFixture(isAuthorized);

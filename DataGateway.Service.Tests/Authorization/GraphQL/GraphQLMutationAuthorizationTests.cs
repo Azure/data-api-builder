@@ -107,7 +107,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<IEnumerable<string>>() // Can be any IEnumerable<string>, as find request result field list is depedent on AllowedColumns.
+                It.IsAny<IEnumerable<string>>()
                 )).Returns(isAuthorized);
 
             return new SqlMutationEngine(

@@ -54,8 +54,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [TestMethod]
         public async Task CheckNoExceptionForNoForeignKey()
         {
-            string databaseEngine = TestCategory.POSTGRESQL;
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(databaseEngine);
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(DatabaseEngine);
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);

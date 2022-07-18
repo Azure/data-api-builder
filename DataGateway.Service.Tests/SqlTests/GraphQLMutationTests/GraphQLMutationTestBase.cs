@@ -11,7 +11,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
     [TestClass]
     public abstract class GraphQLMutationTestBase : SqlTestBase
     {
-        #region  Positive Tests
+        #region Positive Tests
 
         /// <summary>
         /// <code>Do: </code> Inserts new book and return its id and title
@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement actual = await base.GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement actual = await base.GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
@@ -76,7 +76,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement actual = await base.GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
@@ -101,7 +101,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
             // query the table before deletion is performed to see if what the mutation
             // returns is correct
             string expected = await GetDatabaseResultAsync(dbQueryForResult);
-            JsonElement actual = await base.GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
 
@@ -125,7 +125,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            await base.GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
             string dbResponse = await GetDatabaseResultAsync(dbQuery);
 
             using JsonDocument result = JsonDocument.Parse(dbResponse);
@@ -151,7 +151,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement actual = await base.GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
@@ -173,7 +173,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement actual = await base.GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
@@ -195,7 +195,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement actual = await base.GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
@@ -216,7 +216,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement actual = await base.GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
@@ -238,7 +238,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement actual = await base.GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
@@ -261,7 +261,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement actual = await base.GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
@@ -287,7 +287,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement result = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
 
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 result.ToString(),
@@ -316,7 +316,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement result = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
 
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 result.ToString(),
@@ -345,7 +345,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement result = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: $"item");
         }
 
@@ -365,7 +365,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement result = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.EntityNotFound}");
         }
 
@@ -384,7 +384,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement result = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName);
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName);
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 result.ToString(),
                 message: errorMessage,

@@ -40,7 +40,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 "title = 'Awesome book'",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -67,7 +67,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 "title != 'Awesome book'",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -94,7 +94,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 "title LIKE 'Awe%'",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -121,7 +121,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 "title LIKE '%book'",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -148,7 +148,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 "title LIKE '%some%'",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -175,7 +175,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 "title NOT LIKE '%book%'",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -196,7 +196,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             SqlTestHelper.PerformTestEqualJsonStrings("[]", actual.ToString());
         }
 
@@ -222,7 +222,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 @"id = 2",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -249,7 +249,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 @"id != 2",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -276,7 +276,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 @"(id > 2 AND id < 4)",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -303,7 +303,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 @"(id >= 2 AND id <= 4)",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -344,7 +344,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 @"(title LIKE '%book%' AND ((id > 2 AND id < 4) OR id >= 4))",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -384,7 +384,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 @"((id > 2 AND id < 4) OR (id >= 4 AND title LIKE '%book%'))",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -435,7 +435,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                   (publisher_id < 1500 OR publisher_id > 2000)",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -456,7 +456,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             SqlTestHelper.PerformTestEqualJsonStrings("[]", actual.ToString());
         }
 
@@ -476,7 +476,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             SqlTestHelper.PerformTestEqualJsonStrings("[]", actual.ToString());
         }
 
@@ -503,7 +503,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 "issue_number IS NULL",
                 "foo");
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -531,7 +531,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 "issue_number IS NOT NULL",
                 "foo");
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -558,7 +558,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 "username IS NULL",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -585,7 +585,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 "username IS NOT NULL",
                 GetDefaultSchema());
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -613,7 +613,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 new List<string> { "id", "title" },
                 @"id >= 2");
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -636,7 +636,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                 new List<string> { "id" },
                 @"1 != 1");
 
-            JsonElement actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -655,9 +655,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
             string schema = "",
             List<string> pkColumns = null);
 
-        protected override async Task<JsonElement> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, Dictionary<string, object> variables = null, bool failOnErrors = true)
+        protected override async Task<JsonElement> ExecuteGraphQLRequestAsync(string graphQLQuery, string graphQLQueryName, Dictionary<string, object> variables = null, bool failOnErrors = true)
         {
-            JsonElement dataResult = await base.GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, variables, failOnErrors);
+            JsonElement dataResult = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, variables, failOnErrors);
 
             return dataResult.GetProperty("items");
         }

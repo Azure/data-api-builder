@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service.Services
                 {
                     HttpContext httpContext = (HttpContext)value;
                     StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    context.ContextData.TryAdd(key: "role", value: clientRoleHeader);
+                    context.ContextData.TryAdd(key: AuthorizationResolver.CLIENT_ROLE_HEADER, value: clientRoleHeader);
                 }
             }
 

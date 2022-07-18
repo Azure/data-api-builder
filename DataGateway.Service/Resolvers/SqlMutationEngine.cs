@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
@@ -403,7 +404,7 @@ namespace Azure.DataGateway.Service.Resolvers
             Operation mutationOperation)
         {
             string role = string.Empty;
-            if (context.ContextData.TryGetValue(key: "role", out object? value))
+            if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value))
             {
                 if (value is not null)
                 {

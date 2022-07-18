@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Auth;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Resolvers;
@@ -24,7 +25,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
     {
         private const string TEST_ENTITY = "TEST_ENTITY";
         private const string TEST_COLUMN_VALUE = "COLUMN_VALUE";
-        private const string MIDDLEWARE_CONTEXT_ROLEHEADER_KEY = "role";
         private const string MIDDLEWARE_CONTEXT_ROLEHEADER_VALUE = "roleName";
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
 
             Dictionary<string, object?> middlewareContextData = new()
             {
-                { MIDDLEWARE_CONTEXT_ROLEHEADER_KEY, new StringValues(MIDDLEWARE_CONTEXT_ROLEHEADER_VALUE) }
+                { AuthorizationResolver.CLIENT_ROLE_HEADER, new StringValues(MIDDLEWARE_CONTEXT_ROLEHEADER_VALUE) }
             };
 
             Mock<IMiddlewareContext> graphQLMiddlewareContext = new();

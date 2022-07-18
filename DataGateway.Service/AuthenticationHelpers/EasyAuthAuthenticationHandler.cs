@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
@@ -53,9 +55,15 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                     _ => null
                 };
 
-                if (identity is null)
+                if (identity is null || HasOnlyAnonymousRole(identity.Claims))
                 {
-                    return Task.FromResult(AuthenticateResult.Fail(failureMessage: $"Invalid {Options.EasyAuthProvider} EasyAuth token."));
+                    // Either the token is invalid, Or the role is only anonymous,
+                    // we don't terminate the pipeline since the request is
+                    // always at least in the anonymous role.
+                    // It means that anything that is exposed anonymously will still be visible.
+                    // This also represents the scenario where the user attempted to logon
+                    // but failed authentication. So, the role assigned to X-MS-API-ROLE will be anonymous.
+                    return Task.FromResult(AuthenticateResult.NoResult());
                 }
 
                 ClaimsPrincipal? claimsPrincipal = new(identity);
@@ -69,8 +77,40 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                     return Task.FromResult(success);
                 }
             }
-            // Try another handler
+
+            // Return no result when no EasyAuth header is present,
+            // because a request is always in anonymous role in EasyAuth
+            // This scenario is not possible when front loaded with EasyAuth
+            // since the X-MS-CLIENT-PRINCIPAL header will always be present in that case.
+            // This is applicable when engine is being tested without front loading with EasyAuth.
             return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
+        /// <summary>
+        /// Helper method to check if the only role assigned is the anonymous role.
+        /// </summary>
+        /// <param name="claims"></param>
+        /// <returns></returns>
+        private static bool HasOnlyAnonymousRole(IEnumerable<Claim> claims)
+        {
+            bool isUserAnonymousOnly = false;
+            foreach (Claim claim in claims)
+            {
+                if (claim.Type is ClaimTypes.Role)
+                {
+                    if (claim.Value.Equals(AuthorizationType.Anonymous.ToString(),
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        isUserAnonymousOnly = true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return isUserAnonymousOnly;
         }
     }
 }

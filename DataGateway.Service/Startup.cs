@@ -172,7 +172,7 @@ namespace Azure.DataGateway.Service
                 }
             });
 
-            services.AddSingleton<GraphQLService>();
+            services.AddSingleton<GraphQLSchemaCreator>();
             services.AddSingleton<RestService>();
             services.AddSingleton<IFileSystem, FileSystem>();
 
@@ -185,46 +185,44 @@ namespace Azure.DataGateway.Service
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
 
-            services.AddGraphQLServer()
-                .ConfigureSchema((serviceProvider, schemaBuilder) =>
-                {
-                    GraphQLService? graphQLService = serviceProvider.GetService<GraphQLService>();
-                    if (graphQLService is null)
-                    {
-                        throw new Exception("Uh oh");
-                    }
-
-                    graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
-                })
-                .AddAuthorization()
-                .AddErrorFilter(error =>
-                {
-                    if (error.Exception != null)
-                    {
-                        Console.Error.WriteLine(error.Exception.Message);
-                        Console.Error.WriteLine(error.Exception.StackTrace);
-                        return error.WithMessage(error.Exception.Message);
-                    }
-
-                    return error;
-                })
-                .AddErrorFilter(error =>
-                {
-                    if (error.Exception is DataGatewayException)
-                    {
-                        DataGatewayException thrownException = (DataGatewayException)error.Exception;
-                        return error.RemoveException()
-                                .RemoveLocations()
-                                .RemovePath()
-                                .WithMessage(thrownException.Message)
-                                .WithCode($"{thrownException.SubStatusCode}");
-                    }
-
-                    return error;
-                });
-            ;
+            AddGraphQL(services);
 
             services.AddControllers();
+        }
+
+        private static void AddGraphQL(IServiceCollection services)
+        {
+            services.AddGraphQLServer()
+                    .ConfigureSchema((serviceProvider, schemaBuilder) =>
+                    {
+                        GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
+                        graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
+                    })
+                    .AddAuthorization()
+                    .AddErrorFilter(error =>
+                    {
+                        if (error.Exception != null)
+                        {
+                            Console.Error.WriteLine(error.Exception.Message);
+                            Console.Error.WriteLine(error.Exception.StackTrace);
+                            return error.WithMessage(error.Exception.Message);
+                        }
+
+                        return error;
+                    })
+                    .AddErrorFilter(error =>
+                    {
+                        if (error.Exception is DataGatewayException thrownException)
+                        {
+                            return error.RemoveException()
+                                    .RemoveLocations()
+                                    .RemovePath()
+                                    .WithMessage(thrownException.Message)
+                                    .WithCode($"{thrownException.SubStatusCode}");
+                        }
+
+                        return error;
+                    });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

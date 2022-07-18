@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Services;
@@ -13,7 +12,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
     {
 
         #region Test Fixture Setup
-        protected static GraphQLService _graphQLService;
+        protected static GraphQLSchemaCreator _graphQLService;
 
         #endregion
 

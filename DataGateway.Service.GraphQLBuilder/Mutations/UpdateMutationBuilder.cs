@@ -223,7 +223,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
             if (CreateAuthorizationDirectiveIfNecessary(
                     rolesAllowedForMutation,
-                    out DirectiveNode ?authorizeDirective))
+                    out DirectiveNode? authorizeDirective))
             {
                 fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }

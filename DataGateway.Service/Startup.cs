@@ -7,10 +7,10 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Services.MetadataProviders;
-using HotChocolate.Language;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -172,9 +172,7 @@ namespace Azure.DataGateway.Service
                 }
             });
 
-            services.AddSingleton<IDocumentHashProvider, Sha256DocumentHashProvider>();
-            services.AddSingleton<IDocumentCache, DocumentCache>();
-            services.AddSingleton<GraphQLService>();
+            services.AddSingleton<GraphQLSchemaCreator>();
             services.AddSingleton<RestService>();
             services.AddSingleton<IFileSystem, FileSystem>();
 
@@ -187,7 +185,44 @@ namespace Azure.DataGateway.Service
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
 
+            AddGraphQL(services);
+
             services.AddControllers();
+        }
+
+        private static void AddGraphQL(IServiceCollection services)
+        {
+            services.AddGraphQLServer()
+                    .ConfigureSchema((serviceProvider, schemaBuilder) =>
+                    {
+                        GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
+                        graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
+                    })
+                    .AddAuthorization()
+                    .AddErrorFilter(error =>
+                    {
+                        if (error.Exception != null)
+                        {
+                            Console.Error.WriteLine(error.Exception.Message);
+                            Console.Error.WriteLine(error.Exception.StackTrace);
+                            return error.WithMessage(error.Exception.Message);
+                        }
+
+                        return error;
+                    })
+                    .AddErrorFilter(error =>
+                    {
+                        if (error.Exception is DataGatewayException thrownException)
+                        {
+                            return error.RemoveException()
+                                    .RemoveLocations()
+                                    .RemovePath()
+                                    .WithMessage(thrownException.Message)
+                                    .WithCode($"{thrownException.SubStatusCode}");
+                        }
+
+                        return error;
+                    });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -274,7 +309,12 @@ namespace Azure.DataGateway.Service
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapBananaCakePop(toolPath: "/graphql");
+                if (runtimeConfig is not null && runtimeConfig.GraphQLGlobalSettings.Enabled)
+                {
+                    endpoints.MapGraphQL(runtimeConfig.GraphQLGlobalSettings.Path);
+                    endpoints.MapBananaCakePop();
+                }
+
                 endpoints.MapHealthChecks("/");
             });
         }

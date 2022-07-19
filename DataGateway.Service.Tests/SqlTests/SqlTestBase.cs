@@ -1,8 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -21,12 +21,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
-using Newtonsoft.Json.Linq;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -37,7 +39,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
     [TestClass]
     public abstract class SqlTestBase
     {
-        protected static string _testCategory;
         protected static IQueryExecutor _queryExecutor;
         protected static IQueryBuilder _queryBuilder;
         protected static IQueryEngine _queryEngine;
@@ -50,8 +51,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static string _defaultSchemaVersion;
         protected static RuntimeConfigProvider _runtimeConfigProvider;
         protected static IAuthorizationResolver _authorizationResolver;
+        private static WebApplicationFactory<Program> _application;
         protected static RuntimeConfig _runtimeConfig;
         protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
+
+        protected static string DatabaseEngine { get; set; }
+        protected static HttpClient HttpClient { get; private set; }
 
         /// <summary>
         /// Sets up test fixture for class, only to be run once per test run.
@@ -59,10 +64,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// this class.
         /// </summary>
         /// <param name="context"></param>
-        protected static async Task InitializeTestFixture(TestContext context, string testCategory)
+        protected static async Task InitializeTestFixture(TestContext context)
         {
-            _testCategory = testCategory;
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{_testCategory}");
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{DatabaseEngine}");
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
@@ -101,13 +105,29 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _sqlMetadataProvider,
                 _authorizationResolver);
 
+            //Initialize the authorization resolver object
+            _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
+
+            _application = new WebApplicationFactory<Program>()
+                .WithWebHostBuilder(builder =>
+                {
+                    builder.ConfigureTestServices(services =>
+                    {
+                        services.AddSingleton(_runtimeConfigProvider);
+                        services.AddSingleton(_queryEngine);
+                        services.AddSingleton(_mutationEngine);
+                        services.AddSingleton(_sqlMetadataProvider);
+                    });
+                });
+
+            HttpClient = _application.CreateClient();
         }
 
         protected static void SetUpSQLMetadataProvider()
         {
             _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
 
-            switch (_testCategory)
+            switch (DatabaseEngine)
             {
                 case TestCategory.POSTGRESQL:
                     _queryBuilder = new PostgresQueryBuilder();
@@ -149,7 +169,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         protected static async Task ResetDbStateAsync()
         {
-            using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{_testCategory}Books.sql"), parameters: null);
+            using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{DatabaseEngine}Books.sql"), parameters: null);
         }
 
         /// <summary>
@@ -412,54 +432,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Read the data property of the GraphQLController result
         /// </summary>
-        /// <param name="graphQLQuery"></param>
-        /// <param name="graphQLQueryName"></param>
-        /// <param name="graphQLController"></param>
+        /// <param name="query"></param>
+        /// <param name="queryName"></param>
+        /// <param name="httpClient"></param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns>string in JSON format</returns>
-        protected virtual async Task<string> GetGraphQLResultAsync(string graphQLQuery, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null, bool failOnErrors = true)
+        protected virtual async Task<JsonElement> ExecuteGraphQLRequestAsync(string query, string queryName, bool isAuthenticated, Dictionary<string, object> variables = null)
         {
-            JsonElement graphQLResult = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, graphQLController, variables);
-            Console.WriteLine(graphQLResult.ToString());
-
-            if (failOnErrors && graphQLResult.TryGetProperty("errors", out JsonElement errors))
-            {
-                Assert.Fail(errors.GetRawText());
-            }
-
-            JsonElement graphQLResultData = graphQLResult.GetProperty("data").GetProperty(graphQLQueryName);
-
-            // JsonElement.ToString() prints null values as empty strings instead of "null"
-            return graphQLResultData.GetRawText();
-        }
-
-        /// <summary>
-        /// Sends graphQL query through graphQL service, consisting of gql engine processing (resolvers, object serialization)
-        /// returning the result as a JsonElement - the root of the JsonDocument.
-        /// </summary>
-        /// <param name="query"></param>
-        /// <param name="graphQLQueryName"></param>
-        /// <param name="graphQLController"></param>
-        /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
-        /// <returns>JsonElement</returns>
-        protected static async Task<JsonElement> GetGraphQLControllerResultAsync(string query, string graphQLQueryName, GraphQLController graphQLController, Dictionary<string, object> variables = null)
-        {
-            string graphqlQueryJson = variables == null ?
-                JObject.FromObject(new { query }).ToString() :
-                JObject.FromObject(new
-                {
-                    query,
-                    variables
-                }).ToString();
-
-            Console.WriteLine(graphqlQueryJson);
-
-            graphQLController.ControllerContext.HttpContext =
-                GetRequestHttpContext(
-                    queryStringUrl: null,
-                    bodyData: graphqlQueryJson);
-
-            return await graphQLController.PostAsync();
+            RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
+            return await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                HttpClient,
+                configProvider,
+                queryName,
+                query,
+                variables,
+                isAuthenticated ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken() : null
+            );
         }
     }
 }

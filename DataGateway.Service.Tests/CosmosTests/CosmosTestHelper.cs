@@ -3,11 +3,11 @@ using Azure.DataGateway.Config;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
 {
-    public class CosmosTestHelper : TestHelper
+    public static class CosmosTestHelper 
     {
         public static readonly string DB_NAME = "graphqlTestDb";
         private static Lazy<RuntimeConfigPath>
-            _runtimeConfigPath = new(() => GetRuntimeConfigPath(TestCategory.COSMOS));
+            _runtimeConfigPath = new(() => TestHelper.GetRuntimeConfigPath(TestCategory.COSMOS));
 
         public static RuntimeConfigPath ConfigPath
         {

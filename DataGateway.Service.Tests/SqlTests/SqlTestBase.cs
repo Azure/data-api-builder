@@ -16,6 +16,7 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Azure.DataGateway.Service.Tests.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -440,7 +441,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected virtual async Task<JsonElement> ExecuteGraphQLRequestAsync(string query, string queryName, Dictionary<string, object> variables = null, bool failOnErrors = true)
         {
             RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
-            return await GraphQLRequestExecutor.PostGraphQLRequestAsync(HttpClient, configProvider, queryName, query, variables);
+            return await GraphQLRequestExecutor.PostGraphQLRequestAsync(HttpClient, configProvider, queryName, query, variables, AuthTestHelper.CreateStaticWebAppsEasyAuthToken());
         }
     }
 }

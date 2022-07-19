@@ -553,7 +553,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 throw new DataGatewayException(
                        message: $"Primary key not configured on the given database object {tableName}",
-                       statusCode: System.Net.HttpStatusCode.NotImplemented,
+                       statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                        subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 

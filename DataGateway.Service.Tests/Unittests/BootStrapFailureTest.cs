@@ -21,23 +21,12 @@ namespace Azure.DataGateway.Service.Tests.Unittests
         [TestMethod]
         public async Task IndeterministicPrimaryKeyOnDatabaseObject()
         {
-            /*
-             * _testCategory = TestCategory.POSTGRESQL;
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(_testCategory);
-            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
-            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
-            SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
-            SetUpSQLMetadataProvider();
-            await ResetDbStateAsync();
-            await _sqlMetadataProvider.InitializeAsync();
-             */
             _testCategory = TestCategory.MSSQL;
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(_testCategory);
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
-            TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "books_authors");
+            TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, _compositeViewName);
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             SetUpSQLMetadataProvider();
 
             // Add composite view whose primary key cannot be determined.
@@ -52,7 +41,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
             try
             {
                 DataGatewayException ex = await Assert.ThrowsExceptionAsync<DataGatewayException>(() => _sqlMetadataProvider.InitializeAsync());
-                Assert.AreEqual(HttpStatusCode.NotImplemented, ex.StatusCode);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual($"Primary key not configured on the given database object {_compositeViewName}", ex.Message);
             }
             finally

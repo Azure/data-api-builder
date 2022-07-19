@@ -1,5 +1,11 @@
+using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
+using JsonException = System.Text.Json.JsonException;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Azure.DataGateway.Config
 {
@@ -58,6 +64,42 @@ namespace Azure.DataGateway.Config
                 return objectSource.Name;
             }
         }
+
+        /// <summary>
+        /// Helper method to return an object describing the database object source, mainly useful for getting stored procedure config data
+        /// If only a string was passed in config, assume a table is returned and return no parameters
+        /// If neither a string or object in config, fail initialization
+        /// </summary>
+        public DatabaseObjectSource GetSourceObject()
+        {
+            JsonElement sourceJson = (JsonElement)Source;
+            //JsonSerializerOptions options = RuntimeConfig.GetDeserializationOptions();
+            //JsonSerializerOptions options = new()
+            //{
+            //    PropertyNameCaseInsensitive = true
+            //};
+
+            JsonSerializerSettings options = new()
+            {
+                Converters =
+                {
+                    new StringEnumConverter(new KebabCaseNamingStrategy())
+                }
+            };
+
+            if (sourceJson.ValueKind is JsonValueKind.String) {
+                return new(SourceType.Table, JsonSerializer.Deserialize<string>(sourceJson)!, null);
+            }
+            else if (sourceJson.ValueKind is JsonValueKind.Object)
+            {
+                // unfortunately, the string to enum conversion is impossible with system.text.json
+                return JsonConvert.DeserializeObject<DatabaseObjectSource>(Source.ToString()!, options)!;
+                //JsonSerializer.Deserialize<DatabaseObjectSource>(sourceJson, options)!;
+            }
+
+            throw new JsonException(message: $"Source not one of string or object");
+
+        }
     }
 
     /// <summary>
@@ -69,9 +111,23 @@ namespace Azure.DataGateway.Config
     /// <param name="Parameters">The Parameters to be used for constructing this object
     /// in case its a stored procedure.</param>
     public record DatabaseObjectSource(
-        string Type,
+        SourceType Type,
         [property: JsonPropertyName("object")] string Name,
         string[]? Parameters);
+
+    /// <summary>
+    /// Supported source types as defined by json schema
+    /// </summary>
+    //[Newtonsoft.Json.JsonConverter(typeof(StringEnumConverter))]
+    public enum SourceType
+    {
+        //[EnumMember(Value = "table")]
+        Table,
+        //[EnumMember(Value = "view")]
+        View,
+        //[EnumMember(Value = "stored-procedure")]
+        StoredProcedure
+    }
 
     /// <summary>
     /// Describes the REST settings specific to an entity.

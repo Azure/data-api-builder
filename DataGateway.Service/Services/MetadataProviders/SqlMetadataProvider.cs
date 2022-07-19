@@ -32,6 +32,9 @@ namespace Azure.DataGateway.Service.Services
 
         private readonly Dictionary<string, Entity> _entities;
 
+        // An efficient way to access entities labeled as stored procedures instead of iterating over all entities each time
+        private readonly Dictionary<string, Entity> _storedProcedureEntities;
+
         // nullable since Mock tests do not need it.
         // TODO: Refactor the Mock tests to remove the nullability here
         // once the runtime config is implemented tracked by #353.
@@ -64,6 +67,8 @@ namespace Azure.DataGateway.Service.Services
 
             _databaseType = runtimeConfig.DatabaseType;
             _entities = runtimeConfig.Entities;
+            _storedProcedureEntities = _entities.Where(kv => kv.Value.GetSourceObject().Type is SourceType.StoredProcedure)
+                        .ToDictionary(dict => dict.Key, dict => dict.Value);
             ConnectionString = runtimeConfig.ConnectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
@@ -125,6 +130,16 @@ namespace Azure.DataGateway.Service.Services
             return databaseObject!.TableDefinition;
         }
 
+        public StoredProcedureDefinition GetStoredProcedureDefinition(string entityName)
+        {
+            if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
+            {
+                throw new InvalidCastException($"Stored Procedure definition for {entityName} has not been inferred.");
+            }
+
+            return databaseObject!.StoredProcedureDefinition;
+        }
+
         /// <inheritdoc />
         public bool TryGetExposedColumnName(string entityName, string backingFieldName, out string? name)
         {
@@ -149,6 +164,7 @@ namespace Azure.DataGateway.Service.Services
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
             GenerateDatabaseObjectForEntities();
             await PopulateTableDefinitionForEntities();
+            await PopulateStoredProcedureDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();
             InitFilterParser();
             timer.Stop();
@@ -156,11 +172,81 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Returns the default schema name. Throws exception here since
-        /// each derived class should override this method.
+        /// Populate the StoredProcedureDefinition field of each database object labeled as a stored procedure entity in config
         /// </summary>
-        /// <exception cref="NotSupportedException"></exception>
-        protected virtual string GetDefaultSchemaName()
+        /// <returns></returns>
+        private async Task PopulateStoredProcedureDefinitionForEntities()
+        {
+            foreach (string entityName in _storedProcedureEntities.Keys)
+            {
+                await FillSchemaForStoredProcedureAsync(
+                    GetSchemaName(entityName),
+                    GetDatabaseObjectName(entityName));   
+            }
+        }
+
+        /// <summary>
+        /// Verify that the stored procedure exists in the database schema, then populate its database object parameters accordingly
+        /// </summary>
+        /// <param name="schemaName"></param>
+        /// <param name="storedProcedureName"></param>
+        /// <returns></returns>
+        /// <exception cref="DataGatewayException"></exception>
+        private async Task FillSchemaForStoredProcedureAsync(
+            string schemaName,
+            string storedProcedureName)
+        {
+            using ConnectionT conn = new();
+            conn.ConnectionString = ConnectionString;
+            await conn.OpenAsync();
+
+            string tablePrefix = GetTablePrefix(conn.Database, schemaName);
+
+            string[] procedureRestrictions = new string[NUMBER_OF_RESTRICTIONS];
+
+            procedureRestrictions[0] = conn.Database;
+            procedureRestrictions[1] = schemaName;
+            procedureRestrictions[2] = storedProcedureName;
+
+            DataTable procedureMetadata = await conn.GetSchemaAsync(collectionName: "Procedures", restrictionValues: procedureRestrictions);
+
+            // Stored procedure does not exist in DB schema
+            if (procedureMetadata.Rows.Count == 0)
+            {
+                throw new DataGatewayException(
+                    message: $"No stored procedure definition found for the given database object {storedProcedureName}",
+                    statusCode: System.Net.HttpStatusCode.NotImplemented,
+                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            string[] procedureParamRestrictions = new string[NUMBER_OF_RESTRICTIONS];
+
+            // To restrict the parameters for the current stored procedure, specify its name
+            procedureParamRestrictions[0] = conn.Database;
+            procedureParamRestrictions[1] = schemaName;
+            procedureParamRestrictions[2] = storedProcedureName;
+
+            // Each row in the procedureParams DataTable corresponds to a single parameter
+            DataTable parameterMetadata = await conn.GetSchemaAsync(collectionName: "ProcedureParameters", restrictionValues: procedureParamRestrictions);
+            foreach (DataColumn column in parameterMetadata.Columns)
+            {
+                foreach (DataRow row in parameterMetadata.Rows)
+                {
+                    
+                }
+            }
+            //selectCommand.CommandText
+            //    = ($"SELECT * FROM {tablePrefix}.{SqlQueryBuilder.QuoteIdentifier(tableName)}");
+
+            
+        }
+        
+    /// <summary>
+    /// Returns the default schema name. Throws exception here since
+    /// each derived class should override this method.
+    /// </summary>
+    /// <exception cref="NotSupportedException"></exception>
+    protected virtual string GetDefaultSchemaName()
         {
             throw new NotSupportedException($"Cannot get default schema " +
                 $"name for database type {_databaseType}");
@@ -226,12 +312,17 @@ namespace Azure.DataGateway.Service.Services
                     {
                         // parse source name into a tuple of (schemaName, databaseObjectName)
                         (schemaName, dbObjectName) = ParseSchemaAndDbObjectName(entity.GetSourceName())!;
-                        sourceObject = new()
+
+                        // if specified as stored procedure in config, initialize DatabaseObject with StoredProcedureDefinition, else with TableDefinition
+                        sourceObject = new(schemaName: schemaName, tableName: dbObjectName);
+                        if (entity.GetSourceObject().Type is SourceType.StoredProcedure)
                         {
-                            SchemaName = schemaName,
-                            Name = dbObjectName,
-                            TableDefinition = new()
-                        };
+                            sourceObject.StoredProcedureDefinition = new();
+                        }
+                        else
+                        {
+                            sourceObject.TableDefinition = new();
+                        }
 
                         sourceObjects.Add(entity.GetSourceName(), sourceObject);
                     }
@@ -470,16 +561,22 @@ namespace Azure.DataGateway.Service.Services
         /// <summary>
         /// Enrich the entities in the runtime config with the
         /// table definition information needed by the runtime to serve requests.
+        /// Only does so for entities specified as tables or views in config
         /// </summary>
         private async Task PopulateTableDefinitionForEntities()
         {
             foreach (string entityName
                 in EntityToDatabaseObject.Keys)
             {
-                await PopulateTableDefinitionAsync(
-                    GetSchemaName(entityName),
-                    GetDatabaseObjectName(entityName),
-                    GetTableDefinition(entityName));
+                // Only tables and views have their table definitions populated, not stored procedures
+                SourceType entitySourceType = _entities[entityName].GetSourceObject().Type;
+                if (entitySourceType is SourceType.Table || entitySourceType is SourceType.View)
+                {
+                    await PopulateTableDefinitionAsync(
+                        GetSchemaName(entityName),
+                        GetDatabaseObjectName(entityName),
+                        GetTableDefinition(entityName));
+                }
             }
 
             await PopulateForeignKeyDefinitionAsync();
@@ -493,20 +590,27 @@ namespace Azure.DataGateway.Service.Services
         /// the exposed names, and to translate between
         /// exposed name and backing column (or the reverse)
         /// when needed while processing the request.
+        ///
+        /// For now, only do this for tables/views as Stored Procedures do not have a TableDefinition
+        /// In the future, mappings for SPs could be used for parameter renaming.
         /// </summary>
         private void GenerateExposedToBackingColumnMapsForEntities()
         {
             foreach (string entityName in _entities.Keys)
             {
-                Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
-                EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
-                EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
-                foreach (string column in EntityToDatabaseObject[entityName].TableDefinition.Columns.Keys)
+                // Ensure we don't attempt for stored procedures, which have no TableDefinition, Columns, Keys, etc.
+                if (_entities[entityName].GetSourceObject().Type is not SourceType.StoredProcedure)
                 {
-                    if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
+                    Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
+                    EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
+                    EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
+                    foreach (string column in EntityToDatabaseObject[entityName].TableDefinition.Columns.Keys)
                     {
-                        EntityBackingColumnsToExposedNames[entityName].Add(column, column);
-                        EntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
+                        if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
+                        {
+                            EntityBackingColumnsToExposedNames[entityName].Add(column, column);
+                            EntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
+                        }
                     }
                 }
             }
@@ -744,21 +848,25 @@ namespace Azure.DataGateway.Service.Services
             Dictionary<string, TableDefinition> sourceNameToTableDefinition = new();
             foreach ((_, DatabaseObject dbObject) in EntityToDatabaseObject)
             {
-                if (!sourceNameToTableDefinition.ContainsKey(dbObject.Name))
+                // Ensure we're only doing this on tables, not stored procedures which have no table definition
+                if (dbObject.TableDefinition is not null && dbObject.StoredProcedureDefinition is null)
                 {
-                    foreach ((_, RelationshipMetadata relationshipData)
-                        in dbObject.TableDefinition.SourceEntityRelationshipMap)
+                    if (!sourceNameToTableDefinition.ContainsKey(dbObject.Name))
                     {
-                        IEnumerable<List<ForeignKeyDefinition>> foreignKeysForAllTargetEntities
-                            = relationshipData.TargetEntityToFkDefinitionMap.Values;
-                        foreach (List<ForeignKeyDefinition> fkDefinitionsForTargetEntity
-                            in foreignKeysForAllTargetEntities)
+                        foreach ((_, RelationshipMetadata relationshipData)
+                            in dbObject.TableDefinition.SourceEntityRelationshipMap)
                         {
-                            foreach (ForeignKeyDefinition fk in fkDefinitionsForTargetEntity)
+                            IEnumerable<List<ForeignKeyDefinition>> foreignKeysForAllTargetEntities
+                                = relationshipData.TargetEntityToFkDefinitionMap.Values;
+                            foreach (List<ForeignKeyDefinition> fkDefinitionsForTargetEntity
+                                in foreignKeysForAllTargetEntities)
                             {
-                                schemaNames.Add(fk.Pair.ReferencingDbObject.SchemaName);
-                                tableNames.Add(fk.Pair.ReferencingDbObject.Name);
-                                sourceNameToTableDefinition.TryAdd(dbObject.Name, dbObject.TableDefinition);
+                                foreach (ForeignKeyDefinition fk in fkDefinitionsForTargetEntity)
+                                {
+                                    schemaNames.Add(fk.Pair.ReferencingDbObject.SchemaName);
+                                    tableNames.Add(fk.Pair.ReferencingDbObject.Name);
+                                    sourceNameToTableDefinition.TryAdd(dbObject.Name, dbObject.TableDefinition);
+                                }
                             }
                         }
                     }

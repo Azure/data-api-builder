@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
@@ -350,10 +351,34 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         /// </summary>
         private static AuthorizationResolver SetupAuthResolverWithWildcardActions()
         {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                entityName: AuthorizationHelpers.TEST_ENTITY,
-                roleName: "admin",
-                actionName: "*"
+            string roleName = "admin";
+            string entityName = AuthorizationHelpers.TEST_ENTITY;
+
+            PermissionSetting permissionForEntity = new(
+                role: roleName,
+                actions: new object[] { JsonSerializer.SerializeToElement("*") });
+
+            Entity sampleEntity = new(
+                Source: AuthorizationHelpers.TEST_ENTITY,
+                Rest: null,
+                GraphQL: null,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+                );
+
+            Dictionary<string, Entity> entityMap = new();
+            entityMap.Add(entityName, sampleEntity);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                MsSql: null,
+                CosmosDb: null,
+                PostgreSql: null,
+                MySql: null,
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                Entities: entityMap
                 );
 
             return AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);

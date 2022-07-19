@@ -1,39 +1,20 @@
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Services;
-using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
 {
     [TestClass, TestCategory(TestCategory.MYSQL)]
-    public class MYSqlGraphQLQueryTests : GraphQLQueryTestBase
+    public class MySqlGraphQLQueryTests : GraphQLQueryTestBase
     {
-
-        #region Test Fixture Setup
         /// <summary>
-        /// Sets up test fixture for class, only to be run once per test run, as defined by
-        /// MSTest decorator.
+        /// Set the database engine for the tests
         /// </summary>
-        /// <param name="context"></param>
         [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
+        public static async Task SetupAsync(TestContext context)
         {
-            await InitializeTestFixture(context, TestCategory.MYSQL);
-
-            // Setup GraphQL Components
-            _graphQLService = new GraphQLService(
-                _runtimeConfigProvider,
-                _queryEngine,
-                _mutationEngine,
-                new DocumentCache(),
-                new Sha256DocumentHashProvider(),
-                _sqlMetadataProvider,
-                _authorizationResolver);
-            _graphQLController = new GraphQLController(_graphQLService);
+            DatabaseEngine = TestCategory.MYSQL;
+            await InitializeTestFixture(context);
         }
-
-        #endregion
 
         #region Tests
 
@@ -67,12 +48,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
                    LIMIT 100) AS `subq1`";
 
             await MultipleResultQueryWithVariables(mySqlQuery);
-        }
-
-        [TestMethod]
-        public override async Task MultipleResultJoinQuery()
-        {
-            await base.MultipleResultJoinQuery();
         }
 
         /// <summary>
@@ -112,28 +87,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             await OneToOneJoinQuery(mySqlQuery);
         }
 
-        /// <summary>
-        /// This deeply nests a many-to-one/one-to-many join multiple times to
-        /// show that it still results in a valid query.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public override async Task DeeplyNestedManyToOneJoinQuery()
-        {
-            await base.DeeplyNestedManyToOneJoinQuery();
-        }
-
-        /// <summary>
-        /// This deeply nests a many-to-many join multiple times to show that
-        /// it still results in a valid query.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public override async Task DeeplyNestedManyToManyJoinQuery()
-        {
-            await base.DeeplyNestedManyToManyJoinQuery();
-        }
-
         [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKey()
         {
@@ -166,30 +119,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             ";
 
             await QueryWithMultileColumnPrimaryKey(mySqlQuery);
-        }
-
-        [TestMethod]
-        public override async Task QueryWithNullResult()
-        {
-            await base.QueryWithNullResult();
-        }
-
-        /// <sumary>
-        /// Test if first param successfully limits list quries
-        /// </summary>
-        [TestMethod]
-        public override async Task TestFirstParamForListQueries()
-        {
-            await base.TestFirstParamForListQueries();
-        }
-
-        /// <sumary>
-        /// Test if filter param successfully filters the query results
-        /// </summary>
-        [TestMethod]
-        public override async Task TestFilterParamForListQueries()
-        {
-            await base.TestFilterParamForListQueries();
         }
 
         /// <summary>
@@ -352,22 +281,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
                    LIMIT 100) AS `subq1`";
 
             await TestOrderByWithOnlyNullFieldsDefaultsToPkSorting(mySqlQuery);
-        }
-
-        #endregion
-
-        #region Negative Tests
-
-        [TestMethod]
-        public override async Task TestInvalidFirstParamQuery()
-        {
-            await base.TestInvalidFilterParamQuery();
-        }
-
-        [TestMethod]
-        public override async Task TestInvalidFilterParamQuery()
-        {
-            await base.TestInvalidFilterParamQuery();
         }
 
         #endregion

@@ -238,7 +238,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         {
             IEnumerable<string> columnsRequested = new List<string>(
                 columnsRequestedInput);
-            IEnumerable<string> allowedColumns = new List<string>(
+            List<string> allowedColumns = new (
                new string[] { "col1", "col2", "col3", "col4" });
             bool areColumnsAllowed = true;
             bool expectedAuthorizationResult = true;

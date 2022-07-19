@@ -287,6 +287,7 @@ namespace Azure.DataGateway.Service.Authorization
                             }
                         }
 
+                        PopulateAllowedColumns(actionToColumn.AllowedExposedColumns, entityName, actionToColumn.Allowed);
                         // Try to add the actionName to the map if not present.
                         // Builds up mapping: i.e. ActionType.CREATE permitted in {Role1, Role2, ..., RoleN}
                         if (!string.IsNullOrWhiteSpace(actionName) && !entityToRoleMap.ActionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
@@ -311,21 +312,24 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <inheritdoc />
-        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action)
+        public void PopulateAllowedColumns(List<string> allowedExposedColumns, string entityName, HashSet<string> allowedDBColumns)
         {
-            ActionMetadata actionMetadata = EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action];
-            IEnumerable<string> allowedDBColumns = actionMetadata.Allowed;
-            List<string> allowedExposedColumns = new();
-
             foreach (string dbColumn in allowedDBColumns)
             {
                 if (_metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: dbColumn, out string? exposedName))
                 {
-                    allowedExposedColumns.Append(exposedName);
+                    if (exposedName is not null)
+                    {
+                        allowedExposedColumns.Add(exposedName);
+                    }
                 }
             }
+        }
 
-            return allowedExposedColumns;
+        /// <inheritdoc />
+        public List<String> GetAllowedColumns(string entityName, string roleName, string actionName)
+        {
+            return EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[actionName].AllowedExposedColumns;
         }
 
         /// <summary>

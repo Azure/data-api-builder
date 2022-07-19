@@ -38,17 +38,19 @@ namespace Azure.DataGateway.Service.Tests.Unittests
 
             // Execute the query to add view to the database.
             await _queryExecutor.ExecuteQueryAsync(dbQuery + compositeViewQuery, parameters: null);
-            try
-            {
-                DataGatewayException ex = await Assert.ThrowsExceptionAsync<DataGatewayException>(() => _sqlMetadataProvider.InitializeAsync());
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                Assert.AreEqual($"Primary key not configured on the given database object {_compositeViewName}", ex.Message);
-            }
-            finally
-            {
-                string dropViewQuery = $"DROP VIEW IF EXISTS {_compositeViewName}";
-                await _queryExecutor.ExecuteQueryAsync(dropViewQuery, parameters: null);
-            }
+            DataGatewayException ex = await Assert.ThrowsExceptionAsync<DataGatewayException>(() => _sqlMetadataProvider.InitializeAsync());
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual($"Primary key not configured on the given database object {_compositeViewName}", ex.Message);
+        }
+
+        /// <summary>
+        /// Runs after every test to reset the database state
+        /// </summary>
+        [TestCleanup]
+        public async Task TestCleanup()
+        {
+            string dropViewQuery = $"DROP VIEW IF EXISTS {_compositeViewName}";
+            await _queryExecutor.ExecuteQueryAsync(dropViewQuery, parameters: null);
         }
     }
 }

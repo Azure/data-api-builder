@@ -34,12 +34,12 @@ namespace Hawaii.Cli
                     bool isSuccess = ConfigGenerator.TryAddEntityToConfigWithOptions(options);
                     if (isSuccess)
                     {
-                        Console.WriteLine($"Added new entity:{options.Entity} with source: {options.Source} to config: {options.Name} with permissions: {options.Permissions}.");
+                        Console.WriteLine($"Added new entity:{options.Entity} with source: {options.Source} to config: {options.Name} with permissions: {string.Join(":", options.Permissions.ToArray())}.");
                         Console.WriteLine($"SUGGESTION: Use 'hawaii update <options>' to update any entities in your config.");
                     }
                     else
                     {
-                        Console.WriteLine($"ERROR: Could not add entity:{options.Entity} source: {options.Source} to config: {options.Name} with permissions: {options.Permissions}.");
+                        Console.WriteLine($"ERROR: Could not add entity:{options.Entity} source: {options.Source} to config: {options.Name} with permissions: {string.Join(":", options.Permissions.ToArray())}.");
                     }
                 })
                 .WithParsed<UpdateOptions>(options =>

@@ -72,6 +72,55 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Test to verify adding a new Entity without IEnumerable options.
+    /// </summary>
+    [TestMethod]
+    public void TestAddEntityWithoutIEnumerables()
+    {
+        string[] initArgs = { "init", "-n", "hawaii-config-test", "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        Program.Main(initArgs);
+
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
+
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
+
+        string[] addArgs = { "add", "book", "-n", "hawaii-config-test", "--source", "s001.book", "--permissions", "anonymous:*" };
+        Program.Main(addArgs);
+
+        runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(1, runtimeConfig.Entities.Count()); // 1 new entity added
+        Assert.IsTrue(runtimeConfig.Entities.ContainsKey("book"));
+        Entity entity = runtimeConfig.Entities["book"];
+        Console.WriteLine(JsonSerializer.Serialize(entity));
+        Assert.IsNull(entity.Rest);
+        Assert.IsNull(entity.GraphQL);
+        Assert.AreEqual(1, entity.Permissions.Length);
+        Assert.AreEqual("anonymous", entity.Permissions[0].Role);
+        Assert.AreEqual(1, entity.Permissions[0].Actions.Length);
+        Assert.AreEqual(WILDCARD, GetCRUDOperation((JsonElement)entity.Permissions[0].Actions[0]));
+        Assert.IsNull(entity.Mappings);
+        Assert.IsNull(entity.Relationships);
+    }
+
+    /// <summary>
+    /// Test the exact config json generated to verify adding a new Entity without IEnumerable options.
+    /// </summary>
+    [TestMethod]
+    public void TestConfigGeneratedAfterAddingEntityWithoutIEnumerables()
+    {
+        string[] initArgs = { "init", "-n", "hawaii-config-test", "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        Program.Main(initArgs);
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
+        string[] addArgs = { "add", "book", "-n", "hawaii-config-test", "--source", "s001.book", "--permissions", "anonymous:*" };
+        Program.Main(addArgs);
+        Assert.IsTrue(JToken.DeepEquals(JObject.Parse(GetCompleteConfigAfterAddingEntity), JObject.Parse(File.ReadAllText(TEST_RUNTIME_CONFIG))));
+    }
+
+    /// <summary>
     /// Test to verify updating an existing Entity.
     /// It tests updating permissions as well as relationship
     /// </summary>

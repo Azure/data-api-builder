@@ -157,5 +157,141 @@ namespace Hawaii.Cli.Tests
                 }
             }"; }
         }
+
+        public static string GetEntityConfigurationWithPolicyAndFieldsGeneratedWithUpdateCommand
+        {
+            get { return @"
+              {
+                ""entities"": {
+                    ""MyEntity"": {
+                      ""source"": ""MyTable"",
+                      ""permissions"": [
+                          {
+                          ""role"": ""anonymous"",
+                          ""actions"": [
+                                {
+                                    ""action"": ""delete"",
+                                    ""policy"": {
+                                        ""request"": ""@claims.name eq 'hawaii'"",
+                                        ""database"": ""@claims.id eq @item.id""
+                                    },
+                                    ""fields"": {
+                                        ""include"": [""*""],
+                                        ""exclude"": [""level"", ""rating""]
+                                    }
+                                }
+                            ]
+                          }
+                        ]
+                    }
+                }
+            }"; }
+
+        }
+
+        public static string GetEntityConfigurationWithPolicyWithUpdateCommand
+        {
+            get { return @"
+              {
+                ""entities"": {
+                    ""MyEntity"": {
+                      ""source"": ""MyTable"",
+                      ""permissions"": [
+                          {
+                          ""role"": ""anonymous"",
+                          ""actions"": [
+                                {
+                                    ""action"": ""delete"",
+                                    ""policy"": {
+                                        ""request"": ""@claims.name eq 'hawaii'"",
+                                        ""database"": ""@claims.id eq @item.id""
+                                    }
+                                }
+                            ]
+                          }
+                        ]
+                    }
+                }
+            }"; }
+        }
+
+        public static string GetEntityConfigurationWithFieldsGeneratedWithUpdateCommand
+        {
+            get { return @"
+              {
+                ""entities"": {
+                    ""MyEntity"": {
+                      ""source"": ""MyTable"",
+                      ""permissions"": [
+                          {
+                          ""role"": ""anonymous"",
+                          ""actions"": [
+                                {
+                                    ""action"": ""delete"",
+                                    ""fields"": {
+                                        ""include"": [ ""*"" ],
+                                        ""exclude"": [ ""level"", ""rating"" ]
+                                    }
+                                }
+                            ]
+                          }
+                        ]
+                    }
+                }
+            }"; }
+
+        }
+
+        public static string GetCompleteConfigAfterAddingEntity
+        {
+            get
+            {
+                return @"
+                {
+              ""$schema"": ""hawaii.draft-01.schema.json"",
+              ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""localhost:5000""
+              },
+              ""mssql"": {
+                ""set-session-context"": true
+              },
+              ""runtime"": {
+                ""rest"": {
+                  ""enabled"": true,
+                  ""path"": ""/api""
+                },
+                ""graphql"": {
+                  ""allow-introspection"": true,
+                  ""enabled"": true,
+                  ""path"": ""/graphql""
+                },
+                ""host"": {
+                  ""mode"": ""production"",
+                  ""cors"": {
+                    ""origins"": [],
+                    ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                    ""provider"": ""StaticWebApps""
+                  }
+                }
+              },
+              ""entities"": {
+                ""book"": {
+                  ""source"": ""s001.book"",
+                  ""permissions"": [
+                    {
+                      ""role"": ""anonymous"",
+                      ""actions"": [
+                        ""*""
+                      ]
+                    }
+                  ]
+                }
+              }
+            }";
+            }
+        }
     }
 }

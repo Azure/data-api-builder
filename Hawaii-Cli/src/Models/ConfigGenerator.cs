@@ -159,7 +159,7 @@ namespace Hawaii.Cli.Models
             PermissionSetting[]? permissionSettings = ParsePermission(options.Permissions, policy, field);
             if (permissionSettings is null)
             {
-                Console.Error.WriteLine("Please add permission in the following format. --permission \"<<role>>:<<actions>>\"");
+                Console.Error.WriteLine("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
                 return false;
             }
 
@@ -187,18 +187,18 @@ namespace Hawaii.Cli.Models
         /// <summary>
         /// Parse permission string to create PermissionSetting array.
         /// </summary>
-        /// <param name="permissions">Permission string input.</param>
-        /// <param name="fieldsToInclude">fields to include for this permission.</param>
-        /// <param name="fieldsToExclude">fields to exclude for this permission.</param>
+        /// <param name="permissions">Permission input string as IEnumerable.</param>
+        /// <param name="policy">policy to add for this permission.</param>
+        /// <param name="fields">fields to include and exclude for this permission.</param>
         /// <returns></returns>
-        public static PermissionSetting[]? ParsePermission(string permissions, Policy? policy, Field? fields)
+        public static PermissionSetting[]? ParsePermission(IEnumerable<string> permissions, Policy? policy, Field? fields)
         {
             // Getting Role and Actions from permission string
             //
             string? role, actions;
-            if (!TryGetRoleAndActionFromPermissionString(permissions, out role, out actions))
+            if (!TryGetRoleAndActionFromPermission(permissions, out role, out actions))
             {
-                Console.Error.Write($"Failed to fetch the role and action from the given permission string: {permissions}.");
+                Console.Error.Write($"Failed to fetch the role and action from the given permission string: {string.Join(":", permissions.ToArray())}.");
                 return null;
             }
 
@@ -249,19 +249,6 @@ namespace Hawaii.Cli.Models
         /// <returns>True on success. False otherwise.</returns>
         public static bool TryUpdateExistingEntity(UpdateOptions options, ref string runtimeConfigJson)
         {
-            string? source = options.Source;
-            string? rest = options.RestRoute;
-            string? graphQL = options.GraphQLType;
-            string? permissions = options.Permissions;
-            string? fieldsToInclude = options.FieldsToInclude;
-            string? fieldsToExclude = options.FieldsToExclude;
-            string? policyRequest = options.PolicyRequest;
-            string? policyDatabase = options.PolicyDatabase;
-            string? relationship = options.Relationship;
-            string? cardinality = options.Cardinality;
-            string? targetEntity = options.TargetEntity;
-            IEnumerable<string>? mappings = options.Map;
-
             // Deserialize the json string to RuntimeConfig object.
             //
             RuntimeConfig? runtimeConfig;
@@ -282,27 +269,26 @@ namespace Hawaii.Cli.Models
             // Check if Entity is present
             //
             Entity? entity;
-            bool IsEntityPresent = runtimeConfig.Entities.TryGetValue(options.Entity, out entity);
-            if (!IsEntityPresent)
+            if (!runtimeConfig.Entities.TryGetValue(options.Entity, out entity))
             {
                 Console.WriteLine($"Entity:{options.Entity} not found. Please add the entity first.");
                 return false;
             }
 
-            object updatedSource = source is null ? entity!.Source : source;
-            object? updatedRestDetails = rest is null ? entity!.Rest : GetRestDetails(rest);
-            object? updatedGraphqlDetails = graphQL is null ? entity!.GraphQL : GetGraphQLDetails(graphQL);
+            object updatedSource = options.Source is null ? entity!.Source : options.Source;
+            object? updatedRestDetails = options.RestRoute is null ? entity!.Rest : GetRestDetails(options.RestRoute);
+            object? updatedGraphqlDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
             PermissionSetting[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, Relationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;
-            Policy? updatedPolicy = GetPolicyForAction(policyRequest, policyDatabase);
-            Field? updatedFields = GetFieldsForAction(fieldsToInclude, fieldsToExclude);
+            Policy? updatedPolicy = GetPolicyForAction(options.PolicyRequest, options.PolicyDatabase);
+            Field? updatedFields = GetFieldsForAction(options.FieldsToInclude, options.FieldsToExclude);
 
-            if (permissions is not null)
+            if (options.Permissions is not null && options.Permissions.Any())
             {
                 // Get the Updated Permission Settings
                 //
-                updatedPermissions = GetUpdatedPermissionSettings(entity, permissions, updatedPolicy, updatedFields);
+                updatedPermissions = GetUpdatedPermissionSettings(entity, options.Permissions, updatedPolicy, updatedFields);
 
                 if (updatedPermissions is null)
                 {
@@ -312,22 +298,24 @@ namespace Hawaii.Cli.Models
             }
             else
             {
-                if (fieldsToInclude is not null || fieldsToExclude is not null)
+
+                if ((options.FieldsToInclude is not null && options.FieldsToInclude.Any())
+                    || (options.FieldsToExclude is not null && options.FieldsToExclude.Any()))
                 {
-                    Console.WriteLine($"--permission is mandatory with --fields.include and --fields.exclude.");
+                    Console.WriteLine($"--permissions is mandatory with --fields.include and --fields.exclude.");
                     return false;
                 }
 
-                if (policyRequest is not null || policyDatabase is not null)
+                if (options.PolicyRequest is not null || options.PolicyDatabase is not null)
                 {
-                    Console.WriteLine($"--permission is mandatory with --policy-request and --policy-database.");
+                    Console.WriteLine($"--permissions is mandatory with --policy-request and --policy-database.");
                     return false;
                 }
             }
 
-            if (relationship is not null)
+            if (options.Relationship is not null)
             {
-                if (!VerifyCanUpdateRelationship(runtimeConfig, cardinality, targetEntity))
+                if (!VerifyCanUpdateRelationship(runtimeConfig, options.Cardinality, options.TargetEntity))
                 {
                     return false;
                 }
@@ -343,13 +331,13 @@ namespace Hawaii.Cli.Models
                     return false;
                 }
 
-                updatedRelationships[relationship] = new_relationship;
+                updatedRelationships[options.Relationship] = new_relationship;
             }
 
-            if (mappings is not null)
+            if (options.Map is not null && options.Map.Any())
             {
                 // Parsing mappings dictionary from Collection
-                if (!TryParseMappingDictionary(mappings, out updatedMappings))
+                if (!TryParseMappingDictionary(options.Map, out updatedMappings))
                 {
                     return false;
                 }
@@ -372,11 +360,11 @@ namespace Hawaii.Cli.Models
         /// </summary>
         /// <param name="entityToUpdate">entity whose permission needs to be updated</param>
         /// <param name="permissions">New permission to be applied.</param>
-        /// <param name="fieldsToInclude">fields to allow the action permission</param>
-        /// <param name="fieldsToExclude">fields that will be excluded from the action permission.</param>
+        /// <param name="policy">policy to added for this permission</param>
+        /// <param name="fields">fields to be included and excluded from the action permission.</param>
         /// <returns> On failure, returns null. Else updated PermissionSettings array will be returned.</returns>
         private static PermissionSetting[]? GetUpdatedPermissionSettings(Entity entityToUpdate,
-                                                                        string permissions,
+                                                                        IEnumerable<string> permissions,
                                                                         Policy? policy,
                                                                         Field? fields)
         {
@@ -384,7 +372,7 @@ namespace Hawaii.Cli.Models
 
             // Parse role and actions from the permissions string
             //
-            if (!TryGetRoleAndActionFromPermissionString(permissions, out newRole, out newActions))
+            if (!TryGetRoleAndActionFromPermission(permissions, out newRole, out newActions))
             {
                 Console.Error.Write($"Failed to fetch the role and action from the given permission string: {permissions}.");
                 return null;
@@ -580,39 +568,32 @@ namespace Hawaii.Cli.Models
         /// <returns>Returns a Relationship Object</returns>
         public static Relationship? CreateNewRelationshipWithUpdateOptions(UpdateOptions options)
         {
-            string? cardinality = options.Cardinality;
-            string? targetEntity = options.TargetEntity;
-            string? linkingObject = options.LinkingObject;
-            string? linkingSourceFields = options.LinkingSourceFields;
-            string? linkingTargetFields = options.LinkingTargetFields;
-            string? mappingFields = options.MappingFields;
             string[]? updatedSourceFields = null;
             string[]? updatedTargetFields = null;
-            string[]? updatedLinkingSourceFields = linkingSourceFields is null ? null : linkingSourceFields.Split(",");
-            string[]? updatedLinkingTargetFields = linkingTargetFields is null ? null : linkingTargetFields.Split(",");
+            string[]? updatedLinkingSourceFields = (options.LinkingSourceFields is null || !options.LinkingSourceFields.Any()) ? null : options.LinkingSourceFields.ToArray();
+            string[]? updatedLinkingTargetFields = (options.LinkingTargetFields is null || !options.LinkingTargetFields.Any()) ? null : options.LinkingTargetFields.ToArray();
 
-            Cardinality updatedCardinality = Enum.Parse<Cardinality>(cardinality!, ignoreCase: true);
+            Cardinality updatedCardinality = Enum.Parse<Cardinality>(options.Cardinality!, ignoreCase: true);
 
-            if (mappingFields is not null)
+            if (options.MappingFields is not null && options.MappingFields.Any())
             {
                 // Getting source and target fields from mapping fields
                 //
-                string[] mappingFieldsArray = mappingFields.Split(":");
-                if (mappingFieldsArray.Length != 2)
+                if (options.MappingFields.Count() != 2)
                 {
                     Console.WriteLine("Please provide the --mapping.fields in the correct format using ':' between source and target fields.");
                     return null;
                 }
 
-                updatedSourceFields = mappingFieldsArray[0].Split(",");
-                updatedTargetFields = mappingFieldsArray[1].Split(",");
+                updatedSourceFields = options.MappingFields.ElementAt(0).Split(",");
+                updatedTargetFields = options.MappingFields.ElementAt(1).Split(",");
             }
 
             return new Relationship(updatedCardinality,
-                                    targetEntity!,
+                                    options.TargetEntity!,
                                     updatedSourceFields,
                                     updatedTargetFields,
-                                    linkingObject,
+                                    options.LinkingObject,
                                     updatedLinkingSourceFields,
                                     updatedLinkingTargetFields);
         }

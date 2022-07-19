@@ -18,12 +18,12 @@ namespace Hawaii.Cli.Tests
         {
             AddOptions options = new(
                 source: "MyTable",
-                permissions: "anonymous:read,update",
+                permissions: new string[] { "anonymous", "read,update" },
                 entity: "FirstEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
                 name: "outputfile");
@@ -41,12 +41,12 @@ namespace Hawaii.Cli.Tests
         {
             AddOptions options = new(
                 source: "MyTable",
-                permissions: "anonymous:*",
+                permissions: new string[] { "anonymous", "*" },
                 entity: "SecondEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
                 name: "outputfile");
@@ -66,7 +66,7 @@ namespace Hawaii.Cli.Tests
         {
             AddOptions options = new(
                 source: "MyTable",
-                permissions: "anonymous:*",
+                permissions: new string[] { "anonymous", "*" },
                 entity: "FirstEntity",
                 restRoute: null,
                 graphQLType: null,
@@ -87,15 +87,14 @@ namespace Hawaii.Cli.Tests
         [TestMethod]
         public void AddEntityWithAnExistingNameButWithDifferentCase()
         {
-
             AddOptions options = new(
                source: "MyTable",
-               permissions: "anonymous:*",
+               permissions: new string[] { "anonymous", "*" },
                 entity: "FIRSTEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
                 name: "outputfile"
@@ -111,19 +110,18 @@ namespace Hawaii.Cli.Tests
         /// Add Entity with Policy and Field properties
         /// </summary>
         [DataTestMethod]
-        [DataRow("*", "level,rating", "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "PolicyAndFields", DisplayName = "Check adding new Entity with both Policy and Fields")]
-        [DataRow(null, null, "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "Policy", DisplayName = "Check adding new Entity with Policy")]
-        [DataRow("*", "level,rating", null, null, "Fields", DisplayName = "Check adding new Entity with fieldsToInclude and FieldsToExclude")]
-        public void AddEntityWithPolicyAndFieldProperties(string? fieldsToInclude,
-                                                            string? fieldsToExclude,
+        [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "PolicyAndFields", DisplayName = "Check adding new Entity with both Policy and Fields")]
+        [DataRow(new string[] { }, new string[] { }, "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "Policy", DisplayName = "Check adding new Entity with Policy")]
+        [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, null, null, "Fields", DisplayName = "Check adding new Entity with fieldsToInclude and FieldsToExclude")]
+        public void AddEntityWithPolicyAndFieldProperties(IEnumerable<string>? fieldsToInclude,
+                                                            IEnumerable<string>? fieldsToExclude,
                                                             string? policyRequest,
                                                             string? policyDatabase,
                                                             string check)
         {
-
             AddOptions options = new(
                source: "MyTable",
-               permissions: "anonymous:delete",
+               permissions: new string[] { "anonymous", "delete" },
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
@@ -159,22 +157,24 @@ namespace Hawaii.Cli.Tests
         /// Check failure when adding an entity with permission containing invalid actions
         /// </summary>
         [DataTestMethod]
-        [DataRow("anonymous:*,create,read", DisplayName = "Permission With Wildcard And Other CRUD Actions")]
-        [DataRow("anonymous:create,create,read", DisplayName = "Permission With duplicate CRUD Actions")]
-        [DataRow("anonymous:fetch", DisplayName = "Invalid CRUD action: fetch")]
-        [DataRow("anonymous:fetch,*", DisplayName = "WILDCARD combined with other actions")]
-        [DataRow("anonymous:fetch,create", DisplayName = "Mix of invalid and valid CRUD action")]
-        [DataRow("anonymous:reads,create", DisplayName = "Misspelled CRUD actions")]
-        public void TestAddEntityPermissionWithInvalidAction(string permissions)
+        [DataRow(new string[] { "anonymous", "*,create,read" }, DisplayName = "Permission With Wildcard And Other CRUD Actions")]
+        [DataRow(new string[] { "anonymous", "create,create,read" }, DisplayName = "Permission With duplicate CRUD Actions")]
+        [DataRow(new string[] { "anonymous", "fetch" }, DisplayName = "Invalid CRUD action: fetch")]
+        [DataRow(new string[] { "anonymous", "fetch,*" }, DisplayName = "WILDCARD combined with other actions")]
+        [DataRow(new string[] { "anonymous", "fetch,create" }, DisplayName = "Mix of invalid and valid CRUD action")]
+        [DataRow(new string[] { "anonymous", "reads,create" }, DisplayName = "Misspelled CRUD actions")]
+        [DataRow(new string[] { }, DisplayName = "No permissions entered")]
+        public void TestAddEntityPermissionWithInvalidAction(IEnumerable<string> permissions)
         {
+
             AddOptions options = new(
                 source: "MyTable",
                 permissions: permissions,
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: "id,rating",
-                fieldsToExclude: "level",
+                fieldsToInclude: new string[] { "id", "rating" },
+                fieldsToExclude: new string[] { "level" },
                 policyRequest: null,
                 policyDatabase: null,
                 name: "outputfile");
@@ -212,10 +212,7 @@ namespace Hawaii.Cli.Tests
                       ""permissions"": [
                           {
                           ""role"": ""anonymous"",
-                          ""actions"": [
-                              ""read"",
-                              ""update""
-                            ]
+                          ""actions"": [""read"",""update""]
                           }
                         ]
                     }
@@ -232,7 +229,7 @@ namespace Hawaii.Cli.Tests
                       ""permissions"": [
                         {
                           ""role"": ""anonymous"",
-                          ""actions"": [ ""*"" ]
+                          ""actions"": [""*""]
                         }
                       ]
                     }
@@ -250,9 +247,7 @@ namespace Hawaii.Cli.Tests
                     ""permissions"": [
                         {
                         ""role"": ""anonymous"",
-                        ""actions"": [
-                            ""*""
-                        ]
+                        ""actions"": [""*""]
                         }
                     ]
                     }

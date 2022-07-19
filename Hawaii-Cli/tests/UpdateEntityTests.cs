@@ -16,22 +16,22 @@ namespace Hawaii.Cli.Tests
         {
             UpdateOptions options = new(
                 source: "MyTable",
-                permissions: "anonymous:create",
+                permissions: new string[] { "anonymous", "create" },
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: "id,rating",
-                fieldsToExclude: "level",
+                fieldsToInclude: new string[] { "id", "rating" },
+                fieldsToExclude: new string[] { "level" },
                 relationship: null,
                 cardinality: null,
                 targetEntity: null,
                 linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                mappingFields: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                mappingFields: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                map: null,
+                map: new string[] { },
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -41,10 +41,7 @@ namespace Hawaii.Cli.Tests
                                 ""permissions"": [
                                     {
                                         ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            ""read"",
-                                            ""update""
-                                        ]
+                                        ""actions"": [""read"",""update""]
                                     }
                                 ]
                             }
@@ -68,7 +65,7 @@ namespace Hawaii.Cli.Tests
                                             },
                                             ""read"",
                                             ""update""
-                                        ]
+                                        ],
                                     }
                                 ]
                             }
@@ -86,24 +83,25 @@ namespace Hawaii.Cli.Tests
         [TestMethod, Description("it should update the permission by adding a new role.")]
         public void TestUpdateEntityPermissionByAddingNewRole()
         {
+
             UpdateOptions options = new(
                 source: "MyTable",
-                permissions: "authenticated:*",
+                permissions: new string[] { "authenticated", "*" },
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: "id,rating",
-                fieldsToExclude: "level",
+                fieldsToInclude: new string[] { "id", "rating" },
+                fieldsToExclude: new string[] { "level" },
                 relationship: null,
                 cardinality: null,
                 targetEntity: null,
                 linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                mappingFields: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                mappingFields: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                map: null,
+                map: new string[] { },
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -113,10 +111,7 @@ namespace Hawaii.Cli.Tests
                                 ""permissions"": [
                                     {
                                         ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            ""read"",
-                                            ""update""
-                                        ]
+                                        ""actions"" : [""read"", ""update""]
                                     }
                                 ]
                             }
@@ -130,10 +125,7 @@ namespace Hawaii.Cli.Tests
                                 ""permissions"": [
                                     {
                                         ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            ""read"",
-                                            ""update""
-                                        ]
+                                        ""actions"": [""read"",""update""]
                                     },
                                     {
                                         ""role"": ""authenticated"",
@@ -165,22 +157,22 @@ namespace Hawaii.Cli.Tests
         {
             UpdateOptions options = new(
                 source: "MyTable",
-                permissions: "anonymous:update",
+                permissions: new string[] { "anonymous", "update" },
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: "id,rating",
-                fieldsToExclude: "level",
+                fieldsToInclude: new string[] { "id", "rating" },
+                fieldsToExclude: new string[] { "level" },
                 relationship: null,
                 cardinality: null,
                 targetEntity: null,
                 linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                mappingFields: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                mappingFields: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                map: null,
+                map: new string[] { },
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -190,10 +182,7 @@ namespace Hawaii.Cli.Tests
                                 ""permissions"": [
                                     {
                                         ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            ""read"",
-                                            ""update""
-                                        ]
+                                        ""actions"": [ ""read"", ""update""]
                                     }
                                 ]
                             }
@@ -236,22 +225,22 @@ namespace Hawaii.Cli.Tests
         {
             UpdateOptions options = new(
                 source: "MyTable",
-                permissions: "anonymous:read,delete",
+                permissions: new string[] { "anonymous", "read,delete" },
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: "id,type,quantity",
-                fieldsToExclude: null,
+                fieldsToInclude: new string[] { "id", "type", "quantity" },
+                fieldsToExclude: new string[] { },
                 relationship: null,
                 cardinality: null,
                 targetEntity: null,
                 linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                mappingFields: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                mappingFields: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                map: null,
+                map: new string[] { },
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -332,22 +321,22 @@ namespace Hawaii.Cli.Tests
         {
             UpdateOptions options = new(
                 source: "MyTable",
-                permissions: "anonymous:*",
+                permissions: new string[] { "anonymous", "*" },
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: "id,rating",
-                fieldsToExclude: "level",
+                fieldsToInclude: new string[] { "id", "rating" },
+                fieldsToExclude: new string[] { "level" },
                 relationship: null,
                 cardinality: null,
                 targetEntity: null,
                 linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
                 mappingFields: null,
                 policyRequest: null,
                 policyDatabase: null,
-                map: null,
+                map: new string[] { },
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -357,10 +346,7 @@ namespace Hawaii.Cli.Tests
                                 ""permissions"": [
                                     {
                                         ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            ""read"",
-                                            ""update""
-                                        ]
+                                        ""actions"": [""read"", ""update""]
                                     }
                                 ]
                             }
@@ -405,18 +391,18 @@ namespace Hawaii.Cli.Tests
                 entity: "SecondEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
                 relationship: "r2",
                 cardinality: "many",
                 targetEntity: "FirstEntity",
                 linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                mappingFields: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                mappingFields: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                map: null,
+                map: new string[] { },
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -514,18 +500,18 @@ namespace Hawaii.Cli.Tests
                 entity: "SecondEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
                 relationship: "r2",
                 cardinality: "many",
                 targetEntity: "FirstEntity",
                 linkingObject: "entity_link",
-                linkingSourceFields: "eid1",
-                linkingTargetFields: "eid2,fid2",
-                mappingFields: "e1:e2,t2",
+                linkingSourceFields: new string[] { "eid1" },
+                linkingTargetFields: new string[] { "eid2", "fid2" },
+                mappingFields: new string[] { "e1", "e2,t2" },
                 policyRequest: null,
                 policyDatabase: null,
-                map: null,
+                map: new string[] { },
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -616,7 +602,6 @@ namespace Hawaii.Cli.Tests
                     }";
 
             bool isSuccess = TryUpdateExistingEntity(options, ref runtimeConfig);
-
             Assert.IsTrue(isSuccess);
             Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
         }
@@ -633,18 +618,18 @@ namespace Hawaii.Cli.Tests
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
                 relationship: null,
                 cardinality: "many",
                 targetEntity: "FirstEntity",
                 linkingObject: "entity_link",
-                linkingSourceFields: "eid1",
-                linkingTargetFields: "eid2,fid2",
-                mappingFields: "e1:e2,t2",
+                linkingSourceFields: new string[] { "eid1" },
+                linkingTargetFields: new string[] { "eid2", "fid2" },
+                mappingFields: new string[] { "e1", "e2,t2" },
                 policyRequest: null,
                 policyDatabase: null,
-                map: null,
+                map: new string[] { },
                 name: "outputfile");
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
@@ -661,14 +646,92 @@ namespace Hawaii.Cli.Tests
         }
 
         /// <summary>
+        /// Test to check creation of a relationship with multiple linking fields
+        /// </summary>
+        [TestMethod]
+        public void TestCreateNewRelationshipWithMultipleLinkingFields()
+        {
+            UpdateOptions options = new(
+                source: null,
+                permissions: null,
+                entity: "MyEntity",
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                relationship: null,
+                cardinality: "many",
+                targetEntity: "FirstEntity",
+                linkingObject: "entity_link",
+                linkingSourceFields: new string[] { "eid1", "fid1" },
+                linkingTargetFields: new string[] { "eid2", "fid2" },
+                mappingFields: new string[] { "e1", "e2,t2" },
+                policyRequest: null,
+                policyDatabase: null,
+                map: new string[] { },
+                name: "outputfile");
+
+            Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
+
+            Assert.IsNotNull(relationship);
+            Assert.AreEqual(Cardinality.Many, relationship.Cardinality);
+            Assert.AreEqual("entity_link", relationship.LinkingObject);
+            Assert.AreEqual("FirstEntity", relationship.TargetEntity);
+            CollectionAssert.AreEqual(new string[] { "e1" }, relationship.SourceFields);
+            CollectionAssert.AreEqual(new string[] { "e2", "t2" }, relationship.TargetFields);
+            CollectionAssert.AreEqual(new string[] { "eid1", "fid1" }, relationship.LinkingSourceFields);
+            CollectionAssert.AreEqual(new string[] { "eid2", "fid2" }, relationship.LinkingTargetFields);
+
+        }
+
+        /// <summary>
+        /// Test to check creation of a relationship with multiple mapping fields
+        /// </summary>
+        [TestMethod]
+        public void TestCreateNewRelationshipWithMultipleMappingFields()
+        {
+            UpdateOptions options = new(
+                source: null,
+                permissions: null,
+                entity: "MyEntity",
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                relationship: null,
+                cardinality: "many",
+                targetEntity: "FirstEntity",
+                linkingObject: "entity_link",
+                linkingSourceFields: new string[] { "eid1" },
+                linkingTargetFields: new string[] { "eid2", "fid2" },
+                mappingFields: new string[] { "e1,t1", "e2,t2" },
+                policyRequest: null,
+                policyDatabase: null,
+                map: new string[] { },
+                name: "outputfile");
+
+            Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
+
+            Assert.IsNotNull(relationship);
+            Assert.AreEqual(Cardinality.Many, relationship.Cardinality);
+            Assert.AreEqual("entity_link", relationship.LinkingObject);
+            Assert.AreEqual("FirstEntity", relationship.TargetEntity);
+            CollectionAssert.AreEqual(new string[] { "e1", "t1" }, relationship.SourceFields);
+            CollectionAssert.AreEqual(new string[] { "e2", "t2" }, relationship.TargetFields);
+            CollectionAssert.AreEqual(new string[] { "eid1" }, relationship.LinkingSourceFields);
+            CollectionAssert.AreEqual(new string[] { "eid2", "fid2" }, relationship.LinkingTargetFields);
+
+        }
+
+        /// <summary>
         /// Update Entity with new Policy and Field properties
         /// </summary>
         [DataTestMethod]
-        [DataRow("*", "level,rating", "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "PolicyAndFields", DisplayName = "Check adding new Policy and Fields to Action")]
-        [DataRow(null, null, "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "Policy", DisplayName = "Check adding new Policy to Action")]
-        [DataRow("*", "level,rating", null, null, "Fields", DisplayName = "Check adding new fieldsToInclude and FieldsToExclude to Action")]
-        public void TestUpdateEntityWithPolicyAndFieldProperties(string? fieldsToInclude,
-                                                            string? fieldsToExclude,
+        [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "PolicyAndFields", DisplayName = "Check adding new Policy and Fields to Action")]
+        [DataRow(new string[] { }, new string[] { }, "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "Policy", DisplayName = "Check adding new Policy to Action")]
+        [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, null, null, "Fields", DisplayName = "Check adding new fieldsToInclude and FieldsToExclude to Action")]
+        public void TestUpdateEntityWithPolicyAndFieldProperties(IEnumerable<string>? fieldsToInclude,
+                                                            IEnumerable<string>? fieldsToExclude,
                                                             string? policyRequest,
                                                             string? policyDatabase,
                                                             string check)
@@ -676,7 +739,7 @@ namespace Hawaii.Cli.Tests
 
             UpdateOptions options = new(
                source: "MyTable",
-               permissions: "anonymous:delete",
+               permissions: new string[] { "anonymous", "delete" },
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
@@ -688,10 +751,10 @@ namespace Hawaii.Cli.Tests
                 cardinality: null,
                 targetEntity: null,
                 linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                mappingFields: null,
-                map: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                mappingFields: new string[] { },
+                map: new string[] { },
                 name: "outputfile"
             );
 
@@ -700,13 +763,13 @@ namespace Hawaii.Cli.Tests
             switch (check)
             {
                 case "PolicyAndFields":
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyAndFields);
+                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyAndFieldsGeneratedWithUpdateCommand);
                     break;
                 case "Policy":
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicy);
+                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyWithUpdateCommand);
                     break;
                 case "Fields":
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithFields);
+                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithFieldsGeneratedWithUpdateCommand);
                     break;
             }
 
@@ -722,22 +785,22 @@ namespace Hawaii.Cli.Tests
         {
             UpdateOptions options = new(
                source: "MyTable",
-               permissions: "anonymous:delete",
+               permissions: new string[] { "anonymous", "delete" },
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
                 policyRequest: "@claims.name eq 'api_builder'",
                 policyDatabase: "@claims.name eq @item.name",
                 relationship: null,
                 cardinality: null,
                 targetEntity: null,
                 linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                mappingFields: null,
-                map: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                mappingFields: new string[] { },
+                map: new string[] { },
                 name: "outputfile"
             );
 
@@ -785,17 +848,17 @@ namespace Hawaii.Cli.Tests
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
                 relationship: null,
                 cardinality: null,
                 targetEntity: null,
                 linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                mappingFields: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                mappingFields: new string[] { },
                 map: new string[] { "id:Identity", "name:Company Name" },
                 name: "outputfile");
 
@@ -806,10 +869,7 @@ namespace Hawaii.Cli.Tests
                                 ""permissions"": [
                                     {
                                         ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            ""read"",
-                                            ""update""
-                                        ]
+                                        ""actions"": [""read"",""update""]
                                     }
                                 ]
                             }
@@ -823,10 +883,7 @@ namespace Hawaii.Cli.Tests
                                 ""permissions"": [
                                     {
                                         ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            ""read"",
-                                            ""update""
-                                        ]
+                                        ""actions"": [""read"", ""update""]
                                     }
                                 ],
                                 ""mappings"": {
@@ -853,17 +910,17 @@ namespace Hawaii.Cli.Tests
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
                 relationship: null,
                 cardinality: null,
                 targetEntity: null,
                 linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                mappingFields: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                mappingFields: new string[] { },
                 map: new string[] { "name:Company Name", "addr:Company Address", "number:Contact Details" },
                 name: "outputfile");
 
@@ -876,10 +933,7 @@ namespace Hawaii.Cli.Tests
                                 ""permissions"": [
                                     {
                                         ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            ""read"",
-                                            ""update""
-                                        ]
+                                        ""actions"": [""read"",""update""]
                                     }
                                 ],
                                 ""mappings"": {
@@ -909,22 +963,22 @@ namespace Hawaii.Cli.Tests
         {
             UpdateOptions options = new(
                 source: "MyTable",
-                permissions: "anonymous:*,create,read",
+                permissions: new string[] { "anonymous", "*,create,read" },
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: "id,rating",
-                fieldsToExclude: "level",
+                fieldsToInclude: new string[] { "id", "rating" },
+                fieldsToExclude: new string[] { "level" },
                 relationship: null,
                 cardinality: null,
                 targetEntity: null,
                 linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                mappingFields: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                mappingFields: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                map: null,
+                map: new string[] { },
                 name: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -954,8 +1008,8 @@ namespace Hawaii.Cli.Tests
         public void TestParsingFromInvalidPermissionString()
         {
             string? role, actions;
-            string permissions = "anonymous,create"; //wrong format
-            bool isSuccess = TryGetRoleAndActionFromPermissionString(permissions, out role, out actions);
+            IEnumerable<string> permissions = new string[] { "anonymous,create" }; //wrong format
+            bool isSuccess = TryGetRoleAndActionFromPermission(permissions, out role, out actions);
 
             Assert.IsFalse(isSuccess);
             Assert.IsNull(role);
@@ -975,15 +1029,15 @@ namespace Hawaii.Cli.Tests
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
                 relationship: null,
                 cardinality: "many",
                 targetEntity: "FirstEntity",
                 linkingObject: "entity_link",
-                linkingSourceFields: "eid1",
-                linkingTargetFields: "eid2,fid2",
-                mappingFields: "e1,e2,t2", // Invalid value. Correct format uses ':' to separate source and target fields
+                linkingSourceFields: new string[] { "eid1" },
+                linkingTargetFields: new string[] { "eid2", "fid2" },
+                mappingFields: new string[] { "e1,e2,t2" }, // Invalid value. Correct format uses ':' to separate source and target fields
                 policyRequest: null,
                 policyDatabase: null,
                 map: null,
@@ -1009,17 +1063,17 @@ namespace Hawaii.Cli.Tests
                 entity: "MyEntity",
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
                 relationship: null,
                 cardinality: null,
                 targetEntity: null,
                 linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                mappingFields: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                mappingFields: new string[] { },
                 map: mappings.Split(','),
                 name: "outputfile");
 
@@ -1040,6 +1094,40 @@ namespace Hawaii.Cli.Tests
                         }
                     }";
 
+            Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+        }
+
+        /// <summary>
+        /// Test to validate that Permissions is madatory when using options --fields.include or --fields.exclude
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(new string[] { }, new string[] { "field" }, new string[] { }, DisplayName = "Invalid command with fieldsToInclude but no permissions")]
+        [DataRow(new string[] { }, new string[] { }, new string[] { "field1,field2" }, DisplayName = "Invalid command with fieldsToExclude but no permissions")]
+        public void TestUpdateEntityWithInvalidPermissionAndFields(IEnumerable<string> Permissions,
+        IEnumerable<string> FieldsToInclude, IEnumerable<string> FieldsToExclude)
+        {
+            UpdateOptions options = new(
+                source: null,
+                permissions: Permissions,
+                entity: "MyEntity",
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: FieldsToInclude,
+                fieldsToExclude: FieldsToExclude,
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                mappingFields: new string[] { },
+                map: null,
+                name: "outputfile"
+            );
+
+            string runtimeConfig = GetConfigWithMappings();
             Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
         }
 
@@ -1118,10 +1206,7 @@ namespace Hawaii.Cli.Tests
                                 ""permissions"": [
                                     {
                                         ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            ""read"",
-                                            ""update""
-                                        ]
+                                        ""actions"": [""read"",""update""]
                                     }
                                 ],
                                 ""mappings"": {

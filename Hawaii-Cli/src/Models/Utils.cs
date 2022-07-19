@@ -300,12 +300,12 @@ namespace Hawaii.Cli.Models
         /// returns an object of type Field
         /// if fieldsToInclude or fieldsToExclude is provided. Otherwise, returns null.
         /// </summary>
-        public static Field? GetFieldsForAction(string? fieldsToInclude, string? fieldsToExclude)
+        public static Field? GetFieldsForAction(IEnumerable<string>? fieldsToInclude, IEnumerable<string>? fieldsToExclude)
         {
-            if (fieldsToInclude is not null || fieldsToExclude is not null)
+            if ((fieldsToInclude is not null && fieldsToInclude.Any()) || (fieldsToExclude is not null && fieldsToExclude.Any()))
             {
-                HashSet<string>? fieldsToIncludeSet = fieldsToInclude is not null ? fieldsToInclude.Split(",").ToHashSet() : null;
-                HashSet<string>? fieldsToExcludeSet = fieldsToExclude is not null ? fieldsToExclude.Split(",").ToHashSet() : null;
+                HashSet<string>? fieldsToIncludeSet = (fieldsToInclude is not null && fieldsToInclude.Any()) ? new HashSet<string>(fieldsToInclude) : null;
+                HashSet<string>? fieldsToExcludeSet = (fieldsToExclude is not null && fieldsToExclude.Any()) ? new HashSet<string>(fieldsToExclude) : null;
                 return new Field(fieldsToIncludeSet, fieldsToExcludeSet);
             }
 
@@ -393,21 +393,20 @@ namespace Hawaii.Cli.Models
         /// it will return true if parsing is successful and add the parsed value
         /// to the out params role and action.
         /// </summary>
-        public static bool TryGetRoleAndActionFromPermissionString(string permissions, out string? role, out string? actions)
+        public static bool TryGetRoleAndActionFromPermission(IEnumerable<string> permissions, out string? role, out string? actions)
         {
             // Split permission to role and actions
             //
             role = null;
             actions = null;
-            string[] permission_array = permissions.Split(":");
-            if (permission_array.Length != 2)
+            if (permissions.Count() != 2)
             {
-                Console.WriteLine("Please add permission in the following format. --permission \"<<role>>:<<actions>>\"");
+                Console.WriteLine("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
                 return false;
             }
 
-            role = permission_array[0];
-            actions = permission_array[1];
+            role = permissions.ElementAt(0);
+            actions = permissions.ElementAt(1);
             return true;
         }
 

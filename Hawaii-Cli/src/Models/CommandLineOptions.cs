@@ -74,8 +74,8 @@ namespace Hawaii.Cli.Models
             string entity,
             string? restRoute,
             string? graphQLType,
-            string? fieldsToInclude,
-            string? fieldsToExclude,
+            IEnumerable<string>? fieldsToInclude,
+            IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
             string name)
@@ -99,11 +99,11 @@ namespace Hawaii.Cli.Models
         [Option("graphql", Required = false, HelpText = "Type of graphQL.")]
         public string? GraphQLType { get; }
 
-        [Option("fields.include", Required = false, HelpText = "Fields that are allowed access to permission.")]
-        public string? FieldsToInclude { get; }
+        [Option("fields.include", Required = false, Separator = ',', HelpText = "Fields that are allowed access to permission.")]
+        public IEnumerable<string>? FieldsToInclude { get; }
 
-        [Option("fields.exclude", Required = false, HelpText = "Fields that are excluded from the action lists.")]
-        public string? FieldsToExclude { get; }
+        [Option("fields.exclude", Required = false, Separator = ',', HelpText = "Fields that are excluded from the action lists.")]
+        public IEnumerable<string>? FieldsToExclude { get; }
 
         [Option("policy-request", Required = false, HelpText = "Specify the rule to be checked before sending any request to the database.")]
         public string? PolicyRequest { get; }
@@ -120,12 +120,12 @@ namespace Hawaii.Cli.Models
     {
         public AddOptions(
             string source,
-            string permissions,
+            IEnumerable<string> permissions,
             string entity,
             string? restRoute,
             string? graphQLType,
-            string? fieldsToInclude,
-            string? fieldsToExclude,
+            IEnumerable<string>? fieldsToInclude,
+            IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
             string name)
@@ -145,8 +145,8 @@ namespace Hawaii.Cli.Models
         [Option('s', "source", Required = true, HelpText = "Name of the source table or container.")]
         public string Source { get; }
 
-        [Option("permissions", Required = true, HelpText = "Permissions required to access the source table or container.")]
-        public string Permissions { get; }
+        [Option("permissions", Required = true, Separator = ':', HelpText = "Permissions required to access the source table or container.")]
+        public IEnumerable<string> Permissions { get; }
     }
 
     /// <summary>
@@ -157,20 +157,20 @@ namespace Hawaii.Cli.Models
     {
         public UpdateOptions(
             string? source,
-            string? permissions,
+            IEnumerable<string>? permissions,
             string? relationship,
             string? cardinality,
             string? targetEntity,
             string? linkingObject,
-            string? linkingSourceFields,
-            string? linkingTargetFields,
-            string? mappingFields,
+            IEnumerable<string>? linkingSourceFields,
+            IEnumerable<string>? linkingTargetFields,
+            IEnumerable<string>? mappingFields,
             IEnumerable<string>? map,
             string entity,
             string? restRoute,
             string? graphQLType,
-            string? fieldsToInclude,
-            string? fieldsToExclude,
+            IEnumerable<string>? fieldsToInclude,
+            IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
             string name)
@@ -198,8 +198,8 @@ namespace Hawaii.Cli.Models
         [Option('s', "source", Required = false, HelpText = "Name of the source table or container.")]
         public string? Source { get; }
 
-        [Option("permissions", Required = false, HelpText = "Permissions required to access the source table or container.")]
-        public string? Permissions { get; }
+        [Option("permissions", Required = false, Separator = ':', HelpText = "Permissions required to access the source table or container.")]
+        public IEnumerable<string>? Permissions { get; }
 
         [Option("relationship", Required = false, HelpText = "Specify relationship between two entities.")]
         public string? Relationship { get; }
@@ -213,14 +213,14 @@ namespace Hawaii.Cli.Models
         [Option("linking.object", Required = false, HelpText = "Database object that is used to support an M:N relationship.")]
         public string? LinkingObject { get; }
 
-        [Option("linking.source.fields", Required = false, HelpText = "Database fields in the linking object to connect to the related item in the source entity.")]
-        public string? LinkingSourceFields { get; }
+        [Option("linking.source.fields", Required = false, Separator = ',', HelpText = "Database fields in the linking object to connect to the related item in the source entity.")]
+        public IEnumerable<string>? LinkingSourceFields { get; }
 
-        [Option("linking.target.fields", Required = false, HelpText = "Database fields in the linking object to connect to the related item in the target entity.")]
-        public string? LinkingTargetFields { get; }
+        [Option("linking.target.fields", Required = false, Separator = ',', HelpText = "Database fields in the linking object to connect to the related item in the target entity.")]
+        public IEnumerable<string>? LinkingTargetFields { get; }
 
-        [Option("mapping.fields", Required = false, HelpText = "Specify fields to be used for mapping the entities.")]
-        public string? MappingFields { get; }
+        [Option("mapping.fields", Required = false, Separator = ':', HelpText = "Specify fields to be used for mapping the entities.")]
+        public IEnumerable<string>? MappingFields { get; }
 
         [Option('m', "map", Separator = ',', Required = false, HelpText = "Specify mappings between database fields and GraphQL and REST fields. format: --map \"backendName1:exposedName1,backendName2:exposedName2,...\".")]
         public IEnumerable<string>? Map { get; }

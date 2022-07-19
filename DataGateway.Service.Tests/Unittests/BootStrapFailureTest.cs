@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -20,11 +22,24 @@ namespace Azure.DataGateway.Service.Tests.Unittests
         [TestMethod]
         public async Task IndeterministicPrimaryKeyOnDatabaseObject()
         {
-            _testCategory = TestCategory.MSSQL;
-            _runtimeConfig = SqlTestHelper.LoadConfig(_testCategory).CurrentValue;
+            /*
+             * _testCategory = TestCategory.POSTGRESQL;
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(_testCategory);
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
+            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
-            SqlTestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "books_authors");
-            SqlTestBase.SetUpSQLMetadataProvider();
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
+            SetUpSQLMetadataProvider();
+            await ResetDbStateAsync();
+            await _sqlMetadataProvider.InitializeAsync();
+             */
+            _testCategory = TestCategory.MSSQL;
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(_testCategory);
+            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
+            SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
+            TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "books_authors");
+            SetUpSQLMetadataProvider();
 
             // Add composite view whose primary key cannot be determined.
             string dbQuery = File.ReadAllText($"{_testCategory}Books.sql");

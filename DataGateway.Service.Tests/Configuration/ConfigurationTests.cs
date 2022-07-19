@@ -15,11 +15,10 @@ using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Services.MetadataProviders;
-using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
@@ -112,7 +111,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
-        [TestMethod("Validates that local MsSql settings can be loaded and the correct classes are in the service provider.")]
+        [TestMethod("Validates that local MsSql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.MSSQL)]
         public void TestLoadingLocalMsSqlSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
@@ -134,7 +133,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MsSqlMetadataProvider));
         }
 
-        [TestMethod("Validates that local PostgreSql settings can be loaded and the correct classes are in the service provider.")]
+        [TestMethod("Validates that local PostgreSql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.POSTGRESQL)]
         public void TestLoadingLocalPostgresSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, POSTGRESQL_ENVIRONMENT);
@@ -156,7 +155,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
         }
 
-        [TestMethod("Validates that local MySql settings can be loaded and the correct classes are in the service provider.")]
+        [TestMethod("Validates that local MySql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.MYSQL)]
         public void TestLoadingLocalMySqlSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MYSQL_ENVIRONMENT);
@@ -243,9 +242,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         public void TestReadingRuntimeConfig()
         {
             string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
-            JsonSerializerOptions options = RuntimeConfig.GetDeserializationOptions();
-            RuntimeConfig runtimeConfig =
-                    JsonSerializer.Deserialize<RuntimeConfig>(jsonString, options);
+            RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig runtimeConfig);
             Assert.IsNotNull(runtimeConfig.Schema);
             Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
             Assert.IsTrue(runtimeConfig.CosmosDb == null
@@ -271,13 +268,13 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                     && ((JsonElement)entity.Rest).ValueKind == JsonValueKind.Object)
                 {
                     RestEntitySettings rest =
-                        ((JsonElement)entity.Rest).Deserialize<RestEntitySettings>(options);
+                        ((JsonElement)entity.Rest).Deserialize<RestEntitySettings>(RuntimeConfig.SerializerOptions);
                     Assert.IsTrue(
                         ((JsonElement)rest.Route).ValueKind == JsonValueKind.String
                         || ((JsonElement)rest.Route).ValueKind == JsonValueKind.Object);
                     if (((JsonElement)rest.Route).ValueKind == JsonValueKind.Object)
                     {
-                        SingularPlural route = ((JsonElement)rest.Route).Deserialize<SingularPlural>(options);
+                        SingularPlural route = ((JsonElement)rest.Route).Deserialize<SingularPlural>(RuntimeConfig.SerializerOptions);
                     }
                 }
 
@@ -289,13 +286,13 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                     && ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.Object)
                 {
                     GraphQLEntitySettings graphQL =
-                        ((JsonElement)entity.GraphQL).Deserialize<GraphQLEntitySettings>(options);
+                        ((JsonElement)entity.GraphQL).Deserialize<GraphQLEntitySettings>(RuntimeConfig.SerializerOptions);
                     Assert.IsTrue(
                         ((JsonElement)graphQL.Type).ValueKind == JsonValueKind.String
                         || ((JsonElement)graphQL.Type).ValueKind == JsonValueKind.Object);
                     if (((JsonElement)graphQL.Type).ValueKind == JsonValueKind.Object)
                     {
-                        SingularPlural route = ((JsonElement)graphQL.Type).Deserialize<SingularPlural>(options);
+                        SingularPlural route = ((JsonElement)graphQL.Type).Deserialize<SingularPlural>(RuntimeConfig.SerializerOptions);
                     }
                 }
 
@@ -311,7 +308,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                         if (((JsonElement)action).ValueKind == JsonValueKind.Object)
                         {
                             Config.Action configAction =
-                                ((JsonElement)action).Deserialize<Config.Action>(options);
+                                ((JsonElement)action).Deserialize<Config.Action>(RuntimeConfig.SerializerOptions);
                             Assert.IsTrue(allowedActions.Contains(configAction.Name));
                             Assert.IsTrue(configAction.Policy == null
                                 || configAction.Policy.GetType() == typeof(Policy));
@@ -320,7 +317,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                         }
                         else
                         {
-                            string name = ((JsonElement)action).Deserialize<string>(options);
+                            string name = ((JsonElement)action).Deserialize<string>(RuntimeConfig.SerializerOptions);
                             Assert.IsTrue(allowedActions.Contains(name));
                         }
                     }
@@ -374,16 +371,16 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates the runtime configuration file.")]
         public void TestConfigIsValid()
         {
-            IOptionsMonitor<RuntimeConfig> config =
-                SqlTestHelper.LoadConfig(MSSQL_ENVIRONMENT);
+            RuntimeConfigPath configPath =
+                TestHelper.GetRuntimeConfigPath(MSSQL_ENVIRONMENT);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configPath);
 
-            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new();
-            RuntimeConfig runtimeConfig = config.CurrentValue;
-            mockRuntimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out runtimeConfig)).Returns(true);
-            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
-            RuntimeConfigProvider runtimeConfigProvider = mockRuntimeConfigProvider.Object;
-
-            IConfigValidator configValidator = new RuntimeConfigValidator(runtimeConfigProvider, new MockFileSystem());
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            IConfigValidator configValidator =
+                new RuntimeConfigValidator(
+                    configProvider,
+                    new MockFileSystem(),
+                    configValidatorLogger.Object);
 
             configValidator.ValidateConfig();
         }
@@ -410,19 +407,6 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             {
 
             }
-        }
-
-        [TestMethod("Validates that an exception is thrown if config file for the runtime engine is not found.")]
-        public void TestConfigFileNotFound()
-        {
-            RuntimeConfigPath runtimeConfigPath = new()
-            {
-                ConfigFileName = "NonExistentConfigFile.json"
-            };
-
-            Exception ex = Assert.ThrowsException<FileNotFoundException>(() => runtimeConfigPath.LoadRuntimeConfigValue());
-            Console.WriteLine(ex.Message);
-            Assert.AreEqual(ex.Message, "Requested configuration file NonExistentConfigFile.json does not exist.");
         }
 
         [TestCleanup]

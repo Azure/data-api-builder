@@ -9,6 +9,7 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Microsoft.Extensions.Logging;
 using Action = Azure.DataGateway.Config.Action;
 
 namespace Azure.DataGateway.Service.Configurations
@@ -20,6 +21,7 @@ namespace Azure.DataGateway.Service.Configurations
     {
         private readonly IFileSystem _fileSystem;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly ILogger<RuntimeConfigValidator> _logger;
 
         // Only characters from a-z,A-Z,0-9,.,_ are allowed to be present within the claimType.
         private static readonly string _invalidClaimChars = @"[^a-zA-Z0-9_\.]+";
@@ -35,10 +37,14 @@ namespace Azure.DataGateway.Service.Configurations
         // Set of allowed actions for a request.
         private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
 
-        public RuntimeConfigValidator(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
+        public RuntimeConfigValidator(
+            RuntimeConfigProvider runtimeConfigProvider,
+            IFileSystem fileSystem,
+            ILogger<RuntimeConfigValidator> logger)
         {
             _runtimeConfigProvider = runtimeConfigProvider;
             _fileSystem = fileSystem;
+            _logger = logger;
         }
 
         /// <summary>
@@ -52,7 +58,10 @@ namespace Azure.DataGateway.Service.Configurations
 
             if (string.IsNullOrWhiteSpace(runtimeConfig.DatabaseType.ToString()))
             {
-                throw new NotSupportedException("The database-type should be provided with the runtime config.");
+                const string databaseTypeNotSpecified =
+                    "The database-type should be provided with the runtime config.";
+                _logger.LogCritical(databaseTypeNotSpecified);
+                throw new NotSupportedException(databaseTypeNotSpecified);
             }
 
             if (string.IsNullOrWhiteSpace(runtimeConfig.ConnectionString))
@@ -403,8 +412,8 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Helper method to preprocess the policy by replacing "( " with "(", i.e. remove 
-        /// extra spaces after opening parenthesis. This will prevent allowed claimTypes 
+        /// Helper method to preprocess the policy by replacing "( " with "(", i.e. remove
+        /// extra spaces after opening parenthesis. This will prevent allowed claimTypes
         /// from being invalidated.
         /// </summary>
         /// <param name="policy"></param>

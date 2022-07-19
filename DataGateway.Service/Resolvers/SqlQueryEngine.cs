@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -9,6 +10,9 @@ using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -20,6 +24,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         // <summary>
         // Constructor.
@@ -27,11 +32,13 @@ namespace Azure.DataGateway.Service.Resolvers
         public SqlQueryEngine(
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder,
-            ISqlMetadataProvider sqlMetadataProvider)
+            ISqlMetadataProvider sqlMetadataProvider,
+            IHttpContextAccessor httpContextAccessor)
         {
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
             _sqlMetadataProvider = sqlMetadataProvider;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public static async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader, IQueryExecutor executor)
@@ -101,13 +108,103 @@ namespace Azure.DataGateway.Service.Resolvers
         // <summary>
         // Given the FindRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         // </summary>
-        public async Task<JsonDocument> ExecuteAsync(RestRequestContext context)
+        public async Task<IActionResult> ExecuteAsync(RestRequestContext context)
         {
             SqlQueryStructure structure = new(context, _sqlMetadataProvider);
-            JsonDocument queryJson = await ExecuteAsync(structure);
+            using JsonDocument queryJson = await ExecuteAsync(structure);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty table, return an empty json array
-            return queryJson is null ? JsonDocument.Parse("[]") : queryJson;
+            return queryJson is null ? FormatFindResult(JsonDocument.Parse("[]"), (FindRequestContext)context) :
+                                       FormatFindResult(queryJson, (FindRequestContext)context);
+        }
+
+        /// <summary>
+        /// Format the results from a Find operation. Check if there is a requirement
+        /// for a nextLink, and if so, add this value to the array of JsonElements to
+        /// be used as part of the response.
+        /// </summary>
+        /// <param name="jsonDoc">The JsonDocument from the query.</param>
+        /// <param name="context">The RequestContext.</param>
+        /// <returns>An OkObjectResult from a Find operation that has been correctly formatted.</returns>
+        private OkObjectResult FormatFindResult(JsonDocument jsonDoc, FindRequestContext context)
+        {
+            JsonElement jsonElement = jsonDoc.RootElement.Clone();
+
+            // If the results are not a collection or if the query does not have a next page
+            // no nextLink is needed, return JsonDocument as is
+            if (jsonElement.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
+            {
+                // Clones the root element to a new JsonElement that can be
+                // safely stored beyond the lifetime of the original JsonDocument.
+                return OkResponse(jsonElement);
+            }
+
+            // More records exist than requested, we know this by requesting 1 extra record,
+            // that extra record is removed here.
+            IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
+
+            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
+            string after = SqlPaginationUtil.MakeCursorFromJsonElement(
+                               element: rootEnumerated.Last(),
+                               orderByColumns: context.OrderByClauseInUrl,
+                               primaryKey: _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
+                               entityName: context.EntityName,
+                               schemaName: context.DatabaseObject.SchemaName,
+                               tableName: context.DatabaseObject.Name,
+                               sqlMetadataProvider: _sqlMetadataProvider);
+
+            // nextLink is the URL needed to get the next page of records using the same query options
+            // with $after base64 encoded for opaqueness
+            string path = UriHelper.GetEncodedUrl(_httpContextAccessor.HttpContext.Request).Split('?')[0];
+            JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
+                                  path,
+                                  nvc: context!.ParsedQueryString,
+                                  after);
+            rootEnumerated = rootEnumerated.Append(nextLink);
+            return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated));
+        }
+
+        /// <summary>
+        /// Helper function returns an OkObjectResult with provided arguments in a
+        /// form that complies with vNext Api guidelines.
+        /// </summary>
+        /// <param name="jsonResult">Value representing the Json results of the client's request.</param>
+        /// <returns>Correctly formatted OkObjectResult.</returns>
+        public OkObjectResult OkResponse(JsonElement jsonResult)
+        {
+            // For consistency we return all values as type Array
+            if (jsonResult.ValueKind != JsonValueKind.Array)
+            {
+                string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
+                jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
+            }
+
+            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
+            // More than 0 records, and the last element is of type array, then we have pagination
+            if (resultEnumerated.Count() > 0 && resultEnumerated.Last().ValueKind == JsonValueKind.Array)
+            {
+                // Get the nextLink
+                // resultEnumerated will be an array of the form
+                // [{object1}, {object2},...{objectlimit}, [{nextLinkObject}]]
+                // if the last element is of type array, we know it is nextLink
+                // we strip the "[" and "]" and then save the nextLink element
+                // into a dictionary with a key of "nextLink" and a value that
+                // represents the nextLink data we require.
+                string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated.Last());
+                Dictionary<string, object> nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString[1..^1])!;
+                IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count() - 1);
+                return new OkObjectResult(new
+                {
+                    value = value,
+                    @nextLink = nextLink["nextLink"]
+                });
+            }
+
+            // no pagination, do not need nextLink
+            return new OkObjectResult(new
+            {
+                value = resultEnumerated
+            });
         }
 
         /// <inheritdoc />

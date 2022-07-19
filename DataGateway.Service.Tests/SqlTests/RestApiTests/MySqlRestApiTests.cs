@@ -726,12 +726,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                         WHERE id = 5001
                     ) AS subq
                 "
+            },{
+                "InsertOneWithMappingTest",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species,
+                    'United State\'s Region', region)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationMappingTable + @"
+                      WHERE treeId = 3
+                    ) AS subq
+                "
             },
             {
                 "InsertOneInCompositeNonAutoGenPKTest",
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
-                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                      'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
@@ -778,7 +789,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
             {
                 "PutOne_Update_Test",
                 @"
-                    SELECT JSON_OBJECT('id', id) AS data
+                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
                     FROM (
                         SELECT id, title, publisher_id
                         FROM " + _integrationTableName + @"
@@ -788,7 +799,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
-                "PutOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                "PutOne_Update_IfMatchHeaders_Test",
                 @"
                   SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
                   FROM (
@@ -860,6 +871,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                         WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='FairyTales' AND piecesAvailable is NULL 
                         AND piecesRequired = 4
                     ) AS subq
+                "
+            },
+            {
+                "PutOne_Update_With_Mapping_Test",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species,
+                    'United State\'s Region', region, 'height', height)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationMappingTable + @"
+                      WHERE treeId = 1
+                    ) as subq
                 "
             },
             {
@@ -960,6 +983,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
+                "PatchOne_Insert_Mapping_Test",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species,
+                    'United State\'s Region', region, 'height', height)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationMappingTable + @"
+                      WHERE treeId = 4
+                    ) as subq
+                "
+            },
+            {
                 "PatchOne_Insert_CompositeNonAutoGenPK_Test",
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
@@ -1024,7 +1059,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
-                "PatchOne_Update_IfMatchHeaders_Test_Confirm_Update",
+                "PatchOne_Update_IfMatchHeaders_Test",
                 @"
                   SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
                   FROM (
@@ -1042,7 +1077,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     FROM (
                         SELECT id, content, book_id
                         FROM " + _tableWithCompositePrimaryKey + @"
-                        WHERE id = 567 AND book_id = 1 AND content = 'That's a great book'
+                        WHERE id = 567 AND book_id = 1 AND content = 'That''s a great book'
                     ) AS subq
                 "
             },
@@ -1080,7 +1115,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
-                        WHERE categoryid = 1 AND pieceid = 1 AND categoryName ='books' AND piecesAvailable is NULL 
+                        WHERE categoryid = 1 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable is NULL
                         AND piecesRequired = 0
                     ) AS subq
                 "

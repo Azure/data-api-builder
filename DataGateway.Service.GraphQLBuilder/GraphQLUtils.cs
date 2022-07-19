@@ -15,6 +15,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
         public const string AUTHORIZE_DIRECTIVE_ARGUMENT_ROLES = "roles";
         public const string OBJECT_TYPE_MUTATION = "mutation";
         public const string OBJECT_TYPE_QUERY = "query";
+        public const string SYSTEM_ROLE_ANONYMOUS = "anonymous";
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {

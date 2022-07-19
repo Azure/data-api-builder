@@ -314,7 +314,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="queryStructure">SqlQueryStructure object, could be a subQueryStucture which is of the same type.</param>
         /// <param name="context">The GraphQL Middlware context with request metadata like HTTPContext.</param>
-        private void ProcessAuthorizationPolicies(SqlQueryStructure queryStructure, IMiddlewareContext context)
+        public void ProcessAuthorizationPolicies(SqlQueryStructure queryStructure, IMiddlewareContext context)
         {
             string dbQueryPolicy = _authorizationResolver.TryProcessDBPolicy(
                 queryStructure.EntityName,

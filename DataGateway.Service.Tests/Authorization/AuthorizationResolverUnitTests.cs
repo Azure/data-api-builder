@@ -165,7 +165,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new HashSet<string> { "*" }
+                includedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -183,7 +183,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new HashSet<string> { "*" },
+                includedCols: new HashSet<string> { AuthorizationResolver.WILDCARD },
                 excludedCols: new HashSet<string> { "col1", "col2" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
@@ -278,7 +278,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                excludedCols: new HashSet<string> { "*" }
+                excludedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -296,7 +296,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new HashSet<string> { "*" },
+                includedCols: new HashSet<string> { AuthorizationResolver.WILDCARD },
                 excludedCols: new HashSet<string> { "col1", "col2" }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
@@ -316,7 +316,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
                 includedCols: new HashSet<string> { "col1", "col2" },
-                excludedCols: new HashSet<string> { "*" }
+                excludedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -335,7 +335,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
                 includedCols: new HashSet<string> { "col1", "col2" },
-                excludedCols: new HashSet<string> { "*" }
+                excludedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 

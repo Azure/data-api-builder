@@ -347,16 +347,15 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         }
 
         /// <summary>
-        /// Sets up an authorization resolver with a config that specifies the wildcard ("*") as the test entity's actions
+        /// Sets up an authorization resolver with a config that specifies the wildcard ("*") as the test entity's actions.
+        /// Explicitly use this instead of AuthorizationHelpers.InitRuntimeConfig() because we want to create actions as
+        /// array of string instead of array of object.
         /// </summary>
         private static AuthorizationResolver SetupAuthResolverWithWildcardActions()
         {
-            string roleName = "admin";
-            string entityName = AuthorizationHelpers.TEST_ENTITY;
-
             PermissionSetting permissionForEntity = new(
-                role: roleName,
-                actions: new object[] { JsonSerializer.SerializeToElement("*") });
+                role: "admin",
+                actions: new object[] { JsonSerializer.SerializeToElement(AuthorizationResolver.WILDCARD) });
 
             Entity sampleEntity = new(
                 Source: AuthorizationHelpers.TEST_ENTITY,
@@ -368,7 +367,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
                 );
 
             Dictionary<string, Entity> entityMap = new();
-            entityMap.Add(entityName, sampleEntity);
+            entityMap.Add(AuthorizationHelpers.TEST_ENTITY, sampleEntity);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",

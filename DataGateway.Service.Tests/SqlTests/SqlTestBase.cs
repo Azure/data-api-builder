@@ -96,7 +96,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _queryExecutor,
                 _queryBuilder,
                 _sqlMetadataProvider,
-                _httpContextAccessor.Object);
+                _httpContextAccessor.Object,
+                _authorizationResolver);
             _mutationEngine =
                 new SqlMutationEngine(
                 _queryEngine,

@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Auth;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
@@ -13,6 +15,7 @@ using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -25,6 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IAuthorizationResolver _authorizationResolver;
 
         // <summary>
         // Constructor.
@@ -33,12 +37,14 @@ namespace Azure.DataGateway.Service.Resolvers
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder,
             ISqlMetadataProvider sqlMetadataProvider,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            IAuthorizationResolver authorizationResolver)
         {
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
             _sqlMetadataProvider = sqlMetadataProvider;
             _httpContextAccessor = httpContextAccessor;
+            _authorizationResolver = authorizationResolver;
         }
 
         public static async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader, IQueryExecutor executor)
@@ -62,10 +68,22 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json and its related pagination metadata back.
+        /// This method is called by the ResolverMiddleware processing GraphQL queries.
         /// </summary>
+        /// <param name="context">HotChocolate Request Pipeline context containing request metadata</param>
+        /// <param name="parameters">GraphQL Query Parameters from schema retrieved from ResolverMiddleware.GetParametersFromSchemaAndQueryFields()</param>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider);
+
+            // Process Database Authorization Policy for Top-Level Query
+            ProcessAuthorizationPolicies(structure, context);
+
+            // Process Database Authorization Policy for Sub-Queries
+            foreach (SqlQueryStructure subQueryStructure in structure.JoinQueries.Values)
+            {
+                ProcessAuthorizationPolicies(subQueryStructure, context);
+            }
 
             if (structure.PaginationMetadata.IsPaginated)
             {
@@ -263,6 +281,48 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return jsonDocument;
+        }
+
+        /// <summary>
+        /// Given a dbPolicyClause string, appends the string formatting needed to be processed by ODataFilterParser
+        /// As a result each queryStructure object passing through this function will have database query predicates created
+        /// for use by the SqlQueryBuilder.
+        /// </summary>
+        /// <param name="dbPolicyClause">string representation of a processed database authorization policy</param>
+        /// <param name="queryStructure">Top Level or Sub-Query SqlQueryStructure for a GraphQL query.</param>
+        private void ProcessDBPolicyClauseOnQueryStructure(string dbPolicyClause, SqlQueryStructure queryStructure)
+        {
+            if (!string.IsNullOrEmpty(dbPolicyClause))
+            {
+                // Since dbPolicy is nothing but filters to be added by virtue of database policy, we prefix it with
+                // ?$filter= so that it conforms with the format followed by other filter predicates.
+                // This helps the ODataVisitor helpers to parse the policy text properly.
+                dbPolicyClause = "?$filter=" + dbPolicyClause;
+
+                // Parse and save the values that are needed to later generate queries in the given RestRequestContext.
+                // FilterClauseInDbPolicy is an Abstract Syntax Tree representing the parsed policy text.
+                FilterClause topLevelFilterClause = _sqlMetadataProvider.GetODataFilterParser().GetFilterClause(dbPolicyClause, $"{queryStructure.EntityName}.{queryStructure.DatabaseObject.FullName}");
+                queryStructure.ProcessDBPolicyClause(topLevelFilterClause);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the Database Authorization Policiy from the AuthorizationResolver
+        /// and converts it into a dbQueryPolicy string to be processed by the OData Visitor helpers.
+        /// As a result, all top level and sub-queries will have a database query predicate string
+        /// on the SqlQueryStructure, if policies are applicable.
+        /// </summary>
+        /// <param name="queryStructure">SqlQueryStructure object, could be a subQueryStucture which is of the same type.</param>
+        /// <param name="context">The GraphQL Middlware context with request metadata like HTTPContext.</param>
+        private void ProcessAuthorizationPolicies(SqlQueryStructure queryStructure, IMiddlewareContext context)
+        {
+            string dbQueryPolicy = _authorizationResolver.TryProcessDBPolicy(
+                queryStructure.EntityName,
+                context.ContextData[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString(),
+                ActionType.READ,
+                (HttpContext)context.ContextData["HttpContext"]);
+
+            ProcessDBPolicyClauseOnQueryStructure(dbQueryPolicy, queryStructure);
         }
     }
 }

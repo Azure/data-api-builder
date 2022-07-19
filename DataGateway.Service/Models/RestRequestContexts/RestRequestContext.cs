@@ -161,9 +161,9 @@ namespace Azure.DataGateway.Service.Models
         /// This method is only called when FieldsToBeReturned is empty.
         /// </summary>
         /// <param name="fields">List of fields to be returned.</param>
-        public void UpdateReturnFields(List<string> fields)
+        public void UpdateReturnFields(IEnumerable<string> fields)
         {
-            FieldsToBeReturned = fields;
+            FieldsToBeReturned = fields.ToList();
         }
     }
 }

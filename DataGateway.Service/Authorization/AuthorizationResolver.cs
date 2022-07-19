@@ -312,7 +312,7 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <inheritdoc />
-        public void PopulateAllowedColumns(List<string> allowedExposedColumns, string entityName, HashSet<string> allowedDBColumns)
+        public void PopulateAllowedColumns(HashSet<string> allowedExposedColumns, string entityName, HashSet<string> allowedDBColumns)
         {
             foreach (string dbColumn in allowedDBColumns)
             {
@@ -327,7 +327,7 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <inheritdoc />
-        public List<String> GetAllowedColumns(string entityName, string roleName, string actionName)
+        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string actionName)
         {
             return EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[actionName].AllowedExposedColumns;
         }

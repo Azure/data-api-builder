@@ -51,17 +51,17 @@ namespace Azure.DataGateway.Auth
         /// <param name="allowedExposedColumns">Set of fields exposed to user.</param>
         /// <param name="entityName">Entity from request</param>
         /// <param name="allowedDBColumns">Set of allowed backing field names.</param>
-        public void PopulateAllowedColumns(List<string> allowedExposedColumns, string entityName, HashSet<string> allowedDBColumns);
+        public void PopulateAllowedColumns(HashSet<string> allowedExposedColumns, string entityName, HashSet<string> allowedDBColumns);
 
         /// <summary>
-        /// Method to return the list of allowed columns for the given combination of
+        /// Method to return the list of exposed columns for the given combination of
         /// entityName, roleName, action.
         /// </summary>
         /// <param name="entityName">Entity from request</param>
         /// <param name="roleName">Role defined in client role header</param>
         /// <param name="actionName">Action type: Create, Read, Update, Delete</param>
         /// <returns>List of allowed columns</returns>
-        public List<string> GetAllowedColumns(string entityName, string roleName, string actionName);
+        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string actionName);
 
         /// <summary>
         /// Retrieves the policy of an action within an entity's role entry

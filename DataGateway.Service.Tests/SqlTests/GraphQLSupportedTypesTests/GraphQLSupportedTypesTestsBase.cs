@@ -82,7 +82,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { $"{type}_types" }, id);
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, false);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
@@ -150,7 +150,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 5001);
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, true);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
@@ -220,7 +220,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, true);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)

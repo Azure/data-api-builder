@@ -87,39 +87,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             await OneToOneJoinQuery(msSqlQuery);
         }
 
-        /// <summary>
-        /// This deeply nests a many-to-one/one-to-many join multiple times to
-        /// show that it still results in a valid query.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public override async Task DeeplyNestedManyToOneJoinQuery()
-        {
-            await base.DeeplyNestedManyToManyJoinQuery();
-        }
-
-        /// <summary>
-        /// This deeply nests a many-to-many join multiple times to show that
-        /// it still results in a valid query.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public override async Task DeeplyNestedManyToManyJoinQuery()
-        {
-            await base.DeeplyNestedManyToManyJoinQuery();
-        }
-
-        /// <summary>
-        /// This deeply nests a many-to-many join multiple times to show that
-        /// it still results in a valid query.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public override async Task DeeplyNestedManyToManyJoinQueryWithVariables()
-        {
-            await base.DeeplyNestedManyToManyJoinQueryWithVariables();
-        }
-
         [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKey()
         {

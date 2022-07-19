@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Resolvers
         ) : this(
             entityName,
             sqlMetadataProvider,
-            GQLMutationArgumentsToMutationParams(context, CreateMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams))
+            GQLMutArgumentToDictParams(context, CreateMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams))
         { }
 
         public SqlInsertStructure(

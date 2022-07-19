@@ -425,7 +425,16 @@ namespace Azure.DataGateway.Service.Resolvers
                     subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
             }
 
-            List<string> inputArgumentKeys = BaseSqlQueryStructure.InputArgumentToMutationParams(parameters, MutationBuilder.INPUT_ARGUMENT_NAME).Keys.ToList();
+            List<string> inputArgumentKeys;
+            if (mutationOperation != Operation.Delete)
+            {
+                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.INPUT_ARGUMENT_NAME, parameters);
+            }
+            else
+            {
+                inputArgumentKeys = parameters.Keys.ToList();
+            }
+
             bool isAuthorized; // False by default.
 
             switch (mutationOperation)

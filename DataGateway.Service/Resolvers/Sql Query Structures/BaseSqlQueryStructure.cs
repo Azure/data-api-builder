@@ -221,20 +221,62 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Creates the dictionary of fields and their values
-        /// to be set in the mutation from the MutationInput argument name "item".
-        /// This is only applicable for GraphQL since the input we get from the request
-        /// is of the EntityInput object form.
+        /// Very similar to GQLArgumentToDictParams but only extracts the argument names from
+        /// the specified field which means that the method does not need a middleware context
+        /// to resolve the values of the arguments
         /// </summary>
-        /// <exception cref="InvalidDataException"></exception>
-        internal static IDictionary<string, object?> GQLMutationArgumentsToMutationParams(
-            IMiddlewareContext context,
+        /// <param name="fieldName">the field from which to extract the argument names</param>
+        /// <param name="mutationParameters">a dictionary of mutation parameters</param>
+        internal static List<string> GetSubArgumentNamesFromGQLMutArguments
+        (
             string fieldName,
-            IDictionary<string, object?> mutationParams)
+            IDictionary<string, object?> mutationParameters)
         {
             string errMsg;
 
-            if (mutationParams.TryGetValue(fieldName, out object? item))
+            if (mutationParameters.TryGetValue(fieldName, out object? item))
+            {
+                // An inline argument was set
+                // TODO: This assumes the input was NOT nullable.
+                if (item is List<ObjectFieldNode> mutationInputRaw)
+                {
+                    return mutationInputRaw.Select(node => node.Name.Value).ToList();
+                }
+                else
+                {
+                    errMsg = $"Unexpected {fieldName} argument format.";
+                }
+            }
+            else
+            {
+                errMsg = $"Expected {fieldName} argument in mutation arguments.";
+            }
+
+            // should not happen due to gql schema validation
+            throw new DataGatewayException(
+                message: errMsg,
+                subStatusCode: DataGatewayException.SubStatusCodes.BadRequest,
+                statusCode: HttpStatusCode.BadRequest);
+        }
+
+        /// <summary>
+        /// Creates a dictionary of fields and their values
+        /// from a field with type List<ObjectFieldNode> fetched
+        /// a dictionary of parameters
+        /// Used to extract values from parameters
+        /// </summary>
+        /// <param name="context">GQL middleware context used to resolve the values of arguments</param>
+        /// <param name="fieldName">the gql field from which to extract the parameters</param>
+        /// <param name="mutationParameters">a dictionary of mutation parameters</param>
+        /// <exception cref="InvalidDataException"></exception>
+        internal static IDictionary<string, object?> GQLMutArgumentToDictParams(
+            IMiddlewareContext context,
+            string fieldName,
+            IDictionary<string, object?> mutationParameters)
+        {
+            string errMsg;
+
+            if (mutationParameters.TryGetValue(fieldName, out object? item))
             {
                 IObjectField fieldSchema = context.Selection.Field;
                 IInputField itemsArgumentSchema = fieldSchema.Arguments[fieldName];

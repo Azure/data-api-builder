@@ -83,10 +83,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                     if (roles.Count() > 0)
                     {
 
-                        DirectiveNode? authZDirective = GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(roles);
-                        if (authZDirective is not null)
+                        if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
+                                roles,
+                                out DirectiveNode? authZDirective))
                         {
-                            directives.Add(authZDirective);
+                            directives.Add(authZDirective!);
                         }
 
                         NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
@@ -144,10 +145,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
             objectTypeDirectives.Add(new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName)));
 
-            DirectiveNode? authorizeDirective = GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(rolesAllowedForEntity);
-            if (authorizeDirective is not null)
+            if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
+                    rolesAllowedForEntity,
+                    out DirectiveNode? authorizeDirective))
             {
-                objectTypeDirectives.Add(authorizeDirective);
+                objectTypeDirectives.Add(authorizeDirective!);
             }
 
             return new ObjectTypeDefinitionNode(

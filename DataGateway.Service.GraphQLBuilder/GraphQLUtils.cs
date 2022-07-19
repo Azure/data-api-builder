@@ -127,9 +127,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
         /// added.
         /// </summary>
         /// <param name="roles">Collection of roles to set on the directive </param>
-        /// <returns>DirectiveNode such as: @authorize(roles: ["role1", ..., "roleN"])
-        /// where none of role1,..roleN is anonymous. Otherwise, returns null.</returns>
-        public static DirectiveNode? CreateAuthorizationDirectiveIfNecessary(IEnumerable<string>? roles)
+        /// <param name="authorizeDirective">DirectiveNode set such that: @authorize(roles: ["role1", ..., "roleN"])
+        /// where none of role1,..roleN is anonymous. Otherwise, set to null.</param>
+        /// <returns>True if set to a new DirectiveNode, false otherwise. </returns>
+        public static bool CreateAuthorizationDirectiveIfNecessary(
+            IEnumerable<string>? roles,
+            out DirectiveNode? authorizeDirective)
         {
             // Any roles passed in will be added to the authorize directive for this field
             // taking the form: @authorize(roles: [“role1”, ..., “roleN”])
@@ -146,10 +149,16 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
                 }
 
                 ListValueNode roleListNode = new(items: roleList);
-                return new(name: AUTHORIZE_DIRECTIVE, new ArgumentNode(name: AUTHORIZE_DIRECTIVE_ARGUMENT_ROLES, roleListNode));
+                authorizeDirective =
+                    new(name: AUTHORIZE_DIRECTIVE,
+                        new ArgumentNode(name: AUTHORIZE_DIRECTIVE_ARGUMENT_ROLES, roleListNode));
+                return true;
             }
-
-            return null;
+            else
+            {
+                authorizeDirective = null;
+                return false;
+            }
         }
     }
 }

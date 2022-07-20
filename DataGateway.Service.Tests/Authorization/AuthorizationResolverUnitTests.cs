@@ -316,6 +316,36 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         }
 
         /// <summary>
+        /// Exclusion has precedence over inclusion. So for this test case,
+        /// col1 will be excluded even if it is in the inclusion list.
+        /// </summary>
+        [TestMethod("Same column in exclusion and inclusion list")]
+        public void ColumnExclusionWithSameColumnInclusion()
+        {
+            HashSet<string> includedColumns = new() { "col1", "col2" };
+            HashSet<string> excludedColumns = new() { "col1", "col4" };
+
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                ActionType.CREATE,
+                includedCols: includedColumns,
+                excludedCols: excludedColumns
+                );
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            // Col2 should be included.
+            //
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col2" }));
+
+            // Col1 should NOT to included since it is in exclusion list.
+            //
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col1" }));
+
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludedColumns));
+        }
+
+        /// <summary>
         /// Test that wildcard inclusion will include all the columns in the table.
         /// </summary>
         [TestMethod("Wildcard included columns")]
@@ -377,8 +407,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// For this test, exclusion has precedence over inclusion. So for this test case,
-        /// all columns will be excluded.
+        /// For this test, exclusion has precedence over inclusion. So all columns will be excluded
+        /// because wildcard is specified in the exclusion list.
         /// </summary>
         [TestMethod("Wildcard column exclusion with some explicit columns inclusion")]
         public void WildcardColumnExclusionWithExplicitColumnInclusion()

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -26,7 +27,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {title: {eq: ""Awesome book""}})
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {title: {eq: ""Awesome book""}})
                 {
                     items {
                         title
@@ -53,7 +54,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {title: {neq: ""Awesome book""}})
+               books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {title: {neq: ""Awesome book""}})
                 {
                     items {
                         title
@@ -80,7 +81,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {title: {startsWith: ""Awe""}})
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {title: {startsWith: ""Awe""}})
                 {
                     items {
                         title
@@ -107,7 +108,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {title: {endsWith: ""book""}})
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {title: {endsWith: ""book""}})
                 {
                     items {
                         title
@@ -134,7 +135,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {title: {contains: ""some""}})
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {title: {contains: ""some""}})
                 {
                     items {
                         title
@@ -161,7 +162,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {title: {notContains: ""book""}})
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" :{title: {notContains: ""book""}})
                 {
                     items {
                         title
@@ -188,7 +189,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {title: {contains: ""%""}})
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {title: {contains: ""%""}})
                 {
                     items {
                         title
@@ -208,7 +209,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {id: {eq: 2}})
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {eq: 2}})
                 {
                     items {
                         id
@@ -235,7 +236,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {id: {neq: 2}})
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {neq: 2}})
                 {
                     items {
                         id
@@ -262,7 +263,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {id: {gt: 2 lt: 4}})
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {gt: 2 lt: 4}})
                 {
                     items {
                         id
@@ -289,7 +290,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {id: {gte: 2 lte: 4}})
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {gte: 2 lte: 4}})
                 {
                     items {
                         id
@@ -323,7 +324,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {
                                     title: {contains: ""book""}
                                     or: [
                                         {id:{gt: 2 lt: 4}},
@@ -364,7 +365,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {
                                     or: [
                                         {id: {gt: 2} and: [{id: {lt: 4}}]},
                                         {id: {gte: 4} title: {contains: ""book""}}
@@ -400,7 +401,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {
                                     id: {gte: 2}
                                     title: {notContains: ""book""}
                                     and: [
@@ -448,7 +449,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {and: []})
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {and: []})
                 {
                     items {
                         id
@@ -468,7 +469,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {or: []})
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {or: []})
                 {
                     items {
                         id
@@ -597,7 +598,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "books";
             string gqlQuery = @"{
-                books(_filter: {
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {
                                     id: {gte: 2 lte: null}
                                     title: null
                                     or: null
@@ -625,7 +626,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "getBooks";
             string gqlQuery = @"{
-                getBooks(_filter: {id: {lte: null}})
+                getbooks( " + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {lte: null}})
                 {
                     id
                 }

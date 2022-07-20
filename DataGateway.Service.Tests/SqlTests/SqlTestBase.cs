@@ -107,18 +107,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _authorizationResolver,
                 _httpContextAccessor.Object);
 
-            //Initialize the authorization resolver object
-            _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
-
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
                 {
                     builder.ConfigureTestServices(services =>
                     {
+                        services.AddHttpContextAccessor();
                         services.AddSingleton(_runtimeConfigProvider);
                         services.AddSingleton(_queryEngine);
                         services.AddSingleton(_mutationEngine);
+                        services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
+                        {
+                            return new SqlMutationEngine(
+                                    _queryEngine,
+                                    _queryExecutor,
+                                    _queryBuilder,
+                                    _sqlMetadataProvider,
+                                    _authorizationResolver,
+                                    ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider));
+                        });
                         services.AddSingleton(_sqlMetadataProvider);
+                        services.AddSingleton(_authorizationResolver);
                     });
                 });
 

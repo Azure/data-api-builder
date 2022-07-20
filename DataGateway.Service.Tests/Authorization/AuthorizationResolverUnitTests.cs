@@ -153,6 +153,93 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             CollectionAssert.AreEquivalent(expectedRoles, actualRolesForAction.ToList());
         }
 
+        /// <summary>
+        /// Verify that the internal data structure is created correctly when we have
+        /// Two roles for the same entity with different permission.
+        /// readOnlyRole - Read permission only for col1 and no policy.
+        /// readAndUpdateRole - read and update permission for col1 and no policy.
+        /// </summary>
+        [TestMethod]
+        public void TestRoleAndActionCombination()
+        {
+            string readOnlyRole = "readOnlyRole";
+            string readAndUpdateRole = "readAndUpdateRole";
+
+            Field fieldsForRole = new(
+                include: new HashSet<string> { "col1" },
+                exclude: null);
+
+            Action readAction = new(
+                Name: ActionType.READ,
+                Fields: fieldsForRole,
+                Policy: null);
+
+            Action updateAction = new(
+                Name: ActionType.UPDATE,
+                Fields: fieldsForRole,
+                Policy: null);
+
+            PermissionSetting readOnlyPermission = new(
+                role: readOnlyRole,
+                actions: new object[] { JsonSerializer.SerializeToElement(readAction) });
+
+            PermissionSetting readAndUpdatePermission = new(
+            role: readAndUpdateRole,
+            actions: new object[] { JsonSerializer.SerializeToElement(readAction), JsonSerializer.SerializeToElement(updateAction) });
+
+            Entity sampleEntity = new(
+                Source: TEST_ENTITY,
+                Rest: null,
+                GraphQL: null,
+                Permissions: new PermissionSetting[] { readOnlyPermission, readAndUpdatePermission },
+                Relationships: null,
+                Mappings: null
+                );
+
+            Dictionary<string, Entity> entityMap = new();
+            entityMap.Add(AuthorizationHelpers.TEST_ENTITY, sampleEntity);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                MsSql: null,
+                CosmosDb: null,
+                PostgreSql: null,
+                MySql: null,
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                Entities: entityMap
+                );
+
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            // Verify that read only role has permission for read and nothing else.
+            //
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readOnlyRole, ActionType.READ));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readOnlyRole, ActionType.UPDATE));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readOnlyRole, ActionType.CREATE));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readOnlyRole, ActionType.DELETE));
+
+            // Verify that read only role has permission for read and nothing else.
+            //
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readAndUpdateRole, ActionType.READ));
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readAndUpdateRole, ActionType.UPDATE));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readAndUpdateRole, ActionType.CREATE));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readAndUpdateRole, ActionType.DELETE));
+
+            List<string> expectedRolesForRead = new() { readOnlyRole, readAndUpdateRole };
+            List<string> expectedRolesForUpdate = new() { readAndUpdateRole };
+
+            IEnumerable<string> actualReadRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", ActionType.READ);
+            CollectionAssert.AreEquivalent(expectedRolesForRead, actualReadRolesForCol1.ToList());
+            IEnumerable<string> actualUpdateRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", ActionType.UPDATE);
+            CollectionAssert.AreEquivalent(expectedRolesForUpdate, actualUpdateRolesForCol1.ToList());
+
+            IEnumerable<string> actualRolesForRead = authZResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, ActionType.READ);
+            CollectionAssert.AreEquivalent(expectedRolesForRead, actualRolesForRead.ToList());
+            IEnumerable<string> actualRolesForUpdate = authZResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, ActionType.UPDATE);
+            CollectionAssert.AreEquivalent(expectedRolesForUpdate, actualRolesForUpdate.ToList());
+        }
+
         #endregion
 
         /// <summary>

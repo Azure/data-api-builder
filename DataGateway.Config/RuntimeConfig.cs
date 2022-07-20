@@ -133,7 +133,9 @@ namespace Azure.DataGateway.Config
             }
             catch (JsonException ex)
             {
-                Console.WriteLine($"Deserialization of the configuration file failed.\n{ex.Message}");
+                // until this function is refactored to exist in RuntimeConfigProvider
+                // we must use Console for logging.
+                Console.Error.WriteLine($"Deserialization of the configuration file failed.\n{ex.Message}");
 
                 deserializedConfig = default(T);
                 return false;

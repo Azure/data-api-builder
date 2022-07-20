@@ -128,6 +128,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             HttpClient = _application.CreateClient();
         }
 
+        /// <summary>
+        /// Sets the database name based on the provided connection string.
+        /// </summary>
+        /// <param name="connectionString">connection string containing the database name.</param>
         private static void SetDatabaseNameFromConnectionString(string connectionString)
         {
             switch (DatabaseEngine)

@@ -329,7 +329,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            List<string> includedColumns = new() { "col1", "col2", "col3", "col4"};
+            List<string> includedColumns = new() { "col1", "col2", "col3", "col4" };
 
             Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, includedColumns));
         }
@@ -363,7 +363,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [TestMethod("Wildcard column exclusion")]
         public void WildcardColumnExclusion()
         {
-            HashSet<string> excludedColumns = new() { "col1", "col2", "col3", "col4"};
+            HashSet<string> excludedColumns = new() { "col1", "col2", "col3", "col4" };
 
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
@@ -383,7 +383,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [TestMethod("Wildcard column exclusion with some explicit columns inclusion")]
         public void WildcardColumnExclusionWithExplicitColumnInclusion()
         {
-            HashSet<string> includedColumns = new() { "col1", "col2"};
+            HashSet<string> includedColumns = new() { "col1", "col2" };
             HashSet<string> excludedColumns = new() { "col3", "col4" };
 
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(

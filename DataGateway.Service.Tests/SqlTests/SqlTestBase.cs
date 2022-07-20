@@ -55,6 +55,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static RuntimeConfig _runtimeConfig;
         protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
 
+        protected static string DatabaseName { get; set; }
         protected static string DatabaseEngine { get; set; }
         protected static HttpClient HttpClient { get; private set; }
 
@@ -88,6 +89,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
+
+            // gets the database name from the connection string
+            DatabaseName = new SqlConnection(_runtimeConfig.ConnectionString).Database;
 
             //Initialize the authorization resolver object
             _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);

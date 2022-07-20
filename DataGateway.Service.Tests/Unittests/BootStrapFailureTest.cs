@@ -25,7 +25,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(_testCategory);
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
-            TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, _compositeViewName);
+            TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, _compositeViewName, _compositeViewName);
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             SetUpSQLMetadataProvider();
 

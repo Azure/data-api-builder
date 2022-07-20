@@ -112,15 +112,14 @@ namespace Azure.DataGateway.Service.Tests
 
         /// <summary>
         /// Temporary Helper function to ensure that in testing we have an entity
-        /// that can have a custom schema. We create a new entity of 'Magazine' with
-        /// a schema of 'foo' for table 'magazines', and then add this entity to our
-        /// runtime configuration. Because MySql will not have a schema we need a way
-        /// to customize this entity, which this helper function provides. Ultimately
-        /// this will be replaced with a JSON string in the tests that can be fully
-        /// customized for testing purposes.
+        /// that can have a custom schema. Ultimately this will be replaced with a JSON string
+        /// in the tests that can be fully customized for testing purposes.
         /// </summary>
-        /// <param name="configPath"></param>
-        public static void AddMissingEntitiesToConfig(RuntimeConfig config, string dbObjectName, string nameSpace = "")
+        /// <param name="config">Runtimeconfig object</param>
+        /// <param name="dbObjectKey">The key with which the entity is to be added.</param>
+        /// <param name="dbObjectName">The source name of the entity.</param>
+        /// <param name="nameSpace">The namespace in which the entity is present.</param>
+        public static void AddMissingEntitiesToConfig(RuntimeConfig config, string dbObjectKey, string dbObjectName, string nameSpace = "")
         {
             string source = config.DatabaseType is DatabaseType.mysql || string.IsNullOrEmpty(nameSpace) ? $"\"{dbObjectName}\"" : $"\"{nameSpace}.{dbObjectName}\"";
             string entityJsonString =
@@ -149,8 +148,7 @@ namespace Azure.DataGateway.Service.Tests
             };
 
             Entity entity = JsonSerializer.Deserialize<Entity>(entityJsonString, options);
-            string entityKey = dbObjectName.Equals("magazines") ? "Magazine" : dbObjectName;
-            config.Entities.Add(entityKey, entity);
+            config.Entities.Add(dbObjectKey, entity);
         }
     }
 }

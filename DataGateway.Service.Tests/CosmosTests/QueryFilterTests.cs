@@ -1,6 +1,9 @@
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Resolvers;
+using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 
@@ -18,8 +21,9 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         public static void TestFixtureSetup(TestContext context)
         {
             Init(context);
-            Client.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
-            Client.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
+            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
+            cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             CreateItems(DATABASE_NAME, _containerName, 10);
             OverrideEntityContainer("Planet", _containerName);
         }

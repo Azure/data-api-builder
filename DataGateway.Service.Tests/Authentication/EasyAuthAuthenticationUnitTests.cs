@@ -1,11 +1,7 @@
 #nullable enable
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using System.Security.Claims;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.AuthenticationHelpers;
@@ -19,8 +15,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using static Azure.DataGateway.Service.AuthenticationHelpers.AppServiceAuthentication;
-using static Azure.DataGateway.Service.AuthenticationHelpers.StaticWebAppsAuthentication;
 
 namespace Azure.DataGateway.Service.Tests.Authentication
 {
@@ -44,7 +38,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         [TestMethod]
         public async Task TestValidAppServiceEasyAuthToken(bool sendAuthorizationHeader)
         {
-            string generatedToken = CreateAppServiceEasyAuthToken();
+            string generatedToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
                 generatedToken,
                 EasyAuthType.AppService,
@@ -70,7 +64,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         [TestMethod]
         public async Task TestValidStaticWebAppsEasyAuthToken(bool sendAuthorizationHeader, bool addAuthenticated)
         {
-            string generatedToken = CreateStaticWebAppsEasyAuthToken(addAuthenticated);
+            string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated);
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
                 generatedToken,
                 EasyAuthType.StaticWebApps,
@@ -90,7 +84,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         [TestMethod]
         public async Task TestValidStaticWebAppsEasyAuthTokenWithAnonymousRoleOnly()
         {
-            string generatedToken = CreateStaticWebAppsEasyAuthToken(addAuthenticated: false);
+            string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: false);
             HttpContext postMiddlewareContext =
                 await SendRequestAndGetHttpContextState(generatedToken, EasyAuthType.StaticWebApps);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
@@ -113,7 +107,7 @@ namespace Azure.DataGateway.Service.Tests.Authentication
         [TestMethod]
         public async Task TestClientRoleHeaderPresence(bool addAuthenticated, string clientRoleHeader)
         {
-            string generatedToken = CreateStaticWebAppsEasyAuthToken(addAuthenticated);
+            string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated);
             HttpContext postMiddlewareContext =
                 await SendRequestAndGetHttpContextState(
                     generatedToken,
@@ -243,72 +237,6 @@ namespace Azure.DataGateway.Service.Tests.Authentication
 
                 context.Request.Scheme = "https";
             });
-        }
-
-        /// <summary>
-        /// Creates a mocked EasyAuth token, namely, the value of the header injected by EasyAuth.
-        /// </summary>
-        /// <returns>A Base64 encoded string of a serialized EasyAuthClientPrincipal object</returns>
-        private static string CreateAppServiceEasyAuthToken()
-        {
-            AppServiceClaim emailClaim = new()
-            {
-                Val = "apple@contoso.com",
-                Typ = ClaimTypes.Upn
-            };
-
-            AppServiceClaim roleClaimAnonymous = new()
-            {
-                Val = "Anonymous",
-                Typ = ClaimTypes.Role
-            };
-
-            AppServiceClaim roleClaimAuthenticated = new()
-            {
-                Val = "Authenticated",
-                Typ = ClaimTypes.Role
-            };
-
-            List<AppServiceClaim> claims = new();
-            claims.Add(emailClaim);
-            claims.Add(roleClaimAnonymous);
-            claims.Add(roleClaimAuthenticated);
-
-            AppServiceClientPrincipal token = new()
-            {
-                Auth_typ = "aad",
-                Name_typ = "Apple Banana",
-                Claims = claims,
-                Role_typ = ClaimTypes.Role
-            };
-
-            string serializedToken = JsonSerializer.Serialize(value: token);
-            return Convert.ToBase64String(Encoding.UTF8.GetBytes(serializedToken));
-        }
-
-        /// <summary>
-        /// Creates a mocked EasyAuth token, namely, the value of the header injected by EasyAuth.
-        /// </summary>
-        /// <returns>A Base64 encoded string of a serialized EasyAuthClientPrincipal object</returns>
-        private static string CreateStaticWebAppsEasyAuthToken(bool addAuthenticated = true)
-        {
-            List<string> roles = new();
-            roles.Add("anonymous");
-
-            // Add authenticated role conditionally
-            if (addAuthenticated)
-            {
-                roles.Add("authenticated");
-            }
-
-            StaticWebAppsClientPrincipal token = new()
-            {
-                IdentityProvider = "github",
-                UserRoles = roles
-            };
-
-            string serializedToken = JsonSerializer.Serialize(value: token);
-            return Convert.ToBase64String(Encoding.UTF8.GetBytes(serializedToken));
         }
         #endregion
     }

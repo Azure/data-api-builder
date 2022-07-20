@@ -1,7 +1,4 @@
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Services;
-using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
@@ -12,31 +9,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlGraphQLQueryTests : GraphQLQueryTestBase
     {
-        #region Test Fixture Setup
         /// <summary>
-        /// Sets up test fixture for class, only to be run once per test run, as defined by
-        /// MSTest decorator.
+        /// Set the database engine for the tests
         /// </summary>
-        /// <param name="context"></param>
         [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
+        public static async Task SetupAsync(TestContext context)
         {
-            await InitializeTestFixture(context, TestCategory.MSSQL);
-
-            // Setup GraphQL Components
-            //
-            _graphQLService = new GraphQLService(
-                _runtimeConfigProvider,
-                _queryEngine,
-                _mutationEngine,
-                new DocumentCache(),
-                new Sha256DocumentHashProvider(),
-                _sqlMetadataProvider,
-                _authorizationResolver);
-            _graphQLController = new GraphQLController(_graphQLService);
+            DatabaseEngine = TestCategory.MSSQL;
+            await InitializeTestFixture(context);
         }
-
-        #endregion
 
         #region Tests
         /// <summary>
@@ -55,16 +36,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string msSqlQuery = $"SELECT id, title FROM books ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
             await MultipleResultQueryWithVariables(msSqlQuery);
-        }
-
-        /// <summary>
-        /// Gets array of results for querying more than one item.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public override async Task MultipleResultJoinQuery()
-        {
-            await base.MultipleResultJoinQuery();
         }
 
         /// <summary>
@@ -116,39 +87,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             await OneToOneJoinQuery(msSqlQuery);
         }
 
-        /// <summary>
-        /// This deeply nests a many-to-one/one-to-many join multiple times to
-        /// show that it still results in a valid query.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public override async Task DeeplyNestedManyToOneJoinQuery()
-        {
-            await base.DeeplyNestedManyToManyJoinQuery();
-        }
-
-        /// <summary>
-        /// This deeply nests a many-to-many join multiple times to show that
-        /// it still results in a valid query.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public override async Task DeeplyNestedManyToManyJoinQuery()
-        {
-            await base.DeeplyNestedManyToManyJoinQuery();
-        }
-
-        /// <summary>
-        /// This deeply nests a many-to-many join multiple times to show that
-        /// it still results in a valid query.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public override async Task DeeplyNestedManyToManyJoinQueryWithVariables()
-        {
-            await base.DeeplyNestedManyToManyJoinQueryWithVariables();
-        }
-
         [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKey()
         {
@@ -169,30 +107,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             ";
 
             await QueryWithMultileColumnPrimaryKey(msSqlQuery);
-        }
-
-        [TestMethod]
-        public override async Task QueryWithNullResult()
-        {
-            await base.QueryWithNullResult();
-        }
-
-        /// <sumary>
-        /// Test if first param successfully limits list quries
-        /// </summary>
-        [TestMethod]
-        public override async Task TestFirstParamForListQueries()
-        {
-            await base.TestFirstParamForListQueries();
-        }
-
-        /// <sumary>
-        /// Test if filter param successfully filters the query results
-        /// </summary>
-        [TestMethod]
-        public override async Task TestFilterParamForListQueries()
-        {
-            await base.TestFilterParamForListQueries();
         }
 
         /// <summary>
@@ -279,22 +193,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string msSqlQuery = $"SELECT TOP 100 id, title FROM books ORDER BY id ASC FOR JSON PATH, INCLUDE_NULL_VALUES";
             await TestOrderByWithOnlyNullFieldsDefaultsToPkSorting(msSqlQuery);
-        }
-
-        #endregion
-
-        #region Negative Tests
-
-        [TestMethod]
-        public override async Task TestInvalidFirstParamQuery()
-        {
-            await base.TestInvalidFirstParamQuery();
-        }
-
-        [TestMethod]
-        public override async Task TestInvalidFilterParamQuery()
-        {
-            await base.TestInvalidFilterParamQuery();
         }
 
         #endregion

@@ -133,7 +133,7 @@ namespace Azure.DataGateway.Config
             }
             catch (JsonException ex)
             {
-                Console.WriteLine($"Deserialization failed due to: \n{ex}");
+                Console.WriteLine($"Deserialization of the configuration file failed.\n{ex.Message}");
 
                 deserializedConfig = default(T);
                 return false;

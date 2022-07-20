@@ -169,7 +169,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [TestMethod]
         public void TestRoleAndActionCombination()
         {
-            const string READ_ONLY_ROLE  = "readOnlyRole";
+            const string READ_ONLY_ROLE = "readOnlyRole";
             const string READ_AND_UPDATE_ROLE = "readAndUpdateRole";
 
             Field fieldsForRole = new(
@@ -187,7 +187,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 Policy: null);
 
             PermissionSetting readOnlyPermission = new(
-                role: READ_ONLY_ROLE ,
+                role: READ_ONLY_ROLE,
                 actions: new object[] { JsonSerializer.SerializeToElement(readAction) });
 
             PermissionSetting readAndUpdatePermission = new(
@@ -221,10 +221,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Verify that read only role has permission for read and nothing else.
             //
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE , ActionType.READ));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE , ActionType.UPDATE));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE , ActionType.CREATE));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE , ActionType.DELETE));
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, ActionType.READ));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, ActionType.UPDATE));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, ActionType.CREATE));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, ActionType.DELETE));
 
             // Verify that read only role has permission for read and nothing else.
             //
@@ -233,7 +233,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, ActionType.CREATE));
             Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, ActionType.DELETE));
 
-            List<string> expectedRolesForRead = new() { READ_ONLY_ROLE , READ_AND_UPDATE_ROLE };
+            List<string> expectedRolesForRead = new() { READ_ONLY_ROLE, READ_AND_UPDATE_ROLE };
             List<string> expectedRolesForUpdate = new() { READ_AND_UPDATE_ROLE };
 
             IEnumerable<string> actualReadRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", ActionType.READ);

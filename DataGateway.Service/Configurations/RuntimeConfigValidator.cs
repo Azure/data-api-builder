@@ -35,7 +35,7 @@ namespace Azure.DataGateway.Service.Configurations
         private static readonly string _claimChars = @"@claims\.[^\s\)]*";
 
         // Set of allowed actions for a request.
-        private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
+        public static readonly HashSet<string> ValidActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
 
         public RuntimeConfigValidator(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -162,10 +162,10 @@ namespace Azure.DataGateway.Service.Configurations
 
                             // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
                             // don't contain any other field. If they do, we throw an appropriate exception.
-                            if (configAction.Fields!.Include.Contains("*") && configAction.Fields.Include.Count > 1 ||
-                                configAction.Fields.Exclude.Contains("*") && configAction.Fields.Exclude.Count > 1)
+                            if (configAction.Fields!.Include.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Include.Count > 1 ||
+                                configAction.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Exclude.Count > 1)
                             {
-                                string incExc = configAction.Fields.Include.Contains("*") && configAction.Fields.Include.Count > 1 ? "included" : "excluded";
+                                string incExc = configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Include.Count > 1 ? "included" : "excluded";
                                 throw new DataGatewayException(
                                         message: $"No other field can be present with wildcard in the {incExc} set for: entity:{entityName}," +
                                                  $" role:{permissionSetting.Role}, action:{actionName}",
@@ -389,8 +389,8 @@ namespace Azure.DataGateway.Service.Configurations
         private static bool IsFieldAccessible(Match columnNameMatch, HashSet<string> includedFields, HashSet<string> excludedFields)
         {
             string columnName = columnNameMatch.Value.Substring(AuthorizationResolver.FIELD_PREFIX.Length);
-            if (excludedFields.Contains(columnName!) || excludedFields.Contains("*") ||
-                !(includedFields.Contains("*") || includedFields.Contains(columnName)))
+            if (excludedFields.Contains(columnName!) || excludedFields.Contains(AuthorizationResolver.WILDCARD) ||
+                !(includedFields.Contains(AuthorizationResolver.WILDCARD) || includedFields.Contains(columnName)))
             {
                 // If column is present in excluded OR excluded='*'
                 // If column is absent from included and included!=*
@@ -472,7 +472,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <returns>Boolean value indicating whether the actionName is valid or not.</returns>
         public static bool IsValidActionName(string actionName)
         {
-            return actionName.Equals("*") || _validActions.Contains(actionName);
+            return actionName.Equals(AuthorizationResolver.WILDCARD) || ValidActions.Contains(actionName);
         }
     }
 }

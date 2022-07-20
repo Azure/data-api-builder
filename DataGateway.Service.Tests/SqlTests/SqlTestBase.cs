@@ -3,6 +3,7 @@ using System.Data.Common;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Reflection.Metadata;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -54,6 +55,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         private static WebApplicationFactory<Program> _application;
         protected static RuntimeConfig _runtimeConfig;
         protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
+        protected static readonly string _msSqlDefaultDbName = "master";
 
         protected static string DatabaseName { get; set; }
         protected static string DatabaseEngine { get; set; }
@@ -137,15 +139,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             switch (DatabaseEngine)
             {
                 case TestCategory.MSSQL:
-                    DatabaseName = new SqlConnectionStringBuilder(connectionString).InitialCatalog;
+                    // use master as default name for MsSql
+                    string dbName = new SqlConnectionStringBuilder(connectionString).InitialCatalog;
+                    DatabaseName = string.IsNullOrEmpty(dbName) ? _msSqlDefaultDbName : DatabaseName;
                     break;
                 case TestCategory.POSTGRESQL:
+                    // use username as default name for PostgreSql
+                    NpgsqlConnectionStringBuilder npgBuilder = new(connectionString);
+                    DatabaseName = !string.IsNullOrEmpty(npgBuilder.Database) ? npgBuilder.Database : npgBuilder.Username;
+                    break;
                 case TestCategory.MYSQL:
+                    // no default name for MySql
                     DatabaseName = new MySqlConnectionStringBuilder(connectionString).Database;
                     break;
             }
-
-            DatabaseName = string.IsNullOrEmpty(DatabaseName) ? "master" : DatabaseName;
         }
 
         protected static void SetUpSQLMetadataProvider()

@@ -135,7 +135,9 @@ namespace Azure.DataGateway.Config
             {
                 // until this function is refactored to exist in RuntimeConfigProvider
                 // we must use Console for logging.
-                Console.Error.WriteLine($"Deserialization of the configuration file failed.\n{ex.Message}");
+                Console.Error.WriteLine($"Deserialization of the configuration file failed.\n" +
+                    $"Message:\n {ex.Message}\n" +
+                    $"Stack Trace:\n {ex.StackTrace}");
 
                 deserializedConfig = default(T);
                 return false;

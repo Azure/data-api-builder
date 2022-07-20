@@ -296,8 +296,8 @@ namespace Azure.DataGateway.Service.Authorization
         /// Helper method to resolve action into the corresponding actionNames.
         /// In case the action is a wildcard(*), it gets resolved to a set of CRUD operations.
         /// </summary>
-        /// <param name="actionName"></param>
-        /// <returns></returns>
+        /// <param name="actionName">Action name.</param>
+        /// <returns>IEnumerable of all available action name</returns>
         private static IEnumerable<string> GetAllActions(string action)
         {
             return WILDCARD.Equals(action) ? RuntimeConfigValidator._validActions : new List<string> { action };

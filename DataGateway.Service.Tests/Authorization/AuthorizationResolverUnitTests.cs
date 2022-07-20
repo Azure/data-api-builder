@@ -249,7 +249,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
         #endregion
 
-        #region Positive Column Tests
+        #region Column Tests
 
         /// <summary>
         /// Tests the authorization stage: Columns defined for Action
@@ -258,44 +258,65 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// Wildcard included and/or excluded columns handling
         /// and assumes request validation has already occurred
         /// </summary>
-        [TestMethod("Column allowed for action on role")]
-        public void ColsDefinedForAction_ColsForActionTest()
+        [TestMethod("Explicit include columns with no exclusion")]
+        public void ExplicitIncludeColumn()
         {
+            HashSet<string> includedColumns = new() { "col1", "col2", "col3" };
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new HashSet<string> { "col1", "col2", "col3" }
+                includedCols: includedColumns
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            // Mock Request Values - Query a configured entity/role/action with column allowed.
-            List<string> columns = new(new string[] { "col1" });
-            bool expected = true;
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, includedColumns));
 
-            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns), expected);
+            // Not allow column.
+            //
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col4" }));
+
+            // Mix of allow and not allow. Should result in not allow.
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col3", "col4" }));
+
+            // Column does not exist 
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col5", "col6" }));
         }
 
-        [TestMethod("All Columns allowed for action on role")]
-        public void ColDefinedForAction_ColsForActionTest()
+        /// <summary>
+        /// Test to validate that for wildcard action, the authorization stage for column check
+        /// would pass if the action is one among create, read, update, delete and the columns are accessible.
+        /// Similarly if the column is in accessible, then we should not have access.
+        /// </summary>
+        [TestMethod("Explicit include and exclude columns")]
+        public void ExplicitIncludeAndExcludeColumns()
         {
+            HashSet<string> includeColumns = new() { "col1", "col2" };
+            HashSet<string> excludeColumns = new() { "col3" };
+
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
-                includedCols: new HashSet<string> { "col1", "col2", "col3" }
+                includedCols: includeColumns,
+                excludedCols: excludeColumns
                 );
+
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            // Mock Request Values - Query a configured entity/role/action with columns allowed.
-            List<string> columns = new(new string[] { "col1", "col2", "col3" });
-            bool expected = true;
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, includeColumns));
 
-            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns), expected);
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludeColumns));
+
+            // Not exist column in the inclusion or exclusion list
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col4" }));
+
+            // Mix of allow and not allow. Should result in not allow.
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col1", "col3" }));
         }
 
-        [TestMethod("Wildcard included columns allowed for action on role")]
-        public void WildcardIncludeColDefinedForAction_ColsForActionTest()
+        [TestMethod("Wildcard included columns")]
+        public void WildcardColumnInclusion()
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
@@ -306,235 +327,100 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
             // Mock Request Values - Query a configured entity/role/action with columns allowed.
-            List<string> columns = new(new string[] { "col1", "col2", "col3" });
-            bool expected = true;
+            List<string> includedColumns = new() { "col1", "col2", "col3", "col4"};
 
-            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns), expected);
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, includedColumns));
         }
 
-        [TestMethod("Wildcard excluded columns with some included for action on role success")]
-        public void WildcardIncludeColsSomeExcludeDefinedForActionSuccess_ColsForActionTest()
+        [TestMethod("Wildcard include columns with some column exclusion")]
+        public void WildcardColumnInclusionWithExplictExclusion()
         {
+            List<string> includedColumns = new() { "col1", "col2" };
+            HashSet<string> excludedColumns = new() { "col3", "col4" };
+
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.CREATE,
                 includedCols: new HashSet<string> { AuthorizationResolver.WILDCARD },
-                excludedCols: new HashSet<string> { "col1", "col2" }
+                excludedCols: excludedColumns
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            // Mock Request Values - Query a configured entity/role/action with column allowed.
-            List<string> columns = new(new string[] { "col3", "col4" });
-            bool expected = true;
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, includedColumns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludedColumns));
+        }
 
-            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns), expected);
+        [TestMethod("Wildcard column exclusion")]
+        public void WildcardColumnExclusion()
+        {
+            HashSet<string> excludedColumns = new() { "col1", "col2", "col3", "col4"};
+
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                ActionType.CREATE,
+                excludedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
+                );
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludedColumns));
+        }
+
+        [Ignore]
+        [TestMethod("Wildcard column exclusion with some explicit columns inclusion")]
+        public void WildcardColumnExclusionWithExplicitColumnInclusion()
+        {
+            HashSet<string> includedColumns = new() { "col1", "col2"};
+            HashSet<string> excludedColumns = new() { "col3", "col4" };
+
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                ActionType.CREATE,
+                includedCols: includedColumns,
+                excludedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
+                );
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, includedColumns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludedColumns));
+
+            // Mix of include and exclud columns should result in failure.
+            //
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col1", "col4" }));
         }
 
         /// <summary>
         /// Test to validate that for wildcard action, the authorization stage for column check
         /// would pass if the action is one among create, read, update, delete and the columns are accessible.
+        /// Similarly if the column is in accessible, then we should not have access.
         /// </summary>
-        [TestMethod]
-        public void AreColumnsAllowedForActionViaWildcardAction_ColsForActionTest()
+        [TestMethod("Explicit include and exclude columns with wildcard actions")]
+        public void CheckIncludeAndExcludeColumnForWildcardAction()
         {
+            HashSet<string> includeColumns = new() { "col1", "col2" };
+            HashSet<string> excludeColumns = new() { "col3" };
+
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 AuthorizationResolver.WILDCARD,
-                includedCols: new HashSet<string> { "col1", "col2" },
-                excludedCols: new HashSet<string> { "col3" }
+                includedCols: includeColumns,
+                excludedCols: excludeColumns
                 );
 
-            // Mock Request Values - Query a configured entity/role/action with column allowed.
-            List<string> columns = new(new string[] { "col1", "col2" });
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
             foreach (string actionName in RuntimeConfigValidator._validActions)
             {
                 // Validate that the authorization check passes for valid CRUD actions
-                // because columns are accessbile.
-                Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, actionName, columns));
+                // because columns are accessbile or inaccessible.
+                Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, actionName, includeColumns));
+                Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, actionName, excludeColumns));
             }
         }
-        #endregion
 
-        #region Negative Column Tests
-        [TestMethod("Columns NOT allowed for action on role")]
-        public void ColsNotDefinedForAction_ColsForActionTest()
-        {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
-                includedCols: new HashSet<string> { "col1", "col2", "col3" }
-                );
-            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
-
-            // Mock Request Values - Query a configured entity/role/action with column NOT allowed.
-            List<string> columns = new(new string[] { "col4" });
-            bool expected = false;
-
-            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns), expected);
-        }
-
-        [TestMethod("Columns NOT allowed for action on role - with some valid cols")]
-        public void ColsNotDefinedForAction2_ColsForActionTest()
-        {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
-                includedCols: new HashSet<string> { "col1", "col2", "col3" }
-                );
-            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
-
-            // Mock Request Values - Query a configured entity/role/action
-            // to match all allowed columns, with one NOT allowed column.
-            List<string> columns = new(new string[] { "col1", "col2", "col3", "col4" });
-            bool expected = false;
-
-            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns), expected);
-        }
-
-        [TestMethod("Columns NOT allowed for action on role - definition has inc/excl - req has only excluded cols")]
-        public void ColsNotDefinedForAction3_ColsForActionTest()
-        {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
-                includedCols: new HashSet<string> { "col1", "col2", "col3" },
-                excludedCols: new HashSet<string> { "col4", "col5", "col6" }
-                );
-            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
-
-            // Mock Request Values - Query a configured entity/role/action with multiple columns NOT allowed.
-            List<string> columns = new(new string[] { "col4", "col5" });
-            bool expected = false;
-
-            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns), expected);
-        }
-
-        [TestMethod("Columns NOT allowed for action on role - Mixed allowed/disallowed in req.")]
-        public void ColsNotDefinedForAction4Mixed_ColsForActionTest()
-        {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
-                includedCols: new HashSet<string> { "col1", "col2", "col3" },
-                excludedCols: new HashSet<string> { "col4", "col5", "col6" }
-                );
-            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
-
-            // Mock Request Values - Query a configured entity/role/action with 1 allowed/ 1 disallwed column(s).
-            List<string> columns = new(new string[] { "col2", "col5" });
-            bool expected = false;
-
-            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns), expected);
-        }
-
-        [TestMethod("Wildcard excluded for action on role")]
-        public void WildcardExcludeColsDefinedForAction_ColsForActionTest()
-        {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
-                excludedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
-                );
-            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
-
-            // Mock Request Values - Query a configured entity/role/action with columns not allowed.
-            List<string> columns = new(new string[] { "col1", "col2", "col3" });
-            bool expected = false;
-
-            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns), expected);
-        }
-
-        [TestMethod("Wildcard include all except some columns for action on role")]
-        public void WildcardIncludeColsSomeExcludeDefinedForAction_ColsForActionTest()
-        {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
-                includedCols: new HashSet<string> { AuthorizationResolver.WILDCARD },
-                excludedCols: new HashSet<string> { "col1", "col2" }
-                );
-            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
-
-            // Mock Request Values - Query a configured entity/role/action with column allowed and column not allowed.
-            List<string> columns = new(new string[] { "col3", "col1" });
-            bool expected = false;
-
-            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns), expected);
-        }
-
-        [TestMethod("Wildcard exclude all except for some columns for action on role - Request with excluded column")]
-        public void WildcardExcludeColsSomeIncludeDefinedForAction_ColsForActionTest()
-        {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
-                includedCols: new HashSet<string> { "col1", "col2" },
-                excludedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
-                );
-            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
-
-            // Mock Request Values - Query a configured entity/role/action with two columns allowed, one not.
-            List<string> columns = new(new string[] { "col1", "col2", "col3" });
-            bool expected = false;
-
-            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns), expected);
-        }
-
-        [TestMethod("Wildcard exclude all except some columns for action on role - Request with all included columns")]
-        public void WildcardExcludeColsSomeIncludeDefinedForActionSuccess_ColsForActionTest()
-        {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
-                includedCols: new HashSet<string> { "col1", "col2" },
-                excludedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
-                );
-            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
-
-            // Mock Request Values - Query a configured entity/role/action with columns allowed.
-            List<string> columns = new(new string[] { "col1", "col2" });
-            bool expected = false;
-
-            Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns), expected);
-        }
-
-        /// <summary>
-        /// Test to validate that for wildcard action, the authorization stage for column check
-        /// would fail even if the action is one among create, read, update, delete and the columns are inaccessible.
-        /// </summary>
-        [TestMethod]
-        public void InaccessibleColumnsForActionViaWildcardAction_ColsForActionTest()
-        {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                AuthorizationResolver.WILDCARD,
-                includedCols: new HashSet<string> { "col1", "col2" },
-                excludedCols: new HashSet<string> { "col3" }
-                );
-
-            // Mock Request Values - Query a configured entity/role/action with column not allowed.
-            List<string> columns = new(new string[] { "col1", "col3" });
-            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
-
-            foreach (string actionName in RuntimeConfigValidator._validActions)
-            {
-                // Validate that the authorization check fails as the some columns are inaccessible.
-                Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, actionName, columns));
-            }
-        }
         #endregion
 
         #region Tests to validate Database policy parsing

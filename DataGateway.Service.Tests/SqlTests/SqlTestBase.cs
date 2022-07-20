@@ -92,7 +92,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await _sqlMetadataProvider.InitializeAsync();
 
             // sets the database name using the connection string
-            SetDatabaseNameFromConnectionString(_runtimeConfig.ConnectionString);
+            SetDatabaseNameFromConnectionString("");
 
             //Initialize the authorization resolver object
             _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
@@ -139,17 +139,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             {
                 case TestCategory.MSSQL:
                     // use master as default name for MsSql
-                    string dbName = new SqlConnectionStringBuilder(connectionString).InitialCatalog;
-                    DatabaseName = string.IsNullOrEmpty(dbName) ? _msSqlDefaultDbName : DatabaseName;
+                    string sqlDbName = new SqlConnectionStringBuilder(connectionString).InitialCatalog;
+                    DatabaseName = string.IsNullOrEmpty(sqlDbName) ? _msSqlDefaultDbName : DatabaseName;
                     break;
                 case TestCategory.POSTGRESQL:
-                    // use username as default name for PostgreSql
+                    // use username as default name for PostgreSql, if no username use empty string
                     NpgsqlConnectionStringBuilder npgBuilder = new(connectionString);
-                    DatabaseName = !string.IsNullOrEmpty(npgBuilder.Database) ? npgBuilder.Database : npgBuilder.Username;
+                    DatabaseName = !string.IsNullOrEmpty(npgBuilder.Database) ? npgBuilder.Database :
+                        !string.IsNullOrEmpty(npgBuilder.Username) ? npgBuilder.Database : string.Empty;
                     break;
                 case TestCategory.MYSQL:
-                    // no default name for MySql
-                    DatabaseName = new MySqlConnectionStringBuilder(connectionString).Database;
+                    // no default name for MySql, if db name doesn't exist use empty string
+                    string mySqlDbName = new MySqlConnectionStringBuilder(connectionString).Database;
+                    DatabaseName = !string.IsNullOrEmpty(mySqlDbName) ? mySqlDbName : string.Empty;
                     break;
             }
         }

@@ -289,17 +289,23 @@ namespace Azure.DataGateway.Service.Authorization
 
                         // Try to add the actionName to the map if not present.
                         // Builds up mapping: i.e. ActionType.CREATE permitted in {Role1, Role2, ..., RoleN}
-                        if (!string.IsNullOrWhiteSpace(actionName) &&
-                            !entityToRoleMap.ActionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
+                        // Expand wildcard action to explicit action type.
+                        //
+                        if (actionName.Equals(AuthorizationResolver.WILDCARD))
                         {
-                            entityToRoleMap.ActionToRolesMap[actionName].Add(role);
+                            AddRoleToAction(entityToRoleMap.ActionToRolesMap, ActionType.READ, role);
+                            AddRoleToAction(entityToRoleMap.ActionToRolesMap, ActionType.CREATE, role);
+                            AddRoleToAction(entityToRoleMap.ActionToRolesMap, ActionType.DELETE, role);
+                            AddRoleToAction(entityToRoleMap.ActionToRolesMap, ActionType.UPDATE, role);
+                        }
+                        // Otherwise, we know explicit action name. Just add that.
+                        //
+                        else if (!string.IsNullOrWhiteSpace(actionName))
+                        {
+                            AddRoleToAction(entityToRoleMap.ActionToRolesMap, actionName, role);
                         }
 
-                        foreach (string allowedColumn in actionToColumn.Allowed)
-                        {
-                            entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
-                            entityToRoleMap.FieldToRolesMap[allowedColumn][actionName].Add(role);
-                        }
+                        PopuldateFieldToRoleMap(entityToRoleMap.FieldToRolesMap, role, actionName, actionToColumn);
 
                         roleToAction.ActionToColumnMap[actionName] = actionToColumn;
                     }
@@ -308,6 +314,40 @@ namespace Azure.DataGateway.Service.Authorization
                 }
 
                 EntityPermissionsMap[entityName] = entityToRoleMap;
+            }
+        }
+
+        private static void PopuldateFieldToRoleMap(
+            Dictionary<string, Dictionary<string, List<string>>> fieldToRolesMap,
+            string role,
+            string actionName,
+            ActionMetadata actionToColumn)
+        {
+            foreach (string allowedColumn in actionToColumn.Allowed)
+            {
+                fieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
+
+                // Expand wildcard action to explicit action type.
+                //
+                if (actionName.Equals(AuthorizationResolver.WILDCARD))
+                {
+                    fieldToRolesMap[allowedColumn][ActionType.READ].Add(role);
+                    fieldToRolesMap[allowedColumn][ActionType.CREATE].Add(role);
+                    fieldToRolesMap[allowedColumn][ActionType.DELETE].Add(role);
+                    fieldToRolesMap[allowedColumn][ActionType.UPDATE].Add(role);
+                }
+                else
+                {
+                    fieldToRolesMap[allowedColumn][actionName].Add(role);
+                }
+            }
+        }
+
+        private static void AddRoleToAction(Dictionary<string, List<string>> actionToRolesMap, string actionName, string role)
+        {
+            if (!actionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
+            {
+                actionToRolesMap[actionName].Add(role);
             }
         }
 

@@ -293,10 +293,10 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <summary>
-        /// Helper method to resolve action into the corresponding actionNames.
+        /// Helper method to create a list consisting of the given action name.
         /// In case the action is a wildcard(*), it gets resolved to a set of CRUD operations.
         /// </summary>
-        /// <param name="actionName">Action name.</param>
+        /// <param name="action">Action name.</param>
         /// <returns>IEnumerable of all available action name</returns>
         private static IEnumerable<string> GetAllActions(string action)
         {

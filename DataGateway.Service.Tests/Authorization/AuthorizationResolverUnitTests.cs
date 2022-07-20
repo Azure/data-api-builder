@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Http;
@@ -128,11 +129,11 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            bool expected = true;
-            Assert.AreEqual(expected, authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, ActionType.CREATE));
-            Assert.AreEqual(expected, authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, ActionType.READ));
-            Assert.AreEqual(expected, authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, ActionType.UPDATE));
-            Assert.AreEqual(expected, authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, ActionType.DELETE));
+            foreach (string actionName in RuntimeConfigValidator._validActions)
+            {
+                // Validate that the authorization check passes for valid CRUD actions.
+                Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, actionName));
+            }
         }
 
         /// <summary>
@@ -150,9 +151,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            bool expected = false;
-            Assert.AreEqual(expected, authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, "patch"));
-            Assert.AreEqual(expected, authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, "fetch"));
+            // Validate that the authorization check fails because the actions are invalid.
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, "patch"));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, "fetch"));
         }
         #endregion
 
@@ -256,11 +257,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             List<string> columns = new(new string[] { "col1", "col2" });
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            bool expected = true;
-            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns));
-            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.READ, columns));
-            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.UPDATE, columns));
-            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.DELETE, columns));
+            foreach (string actionName in RuntimeConfigValidator._validActions)
+            {
+                // Validate that the authorization check passes for valid CRUD actions
+                // because columns are accessbile.
+                Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, actionName, columns));
+            }
         }
         #endregion
         #region Negative Column Tests
@@ -433,11 +435,11 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             List<string> columns = new(new string[] { "col1", "col3" });
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            bool expected = false;
-            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns));
-            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.READ, columns));
-            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.UPDATE, columns));
-            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.DELETE, columns));
+            foreach (string actionName in RuntimeConfigValidator._validActions)
+            {
+                // Validate that the authorization check fails as the some columns are inaccessible.
+                Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, actionName, columns));
+            }
         }
         #endregion
 

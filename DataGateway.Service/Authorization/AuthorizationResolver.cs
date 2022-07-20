@@ -141,7 +141,7 @@ namespace Azure.DataGateway.Service.Authorization
                 {
                     // backingColumn will not be null when TryGetBackingColumn() is true.
                     if (actionToColumnMap.Excluded.Contains(backingColumn!) || actionToColumnMap.Excluded.Contains(WILDCARD) ||
-                    !(actionToColumnMap.Included.Contains(WILDCARD) || actionToColumnMap.Included.Contains(backingColumn!)))
+                        !(actionToColumnMap.Included.Contains(WILDCARD) || actionToColumnMap.Included.Contains(backingColumn!)))
                     {
                         // If column is present in excluded OR excluded='*'
                         // If column is absent from included and included!=*
@@ -289,7 +289,8 @@ namespace Azure.DataGateway.Service.Authorization
 
                         // Try to add the actionName to the map if not present.
                         // Builds up mapping: i.e. ActionType.CREATE permitted in {Role1, Role2, ..., RoleN}
-                        if (!string.IsNullOrWhiteSpace(actionName) && !entityToRoleMap.ActionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
+                        if (!string.IsNullOrWhiteSpace(actionName) &&
+                            !entityToRoleMap.ActionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
                         {
                             entityToRoleMap.ActionToRolesMap[actionName].Add(role);
                         }

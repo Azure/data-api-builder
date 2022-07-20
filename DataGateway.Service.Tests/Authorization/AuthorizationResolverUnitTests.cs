@@ -87,7 +87,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Assert.AreEqual(authZResolver.IsValidRoleContext(context.Object), expected);
         }
         #endregion
-        #region Role and Action on Entity Tests
         /// <summary>
         /// Tests the AreRoleAndActionDefinedForEntity stage of authorization.
         /// Request Action is defined for role -> VALID
@@ -95,6 +94,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         ///     Ensures method short ciruits in circumstances role is not defined -> INVALID
         /// Request Action does not match an action defined for role (role has >=1 defined action) -> INVALID
         /// </summary>
+        #region Role and Action on Entity Tests
         [DataTestMethod]
         [DataRow("Writer", ActionType.CREATE, "Writer", ActionType.CREATE, true)]
         [DataRow("Reader", ActionType.CREATE, "Reader", "", false)]
@@ -111,6 +111,48 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Mock Request Values
             Assert.AreEqual(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, roleName, actionName), expected);
+        }
+
+        /// <summary>
+        /// Test to validate that for wildcard action, the authorization stage for role/action check
+        /// would pass if the action is one among create, read, update, delete.
+        /// </summary>
+        [TestMethod]
+        public void AreRoleAndActionDefinedForEntityViaWildcardAction()
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                "*",
+                includedCols: new HashSet<string> { "*" }
+                );
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            bool expected = true;
+            Assert.AreEqual(expected, authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, ActionType.CREATE));
+            Assert.AreEqual(expected, authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, ActionType.READ));
+            Assert.AreEqual(expected, authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, ActionType.UPDATE));
+            Assert.AreEqual(expected, authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, ActionType.DELETE));
+        }
+
+        /// <summary>
+        /// Test to validate that for wildcard action, the authorization stage for role/action check
+        /// would fail if the action is not one among create, read, update, delete.
+        /// </summary>
+        [TestMethod]
+        public void UndefinedRoleOrActionDefinedForEntityViaWildcardAction()
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                "*",
+                includedCols: new HashSet<string> { "*" }
+                );
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            bool expected = false;
+            Assert.AreEqual(expected, authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, "patch"));
+            Assert.AreEqual(expected, authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, "fetch"));
         }
         #endregion
 
@@ -193,6 +235,32 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             bool expected = true;
 
             Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns), expected);
+        }
+
+        /// <summary>
+        /// Test to validate that for wildcard action, the authorization stage for column check
+        /// would pass if the action is one among create, read, update, delete and the columns are accessible.
+        /// </summary>
+        [TestMethod]
+        public void AreColumnsAllowedForActionViaWildcardAction_ColsForActionTest()
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                "*",
+                includedCols: new HashSet<string> { "col1", "col2" },
+                excludedCols: new HashSet<string> { "col3" }
+                );
+
+            // Mock Request Values - Query a configured entity/role/action with column allowed.
+            List<string> columns = new(new string[] { "col1", "col2" });
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            bool expected = true;
+            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns));
+            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.READ, columns));
+            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.UPDATE, columns));
+            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.DELETE, columns));
         }
         #endregion
         #region Negative Column Tests
@@ -344,6 +412,32 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             bool expected = false;
 
             Assert.AreEqual(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns), expected);
+        }
+
+        /// <summary>
+        /// Test to validate that for wildcard action, the authorization stage for column check
+        /// would fail even if the action is one among create, read, update, delete and the columns are inaccessible.
+        /// </summary>
+        [TestMethod]
+        public void InaccessibleColumnsForActionViaWildcardAction_ColsForActionTest()
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                "*",
+                includedCols: new HashSet<string> { "col1", "col2" },
+                excludedCols: new HashSet<string> { "col3" }
+                );
+
+            // Mock Request Values - Query a configured entity/role/action with column not allowed.
+            List<string> columns = new(new string[] { "col1", "col3" });
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            bool expected = false;
+            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, columns));
+            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.READ, columns));
+            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.UPDATE, columns));
+            Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.DELETE, columns));
         }
         #endregion
 

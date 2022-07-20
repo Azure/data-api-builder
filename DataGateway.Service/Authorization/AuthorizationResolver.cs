@@ -293,7 +293,7 @@ namespace Azure.DataGateway.Service.Authorization
 
         /// <summary>
         /// Helper method to resolve action into the corresponding actionNames.
-        /// In case the action is a wildcard, it gets resolved to a set of CRUD operations.
+        /// In case the action is a wildcard(*), it gets resolved to a set of CRUD operations.
         /// </summary>
         /// <param name="actionName"></param>
         /// <returns></returns>

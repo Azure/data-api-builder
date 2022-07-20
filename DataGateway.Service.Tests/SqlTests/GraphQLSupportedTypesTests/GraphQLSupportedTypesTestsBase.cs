@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
@@ -24,12 +22,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         protected const string BOOLEAN_TYPE = "boolean";
         protected const string DATETIME_TYPE = "datetime";
         protected const string BYTEARRAY_TYPE = "bytearray";
-
-        #region Test Fixture Setup
-        protected static GraphQLService _graphQLService;
-        protected static GraphQLController _graphQLController;
-
-        #endregion
 
         #region Tests
 
@@ -90,20 +82,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { $"{type}_types" }, id);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
             {
-                CompareFloatResults(type, actual, expected);
+                CompareFloatResults(type, actual.ToString(), expected);
             }
             else if (type == DATETIME_TYPE)
             {
-                CompareDateTimeResults(actual, expected);
+                CompareDateTimeResults(actual.ToString(), expected);
             }
             else
             {
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
             }
         }
 
@@ -158,20 +150,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 5001);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
             {
-                CompareFloatResults(type, actual, expected);
+                CompareFloatResults(type, actual.ToString(), expected);
             }
             else if (type == DATETIME_TYPE)
             {
-                CompareDateTimeResults(actual, expected);
+                CompareDateTimeResults(actual.ToString(), expected);
             }
             else
             {
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
             }
 
             await ResetDbStateAsync();
@@ -228,20 +220,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
             {
-                CompareFloatResults(type, actual, expected);
+                CompareFloatResults(type, actual.ToString(), expected);
             }
             else if (type == DATETIME_TYPE)
             {
-                CompareDateTimeResults(actual, expected);
+                CompareDateTimeResults(actual.ToString(), expected);
             }
             else
             {
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
             }
 
             await ResetDbStateAsync();

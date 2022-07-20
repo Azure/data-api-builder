@@ -13,6 +13,12 @@ namespace Azure.DataGateway.Service.Tests.Unittests
     public class BootStrapFailureTest : SqlTestBase
     {
         private static readonly string _compositeViewName = "books_authors";
+
+        [ClassInitialize]
+        public static void Setup(TestContext context)
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+        }
         /// <summary>
         /// Test to validate that the runtime fails and throws an exception during bootstrap when the primary
         /// key cannot be determined for a database object.
@@ -21,8 +27,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
         [TestMethod]
         public async Task IndeterministicPrimaryKeyOnDatabaseObject()
         {
-            _testCategory = TestCategory.MSSQL;
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(_testCategory);
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(DatabaseEngine);
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
             TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, _compositeViewName, _compositeViewName);
@@ -30,7 +35,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
             SetUpSQLMetadataProvider();
 
             // Add composite view whose primary key cannot be determined.
-            string dbQuery = File.ReadAllText($"{_testCategory}Books.sql");
+            string dbQuery = File.ReadAllText($"{DatabaseEngine}Books.sql");
             string compositeViewQuery = $"EXEC('CREATE VIEW {_compositeViewName} as SELECT books.title, authors.[name], " +
                 "authors.[birthdate], books.id as book_id, authors.id as author_id " +
                 "FROM dbo.books INNER JOIN dbo.book_author_link ON books.[id] = book_author_link.book_id " +

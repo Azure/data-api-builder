@@ -54,7 +54,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         private static WebApplicationFactory<Program> _application;
         protected static RuntimeConfig _runtimeConfig;
         protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
-        protected const string _msSqlDefaultDbName = "master";
+        protected const string MSSQL_DEFAULT_DB_NAME = "master";
 
         protected static string DatabaseName { get; set; }
         protected static string DatabaseEngine { get; set; }

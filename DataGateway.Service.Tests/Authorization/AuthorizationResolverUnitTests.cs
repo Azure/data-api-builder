@@ -90,6 +90,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         }
         #endregion
 
+        #region Role and Action on Entity Tests
 
         /// <summary>
         /// Tests the AreRoleAndActionDefinedForEntity stage of authorization.
@@ -98,7 +99,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         ///     Ensures method short ciruits in circumstances role is not defined -> INVALID
         /// Request Action does not match an action defined for role (role has >=1 defined action) -> INVALID
         /// </summary>
-        #region Role and Action on Entity Tests
         [DataTestMethod]
         [DataRow("Writer", ActionType.CREATE, "Writer", ActionType.CREATE, true)]
         [DataRow("Reader", ActionType.CREATE, "Reader", "", false)]
@@ -118,58 +118,18 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// Test to validate that for wildcard action, the authorization stage for role/action check
-        /// would pass if the action is one among create, read, update, delete.
-        /// </summary>
-        [TestMethod]
-        public void AreRoleAndActionDefinedForEntityViaWildcardAction()
-        {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                AuthorizationResolver.WILDCARD,
-                includedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
-                );
-            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
-
-            foreach (string actionName in RuntimeConfigValidator._validActions)
-            {
-                // Validate that the authorization check passes for valid CRUD actions.
-                Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, actionName));
-            }
-        }
-
-        /// <summary>
-        /// Test to validate that for wildcard action, the authorization stage for role/action check
-        /// would fail if the action is not one among create, read, update, delete.
-        /// </summary>
-        [TestMethod]
-        public void UndefinedRoleOrActionDefinedForEntityViaWildcardAction()
-        {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                AuthorizationResolver.WILDCARD,
-                includedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
-                );
-            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
-
-            // Validate that the authorization check fails because the actions are invalid.
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, "patch"));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, "fetch"));
-        }
-
-        /// <summary>
         /// Test that wildcard actions are expanded to explicit actions.
         /// Verifies that internal data structure are created correctly.
         /// </summary>
-        [TestMethod]
+        [TestMethod("Wildcard actions are expand to all valid actions")]
         public void TestWildcardAction()
         {
-            string roleName = "myRole";
-            List<string> expectedRoles = new() { roleName };
+            List<string> expectedRoles = new() { AuthorizationHelpers.TEST_ROLE };
 
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(AuthorizationHelpers.TEST_ENTITY, roleName, AuthorizationResolver.WILDCARD);
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                AuthorizationResolver.WILDCARD);
 
             // Override the action to be a list of string for wildcard instead of a list of object created by InitRuntimeConfig()
             //
@@ -178,22 +138,26 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // There should not be a wildcard action in AuthorizationResolver.EntityPermissionsMap
             //
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, roleName, AuthorizationResolver.WILDCARD));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, AuthorizationResolver.WILDCARD));
 
             // All the wildcard action should be expand to explicit actions.
             //
-            string[] allAvailableActions = { ActionType.READ, ActionType.CREATE, ActionType.DELETE, ActionType.UPDATE };
-            foreach (string action in allAvailableActions)
+            foreach (string actionName in RuntimeConfigValidator._validActions)
             {
-                Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, roleName, action));
+                Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, actionName));
 
-                IEnumerable<string> actualRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", action);
+                IEnumerable<string> actualRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", actionName);
 
                 CollectionAssert.AreEquivalent(expectedRoles, actualRolesForCol1.ToList());
             }
 
             IEnumerable<string> actualRolesForAction = authZResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, ActionType.CREATE);
             CollectionAssert.AreEquivalent(expectedRoles, actualRolesForAction.ToList());
+
+            // Validate that the authorization check fails because the actions are invalid.
+            //
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, "patch"));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, "fetch"));
         }
 
         /// <summary>
@@ -205,8 +169,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [TestMethod]
         public void TestRoleAndActionCombination()
         {
-            string readOnlyRole = "readOnlyRole";
-            string readAndUpdateRole = "readAndUpdateRole";
+            const string readOnlyRole = "readOnlyRole";
+            const string readAndUpdateRole = "readAndUpdateRole";
 
             Field fieldsForRole = new(
                 include: new HashSet<string> { "col1" },
@@ -285,6 +249,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
         #endregion
 
+        #region Positive Column Tests
+
         /// <summary>
         /// Tests the authorization stage: Columns defined for Action
         /// Columns are allowed for role
@@ -292,7 +258,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// Wildcard included and/or excluded columns handling
         /// and assumes request validation has already occurred
         /// </summary>
-        #region Positive Column Tests
         [TestMethod("Column allowed for action on role")]
         public void ColsDefinedForAction_ColsForActionTest()
         {
@@ -393,6 +358,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             }
         }
         #endregion
+
         #region Negative Column Tests
         [TestMethod("Columns NOT allowed for action on role")]
         public void ColsNotDefinedForAction_ColsForActionTest()
@@ -714,6 +680,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             }
         }
         #endregion
+
         #region Helpers
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",

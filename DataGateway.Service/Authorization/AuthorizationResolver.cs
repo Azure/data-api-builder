@@ -264,12 +264,13 @@ namespace Azure.DataGateway.Service.Authorization
                             }
                         }
 
-                        HashSet<string> actionNames = GetAllActions(action);
+                        IEnumerable<string> actionNames = GetAllActions(action);
                         foreach (string actionName in actionNames)
                         {
                             // Try to add the actionName to the map if not present.
                             // Builds up mapping: i.e. ActionType.CREATE permitted in {Role1, Role2, ..., RoleN}
-                            if (!string.IsNullOrWhiteSpace(actionName) && !entityToRoleMap.ActionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
+                            if (!string.IsNullOrWhiteSpace(actionName) &&
+                                !entityToRoleMap.ActionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
                             {
                                 entityToRoleMap.ActionToRolesMap[actionName].Add(role);
                             }
@@ -291,37 +292,15 @@ namespace Azure.DataGateway.Service.Authorization
             }
         }
 
-        private static void PopulateFieldToRoleMap(
-            Dictionary<string, Dictionary<string, List<string>>> fieldToRolesMap,
-            string role,
-            string actionName,
-            ActionMetadata actionToColumn)
-        {
-            foreach (string allowedColumn in actionToColumn.Allowed)
-            {
-                fieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
-
-                fieldToRolesMap[allowedColumn][actionName].Add(role);
-            }
-        }
-
-        private static void PopulateActionToRoleMap(Dictionary<string, List<string>> actionToRolesMap, string actionName, string role)
-        {
-            if (!actionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
-            {
-                actionToRolesMap[actionName].Add(role);
-            }
-        }
-
         /// <summary>
         /// Helper method to resolve action into the corresponding actionNames.
         /// In case the action is a wildcard(*), it gets resolved to a set of CRUD operations.
         /// </summary>
         /// <param name="actionName"></param>
         /// <returns></returns>
-        private static HashSet<string> GetAllActions(string action)
+        private static IEnumerable<string> GetAllActions(string action)
         {
-            return "*".Equals(action) ? RuntimeConfigValidator._validActions : new HashSet<string> { action };
+            return WILDCARD.Equals(action) ? RuntimeConfigValidator._validActions : new List<string> { action };
         }
 
         /// <inheritdoc />

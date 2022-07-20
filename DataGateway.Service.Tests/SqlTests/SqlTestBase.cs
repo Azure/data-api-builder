@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
@@ -90,8 +91,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
 
-            // gets the database name from the connection string
-            DatabaseName = new SqlConnection(_runtimeConfig.ConnectionString).Database;
+            // sets the database name using the connection string
+            SetDatabaseNameFromConnectionString(_runtimeConfig.ConnectionString);
 
             //Initialize the authorization resolver object
             _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
@@ -125,6 +126,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 });
 
             HttpClient = _application.CreateClient();
+        }
+
+        private static void SetDatabaseNameFromConnectionString(string connectionString)
+        {
+            switch (DatabaseEngine)
+            {
+                case TestCategory.MSSQL:
+                    DatabaseName = new SqlConnectionStringBuilder(connectionString).InitialCatalog;
+                    break;
+                case TestCategory.POSTGRESQL:
+                case TestCategory.MYSQL:
+                    DatabaseName = new MySqlConnectionStringBuilder(connectionString).Database;
+                    break;
+            }
         }
 
         protected static void SetUpSQLMetadataProvider()

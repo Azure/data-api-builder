@@ -129,8 +129,8 @@ namespace Azure.DataGateway.Service.Authorization
                 if (_metadataProvider.TryGetBackingColumn(entityName, field: exposedColumn, out string? backingColumn))
                 {
                     // backingColumn will not be null when TryGetBackingColumn() is true.
-                    if (actionToColumnMap.Excluded.Contains(backingColumn!) || actionToColumnMap.Excluded.Contains(WILDCARD) ||
-                    !(actionToColumnMap.Included.Contains(WILDCARD) || actionToColumnMap.Included.Contains(backingColumn!)))
+                    if (actionToColumnMap.Excluded.Contains(backingColumn!) ||
+                        !actionToColumnMap.Included.Contains(backingColumn!))
                     {
                         // If column is present in excluded OR excluded='*'
                         // If column is absent from included and included!=*
@@ -288,6 +288,28 @@ namespace Azure.DataGateway.Service.Authorization
                 }
 
                 EntityPermissionsMap[entityName] = entityToRoleMap;
+            }
+        }
+
+        private static void PopulateFieldToRoleMap(
+            Dictionary<string, Dictionary<string, List<string>>> fieldToRolesMap,
+            string role,
+            string actionName,
+            ActionMetadata actionToColumn)
+        {
+            foreach (string allowedColumn in actionToColumn.Allowed)
+            {
+                fieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
+
+                fieldToRolesMap[allowedColumn][actionName].Add(role);
+            }
+        }
+
+        private static void PopulateActionToRoleMap(Dictionary<string, List<string>> actionToRolesMap, string actionName, string role)
+        {
+            if (!actionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
+            {
+                actionToRolesMap[actionName].Add(role);
             }
         }
 

@@ -232,11 +232,6 @@ namespace Azure.DataGateway.Service.Resolvers
             ParametrizeColumns();
         }
 
-        private static string? GetFilterPredicatesFromFilterClause(FilterClause filterClause, ODataASTVisitor visitor)
-        {
-            return filterClause.Expression.Accept<string>(visitor);
-        }
-
         /// <summary>
         /// Use the mapping of exposed names to
         /// backing columns to add column with
@@ -894,29 +889,6 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (LabelledColumn column in Columns)
             {
                 ColumnLabelToParam.Add(column.Label, $"@{MakeParamWithValue(column.Label)}");
-            }
-        }
-
-        /// <summary>
-        /// After SqlQueryStructure is instantiated, process a database authorization policy
-        /// for GraphQL requests. Including GraphQL SubQueries
-        /// </summary>
-        /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
-        /// <exception cref="DataGatewayException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
-        public void ProcessDBPolicyClause(FilterClause dbPolicyClause)
-        {
-            // Similar to how we have added FilterPredicates above,
-            // we will add DbPolicyPredicates here.
-            ODataASTVisitor visitor = new(this, this.SqlMetadataProvider);
-            try
-            {
-                DbPolicyPredicates = GetFilterPredicatesFromFilterClause(dbPolicyClause, visitor);
-            }
-            catch
-            {
-                throw new DataGatewayException(message: "Policy query parameter is not well formed for GraphQL Policy Processing.",
-                                               statusCode: HttpStatusCode.Forbidden,
-                                               subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
             }
         }
     }

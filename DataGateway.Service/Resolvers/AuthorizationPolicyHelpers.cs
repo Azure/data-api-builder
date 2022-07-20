@@ -58,6 +58,43 @@ namespace Azure.DataGateway.Service.Resolvers
             queryStructure.ProcessDBPolicyClause(filterClause);
         }
 
+        public static void ProcessAuthorizationPolicies(
+            string actionType,
+            BaseSqlQueryStructure queryStructure,
+            HttpContext context,
+            IAuthorizationResolver authorizationResolver,
+            ISqlMetadataProvider sqlMetadataProvider)
+        {
+            if (!context.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues roleHeaderValue))
+            {
+                throw new DataGatewayException(
+                    message: "No ClientRoleHeader found in GraphQL Middleware Context.",
+                    statusCode: System.Net.HttpStatusCode.Forbidden,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
+            string clientRoleHeader = roleHeaderValue.ToString();
+
+            string dbQueryPolicy = authorizationResolver.TryProcessDBPolicy(
+                queryStructure.EntityName,
+                clientRoleHeader,
+                actionType,
+                context);
+
+            FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
+                dbQueryPolicy,
+                entityName: queryStructure.EntityName,
+                resourcePath: queryStructure.DatabaseObject.FullName,
+                sqlMetadataProvider);
+
+            if (filterClause is null)
+            {
+                return;
+            }
+
+            queryStructure.ProcessDBPolicyClause(filterClause);
+        }
+
         /// <summary>
         /// Given a dbPolicyClause string, appends the string formatting needed to be processed by ODataFilterParser
         /// As a result each queryStructure object passing through this function will have database query predicates created

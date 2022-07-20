@@ -104,7 +104,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _queryExecutor,
                 _queryBuilder,
                 _sqlMetadataProvider,
-                _authorizationResolver);
+                _authorizationResolver,
+                _httpContextAccessor.Object);
 
             //Initialize the authorization resolver object
             _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);

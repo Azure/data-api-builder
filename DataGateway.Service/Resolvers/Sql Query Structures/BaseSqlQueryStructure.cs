@@ -6,8 +6,10 @@ using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
+using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -262,6 +264,34 @@ namespace Azure.DataGateway.Service.Resolvers
             // Its ok to not find the input argument name in the mutation params dictionary
             // because it indicates the REST scenario.
             return mutationParams;
+        }
+
+        /// <summary>
+        /// After SqlQueryStructure is instantiated, process a database authorization policy
+        /// for GraphQL requests. Including GraphQL SubQueries
+        /// </summary>
+        /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
+        /// <exception cref="DataGatewayException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
+        public void ProcessDBPolicyClause(FilterClause dbPolicyClause)
+        {
+            // Similar to how we have added FilterPredicates above,
+            // we will add DbPolicyPredicates here.
+            ODataASTVisitor visitor = new(this, this.SqlMetadataProvider);
+            try
+            {
+                DbPolicyPredicates = GetFilterPredicatesFromFilterClause(dbPolicyClause, visitor);
+            }
+            catch
+            {
+                throw new DataGatewayException(message: "Policy query parameter is not well formed for GraphQL Policy Processing.",
+                                               statusCode: HttpStatusCode.Forbidden,
+                                               subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+        }
+
+        protected static string? GetFilterPredicatesFromFilterClause(FilterClause filterClause, ODataASTVisitor visitor)
+        {
+            return filterClause.Expression.Accept<string>(visitor);
         }
     }
 }

@@ -16,6 +16,7 @@ using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 
@@ -31,6 +32,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
         private readonly IAuthorizationResolver _authorizationResolver;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         /// <summary>
         /// Constructor
@@ -40,13 +42,15 @@ namespace Azure.DataGateway.Service.Resolvers
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder,
             ISqlMetadataProvider sqlMetadataProvider,
-            IAuthorizationResolver authorizationResolver)
+            IAuthorizationResolver authorizationResolver,
+            IHttpContextAccessor httpContextAccessor)
         {
             _queryEngine = queryEngine;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
             _sqlMetadataProvider = sqlMetadataProvider;
             _authorizationResolver = authorizationResolver;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         /// <summary>
@@ -289,6 +293,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         new(entityName,
                         _sqlMetadataProvider,
                         parameters);
+                    AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(ActionType.UPDATE, updateGraphQLStructure, _httpContextAccessor.HttpContext, _authorizationResolver, _sqlMetadataProvider);
                     queryString = _queryBuilder.Build(updateGraphQLStructure);
                     queryParameters = updateGraphQLStructure.Parameters;
                     break;

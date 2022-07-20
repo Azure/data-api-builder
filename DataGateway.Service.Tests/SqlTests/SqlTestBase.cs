@@ -140,7 +140,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 case TestCategory.MSSQL:
                     // use master as default name for MsSql
                     string sqlDbName = new SqlConnectionStringBuilder(connectionString).InitialCatalog;
-                    DatabaseName = !string.IsNullOrEmpty(sqlDbName) ? DatabaseName : _msSqlDefaultDbName;
+                    DatabaseName = !string.IsNullOrEmpty(sqlDbName) ? DatabaseName : MSSQL_DEFAULT_DB_NAME;
                     break;
                 case TestCategory.POSTGRESQL:
                     // use username as default name for PostgreSql, if no username use empty string

@@ -276,9 +276,9 @@ namespace Azure.DataGateway.Service.Authorization
 
                             foreach (string action in allAvailableActions)
                             {
-                                AddRoleToAction(entityToRoleMap.ActionToRolesMap, action, role);
+                                PopulateActionToRoleMap(entityToRoleMap.ActionToRolesMap, action, role);
 
-                                PopuldateFieldToRoleMap(entityToRoleMap.FieldToRolesMap, role, action, actionToColumn);
+                                PopulateFieldToRoleMap(entityToRoleMap.FieldToRolesMap, role, action, actionToColumn);
 
                                 roleToAction.ActionToColumnMap[action] = actionToColumn;
                             }
@@ -287,9 +287,9 @@ namespace Azure.DataGateway.Service.Authorization
                         //
                         else if (!string.IsNullOrWhiteSpace(actionName))
                         {
-                            AddRoleToAction(entityToRoleMap.ActionToRolesMap, actionName, role);
+                            PopulateActionToRoleMap(entityToRoleMap.ActionToRolesMap, actionName, role);
 
-                            PopuldateFieldToRoleMap(entityToRoleMap.FieldToRolesMap, role, actionName, actionToColumn);
+                            PopulateFieldToRoleMap(entityToRoleMap.FieldToRolesMap, role, actionName, actionToColumn);
 
                             roleToAction.ActionToColumnMap[actionName] = actionToColumn;
                         }
@@ -302,7 +302,7 @@ namespace Azure.DataGateway.Service.Authorization
             }
         }
 
-        private static void PopuldateFieldToRoleMap(
+        private static void PopulateFieldToRoleMap(
             Dictionary<string, Dictionary<string, List<string>>> fieldToRolesMap,
             string role,
             string actionName,
@@ -316,7 +316,7 @@ namespace Azure.DataGateway.Service.Authorization
             }
         }
 
-        private static void AddRoleToAction(Dictionary<string, List<string>> actionToRolesMap, string actionName, string role)
+        private static void PopulateActionToRoleMap(Dictionary<string, List<string>> actionToRolesMap, string actionName, string role)
         {
             if (!actionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
             {

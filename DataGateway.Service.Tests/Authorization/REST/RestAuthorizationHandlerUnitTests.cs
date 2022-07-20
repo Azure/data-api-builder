@@ -353,32 +353,14 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         /// </summary>
         private static AuthorizationResolver SetupAuthResolverWithWildcardActions()
         {
-            PermissionSetting permissionForEntity = new(
-                role: "admin",
-                actions: new object[] { JsonSerializer.SerializeToElement(AuthorizationResolver.WILDCARD) });
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: "admin",
+                actionName: "*");
 
-            Entity sampleEntity = new(
-                Source: AuthorizationHelpers.TEST_ENTITY,
-                Rest: null,
-                GraphQL: null,
-                Permissions: new PermissionSetting[] { permissionForEntity },
-                Relationships: null,
-                Mappings: null
-                );
-
-            Dictionary<string, Entity> entityMap = new();
-            entityMap.Add(AuthorizationHelpers.TEST_ENTITY, sampleEntity);
-
-            RuntimeConfig runtimeConfig = new(
-                Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
-                Entities: entityMap
-                );
+            // Override the action to be a list of string for wildcard instead of a list of object created by InitRuntimeConfig()
+            //
+            runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY].Permissions[0].Actions = new object[] { JsonSerializer.SerializeToElement(AuthorizationResolver.WILDCARD) };
 
             return AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
         }

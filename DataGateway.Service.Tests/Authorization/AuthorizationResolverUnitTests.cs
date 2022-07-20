@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
@@ -87,7 +88,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Assert.AreEqual(authZResolver.IsValidRoleContext(context.Object), expected);
         }
         #endregion
+
         #region Role and Action on Entity Tests
+
         /// <summary>
         /// Tests the AreRoleAndActionDefinedForEntity stage of authorization.
         /// Request Action is defined for role -> VALID
@@ -115,18 +118,24 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
         /// <summary>
         /// Test that wildcard actions are expanded to explicit actions.
+        /// Verifies that internal data structure are created correctly.
         /// </summary>
         [TestMethod]
         public void TestWildcardAction()
         {
             string roleName = "myRole";
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(AuthorizationHelpers.TEST_ENTITY, roleName, "*");
+            List<string> expectedRoles = new() { roleName };
+
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(AuthorizationHelpers.TEST_ENTITY, roleName, AuthorizationResolver.WILDCARD);
+
+            // Override the action to be a list of string for wildcard instead of a list of object created by InitRuntimeConfig()
+            //
             runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY].Permissions[0].Actions = new object[] { JsonSerializer.SerializeToElement(AuthorizationResolver.WILDCARD) };
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
             // There should not be a wildcard action in AuthorizationResolver.EntityPermissionsMap
             //
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, roleName, "*"));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, roleName, AuthorizationResolver.WILDCARD));
 
             // All the wildcard action should be expand to explicit actions.
             //
@@ -134,8 +143,16 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             foreach (string action in allAvailableActions)
             {
                 Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, roleName, action));
+
+                IEnumerable<string> actualRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", action);
+
+                CollectionAssert.AreEquivalent(expectedRoles, actualRolesForCol1.ToList());
             }
+
+            IEnumerable<string> actualRolesForAction = authZResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, ActionType.CREATE);
+            CollectionAssert.AreEquivalent(expectedRoles, actualRolesForAction.ToList());
         }
+
         #endregion
 
         /// <summary>

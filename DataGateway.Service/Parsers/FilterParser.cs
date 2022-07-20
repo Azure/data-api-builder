@@ -9,14 +9,14 @@ using Microsoft.OData.UriParser;
 namespace Azure.DataGateway.Service.Parsers
 {
     /// <summary>
-    /// FilterParser stores the model that represents customer data and can
-    /// Parse the FilterClause generated from that model.
+    /// ODataParser stores the model that represents customer data and can
+    /// parse the filter query string or order by query string.
     /// </summary>
-    public class FilterParser
+    public class ODataParser
     {
         private IEdmModel? _model;
 
-        public FilterParser() { }
+        public ODataParser() { }
 
         public void BuildModel(ISqlMetadataProvider sqlMetadataProvider)
         {

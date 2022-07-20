@@ -142,17 +142,17 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // All the wildcard action should be expand to explicit actions.
             //
-            foreach (string actionName in RuntimeConfigValidator._validActions)
+            foreach (string actionName in RuntimeConfigValidator.ValidActions)
             {
                 Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, actionName));
 
                 IEnumerable<string> actualRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", actionName);
 
                 CollectionAssert.AreEquivalent(expectedRoles, actualRolesForCol1.ToList());
-            }
 
-            IEnumerable<string> actualRolesForAction = authZResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, ActionType.CREATE);
-            CollectionAssert.AreEquivalent(expectedRoles, actualRolesForAction.ToList());
+                IEnumerable<string> actualRolesForAction = authZResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, actionName);
+                CollectionAssert.AreEquivalent(expectedRoles, actualRolesForAction.ToList());
+            }
 
             // Validate that the authorization check fails because the actions are invalid.
             //
@@ -169,8 +169,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [TestMethod]
         public void TestRoleAndActionCombination()
         {
-            const string readOnlyRole = "readOnlyRole";
-            const string readAndUpdateRole = "readAndUpdateRole";
+            const string READ_ONLY_ROLE  = "readOnlyRole";
+            const string READ_AND_UPDATE_ROLE = "readAndUpdateRole";
 
             Field fieldsForRole = new(
                 include: new HashSet<string> { "col1" },
@@ -187,11 +187,11 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 Policy: null);
 
             PermissionSetting readOnlyPermission = new(
-                role: readOnlyRole,
+                role: READ_ONLY_ROLE ,
                 actions: new object[] { JsonSerializer.SerializeToElement(readAction) });
 
             PermissionSetting readAndUpdatePermission = new(
-            role: readAndUpdateRole,
+            role: READ_AND_UPDATE_ROLE,
             actions: new object[] { JsonSerializer.SerializeToElement(readAction), JsonSerializer.SerializeToElement(updateAction) });
 
             Entity sampleEntity = new(
@@ -221,20 +221,20 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Verify that read only role has permission for read and nothing else.
             //
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readOnlyRole, ActionType.READ));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readOnlyRole, ActionType.UPDATE));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readOnlyRole, ActionType.CREATE));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readOnlyRole, ActionType.DELETE));
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE , ActionType.READ));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE , ActionType.UPDATE));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE , ActionType.CREATE));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE , ActionType.DELETE));
 
             // Verify that read only role has permission for read and nothing else.
             //
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readAndUpdateRole, ActionType.READ));
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readAndUpdateRole, ActionType.UPDATE));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readAndUpdateRole, ActionType.CREATE));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, readAndUpdateRole, ActionType.DELETE));
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, ActionType.READ));
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, ActionType.UPDATE));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, ActionType.CREATE));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, ActionType.DELETE));
 
-            List<string> expectedRolesForRead = new() { readOnlyRole, readAndUpdateRole };
-            List<string> expectedRolesForUpdate = new() { readAndUpdateRole };
+            List<string> expectedRolesForRead = new() { READ_ONLY_ROLE , READ_AND_UPDATE_ROLE };
+            List<string> expectedRolesForUpdate = new() { READ_AND_UPDATE_ROLE };
 
             IEnumerable<string> actualReadRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", ActionType.READ);
             CollectionAssert.AreEquivalent(expectedRolesForRead, actualReadRolesForCol1.ToList());
@@ -420,7 +420,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            foreach (string actionName in RuntimeConfigValidator._validActions)
+            foreach (string actionName in RuntimeConfigValidator.ValidActions)
             {
                 // Validate that the authorization check passes for valid CRUD actions
                 // because columns are accessbile or inaccessible.

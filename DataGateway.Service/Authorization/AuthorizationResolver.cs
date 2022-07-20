@@ -300,7 +300,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <returns>IEnumerable of all available action name</returns>
         private static IEnumerable<string> GetAllActions(string action)
         {
-            return WILDCARD.Equals(action) ? RuntimeConfigValidator._validActions : new List<string> { action };
+            return WILDCARD.Equals(action) ? RuntimeConfigValidator.ValidActions : new List<string> { action };
         }
 
         /// <inheritdoc />

@@ -35,7 +35,7 @@ namespace Azure.DataGateway.Service.Configurations
         private static readonly string _claimChars = @"@claims\.[^\s\)]*";
 
         // Set of allowed actions for a request.
-        public static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
+        public static readonly HashSet<string> ValidActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
 
         public RuntimeConfigValidator(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -472,7 +472,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <returns>Boolean value indicating whether the actionName is valid or not.</returns>
         public static bool IsValidActionName(string actionName)
         {
-            return actionName.Equals(AuthorizationResolver.WILDCARD) || _validActions.Contains(actionName);
+            return actionName.Equals(AuthorizationResolver.WILDCARD) || ValidActions.Contains(actionName);
         }
     }
 }

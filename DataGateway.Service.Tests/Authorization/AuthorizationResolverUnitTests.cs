@@ -315,6 +315,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col1", "col3" }));
         }
 
+        /// <summary>
+        /// Test that wildcard inclusion will include all the columns in the table.
+        /// </summary>
         [TestMethod("Wildcard included columns")]
         public void WildcardColumnInclusion()
         {
@@ -326,12 +329,15 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            // Mock Request Values - Query a configured entity/role/action with columns allowed.
             List<string> includedColumns = new() { "col1", "col2", "col3", "col4"};
 
             Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, includedColumns));
         }
 
+        /// <summary>
+        /// Test that wildcard inclusion will include all column except column specify in exclusion.
+        /// Exclusion has priority over inclusion.
+        /// </summary>
         [TestMethod("Wildcard include columns with some column exclusion")]
         public void WildcardColumnInclusionWithExplictExclusion()
         {
@@ -351,6 +357,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludedColumns));
         }
 
+        /// <summary>
+        /// Test that all columns should be excluded if the exclusion contains wildcard character.
+        /// </summary>
         [TestMethod("Wildcard column exclusion")]
         public void WildcardColumnExclusion()
         {
@@ -367,7 +376,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludedColumns));
         }
 
-        [Ignore]
+        /// <summary>
+        /// For this test, exclusion has precedence over inclusion. So for this test case,
+        /// all columns will be excluded.
+        /// </summary>
         [TestMethod("Wildcard column exclusion with some explicit columns inclusion")]
         public void WildcardColumnExclusionWithExplicitColumnInclusion()
         {
@@ -383,12 +395,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, includedColumns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, includedColumns));
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludedColumns));
-
-            // Mix of include and exclud columns should result in failure.
-            //
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col1", "col4" }));
         }
 
         /// <summary>

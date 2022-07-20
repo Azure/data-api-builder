@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
@@ -130,6 +129,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
         /// <summary>
         /// Sets the database name based on the provided connection string.
+        /// If connection string has no database set we use 'master' for default.
         /// </summary>
         /// <param name="connectionString">connection string containing the database name.</param>
         private static void SetDatabaseNameFromConnectionString(string connectionString)
@@ -144,6 +144,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     DatabaseName = new MySqlConnectionStringBuilder(connectionString).Database;
                     break;
             }
+
+            DatabaseName = string.IsNullOrEmpty(DatabaseName) ? "master" : DatabaseName;
         }
 
         protected static void SetUpSQLMetadataProvider()

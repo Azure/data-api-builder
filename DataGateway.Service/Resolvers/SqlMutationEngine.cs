@@ -293,7 +293,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         new(entityName,
                         _sqlMetadataProvider,
                         parameters);
-                    AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(ActionType.UPDATE, updateGraphQLStructure, _httpContextAccessor.HttpContext, _authorizationResolver, _sqlMetadataProvider);
+                    AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(ActionType.UPDATE, updateGraphQLStructure, _httpContextAccessor.HttpContext!, _authorizationResolver, _sqlMetadataProvider);
                     queryString = _queryBuilder.Build(updateGraphQLStructure);
                     queryParameters = updateGraphQLStructure.Parameters;
                     break;
@@ -302,6 +302,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         new(entityName,
                         _sqlMetadataProvider,
                         parameters);
+                    AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(ActionType.DELETE, deleteStructure, _httpContextAccessor.HttpContext!, _authorizationResolver, _sqlMetadataProvider);
                     queryString = _queryBuilder.Build(deleteStructure);
                     queryParameters = deleteStructure.Parameters;
                     break;

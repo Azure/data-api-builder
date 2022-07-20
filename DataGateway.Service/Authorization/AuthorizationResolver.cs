@@ -25,7 +25,7 @@ namespace Azure.DataGateway.Service.Authorization
     public class AuthorizationResolver : IAuthorizationResolver
     {
         private ISqlMetadataProvider _metadataProvider;
-        private const string WILDCARD = "*";
+        public const string WILDCARD = "*";
         public const string CLAIM_PREFIX = "@claims.";
         public const string FIELD_PREFIX = "@item.";
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
@@ -299,7 +299,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <returns></returns>
         private static HashSet<string> GetAllActions(string action)
         {
-            return "*".Equals(action) ? RuntimeConfigValidator._validActions: new HashSet<string> { action };
+            return "*".Equals(action) ? RuntimeConfigValidator._validActions : new HashSet<string> { action };
         }
 
         /// <inheritdoc />

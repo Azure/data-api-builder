@@ -92,7 +92,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await _sqlMetadataProvider.InitializeAsync();
 
             // sets the database name using the connection string
-            SetDatabaseNameFromConnectionString("");
+            SetDatabaseNameFromConnectionString(_runtimeConfig.ConnectionString);
 
             //Initialize the authorization resolver object
             _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);

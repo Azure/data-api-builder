@@ -35,7 +35,7 @@ namespace Azure.DataGateway.Service.Configurations
         private static readonly string _claimChars = @"@claims\.[^\s\)]*";
 
         // Set of allowed actions for a request.
-        private static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
+        public static readonly HashSet<string> _validActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
 
         public RuntimeConfigValidator(
             RuntimeConfigProvider runtimeConfigProvider,

@@ -102,8 +102,7 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 if (valueOfEntityToRole.RoleToActionMap.TryGetValue(roleName, out RoleMetadata? valueOfRoleToAction))
                 {
-                    if (valueOfRoleToAction!.ActionToColumnMap.ContainsKey(WILDCARD) ||
-                        valueOfRoleToAction!.ActionToColumnMap.ContainsKey(action))
+                    if (valueOfRoleToAction!.ActionToColumnMap.ContainsKey(action))
                     {
                         return true;
                     }
@@ -122,14 +121,7 @@ namespace Azure.DataGateway.Service.Authorization
             ActionMetadata actionToColumnMap;
             RoleMetadata roleInEntity = EntityPermissionsMap[entityName].RoleToActionMap[roleName];
 
-            try
-            {
-                actionToColumnMap = roleInEntity.ActionToColumnMap[actionName];
-            }
-            catch (KeyNotFoundException)
-            {
-                actionToColumnMap = roleInEntity.ActionToColumnMap[WILDCARD];
-            }
+            actionToColumnMap = roleInEntity.ActionToColumnMap[actionName];
 
             // Each column present in the request is an "exposedColumn".
             // Authorization permissions reference "backingColumns"
@@ -140,8 +132,8 @@ namespace Azure.DataGateway.Service.Authorization
                 if (_metadataProvider.TryGetBackingColumn(entityName, field: exposedColumn, out string? backingColumn))
                 {
                     // backingColumn will not be null when TryGetBackingColumn() is true.
-                    if (actionToColumnMap.Excluded.Contains(backingColumn!) || actionToColumnMap.Excluded.Contains(WILDCARD) ||
-                        !(actionToColumnMap.Included.Contains(WILDCARD) || actionToColumnMap.Included.Contains(backingColumn!)))
+                    if (actionToColumnMap.Excluded.Contains(backingColumn!) ||
+                        !actionToColumnMap.Included.Contains(backingColumn!))
                     {
                         // If column is present in excluded OR excluded='*'
                         // If column is absent from included and included!=*
@@ -189,20 +181,7 @@ namespace Azure.DataGateway.Service.Authorization
             RoleMetadata roleMetadata = EntityPermissionsMap[entityName].RoleToActionMap[roleName];
             roleMetadata.ActionToColumnMap.TryGetValue(action, out ActionMetadata? actionMetadata);
 
-            // If action exists in map (explicitly specified in config), use its policy
-            // action should only be absent in roleMetadata if WILDCARD is in the map instead of specific actions,
-            // as authorization happens before policy parsing (would have already returned forbidden)
-            string? dbPolicy;
-            if (actionMetadata is not null)
-            {
-                dbPolicy = actionMetadata.DatabasePolicy;
-
-            } // else check if wildcard exists in action map, if so use its policy, else null
-            else
-            {
-                roleMetadata.ActionToColumnMap.TryGetValue(WILDCARD, out ActionMetadata? wildcardMetadata);
-                dbPolicy = wildcardMetadata is not null ? wildcardMetadata.DatabasePolicy : null;
-            }
+            string? dbPolicy = actionMetadata!.DatabasePolicy;
 
             return dbPolicy is not null ? dbPolicy : string.Empty;
         }
@@ -291,23 +270,29 @@ namespace Azure.DataGateway.Service.Authorization
                         // Builds up mapping: i.e. ActionType.CREATE permitted in {Role1, Role2, ..., RoleN}
                         // Expand wildcard action to explicit action type.
                         //
-                        if (actionName.Equals(AuthorizationResolver.WILDCARD))
+                        if (actionName.Equals(WILDCARD))
                         {
-                            AddRoleToAction(entityToRoleMap.ActionToRolesMap, ActionType.READ, role);
-                            AddRoleToAction(entityToRoleMap.ActionToRolesMap, ActionType.CREATE, role);
-                            AddRoleToAction(entityToRoleMap.ActionToRolesMap, ActionType.DELETE, role);
-                            AddRoleToAction(entityToRoleMap.ActionToRolesMap, ActionType.UPDATE, role);
+                            string[] allAvailableActions = { ActionType.READ, ActionType.CREATE, ActionType.DELETE, ActionType.UPDATE };
+
+                            foreach (string action in allAvailableActions)
+                            {
+                                AddRoleToAction(entityToRoleMap.ActionToRolesMap, action, role);
+
+                                PopuldateFieldToRoleMap(entityToRoleMap.FieldToRolesMap, role, action, actionToColumn);
+
+                                roleToAction.ActionToColumnMap[action] = actionToColumn;
+                            }
                         }
                         // Otherwise, we know explicit action name. Just add that.
                         //
                         else if (!string.IsNullOrWhiteSpace(actionName))
                         {
                             AddRoleToAction(entityToRoleMap.ActionToRolesMap, actionName, role);
+
+                            PopuldateFieldToRoleMap(entityToRoleMap.FieldToRolesMap, role, actionName, actionToColumn);
+
+                            roleToAction.ActionToColumnMap[actionName] = actionToColumn;
                         }
-
-                        PopuldateFieldToRoleMap(entityToRoleMap.FieldToRolesMap, role, actionName, actionToColumn);
-
-                        roleToAction.ActionToColumnMap[actionName] = actionToColumn;
                     }
 
                     entityToRoleMap.RoleToActionMap[role] = roleToAction;
@@ -327,19 +312,7 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 fieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
 
-                // Expand wildcard action to explicit action type.
-                //
-                if (actionName.Equals(AuthorizationResolver.WILDCARD))
-                {
-                    fieldToRolesMap[allowedColumn][ActionType.READ].Add(role);
-                    fieldToRolesMap[allowedColumn][ActionType.CREATE].Add(role);
-                    fieldToRolesMap[allowedColumn][ActionType.DELETE].Add(role);
-                    fieldToRolesMap[allowedColumn][ActionType.UPDATE].Add(role);
-                }
-                else
-                {
-                    fieldToRolesMap[allowedColumn][actionName].Add(role);
-                }
+                fieldToRolesMap[allowedColumn][actionName].Add(role);
             }
         }
 

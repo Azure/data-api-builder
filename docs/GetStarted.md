@@ -30,7 +30,16 @@ Update hawaii-config.json (and schema.gql if using CosmosDb).
 docker compose -f "./docker-compose.yml" up
 ```
 
-4. Your container should be accessible at localhost:5000
+4. Your container should be accessible at `http://localhost:5000`. 
+
+    4.1 Append the `path` from the `runtime` section of configuration file to access the respective GraphQL or REST endpoint URI.
+    e.g. if you are using the configuration example from this repo, GraphQL endpoint URI will be `http://localhost:5000/graphql`
+    whereas one of the REST endpoint URIs will be `http://localhost:5000/api/Book`.
+
+    4.2 Use your favorite client like Banana Cake Pop(for GraphQL) or Post Man(for both GraphQL and REST) to trigger
+    the requests. In Banana Cake Pop, make sure to configure the schema endpoint to the GraphQL endpoint
+    e.g.`http://localhost:5000/graphql` in its `Connection Settings`-> `General` tab.
+    ![Banana Cake Pop Connection Strings](BananaCakePopConnectionSettings.png)
 
 ## Build and deploy as Docker Container
 

@@ -146,7 +146,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     // use username as default name for PostgreSql, if no username use empty string
                     NpgsqlConnectionStringBuilder npgBuilder = new(connectionString);
                     DatabaseName = !string.IsNullOrEmpty(npgBuilder.Database) ? npgBuilder.Database :
-                        !string.IsNullOrEmpty(npgBuilder.Username) ? npgBuilder.Database : string.Empty;
+                        !string.IsNullOrEmpty(npgBuilder.Username) ? npgBuilder.Username : string.Empty;
                     break;
                 case TestCategory.MYSQL:
                     // no default name needed for MySql, if db name doesn't exist use empty string

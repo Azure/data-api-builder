@@ -10,7 +10,7 @@ namespace Azure.DataGateway.Service.Parsers
 {
     /// <summary>
     /// ODataParser stores the model that represents customer data and can
-    /// parse the filter query string or order by query string.
+    /// parse the filter query string, order by query string, or database policy from the configuration file permissions section.
     /// </summary>
     public class ODataParser
     {

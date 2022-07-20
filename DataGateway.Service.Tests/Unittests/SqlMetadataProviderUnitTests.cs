@@ -17,6 +17,15 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
     public class SqlMetadataProviderUnitTests : SqlTestBase
     {
         /// <summary>
+        /// Set the database engine for the tests
+        /// </summary>
+        [ClassInitialize]
+        public static void Setup(TestContext context)
+        {
+            DatabaseEngine = TestCategory.POSTGRESQL;
+        }
+
+        /// <summary>
         /// Verify we parse the connection string for the
         /// schema correctly when it is of various relevant
         /// formats.
@@ -43,10 +52,9 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// </summary>
         [TestMethod]
-        public async Task CheckNoExceptionForNoForiegnKey()
+        public async Task CheckNoExceptionForNoForeignKey()
         {
-            _testCategory = TestCategory.POSTGRESQL;
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(_testCategory);
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(DatabaseEngine);
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);

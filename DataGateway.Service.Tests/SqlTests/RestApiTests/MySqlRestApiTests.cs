@@ -1155,10 +1155,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
+        public static async Task SetupAsync(TestContext context)
         {
-            await InitializeTestFixture(context, TestCategory.MYSQL);
-
+            DatabaseEngine = TestCategory.MYSQL;
+            await InitializeTestFixture(context);
             _restService = new RestService(_queryEngine,
                 _mutationEngine,
                 _sqlMetadataProvider,

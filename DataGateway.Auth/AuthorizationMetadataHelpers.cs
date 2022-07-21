@@ -21,15 +21,15 @@ namespace Azure.DataGateway.Auth
         /// i.e. ID column
         /// Key(field): id -> Dictionary(actions)
         ///     each entry in the dictionary contains action to role map.
-        ///     create: permitted in {Role1, Role2, ..., RoleN}
-        ///     delete: permitted in {Role1, RoleN}
+        ///     Create: permitted in {Role1, Role2, ..., RoleN}
+        ///     Delete: permitted in {Role1, RoleN}
         /// </summary>
         public Dictionary<string, Dictionary<Operation, List<string>>> FieldToRolesMap { get; set; } = new();
 
         /// <summary>
         /// Given the key (action) returns a collection of roles
         /// defining config permissions for the action.
-        /// i.e. READ action is permitted in {Role1, Role2, ..., RoleN}
+        /// i.e. Read action is permitted in {Role1, Role2, ..., RoleN}
         /// </summary>
         public Dictionary<Operation, List<string>> ActionToRolesMap { get; set; } = new();
     }
@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Auth
     /// <summary>
     /// Represents the permission metadata of a role
     /// A role's top-level permission structure is a collection of
-    /// actions allowed for that role: Create, Read, Update, Delete, * (wildcard)
+    /// actions allowed for that role: Create, Read, Update, Delete, All (wildcard action)
     /// </summary>
     public class RoleMetadata
     {

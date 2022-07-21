@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Azure.DataGateway.Service.Exceptions;
 
 namespace Azure.DataGateway.Config
 {

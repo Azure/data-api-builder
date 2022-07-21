@@ -212,7 +212,7 @@ namespace Azure.DataGateway.Service.Authorization
                         if (actionElement.ValueKind is JsonValueKind.String)
                         {
                             string actionName = actionElement.ToString();
-                            action = AuthorizationResolver.WILDCARD.Equals(actionName)? Operation.All : Enum.Parse<Operation>(actionName, ignoreCase: true);
+                            action = AuthorizationResolver.WILDCARD.Equals(actionName) ? Operation.All : Enum.Parse<Operation>(actionName, ignoreCase: true);
                             actionToColumn.Included.UnionWith(allTableColumns);
                             actionToColumn.Allowed.UnionWith(allTableColumns);
                         }

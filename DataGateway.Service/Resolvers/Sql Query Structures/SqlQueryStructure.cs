@@ -30,7 +30,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Authorization Resolver used within SqlQueryStructure to get and apply
         /// authorization policies to GraphQL queries.
         /// </summary>
-        protected IAuthorizationResolver? AuthorizationResolver { get; }
+        protected IAuthorizationResolver AuthorizationResolver { get; }
 
         public const string DATA_IDENT = "data";
 
@@ -312,7 +312,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             // Get HttpContext from IMiddlewareContext and fail if resolved value is null.
-            if (!_ctx.ContextData.TryGetValue("HttpContext", out object? httpContextValue))
+            if (!_ctx.ContextData.TryGetValue(nameof(HttpContext), out object? httpContextValue))
             {
                 throw new DataGatewayException(
                     message: "No HttpContext found in GraphQL Middleware Context.",
@@ -323,7 +323,6 @@ namespace Azure.DataGateway.Service.Resolvers
             HttpContext httpContext = (HttpContext)httpContextValue!;
 
             // Process Authorization Policy of the entity being processed.
-            // This includes entities of subqueries.
             AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(ActionType.READ, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
 
             if (outputType.IsNonNullType())
@@ -594,10 +593,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Additionally, if a field has a selection set, sub-query or join processing
         /// takes place which is required to fetch nested data.
         /// </summary>
-        /// <param name="Selections">Fields selection in the GraphQL Query.</param>
-        private void AddGraphQLFields(IReadOnlyList<ISelectionNode> Selections)
+        /// <param name="selections">Fields selection in the GraphQL Query.</param>
+        private void AddGraphQLFields(IReadOnlyList<ISelectionNode> selections)
         {
-            foreach (ISelectionNode node in Selections)
+            foreach (ISelectionNode node in selections)
             {
                 FieldNode field = (FieldNode)node;
                 string fieldName = field.Name.Value;

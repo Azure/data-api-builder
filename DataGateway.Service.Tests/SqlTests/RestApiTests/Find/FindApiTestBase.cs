@@ -9,7 +9,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
 {
     /// <summary>
-    /// Test REST Apis validating expected results are obtained.
+    /// Test GET REST Api validating expected results are obtained.
     /// </summary>
     [TestClass]
     public abstract class FindApiTestBase : RestApiTestBase

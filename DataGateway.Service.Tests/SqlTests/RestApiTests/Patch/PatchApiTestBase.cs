@@ -10,7 +10,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
 {
     /// <summary>
-    /// Test REST Apis validating expected results are obtained.
+    /// Test PATCH REST Api validating expected results are obtained.
     /// </summary>
     [TestClass]
     public abstract class PatchApiTestBase : RestApiTestBase

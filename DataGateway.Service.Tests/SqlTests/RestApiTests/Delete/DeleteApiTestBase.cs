@@ -7,7 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
 {
     /// <summary>
-    /// Test REST Apis validating expected results are obtained.
+    /// Test DELETE REST Api validating expected results are obtained.
     /// </summary>
     [TestClass]
     public abstract class DeleteApiTestBase : RestApiTestBase

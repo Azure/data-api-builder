@@ -55,7 +55,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 return;
             }
 
-            queryStructure.ProcessDBPolicyClause(filterClause);
+            queryStructure.ProcessOdataClause(filterClause);
         }
 
         public static void ProcessAuthorizationPolicies(
@@ -92,7 +92,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 return;
             }
 
-            queryStructure.ProcessDBPolicyClause(filterClause);
+            queryStructure.ProcessOdataClause(filterClause);
         }
 
         /// <summary>
@@ -119,7 +119,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 // Parse and save the values that are needed to later generate SQL query predicates
                 // FilterClauseInDbPolicy is an Abstract Syntax Tree representing the parsed policy text.
-                return sqlMetadataProvider.GetODataFilterParser().GetFilterClause(dbPolicyClause, $"{entityName}.{resourcePath}");
+                return sqlMetadataProvider.GetODataParser().GetFilterClause(dbPolicyClause, $"{entityName}.{resourcePath}");
             }
 
             return null;

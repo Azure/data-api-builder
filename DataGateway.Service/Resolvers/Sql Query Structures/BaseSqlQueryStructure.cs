@@ -273,12 +273,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
         /// <exception cref="DataGatewayException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
-        public void ProcessDBPolicyClause(FilterClause dbPolicyClause)
+        public void ProcessOdataClause(FilterClause odataClause)
         {
             ODataASTVisitor visitor = new(this, this.SqlMetadataProvider);
             try
             {
-                DbPolicyPredicates = GetFilterPredicatesFromFilterClause(dbPolicyClause, visitor);
+                DbPolicyPredicates = GetFilterPredicatesFromFilterClause(odataClause, visitor);
             }
             catch
             {

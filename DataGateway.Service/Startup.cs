@@ -215,7 +215,7 @@ namespace Azure.DataGateway.Service
                                 return error.WithMessage(error.Exception.Message);
                             }
                         }
-                        
+
                         return error;
                     })
                     .AddErrorFilter(error =>

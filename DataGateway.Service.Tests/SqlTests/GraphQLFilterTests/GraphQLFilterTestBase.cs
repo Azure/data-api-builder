@@ -489,7 +489,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "magazines";
             string gqlQuery = @"{
-                magazines(_filter: {issue_number: {isNull: true}}) {
+                magazines( "+ QueryBuilder.FILTER_FIELD_NAME + @" : { issue_number: {isNull: true}}) {
                     items {
                         id
                         title
@@ -517,7 +517,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "magazines";
             string gqlQuery = @"{
-                magazines(_filter: {issue_number: {isNull: false}}) {
+                magazines( " + QueryBuilder.FILTER_FIELD_NAME + @" : { issue_number: {isNull: false}}) {
                     items {
                         id
                         title
@@ -545,7 +545,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "websiteUsers";
             string gqlQuery = @"{
-                websiteUsers(_filter: {username: {isNull: true}}) {
+                websiteUsers( " + QueryBuilder.FILTER_FIELD_NAME + @" : {username: {isNull: true}}) {
                     items {
                         id
                         username
@@ -572,7 +572,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "websiteUsers";
             string gqlQuery = @"{
-                websiteUsers(_filter: {username: {isNull: false}}) {
+                websiteUsers( " + QueryBuilder.FILTER_FIELD_NAME + @" : {username: {isNull: false}}) {
                     items {
                         id
                         username

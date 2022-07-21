@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
@@ -501,7 +502,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                books(_filter: {id: {gte: 1} and: [{id: {lte: 4}}]}) {
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {gte: 1} and: [{id: {lte: 4}}]}) {
                     items {
                         id
                         publishers {

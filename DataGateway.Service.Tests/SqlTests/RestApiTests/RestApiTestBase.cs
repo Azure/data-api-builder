@@ -1,15 +1,5 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
-using System.Web;
-using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
@@ -47,7 +37,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _simple_all_books = "books_view_all";
         protected static readonly string _simple_subset_stocks = "stocks_view_selected";
         protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
-        
+
         public abstract string GetQuery(string key);
     }
 }

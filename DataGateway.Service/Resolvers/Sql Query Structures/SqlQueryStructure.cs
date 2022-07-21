@@ -192,7 +192,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 ODataASTVisitor visitor = new(this, sqlMetadataProvider);
                 try
                 {
-                    FilterPredicates = GetFilterPredicatesFromFilterClause(context.FilterClauseInUrl, visitor);
+                    FilterPredicates = GetFilterPredicatesFromOdataClause(context.FilterClauseInUrl, visitor);
                 }
                 catch
                 {
@@ -209,7 +209,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 ODataASTVisitor visitor = new(this, sqlMetadataProvider);
                 try
                 {
-                    DbPolicyPredicates = GetFilterPredicatesFromFilterClause(context.DbPolicyClause, visitor);
+                    DbPolicyPredicates = GetFilterPredicatesFromOdataClause(context.DbPolicyClause, visitor);
                 }
                 catch
                 {

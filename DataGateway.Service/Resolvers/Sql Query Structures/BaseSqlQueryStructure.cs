@@ -278,7 +278,7 @@ namespace Azure.DataGateway.Service.Resolvers
             ODataASTVisitor visitor = new(this, this.SqlMetadataProvider);
             try
             {
-                DbPolicyPredicates = GetFilterPredicatesFromFilterClause(odataClause, visitor);
+                DbPolicyPredicates = GetFilterPredicatesFromOdataClause(odataClause, visitor);
             }
             catch
             {
@@ -288,7 +288,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
         }
 
-        protected static string? GetFilterPredicatesFromFilterClause(FilterClause filterClause, ODataASTVisitor visitor)
+        protected static string? GetFilterPredicatesFromOdataClause(FilterClause filterClause, ODataASTVisitor visitor)
         {
             return filterClause.Expression.Accept<string>(visitor);
         }

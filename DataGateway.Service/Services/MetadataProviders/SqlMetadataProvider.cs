@@ -595,9 +595,17 @@ namespace Azure.DataGateway.Service.Services
             string tableName)
         {
             DataTable? dataTable = EntitiesDataSet.Tables[tableName];
-            if (dataTable == null)
+            if (dataTable is null)
             {
-                dataTable = await FillSchemaForTableAsync(schemaName, tableName);
+                try
+                {
+                    dataTable = await FillSchemaForTableAsync(schemaName, tableName);
+                }
+                // ArgumentException handling to cover wrongly formatted Connection string
+                catch (ArgumentException)
+                {
+                    throw new NotSupportedException("The Connection String should be provided.");
+                }
             }
 
             return dataTable;

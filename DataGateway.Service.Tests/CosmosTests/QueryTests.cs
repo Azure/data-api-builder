@@ -149,15 +149,14 @@ query {{
             int totalElementsFromPaginatedQuery = 0;
             string afterToken = null;
             List<string> pagedResponse = new();
-
-            _ = _idList[0];
+            string id = _idList[0];
 
             do
             {
                 string planetConnectionQueryStringFormat = @$"
 query {{
-    planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")}, "
-    + QueryBuilder.FILTER_FIELD_NAME + @": {{ id: {{eq: ""{id}""}} }}) {{
+    planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")},
+    {QueryBuilder.FILTER_FIELD_NAME}: {{ id: {{eq: ""{id}""}} }}) {{
         items {{
             id
             name

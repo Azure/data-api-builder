@@ -9,7 +9,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
     [TestClass, TestCategory(TestCategory.MYSQL)]
     public class MySqlPatchApiTests : PatchApiTestBase
     {
-        protected static string DEFAULT_SCHEMA = string.Empty;
         protected static Dictionary<string, string> _queryMap = new()
         {
             {
@@ -208,37 +207,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
 
         #endregion
 
-        public override string GetDefaultSchema()
-        {
-            return string.Empty;
-        }
-
-        /// <summary>
-        /// MySql does not a schema so it lacks
-        /// the '.' between schema and table, we
-        /// return empty string here for this reason.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetDefaultSchemaForEdmModel()
-        {
-            return string.Empty;
-        }
-
         public override string GetQuery(string key)
         {
             return _queryMap[key];
         }
 
-        /// <summary>
-        /// We have 1 test, which is named
-        /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
-        /// that will have Db specific error messages.
-        /// We return the mysql specific message here.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetUniqueDbErrorMessage()
-        {
-            return "Column 'piecesRequired' cannot be null";
-        }
     }
 }

@@ -772,16 +772,5 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
             return _queryMap[key];
         }
 
-        /// <summary>
-        /// We have 1 test, which is named
-        /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
-        /// that will have Db specific error messages.
-        /// We return the mysql specific message here.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetUniqueDbErrorMessage()
-        {
-            return "Column 'piecesRequired' cannot be null";
-        }
     }
 }

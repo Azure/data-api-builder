@@ -59,6 +59,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Insert
                 "
             },
             {
+                "InsertOneWithNullFieldValue",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 3 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable is NULL
+                        AND piecesRequired = 1
+                    ) AS subq
+                "
+            },
+            {
                 "InsertOneInDefaultTestTable",
                 @"
                     SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data
@@ -105,37 +118,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Insert
 
         #endregion
 
-        public override string GetDefaultSchema()
-        {
-            return string.Empty;
-        }
-
-        /// <summary>
-        /// MySql does not a schema so it lacks
-        /// the '.' between schema and table, we
-        /// return empty string here for this reason.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetDefaultSchemaForEdmModel()
-        {
-            return string.Empty;
-        }
-
         public override string GetQuery(string key)
         {
             return _queryMap[key];
-        }
-
-        /// <summary>
-        /// We have 1 test, which is named
-        /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
-        /// that will have Db specific error messages.
-        /// We return the mysql specific message here.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetUniqueDbErrorMessage()
-        {
-            return "Column 'piecesRequired' cannot be null";
         }
     }
 }

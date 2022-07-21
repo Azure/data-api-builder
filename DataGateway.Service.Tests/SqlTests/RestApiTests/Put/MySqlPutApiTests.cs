@@ -9,7 +9,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Put
     [TestClass, TestCategory(TestCategory.MYSQL)]
     public class MySqlPutApiTests : PutApiTestBase
     {
-        protected static string DEFAULT_SCHEMA = string.Empty;
         protected static Dictionary<string, string> _queryMap = new()
         {
             {
@@ -231,22 +230,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         #endregion
-
-        public override string GetDefaultSchema()
-        {
-            return string.Empty;
-        }
-
-        /// <summary>
-        /// MySql does not a schema so it lacks
-        /// the '.' between schema and table, we
-        /// return empty string here for this reason.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetDefaultSchemaForEdmModel()
-        {
-            return string.Empty;
-        }
 
         public override string GetQuery(string key)
         {

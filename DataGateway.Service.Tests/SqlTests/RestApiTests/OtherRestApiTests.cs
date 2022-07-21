@@ -19,41 +19,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class OtherRestApiTests : RestApiTestBase
     {
-        protected static string DEFAULT_SCHEMA = "dbo";
-
         #region RestApiTestBase Overrides
 
-        public override string GetDefaultSchema()
-        {
-            return DEFAULT_SCHEMA;
-        }
-
-        /// <summary>
-        /// We include a '.' for the Edm Model
-        /// schema to allow both MsSql/PostgreSql
-        /// and MySql to share code. MySql does not
-        /// include a '.' but MsSql does so
-        /// we must include here.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetDefaultSchemaForEdmModel()
-        {
-            return $"{DEFAULT_SCHEMA}.";
-        }
-
         public override string GetQuery(string key)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// We have 1 test that is named
-        /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
-        /// which will have Db specific error messages.
-        /// We return the mssql specific message here.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetUniqueDbErrorMessage()
         {
             throw new NotImplementedException();
         }

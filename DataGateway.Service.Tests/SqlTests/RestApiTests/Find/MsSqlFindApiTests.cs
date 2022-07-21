@@ -447,48 +447,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
             return _queryMap[key];
         }
 
-        /// <summary>
-        /// We have 1 test that is named
-        /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
-        /// which will have Db specific error messages.
-        /// We return the mssql specific message here.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetUniqueDbErrorMessage()
-        {
-            return "Cannot insert the value NULL into column 'piecesRequired', " +
-                   "table 'master.dbo.stocks'; column does not allow nulls. UPDATE fails.";
-        }
-
-        #endregion
-
-        #region Private helpers
-
-        /// <summary>
-        /// Helper function uses reflection to invoke
-        /// private methods from outside class.
-        /// Expects async method returning Task.
-        /// </summary>
-        class PrivateObject
-        {
-            private readonly object _classToInvoke;
-            public PrivateObject(object classToInvoke)
-            {
-                _classToInvoke = classToInvoke;
-            }
-
-            public Task<IActionResult> Invoke(string privateMethodName, params object[] privateMethodArgs)
-            {
-                MethodInfo methodInfo = _classToInvoke.GetType().GetMethod(privateMethodName, BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (methodInfo is null)
-                {
-                    throw new System.Exception($"{privateMethodName} not found in class '{_classToInvoke.GetType()}'");
-                }
-
-                return (Task<IActionResult>)methodInfo.Invoke(_classToInvoke, privateMethodArgs);
-            }
-        }
-
         #endregion
     }
 }

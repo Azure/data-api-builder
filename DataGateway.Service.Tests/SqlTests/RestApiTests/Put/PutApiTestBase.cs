@@ -20,6 +20,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Put
     [TestClass]
     public abstract class PutApiTestBase : RestApiTestBase
     {
+        public abstract string GetUniqueDbErrorMessage();
 
         #region Positive Tests
 

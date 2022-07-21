@@ -22,6 +22,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
     {
         protected static readonly int _numRecordsReturnedFromTieBreakTable = 2;
 
+        public abstract string GetDefaultSchema();
+        public abstract string GetDefaultSchemaForEdmModel();
+
         #region Positive Tests
         /// <summary>
         /// Tests the REST Api for FindById operation without a query string.

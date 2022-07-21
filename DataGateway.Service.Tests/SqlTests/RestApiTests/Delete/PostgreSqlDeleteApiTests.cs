@@ -11,7 +11,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Delete
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlDeleteApiTests : DeleteApiTestBase
     {
-        protected static string DEFAULT_SCHEMA = "public";
         protected static Dictionary<string, string> _queryMap = new()
         {
             {
@@ -57,39 +56,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Delete
             await ResetDbStateAsync();
         }
 
-        public override string GetDefaultSchema()
-        {
-            return DEFAULT_SCHEMA;
-        }
-
-        /// <summary>
-        /// We include a '.' for the Edm Model
-        /// schema to allow both MsSql/PostgreSql
-        /// and MySql to share code. MySql does not
-        /// include a '.' but PostgreSql does so
-        /// we must include here.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetDefaultSchemaForEdmModel()
-        {
-            return $"{DEFAULT_SCHEMA}.";
-        }
-
         public override string GetQuery(string key)
         {
             return _queryMap[key];
-        }
-
-        /// <summary>
-        /// We have 1 test that is named
-        /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
-        /// which will have Db specific error messages.
-        /// We return the postgres specific message here.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetUniqueDbErrorMessage()
-        {
-            return "23502: null value in column \"piecesRequired\" of relation \"stocks\" violates not-null constraint";
         }
     }
 }

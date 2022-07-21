@@ -48,9 +48,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _simple_subset_stocks = "stocks_view_selected";
         protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
         
-        public abstract string GetDefaultSchema();
-        public abstract string GetDefaultSchemaForEdmModel();
         public abstract string GetQuery(string key);
-        public abstract string GetUniqueDbErrorMessage();
     }
 }

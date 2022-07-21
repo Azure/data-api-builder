@@ -11,7 +11,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Insert
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlInsertApiTests : InsertApiTestBase
     {
-        protected static string DEFAULT_SCHEMA = "public";
         protected static Dictionary<string, string> _queryMap = new()
         {
             {
@@ -61,6 +60,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Insert
                 "
             },
             {
+                "InsertOneWithNullFieldValue",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 3 AND pieceid = 1 AND ""categoryName"" = 'SciFi'
+                            AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 1
+                    ) AS subq
+                "
+            },
+            {
                 "InsertOneInDefaultTestTable",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -103,39 +114,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Insert
             await ResetDbStateAsync();
         }
 
-        public override string GetDefaultSchema()
-        {
-            return DEFAULT_SCHEMA;
-        }
-
-        /// <summary>
-        /// We include a '.' for the Edm Model
-        /// schema to allow both MsSql/PostgreSql
-        /// and MySql to share code. MySql does not
-        /// include a '.' but PostgreSql does so
-        /// we must include here.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetDefaultSchemaForEdmModel()
-        {
-            return $"{DEFAULT_SCHEMA}.";
-        }
-
         public override string GetQuery(string key)
         {
             return _queryMap[key];
-        }
-
-        /// <summary>
-        /// We have 1 test that is named
-        /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
-        /// which will have Db specific error messages.
-        /// We return the postgres specific message here.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetUniqueDbErrorMessage()
-        {
-            return "23502: null value in column \"piecesRequired\" of relation \"stocks\" violates not-null constraint";
         }
     }
 }

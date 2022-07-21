@@ -536,7 +536,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
         }
 
         /// <summary>
-        /// Restrict the pagination result using the _filter argument
+        /// Restrict the pagination result using the filter argument
         /// </summary>
         [TestMethod]
         public async Task PaginationWithFilterArgument()

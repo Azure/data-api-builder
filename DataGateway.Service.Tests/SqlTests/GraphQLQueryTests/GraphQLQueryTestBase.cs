@@ -502,11 +502,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {gte: 1} and: [{id: {lte: 4}}]}) {
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @": {id: {gte: 1} and: [{id: {lte: 4}}]}) {
                     items {
                         id
                         publishers {
-                            books(first: 3, _filter: {id: {neq: 2}}) {
+                            books(first: 3, " + QueryBuilder.FILTER_FIELD_NAME + @": {id: {neq: 2}}) {
                                 items {
                                     id
                                 }
@@ -787,7 +787,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                books(_filter: ""INVALID"") {
+                books( " + QueryBuilder.FILTER_FIELD_NAME + @": ""INVALID"") {
                     items {
                         id
                         title

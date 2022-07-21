@@ -138,7 +138,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
             // Query field for the parent object type
             // Generates a file like:
-            //    books(first: Int, after: String, _filter: BooksFilterInput, orderBy: BooksOrderByInput): BooksConnection!
+            //    books(first: Int, after: String, filter: BooksFilterInput, orderBy: BooksOrderByInput): BooksConnection!
             return new(
                 location: null,
                 Pluralize(name, entity),

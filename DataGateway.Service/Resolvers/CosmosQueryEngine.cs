@@ -237,7 +237,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             foreach (KeyValuePair<string, object?> parameterEntry in parameters)
             {
-                // id and _filter args can't exist at the same time
+                // id and filter args can't exist at the same time
                 if (parameterEntry.Key == QueryBuilder.ID_FIELD_NAME)
                 {
                     // Set id value if id is passed in as an argument
@@ -245,13 +245,13 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
                 else if (parameterEntry.Key == QueryBuilder.FILTER_FIELD_NAME)
                 {
-                    // Mapping partitionKey and id value from _filter object if _filter keywords exists in args
+                    // Mapping partitionKey and id value from filter object if filter keyword exists in args
                     partitionKeyValue = GetPartitionKeyValue(partitionKeyPath, parameterEntry.Value);
                     idValue = GetIdValue(parameterEntry.Value);
                 }
             }
 
-            // If partition key was not found in the _filter, then check if it's being passed in arguments
+            // If partition key was not found in the filter, then check if it's being passed in arguments
             // Partition key is set in the structure object if the _partitionKeyValue keyword exists in args
             if (string.IsNullOrEmpty(partitionKeyValue))
             {

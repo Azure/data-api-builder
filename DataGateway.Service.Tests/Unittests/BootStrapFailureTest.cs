@@ -19,6 +19,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
         {
             DatabaseEngine = TestCategory.MSSQL;
         }
+        
         /// <summary>
         /// Test to validate that the runtime fails and throws an exception during bootstrap when the primary
         /// key cannot be determined for a database object.

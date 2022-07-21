@@ -268,14 +268,13 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// After SqlQueryStructure is instantiated, process a database authorization policy
-        /// for GraphQL requests. Including GraphQL SubQueries
+        /// for GraphQL requests with the ODataASTVisitor to populate DbPolicyPredicates.
+        /// Processing will also occur for GraphQL sub-queries.
         /// </summary>
         /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
         /// <exception cref="DataGatewayException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
         public void ProcessDBPolicyClause(FilterClause dbPolicyClause)
         {
-            // Similar to how we have added FilterPredicates above,
-            // we will add DbPolicyPredicates here.
             ODataASTVisitor visitor = new(this, this.SqlMetadataProvider);
             try
             {

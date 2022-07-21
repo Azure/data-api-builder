@@ -149,7 +149,8 @@ query {{
             int totalElementsFromPaginatedQuery = 0;
             string afterToken = null;
             List<string> pagedResponse = new();
-            string id = _idList[0];
+
+            _ = _idList[0];
 
             do
             {

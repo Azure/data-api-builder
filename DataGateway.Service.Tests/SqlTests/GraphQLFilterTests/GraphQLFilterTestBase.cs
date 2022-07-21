@@ -489,7 +489,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         {
             string graphQLQueryName = "magazines";
             string gqlQuery = @"{
-                magazines( "+ QueryBuilder.FILTER_FIELD_NAME + @" : { issue_number: {isNull: true}}) {
+                magazines( " + QueryBuilder.FILTER_FIELD_NAME + @" : { issue_number: {isNull: true}}) {
                     items {
                         id
                         title

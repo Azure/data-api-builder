@@ -26,34 +26,7 @@ namespace Azure.DataGateway.Service.Models
             PrimaryKeyValuePairs = new();
             OperationType = operationType;
 
-            string? payload = insertPayloadRoot.ToString();
-            if (!string.IsNullOrEmpty(payload))
-            {
-                try
-                {
-                    Dictionary<string, object?>? fieldValuePairs = JsonSerializer.Deserialize<Dictionary<string, object?>>(payload);
-                    if (fieldValuePairs != null)
-                    {
-                        FieldValuePairsInBody = fieldValuePairs;
-                    }
-                    else
-                    {
-                        throw new JsonException("Failed to deserialize the insert payload");
-                    }
-                }
-                catch (JsonException)
-                {
-                    throw new DataGatewayException(
-                        message: "The request body is not in a valid JSON format.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
-                }
-            }
-            else
-            {
-                FieldValuePairsInBody = new();
-            }
-
+            PopulateFieldValuePairsInBody(insertPayloadRoot);
             // We don't support InsertMany as yet.
             IsMany = false;
         }

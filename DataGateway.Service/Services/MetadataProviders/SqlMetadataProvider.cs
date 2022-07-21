@@ -10,6 +10,7 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
+using Newtonsoft.Json.Linq;
 using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
@@ -130,6 +131,7 @@ namespace Azure.DataGateway.Service.Services
             return databaseObject!.TableDefinition;
         }
 
+        /// <inheritdoc />
         public StoredProcedureDefinition GetStoredProcedureDefinition(string entityName)
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
@@ -177,24 +179,24 @@ namespace Azure.DataGateway.Service.Services
         /// <returns></returns>
         private async Task PopulateStoredProcedureDefinitionForEntities()
         {
-            foreach (string entityName in _storedProcedureEntities.Keys)
+            foreach ((string entityName, Entity procedureEntity) in _storedProcedureEntities)
             {
                 await FillSchemaForStoredProcedureAsync(
+                    procedureEntity,
                     GetSchemaName(entityName),
-                    GetDatabaseObjectName(entityName));   
+                    GetDatabaseObjectName(entityName),
+                    GetStoredProcedureDefinition(entityName));   
             }
         }
 
         /// <summary>
         /// Verify that the stored procedure exists in the database schema, then populate its database object parameters accordingly
         /// </summary>
-        /// <param name="schemaName"></param>
-        /// <param name="storedProcedureName"></param>
-        /// <returns></returns>
-        /// <exception cref="DataGatewayException"></exception>
         private async Task FillSchemaForStoredProcedureAsync(
+            Entity procedureEntity,
             string schemaName,
-            string storedProcedureName)
+            string storedProcedureName,
+            StoredProcedureDefinition storedProcedureDefinition)
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
@@ -228,19 +230,110 @@ namespace Azure.DataGateway.Service.Services
 
             // Each row in the procedureParams DataTable corresponds to a single parameter
             DataTable parameterMetadata = await conn.GetSchemaAsync(collectionName: "ProcedureParameters", restrictionValues: procedureParamRestrictions);
-            foreach (DataColumn column in parameterMetadata.Columns)
+            Dictionary<string, JValue>? configParameters = procedureEntity.GetSourceObject().Parameters;
+
+            // For each row/parameter, add an entry to StoredProcedureDefinition.Parameters dictionary
+            foreach (DataRow row in parameterMetadata.Rows)
             {
-                foreach (DataRow row in parameterMetadata.Rows)
+                // Add to parameters dictionary without the leading @ sign
+                storedProcedureDefinition.Parameters.Add(((string)row["PARAMETER_NAME"])[1..],
+                    new()
+                    {
+                        SqlDataType = (string)row["DATA_TYPE"],
+                        SystemType = SqlToCLRType((string)row["DATA_TYPE"]),
+                        ParameterMode = (string)row["PARAMETER_MODE"]
+                    }
+                );
+            }
+
+            // Loop through parameters specified in config, throw error if not found in schema or type mismatch, else set default values
+            if (configParameters is not null)
+            {
+                foreach ((string configParamKey, JValue configParamValue) in configParameters)
                 {
-                    
+                    Type? configParamValueType = configParamValue.Type is JTokenType.Null ? null : configParamValue.Value!.GetType();
+                    if (!storedProcedureDefinition.Parameters.TryGetValue(configParamKey, out ParameterDefinition? parameterDefinition))
+                    {
+                        throw new DataGatewayException(
+                            message: $"Could not find parameter \"{configParamKey}\" specified in config in database schema for stored procedure \"{storedProcedureName}\"",
+                            statusCode: System.Net.HttpStatusCode.NotImplemented,
+                            subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+                    }
+                    else if (configParamValueType is not null && parameterDefinition.SystemType != configParamValueType)
+                    {
+                        throw new DataGatewayException(
+                            message: $"Type mismatch between parameters specified in config and those found in database schema for stored procedure \"{storedProcedureName}\": " +
+                            $"expected {parameterDefinition.SystemType}, got {configParamValueType} for param \"{configParamKey}\"",
+                            statusCode: System.Net.HttpStatusCode.NotImplemented,
+                            subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+                    }
+                    else
+                    {
+                        parameterDefinition.HasConfigDefault = true;
+                        parameterDefinition.ConfigDefaultValue = configParamValue;
+                        //Console.WriteLine($"db param type: {parameterDefinition.SystemType} \n config param type: {configParamValueType}");
+
+                    }
                 }
             }
-            //selectCommand.CommandText
-            //    = ($"SELECT * FROM {tablePrefix}.{SqlQueryBuilder.QuoteIdentifier(tableName)}");
 
-            
         }
-        
+
+        /// <summary>
+        /// Takes a string version of a sql data type and returns its .NET common language runtime (CLR) counterpart
+        /// As per https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/sql-server-data-type-mappings
+        /// Hilariously, I can't seem to find a method .NET exposes to do this for us.
+        /// Note: this is probably sql server specific.
+        /// </summary>
+        public static Type SqlToCLRType(string sqlType)
+        {
+            switch (sqlType)
+            {
+                case "bigint":
+                case "real":
+                    return typeof(long);
+                case "numeric":
+                    return typeof(decimal);
+                case "bit":
+                    return typeof(bool);
+                case "smallint":
+                    return typeof(short);
+                case "decimal":
+                case "smallmoney":
+                case "money":
+                    return typeof(decimal);
+                case "int":
+                    return typeof(int);
+                case "tinyint":
+                    return typeof(byte);
+                case "float":
+                    return typeof(float);
+                case "date":
+                case "datetime2":
+                case "smalldatetime":
+                case "datetime":
+                case "time":
+                    return typeof(DateTime);
+                case "datetimeoffset":
+                    return typeof(DateTimeOffset);
+                case "char":
+                case "varchar":
+                case "text":
+                case "nchar":
+                case "nvarchar":
+                case "ntext":
+                    return typeof(string);
+                case "binary":
+                case "varbinary":
+                case "image":
+                    return typeof(byte[]);
+                case "uniqueidentifier":
+                    return typeof(Guid);
+                default:
+                    throw new ArgumentException("Tried to convert unsupported data type");
+            }
+        }
+
     /// <summary>
     /// Returns the default schema name. Throws exception here since
     /// each derived class should override this method.
@@ -314,8 +407,13 @@ namespace Azure.DataGateway.Service.Services
                         (schemaName, dbObjectName) = ParseSchemaAndDbObjectName(entity.GetSourceName())!;
 
                         // if specified as stored procedure in config, initialize DatabaseObject with StoredProcedureDefinition, else with TableDefinition
-                        sourceObject = new(schemaName: schemaName, tableName: dbObjectName);
-                        if (entity.GetSourceObject().Type is SourceType.StoredProcedure)
+                        sourceObject = new()
+                        {
+                            SchemaName = schemaName,
+                            Name = dbObjectName,
+                            ObjectType = entity.GetSourceObject().Type
+                        };
+                        if (sourceObject.ObjectType is SourceType.StoredProcedure)
                         {
                             sourceObject.StoredProcedureDefinition = new();
                         }
@@ -849,7 +947,7 @@ namespace Azure.DataGateway.Service.Services
             foreach ((_, DatabaseObject dbObject) in EntityToDatabaseObject)
             {
                 // Ensure we're only doing this on tables, not stored procedures which have no table definition
-                if (dbObject.TableDefinition is not null && dbObject.StoredProcedureDefinition is null)
+                if (dbObject.ObjectType is SourceType.Table || dbObject.ObjectType is SourceType.View)
                 {
                     if (!sourceNameToTableDefinition.ContainsKey(dbObject.Name))
                     {

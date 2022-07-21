@@ -131,6 +131,14 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
+        /// Return the StoredProcedureDefinition associated with this database object
+        /// </summary>
+        protected StoredProcedureDefinition GetUnderlyingStoredProcedureDefinition()
+        {
+            return SqlMetadataProvider.GetStoredProcedureDefinition(EntityName);
+        }
+
+        /// <summary>
         /// Get primary key as list of string
         /// </summary>
         public List<string> PrimaryKey()

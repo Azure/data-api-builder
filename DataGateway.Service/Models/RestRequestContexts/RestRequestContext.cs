@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
@@ -164,6 +165,42 @@ namespace Azure.DataGateway.Service.Models
         public void UpdateReturnFields(IEnumerable<string> fields)
         {
             FieldsToBeReturned = fields.ToList();
+        }
+
+        /// <summary>
+        /// Tries to parse the json request body into FieldValuePairsInBody dictionary
+        /// Migrating from derived classes to here as more request contexts need it 
+        /// </summary>
+        public void PopulateFieldValuePairsInBody(JsonElement? jsonBody)
+        {
+            string? payload = jsonBody.ToString();
+            if (!string.IsNullOrEmpty(payload))
+            {
+                try
+                {
+                    Dictionary<string, object?>? fieldValuePairs = JsonSerializer.Deserialize<Dictionary<string, object?>>(payload);
+                    if (fieldValuePairs != null)
+                    {
+                        FieldValuePairsInBody = fieldValuePairs;
+                    }
+                    else
+                    {
+                        throw new JsonException("Failed to deserialize the request body payload");
+                    }
+                }
+                catch (JsonException)
+                {
+                    throw new DataGatewayException(
+                        message: "The request body is not in a valid JSON format.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                }
+            }
+            else
+            {
+                FieldValuePairsInBody = new();
+            }
+
         }
     }
 }

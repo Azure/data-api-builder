@@ -80,46 +80,90 @@ namespace Azure.DataGateway.Service.Services
             }
 
             RestRequestContext context;
-            switch (operationType)
+            // If request has resolved to a stored procedure entity, initialize appropriate request context
+            if (dbObject.ObjectType is SourceType.StoredProcedure)
             {
-                case Operation.Find:
-                    context = new FindRequestContext(entityName,
-                                                     dbo: dbObject,
-                                                     isList: string.IsNullOrEmpty(primaryKeyRoute));
-                    break;
-                case Operation.Insert:
-                    JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
-                    context = new InsertRequestContext(
-                        entityName,
-                        dbo: dbObject,
-                        insertPayloadRoot,
-                        operationType);
-                    RequestValidator.ValidateInsertRequestContext(
-                        (InsertRequestContext)context,
-                        _sqlMetadataProvider);
-                    break;
-                case Operation.Delete:
-                    context = new DeleteRequestContext(entityName,
-                                                       dbo: dbObject,
-                                                       isList: false);
-                    RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
-                    break;
-                case Operation.Update:
-                case Operation.UpdateIncremental:
-                case Operation.Upsert:
-                case Operation.UpsertIncremental:
-                    JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
-                    context = new UpsertRequestContext(entityName,
-                                                       dbo: dbObject,
-                                                       upsertPayloadRoot,
-                                                       operationType);
-                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
-                    break;
-                default:
-                    throw new DataGatewayException(message: "This operation is not supported.",
-                                                   statusCode: HttpStatusCode.BadRequest,
-                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                switch (operationType)
+                {
+
+                    case Operation.Find:
+                        // No need to add request body for find operation, parameters passed in query string
+                        context = new StoredProcedureRequestContext(
+                            entityName,
+                            dbo: dbObject,
+                            null,
+                            operationType);
+                        break;
+                    case Operation.Insert:
+                    case Operation.Delete:
+                    case Operation.Update:
+                    case Operation.UpdateIncremental:
+                    case Operation.Upsert:
+                    case Operation.UpsertIncremental:
+                        // Stored procedure call is semantically identical for all methods except Find, so we can
+                        // effectively reuse the ValidateInsertRequest - throws error if query string is nonempty
+                        // and parses the body into json
+                        JsonElement requestPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
+                        context = new StoredProcedureRequestContext(
+                            entityName,
+                            dbo: dbObject,
+                            requestPayloadRoot,
+                            operationType);
+                        break;
+                    default:
+                        throw new DataGatewayException(message: "This operation is not supported.",
+                                                       statusCode: HttpStatusCode.BadRequest,
+                                                       subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+
+                }
+                // todo: validate stored proc request context (parameters match by name, type..)
+                //RequestValidator.ValidateStoredProcedureRequestContext(context, )
+                
             }
+            else
+            {
+                switch (operationType)
+                {
+                    case Operation.Find:
+                        context = new FindRequestContext(entityName,
+                                                         dbo: dbObject,
+                                                         isList: string.IsNullOrEmpty(primaryKeyRoute));
+                        break;
+                    case Operation.Insert:
+                        JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
+                        context = new InsertRequestContext(
+                            entityName,
+                            dbo: dbObject,
+                            insertPayloadRoot,
+                            operationType);
+                        RequestValidator.ValidateInsertRequestContext(
+                            (InsertRequestContext)context,
+                            _sqlMetadataProvider);
+                        break;
+                    case Operation.Delete:
+                        context = new DeleteRequestContext(entityName,
+                                                           dbo: dbObject,
+                                                           isList: false);
+                        RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
+                        break;
+                    case Operation.Update:
+                    case Operation.UpdateIncremental:
+                    case Operation.Upsert:
+                    case Operation.UpsertIncremental:
+                        JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
+                        context = new UpsertRequestContext(entityName,
+                                                           dbo: dbObject,
+                                                           upsertPayloadRoot,
+                                                           operationType);
+                        RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
+                        break;
+                    default:
+                        throw new DataGatewayException(message: "This operation is not supported.",
+                                                       statusCode: HttpStatusCode.BadRequest,
+                                                       subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                }
+            } 
+            
 
             if (!string.IsNullOrEmpty(primaryKeyRoute))
             {

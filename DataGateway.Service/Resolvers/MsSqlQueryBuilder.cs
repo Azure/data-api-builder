@@ -80,6 +80,15 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
+        ///
+        /// </summary>
+        public string Build(SqlExecuteStructure structure)
+        {
+            return $"EXECUTE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                $"PARAMS";
+        }
+
+        /// <summary>
         /// Avoid redundant check, wrap the sequence in a transaction,
         /// and protect the first table access with appropriate locking.
         /// </summary>

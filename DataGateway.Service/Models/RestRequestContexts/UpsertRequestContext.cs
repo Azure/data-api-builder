@@ -25,24 +25,8 @@ namespace Azure.DataGateway.Service.Models
             FieldsToBeReturned = new();
             PrimaryKeyValuePairs = new();
             OperationType = operationType;
-            if (!string.IsNullOrEmpty(insertPayloadRoot.ToString()))
-            {
-                try
-                {
-                    FieldValuePairsInBody = JsonSerializer.Deserialize<Dictionary<string, object>>(insertPayloadRoot.ToString()!)!;
-                }
-                catch (JsonException)
-                {
-                    throw new DataGatewayException(
-                        message: "The request body is not in a valid JSON format.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
-                }
-            }
-            else
-            {
-                FieldValuePairsInBody = new();
-            }
+
+            PopulateFieldValuePairsInBody(insertPayloadRoot);
 
             // We don't support UpsertMany as yet.
             IsMany = false;

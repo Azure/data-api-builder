@@ -1,8 +1,8 @@
-using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using JsonException = System.Text.Json.JsonException;
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -73,12 +73,6 @@ namespace Azure.DataGateway.Config
         public DatabaseObjectSource GetSourceObject()
         {
             JsonElement sourceJson = (JsonElement)Source;
-            //JsonSerializerOptions options = RuntimeConfig.GetDeserializationOptions();
-            //JsonSerializerOptions options = new()
-            //{
-            //    PropertyNameCaseInsensitive = true
-            //};
-
             JsonSerializerSettings options = new()
             {
                 Converters =
@@ -92,13 +86,11 @@ namespace Azure.DataGateway.Config
             }
             else if (sourceJson.ValueKind is JsonValueKind.Object)
             {
-                // unfortunately, the string to enum conversion is impossible with system.text.json
+                // unfortunately, hyphenated string to enum conversion is impossible with system.text.json alone
                 return JsonConvert.DeserializeObject<DatabaseObjectSource>(Source.ToString()!, options)!;
-                //JsonSerializer.Deserialize<DatabaseObjectSource>(sourceJson, options)!;
             }
 
             throw new JsonException(message: $"Source not one of string or object");
-
         }
     }
 
@@ -109,23 +101,19 @@ namespace Azure.DataGateway.Config
     /// <param name="Type">Type of the database object.</param>
     /// <param name="Name">The name of the database object.</param>
     /// <param name="Parameters">The Parameters to be used for constructing this object
-    /// in case its a stored procedure.</param>
+    /// in case its a stored procedure. Allowed types are boolean/string/number/null </param>
     public record DatabaseObjectSource(
         SourceType Type,
-        [property: JsonPropertyName("object")] string Name,
-        string[]? Parameters);
+        [property: JsonPropertyName("object")] [JsonProperty("object")] string Name,
+        Dictionary<string, JValue>? Parameters);
 
     /// <summary>
     /// Supported source types as defined by json schema
     /// </summary>
-    //[Newtonsoft.Json.JsonConverter(typeof(StringEnumConverter))]
     public enum SourceType
     {
-        //[EnumMember(Value = "table")]
         Table,
-        //[EnumMember(Value = "view")]
         View,
-        //[EnumMember(Value = "stored-procedure")]
         StoredProcedure
     }
 

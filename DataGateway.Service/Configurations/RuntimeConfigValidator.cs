@@ -132,11 +132,7 @@ namespace Azure.DataGateway.Service.Configurations
                     {
                         if (action is null)
                         {
-                            // null is not a valid action.
-                            throw new DataGatewayException(
-                                message: $"null action specified for entity:{entityName}, role:{roleName} is not a valid.",
-                                statusCode: System.Net.HttpStatusCode.InternalServerError,
-                                subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
+                            ThrowInvalidActionException(entityName, roleName);
                         }
 
                         // Evaluate actionOp as the current operation to be validated.

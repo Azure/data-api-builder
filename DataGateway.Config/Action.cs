@@ -29,8 +29,13 @@ namespace Azure.DataGateway.Config
         public static readonly string WILDCARD = "*";
         public override Operation Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            string action = reader.GetString()!;
-            return Enum.TryParse<Operation>(action, true, out Operation operation) ? operation : Operation.All;
+            string? action = reader.GetString();
+            if (WILDCARD.Equals(action))
+            {
+                return Operation.All;
+            }
+
+            return Enum.TryParse<Operation>(action, ignoreCase: true, out Operation operation) ? operation : Operation.None;
         }
 
         public override void Write(Utf8JsonWriter writer, Operation value, JsonSerializerOptions options)

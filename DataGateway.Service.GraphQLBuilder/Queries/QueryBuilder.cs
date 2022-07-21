@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public const string HAS_NEXT_PAGE_FIELD_NAME = "hasNextPage";
         public const string PAGE_START_ARGUMENT_NAME = "first";
         public const string PAGINATION_OBJECT_TYPE_SUFFIX = "Connection";
-        public const string FILTER_FIELD_NAME = "_filter";
+        public const string FILTER_FIELD_NAME = "filter";
         public const string ORDER_BY_FIELD_NAME = "orderBy";
         public const string PARTITION_KEY_FIELD_NAME = "_partitionKeyValue";
         public const string ID_FIELD_NAME = "id";
@@ -77,15 +77,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             List<InputValueDefinitionNode> inputValues = new();
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
 
-            // Any roles passed in will be added to the authorize directive for this field
-            // taking the form: @authorize(roles: [“role1”, ..., “roleN”])
-            // If the 'anonymous' role is present in the role list, no @authorize directive will be added
-            // because HotChocolate requires an authenticated user when the authorize directive is evaluated.
-            if (rolesAllowedForRead is not null &&
-                rolesAllowedForRead.Count() >= 1 &&
-                !rolesAllowedForRead.Contains(SYSTEM_ROLE_ANONYMOUS))
+            if (CreateAuthorizationDirectiveIfNecessary(
+                    rolesAllowedForRead,
+                    out DirectiveNode? authorizeDirective))
             {
-                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForRead));
+                fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
 
             foreach (FieldDefinitionNode primaryKeyField in primaryKeyFields)
@@ -133,20 +129,16 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
 
-            // Any roles passed in will be added to the authorize directive for this field
-            // taking the form: @authorize(roles: [“role1”, ..., “roleN”])
-            // If the 'anonymous' role is present in the role list, no @authorize directive will be added
-            // because HotChocolate requires an authenticated user when the authorize directive is evaluated.
-            if (rolesAllowedForRead is not null &&
-                rolesAllowedForRead.Count() >= 1 &&
-                !rolesAllowedForRead.Contains(SYSTEM_ROLE_ANONYMOUS))
+            if (CreateAuthorizationDirectiveIfNecessary(
+                    rolesAllowedForRead,
+                    out DirectiveNode? authorizeDirective))
             {
-                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForRead));
+                fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
 
             // Query field for the parent object type
             // Generates a file like:
-            //    books(first: Int, after: String, _filter: BooksFilterInput, orderBy: BooksOrderByInput): BooksConnection!
+            //    books(first: Int, after: String, filter: BooksFilterInput, orderBy: BooksOrderByInput): BooksConnection!
             return new(
                 location: null,
                 Pluralize(name, entity),

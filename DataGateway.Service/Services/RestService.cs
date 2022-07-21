@@ -143,8 +143,8 @@ namespace Azure.DataGateway.Service.Services
                 dbPolicy = "?$filter=" + dbPolicy;
 
                 // Parse and save the values that are needed to later generate queries in the given RestRequestContext.
-                // FilterClauseInDbPolicy is an Abstract Syntax Tree representing the parsed policy text.
-                context.DbPolicyClause = _sqlMetadataProvider.GetODataFilterParser().GetFilterClause(dbPolicy, $"{context.EntityName}.{context.DatabaseObject.FullName}");
+                // DbPolicyClause is an Abstract Syntax Tree representing the parsed policy text.
+                context.DbPolicyClause = _sqlMetadataProvider.GetODataParser().GetFilterClause(dbPolicy, $"{context.EntityName}.{context.DatabaseObject.FullName}");
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context.
@@ -263,16 +263,16 @@ namespace Azure.DataGateway.Service.Services
             switch (httpVerbName)
             {
                 case "POST":
-                    return "create";
+                    return ActionType.CREATE;
                 case "PUT":
                 case "PATCH":
                     // Please refer to the use of this method, which is to look out for policy based on crud operation type.
                     // Since create doesn't have filter predicates, PUT/PATCH would resolve to update operation.
-                    return "update";
+                    return ActionType.UPDATE;
                 case "DELETE":
-                    return "delete";
+                    return ActionType.DELETE;
                 case "GET":
-                    return "read";
+                    return ActionType.READ;
                 default:
                     throw new DataGatewayException(
                         message: "Unsupported operation type.",

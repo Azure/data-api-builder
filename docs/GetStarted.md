@@ -16,13 +16,15 @@ az acr login --name hawaiiacr
 
 2. Update the configuration files for your environment:
 
-Update hawaii-config.json (and schema.gql if using CosmosDb).
+Update `hawaii-config.json` (and `schema.gql` if using cosmos).
 
-3. Choose a docker-compose-*.yml file based on your environment (cosmos, sql, postgres)
+3. Choose a `docker-compose-*.yml` file based on your environment (cosmos, sql, postgres)
 
-    3.1. Open the docker-compose file and update the "image" with the tag you want to use. (hawaii:latest is manually created, it doesn't always point to the latest image)
+    3.1. Open the docker-compose file and update the `image` with the tag you want to use. The `latest` tag has the latest commit.
+        To find a different tag, find the CI run that was automatically triggered after your checkin, view more details on azure pipelines, then click `Job`.
+        In the logs of `Build and push docker image` stage, search for `docker push` to find the tag that was pushed.
 
-    3.2. If you are not using the configuration from the repo, update the path to your config/schema to point to your files and map them to /App/hawaii-config.json and for CosmosDb - /App/schema.gql as well.
+    3.2. If you are not using the configuration from the repo, update the path to your config/schema to point to your files and map them to `/App/hawaii-config.json` and for cosmos - `/App/schema.gql` as well.
 
     3.3. Run docker compose up to start the container:
 
@@ -30,7 +32,17 @@ Update hawaii-config.json (and schema.gql if using CosmosDb).
 docker compose -f "./docker-compose.yml" up
 ```
 
-4. Your container should be accessible at localhost:5000
+4. Your container should be accessible at `http://localhost:5000`. 
+
+    4.1 Append the `path` from the `runtime` section of configuration file to access the respective GraphQL or REST endpoint URI.
+    e.g. if you are using the configuration example from this repo, GraphQL endpoint URI will be `http://localhost:5000/graphql`
+    whereas one of the REST endpoint URIs will be `http://localhost:5000/api/Book`.
+
+    4.2 Use your favorite client like Banana Cake Pop(for GraphQL) or Post Man(for both GraphQL and REST) to trigger
+    the requests. In Banana Cake Pop, make sure to configure the schema endpoint to the GraphQL endpoint
+    e.g.`http://localhost:5000/graphql` in its `Connection Settings`-> `General` tab.
+
+    ![Banana Cake Pop Connection Strings](BananaCakePopConnectionSettings.png)
 
 ## Build and deploy as Docker Container
 

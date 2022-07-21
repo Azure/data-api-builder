@@ -25,7 +25,7 @@ namespace Azure.DataGateway.Service.Authorization
     public class AuthorizationResolver : IAuthorizationResolver
     {
         private ISqlMetadataProvider _metadataProvider;
-        private const string WILDCARD = "*";
+        public const string WILDCARD = "*";
         public const string CLAIM_PREFIX = "@claims.";
         public const string FIELD_PREFIX = "@item.";
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
@@ -102,8 +102,7 @@ namespace Azure.DataGateway.Service.Authorization
             {
                 if (valueOfEntityToRole.RoleToActionMap.TryGetValue(roleName, out RoleMetadata? valueOfRoleToAction))
                 {
-                    if (valueOfRoleToAction!.ActionToColumnMap.ContainsKey(WILDCARD) ||
-                        valueOfRoleToAction!.ActionToColumnMap.ContainsKey(action))
+                    if (valueOfRoleToAction!.ActionToColumnMap.ContainsKey(action))
                     {
                         return true;
                     }
@@ -119,17 +118,7 @@ namespace Azure.DataGateway.Service.Authorization
             // Columns.Count() will never be zero because this method is called after a check ensures Count() > 0
             Assert.IsFalse(columns.Count() == 0, message: "columns.Count() should be greater than 0.");
 
-            ActionMetadata actionToColumnMap;
-            RoleMetadata roleInEntity = EntityPermissionsMap[entityName].RoleToActionMap[roleName];
-
-            try
-            {
-                actionToColumnMap = roleInEntity.ActionToColumnMap[actionName];
-            }
-            catch (KeyNotFoundException)
-            {
-                actionToColumnMap = roleInEntity.ActionToColumnMap[WILDCARD];
-            }
+            ActionMetadata actionToColumnMap = EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[actionName];
 
             // Each column present in the request is an "exposedColumn".
             // Authorization permissions reference "backingColumns"
@@ -140,8 +129,8 @@ namespace Azure.DataGateway.Service.Authorization
                 if (_metadataProvider.TryGetBackingColumn(entityName, field: exposedColumn, out string? backingColumn))
                 {
                     // backingColumn will not be null when TryGetBackingColumn() is true.
-                    if (actionToColumnMap.Excluded.Contains(backingColumn!) || actionToColumnMap.Excluded.Contains(WILDCARD) ||
-                    !(actionToColumnMap.Included.Contains(WILDCARD) || actionToColumnMap.Included.Contains(backingColumn!)))
+                    if (actionToColumnMap.Excluded.Contains(backingColumn!) ||
+                        !actionToColumnMap.Included.Contains(backingColumn!))
                     {
                         // If column is present in excluded OR excluded='*'
                         // If column is absent from included and included!=*
@@ -189,20 +178,8 @@ namespace Azure.DataGateway.Service.Authorization
             RoleMetadata roleMetadata = EntityPermissionsMap[entityName].RoleToActionMap[roleName];
             roleMetadata.ActionToColumnMap.TryGetValue(action, out ActionMetadata? actionMetadata);
 
-            // If action exists in map (explicitly specified in config), use its policy
-            // action should only be absent in roleMetadata if WILDCARD is in the map instead of specific actions,
-            // as authorization happens before policy parsing (would have already returned forbidden)
-            string? dbPolicy;
-            if (actionMetadata is not null)
-            {
-                dbPolicy = actionMetadata.DatabasePolicy;
-
-            } // else check if wildcard exists in action map, if so use its policy, else null
-            else
-            {
-                roleMetadata.ActionToColumnMap.TryGetValue(WILDCARD, out ActionMetadata? wildcardMetadata);
-                dbPolicy = wildcardMetadata is not null ? wildcardMetadata.DatabasePolicy : null;
-            }
+            // Get the database policy for the specified action.
+            string? dbPolicy = actionMetadata!.DatabasePolicy;
 
             return dbPolicy is not null ? dbPolicy : string.Empty;
         }
@@ -227,7 +204,7 @@ namespace Azure.DataGateway.Service.Authorization
                     object[] Actions = permission.Actions;
                     foreach (JsonElement actionElement in Actions)
                     {
-                        string actionName = string.Empty;
+                        string action = string.Empty;
                         ActionMetadata actionToColumn = new();
                         IEnumerable<string> allTableColumns = ResolveTableDefinitionColumns(entityName);
 
@@ -235,7 +212,7 @@ namespace Azure.DataGateway.Service.Authorization
                         // Since no granular field permissions exist for this action within the current role.
                         if (actionElement.ValueKind is JsonValueKind.String)
                         {
-                            actionName = actionElement.ToString();
+                            action = actionElement.ToString();
                             actionToColumn.Included.UnionWith(allTableColumns);
                             actionToColumn.Allowed.UnionWith(allTableColumns);
                         }
@@ -246,7 +223,7 @@ namespace Azure.DataGateway.Service.Authorization
                             if (RuntimeConfig.TryGetDeserializedConfig(actionElement.ToString(), out Action? actionObj)
                                 && actionObj is not null)
                             {
-                                actionName = actionObj.Name;
+                                action = actionObj.Name;
                                 if (actionObj.Fields!.Include is not null)
                                 {
                                     // When a wildcard (*) is defined for Included columns, all of the table's
@@ -287,20 +264,25 @@ namespace Azure.DataGateway.Service.Authorization
                             }
                         }
 
-                        // Try to add the actionName to the map if not present.
-                        // Builds up mapping: i.e. ActionType.CREATE permitted in {Role1, Role2, ..., RoleN}
-                        if (!string.IsNullOrWhiteSpace(actionName) && !entityToRoleMap.ActionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
+                        IEnumerable<string> actionNames = GetAllActions(action);
+                        foreach (string actionName in actionNames)
                         {
-                            entityToRoleMap.ActionToRolesMap[actionName].Add(role);
-                        }
+                            // Try to add the actionName to the map if not present.
+                            // Builds up mapping: i.e. ActionType.CREATE permitted in {Role1, Role2, ..., RoleN}
+                            if (!string.IsNullOrWhiteSpace(actionName) &&
+                                !entityToRoleMap.ActionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
+                            {
+                                entityToRoleMap.ActionToRolesMap[actionName].Add(role);
+                            }
 
-                        foreach (string allowedColumn in actionToColumn.Allowed)
-                        {
-                            entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
-                            entityToRoleMap.FieldToRolesMap[allowedColumn][actionName].Add(role);
-                        }
+                            foreach (string allowedColumn in actionToColumn.Allowed)
+                            {
+                                entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
+                                entityToRoleMap.FieldToRolesMap[allowedColumn][actionName].Add(role);
+                            }
 
-                        roleToAction.ActionToColumnMap[actionName] = actionToColumn;
+                            roleToAction.ActionToColumnMap[actionName] = actionToColumn;
+                        }
                     }
 
                     entityToRoleMap.RoleToActionMap[role] = roleToAction;
@@ -308,6 +290,17 @@ namespace Azure.DataGateway.Service.Authorization
 
                 EntityPermissionsMap[entityName] = entityToRoleMap;
             }
+        }
+
+        /// <summary>
+        /// Helper method to create a list consisting of the given action name.
+        /// In case the action is a wildcard(*), it gets resolved to a set of CRUD operations.
+        /// </summary>
+        /// <param name="action">Action name.</param>
+        /// <returns>IEnumerable of all available action name</returns>
+        private static IEnumerable<string> GetAllActions(string action)
+        {
+            return WILDCARD.Equals(action) ? RuntimeConfigValidator.ValidActions : new List<string> { action };
         }
 
         /// <inheritdoc />

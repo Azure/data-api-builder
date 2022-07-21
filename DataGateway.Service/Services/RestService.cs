@@ -1,9 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
@@ -17,7 +14,7 @@ using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -60,7 +57,7 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="entityName">The entity name.</param>
         /// <param name="operationType">The kind of operation to execute.</param>
         /// <param name="primaryKeyRoute">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
-        public async Task<JsonDocument?> ExecuteAsync(
+        public async Task<IActionResult?> ExecuteAsync(
             string entityName,
             Operation operationType,
             string? primaryKeyRoute)
@@ -190,8 +187,8 @@ namespace Azure.DataGateway.Service.Services
                 dbPolicy = "?$filter=" + dbPolicy;
 
                 // Parse and save the values that are needed to later generate queries in the given RestRequestContext.
-                // FilterClauseInDbPolicy is an Abstract Syntax Tree representing the parsed policy text.
-                context.DbPolicyClause = _sqlMetadataProvider.GetODataFilterParser().GetFilterClause(dbPolicy, $"{context.EntityName}.{context.DatabaseObject.FullName}");
+                // DbPolicyClause is an Abstract Syntax Tree representing the parsed policy text.
+                context.DbPolicyClause = _sqlMetadataProvider.GetODataParser().GetFilterClause(dbPolicy, $"{context.EntityName}.{context.DatabaseObject.FullName}");
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context.
@@ -203,7 +200,7 @@ namespace Azure.DataGateway.Service.Services
             switch (operationType)
             {
                 case Operation.Find:
-                    return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
+                    return await _queryEngine.ExecuteAsync(context);
                 case Operation.Insert:
                 case Operation.Delete:
                 case Operation.Update:
@@ -261,84 +258,6 @@ namespace Azure.DataGateway.Service.Services
             return (entityName, primaryKeyRoute);
         }
 
-        /// <summary>
-        /// Format the results from a Find operation. Check if there is a requirement
-        /// for a nextLink, and if so, add this value to the array of JsonElements to
-        /// be used later to format the response in the RestController.
-        /// </summary>
-        /// <param name="task">This task will return the resultant JsonDocument from the query.</param>
-        /// <param name="context">The RequestContext.</param>
-        /// <returns>A result from a Find operation that has been correctly formatted for the controller.</returns>
-        private JsonDocument? FormatFindResult(JsonDocument? jsonDoc, FindRequestContext context)
-        {
-            if (jsonDoc is null)
-            {
-                return jsonDoc;
-            }
-
-            JsonElement jsonElement = jsonDoc.RootElement;
-
-            // If the results are not a collection or if the query does not have a next page
-            // no nextLink is needed, return JsonDocument as is
-            if (jsonElement.ValueKind != JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
-            {
-                return jsonDoc;
-            }
-
-            // More records exist than requested, we know this by requesting 1 extra record,
-            // that extra record is removed here.
-            IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
-
-            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
-            string after = SqlPaginationUtil.MakeCursorFromJsonElement(
-                               element: rootEnumerated.Last(),
-                               orderByColumns: context.OrderByClauseInUrl,
-                               primaryKey: _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
-                               entityName: context.EntityName,
-                               schemaName: context.DatabaseObject.SchemaName,
-                               tableName: context.DatabaseObject.Name,
-                               sqlMetadataProvider: _sqlMetadataProvider);
-
-            // nextLink is the URL needed to get the next page of records using the same query options
-            // with $after base64 encoded for opaqueness
-            string path = UriHelper.GetEncodedUrl(GetHttpContext().Request).Split('?')[0];
-            JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
-                                  path,
-                                  nvc: context!.ParsedQueryString,
-                                  after);
-            rootEnumerated = rootEnumerated.Append(nextLink);
-            return JsonDocument.Parse(JsonSerializer.Serialize(rootEnumerated));
-        }
-
-        /// <summary>
-        /// For the given entity, constructs the primary key route
-        /// using the primary key names from metadata and their values from the JsonElement
-        /// representing one instance of the entity.
-        /// </summary>
-        /// <param name="entityName">Name of the entity.</param>
-        /// <param name="entity">A Json element representing one instance of the entity.</param>
-        /// <remarks> This function expects the Json element entity to contain all the properties
-        /// that make up the primary keys.</remarks>
-        /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
-        public string ConstructPrimaryKeyRoute(string entityName, JsonElement entity)
-        {
-            TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
-            StringBuilder newPrimaryKeyRoute = new();
-
-            foreach (string primaryKey in tableDefinition.PrimaryKey)
-            {
-                newPrimaryKeyRoute.Append(primaryKey);
-                newPrimaryKeyRoute.Append("/");
-                newPrimaryKeyRoute.Append(entity.GetProperty(primaryKey).ToString());
-                newPrimaryKeyRoute.Append("/");
-            }
-
-            // Remove the trailing "/"
-            newPrimaryKeyRoute.Remove(newPrimaryKeyRoute.Length - 1, 1);
-
-            return newPrimaryKeyRoute.ToString();
-        }
-
         private HttpContext GetHttpContext()
         {
             return _httpContextAccessor.HttpContext!;
@@ -388,16 +307,16 @@ namespace Azure.DataGateway.Service.Services
             switch (httpVerbName)
             {
                 case "POST":
-                    return "create";
+                    return ActionType.CREATE;
                 case "PUT":
                 case "PATCH":
                     // Please refer to the use of this method, which is to look out for policy based on crud operation type.
                     // Since create doesn't have filter predicates, PUT/PATCH would resolve to update operation.
-                    return "update";
+                    return ActionType.UPDATE;
                 case "DELETE":
-                    return "delete";
+                    return ActionType.DELETE;
                 case "GET":
-                    return "read";
+                    return ActionType.READ;
                 default:
                     throw new DataGatewayException(
                         message: "Unsupported operation type.",

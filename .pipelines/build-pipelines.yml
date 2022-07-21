@@ -76,4 +76,6 @@ steps:
     repository: 'hawaii/$(Build.SourceBranch)'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
-    tags: '$(BuildDate)-$(Build.SourceVersion)' # Use build date and commitId as the tag for the image
+    tags: |
+      $(BuildDate)-$(Build.SourceVersion)
+      latest

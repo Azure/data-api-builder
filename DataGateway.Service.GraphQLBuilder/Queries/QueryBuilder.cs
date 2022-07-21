@@ -77,9 +77,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             List<InputValueDefinitionNode> inputValues = new();
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
 
-            if (rolesAllowedForRead is not null)
+            if (CreateAuthorizationDirectiveIfNecessary(
+                    rolesAllowedForRead,
+                    out DirectiveNode? authorizeDirective))
             {
-                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForRead));
+                fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
 
             foreach (FieldDefinitionNode primaryKeyField in primaryKeyFields)
@@ -126,9 +128,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             }
 
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
-            if (rolesAllowedForRead is not null)
+
+            if (CreateAuthorizationDirectiveIfNecessary(
+                    rolesAllowedForRead,
+                    out DirectiveNode? authorizeDirective))
             {
-                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForRead));
+                fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
 
             // Query field for the parent object type

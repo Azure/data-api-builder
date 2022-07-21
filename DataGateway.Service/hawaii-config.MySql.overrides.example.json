@@ -17,7 +17,7 @@
     "host": {
       "mode": "development",
       "cors": {
-        "origins": [ "http://localhost:3000" ],
+        "origins": [ "http://localhost:5000" ],
         "allow-credentials": false
       },
       "authentication": {
@@ -128,8 +128,7 @@
                 "database": "@claims.id eq @item.id"
               },
               "fields": {
-                "include": [ "*" ],
-                "exclude": [ "id" ]
+                "include": [ "*" ]
               }
             }
           ]

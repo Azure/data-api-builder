@@ -19,14 +19,20 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public List<Predicate> UpdateOperations { get; }
 
+        /// <summary>
+        /// The columns used for OUTPUT
+        /// </summary>
+        public List<LabelledColumn> OutputColumns { get; }
+
         public SqlUpdateStructure(
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
             bool isIncrementalUpdate)
-        : base(sqlMetadataProvider, entityName: entityName)
+        : base(sqlMetadataProvider, entityName)
         {
             UpdateOperations = new();
+            OutputColumns = GenerateOutputColumns();
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
 
             List<string> primaryKeys = tableDefinition.PrimaryKey;
@@ -34,19 +40,20 @@ namespace Azure.DataGateway.Service.Resolvers
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 Predicate predicate = CreatePredicateForParam(param);
-
+                // since we have already validated mutationParams we know backing column exists
+                SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 // primary keys used as predicates
-                if (primaryKeys.Contains(param.Key))
+                if (primaryKeys.Contains(backingColumn!))
                 {
                     Predicates.Add(predicate);
                 }
                 // use columns to determine values to edit
-                else if (columns.Contains(param.Key))
+                else if (columns.Contains(backingColumn!))
                 {
                     UpdateOperations.Add(predicate);
                 }
 
-                columns.Remove(param.Key);
+                columns.Remove(backingColumn!);
             }
 
             if (!isIncrementalUpdate)
@@ -76,6 +83,7 @@ namespace Azure.DataGateway.Service.Resolvers
             UpdateOperations = new();
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
             List<string> columns = tableDefinition.Columns.Keys.ToList();
+            OutputColumns = GenerateOutputColumns();
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 // primary keys used as predicates
@@ -112,18 +120,20 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
             Predicate predicate;
-            if (param.Value == null && !tableDefinition.Columns[param.Key].IsNullable)
+            // since we have already validated param we know backing column exists
+            SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+            if (param.Value is null && !tableDefinition.Columns[backingColumn!].IsNullable)
             {
                 throw new DataGatewayException(
                     message: $"Cannot set argument {param.Key} to null.",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
-            else if (param.Value == null)
+            else if (param.Value is null)
             {
                 predicate = new(
                     new PredicateOperand(
-                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key)),
+                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn!)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"@{MakeParamWithValue(null)}")
                 );

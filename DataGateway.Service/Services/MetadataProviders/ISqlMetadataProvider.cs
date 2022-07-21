@@ -39,10 +39,10 @@ namespace Azure.DataGateway.Service.Services
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
 
         /// <summary>
-        /// Obtains the underlying OData filter parser.
+        /// Obtains the underlying OData parser.
         /// </summary>
         /// <returns></returns>
-        FilterParser GetODataFilterParser();
+        ODataParser GetODataParser();
 
         /// <summary>
         /// For the entity that is provided as an argument,

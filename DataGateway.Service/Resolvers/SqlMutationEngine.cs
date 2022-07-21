@@ -4,15 +4,20 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -25,6 +30,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
+        private readonly IAuthorizationResolver _authorizationResolver;
 
         /// <summary>
         /// Constructor
@@ -33,12 +39,14 @@ namespace Azure.DataGateway.Service.Resolvers
             IQueryEngine queryEngine,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder,
-            ISqlMetadataProvider sqlMetadataProvider)
+            ISqlMetadataProvider sqlMetadataProvider,
+            IAuthorizationResolver authorizationResolver)
         {
             _queryEngine = queryEngine;
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
             _sqlMetadataProvider = sqlMetadataProvider;
+            _authorizationResolver = authorizationResolver;
         }
 
         /// <summary>
@@ -60,11 +68,15 @@ namespace Azure.DataGateway.Service.Resolvers
             Tuple<JsonDocument, IMetadata>? result = null;
             Operation mutationOperation =
                 MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
-            if (mutationOperation == Operation.Delete)
+            if (mutationOperation is Operation.Delete)
             {
-                // compute the mutation result before removing the element
+                // compute the mutation result before removing the element,
+                // since typical GraphQL delete mutations return the metadata of the deleted item.
                 result = await _queryEngine.ExecuteAsync(context, parameters);
             }
+
+            // If authorization fails, an exception will be thrown and request execution halts.
+            AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
 
             using DbDataReader dbDataReader =
                 await PerformMutationOperation(
@@ -72,7 +84,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     mutationOperation,
                     parameters);
 
-            if (!context.Selection.Type.IsScalarType() && mutationOperation != Operation.Delete)
+            if (!context.Selection.Type.IsScalarType() && mutationOperation is not Operation.Delete)
             {
                 TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
 
@@ -99,7 +111,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     searchParams);
             }
 
-            if (result == null)
+            if (result is null)
             {
                 throw new DataGatewayException(
                     message: "Failed to resolve any query based on the current configuration.",
@@ -111,12 +123,11 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Executes the REST mutation query and returns result as JSON object asynchronously.
+        /// Executes the REST mutation query and returns IActionResult asynchronously.
         /// </summary>
         /// <param name="context">context of REST mutation request.</param>
-        /// <param name="parameters">parameters in the mutation query.</param>
-        /// <returns>JSON object result</returns>
-        public async Task<JsonDocument?> ExecuteAsync(RestRequestContext context)
+        /// <returns>IActionResult</returns>
+        public async Task<IActionResult?> ExecuteAsync(RestRequestContext context)
         {
             Dictionary<string, object?> parameters = PrepareParameters(context);
 
@@ -126,26 +137,32 @@ namespace Azure.DataGateway.Service.Resolvers
                 context.OperationType,
                 parameters);
 
+            string primaryKeyRoute;
             Dictionary<string, object?>? resultRecord = new();
             resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
-
-            string? jsonResultString = null;
 
             switch (context.OperationType)
             {
                 case Operation.Delete:
                     // Records affected tells us that item was successfully deleted.
                     // No records affected happens for a DELETE request on nonexistent object
-                    // Returning empty JSON result triggers a NoContent result in calling REST service.
                     if (dbDataReader.RecordsAffected > 0)
                     {
-                        jsonResultString = "{}";
+                        return new NoContentResult();
                     }
 
                     break;
                 case Operation.Insert:
-                    jsonResultString = JsonSerializer.Serialize(resultRecord);
-                    break;
+                    if (resultRecord is null)
+                    {
+                        // this case should not happen, we throw an exception
+                        // which will be returned as an Unexpected Internal Server Error
+                        throw new Exception();
+                    }
+
+                    primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRecord);
+                    // location will be updated in rest controller where httpcontext is available
+                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRecord).Value);
                 case Operation.Update:
                 case Operation.UpdateIncremental:
                     // Nothing to update means we throw Exception
@@ -155,33 +172,41 @@ namespace Azure.DataGateway.Service.Resolvers
                                                        statusCode: HttpStatusCode.PreconditionFailed,
                                                        subStatusCode: DataGatewayException.SubStatusCodes.DatabaseOperationFailed);
                     }
-                    // Valid REST updates return empty result set
-                    jsonResultString = null;
-                    break;
+
+                    // Valid REST updates return OkObjectResult
+                    return OkMutationResponse(resultRecord);
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
                     /// Processes a second result set from DbDataReader if it exists.
                     /// In MsSQL upsert:
                     /// result set #1: result of the UPDATE operation.
                     /// result set #2: result of the INSERT operation.
-                    if (resultRecord != null)
+                    if (resultRecord is not null)
                     {
-                        if (_sqlMetadataProvider.GetDatabaseType() == DatabaseType.postgresql &&
+                        // postgress may be an insert op here, if so, return CreatedResult
+                        if (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&
                             PostgresQueryBuilder.IsInsert(resultRecord))
                         {
-                            jsonResultString = JsonSerializer.Serialize(resultRecord);
+                            primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRecord);
+                            // location will be updated in rest controller where httpcontext is available
+                            return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRecord).Value);
                         }
-                        else
-                        {
-                            // We give empty result set for updates
-                            jsonResultString = null;
-                        }
+
+                        // Valid REST updates return OkObjectResult
+                        return OkMutationResponse(resultRecord);
                     }
                     else if (await dbDataReader.NextResultAsync())
                     {
                         // Since no first result set exists, we overwrite Dictionary here.
                         resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
-                        jsonResultString = JsonSerializer.Serialize(resultRecord);
+                        if (resultRecord is null)
+                        {
+                            break;
+                        }
+
+                        // location will be updated in rest controller where httpcontext is available
+                        primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRecord);
+                        return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRecord).Value);
                     }
                     else
                     {
@@ -194,16 +219,28 @@ namespace Azure.DataGateway.Service.Resolvers
                             statusCode: HttpStatusCode.NotFound,
                             subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
                     }
-
-                    break;
             }
 
-            if (jsonResultString == null)
+            // if we have not yet returned, record is null
+            return null;
+        }
+
+        /// <summary>
+        /// Helper function returns an OkObjectResult with provided arguments in a
+        /// form that complies with vNext Api guidelines.
+        /// </summary>
+        /// <param name="result">Dictionary representing the results of the client's request.</param>
+        private static OkObjectResult OkMutationResponse(Dictionary<string, object?> result)
+        {
+            // Convert Dictionary to array of JsonElements
+            string jsonString = $"[{JsonSerializer.Serialize(result)}]";
+            JsonElement jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
+            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
+
+            return new OkObjectResult(new
             {
-                return null;
-            }
-
-            return JsonDocument.Parse(jsonResultString);
+                value = resultEnumerated
+            });
         }
 
         /// <summary>
@@ -290,6 +327,35 @@ namespace Azure.DataGateway.Service.Resolvers
             return await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
         }
 
+        /// <summary>
+        /// For the given entity, constructs the primary key route
+        /// using the primary key names from metadata and their values
+        /// from the JsonElement representing the entity.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="entity">A Json element representing one instance of the entity.</param>
+        /// <remarks> This function expects the Json element entity to contain all the properties
+        /// that make up the primary keys.</remarks>
+        /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
+        public string ConstructPrimaryKeyRoute(string entityName, Dictionary<string, object?> entity)
+        {
+            TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
+            StringBuilder newPrimaryKeyRoute = new();
+
+            foreach (string primaryKey in tableDefinition.PrimaryKey)
+            {
+                newPrimaryKeyRoute.Append(primaryKey);
+                newPrimaryKeyRoute.Append("/");
+                newPrimaryKeyRoute.Append(entity[primaryKey]!.ToString());
+                newPrimaryKeyRoute.Append("/");
+            }
+
+            // Remove the trailing "/"
+            newPrimaryKeyRoute.Remove(newPrimaryKeyRoute.Length - 1, 1);
+
+            return newPrimaryKeyRoute.ToString();
+        }
+
         private static Dictionary<string, object?> PrepareParameters(RestRequestContext context)
         {
             Dictionary<string, object?> parameters;
@@ -319,6 +385,71 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             return parameters;
+        }
+
+        /// <summary>
+        /// Authorization check on mutation fields provided in a GraphQL Mutation request.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="parameters"></param>
+        /// <param name="entityName"></param>
+        /// <param name="graphQLMutationName"></param>
+        /// <param name="mutationOperation"></param>
+        /// <returns></returns>
+        /// <exception cref="DataGatewayException"></exception>
+        public void AuthorizeMutationFields(
+            IMiddlewareContext context,
+            IDictionary<string, object?> parameters,
+            string entityName,
+            Operation mutationOperation)
+        {
+            string role = string.Empty;
+            if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value))
+            {
+                role = (StringValues)value!.ToString();
+            }
+
+            if (string.IsNullOrEmpty(role))
+            {
+                throw new DataGatewayException(
+                    message: "No ClientRoleHeader available to perform authorization.",
+                    statusCode: HttpStatusCode.Unauthorized,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
+            List<string> inputArgumentKeys = BaseSqlQueryStructure.InputArgumentToMutationParams(parameters, MutationBuilder.INPUT_ARGUMENT_NAME).Keys.ToList();
+            bool isAuthorized; // False by default.
+
+            switch (mutationOperation)
+            {
+                case Operation.UpdateGraphQL:
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: ActionType.UPDATE, inputArgumentKeys);
+                    break;
+                case Operation.Create:
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: ActionType.CREATE, inputArgumentKeys);
+                    break;
+                case Operation.Delete:
+                    // Delete operations are not checked for authorization on field level,
+                    // and instead at the mutation level and would be rejected before this time in the pipeline.
+                    // Continuing on with operation.
+                    isAuthorized = true;
+                    break;
+                default:
+                    throw new DataGatewayException(
+                        message: "Invalid operation for GraphQL Mutation, must be Create, UpdateGraphQL, or Delete",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest
+                        );
+            }
+
+            if (!isAuthorized)
+            {
+                throw new DataGatewayException(
+                    message: "Unauthorized due to one or more fields in this mutation.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed
+                );
+            }
         }
     }
 }

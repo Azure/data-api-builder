@@ -19,8 +19,6 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         private readonly RuntimeConfig _runtimeConfig;
         private Dictionary<string, string> _partitionKeyPaths = new();
 
-        public FilterParser ODataFilterParser => new();
-
         /// <inheritdoc />
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
 
@@ -129,7 +127,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
             return _cosmosDb.GraphQLSchema;
         }
 
-        public FilterParser GetODataFilterParser()
+        public ODataParser GetODataParser()
         {
             throw new NotImplementedException();
         }

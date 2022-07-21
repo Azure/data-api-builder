@@ -1,23 +1,20 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Net.Http;
-using System.Security.Claims;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Service.Services;
-using Azure.DataGateway.Service.Services.MetadataProviders;
 using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
-using HotChocolate.Language;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json.Linq;
@@ -27,18 +24,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
     public class TestBase
     {
         internal const string DATABASE_NAME = "graphqldb";
-        internal static GraphQLService _graphQLService;
-        internal static CosmosClientProvider _clientProvider;
-        internal static CosmosQueryEngine _queryEngine;
-        internal static CosmosMutationEngine _mutationEngine;
-        internal static GraphQLController _controller;
-        internal static CosmosClient Client { get; private set; }
-
-        [ClassInitialize]
-        public static void Init(TestContext context)
-        {
-            _clientProvider = new CosmosClientProvider(TestHelper.ConfigProvider);
-            string jsonString = @"
+        private const string GRAPHQL_SCHEMA = @"
 type Character @model {
     id : ID,
     name : String,
@@ -52,35 +38,47 @@ type Planet @model {
     name : String,
     character: Character,
     age : Int,
-    dimension : String
+    dimension : String,
+    stars: [Star]
+}
+
+type Star @model {
+    id : ID,
+    name : String
 }";
+
+        private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };
+
+        private static HttpClient _client;
+        internal static WebApplicationFactory<Startup> _application;
+
+        [ClassInitialize(InheritanceBehavior.BeforeEachDerivedClass)]
+        public static void Init(TestContext context)
+        {
             MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
             {
-                { @"./schema.gql", new MockFileData(jsonString) }
+                { @"./schema.gql", new MockFileData(GRAPHQL_SCHEMA) }
             });
-
-            CosmosSqlMetadataProvider _metadataStoreProvider = new(TestHelper.ConfigProvider, fileSystem);
 
             //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.
             Mock<IAuthorizationResolver> authorizationResolverCosmos = new();
-            authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet" }));
+            authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet", "Star" }));
 
-            _queryEngine = new CosmosQueryEngine(_clientProvider, _metadataStoreProvider);
-            _mutationEngine = new CosmosMutationEngine(_clientProvider, _metadataStoreProvider);
-            _graphQLService = new GraphQLService(
-                TestHelper.ConfigProvider,
-                _queryEngine,
-                _mutationEngine,
-                new DocumentCache(),
-                new Sha256DocumentHashProvider(),
-                _metadataStoreProvider,
-                authorizationResolverCosmos.Object);
-            _controller = new GraphQLController(_graphQLService);
-            Client = _clientProvider.Client;
+            _application = new WebApplicationFactory<Startup>()
+                .WithWebHostBuilder(builder =>
+                {
+                    _ = builder.ConfigureTestServices(services =>
+                    {
+                        services.AddSingleton<IFileSystem>(fileSystem);
+                        services.AddSingleton(TestHelper.GetRuntimeConfigProvider(CosmosTestHelper.ConfigPath));
+                        services.AddSingleton(authorizationResolverCosmos.Object);
+                    });
+                });
+
+            RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
+
+            _client = _application.CreateClient();
         }
-
-        private static string[] _planets = { "Earth", "Mars", "Jupiter",
-            "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial"};
 
         /// <summary>
         /// Creates items on the specified container
@@ -90,37 +88,18 @@ type Planet @model {
         /// <param name="numItems">number of items to be created</param>
         internal static List<string> CreateItems(string dbName, string containerName, int numItems)
         {
-            List<String> idList = new();
+            List<string> idList = new();
+            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             for (int i = 0; i < numItems; i++)
             {
                 string uid = Guid.NewGuid().ToString();
                 idList.Add(uid);
-                dynamic sourceItem = TestHelper.GetItem(uid, _planets[i % (_planets.Length)], i);
-                Client.GetContainer(dbName, containerName)
+                dynamic sourceItem = CosmosTestHelper.GetItem(uid, _planets[i % (_planets.Length)], i);
+                cosmosClient.GetContainer(dbName, containerName)
                     .CreateItemAsync(sourceItem, new PartitionKey(uid)).Wait();
             }
 
             return idList;
-        }
-
-        private static DefaultHttpContext GetHttpContextWithBody(string data)
-        {
-            HttpRequestMessage request = new();
-            MemoryStream stream = new(Encoding.UTF8.GetBytes(data));
-            request.Method = HttpMethod.Post;
-
-            //Add identity object to the Mock context object.
-            ClaimsIdentity identity = new(authenticationType: "Bearer");
-            identity.AddClaim(new Claim(ClaimTypes.Role, "anonymous"));
-            identity.AddClaim(new Claim(ClaimTypes.Role, "authenticated"));
-
-            ClaimsPrincipal user = new(identity);
-            DefaultHttpContext httpContext = new()
-            {
-                Request = { Body = stream, ContentLength = stream.Length },
-                User = user
-            };
-            return httpContext;
         }
 
         /// <summary>
@@ -130,7 +109,9 @@ type Planet @model {
         /// <param name="containerName">the container name</param>
         internal static void OverrideEntityContainer(string entityName, string containerName)
         {
-            Entity entity = TestHelper.Config.Entities[entityName];
+            RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
+            RuntimeConfig config = configProvider.GetRuntimeConfiguration();
+            Entity entity = config.Entities[entityName];
 
             System.Reflection.PropertyInfo prop = entity.GetType().GetProperty("Source");
             // Use reflection to set the entity Source (since `entity` is a record type and technically immutable)
@@ -145,25 +126,10 @@ type Planet @model {
         /// <param name="query"> The GraphQL query/mutation</param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns></returns>
-        internal static async Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null)
+        internal static Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null)
         {
-            string queryJson = variables == null ?
-                JObject.FromObject(new { query }).ToString() :
-                JObject.FromObject(new
-                {
-                    query,
-                    variables
-                }).ToString();
-            _controller.ControllerContext.HttpContext = GetHttpContextWithBody(queryJson);
-            JsonElement graphQLResult = await _controller.PostAsync();
-
-            if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
-            {
-                // to validate expected errors and error message
-                return errors;
-            }
-
-            return graphQLResult.GetProperty("data").GetProperty(queryName);
+            RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
+            return GraphQLRequestExecutor.PostGraphQLRequestAsync(_client, configProvider, queryName, query, variables);
         }
 
         internal static async Task<JsonDocument> ExecuteCosmosRequestAsync(string query, int pagesize, string continuationToken, string containerName)
@@ -172,7 +138,8 @@ type Planet @model {
             {
                 MaxItemCount = pagesize,
             };
-            Container c = Client.GetContainer(DATABASE_NAME, containerName);
+            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            Container c = cosmosClient.GetContainer(DATABASE_NAME, containerName);
             QueryDefinition queryDef = new(query);
             FeedIterator<JObject> resultSetIterator = c.GetItemQueryIterator<JObject>(queryDef, continuationToken, options);
             FeedResponse<JObject> firstPage = await resultSetIterator.ReadNextAsync();
@@ -185,7 +152,6 @@ type Planet @model {
             }
 
             return JsonDocument.Parse(jarray.ToString().Trim());
-
         }
 
         private static Dictionary<string, EntityMetadata> GetEntityPermissionsMap(string[] entities)

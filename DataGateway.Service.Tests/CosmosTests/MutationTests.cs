@@ -1,6 +1,9 @@
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Resolvers;
+using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
@@ -31,9 +34,9 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         [ClassInitialize]
         public static void TestFixtureSetup(TestContext context)
         {
-            Init(context);
-            Client.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
-            Client.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
+            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
+            cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             CreateItems(DATABASE_NAME, _containerName, 10);
             OverrideEntityContainer("Planet", _containerName);
         }
@@ -46,12 +49,14 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             var input = new
             {
                 id,
-                name = "test_name"
+                name = "test_name",
+                stars = new[] { new { id = "TestStar" } }
             };
             JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
+            Assert.AreEqual("test_name", response.GetProperty("name").GetString());
         }
 
         [TestMethod]
@@ -81,7 +86,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             const string name = "test_name";
             string mutation = $@"
 mutation {{
-    createPlanet (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+    createPlanet (item: {{ id: ""{id}"", name: ""{name}"", stars: [{{ id: ""{id}"" }}] }}) {{
         id
         name
     }}
@@ -150,7 +155,7 @@ mutation {{
     }}
 }}";
             JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
-            Assert.AreEqual("id field is mandatory", response[0].GetProperty("message").ToString());
+            Assert.IsTrue(response[0].GetProperty("message").ToString().Contains("The input content is invalid because the required properties - 'id; ' - are missing"));
         }
 
         [TestMethod]
@@ -171,7 +176,7 @@ mutation {{
             const string newName = "new_name";
             mutation = $@"
 mutation {{
-    updatePlanet (id: ""{id}"", _partitionKeyValue: ""{id}"", item: {{ id: ""{id}"", name: ""{newName}"" }}) {{
+    updatePlanet (id: ""{id}"", _partitionKeyValue: ""{id}"", item: {{ id: ""{id}"", name: ""{newName}"", stars: [{{ id: ""{id}"" }}] }}) {{
         id
         name
     }}
@@ -207,7 +212,8 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetInput!) {
             var update = new
             {
                 id = id,
-                name = "new_name"
+                name = "new_name",
+                stars = new[] { new { id = "TestStar" } }
             };
 
             JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
@@ -239,7 +245,8 @@ mutation {{
         [ClassCleanup]
         public static void TestFixtureTearDown()
         {
-            Client.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
+            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }
 }

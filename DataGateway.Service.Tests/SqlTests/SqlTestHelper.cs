@@ -1,49 +1,21 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
-    public class SqlTestHelper
+    public class SqlTestHelper : TestHelper
     {
-        public static IOptionsMonitor<RuntimeConfig> LoadConfig(string environment)
-        {
-            string configFileName = RuntimeConfigPath.GetFileNameForEnvironment(environment);
-
-            Dictionary<string, string> configFileNameMap = new()
-            {
-                {
-                    nameof(RuntimeConfigPath.ConfigFileName),
-                    configFileName
-                }
-            };
-
-            IConfigurationRoot config = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddInMemoryCollection(configFileNameMap)
-                .Build();
-
-            RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
-            RuntimeConfig runtimeConfig = configPath.LoadRuntimeConfigValue();
-            AddMissingEntitiesToConfig(runtimeConfig);
-            return Mock.Of<IOptionsMonitor<RuntimeConfig>>(_ => _.CurrentValue == runtimeConfig);
-        }
-
         public static void RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
@@ -54,48 +26,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 runtimeConfig.Entities.Remove(entityName);
                 runtimeConfig.Entities.Add(entityName, updatedEntity);
             }
-        }
-
-        /// <summary>
-        /// Temporary Helper function to ensure that in testing we have an entity
-        /// that can have a custom schema. We create a new entity of 'Magazine' with
-        /// a schema of 'foo' for table 'magazines', and then add this entity to our
-        /// runtime configuration. Because MySql will not have a schema we need a way
-        /// to customize this entity, which this helper function provides. Ultimately
-        /// this will be replaced with a JSON string in the tests that can be fully
-        /// customized for testing purposes.
-        /// </summary>
-        /// <param name="configPath"></param>
-        private static void AddMissingEntitiesToConfig(RuntimeConfig config)
-        {
-            string magazineSource = config.DatabaseType is DatabaseType.mysql ? "\"magazines\"" : "\"foo.magazines\"";
-            string magazineEntityJsonString =
-              @"{
-                    ""source"":  " + magazineSource + @",
-                    ""graphql"": true,
-                    ""permissions"": [
-                      {
-                        ""role"": ""anonymous"",
-                        ""actions"": [ ""read"" ]
-                      },
-                      {
-                        ""role"": ""authenticated"",
-                        ""actions"": [" + $" \"{ActionType.CREATE}\", \"{ActionType.READ}\", \"{ActionType.DELETE}\", \"{ActionType.UPDATE}\" ]" +
-                      @"}
-                    ]
-                }";
-
-            JsonSerializerOptions options = new()
-            {
-                PropertyNameCaseInsensitive = true,
-                Converters =
-                {
-                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
-                }
-            };
-
-            Entity magazineEntity = JsonSerializer.Deserialize<Entity>(magazineEntityJsonString, options);
-            config.Entities.Add("Magazine", magazineEntity);
         }
 
         /// <summary>
@@ -133,8 +63,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         public static void TestForErrorInGraphQLResponse(string response, string message = null, string statusCode = null)
         {
             Console.WriteLine(response);
-
-            Assert.IsTrue(response.Contains("\"errors\""), "No error was found where error is expected.");
 
             if (message is not null)
             {

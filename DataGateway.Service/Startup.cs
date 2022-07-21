@@ -203,13 +203,19 @@ namespace Azure.DataGateway.Service
                     .AddAuthorization()
                     .AddErrorFilter(error =>
                     {
-                        if (error.Exception != null)
+                        if (error.Code is not null)
                         {
-                            Console.Error.WriteLine(error.Exception.Message);
-                            Console.Error.WriteLine(error.Exception.StackTrace);
-                            return error.WithMessage(error.Exception.Message);
-                        }
+                            Console.Error.WriteLine(error.Code);
+                            Console.Error.WriteLine(error.Message);
 
+                            if (error.Exception is not null)
+                            {
+                                Console.Error.WriteLine(error.Exception.Message);
+                                Console.Error.WriteLine(error.Exception.StackTrace);
+                                return error.WithMessage(error.Exception.Message);
+                            }
+                        }
+                        
                         return error;
                     })
                     .AddErrorFilter(error =>

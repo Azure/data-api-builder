@@ -46,6 +46,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
             DataGatewayException ex = await Assert.ThrowsExceptionAsync<DataGatewayException>(() => _sqlMetadataProvider.InitializeAsync());
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual($"Primary key not configured on the given database object {_compositeViewName}", ex.Message);
+            Assert.AreEqual(DataGatewayException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
         }
 
         /// <summary>

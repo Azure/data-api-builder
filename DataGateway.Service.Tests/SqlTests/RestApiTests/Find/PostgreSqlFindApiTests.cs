@@ -7,7 +7,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
 {
-
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlFindApiTests : FindApiTestBase
     {

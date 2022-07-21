@@ -152,6 +152,5 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         #endregion
-
     }
 }

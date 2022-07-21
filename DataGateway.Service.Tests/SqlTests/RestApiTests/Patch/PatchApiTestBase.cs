@@ -15,7 +15,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
     [TestClass]
     public abstract class PatchApiTestBase : RestApiTestBase
     {
-
         #region Positive Tests
 
         /// <summary>

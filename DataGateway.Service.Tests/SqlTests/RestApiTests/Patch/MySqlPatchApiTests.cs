@@ -211,6 +211,5 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
         {
             return _queryMap[key];
         }
-
     }
 }

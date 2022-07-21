@@ -771,6 +771,5 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
         {
             return _queryMap[key];
         }
-
     }
 }

@@ -6,7 +6,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Delete
 {
-
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlDeleteApiTests : DeleteApiTestBase
     {

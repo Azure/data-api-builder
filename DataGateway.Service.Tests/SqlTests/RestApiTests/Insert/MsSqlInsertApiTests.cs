@@ -111,6 +111,5 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         #endregion
-
     }
 }

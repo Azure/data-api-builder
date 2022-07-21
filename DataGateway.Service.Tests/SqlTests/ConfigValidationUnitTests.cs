@@ -3,7 +3,6 @@ using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Tests.Authorization;
 using Azure.DataGateway.Service.Tests.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -30,7 +29,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
+                Operation.Create,
                 includedCols: new HashSet<string> { "*" },
                 excludedCols: new HashSet<string> { "id", "email" },
                 databasePolicy: dbPolicy
@@ -48,21 +47,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Test method to validate that an appropriate exception is thrown when there is an invalid actionName
+        /// Test method to validate that an appropriate exception is thrown when there is an invalid action
         /// supplied in the runtimeconfig.
         /// </summary>
         /// <param name="dbPolicy">Database policy.</param>
-        /// <param name="actionName">The action name to be validated.</param>
+        /// <param name="action">The action to be validated.</param>
         [DataTestMethod]
-        [DataRow("@claims.id eq @item.col1", "fetch", DisplayName = "Invalid action fetch specified in config")]
-        [DataRow("@claims.id eq @item.col2", "remove", DisplayName = "Invalid action remove specified in config")]
-        [DataRow("@claims.id eq @item.col3", "put", DisplayName = "Invalid action put specified in config")]
-        public void InvalidActionNameSpecifiedForARole(string dbPolicy, string actionName)
+        [DataRow("@claims.id eq @item.col1", Operation.Insert, DisplayName = "Invalid action insert specified in config")]
+        [DataRow("@claims.id eq @item.col2", Operation.Upsert, DisplayName = "Invalid action upsert specified in config")]
+        [DataRow("@claims.id eq @item.col3", Operation.Find, DisplayName = "Invalid action find specified in config")]
+        public void InvalidActionSpecifiedForARole(string dbPolicy, Operation action)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                actionName,
+                action,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy
                 );
@@ -93,7 +92,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
+                Operation.Create,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy
                 );
@@ -127,7 +126,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
+                Operation.Create,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );

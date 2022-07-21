@@ -423,10 +423,10 @@ namespace Azure.DataGateway.Service.Resolvers
             switch (mutationOperation)
             {
                 case Operation.UpdateGraphQL:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: ActionType.UPDATE, inputArgumentKeys);
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: Operation.Update, inputArgumentKeys);
                     break;
                 case Operation.Create:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: ActionType.CREATE, inputArgumentKeys);
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: Operation.Create, inputArgumentKeys);
                     break;
                 case Operation.Delete:
                     // Delete operations are not checked for authorization on field level,

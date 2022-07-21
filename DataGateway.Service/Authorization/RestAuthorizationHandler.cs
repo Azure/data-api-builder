@@ -97,9 +97,9 @@ namespace Azure.DataGateway.Service.Authorization
                     }
 
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    IEnumerable<string> actions = HttpVerbToActions(httpContext.Request.Method);
+                    IEnumerable<Operation> actions = HttpVerbToActions(httpContext.Request.Method);
 
-                    foreach (string action in actions)
+                    foreach (Operation action in actions)
                     {
                         bool isAuthorized = _authorizationResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, action);
                         if (!isAuthorized)
@@ -137,12 +137,12 @@ namespace Azure.DataGateway.Service.Authorization
 
                     string entityName = restContext.EntityName;
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    IEnumerable<string> actions = HttpVerbToActions(httpContext.Request.Method);
+                    IEnumerable<Operation> actions = HttpVerbToActions(httpContext.Request.Method);
 
                     // Delete operations do not have column level restrictions.
                     // If the operation is allowed for the role, the column requirement is implicitly successful,
                     // and the authorization check can be short circuited here.
-                    if (actions.Count() == 1 && actions.Contains(ActionType.DELETE))
+                    if (actions.Count() == 1 && actions.Contains(Operation.Delete))
                     {
                         context.Succeed(requirement);
                         return Task.CompletedTask;
@@ -155,7 +155,7 @@ namespace Azure.DataGateway.Service.Authorization
                     // otherwise, just one action is checked.
                     // PUT and PATCH resolve to actions 'create' and 'update'.
                     // A user must fulfill all actions' permissions requirements to proceed.
-                    foreach (string action in actions)
+                    foreach (Operation action in actions)
                     {
                         // Get a list of all columns present in a request that need to be authorized.
                         IEnumerable<string> columnsToCheck = restContext.CumulativeColumns;
@@ -209,19 +209,19 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="httpVerb"></param>
         /// <returns>A collection of ActionTypes resolved from the http verb type of the request.</returns>
-        private static IEnumerable<string> HttpVerbToActions(string httpVerb)
+        private static IEnumerable<Operation> HttpVerbToActions(string httpVerb)
         {
             switch (httpVerb)
             {
                 case HttpConstants.POST:
-                    return new List<string>(new string[] { ActionType.CREATE });
+                    return new List<Operation>(new Operation[] { Operation.Create });
                 case HttpConstants.PUT:
                 case HttpConstants.PATCH:
-                    return new List<string>(new string[] { ActionType.CREATE, ActionType.UPDATE });
+                    return new List<Operation>(new Operation[] { Operation.Create, Operation.Update });
                 case HttpConstants.DELETE:
-                    return new List<string>(new string[] { ActionType.DELETE });
+                    return new List<Operation>(new Operation[] { Operation.Delete });
                 case HttpConstants.GET:
-                    return new List<string>(new string[] { ActionType.READ });
+                    return new List<Operation>(new Operation[] { Operation.Read });
                 default:
                     throw new DataGatewayException(
                         message: "Unsupported operation type.",

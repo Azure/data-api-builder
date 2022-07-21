@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Auth;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
@@ -107,7 +108,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
             _authorizationResolver.Setup(x => x.AreColumnsAllowedForAction(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<string>(),
+                It.IsAny<Operation>(),
                 It.IsAny<IEnumerable<string>>()
                 )).Returns(isAuthorized);
 

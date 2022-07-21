@@ -48,14 +48,14 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// </summary>
         /// <param name="entityName"></param>
         /// <param name="roleName"></param>
-        /// <param name="actionName"></param>
+        /// <param name="action"></param>
         /// <param name="includedCols"></param>
         /// <param name="excludedCols"></param>
         /// <returns></returns>
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
             string roleName = "Reader",
-            string actionName = ActionType.CREATE,
+            Operation action = Operation.Create,
             HashSet<string>? includedCols = null,
             HashSet<string>? excludedCols = null,
             string? databasePolicy = null,
@@ -69,7 +69,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Policy policy = new(requestPolicy, databasePolicy);
 
             Action actionForRole = new(
-                Name: actionName,
+                Name: action,
                 Fields: fieldsForRole,
                 Policy: policy);
 

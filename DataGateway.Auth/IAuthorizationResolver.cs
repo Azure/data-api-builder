@@ -1,3 +1,4 @@
+using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataGateway.Auth
@@ -29,7 +30,7 @@ namespace Azure.DataGateway.Auth
         /// <param name="roleName">Role defined in client role header</param>
         /// <param name="action">Action type: Create, Read, Update, Delete</param>
         /// <returns>True, if a matching permission entry is found.</returns>
-        public bool AreRoleAndActionDefinedForEntity(string entityName, string roleName, string action);
+        public bool AreRoleAndActionDefinedForEntity(string entityName, string roleName, Operation action);
 
         /// <summary>
         /// Any columns referenced in a request's headers, URL(filter/orderby/routes), and/or body
@@ -40,7 +41,7 @@ namespace Azure.DataGateway.Auth
         /// <param name="action">Action type: Create, Read, Update, Delete</param>
         /// <param name="columns">Compiled list of any column referenced in a request</param>
         /// <returns></returns>
-        public bool AreColumnsAllowedForAction(string entityName, string roleName, string action, IEnumerable<string> columns);
+        public bool AreColumnsAllowedForAction(string entityName, string roleName, Operation action, IEnumerable<string> columns);
 
         /// <summary>
         /// From the given parameters, processes the included and excluded column permissions to output
@@ -52,7 +53,7 @@ namespace Azure.DataGateway.Auth
         /// <param name="roleName">Role defined in client role header</param>
         /// <param name="action">Action type: Create, Read, Update, Delete</param>
         /// <returns></returns>
-        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action);
+        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, Operation action);
 
         /// <summary>
         /// Retrieves the policy of an action within an entity's role entry
@@ -64,7 +65,7 @@ namespace Azure.DataGateway.Auth
         /// <param name="action">Action type: Create, Read, Update, Delete.</param>
         /// <param name="httpContext">Contains token claims of the authenticated user used in policy evaluation.</param>
         /// <returns>Returns the parsed policy, if successfully processed, or an exception otherwise.</returns>
-        public string TryProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext);
+        public string TryProcessDBPolicy(string entityName, string roleName, Operation action, HttpContext httpContext);
 
         /// <summary>
         /// Get list of roles defined for entity within runtime configuration.. This is applicable for GraphQL when creating authorization
@@ -75,25 +76,25 @@ namespace Azure.DataGateway.Auth
         public IEnumerable<string> GetRolesForEntity(string entityName);
 
         /// <summary>
-        /// Returns the collection of roles which can perform {actionName} the provided field.
+        /// Returns the collection of roles which can perform {action} the provided field.
         /// Applicable to GraphQL field directive @authorize on ObjectType fields.
         /// </summary>
         /// <param name="entityName">EntityName whose actionMetadata will be searched.</param>
         /// <param name="field">Field to lookup action permissions</param>
-        /// <param name="actionName">Specific action to get collection of roles</param>
-        /// <returns>Collection of role names allowed to perform actionName on Entity's field.</returns>
-        public IEnumerable<string> GetRolesForField(string entityName, string field, string actionName);
+        /// <param name="action">Specific action to get collection of roles</param>
+        /// <returns>Collection of role names allowed to perform action on Entity's field.</returns>
+        public IEnumerable<string> GetRolesForField(string entityName, string field, Operation action);
 
         /// <summary>
         /// Returns a list of roles which define permissions for the provided action.
         /// i.e. list of roles which allow the action "read" on entityName.
         /// </summary>
         /// <param name="entityName">Entity to lookup permissions</param>
-        /// <param name="actionName">Action to lookup applicable roles</param>
+        /// <param name="action">Action to lookup applicable roles</param>
         /// <returns>Collection of roles. Empty list if entityPermissionsMap is null.</returns>
         public static IEnumerable<string> GetRolesForAction(
             string entityName,
-            string actionName,
+            Operation action,
             Dictionary<string, EntityMetadata>? entityPermissionsMap)
         {
             if (entityName is null)
@@ -102,7 +103,7 @@ namespace Azure.DataGateway.Auth
             }
 
             if (entityPermissionsMap is not null &&
-                entityPermissionsMap[entityName].ActionToRolesMap.TryGetValue(actionName, out List<string>? roleList) &&
+                entityPermissionsMap[entityName].ActionToRolesMap.TryGetValue(action, out List<string>? roleList) &&
                 roleList is not null)
             {
                 return roleList;

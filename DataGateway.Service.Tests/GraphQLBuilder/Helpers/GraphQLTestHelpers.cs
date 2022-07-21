@@ -16,19 +16,19 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers
         /// in an authorize directive used on a GraphQL object type definition.
         /// </summary>
         /// <param name="entityName">Entity for which authorization permissions need to be resolved.</param>
-        /// <param name="actionName">Name of action performed on entity to resolve authorization permissions.</param>
+        /// <param name="action">Action performed on entity to resolve authorization permissions.</param>
         /// <param name="roles">Collection of role names allowed to perform action on entity.</param>
         /// <returns>EntityPermissionsMap Key/Value collection.</returns>
-        public static Dictionary<string, EntityMetadata> CreateStubEntityPermissionsMap(string[] entityNames, IEnumerable<string> actionNames, IEnumerable<string> roles)
+        public static Dictionary<string, EntityMetadata> CreateStubEntityPermissionsMap(string[] entityNames, IEnumerable<Operation> actions, IEnumerable<string> roles)
         {
             EntityMetadata entityMetadata = new()
             {
-                ActionToRolesMap = new Dictionary<string, List<string>>()
+                ActionToRolesMap = new Dictionary<Operation, List<string>>()
             };
 
-            foreach (string actionName in actionNames)
+            foreach (Operation action in actions)
             {
-                entityMetadata.ActionToRolesMap.Add(actionName, roles.ToList());
+                entityMetadata.ActionToRolesMap.Add(action, roles.ToList());
             }
 
             Dictionary<string, EntityMetadata> entityPermissionsMap = new();

@@ -1,4 +1,6 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.DataGateway.Service.Exceptions;
 
 namespace Azure.DataGateway.Config
 {
@@ -10,12 +12,34 @@ namespace Azure.DataGateway.Config
     /// <param name="Policy">Details about item-level security rules.</param>
     /// <param name="Fields">Details what fields to include or exclude</param>
     public record Action(
-        [property: JsonPropertyName("action")]
-        string Name,
+        [property: JsonPropertyName("action"),JsonConverter(typeof(StringEnumJsonConverter))]
+        Operation Name,
         [property: JsonPropertyName("policy")]
         Policy? Policy,
         [property: JsonPropertyName("fields")]
         Field? Fields);
+
+    /// <summary>
+    /// Class to specify custom converter used while deserialising action from json config
+    /// to Action.Name.
+    /// </summary>
+    public class StringEnumJsonConverter : JsonConverter<Operation>
+    {
+        // Creating another constant for "*" as we can't use the constant defined in
+        // AuthorizationResolver class because of circular dependency.
+        public static readonly string WILDCARD = "*";
+        public override Operation Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            string action = reader.GetString()!;
+            return Enum.TryParse<Operation>(action, true, out Operation operation) ? operation : Operation.All;
+        }
+
+        public override void Write(Utf8JsonWriter writer, Operation value, JsonSerializerOptions options)
+        {
+            string valueToWrite = value == Operation.All ? WILDCARD : value.ToString();
+            writer.WriteStringValue(valueToWrite);
+        }
+    }
 
     /// <summary>
     /// The operations supported by the service.
@@ -26,7 +50,7 @@ namespace Azure.DataGateway.Config
         // *
         All,
         // Common Operations
-        Find, Delete,
+        Find, Delete, Read,
 
         // Cosmos operations
         Upsert, Create,

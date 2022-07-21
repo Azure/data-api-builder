@@ -9,7 +9,6 @@ using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -96,7 +95,7 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <inheritdoc />
-        public bool AreRoleAndActionDefinedForEntity(string entityName, string roleName, string action)
+        public bool AreRoleAndActionDefinedForEntity(string entityName, string roleName, Operation action)
         {
             if (EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? valueOfEntityToRole))
             {
@@ -113,12 +112,12 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <inheritdoc />
-        public bool AreColumnsAllowedForAction(string entityName, string roleName, string actionName, IEnumerable<string> columns)
+        public bool AreColumnsAllowedForAction(string entityName, string roleName, Operation action, IEnumerable<string> columns)
         {
             // Columns.Count() will never be zero because this method is called after a check ensures Count() > 0
             Assert.IsFalse(columns.Count() == 0, message: "columns.Count() should be greater than 0.");
 
-            ActionMetadata actionToColumnMap = EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[actionName];
+            ActionMetadata actionToColumnMap = EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action];
 
             // Each column present in the request is an "exposedColumn".
             // Authorization permissions reference "backingColumns"
@@ -153,7 +152,7 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <inheritdoc />
-        public string TryProcessDBPolicy(string entityName, string roleName, string action, HttpContext httpContext)
+        public string TryProcessDBPolicy(string entityName, string roleName, Operation action, HttpContext httpContext)
         {
             string dBpolicyWithClaimTypes = GetDBPolicyForRequest(entityName, roleName, action);
             return string.IsNullOrWhiteSpace(dBpolicyWithClaimTypes) ? string.Empty :
@@ -168,7 +167,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="roleName">Role defined in client role header.</param>
         /// <param name="action">Action type: create, read, update, delete.</param>
         /// <returns></returns>
-        private string GetDBPolicyForRequest(string entityName, string roleName, string action)
+        private string GetDBPolicyForRequest(string entityName, string roleName, Operation action)
         {
             // Fetch the database policy by using the sequence of following steps:
             // _entityPermissionMap[entityName] finds the entityMetaData for the current entityName
@@ -204,7 +203,7 @@ namespace Azure.DataGateway.Service.Authorization
                     object[] Actions = permission.Actions;
                     foreach (JsonElement actionElement in Actions)
                     {
-                        string action = string.Empty;
+                        Operation action = Operation.None;
                         ActionMetadata actionToColumn = new();
                         IEnumerable<string> allTableColumns = ResolveTableDefinitionColumns(entityName);
 
@@ -212,7 +211,8 @@ namespace Azure.DataGateway.Service.Authorization
                         // Since no granular field permissions exist for this action within the current role.
                         if (actionElement.ValueKind is JsonValueKind.String)
                         {
-                            action = actionElement.ToString();
+                            string actionName = actionElement.ToString();
+                            action = AuthorizationResolver.WILDCARD.Equals(actionName)? Operation.All : Enum.Parse<Operation>(actionName, ignoreCase: true);
                             actionToColumn.Included.UnionWith(allTableColumns);
                             actionToColumn.Allowed.UnionWith(allTableColumns);
                         }
@@ -264,24 +264,23 @@ namespace Azure.DataGateway.Service.Authorization
                             }
                         }
 
-                        IEnumerable<string> actionNames = GetAllActions(action);
-                        foreach (string actionName in actionNames)
+                        IEnumerable<Operation> actions = GetAllActions(action);
+                        foreach (Operation actionOp in actions)
                         {
-                            // Try to add the actionName to the map if not present.
-                            // Builds up mapping: i.e. ActionType.CREATE permitted in {Role1, Role2, ..., RoleN}
-                            if (!string.IsNullOrWhiteSpace(actionName) &&
-                                !entityToRoleMap.ActionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
+                            // Try to add the actionOp to the map if not present.
+                            // Builds up mapping: i.e. Operation.Create permitted in {Role1, Role2, ..., RoleN}
+                            if (!entityToRoleMap.ActionToRolesMap.TryAdd(actionOp, new List<string>(new string[] { role })))
                             {
-                                entityToRoleMap.ActionToRolesMap[actionName].Add(role);
+                                entityToRoleMap.ActionToRolesMap[actionOp].Add(role);
                             }
 
                             foreach (string allowedColumn in actionToColumn.Allowed)
                             {
                                 entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
-                                entityToRoleMap.FieldToRolesMap[allowedColumn][actionName].Add(role);
+                                entityToRoleMap.FieldToRolesMap[allowedColumn][actionOp].Add(role);
                             }
 
-                            roleToAction.ActionToColumnMap[actionName] = actionToColumn;
+                            roleToAction.ActionToColumnMap[actionOp] = actionToColumn;
                         }
                     }
 
@@ -298,13 +297,13 @@ namespace Azure.DataGateway.Service.Authorization
         /// </summary>
         /// <param name="action">Action name.</param>
         /// <returns>IEnumerable of all available action name</returns>
-        private static IEnumerable<string> GetAllActions(string action)
+        private static IEnumerable<Operation> GetAllActions(Operation action)
         {
-            return WILDCARD.Equals(action) ? RuntimeConfigValidator.ValidActions : new List<string> { action };
+            return Operation.All == action ? RuntimeConfigValidator.ValidActions : new List<Operation> { action };
         }
 
         /// <inheritdoc />
-        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action)
+        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, Operation action)
         {
             ActionMetadata actionMetadata = EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action];
             IEnumerable<string> allowedDBColumns = actionMetadata.Allowed;
@@ -487,11 +486,11 @@ namespace Azure.DataGateway.Service.Authorization
         /// i.e. list of roles which allow the action "read" on entityName.
         /// </summary>
         /// <param name="entityName">Entity to lookup permissions</param>
-        /// <param name="actionName">Action to lookup applicable roles</param>
+        /// <param name="action">Action to lookup applicable roles</param>
         /// <returns>Collection of roles.</returns>
-        public IEnumerable<string> GetRolesForAction(string entityName, string actionName)
+        public IEnumerable<string> GetRolesForAction(string entityName, Operation action)
         {
-            if (EntityPermissionsMap[entityName].ActionToRolesMap.TryGetValue(actionName, out List<string>? roleList) && roleList is not null)
+            if (EntityPermissionsMap[entityName].ActionToRolesMap.TryGetValue(action, out List<string>? roleList) && roleList is not null)
             {
                 return roleList;
             }
@@ -500,16 +499,16 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <summary>
-        /// Returns the collection of roles which can perform {actionName} the provided field.
+        /// Returns the collection of roles which can perform {action} the provided field.
         /// Applicable to GraphQL field directive @authorize on ObjectType fields.
         /// </summary>
         /// <param name="entityName">EntityName whose actionMetadata will be searched.</param>
         /// <param name="field">Field to lookup action permissions</param>
-        /// <param name="actionName">Specific action to get collection of roles</param>
-        /// <returns>Collection of role names allowed to perform actionName on Entity's field.</returns>
-        public IEnumerable<string> GetRolesForField(string entityName, string field, string actionName)
+        /// <param name="action">Specific action to get collection of roles</param>
+        /// <returns>Collection of role names allowed to perform action on Entity's field.</returns>
+        public IEnumerable<string> GetRolesForField(string entityName, string field, Operation action)
         {
-            return EntityPermissionsMap[entityName].FieldToRolesMap[field][actionName];
+            return EntityPermissionsMap[entityName].FieldToRolesMap[field][action];
         }
 
         /// <summary>
@@ -535,14 +534,14 @@ namespace Azure.DataGateway.Service.Authorization
         /// There are only four possible actions
         /// </summary>
         /// <returns></returns>
-        private static Dictionary<string, List<string>> CreateActionToRoleMap()
+        private static Dictionary<Operation, List<string>> CreateActionToRoleMap()
         {
-            return new Dictionary<string, List<string>>()
+            return new Dictionary<Operation, List<string>>()
             {
-                { ActionType.CREATE, new List<string>()},
-                { ActionType.READ, new List<string>()},
-                { ActionType.UPDATE, new List<string>()},
-                { ActionType.DELETE, new List<string>()}
+                { Operation.Create, new List<string>()},
+                { Operation.Read, new List<string>()},
+                { Operation.Update, new List<string>()},
+                { Operation.Delete, new List<string>()}
             };
         }
 

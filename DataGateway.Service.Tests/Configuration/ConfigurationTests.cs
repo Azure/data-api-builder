@@ -309,7 +309,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                         {
                             Config.Action configAction =
                                 ((JsonElement)action).Deserialize<Config.Action>(RuntimeConfig.SerializerOptions);
-                            Assert.IsTrue(allowedActions.Contains(configAction.Name));
+                            Assert.IsTrue(allowedActions.Contains(configAction.Name.ToString().ToLower()));
                             Assert.IsTrue(configAction.Policy == null
                                 || configAction.Policy.GetType() == typeof(Policy));
                             Assert.IsTrue(configAction.Fields == null

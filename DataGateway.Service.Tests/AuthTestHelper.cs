@@ -64,6 +64,10 @@ namespace Azure.DataGateway.Service.Tests
             if (addAuthenticated)
             {
                 roles.Add("authenticated");
+                roles.Add("policy_tester_01");
+                roles.Add("policy_tester_02");
+                roles.Add("policy_tester_03");
+                roles.Add("policy_tester_04");
             }
 
             StaticWebAppsClientPrincipal token = new()

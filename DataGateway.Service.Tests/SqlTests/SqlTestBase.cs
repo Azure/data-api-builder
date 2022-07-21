@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
@@ -115,7 +116,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                         services.AddHttpContextAccessor();
                         services.AddSingleton(_runtimeConfigProvider);
                         services.AddSingleton(_queryEngine);
-                        services.AddSingleton(_mutationEngine);
                         services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
                         {
                             return new SqlMutationEngine(
@@ -448,7 +448,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="httpClient"></param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns>string in JSON format</returns>
-        protected virtual async Task<JsonElement> ExecuteGraphQLRequestAsync(string query, string queryName, bool isAuthenticated, Dictionary<string, object> variables = null)
+        protected virtual async Task<JsonElement> ExecuteGraphQLRequestAsync(
+            string query,
+            string queryName,
+            bool isAuthenticated,
+            Dictionary<string, object> variables = null,
+            string clientRoleHeader = null)
         {
             RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
             return await GraphQLRequestExecutor.PostGraphQLRequestAsync(
@@ -457,7 +462,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryName,
                 query,
                 variables,
-                isAuthenticated ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken() : null
+                isAuthenticated ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken() : null,
+                clientRoleHeader: clientRoleHeader
             );
         }
     }

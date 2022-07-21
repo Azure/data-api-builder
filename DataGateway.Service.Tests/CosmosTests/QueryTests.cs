@@ -157,7 +157,7 @@ query {{
                 string planetConnectionQueryStringFormat = @$"
 query {{
     planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")}, "
-    + QueryBuilder.FILTER_FIELD_NAME + @" : {{ id: {{eq: ""{id}""}} }}) {{
+    + QueryBuilder.FILTER_FIELD_NAME + @": {{ id: {{eq: ""{id}""}} }}) {{
         items {{
             id
             name

@@ -298,7 +298,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
 },
 {
     ""id"": 12,
-    ""title"": ""Time to Eat"",
+    ""title"": ""Time to Eat 2"",
     ""publisher_id"": 1941,
     ""publishers"": {
         ""id"": 1941,

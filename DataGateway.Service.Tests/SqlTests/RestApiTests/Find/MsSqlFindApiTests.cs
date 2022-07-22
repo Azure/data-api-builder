@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
@@ -29,6 +29,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
                 "FindEmptyResultSetWithQueryFilter",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE 1 != 1 FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindOnTableWithUniqueCharacters",
+                $"SELECT [NoteNum] AS [┬─┬ノ( º _ ºノ)], [DetailAssessmentAndPlanning] AS [始計], " +
+                $"[WagingWar] AS [作戰], [StrategicAttack] AS [謀攻] FROM { _integrationUniqueCharactersTable } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindViewAll",

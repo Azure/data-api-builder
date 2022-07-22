@@ -5,6 +5,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
 {
+    /// <summary>
+    /// Tests Database Authorization Policies applied to GraphQL Queries
+    /// </summary>
     [TestClass]
     public class GraphQLQueryDatabasePolicyTests : SqlTestBase
     {
@@ -175,6 +178,46 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
             // id: 9 title: 'Policy-Test-01'
             actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true, clientRoleHeader: "policy_tester_01");
             expected = await GetDatabaseResultAsync(dbQuery_restrictToOneResult);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// Tests a GraphQL query that may fetch multiple result records
+        /// on a table with a nullable field, but does not include any nested queries.
+        /// When a policy is applied to such top-level query, results are restricted
+        /// to the expected records.
+        /// </summary>
+        [TestMethod]
+        public async Task QueryMany_Policy_Nullable()
+        {
+            string dbQuery = @"
+                SELECT TOP 100
+                [table0].[speciesid] AS [speciesid],
+                [table0].[region] AS [region]
+                FROM [dbo].[fungi] AS [table0] 
+                WHERE ([region] != 'northeast') 
+                ORDER BY [table0].[speciesid] ASC 
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            string graphQLQueryName = "fungi";
+            string graphQLQuery = @"query {
+                fungi {
+                    items {
+                        speciesid,
+                        region
+                    }
+            }}";
+
+            // Tests Fungi Read Policy: @item.region ne 'northeast'
+            // Due to restrictive book policy, expects all fungi records except
+            // id: 1 region: 'northeast'
+            JsonElement actual = await base.ExecuteGraphQLRequestAsync(
+                graphQLQuery,
+                graphQLQueryName,
+                isAuthenticated: true,
+                clientRoleHeader: "policy_tester_01");
+            string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }

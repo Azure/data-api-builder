@@ -630,6 +630,55 @@ type Foo @model {
                 actual: deleteField.Directives.Count);
         }
 
+        [DataTestMethod]
+        [TestCategory("Mutation Builder - Delete")]
+        [TestCategory("Schema Builder - Simple Type")]
+        [DataRow(new string[] { "authenticated" }, true,
+            DisplayName = "Validates @authorize directive is added.")]
+        [DataRow(new string[] { "anonymous" }, false,
+            DisplayName = "Validates @authorize directive is NOT added.")]
+        [DataRow(new string[] { "anonymous", "authenticated" }, false,
+            DisplayName = "Validates @authorize directive is NOT added - multiple roles")]
+        public void CanGenerateDeleteMutationWith_SingularEntityName(IEnumerable<string> roles,
+            bool isAuthorizeDirectiveExpected)
+        {
+            string gql =
+    @"
+type Foos @model {
+    id: ID!
+    bar: String!
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, EntityMetadata> entityPermissionsMap
+                = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    new string[] { "Foos" },
+                    new string[] { ActionType.DELETE },
+                    roles);
+            DocumentNode mutationRoot = MutationBuilder.Build(root,
+                DatabaseType.cosmos,
+                new Dictionary<string, Entity> { { "Foos", GenerateEmptyEntity() } },
+                entityPermissionsMap: entityPermissionsMap
+                );
+
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"deleteFoo");
+            Assert.AreEqual(2, field.Arguments.Count);
+            Assert.AreEqual("id", field.Arguments[0].Name.Value);
+            Assert.AreEqual("ID", field.Arguments[0].Type.NamedType().Name.Value);
+            Assert.IsTrue(field.Arguments[0].Type.IsNonNullType());
+            Assert.AreEqual("_partitionKeyValue", field.Arguments[1].Name.Value);
+            Assert.AreEqual("String", field.Arguments[1].Type.NamedType().Name.Value);
+            Assert.IsTrue(field.Arguments[1].Type.IsNonNullType());
+
+            FieldDefinitionNode deleteField =
+                query.Fields.Where(f => f.Name.Value == $"deleteFoo").First();
+            Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
+                actual: deleteField.Directives.Count);
+
+        }
+
         [TestMethod]
         [TestCategory("Mutation Builder - Update")]
         [TestCategory("Schema Builder - Simple Type")]

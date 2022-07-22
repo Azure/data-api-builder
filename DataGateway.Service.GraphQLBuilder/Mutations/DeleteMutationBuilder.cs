@@ -1,6 +1,7 @@
 using Azure.DataGateway.Config;
 using HotChocolate.Language;
 using HotChocolate.Types;
+using Humanizer;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLUtils;
 
@@ -53,8 +54,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
             return new(
                 null,
-                new NameNode($"delete{FormatNameForObject(name, configEntity)}"),
-                new StringValueNode($"Delete a {name}"),
+                new NameNode($"delete{FormatNameForObject(name.Value.Singularize(false), configEntity)}"),
+                new StringValueNode($"Delete a {name.Value.Singularize(false)}"),
                 inputValues,
                 new NamedTypeNode(FormatNameForObject(name, configEntity)),
                 fieldDefinitionNodeDirectives

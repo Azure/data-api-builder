@@ -554,6 +554,7 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="schemaName">Name of the schema.</param>
         /// <param name="tableName">Name of the table.</param>
         /// <param name="tableDefinition">Table definition to fill.</param>
+        /// <param name="entityName">EntityName included to pass on for error messaging.</param>
         private async Task PopulateTableDefinitionAsync(
             string entityName,
             string schemaName,
@@ -627,7 +628,7 @@ namespace Azure.DataGateway.Service.Services
                     else
                     {
                         message = $"Cannot obtain Schema for entity {entityName} " +
-                            $" with underlying database object source: {schemaName}.{tableName} " +
+                            $"with underlying database object source: {schemaName}.{tableName} " +
                             $"due to: {ex.Message}";
                     }
 

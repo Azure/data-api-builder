@@ -186,7 +186,7 @@ INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (1
 SET IDENTITY_INSERT authors OFF
 
 SET IDENTITY_INSERT books ON
-INSERT INTO books(id, title, publisher_id) VALUES (1, 'Awesome book', 1234), (2, 'Also Awesome book', 1234), (3, 'Great wall of china explained', 2345), (4, 'US history in a nutshell', 2345), (5, 'Chernobyl Diaries', 2323), (6, 'The Palace Door', 2324), (7, 'The Groovy Bar', 2324), (8, 'Time to Eat', 2324), (9, 'Policy-Test-01', 1940), (10, 'Policy-Test-02', 1940), (11, 'Policy-Test-04', 1941), (12, 'Time to Eat', 1941);
+INSERT INTO books(id, title, publisher_id) VALUES (1, 'Awesome book', 1234), (2, 'Also Awesome book', 1234), (3, 'Great wall of china explained', 2345), (4, 'US history in a nutshell', 2345), (5, 'Chernobyl Diaries', 2323), (6, 'The Palace Door', 2324), (7, 'The Groovy Bar', 2324), (8, 'Time to Eat', 2324), (9, 'Policy-Test-01', 1940), (10, 'Policy-Test-02', 1940), (11, 'Policy-Test-04', 1941), (12, 'Time to Eat 2', 1941);
 SET IDENTITY_INSERT books OFF
 
 SET IDENTITY_INSERT book_website_placements ON

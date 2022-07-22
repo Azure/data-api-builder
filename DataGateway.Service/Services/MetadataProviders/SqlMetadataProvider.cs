@@ -627,7 +627,8 @@ namespace Azure.DataGateway.Service.Services
                     else
                     {
                         message = $"Cannot obtain Schema for entity {entityName} " +
-                            $" with underlying database object source: {schemaName}.{tableName}: {ex.Message}";
+                            $" with underlying database object source: {schemaName}.{tableName} " +
+                            $"due to: {ex.Message}";
                     }
 
                     throw new DataGatewayException(

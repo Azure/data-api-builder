@@ -53,7 +53,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [TestMethod]
         public async Task CheckNoExceptionForNoForeignKey()
         {
-            SqlTestHelper.SetupRuntimeConfig(DatabaseEngine, out _runtimeConfig);
+            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             SetUpSQLMetadataProvider();
@@ -78,7 +78,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [DataRow("", "Cannot obtain Schema for entity", DatabaseType.mysql)]
         public async Task CheckExceptionForBadConnectionString(string connectionString, string message, DatabaseType db)
         {
-            SqlTestHelper.SetupRuntimeConfig(DatabaseEngine, out _runtimeConfig);
+            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
             _runtimeConfig.ConnectionString = connectionString;
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             switch (db)

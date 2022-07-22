@@ -222,13 +222,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <summary>
         /// Helper function handles the loading of the runtime config.
         /// </summary>
-        public static void SetupRuntimeConfig(string databaseEngine,
-                                              out RuntimeConfig runtimeConfig)
+        public static RuntimeConfig SetupRuntimeConfig(string databaseEngine)
         {
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(databaseEngine);
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
-            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out runtimeConfig);
+            return TestHelper.GetRuntimeConfig(TestHelper.GetRuntimeConfigProvider(configPath));
         }
 
         /// <summary>

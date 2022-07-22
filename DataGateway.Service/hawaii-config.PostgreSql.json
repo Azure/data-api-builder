@@ -315,6 +315,26 @@
           "actions": [ "create", "read", "update", "delete" ]
         }
       ]
+    },
+    "ArtOfWar": {
+      "source": "aow",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "DetailAssessmentAndPlanning": "始計",
+        "WagingWar": "作戰",
+        "StrategicAttack": "謀攻",
+        "NoteNum": "┬─┬ノ( º _ ºノ)"
+      }
     }
   }
 }

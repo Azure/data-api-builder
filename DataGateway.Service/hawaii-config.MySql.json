@@ -4,6 +4,9 @@
     "database-type": "mysql",
     "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests"
   },
+  "mssql": {
+    "set-session-context": false
+  },
   "runtime": {
     "rest": {
       "enabled": true,
@@ -54,7 +57,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update" ]
         },
         {
           "role": "authenticated",
@@ -246,7 +249,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "create", "read", "update", "delete" ]
+          "actions": [ "read" ]
         },
         {
           "role": "authenticated",
@@ -365,6 +368,26 @@
         }
       ],
       "relationships": {
+      }
+    },
+    "ArtOfWar": {
+      "source": "aow",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "DetailAssessmentAndPlanning": "始計",
+        "WagingWar": "作戰",
+        "StrategicAttack": "謀攻",
+        "NoteNum": "┬─┬ノ( º _ ºノ)"
       }
     }
   }

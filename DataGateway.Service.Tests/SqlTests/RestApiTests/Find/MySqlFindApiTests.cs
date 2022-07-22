@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
@@ -32,6 +32,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _emptyTableTableName + @"
                     ) AS subq"
+            },
+            {
+                "FindOnTableWithUniqueCharacters",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('┬─┬ノ( º _ ºノ)', NoteNum,
+                  '始計', DetailAssessmentAndPlanning, '作戰', WagingWar,
+                  '謀攻', StrategicAttack)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationUniqueCharactersTable + @"
+                  ) AS subq"
             },
             {
                 "FindEmptyResultSetWithQueryFilter",

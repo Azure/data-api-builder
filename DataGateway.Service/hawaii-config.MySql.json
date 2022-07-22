@@ -4,9 +4,6 @@
     "database-type": "mysql",
     "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests"
   },
-  "mssql": {
-    "set-session-context": false
-  },
   "runtime": {
     "rest": {
       "enabled": true,

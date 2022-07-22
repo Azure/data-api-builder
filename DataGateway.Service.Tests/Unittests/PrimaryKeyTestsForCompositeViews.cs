@@ -9,7 +9,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.Unittests
 {
-    [TestClass, TestCategory(TestCategory.MSSQL)]
+    [TestClass]
     public class PrimaryKeyTestsForCompositeViews : SqlTestBase
     {
         private static readonly string _compositeViewName = "books_authors";
@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
         /// key cannot be determined for a complex composite view for MsSql.
         /// </summary>
         /// <returns></returns>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task MsSqlPrimaryKeyOnComplexCompositeView()
         {
             DatabaseEngine = TestCategory.MSSQL;
@@ -50,7 +50,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
         /// key cannot be determined for a complex composite view for PostgreSql.
         /// </summary>
         /// <returns></returns>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.POSTGRESQL)]
         public async Task PostgreSqlPrimaryKeyOnComplexCompositeView()
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
@@ -86,7 +86,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
         /// key can be determined for a complex composite view for MySql.
         /// </summary>
         /// <returns></returns>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.MYSQL)]
         public async Task MySqlPrimaryKeyOnComplexCompositeView()
         {
             DatabaseEngine = TestCategory.MYSQL;

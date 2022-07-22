@@ -34,6 +34,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
                     ) AS subq"
             },
             {
+                "FindEmptyResultSetWithQueryFilter",
+                @"
+                    SELECT JSON_OBJECT('id', id) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE 1 != 1
+                    ) AS subq"
+            },
+            {
                 "FindOnTableWithUniqueCharacters",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('┬─┬ノ( º _ ºノ)', NoteNum,
@@ -43,16 +53,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
                       SELECT *
                       FROM " + _integrationUniqueCharactersTable + @"
                   ) AS subq"
-            },
-            {
-                "FindEmptyResultSetWithQueryFilter",
-                @"
-                    SELECT JSON_OBJECT('id', id) AS data
-                    FROM (
-                        SELECT *
-                        FROM " + _integrationTableName + @"
-                        WHERE 1 != 1
-                    ) AS subq"
             },
             {
                 "FindViewAll",

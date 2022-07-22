@@ -613,7 +613,7 @@ namespace Azure.DataGateway.Service.Services
                 {
                     dataTable = await FillSchemaForTableAsync(schemaName, tableName);
                 }
-                catch (ArgumentException ex)
+                catch (Exception ex)
                 {
                     string message;
                     // Check message content to ensure proper messaging
@@ -623,7 +623,7 @@ namespace Azure.DataGateway.Service.Services
                     }
                     else
                     {
-                        message = $"Cannot obtain Schema for {tableName}.";
+                        message = $"Cannot obtain Schema for {tableName}: {ex.Message}";
                     }
 
                     throw new DataGatewayException(

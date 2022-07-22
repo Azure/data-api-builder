@@ -71,13 +71,16 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// <code>Check: </code>  Verify malformed connection string throws correct exception.
         /// </summary>
         [DataTestMethod]
-        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.mssql)]
-        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.postgresql)]
-        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.mysql)]
-        [DataRow("", DatabaseType.mssql)]
-        [DataRow("", DatabaseType.postgresql)]
-        [DataRow("", DatabaseType.mysql)]
-        public async Task CheckExceptionForBadConnectionString(string connectionString, DatabaseType db)
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
+            "The Connection String should be provided.", DatabaseType.mssql)]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
+            "The Connection String should be provided.", DatabaseType.postgresql)]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
+            "The Connection String should be provided.", DatabaseType.mysql)]
+        [DataRow("", "Cannot obtain Schema for publishers:", DatabaseType.mssql)]
+        [DataRow("", "Cannot obtain Schema for publishers:", DatabaseType.postgresql)]
+        [DataRow("", "Cannot obtain Schema for publishers:", DatabaseType.mysql)]
+        public async Task CheckExceptionForBadConnectionString(string connectionString, string message, DatabaseType db)
         {
             SetupRuntimeConfig();
             _runtimeConfig.ConnectionString = connectionString;
@@ -113,7 +116,8 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             }
             catch (DataGatewayException ex)
             {
-                Assert.AreEqual("The Connection String should be provided.", ex.Message);
+                // use contains to correctly cover db/user unique error messaging
+                Assert.IsTrue(ex.Message.Contains(message));
                 Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
                 Assert.AreEqual(DataGatewayException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
             }

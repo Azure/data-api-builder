@@ -191,7 +191,7 @@ namespace Azure.DataGateway.Service
             services.AddControllers();
         }
 
-        private static void AddGraphQL(IServiceCollection services)
+        private void AddGraphQL(IServiceCollection services)
         {
             services.AddGraphQLServer()
                     .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
@@ -205,13 +205,13 @@ namespace Azure.DataGateway.Service
                     {
                         if (error.Code is not null)
                         {
-                            Console.Error.WriteLine(error.Code);
-                            Console.Error.WriteLine(error.Message);
+                            _logger.LogError(error.Code);
+                            _logger.LogError(error.Message);
 
                             if (error.Exception is not null)
                             {
-                                Console.Error.WriteLine(error.Exception.Message);
-                                Console.Error.WriteLine(error.Exception.StackTrace);
+                                _logger.LogError(error.Exception.Message);
+                                _logger.LogError(error.Exception.StackTrace);
                                 return error.WithMessage(error.Exception.Message);
                             }
                         }

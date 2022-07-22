@@ -373,11 +373,11 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "create", "read", "update", "delete" ]
+          "actions": [ "*" ]
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "read", "update", "delete" ]
+          "actions": [ "*" ]
         }
       ],
       "mappings": {

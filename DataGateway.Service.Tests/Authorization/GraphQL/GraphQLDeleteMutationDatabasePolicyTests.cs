@@ -1,6 +1,4 @@
-using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -40,7 +38,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
                 WHERE ([table0].[id] = 9 and [table0].[title] = 'Policy-Test-01') 
                 ORDER BY [table0].[id] ASC 
                 FOR JSON PATH, INCLUDE_NULL_VALUES,WITHOUT_ARRAY_WRAPPER";
-            string expectedErrorMessageSubString = "Could not find entity with";
+
             string graphQLMutationName = "deleteBook";
             string graphQLMutation = @"mutation {
                 deleteBook(id: 9)
@@ -54,21 +52,15 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
             // Delete Book Policy: @item.id ne 9
             // Test that the delete fails due to restrictive delete policy.
             // Confirm that records are not deleted.
-            JsonElement result = await ExecuteGraphQLRequestAsync(
+            await ExecuteGraphQLRequestAsync(
                 graphQLMutation,
                 graphQLMutationName,
                 isAuthenticated: true,
                 clientRoleHeader: "policy_tester_07");
 
-/*            SqlTestHelper.TestForErrorInGraphQLResponse(
-                result.ToString(),
-                message: expectedErrorMessageSubString
-            );*/
-
             string expected = await GetDatabaseResultAsync(dbQuery);
             Assert.IsNotNull(expected, message: "Expected result was null, erroneous delete occurred.");
-/*            SqlTestHelper.PerformTestEqualJsonStrings(expected, result.ToString());
-*/
+
             // Delete Book Policy: @item.id eq 9
             // Test that the delete is successful when policy allows operation.
             // Confirm that record is deleted.
@@ -83,4 +75,3 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
         }
     }
 }
-

@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using System.Web;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;

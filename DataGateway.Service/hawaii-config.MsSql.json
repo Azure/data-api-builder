@@ -129,6 +129,28 @@
             },
             "delete"
           ]
+        },
+        {
+          "role": "policy_tester_06",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 1940"
+              }
+            },
+            "delete"
+          ]
         }
       ],
       "relationships": {
@@ -255,6 +277,50 @@
               },
               "policy": {
                 "database": "@item.title ne 'Policy-Test-01'"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_05",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 9"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_06",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 10"
               }
             },
             "delete"

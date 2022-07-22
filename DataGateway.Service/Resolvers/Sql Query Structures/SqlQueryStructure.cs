@@ -333,9 +333,9 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            if (IsListQuery && queryParams.ContainsKey("_filter"))
+            if (IsListQuery && queryParams.ContainsKey(QueryBuilder.FILTER_FIELD_NAME))
             {
-                object? filterObject = queryParams["_filter"];
+                object? filterObject = queryParams[QueryBuilder.FILTER_FIELD_NAME];
 
                 if (filterObject != null)
                 {
@@ -350,9 +350,9 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             OrderByColumns = PrimaryKeyAsOrderByColumns();
-            if (IsListQuery && queryParams.ContainsKey("orderBy"))
+            if (IsListQuery && queryParams.ContainsKey(QueryBuilder.ORDER_BY_FIELD_NAME))
             {
-                object? orderByObject = queryParams["orderBy"];
+                object? orderByObject = queryParams[QueryBuilder.ORDER_BY_FIELD_NAME];
 
                 if (orderByObject != null)
                 {

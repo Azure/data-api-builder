@@ -68,11 +68,11 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// </summary>
         [DataTestMethod]
         [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
-            "The Connection String should be provided.", DatabaseType.mssql)]
+            DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE, DatabaseType.mssql)]
         [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
-            "The Connection String should be provided.", DatabaseType.postgresql)]
+            DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE, DatabaseType.postgresql)]
         [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
-            "The Connection String should be provided.", DatabaseType.mysql)]
+            DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE, DatabaseType.mysql)]
         [DataRow("", "Cannot obtain Schema for entity", DatabaseType.mssql)]
         [DataRow("", "Cannot obtain Schema for entity", DatabaseType.postgresql)]
         [DataRow("", "Cannot obtain Schema for entity", DatabaseType.mysql)]

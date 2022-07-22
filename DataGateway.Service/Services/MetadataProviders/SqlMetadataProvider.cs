@@ -620,8 +620,11 @@ namespace Azure.DataGateway.Service.Services
                 catch (Exception ex)
                 {
                     string message;
-                    // Check message content to ensure proper messaging
-                    if (ex.Message.Contains($"Format of the initialization string"))
+                    // Check message content to ensure proper error message for connection string
+                    if (ex.Message.Contains($"Format of the initialization string") ||
+                        ex.Message.Contains($"The ConnectionString property has not been initialized") ||
+                        ex.Message.Contains($"Access denied") ||
+                        ex.Message.Contains($"Host can't be null"))
                     {
                         message = DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE;
                     }

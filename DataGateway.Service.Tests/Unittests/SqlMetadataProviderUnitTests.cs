@@ -67,16 +67,13 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// <code>Check: </code>  Verify malformed connection string throws correct exception.
         /// </summary>
         [DataTestMethod]
-        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
-            DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE, DatabaseType.mssql)]
-        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
-            DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE, DatabaseType.postgresql)]
-        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
-            DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE, DatabaseType.mysql)]
-        [DataRow("", "Cannot obtain Schema for entity", DatabaseType.mssql)]
-        [DataRow("", "Cannot obtain Schema for entity", DatabaseType.postgresql)]
-        [DataRow("", "Cannot obtain Schema for entity", DatabaseType.mysql)]
-        public async Task CheckExceptionForBadConnectionString(string connectionString, string message, DatabaseType db)
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.mssql)]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.postgresql)]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.mysql)]
+        [DataRow("", DatabaseType.mssql)]
+        [DataRow("", DatabaseType.postgresql)]
+        [DataRow("", DatabaseType.mysql)]
+        public async Task CheckExceptionForBadConnectionString(string connectionString, DatabaseType db)
         {
             _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
             _runtimeConfig.ConnectionString = connectionString;
@@ -113,7 +110,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             catch (DataGatewayException ex)
             {
                 // use contains to correctly cover db/user unique error messaging
-                Assert.IsTrue(ex.Message.Contains(message));
+                Assert.IsTrue(ex.Message.Contains(DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE));
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataGatewayException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
             }

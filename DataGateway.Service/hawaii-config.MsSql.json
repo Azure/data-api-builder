@@ -325,6 +325,48 @@
             },
             "delete"
           ]
+        },
+        {
+          "role": "policy_tester_07",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 9"
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              }
+            }
+          ]
+        },
+        {
+          "role": "policy_tester_08",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 9"
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              }
+            }
+          ]
         }
       ],
       "relationships": {

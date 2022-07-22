@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.Configurations
 
                         // Evaluate actionOp as the current operation to be validated.
                         Operation actionOp;
-                        if (((JsonElement)action!).ValueKind == JsonValueKind.String)
+                        if (((JsonElement)action!).ValueKind is JsonValueKind.String)
                         {
                             string actionName = action.ToString()!;
                             try
@@ -496,7 +496,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <returns>Boolean value indicating whether the action is valid or not.</returns>
         public static bool IsValidAction(Operation action)
         {
-            return action == Operation.All || ValidActions.Contains(action);
+            return action is Operation.All || ValidActions.Contains(action);
         }
     }
 }

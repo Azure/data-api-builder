@@ -11,7 +11,8 @@ namespace Azure.DataGateway.Config
     /// <param name="Policy">Details about item-level security rules.</param>
     /// <param name="Fields">Details what fields to include or exclude</param>
     public record Action(
-        [property: JsonPropertyName("action"),JsonConverter(typeof(StringEnumJsonConverter))]
+        [property: JsonPropertyName("action"),
+        JsonConverter(typeof(StringEnumJsonConverter))]
         Operation Name,
         [property: JsonPropertyName("policy")]
         Policy? Policy,
@@ -40,7 +41,7 @@ namespace Azure.DataGateway.Config
 
         public override void Write(Utf8JsonWriter writer, Operation value, JsonSerializerOptions options)
         {
-            string valueToWrite = value == Operation.All ? WILDCARD : value.ToString();
+            string valueToWrite = value is Operation.All ? WILDCARD : value.ToString();
             writer.WriteStringValue(valueToWrite);
         }
     }

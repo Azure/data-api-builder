@@ -344,6 +344,15 @@
               "fields": {
                 "include": [ "*" ]
               }
+            },
+            {
+              "action": "delete",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 9"
+              }
             }
           ]
         },
@@ -364,6 +373,15 @@
               "action": "read",
               "fields": {
                 "include": [ "*" ]
+              }
+            },
+            {
+              "action": "delete",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 9"
               }
             }
           ]

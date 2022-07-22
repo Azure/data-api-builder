@@ -10,7 +10,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
     /// Tests Database Authorization Policies applied to GraphQL Queries
     /// </summary>
     [TestClass]
-    public class GraphQLUpdateMutationDatabasePolicyTests : SqlTestBase
+    public class GraphQLDeleteMutationDatabasePolicyTests : SqlTestBase
     {
         /// <summary>
         /// Set the database engine for the tests
@@ -23,68 +23,63 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
         }
 
         /// <summary>
-        /// Tests Authenticated GraphQL Update Mutation which triggers
-        /// policy processing. Tests updateBook with policy that
+        /// Tests Authenticated GraphQL Delete Mutation which triggers
+        /// policy processing. Tests deleteBook with policy that
         /// allows/prevents operation.
-        /// - Operation allowed: confirm record updated.
-        /// - Operation forbidden: confirm record not updated.
+        /// - Operation allowed: confirm record deleted.
+        /// - Operation forbidden: confirm record not deleted.
         /// </summary>
         [TestMethod]
-        public async Task UpdateMutation_Policy()
+        public async Task DeleteMutation_Policy()
         {
             string dbQuery = @"
                 SELECT TOP 1
                 [table0].[id] AS [id],
                 [table0].[title] AS [title]
                 FROM [dbo].[books] AS [table0] 
-                WHERE ([table0].[id] = 9 and [table0].[title] = 'UpdatedBookTitle') 
+                WHERE ([table0].[id] = 9 and [table0].[title] = 'Policy-Test-01') 
                 ORDER BY [table0].[id] ASC 
                 FOR JSON PATH, INCLUDE_NULL_VALUES,WITHOUT_ARRAY_WRAPPER";
             string expectedErrorMessageSubString = "Could not find entity with";
-            string graphQLMutationName = "updateBook";
+            string graphQLMutationName = "deleteBook";
             string graphQLMutation = @"mutation {
-                updateBook(
-                    id: 9
-                    item: {
-                        title: ""UpdatedBookTitle"",
-                        publisher_id: 2345
-                    }
-                )
+                deleteBook(id: 9)
                 {
-                    id,
-                    title
+                    title,
+                    publisher_id
                 }
             }
             ";
 
-            // Update Book Policy: @item.id ne 9
-            // Test that the update fails due to restrictive update policy.
-            // Confirm that no result matches the update request metadata.
+            // Delete Book Policy: @item.id ne 9
+            // Test that the delete fails due to restrictive delete policy.
+            // Confirm that records are not deleted.
             JsonElement result = await ExecuteGraphQLRequestAsync(
                 graphQLMutation,
                 graphQLMutationName,
                 isAuthenticated: true,
                 clientRoleHeader: "policy_tester_07");
 
-            SqlTestHelper.TestForErrorInGraphQLResponse(
+/*            SqlTestHelper.TestForErrorInGraphQLResponse(
                 result.ToString(),
                 message: expectedErrorMessageSubString
-            );
+            );*/
 
-            string dbResponse = await GetDatabaseResultAsync(dbQuery);
-            Assert.IsNull(dbResponse);
-
-            // Update Book Policy: @item.id eq 9
-            // Test that the update is successful when policy allows operation.
-            // Confirm that one result matches the update request metadata.
-            result = await ExecuteGraphQLRequestAsync(
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            Assert.IsNotNull(expected, message: "Expected result was null, erroneous delete occurred.");
+/*            SqlTestHelper.PerformTestEqualJsonStrings(expected, result.ToString());
+*/
+            // Delete Book Policy: @item.id eq 9
+            // Test that the delete is successful when policy allows operation.
+            // Confirm that record is deleted.
+            await ExecuteGraphQLRequestAsync(
                 graphQLMutation,
                 graphQLMutationName,
                 isAuthenticated: true,
                 clientRoleHeader: "policy_tester_08");
 
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, result.ToString());
+            string dbResponse = await GetDatabaseResultAsync(dbQuery);
+            Assert.IsNull(dbResponse, message: "Expected result was not null, delete operation failed.");
         }
     }
 }

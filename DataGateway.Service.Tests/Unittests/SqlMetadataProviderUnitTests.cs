@@ -1,6 +1,9 @@
+using System;
+using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.Extensions.Logging;
@@ -54,15 +57,77 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [TestMethod]
         public async Task CheckNoExceptionForNoForeignKey()
         {
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(DatabaseEngine);
-            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
-            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
+            SetupRuntimeConfig();
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             SetUpSQLMetadataProvider();
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Load runtimeConfig and set connection string and db type
+        /// according to data row.
+        /// <code>Check: </code>  Verify malformed connection string throws correct exception.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.mssql)]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.postgresql)]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.mysql)]
+        [DataRow("", DatabaseType.mssql)]
+        [DataRow("", DatabaseType.postgresql)]
+        [DataRow("", DatabaseType.mysql)]
+        public async Task CheckExceptionForBadConnectionString(string connectionString, DatabaseType db)
+        {
+            SetupRuntimeConfig();
+            _runtimeConfig.ConnectionString = connectionString;
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
+            switch (db)
+            {
+                case DatabaseType.mssql:
+                    _sqlMetadataProvider =
+                       new MsSqlMetadataProvider(_runtimeConfigProvider,
+                           _queryExecutor,
+                           _queryBuilder,
+                           _sqlMetadataLogger);
+                    break;
+                case DatabaseType.mysql:
+                    _sqlMetadataProvider =
+                       new MySqlMetadataProvider(_runtimeConfigProvider,
+                           _queryExecutor,
+                           _queryBuilder,
+                           _sqlMetadataLogger);
+                    break;
+                case DatabaseType.postgresql:
+                    _sqlMetadataProvider =
+                       new PostgreSqlMetadataProvider(_runtimeConfigProvider,
+                           _queryExecutor,
+                           _queryBuilder,
+                           _sqlMetadataLogger);
+                    break;
+            }
+
+            try
+            {
+                await _sqlMetadataProvider.InitializeAsync();
+            }
+            catch (DataGatewayException ex)
+            {
+                Assert.AreEqual("The Connection String should be provided.", ex.Message);
+                Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+                Assert.AreEqual(DataGatewayException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+            }
+        }
+
+        /// <summary>
+        /// Helper function handles the loading of the runtime config.
+        /// </summary>
+        private static void SetupRuntimeConfig()
+        {
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(DatabaseEngine);
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
+            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
         }
     }
 }

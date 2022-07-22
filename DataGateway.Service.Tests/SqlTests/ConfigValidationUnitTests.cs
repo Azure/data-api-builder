@@ -72,8 +72,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             }
             catch (DataGatewayException ex)
             {
-                Assert.AreEqual($"One of the action specified for entity:{AuthorizationHelpers.TEST_ENTITY}, " +
-                                $"role:{AuthorizationHelpers.TEST_ROLE} is not valid.", ex.Message);
+                Assert.AreEqual($"action:{action.ToString()} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
+                    $" role:{AuthorizationHelpers.TEST_ROLE} is not valid.", ex.Message);
                 Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
             }
         }

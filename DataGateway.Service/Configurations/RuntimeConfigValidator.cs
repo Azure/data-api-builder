@@ -132,7 +132,7 @@ namespace Azure.DataGateway.Service.Configurations
                     {
                         if (action is null)
                         {
-                            ThrowInvalidActionException(entityName, roleName);
+                            ThrowInvalidActionException(entityName, roleName, "null");
                         }
 
                         // Evaluate actionOp as the current operation to be validated.
@@ -148,7 +148,7 @@ namespace Azure.DataGateway.Service.Configurations
                             {
                                 // If we have reached this point, it means that actionOp
                                 // is invalid, so we throw exception.
-                                ThrowInvalidActionException(entityName, roleName);
+                                ThrowInvalidActionException(entityName, roleName, actionName);
                             }
                         }
                         else
@@ -168,10 +168,22 @@ namespace Azure.DataGateway.Service.Configurations
                             }
 
                             actionOp = configAction.Name;
-
                             // If we have reached this point, it means that we don't have any invalid
                             // data type in actions. However we need to ensure that the actionOp is valid.
-                            ValidateAction(actionOp, entityName, roleName);
+                            if (!IsValidAction(actionOp))
+                            {
+                                bool isActionPresent = ((JsonElement)action).TryGetProperty("action",
+                                    out JsonElement actionElement);
+                                if (!isActionPresent)
+                                {
+                                    throw new DataGatewayException(
+                                        message: $"action cannot be omitted for entity: {entityName}, role:{roleName}",
+                                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                        subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
+                                }
+
+                                ThrowInvalidActionException(entityName, roleName, actionElement.ToString());
+                            }
 
                             // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
                             // don't contain any other field. If they do, we throw an appropriate exception.
@@ -459,30 +471,16 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Helper function to throw an exception if the action is not valid.
-        /// </summary>
-        /// <param name="action">The action to be validated.</param>
-        /// <param name="entityName">Name of the entity on which the action is to be executed.</param>
-        /// <exception cref="DataGatewayException">Exception thrown if the action is invalid.</exception>
-        private static void ValidateAction(Operation action, string entityName, string roleName)
-        {
-            if (!IsValidAction(action))
-            {
-                // If the action is invalid, we throw an appropriate exception for the same.
-                ThrowInvalidActionException(entityName, roleName);
-            }
-        }
-
-        /// <summary>
         /// Method to throw exception when there is an invalid action specified in config.
         /// </summary>
         /// <param name="entityName">Name of entity for which invalid action is supplied.</param>
         /// <param name="roleName">Name of role for which invalid action is supplied.</param>
+        /// <param name="actionName">Name of invalid action.</param>
         /// <exception cref="DataGatewayException"></exception>
-        private static void ThrowInvalidActionException(string entityName, string roleName)
+        private static void ThrowInvalidActionException(string entityName, string roleName, string actionName)
         {
             throw new DataGatewayException(
-                message: $"One of the action specified for entity:{entityName}, role:{roleName} is not valid.",
+                message: $"action:{actionName} specified for entity:{entityName}, role:{roleName} is not valid.",
                 statusCode: System.Net.HttpStatusCode.InternalServerError,
                 subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
         }

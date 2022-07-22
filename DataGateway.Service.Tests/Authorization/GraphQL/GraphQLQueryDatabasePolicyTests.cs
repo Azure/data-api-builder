@@ -8,7 +8,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
     /// <summary>
     /// Tests Database Authorization Policies applied to GraphQL Queries
     /// </summary>
-    [TestClass]
+    [TestClass, TestCategory(TestCategory.MSSQL)]
     public class GraphQLQueryDatabasePolicyTests : SqlTestBase
     {
         /// <summary>

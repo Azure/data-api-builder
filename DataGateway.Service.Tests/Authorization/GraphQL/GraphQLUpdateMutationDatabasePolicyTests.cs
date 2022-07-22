@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

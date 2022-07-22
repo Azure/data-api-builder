@@ -122,20 +122,25 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
             Assert.AreEqual(expected: true, actual: actual.ValueKind is JsonValueKind.Null);
         }
 
-        // SQL Query by pk nested
-        // Positive: top-level policy allows result, nested policy allows result
-        // Positive: top-level policy allows result, nested policy nullifies result (Nullable field)
-        // Negative: top-level policy nullifies result, nested policy allows result
-        // Negative: top-level policy allows result, nested policy nullifies result (NON Nullable field)
-        // <>: triple nested circular reference , fail or succeed nicely.
-
-        // SQL Query Many non nested
-        // Positive: policy allows result
-        // Negative: policy nullifies result
+        /// <summary>
+        /// Tests a GraphQL query that may fetch multiple result records,
+        /// but does not include any nested queries.
+        /// When a policy is applied to such top-level query, results are restricted
+        /// to the expected records.
+        /// </summary>
         [TestMethod]
-        public async Task QueryMany_PolicyAllowsTopLevelResult()
+        public async Task QueryMany_Policy()
         {
             string dbQuery = @"
+                SELECT TOP 100
+                [table0].[id] AS [id],
+                [table0].[title] AS [title]
+                FROM [dbo].[books] AS [table0] 
+                WHERE ([title] != 'Policy-Test-01') 
+                ORDER BY [table0].[id] ASC 
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            string dbQuery_restrictToOneResult = @"
                 SELECT TOP 100
                 [table0].[id] AS [id],
                 [table0].[title] AS [title]
@@ -153,43 +158,36 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
                     }
             }}";
 
-            JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true, clientRoleHeader: "policy_tester_01");
+            // Tests Book Read Policy: @item.title ne 'Policy-Test-01'
+            // Due to restrictive book policy, expects all book records except:
+            // id: 9 title: 'Policy-Test-01'
+            JsonElement actual = await base.ExecuteGraphQLRequestAsync(
+                graphQLQuery,
+                graphQLQueryName,
+                isAuthenticated: true,
+                clientRoleHeader: "policy_tester_02");
             string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+
+            // Tests Book Read Policy: @item.title eq 'Policy-Test-01'
+            // Due to restrictive book policy, expects one book result:
+            // id: 9 title: 'Policy-Test-01'
+            actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true, clientRoleHeader: "policy_tester_01");
+            expected = await GetDatabaseResultAsync(dbQuery_restrictToOneResult);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
+        /// <summary>
+        /// Tests a GraphQL query that may fetch multiple result records.
+        /// When a policy is applied at the top-level query, results are restricted
+        /// to the expected records.
+        /// When a policy is applied at the nested query level, results may be nulled/trigger
+        /// a GraphQL error due to non-nullable fields resolving to null results.
+        /// </summary>
         [TestMethod]
-        public async Task QueryMany_PolicyDisallowsTopLevelResult()
-        {
-            string dbQuery = @"
-                SELECT TOP 100
-                [table0].[id] AS [id],
-                [table0].[title] AS [title]
-                FROM [dbo].[books] AS [table0] 
-                WHERE ([title] != 'Policy-Test-01') 
-                ORDER BY [table0].[id] ASC 
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
-
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"query {
-                books {
-                    items {
-                        id,
-                        title
-                    }
-            }}";
-
-            JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true, clientRoleHeader: "policy_tester_02");
-            string expected = await GetDatabaseResultAsync(dbQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
-
-        // SQL Query Many nested
-        // Positive: top-level policy allows result, nested policy allows result
-        [TestMethod]
-        public async Task QueryMany_Policy_AllowedTopLevelResult_AllowedNestedResult()
+        public async Task QueryMany_NestedRequest_Policy()
         {
             string dbQuery = @"
                 SELECT TOP 100 
@@ -225,67 +223,36 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
                     }
             }}";
 
-            JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true, clientRoleHeader: "policy_tester_01");
-            string expected = await GetDatabaseResultAsync(dbQuery);
+            // Tests Book Read Policy: @item.title eq 'Policy-Test-01'
+            // Publisher Read Policy: @item.id ne 1940
+            // Expects HotChocolate error since nested query fails to resolve
+            // at least one publisher record due to restrictive policy.
+            JsonElement actual = await base.ExecuteGraphQLRequestAsync(
+                graphQLQuery,
+                graphQLQueryName,
+                isAuthenticated: true,
+                clientRoleHeader: "policy_tester_03");
 
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                actual.ToString(),
+                message: "Cannot return null for non-nullable field.",
+                path: @"[""books"",""items"",0,""publishers""]"
+            );
+
+            // Tests Book Read Policy: @item.title eq 'Policy-Test-01'
+            // Publisher Read Policy: @item.id eq 1940
+            // Target Record: id: 9, title: 'Policy-Test-01' publisher_id: 1940
+            // The top-level book policy restricts this result to one record while
+            // the nested query policy resolves at least one result, avoiding
+            // resolving null for a non-nullable field.
+            actual = await base.ExecuteGraphQLRequestAsync(
+                graphQLQuery,
+                graphQLQueryName,
+                isAuthenticated: true,
+                clientRoleHeader: "policy_tester_01");
+
+            string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
-
-        // Positive: top-level policy allows result, nested policy nullifies result (Nullable field)
-        [TestMethod]
-        public async Task QueryMany_Policy_AllowedTopLevelResult_DisallowedNestedResult()
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"query {
-                books {
-                    items {
-                        id,
-                        title,
-                        publishers{
-                            id,
-                            name
-                        }
-                    }
-            }}";
-
-            JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true, clientRoleHeader: "policy_tester_03");
-
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                actual.ToString(),
-                message: "Cannot return null for non-nullable field.",
-                path: @"[""books"",""items"",0,""publishers""]"
-            );
-        }
-
-        // Negative: top-level policy nullifies result, nested policy allows result
-        // Policy on Publishers filters out a result for one of the book results,
-        // nullifying the entire result.
-        [TestMethod]
-        public async Task QueryMany_Policy_DisAllowedTopLevelResult_AllowedNestedResult()
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"query {
-                books {
-                    items {
-                        id,
-                        title,
-                        publishers{
-                            id,
-                            name
-                        }
-                    }
-            }}";
-
-            JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true, clientRoleHeader: "policy_tester_04");
-
-            // We expect a GraphQL response error. 
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                actual.ToString(),
-                message: "Cannot return null for non-nullable field.",
-                path: @"[""books"",""items"",0,""publishers""]"
-            );
-        }
-        // Negative: top-level policy allows result, nested policy nullifies result (NON Nullable field)
-        // <>: triple nested circular reference , fail or succeed nicely.
     }
 }

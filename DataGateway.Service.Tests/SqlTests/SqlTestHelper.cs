@@ -6,10 +6,13 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
@@ -214,6 +217,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 default:
                     throw new ArgumentException(message: $"Invalid operationType {operationType} provided");
             }
+        }
+
+        /// <summary>
+        /// Helper function handles the loading of the runtime config.
+        /// </summary>
+        public static void SetupRuntimeConfig(string databaseEngine,
+                                              out RuntimeConfig runtimeConfig)
+        {
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(databaseEngine);
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
+            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out runtimeConfig);
         }
 
         /// <summary>

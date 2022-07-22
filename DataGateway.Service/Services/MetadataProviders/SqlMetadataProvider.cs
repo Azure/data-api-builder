@@ -472,8 +472,8 @@ namespace Azure.DataGateway.Service.Services
             catch (ArgumentException)
             {
                 throw new DataGatewayException(
-                    message: $"The Connection String should be provided.",
-                    statusCode: HttpStatusCode.InternalServerError,
+                    message: DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
@@ -490,6 +490,7 @@ namespace Azure.DataGateway.Service.Services
                 in EntityToDatabaseObject.Keys)
             {
                 await PopulateTableDefinitionAsync(
+                    entityName,
                     GetSchemaName(entityName),
                     GetDatabaseObjectName(entityName),
                     GetTableDefinition(entityName));
@@ -554,11 +555,12 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="tableName">Name of the table.</param>
         /// <param name="tableDefinition">Table definition to fill.</param>
         private async Task PopulateTableDefinitionAsync(
+            string entityName,
             string schemaName,
             string tableName,
             TableDefinition tableDefinition)
         {
-            DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(schemaName, tableName);
+            DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(entityName, schemaName, tableName);
 
             List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);
 
@@ -603,6 +605,7 @@ namespace Azure.DataGateway.Service.Services
         /// If not present, fills it first and returns the same.
         /// </summary>
         private async Task<DataTable> GetTableWithSchemaFromDataSetAsync(
+            string entityName,
             string schemaName,
             string tableName)
         {
@@ -619,16 +622,17 @@ namespace Azure.DataGateway.Service.Services
                     // Check message content to ensure proper messaging
                     if (ex.Message.Contains($"Format of the initialization string"))
                     {
-                        message = $"The Connection String should be provided.";
+                        message = DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE;
                     }
                     else
                     {
-                        message = $"Cannot obtain Schema for {tableName}: {ex.Message}";
+                        message = $"Cannot obtain Schema for entity {entityName} " +
+                            $" with underlying database object source: {schemaName}.{tableName}: {ex.Message}";
                     }
 
                     throw new DataGatewayException(
                         message,
-                        statusCode: HttpStatusCode.InternalServerError,
+                        statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
                 }
             }

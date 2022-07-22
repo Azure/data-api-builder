@@ -1,13 +1,10 @@
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.SqlTests;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 
 namespace Azure.DataGateway.Service.Tests.UnitTests
 {
@@ -56,7 +53,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [TestMethod]
         public async Task CheckNoExceptionForNoForeignKey()
         {
-            SetupRuntimeConfig();
+            SqlTestHelper.SetupRuntimeConfig(DatabaseEngine, out _runtimeConfig);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             SetUpSQLMetadataProvider();
@@ -76,12 +73,12 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             "The Connection String should be provided.", DatabaseType.postgresql)]
         [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests",
             "The Connection String should be provided.", DatabaseType.mysql)]
-        [DataRow("", "Cannot obtain Schema for publishers:", DatabaseType.mssql)]
-        [DataRow("", "Cannot obtain Schema for publishers:", DatabaseType.postgresql)]
-        [DataRow("", "Cannot obtain Schema for publishers:", DatabaseType.mysql)]
+        [DataRow("", "Cannot obtain Schema for entity", DatabaseType.mssql)]
+        [DataRow("", "Cannot obtain Schema for entity", DatabaseType.postgresql)]
+        [DataRow("", "Cannot obtain Schema for entity", DatabaseType.mysql)]
         public async Task CheckExceptionForBadConnectionString(string connectionString, string message, DatabaseType db)
         {
-            SetupRuntimeConfig();
+            SqlTestHelper.SetupRuntimeConfig(DatabaseEngine, out _runtimeConfig);
             _runtimeConfig.ConnectionString = connectionString;
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             switch (db)
@@ -117,20 +114,9 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             {
                 // use contains to correctly cover db/user unique error messaging
                 Assert.IsTrue(ex.Message.Contains(message));
-                Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataGatewayException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
             }
-        }
-
-        /// <summary>
-        /// Helper function handles the loading of the runtime config.
-        /// </summary>
-        private static void SetupRuntimeConfig()
-        {
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(DatabaseEngine);
-            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
-            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
         }
     }
 }

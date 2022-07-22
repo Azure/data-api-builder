@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
@@ -463,8 +464,19 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>true if non empty schema in connection string, false otherwise.</returns>
         public static bool TryGetSchemaFromConnectionString(out string schemaName, string connectionString)
         {
-            NpgsqlConnectionStringBuilder connectionStringBuilder = new(connectionString);
-            schemaName = connectionStringBuilder.SearchPath is null ? string.Empty : connectionStringBuilder.SearchPath;
+            try
+            {
+                NpgsqlConnectionStringBuilder connectionStringBuilder = new(connectionString);
+                schemaName = connectionStringBuilder.SearchPath is null ? string.Empty : connectionStringBuilder.SearchPath;
+            }
+            catch (ArgumentException)
+            {
+                throw new DataGatewayException(
+                    message: $"The Connection String should be provided.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
             return string.IsNullOrEmpty(schemaName) ? false : true;
         }
 
@@ -601,14 +613,27 @@ namespace Azure.DataGateway.Service.Services
                 {
                     dataTable = await FillSchemaForTableAsync(schemaName, tableName);
                 }
-                // ArgumentException handling to cover wrongly formatted Connection string
-                catch (ArgumentException)
+                catch (ArgumentException ex)
                 {
-                    throw new NotSupportedException("The Connection String should be provided.");
+                    string message;
+                    // Check message content to ensure proper messaging
+                    if (ex.Message.Contains($"Format of the initialization string"))
+                    {
+                        message = $"The Connection String should be provided.";
+                    }
+                    else
+                    {
+                        message = $"Cannot obtain Schema for {tableName}.";
+                    }
+
+                    throw new DataGatewayException(
+                        message,
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
                 }
             }
 
-            return dataTable;
+            return dataTable!;
         }
 
         /// <summary>

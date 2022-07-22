@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -66,7 +67,10 @@ namespace Azure.DataGateway.Service.Configurations
 
             if (string.IsNullOrWhiteSpace(runtimeConfig.ConnectionString))
             {
-                throw new NotSupportedException($"The Connection String should be provided.");
+                throw new DataGatewayException(
+                    message: $"The Connection String should be provided.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
             if (runtimeConfig.DatabaseType == DatabaseType.cosmos)

@@ -24,10 +24,7 @@ namespace Azure.DataGateway.Service.Services
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
     {
-        // use for more than just filter parsing
-        // rename to _oDataParser
-        // tracked in https://github.com/Azure/hawaii-gql/issues/486
-        private FilterParser _oDataFilterParser = new();
+        private ODataParser _oDataParser = new();
 
         private readonly DatabaseType _databaseType;
 
@@ -76,9 +73,9 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <inheritdoc />
-        public FilterParser GetODataFilterParser()
+        public ODataParser GetODataParser()
         {
-            return _oDataFilterParser;
+            return _oDataParser;
         }
 
         /// <inheritdoc />
@@ -154,7 +151,7 @@ namespace Azure.DataGateway.Service.Services
             GenerateDatabaseObjectForEntities();
             await PopulateTableDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();
-            InitFilterParser();
+            InitODataParser();
             timer.Stop();
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
         }
@@ -528,9 +525,13 @@ namespace Azure.DataGateway.Service.Services
             return entity is not null ? entity.Mappings : null;
         }
 
-        private void InitFilterParser()
+        /// <summary>
+        /// Initialize OData parser by buidling OData model.
+        /// The parser will be used for parsing filter clause and order by clause.
+        /// </summary>
+        private void InitODataParser()
         {
-            _oDataFilterParser.BuildModel(this);
+            _oDataParser.BuildModel(this);
         }
 
         /// <summary>

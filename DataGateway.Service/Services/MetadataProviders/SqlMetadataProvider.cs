@@ -624,7 +624,8 @@ namespace Azure.DataGateway.Service.Services
                     if (ex.Message.Contains($"Format of the initialization string") ||
                         ex.Message.Contains($"The ConnectionString property has not been initialized") ||
                         ex.Message.Contains($"Access denied") ||
-                        ex.Message.Contains($"Host can't be null"))
+                        ex.Message.Contains($"Host can't be null") ||
+                        ex.Message.Contains($"Unable to connect"))
                     {
                         message = DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE;
                     }

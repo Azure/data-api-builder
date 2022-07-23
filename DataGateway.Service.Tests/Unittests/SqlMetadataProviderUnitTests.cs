@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
@@ -110,6 +111,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             catch (DataGatewayException ex)
             {
                 // use contains to correctly cover db/user unique error messaging
+                Console.WriteLine(ex.Message);
                 Assert.IsTrue(ex.Message.Contains(DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE));
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataGatewayException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);

@@ -39,6 +39,13 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
         {
             return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
         }
+        private static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameDefinedInConfig)
+        {
+            return new Entity("dbo.entity", Rest: null,
+                GraphQL: new SingularPlural(singularNameForEntity, pluralNameDefinedInConfig),
+                Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
+            ;
+        }
 
         [DataTestMethod]
         [TestCategory("Mutation Builder - Create")]
@@ -633,150 +640,58 @@ type Foo @model {
         [DataTestMethod]
         [TestCategory("Mutation Builder - Delete")]
         [TestCategory("Schema Builder - Simple Type")]
-        [DataRow(new string[] { "authenticated" }, true,
-            DisplayName = "Validates @authorize directive is added.")]
-        [DataRow(new string[] { "anonymous" }, false,
-            DisplayName = "Validates @authorize directive is NOT added.")]
-        [DataRow(new string[] { "anonymous", "authenticated" }, false,
-            DisplayName = "Validates @authorize directive is NOT added - multiple roles")]
-        public void CanGenerateDeleteMutationWithSingularEntityName_ForDirectPluralEntityName(IEnumerable<string> roles,
-            bool isAuthorizeDirectiveExpected)
+        [DataRow(@"
+                type Foos @model {
+                    id: ID!
+                }", "Foos", null, null,
+            DisplayName = "Validates that delete mutation is created with singular entity name for a direct plural entity name.")]
+        [DataRow(@"
+                    type Leaves @model {
+                        id: ID!
+                }", "Leaves", null, null,
+            DisplayName = "Validates that delete mutation is created with singular entity name for indirect plural entity name.")]
+        [DataRow(@"
+                    type Herbs @model {
+                        id: ID!
+                }", "Herbs", "Plant", "Plants",
+            DisplayName = "Validates that when singular entity name is defined in the config, delete mutation will be created with that singular name.")]
+        public void CanGenerateDeleteMutationWithSingularEntityName(string gql, string entityName, string singularName, string pluralName)
         {
-            string gql =
-    @"
-type Foos @model {
-    id: ID!
-    bar: String!
-}
-                ";
-
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Entity entity = (singularName is not null && pluralName is not null)
+                                ? GenerateEntityWithSingularPlural(singularName, pluralName)
+                                : GenerateEmptyEntity();
+
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                    new string[] { "Foos" },
+                    new string[] { entityName },
                     new string[] { ActionType.DELETE },
-                    roles);
+                    new string[] { "anonymous", "authenticated" });
+
+            string expectedDeleteMutationName = (singularName is not null && pluralName is not null)
+                                                        ? $"delete{singularName}"
+                                                        : GetExpectedDeleteMutationName(entityName);
+
             DocumentNode mutationRoot = MutationBuilder.Build(root,
                 DatabaseType.cosmos,
-                new Dictionary<string, Entity> { { "Foos", GenerateEmptyEntity() } },
+                new Dictionary<string, Entity> { { entityName, entity } },
                 entityPermissionsMap: entityPermissionsMap
                 );
-
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
-            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"deleteFoo");
-            Assert.AreEqual(2, field.Arguments.Count);
-            Assert.AreEqual("id", field.Arguments[0].Name.Value);
-            Assert.AreEqual("ID", field.Arguments[0].Type.NamedType().Name.Value);
-            Assert.IsTrue(field.Arguments[0].Type.IsNonNullType());
-            Assert.AreEqual("_partitionKeyValue", field.Arguments[1].Name.Value);
-            Assert.AreEqual("String", field.Arguments[1].Type.NamedType().Name.Value);
-            Assert.IsTrue(field.Arguments[1].Type.IsNonNullType());
 
-            FieldDefinitionNode deleteField =
-                query.Fields.Where(f => f.Name.Value == $"deleteFoo").First();
-            Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: deleteField.Directives.Count);
-
+            Assert.IsNotNull(query);
+            Assert.AreEqual(1, query.Fields.Count);
+            Assert.IsTrue(query.Fields.Any(f => f.Name.Value == expectedDeleteMutationName));
         }
 
-        [DataTestMethod]
-        [TestCategory("Mutation Builder - Delete")]
-        [TestCategory("Schema Builder - Simple Type")]
-        [DataRow(new string[] { "authenticated" }, true,
-            DisplayName = "Validates @authorize directive is added.")]
-        [DataRow(new string[] { "anonymous" }, false,
-            DisplayName = "Validates @authorize directive is NOT added.")]
-        [DataRow(new string[] { "anonymous", "authenticated" }, false,
-            DisplayName = "Validates @authorize directive is NOT added - multiple roles")]
-        public void CanGenerateDeleteMutationWithSingularEntityName_ForInDirectPluralEntityName(IEnumerable<string> roles,
-            bool isAuthorizeDirectiveExpected)
+        private static string GetExpectedDeleteMutationName(string entityName)
         {
-            string gql =
-    @"
-type Leaves @model {
-    id: ID!
-    bar: String!
-}
-                ";
-
-            DocumentNode root = Utf8GraphQLParser.Parse(gql);
-            Dictionary<string, EntityMetadata> entityPermissionsMap
-                = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                    new string[] { "Leaves" },
-                    new string[] { ActionType.DELETE },
-                    roles);
-            DocumentNode mutationRoot = MutationBuilder.Build(root,
-                DatabaseType.cosmos,
-                new Dictionary<string, Entity> { { "Leaves", GenerateEmptyEntity() } },
-                entityPermissionsMap: entityPermissionsMap
-                );
-
-            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
-            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"deleteLeaf");
-            Assert.AreEqual(2, field.Arguments.Count);
-            Assert.AreEqual("id", field.Arguments[0].Name.Value);
-            Assert.AreEqual("ID", field.Arguments[0].Type.NamedType().Name.Value);
-            Assert.IsTrue(field.Arguments[0].Type.IsNonNullType());
-            Assert.AreEqual("_partitionKeyValue", field.Arguments[1].Name.Value);
-            Assert.AreEqual("String", field.Arguments[1].Type.NamedType().Name.Value);
-            Assert.IsTrue(field.Arguments[1].Type.IsNonNullType());
-
-            FieldDefinitionNode deleteField =
-                query.Fields.Where(f => f.Name.Value == $"deleteLeaf").First();
-            Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: deleteField.Directives.Count);
-
-        }
-
-        [DataTestMethod]
-        [TestCategory("Mutation Builder - Delete")]
-        [TestCategory("Schema Builder - Simple Type")]
-        [DataRow(new string[] { "authenticated" }, true,
-            DisplayName = "Validates @authorize directive is added.")]
-        [DataRow(new string[] { "anonymous" }, false,
-            DisplayName = "Validates @authorize directive is NOT added.")]
-        [DataRow(new string[] { "anonymous", "authenticated" }, false,
-            DisplayName = "Validates @authorize directive is NOT added - multiple roles")]
-        public void CanGenerateDeleteMutationWithSingularEntityName_ForSingularPluralDefined(IEnumerable<string> roles,
-            bool isAuthorizeDirectiveExpected)
-        {
-            string gql =
-    @"
-type Leaves @model {
-    id: ID!
-    bar: String!
-}
-                ";
-
-            DocumentNode root = Utf8GraphQLParser.Parse(gql);
-            Dictionary<string, EntityMetadata> entityPermissionsMap
-                = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                    new string[] { "Leaves" },
-                    new string[] { ActionType.DELETE },
-                    roles);
-            DocumentNode mutationRoot = MutationBuilder.Build(root,
-                DatabaseType.cosmos,
-                new Dictionary<string, Entity> { { "Leaves",
-                        new Entity("dbo.entity", Rest: null, GraphQL: new SingularPlural("leaves", "leaves"), Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new())
-        } },
-                entityPermissionsMap: entityPermissionsMap
-                );
-            //When singular, plural value is defined in the configuration, the mutation will be created as per that 
-            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
-            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"deleteLeaves");
-            Assert.AreEqual(2, field.Arguments.Count);
-            Assert.AreEqual("id", field.Arguments[0].Name.Value);
-            Assert.AreEqual("ID", field.Arguments[0].Type.NamedType().Name.Value);
-            Assert.IsTrue(field.Arguments[0].Type.IsNonNullType());
-            Assert.AreEqual("_partitionKeyValue", field.Arguments[1].Name.Value);
-            Assert.AreEqual("String", field.Arguments[1].Type.NamedType().Name.Value);
-            Assert.IsTrue(field.Arguments[1].Type.IsNonNullType());
-
-            FieldDefinitionNode deleteField =
-                query.Fields.Where(f => f.Name.Value == $"deleteLeaves").First();
-            Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: deleteField.Directives.Count);
-
+            return entityName switch
+            {
+                "Foos" => "deleteFoo",
+                "Leaves" => "deleteLeaf",
+                _ => $"delete{entityName}"
+            };
         }
 
         [TestMethod]
@@ -1074,4 +989,5 @@ type Foo @model {{
             return (mutationRoot, field);
         }
     }
+
 }

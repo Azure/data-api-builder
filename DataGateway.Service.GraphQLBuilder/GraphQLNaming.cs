@@ -91,5 +91,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 
             return modelDirective.Arguments.Count == 1 ? (string)(modelDirective.Arguments[0].Value.Value ?? node.Name.Value) : node.Name.Value;
         }
+
+        public static string Singularize(NameNode name)
+        {
+            return name.Value.Singularize(inputIsKnownToBePlural: false);
+        }
+
     }
 }

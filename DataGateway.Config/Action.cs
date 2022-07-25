@@ -28,6 +28,8 @@ namespace Azure.DataGateway.Config
         // Creating another constant for "*" as we can't use the constant defined in
         // AuthorizationResolver class because of circular dependency.
         public static readonly string WILDCARD = "*";
+
+        /// <inheritdoc/>
         public override Operation Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             string? action = reader.GetString();
@@ -39,6 +41,7 @@ namespace Azure.DataGateway.Config
             return Enum.TryParse<Operation>(action, ignoreCase: true, out Operation operation) ? operation : Operation.None;
         }
 
+        /// <inheritdoc/>
         public override void Write(Utf8JsonWriter writer, Operation value, JsonSerializerOptions options)
         {
             string valueToWrite = value is Operation.All ? WILDCARD : value.ToString();

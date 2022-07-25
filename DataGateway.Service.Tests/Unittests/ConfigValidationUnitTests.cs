@@ -7,7 +7,7 @@ using Azure.DataGateway.Service.Tests.Authorization;
 using Azure.DataGateway.Service.Tests.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataGateway.Service.Tests.SqlTests
+namespace Azure.DataGateway.Service.Tests.UnitTests
 {
     /// <summary>
     /// Test class to perform semantic validations on the runtime config object. At this point,

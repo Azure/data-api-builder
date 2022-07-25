@@ -536,7 +536,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
         }
 
         /// <summary>
-        /// Restrict the pagination result using the _filter argument
+        /// Restrict the pagination result using the filter argument
         /// </summary>
         [TestMethod]
         public async Task PaginationWithFilterArgument()
@@ -544,7 +544,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
-                books(first: 2, after: """ + after + @""", _filter: {publisher_id: {eq: 2345}}) {
+                books(first: 2, after: """ + after + @""", " + QueryBuilder.FILTER_FIELD_NAME + @" : {publisher_id: {eq: 2345}}) {
                     items {
                         id
                         publisher_id

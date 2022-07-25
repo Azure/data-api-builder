@@ -39,8 +39,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
 
-            //Assert.AreEqual(expected: expected, actual: actual.ToString());
-
             // Tests Book Read Policy: @item.title ne 'Policy-Test-01'
             // Expects a null result, HotChocolate  returns -> "book_by_pk": null
             actual = await ExecuteGraphQLRequestAsync(

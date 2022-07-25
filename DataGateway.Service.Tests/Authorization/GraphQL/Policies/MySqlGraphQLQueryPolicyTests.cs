@@ -139,5 +139,3 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL.Policies
         }
     }
 }
-
-

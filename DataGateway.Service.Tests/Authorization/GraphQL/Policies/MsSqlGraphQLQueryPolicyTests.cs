@@ -82,13 +82,13 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL.Policies
             await QueryMany_Policy(dbQuery_restrictToOneResult, clientRole);
         }
 
-            /// <summary>
-            /// Tests a GraphQL query that may fetch multiple result records
-            /// on a table with a nullable field, but does not include any nested queries.
-            /// When a policy is applied to such top-level query, results are restricted
-            /// to the expected records.
-            /// </summary>
-            [TestMethod]
+        /// <summary>
+        /// Tests a GraphQL query that may fetch multiple result records
+        /// on a table with a nullable field, but does not include any nested queries.
+        /// When a policy is applied to such top-level query, results are restricted
+        /// to the expected records.
+        /// </summary>
+        [TestMethod]
         public async Task QueryMany_Policy_Nullable()
         {
             string dbQuery = @"

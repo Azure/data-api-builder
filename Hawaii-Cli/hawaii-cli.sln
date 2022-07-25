@@ -5,7 +5,7 @@ VisualStudioVersion = 17.1.32407.343
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "hawaii-cli", "src\hawaii-cli.csproj", "{55528027-AC5E-4B3A-901A-BAE649C44C07}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Config", "hawaii-engine\DataGateway.Config\Azure.DataGateway.Config.csproj", "{3D826537-5771-4777-B98F-864A0C2447E3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Config", "..\DataGateway.Config\Azure.DataGateway.Config.csproj", "{3D826537-5771-4777-B98F-864A0C2447E3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tests", "tests\tests.csproj", "{2D9D5A56-2025-43BA-97D6-47385C2890FE}"
 EndProject

@@ -59,7 +59,6 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
                               Permissions: Array.Empty<PermissionSetting>(),
                               Relationships: new(),
                               Mappings: new());
-            ;
         }
 
         [DataTestMethod]
@@ -652,15 +651,23 @@ type Foo @model {
                 actual: deleteField.Directives.Count);
         }
 
+        /// <summary>
+        ///     This test validates that the delete mutations are explicitly created with singular entity names. This also
+        ///     validates that when a singular name is available in the config, delete mutation is created with that.
+        /// </summary>
+        /// <param name="gql"> Type definition for the entity.</param>
+        /// <param name="entityName"> Name of the entity for which delete mutation is being valdiated.</param>
+        /// <param name="singularName"> Singular name for the entity defined in the config.</param>
+        /// <param name="pluralName"> Plural name for the entity defined in the config.</param>
         [DataTestMethod]
         [TestCategory("Mutation Builder - Delete")]
         [TestCategory("Schema Builder - Simple Type")]
         [DataRow(FOOS_ENTITY_GQL, "Foos", null, null,
-            DisplayName = "Validates that delete mutation is created with singular entity name for a direct plural entity name.")]
+            DisplayName = "Validates delete mutation creation with simple plural entity name.")]
         [DataRow(LEAVES_ENTITY_GQL, "Leaves", null, null,
-            DisplayName = "Validates that delete mutation is created with singular entity name for indirect plural entity name.")]
+            DisplayName = "Validates delete mutation creation with indirect plural entity name.")]
         [DataRow(HERBS_ENTITY_GQL, "Herbs", "Plant", "Plants",
-            DisplayName = "Validates that if singular entity name is defined in the config, delete mutation is created with that singular name.")]
+            DisplayName = "Validates delete mutation creation with a defined singular name.")]
         public void CanGenerateDeleteMutationWithSingularEntityName(string gql, string entityName, string singularName, string pluralName)
         {
             DocumentNode root = Utf8GraphQLParser.Parse(gql);

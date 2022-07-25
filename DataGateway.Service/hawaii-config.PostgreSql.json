@@ -300,6 +300,20 @@
         {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "policy_tester_01",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.region ne 'northeast'"
+              }
+            }
+          ]
         }
       ],
       "mappings": {

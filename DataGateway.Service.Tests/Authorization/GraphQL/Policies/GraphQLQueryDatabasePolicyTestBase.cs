@@ -8,19 +8,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
     /// <summary>
     /// Tests Database Authorization Policies applied to GraphQL Queries
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class GraphQLQueryDatabasePolicyTests : SqlTestBase
+    [TestClass]
+    public abstract class GraphQLQueryDatabasePolicyTestBase : SqlTestBase
     {
-        /// <summary>
-        /// Set the database engine for the tests
-        /// </summary>
-        [ClassInitialize]
-        public static async Task SetupAsync(TestContext context)
-        {
-            DatabaseEngine = TestCategory.MSSQL;
-            await InitializeTestFixture(context);
-        }
-
         /// <summary>
         /// Tests Authenticated GraphQL Queries which trigger
         /// policy processing. Tests QueryByPK with policies that
@@ -29,18 +19,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
         /// - To 1 record to validate result returns as expected.
         /// </summary>
         [TestMethod]
-        public async Task QueryByPK_Policy()
+        public async Task QueryByPK_Policy(string dbQuery)
         {
-            string dbQuery = @"
-                SELECT
-                [table0].[id] AS [id],
-                [table0].[title] AS [title]
-                FROM [dbo].[books] AS [table0] 
-                WHERE ([table0].[id] = 9)
-                AND [table0].[title] = 'Policy-Test-01' 
-                ORDER BY [table0].[id] ASC 
-                FOR JSON PATH, INCLUDE_NULL_VALUES,WITHOUT_ARRAY_WRAPPER";
-
             string graphQLQueryName = "book_by_pk";
             string graphQLQuery = @"{
                 book_by_pk(id: 9) {
@@ -57,7 +37,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
                 isAuthenticated: true,
                 clientRoleHeader: "policy_tester_01");
             string expected = await GetDatabaseResultAsync(dbQuery);
-            Assert.AreEqual(expected: expected, actual: actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+
+            //Assert.AreEqual(expected: expected, actual: actual.ToString());
 
             // Tests Book Read Policy: @item.title ne 'Policy-Test-01'
             // Expects a null result, HotChocolate  returns -> "book_by_pk": null
@@ -132,26 +114,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
         /// to the expected records.
         /// </summary>
         [TestMethod]
-        public async Task QueryMany_Policy()
+        public async Task QueryMany_Policy(string dbQuery, string roleName)
         {
-            string dbQuery = @"
-                SELECT TOP 100
-                [table0].[id] AS [id],
-                [table0].[title] AS [title]
-                FROM [dbo].[books] AS [table0] 
-                WHERE ([title] != 'Policy-Test-01') 
-                ORDER BY [table0].[id] ASC 
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
-
-            string dbQuery_restrictToOneResult = @"
-                SELECT TOP 100
-                [table0].[id] AS [id],
-                [table0].[title] AS [title]
-                FROM [dbo].[books] AS [table0] 
-                WHERE ([title] = 'Policy-Test-01') 
-                ORDER BY [table0].[id] ASC 
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
-
             string graphQLQueryName = "books";
             string graphQLQuery = @"query {
                 books {
@@ -161,23 +125,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
                     }
             }}";
 
-            // Tests Book Read Policy: @item.title ne 'Policy-Test-01'
-            // Due to restrictive book policy, expects all book records except:
-            // id: 9 title: 'Policy-Test-01'
             JsonElement actual = await base.ExecuteGraphQLRequestAsync(
                 graphQLQuery,
                 graphQLQueryName,
                 isAuthenticated: true,
-                clientRoleHeader: "policy_tester_02");
+                clientRoleHeader: roleName);
             string expected = await GetDatabaseResultAsync(dbQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-
-            // Tests Book Read Policy: @item.title eq 'Policy-Test-01'
-            // Due to restrictive book policy, expects one book result:
-            // id: 9 title: 'Policy-Test-01'
-            actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true, clientRoleHeader: "policy_tester_01");
-            expected = await GetDatabaseResultAsync(dbQuery_restrictToOneResult);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
@@ -189,17 +142,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
         /// to the expected records.
         /// </summary>
         [TestMethod]
-        public async Task QueryMany_Policy_Nullable()
+        public async Task QueryMany_Policy_Nullable(string dbQuery)
         {
-            string dbQuery = @"
-                SELECT TOP 100
-                [table0].[speciesid] AS [speciesid],
-                [table0].[region] AS [region]
-                FROM [dbo].[fungi] AS [table0] 
-                WHERE ([region] != 'northeast') 
-                ORDER BY [table0].[speciesid] ASC 
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
-
             string graphQLQueryName = "fungi";
             string graphQLQuery = @"query {
                 fungi {
@@ -230,29 +174,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
         /// a GraphQL error due to non-nullable fields resolving to null results.
         /// </summary>
         [TestMethod]
-        public async Task QueryMany_NestedRequest_Policy()
+        public async Task QueryMany_NestedRequest_Policy(string dbQuery, string roleName, bool expectError)
         {
-            string dbQuery = @"
-                SELECT TOP 100 
-                [table0].[id] AS [id], 
-                [table0].[title] AS [title], 
-                JSON_QUERY (
-                [table1_subq].[data]) AS [publishers] 
-                FROM [dbo].[books] AS [table0] 
-                OUTER APPLY (
-                SELECT TOP 1 
-                [table1].[id] AS [id], 
-                [table1].[name] AS [name] 
-                FROM [dbo].[publishers] AS [table1] 
-                WHERE ([id] = 1940) AND [table0].[publisher_id] = [table1].[id] 
-                ORDER BY [table1].[id] ASC 
-                FOR JSON PATH, INCLUDE_NULL_VALUES,WITHOUT_ARRAY_WRAPPER) 
-                AS [table1_subq]([data]) 
-                WHERE ([title] = 'Policy-Test-01') 
-                ORDER BY [table0].[id] ASC 
-                FOR JSON PATH, INCLUDE_NULL_VALUES
-            ";
-
             string graphQLQueryName = "books";
             string graphQLQuery = @"query {
                 books {
@@ -266,36 +189,25 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
                     }
             }}";
 
-            // Tests Book Read Policy: @item.title eq 'Policy-Test-01'
-            // Publisher Read Policy: @item.id ne 1940
-            // Expects HotChocolate error since nested query fails to resolve
-            // at least one publisher record due to restrictive policy.
             JsonElement actual = await base.ExecuteGraphQLRequestAsync(
                 graphQLQuery,
                 graphQLQueryName,
                 isAuthenticated: true,
-                clientRoleHeader: "policy_tester_03");
+                clientRoleHeader: roleName);
 
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                actual.ToString(),
-                message: "Cannot return null for non-nullable field.",
-                path: @"[""books"",""items"",0,""publishers""]"
-            );
-
-            // Tests Book Read Policy: @item.title eq 'Policy-Test-01'
-            // Publisher Read Policy: @item.id eq 1940
-            // Target Record: id: 9, title: 'Policy-Test-01' publisher_id: 1940
-            // The top-level book policy restricts this result to one record while
-            // the nested query policy resolves at least one result, avoiding
-            // resolving null for a non-nullable field.
-            actual = await base.ExecuteGraphQLRequestAsync(
-                graphQLQuery,
-                graphQLQueryName,
-                isAuthenticated: true,
-                clientRoleHeader: "policy_tester_01");
-
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+            if (expectError)
+            {
+                SqlTestHelper.TestForErrorInGraphQLResponse(
+                    actual.ToString(),
+                    message: "Cannot return null for non-nullable field.",
+                    path: @"[""books"",""items"",0,""publishers""]"
+                );
+            }
+            else
+            {
+                string expected = await GetDatabaseResultAsync(dbQuery);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+            }
         }
     }
 }

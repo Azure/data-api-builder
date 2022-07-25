@@ -132,18 +132,6 @@ namespace Azure.DataGateway.Service.Resolvers
             IsListQuery = context.IsMany;
             TableAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
             AddFields(context, sqlMetadataProvider);
-            if (Columns.Count == 0)
-            {
-                TableDefinition tableDefinition = GetUnderlyingTableDefinition();
-                foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
-                {
-                    // We only include columns that are exposed for use in requests
-                    if (sqlMetadataProvider.TryGetExposedColumnName(EntityName, column.Key, out string? name))
-                    {
-                        AddColumn(column.Key, name!);
-                    }
-                }
-            }
 
             foreach (KeyValuePair<string, object> predicate in context.PrimaryKeyValuePairs)
             {

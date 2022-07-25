@@ -652,8 +652,8 @@ type Foo @model {
         }
 
         /// <summary>
-        ///     This test validates that the delete mutations are explicitly created with singular entity names. This also
-        ///     validates that when a singular name is available in the config, delete mutation is created with that.
+        /// This test validates that the delete mutations are explicitly created with singular entity names. This also
+        /// validates that when a singular name is available in the config, delete mutation is created with that.
         /// </summary>
         /// <param name="gql"> Type definition for the entity.</param>
         /// <param name="entityName"> Name of the entity for which delete mutation is being valdiated.</param>

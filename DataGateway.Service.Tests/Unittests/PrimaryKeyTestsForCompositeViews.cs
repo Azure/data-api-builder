@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
@@ -13,6 +14,10 @@ namespace Azure.DataGateway.Service.Tests.Unittests
     public class PrimaryKeyTestsForCompositeViews : SqlTestBase
     {
         private static readonly string _compositeViewName = "books_authors";
+        private static readonly string _compositeViewQuery = $"'CREATE VIEW {_compositeViewName} as SELECT books.title, authors.name, " +
+            $"authors.birthdate, books.id as book_id, authors.id as author_id " +
+            $"FROM books INNER JOIN book_author_link ON books.id = book_author_link.book_id " +
+            $"INNER JOIN authors ON authors.id = book_author_link.author_id'";
 
         /// <summary>
         /// Test to validate that the runtime fails and throws an exception during bootstrap when the primary
@@ -22,27 +27,12 @@ namespace Azure.DataGateway.Service.Tests.Unittests
         [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task MsSqlPrimaryKeyOnComplexCompositeView()
         {
-            DatabaseEngine = TestCategory.MSSQL;
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(DatabaseEngine);
-            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
-            SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
-            TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, _compositeViewName, _compositeViewName);
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
-            SetUpSQLMetadataProvider();
+            // Create query to be executed on the database to add the view.
+            string compositeViewDbQuery = $"EXEC(" +
+                _compositeViewQuery +
+                ")";
 
-            // Add composite view whose primary key cannot be determined.
-            string dbQuery = File.ReadAllText($"{DatabaseEngine}Books.sql");
-            string compositeViewQuery = $"EXEC('CREATE VIEW {_compositeViewName} as SELECT books.title, authors.[name], " +
-                "authors.[birthdate], books.id as book_id, authors.id as author_id " +
-                "FROM dbo.books INNER JOIN dbo.book_author_link ON books.[id] = book_author_link.book_id " +
-                "INNER JOIN authors ON authors.[id] = book_author_link.author_id')";
-
-            // Execute the query to add view to the database.
-            await _queryExecutor.ExecuteQueryAsync(dbQuery + compositeViewQuery, parameters: null);
-            DataGatewayException ex = await Assert.ThrowsExceptionAsync<DataGatewayException>(() => _sqlMetadataProvider.InitializeAsync());
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-            Assert.AreEqual($"Primary key not configured on the given database object {_compositeViewName}", ex.Message);
-            Assert.AreEqual(DataGatewayException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+            await AddViewToDatabaseTestAsync(compositeViewDbQuery, TestCategory.MSSQL, true);
         }
 
         /// <summary>
@@ -53,32 +43,16 @@ namespace Azure.DataGateway.Service.Tests.Unittests
         [TestMethod, TestCategory(TestCategory.POSTGRESQL)]
         public async Task PostgreSqlPrimaryKeyOnComplexCompositeView()
         {
-            DatabaseEngine = TestCategory.POSTGRESQL;
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(DatabaseEngine);
-            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
-            SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
-            TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, _compositeViewName, _compositeViewName);
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
-            SetUpSQLMetadataProvider();
-
-            // Add composite view whose primary key cannot be determined.
-            string dbQuery = File.ReadAllText($"{DatabaseEngine}Books.sql");
-            string compositeViewQuery = $"DO $do$ " +
+            // Create query to be executed on the database to add the view.
+            string compositeViewDbQuery = $"DO $do$ " +
                 $"BEGIN " +
-                $"EXECUTE('CREATE VIEW {_compositeViewName} as " +
-                "SELECT books.title, authors.name, " +
-                "authors.birthdate, books.id as book_id, authors.id as author_id " +
-                "FROM books INNER JOIN book_author_link ON books.id = book_author_link.book_id " +
-                "INNER JOIN authors ON authors.id = book_author_link.author_id'); " +
+                $"EXECUTE(" +
+                _compositeViewQuery +
+                "); " +
                 "END " +
                 "$do$";
 
-            // Execute the query to add view to the database.
-            await _queryExecutor.ExecuteQueryAsync(dbQuery + compositeViewQuery, parameters: null);
-            DataGatewayException ex = await Assert.ThrowsExceptionAsync<DataGatewayException>(() => _sqlMetadataProvider.InitializeAsync());
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-            Assert.AreEqual($"Primary key not configured on the given database object {_compositeViewName}", ex.Message);
-            Assert.AreEqual(DataGatewayException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+            await AddViewToDatabaseTestAsync(compositeViewDbQuery, TestCategory.POSTGRESQL, true);
         }
 
         /// <summary>
@@ -89,7 +63,19 @@ namespace Azure.DataGateway.Service.Tests.Unittests
         [TestMethod, TestCategory(TestCategory.MYSQL)]
         public async Task MySqlPrimaryKeyOnComplexCompositeView()
         {
-            DatabaseEngine = TestCategory.MYSQL;
+            // Create query to be executed on the database to add the view.
+            string compositeViewDbQuery = $"prepare stmt4 from " +
+                _compositeViewQuery +
+                ";" +
+                "execute stmt4";
+            await AddViewToDatabaseTestAsync(compositeViewDbQuery, TestCategory.MYSQL, false);
+        }
+
+        private static async Task AddViewToDatabaseTestAsync(string compositeDbViewquery, string dbEngine, bool isExceptionExpected)
+        {
+            // Setup dependencies
+            DatabaseEngine = dbEngine;
+            string dbQuery = File.ReadAllText($"{DatabaseEngine}Books.sql");
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(DatabaseEngine);
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
@@ -97,17 +83,23 @@ namespace Azure.DataGateway.Service.Tests.Unittests
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             SetUpSQLMetadataProvider();
 
-            // Add composite view whose primary key cannot be determined.
-            string dbQuery = File.ReadAllText($"{DatabaseEngine}Books.sql");
-            string compositeViewQuery = $"prepare stmt4 from 'CREATE VIEW {_compositeViewName} as " +
-                "SELECT books.title, authors.name, " +
-                "authors.birthdate, books.id as book_id, authors.id as author_id " +
-                "FROM books INNER JOIN book_author_link ON books.id = book_author_link.book_id " +
-                "INNER JOIN authors ON authors.id = book_author_link.author_id';" +
-                "execute stmt4";
+            await _queryExecutor.ExecuteQueryAsync(dbQuery + compositeDbViewquery, parameters: null);
 
-            // Execute the query to add view to the database.
-            await _queryExecutor.ExecuteQueryAsync(dbQuery + compositeViewQuery, parameters: null);
+            if (isExceptionExpected)
+            {
+                DataGatewayException ex = await Assert.ThrowsExceptionAsync<DataGatewayException>(() => _sqlMetadataProvider.InitializeAsync());
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual($"Primary key not configured on the given database object {_compositeViewName}", ex.Message);
+                Assert.AreEqual(DataGatewayException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+            }
+            else
+            {
+                await _sqlMetadataProvider.InitializeAsync();
+
+                // Validate that when exception is not thrown, the view's definition has been
+                // successfully added to the Entity map.
+                Assert.IsTrue(_sqlMetadataProvider.EntityToDatabaseObject.ContainsKey(_compositeViewName));
+            }
         }
 
         /// <summary>

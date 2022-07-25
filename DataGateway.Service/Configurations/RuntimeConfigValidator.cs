@@ -140,14 +140,10 @@ namespace Azure.DataGateway.Service.Configurations
                         if (((JsonElement)action!).ValueKind is JsonValueKind.String)
                         {
                             string actionName = action.ToString()!;
-                            try
+                            actionOp = AuthorizationResolver.WILDCARD.Equals(actionName) ? Operation.All : Enum.Parse<Operation>(actionName, ignoreCase: true);
+
+                            if (!IsValidAction(actionOp))
                             {
-                                actionOp = AuthorizationResolver.WILDCARD.Equals(actionName) ? Operation.All : Enum.Parse<Operation>(actionName, ignoreCase: true);
-                            }
-                            catch
-                            {
-                                // If we have reached this point, it means that actionOp
-                                // is invalid, so we throw exception.
                                 ThrowInvalidActionException(entityName, roleName, actionName);
                             }
                         }

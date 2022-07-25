@@ -81,7 +81,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // Since dbPolicy is nothing but filters to be added by virtue of database policy, we prefix it with
                 // ?$filter= so that it conforms with the format followed by other filter predicates.
                 // This enables the ODataVisitor helpers to parse the policy text properly.
-                dbPolicyClause = $"?{RequestParser.FILTER_URL}{dbPolicyClause}";
+                dbPolicyClause = $"?{RequestParser.FILTER_URL}={dbPolicyClause}";
 
                 // Parse and save the values that are needed to later generate SQL query predicates
                 // FilterClauseInDbPolicy is an Abstract Syntax Tree representing the parsed policy text.

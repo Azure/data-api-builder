@@ -656,7 +656,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
             string schema = "",
             List<string> pkColumns = null);
 
-        protected override async Task<JsonElement> ExecuteGraphQLRequestAsync(string graphQLQuery, string graphQLQueryName, bool isAuthenticated, Dictionary<string, object> variables = null, string clientRoleHeader = null)
+        /// <summary>
+        /// Method used to execute GraphQL requests.
+        /// For list results, returns the JsonElement representative of the property 'items'
+        /// </summary>
+        /// <param name="graphQLQuery"></param>
+        /// <param name="graphQLQueryName"></param>
+        /// <param name="isAuthenticated"></param>
+        /// <param name="variables"></param>
+        /// <param name="clientRoleHeader"></param>
+        /// <returns></returns>
+        protected override async Task<JsonElement> ExecuteGraphQLRequestAsync(
+            string graphQLQuery,
+            string graphQLQueryName,
+            bool isAuthenticated,
+            Dictionary<string, object> variables = null,
+            string clientRoleHeader = null)
         {
             JsonElement dataResult = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: isAuthenticated, variables);
 

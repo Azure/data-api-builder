@@ -85,7 +85,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Build(SqlExecuteStructure structure)
         {
             return $"EXECUTE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                $"PARAMS";
+                $"{structure.BuildProcedureParameterList()};";
         }
 
         /// <summary>

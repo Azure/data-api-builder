@@ -33,5 +33,16 @@ namespace Azure.DataGateway.Service.Resolvers
                 } 
             }
         }
+
+        public string BuildProcedureParameterList()
+        {
+            string parameterList = string.Empty;
+            foreach((string paramKey, object paramValue) in ProcedureParameters)
+            {
+                parameterList += $"@{paramKey} = {paramValue}, ";
+            }
+            // At least one parameter added, remove trailing comma and space, else return empty string
+            return parameterList.Length > 0 ? parameterList[..^2] : parameterList;
+        }
     }
 }

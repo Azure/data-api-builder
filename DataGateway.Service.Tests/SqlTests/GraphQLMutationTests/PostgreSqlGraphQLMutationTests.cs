@@ -1,7 +1,4 @@
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Services;
-using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
@@ -16,25 +13,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
 
         #region Test Fixture Setup
         /// <summary>
-        /// Sets up test fixture for class, only to be run once per test run, as defined by
-        /// MSTest decorator.
+        /// Set the database engine for the tests
         /// </summary>
-        /// <param name="context"></param>
         [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
+        public static async Task SetupAsync(TestContext context)
         {
-            await InitializeTestFixture(context, TestCategory.POSTGRESQL);
-
-            // Setup GraphQL Components
-            _graphQLService = new GraphQLService(
-                _runtimeConfigProvider,
-                _queryEngine,
-                _mutationEngine,
-                new DocumentCache(),
-                new Sha256DocumentHashProvider(),
-                _sqlMetadataProvider,
-                _authorizationResolver);
-            _graphQLController = new GraphQLController(_graphQLService);
+            DatabaseEngine = TestCategory.POSTGRESQL;
+            await InitializeTestFixture(context);
         }
 
         /// <summary>
@@ -72,6 +57,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             await InsertMutation(postgresQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Inserts new book using variables to set its title and publisher_id
+        /// <code>Check: </code> If book with the expected values of the new book is present in the database and
+        /// if the mutation query has returned the correct information
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationWithVariables()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.title AS title
+                   FROM books AS table0
+                   WHERE id = 5001
+                     AND title = 'My New Book'
+                     AND publisher_id = 1234
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            await InsertMutationWithVariables(postgresQuery);
         }
 
         /// <summary>

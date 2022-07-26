@@ -64,8 +64,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             Console.WriteLine(response);
 
-            Assert.IsTrue(response.Contains("\"errors\""), "No error was found where error is expected.");
-
             if (message is not null)
             {
                 Console.WriteLine(response);

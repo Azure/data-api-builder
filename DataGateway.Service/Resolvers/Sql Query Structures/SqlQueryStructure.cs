@@ -75,7 +75,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// If this query is built because of a GraphQL query (as opposed to
         /// REST), then this is set to the resolver context of that query.
         /// </summary>
-        IResolverContext? _ctx;
+        IMiddlewareContext? _ctx;
 
         /// <summary>
         /// The underlying type of the type returned by this query see, the
@@ -94,7 +94,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Only use as constructor for the outermost queries not subqueries
         /// </summary>
         public SqlQueryStructure(
-            IResolverContext ctx,
+            IMiddlewareContext ctx,
             IDictionary<string, object?> queryParams,
             ISqlMetadataProvider sqlMetadataProvider)
             // This constructor simply forwards to the more general constructor
@@ -249,7 +249,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// request.
         /// </summary>
         private SqlQueryStructure(
-                IResolverContext ctx,
+                IMiddlewareContext ctx,
                 IDictionary<string, object?> queryParams,
                 ISqlMetadataProvider sqlMetadataProvider,
                 IObjectField schemaField,
@@ -261,6 +261,10 @@ namespace Azure.DataGateway.Service.Resolvers
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
             _underlyingFieldType = UnderlyingGraphQLEntityType(outputType);
+
+            // extract the query argument schemas before switching schemaField to point to *Connetion.items
+            // since the pagination arguments are not placed on the items, but on the pagination query
+            IFieldCollection<IInputField> queryArgumentSchemas = schemaField.Arguments;
 
             PaginationMetadata.IsPaginated = QueryBuilder.IsPaginationType(_underlyingFieldType);
 
@@ -290,7 +294,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 //      books > items > publisher > books > publisher
                 //      items do not have a matching subquery so the line of code below is
                 //      required to build a pagination metadata chain matching the json result
-                PaginationMetadata.Subqueries.Add("items", PaginationMetadata.MakeEmptyPaginationMetadata());
+                PaginationMetadata.Subqueries.Add(QueryBuilder.PAGINATION_FIELD_NAME, PaginationMetadata.MakeEmptyPaginationMetadata());
             }
 
             EntityName = _underlyingFieldType.Name;
@@ -312,10 +316,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 IsListQuery = outputType.IsListType();
             }
 
-            if (IsListQuery && queryParams.ContainsKey("first"))
+            if (IsListQuery && queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
             {
                 // parse first parameter for all list queries
-                object? firstObject = queryParams["first"];
+                object? firstObject = queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
 
                 if (firstObject != null)
                 {
@@ -324,7 +328,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     if (first <= 0)
                     {
                         throw new DataGatewayException(
-                        message: $"Invalid number of items requested, $first must be an integer greater than 0 for {schemaField.Name}. Actual value: {first.ToString()}",
+                        message: $"Invalid number of items requested, {QueryBuilder.PAGE_START_ARGUMENT_NAME} argument must be an integer greater than 0 for {schemaField.Name}. Actual value: {first.ToString()}",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
@@ -333,14 +337,16 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
             }
 
-            if (IsListQuery && queryParams.ContainsKey("_filter"))
+            if (IsListQuery && queryParams.ContainsKey(QueryBuilder.FILTER_FIELD_NAME))
             {
-                object? filterObject = queryParams["_filter"];
+                object? filterObject = queryParams[QueryBuilder.FILTER_FIELD_NAME];
 
                 if (filterObject != null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-                    Predicates.Add(GQLFilterParser.Parse(fields: filterFields,
+                    Predicates.Add(GQLFilterParser.Parse(_ctx,
+                                                         filterArgumentSchema: queryArgumentSchemas[QueryBuilder.FILTER_FIELD_NAME],
+                                                         fields: filterFields,
                                                          schemaName: DatabaseObject.SchemaName,
                                                          tableName: DatabaseObject.Name,
                                                          tableAlias: TableAlias,
@@ -350,13 +356,13 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             OrderByColumns = PrimaryKeyAsOrderByColumns();
-            if (IsListQuery && queryParams.ContainsKey("orderBy"))
+            if (IsListQuery && queryParams.ContainsKey(QueryBuilder.ORDER_BY_FIELD_NAME))
             {
-                object? orderByObject = queryParams["orderBy"];
+                object? orderByObject = queryParams[QueryBuilder.ORDER_BY_FIELD_NAME];
 
                 if (orderByObject != null)
                 {
-                    OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject);
+                    OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject, queryArgumentSchemas[QueryBuilder.ORDER_BY_FIELD_NAME]);
                 }
             }
 
@@ -601,7 +607,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     {
                         // add the subquery metadata as children of items instead of the pagination metadata
                         // object of this structure which is associated with the pagination query itself
-                        PaginationMetadata.Subqueries["items"].Subqueries.Add(fieldName, subquery.PaginationMetadata);
+                        PaginationMetadata.Subqueries[QueryBuilder.PAGINATION_FIELD_NAME].Subqueries.Add(fieldName, subquery.PaginationMetadata);
                     }
                     else
                     {
@@ -753,8 +759,14 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Create a list of orderBy columns from the orderBy argument
         /// passed to the gql query
         /// </summary>
-        private List<OrderByColumn> ProcessGqlOrderByArg(List<ObjectFieldNode> orderByFields)
+        private List<OrderByColumn> ProcessGqlOrderByArg(List<ObjectFieldNode> orderByFields, IInputField orderByArgumentSchema)
         {
+            if (_ctx is null)
+            {
+                throw new ArgumentNullException("IMiddlewareContext should be intiliazed before " +
+                                                "trying to parse the orderBy argument.");
+            }
+
             // Create list of primary key columns
             // we always have the primary keys in
             // the order by statement for the case
@@ -763,9 +775,15 @@ namespace Azure.DataGateway.Service.Resolvers
 
             List<string> remainingPkCols = new(PrimaryKey());
 
+            InputObjectType orderByArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(orderByArgumentSchema);
             foreach (ObjectFieldNode field in orderByFields)
             {
-                if (field.Value is NullValueNode)
+                object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+                    value: field.Value,
+                    argumentSchema: orderByArgumentObject.Fields[field.Name.Value],
+                    variables: _ctx.Variables);
+
+                if (fieldValue is null)
                 {
                     continue;
                 }
@@ -776,9 +794,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 // field in orderBy
                 remainingPkCols.Remove(fieldName);
 
-                EnumValueNode enumValue = (EnumValueNode)field.Value;
-
-                if (enumValue.Value == $"{OrderBy.DESC}")
+                if (fieldValue.ToString() == $"{OrderBy.DESC}")
                 {
                     orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
                                                              tableName: DatabaseObject.Name,

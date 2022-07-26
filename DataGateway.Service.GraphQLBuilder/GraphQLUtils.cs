@@ -1,9 +1,9 @@
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using HotChocolate.Types;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder
 {
@@ -34,17 +34,17 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             HashSet<string> inBuiltTypes = new()
             {
                 "ID",
-                "Byte",
-                "Short",
-                "Int",
-                "Long",
-                SingleType.TypeName,
-                "Float",
-                "Decimal",
-                "String",
-                "Boolean",
-                "DateTime",
-                "ByteArray"
+                BYTE_TYPE,
+                SHORT_TYPE,
+                INT_TYPE,
+                LONG_TYPE,
+                SINGLE_TYPE,
+                FLOAT_TYPE,
+                DECIMAL_TYPE,
+                STRING_TYPE,
+                BOOLEAN_TYPE,
+                DATETIME_TYPE,
+                BYTEARRAY_TYPE
             };
             string name = typeNode.NamedType().Name.Value;
             return inBuiltTypes.Contains(name);
@@ -120,21 +120,45 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Creates a HotChocolate/GraphQL Authorize directive with a list of roles provided.
-        /// Typically used to lock down Object/Field types to users who are members of the roles allowed
+        /// Creates a HotChocolate/GraphQL Authorize directive with a list of roles (if any) provided.
+        /// Typically used to lock down Object/Field types to users who are members of the roles allowed.
+        /// Will not create such a directive if one of the roles is the system role: anonymous
+        /// since for that case, we don't want to lock down the field on which this directive is intended to be
+        /// added.
         /// </summary>
         /// <param name="roles">Collection of roles to set on the directive </param>
-        /// <returns>DirectiveNode such as: @authorize(roles: ["role1", ..., "roleN"]) </returns>
-        public static DirectiveNode CreateAuthorizationDirective(IEnumerable<string> roles)
+        /// <param name="authorizeDirective">DirectiveNode set such that: @authorize(roles: ["role1", ..., "roleN"])
+        /// where none of role1,..roleN is anonymous. Otherwise, set to null.</param>
+        /// <returns>True if set to a new DirectiveNode, false otherwise. </returns>
+        public static bool CreateAuthorizationDirectiveIfNecessary(
+            IEnumerable<string>? roles,
+            out DirectiveNode? authorizeDirective)
         {
-            List<IValueNode> roleList = new();
-            foreach (string rolename in roles)
+            // Any roles passed in will be added to the authorize directive for this field
+            // taking the form: @authorize(roles: [“role1”, ..., “roleN”])
+            // If the 'anonymous' role is present in the role list, no @authorize directive will be added
+            // because HotChocolate requires an authenticated user when the authorize directive is evaluated.
+            if (roles is not null &&
+                roles.Count() > 0 &&
+                !roles.Contains(SYSTEM_ROLE_ANONYMOUS))
             {
-                roleList.Add(new StringValueNode(rolename));
-            }
+                List<IValueNode> roleList = new();
+                foreach (string rolename in roles)
+                {
+                    roleList.Add(new StringValueNode(rolename));
+                }
 
-            ListValueNode roleListNode = new(items: roleList);
-            return new(name: AUTHORIZE_DIRECTIVE, new ArgumentNode(name: AUTHORIZE_DIRECTIVE_ARGUMENT_ROLES, roleListNode));
+                ListValueNode roleListNode = new(items: roleList);
+                authorizeDirective =
+                    new(name: AUTHORIZE_DIRECTIVE,
+                        new ArgumentNode(name: AUTHORIZE_DIRECTIVE_ARGUMENT_ROLES, roleListNode));
+                return true;
+            }
+            else
+            {
+                authorizeDirective = null;
+                return false;
+            }
         }
     }
 }

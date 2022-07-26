@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
@@ -18,34 +16,43 @@ using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services.MetadataProviders;
 using HotChocolate;
-using HotChocolate.Execution;
-using HotChocolate.Execution.Configuration;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Azure.DataGateway.Service.Services
 {
-    public class GraphQLService
+    /// <summary>
+    /// Used to generate a GraphQL schema from the provided database.
+    ///
+    /// This will take the provided database object model for entities and
+    /// combine it with the runtime configuration to apply the auth config.
+    ///
+    /// It also generates the middleware resolvers used for the queries
+    /// and mutations, based off the provided <c>IQueryEngine</c> and
+    /// <c>IMutationEngine</c> for the runtime.
+    /// </summary>
+    public class GraphQLSchemaCreator
     {
         private readonly IQueryEngine _queryEngine;
         private readonly IMutationEngine _mutationEngine;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
-        private readonly IDocumentCache _documentCache;
-        private readonly IDocumentHashProvider _documentHashProvider;
         private readonly DatabaseType _databaseType;
         private readonly Dictionary<string, Entity> _entities;
-        private IAuthorizationResolver _authorizationResolver;
+        private readonly IAuthorizationResolver _authorizationResolver;
 
-        public ISchema? Schema { private set; get; }
-        public IRequestExecutor? Executor { private set; get; }
-
-        public GraphQLService(
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
+        /// </summary>
+        /// <param name="runtimeConfigProvider">Runtime config provided for the instance.</param>
+        /// <param name="queryEngine">SQL or Cosmos query engine to be used by resolvers.</param>
+        /// <param name="mutationEngine">SQL or Cosmos mutation engine to be used by resolvers.</param>
+        /// <param name="sqlMetadataProvider">Metadata provider used when generating the SQL-based GraphQL schema. Ignored if the runtime is Cosmos.</param>
+        /// <param name="authorizationResolver">Authorization information for the runtime, to be applied to the GraphQL schema.</param>
+        public GraphQLSchemaCreator(
             RuntimeConfigProvider runtimeConfigProvider,
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            IDocumentCache documentCache,
-            IDocumentHashProvider documentHashProvider,
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver)
         {
@@ -56,113 +63,48 @@ namespace Azure.DataGateway.Service.Services
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             _sqlMetadataProvider = sqlMetadataProvider;
-            _documentCache = documentCache;
-            _documentHashProvider = documentHashProvider;
             _authorizationResolver = authorizationResolver;
-
-            InitializeSchemaAndResolvers();
         }
 
         /// <summary>
-        /// Take the raw GraphQL objects and generate the full schema from them
+        /// Take the raw GraphQL objects and generate the full schema from them.
+        ///
+        /// At this point, we're somewhat agnostic to whether the runtime is Cosmos or SQL
+        /// as we're working with GraphQL object types, regardless of where they came from.
         /// </summary>
-        /// <param name="root">Root document containing the GraphQL object and input types</param>
-        /// <param name="inputTypes">Reference table of the input types for query lookup</param>
-        /// <exception cref="DataGatewayException">Error will be raised if no database type is set</exception>
-        private void Parse(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+        /// <param name="root">Root document containing the GraphQL object and input types.</param>
+        /// <param name="inputTypes">Reference table of the input types for query lookup.</param>
+        private ISchemaBuilder Parse(ISchemaBuilder sb, DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
-            ISchemaBuilder sb = SchemaBuilder.New()
+            return sb
                 .AddDocument(root)
+                .AddAuthorizeDirectiveType()
+                // Add our custom directives
                 .AddDirectiveType<ModelDirectiveType>()
                 .AddDirectiveType<RelationshipDirectiveType>()
                 .AddDirectiveType<PrimaryKeyDirectiveType>()
                 .AddDirectiveType<DefaultValueDirectiveType>()
                 .AddDirectiveType<AutoGeneratedDirectiveType>()
-                .AddAuthorizeDirectiveType()
+                // Add our custom scalar GraphQL types
                 .AddType<OrderByType>()
                 .AddType<DefaultValueType>()
+                // Generate the GraphQL queries from the provided objects
                 .AddDocument(QueryBuilder.Build(root, _databaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap))
-                .AddDocument(MutationBuilder.Build(root, _databaseType, _entities, _authorizationResolver.EntityPermissionsMap));
-
-            Schema = sb
+                // Generate the GraphQL mutations from the provided objects
+                .AddDocument(MutationBuilder.Build(root, _databaseType, _entities, _authorizationResolver.EntityPermissionsMap))
+                // Enable the OneOf directive (https://github.com/graphql/graphql-spec/pull/825) to support the DefaultValue type
                 .ModifyOptions(o => o.EnableOneOf = true)
-                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine))
-                .Create();
-
-            MakeSchemaExecutable();
-        }
-
-        private void MakeSchemaExecutable()
-        {
-            // Below is pretty much an inlined version of
-            // ISchema.MakeExecutable. The reason that we inline it is that
-            // same changes need to be made in the middle of it, such as
-            // AddErrorFilter.
-            IRequestExecutorBuilder builder = new ServiceCollection()
-                .AddGraphQL()
-                .AddAuthorization()
-                .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
-                .AddErrorFilter(error =>
-                {
-                    if (error.Exception != null)
-                    {
-                        Console.Error.WriteLine(error.Exception.Message);
-                        Console.Error.WriteLine(error.Exception.StackTrace);
-                        return error.WithMessage(error.Exception.Message);
-                    }
-
-                    return error;
-                })
-                .AddErrorFilter(error =>
-                {
-                    if (error.Exception is DataGatewayException)
-                    {
-                        DataGatewayException thrownException = (DataGatewayException)error.Exception;
-                        return error.RemoveException()
-                                .RemoveLocations()
-                                .RemovePath()
-                                .WithMessage(thrownException.Message)
-                                .WithCode($"{thrownException.SubStatusCode}");
-                    }
-
-                    return error;
-                });
-
-            // Sadly IRequestExecutorBuilder.Configure is internal, so we also
-            // inline that one here too
-            Executor = builder.Services
-                .Configure(builder.Name, (RequestExecutorSetup o) => o.Schema = Schema)
-                .BuildServiceProvider()
-                .GetRequiredService<IRequestExecutorResolver>()
-                .GetRequestExecutorAsync()
-                .Result;
-        }
-
-        /// <summary>
-        /// Executes GraphQL request within GraphQL Library components.
-        /// </summary>
-        /// <param name="requestBody">GraphQL request body</param>
-        /// <param name="requestProperties">key/value pairs of properties to be used in GraphQL library pipeline</param>
-        /// <returns></returns>
-        public async Task<string> ExecuteAsync(string requestBody, Dictionary<string, object> requestProperties)
-        {
-            if (Executor == null)
-            {
-                /*lang=json,strict*/
-                return "{\"error\": \"Schema must be defined first\" }";
-            }
-
-            IQueryRequest queryRequest = CompileRequest(requestBody, requestProperties);
-
-            using IExecutionResult result = await Executor.ExecuteAsync(queryRequest);
-            return result.ToJson(withIndentations: false);
+                // Add our custom middleware for GraphQL resolvers
+                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine));
         }
 
         /// <summary>
         /// If the metastore provider is able to get the graphql schema,
         /// this function parses it and attaches resolvers to the various query fields.
         /// </summary>
-        private void InitializeSchemaAndResolvers()
+        /// <exception cref="NotImplementedException">Thrown if the database type is not supported</exception>
+        /// <returns>The <c>ISchemaBuilder</c> for HotChocolate, with the generated GraphQL schema</returns>
+        public ISchemaBuilder InitializeSchemaAndResolvers(ISchemaBuilder schemaBuilder)
         {
             (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = _databaseType switch
             {
@@ -173,7 +115,7 @@ namespace Azure.DataGateway.Service.Services
                 _ => throw new NotImplementedException($"This database type {_databaseType} is not yet implemented.")
             };
 
-            Parse(root, inputTypes);
+            return Parse(schemaBuilder, root, inputTypes);
         }
 
         /// <summary>
@@ -217,7 +159,7 @@ namespace Azure.DataGateway.Service.Services
 
                 // The roles allowed for Fields are the roles allowed to READ the fields, so any role that has a read definition for the field.
                 // Only add objectTypeDefinition for GraphQL if it has a role definition defined for access.
-                if (rolesAllowedForEntity.Count() > 0)
+                if (rolesAllowedForEntity.Any())
                 {
                     ObjectTypeDefinitionNode node = SchemaConverter.FromTableDefinition(
                         entityName,
@@ -265,45 +207,6 @@ namespace Azure.DataGateway.Service.Services
             }
 
             return (root.WithDefinitions(root.Definitions.Concat(inputObjects.Values).ToImmutableList()), inputObjects);
-        }
-
-        /// <summary>
-        /// Adds request properties(i.e. AuthN details) as GraphQL QueryRequest properties so key/values
-        /// can be used in HotChocolate Middleware.
-        /// </summary>
-        /// <param name="requestBody">Http Request Body</param>
-        /// <param name="requestProperties">Key/Value Pair of Https Headers intended to be used in GraphQL service</param>
-        /// <returns></returns>
-        private IQueryRequest CompileRequest(string requestBody, Dictionary<string, object> requestProperties)
-        {
-            byte[] graphQLData = Encoding.UTF8.GetBytes(requestBody);
-            ParserOptions parserOptions = new();
-
-            Utf8GraphQLRequestParser requestParser = new(
-                graphQLData,
-                parserOptions,
-                _documentCache,
-                _documentHashProvider);
-
-            IReadOnlyList<GraphQLRequest> parsed = requestParser.Parse();
-
-            // TODO: Overhaul this to support batch queries
-            // right now we have only assumed a single query/mutation in the request
-            // but HotChocolate supports batching and we're just ignoring it for now
-            QueryRequestBuilder requestBuilder = QueryRequestBuilder.From(parsed[0]);
-
-            // Individually adds each property to requestBuilder if they are provided.
-            // Avoids using SetProperties() as it detrimentally overwrites
-            // any properties other Middleware sets.
-            if (requestProperties != null)
-            {
-                foreach (KeyValuePair<string, object> property in requestProperties)
-                {
-                    requestBuilder.AddProperty(property.Key, property.Value);
-                }
-            }
-
-            return requestBuilder.Create();
         }
     }
 }

@@ -54,7 +54,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         private static WebApplicationFactory<Program> _application;
         protected static RuntimeConfig _runtimeConfig;
         protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
+        protected const string MSSQL_DEFAULT_DB_NAME = "master";
 
+        protected static string DatabaseName { get; set; }
         protected static string DatabaseEngine { get; set; }
         protected static HttpClient HttpClient { get; private set; }
 
@@ -89,6 +91,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
 
+            // sets the database name using the connection string
+            SetDatabaseNameFromConnectionString(_runtimeConfig.ConnectionString);
+
             //Initialize the authorization resolver object
             _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
 
@@ -121,6 +126,34 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 });
 
             HttpClient = _application.CreateClient();
+        }
+
+        /// <summary>
+        /// Sets the database name based on the provided connection string.
+        /// If connection string has no database set, we set the default based on the db type.
+        /// </summary>
+        /// <param name="connectionString">connection string containing the database name.</param>
+        private static void SetDatabaseNameFromConnectionString(string connectionString)
+        {
+            switch (DatabaseEngine)
+            {
+                case TestCategory.MSSQL:
+                    // use master as default name for MsSql
+                    string sqlDbName = new SqlConnectionStringBuilder(connectionString).InitialCatalog;
+                    DatabaseName = !string.IsNullOrEmpty(sqlDbName) ? DatabaseName : MSSQL_DEFAULT_DB_NAME;
+                    break;
+                case TestCategory.POSTGRESQL:
+                    // use username as default name for PostgreSql, if no username use empty string
+                    NpgsqlConnectionStringBuilder npgBuilder = new(connectionString);
+                    DatabaseName = !string.IsNullOrEmpty(npgBuilder.Database) ? npgBuilder.Database :
+                        !string.IsNullOrEmpty(npgBuilder.Username) ? npgBuilder.Username : string.Empty;
+                    break;
+                case TestCategory.MYSQL:
+                    // no default name needed for MySql, if db name doesn't exist use empty string
+                    string mySqlDbName = new MySqlConnectionStringBuilder(connectionString).Database;
+                    DatabaseName = !string.IsNullOrEmpty(mySqlDbName) ? mySqlDbName : string.Empty;
+                    break;
+            }
         }
 
         protected static void SetUpSQLMetadataProvider()

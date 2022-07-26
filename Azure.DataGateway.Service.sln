@@ -29,7 +29,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Auth", "D
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "hawaii-cli", "Hawaii-Cli\src\hawaii-cli.csproj", "{55528027-AC5E-4B3A-901A-BAE649C44C07}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "tests", "Hawaii-Cli\tests\tests.csproj", "{2D9D5A56-2025-43BA-97D6-47385C2890FE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "tests", "Hawaii-Cli\tests\hawaii-cli-tests.csproj", "{2D9D5A56-2025-43BA-97D6-47385C2890FE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

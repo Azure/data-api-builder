@@ -635,6 +635,17 @@
         }
       ]
     },
+    "Journal": {
+      "source": "journals",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        }
+      ]
+    },
     "books_view_all": {
       "source": "books_view_all",
       "rest": true,

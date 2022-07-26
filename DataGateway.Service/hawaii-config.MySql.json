@@ -184,10 +184,6 @@
       "source": "books",
       "permissions": [
         {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         },
@@ -370,6 +366,36 @@
               "action": "read",
               "fields": {
                 "include": [ "*" ]
+              }
+            },
+            {
+              "action": "delete",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 9"
+              }
+            }
+          ]
+        },
+        {
+          "role": "policy_tester_update_noread",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 9"
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [ "*" ]
               }
             },
             {
@@ -629,6 +655,41 @@
         {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
+    },
+    "Notebook": {
+      "source": "notebooks",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 1"
+              }
+            },
+            "create",
+            "update",
+            "delete"
+          ]
+        }
+      ]
+    },
+    "Journal": {
+      "source": "journals",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
         }
       ]
     },

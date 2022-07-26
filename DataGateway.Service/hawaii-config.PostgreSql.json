@@ -38,6 +38,116 @@
         {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "policy_tester_01",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 1940"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_02",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 1940"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_03",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 1940"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_04",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 1940"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_06",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 1940"
+              }
+            },
+            "delete"
+          ]
         }
       ],
       "relationships": {

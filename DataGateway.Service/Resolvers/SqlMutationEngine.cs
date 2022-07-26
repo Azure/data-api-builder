@@ -368,9 +368,11 @@ namespace Azure.DataGateway.Service.Resolvers
 
             foreach (string primaryKey in tableDefinition.PrimaryKey)
             {
-                newPrimaryKeyRoute.Append(primaryKey);
+                // get backing column for lookup, previously validated to be non-null
+                _sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? pkExposedName);
+                newPrimaryKeyRoute.Append(pkExposedName);
                 newPrimaryKeyRoute.Append("/");
-                newPrimaryKeyRoute.Append(entity[primaryKey]!.ToString());
+                newPrimaryKeyRoute.Append(entity[pkExposedName!]!.ToString());
                 newPrimaryKeyRoute.Append("/");
             }
 

@@ -164,7 +164,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update" ]
         },
         {
           "role": "authenticated",
@@ -744,6 +744,26 @@
           ]
         }
       ]
+    },
+    "ArtOfWar": {
+      "source": "aow",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
+        }
+      ],
+      "mappings": {
+        "DetailAssessmentAndPlanning": "始計",
+        "WagingWar": "作戰",
+        "StrategicAttack": "謀攻",
+        "NoteNum": "┬─┬ノ( º _ ºノ)"
+      }
     }
   }
 }

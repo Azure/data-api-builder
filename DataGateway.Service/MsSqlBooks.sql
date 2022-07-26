@@ -20,6 +20,7 @@ DROP TABLE IF EXISTS fungi;
 DROP TABLE IF EXISTS empty_table;
 DROP TABLE IF EXISTS notebooks;
 DROP TABLE IF EXISTS journals;
+DROP TABLE IF EXISTS aow;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -151,6 +152,13 @@ CREATE TABLE journals (
     ownername varchar(max)
 );
 
+CREATE TABLE aow (
+    NoteNum int PRIMARY KEY,
+    DetailAssessmentAndPlanning varchar(max),
+    WagingWar varchar(max),
+    StrategicAttack varchar(max)
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -234,6 +242,7 @@ INSERT INTO comics(id, title, categoryName) VALUES (1, 'Star Trek', 'SciFi'), (2
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');
 INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, 'instant1', 100.57, 1), (1, 1, 'instant2', 42.75, 0);
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
+INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
 INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');

@@ -20,7 +20,7 @@
     "host": {
       "mode": "development",
       "cors": {
-        "origins": [ "http://localhost:3000" ],
+        "origins": [ "http://localhost:5000" ],
         "allow-credentials": false
       },
       "authentication": {
@@ -249,7 +249,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update", "delete" ]
         },
         {
           "role": "authenticated",

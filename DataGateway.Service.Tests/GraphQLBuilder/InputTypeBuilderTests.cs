@@ -45,7 +45,8 @@ type Book @model {
 
 type Publisher @model {
     id: Int!
-    books(first: Int, after: String, _filter: PublisherFilterInput): PublisherConnection @relationship(target: ""Book"", cardinality: ""Many"")
+    books(first: Int, after: String, " + QueryBuilder.FILTER_FIELD_NAME +
+    @": PublisherFilterInput): PublisherConnection @relationship(target: ""Book"", cardinality: ""Many"")
 }
                 ";
 

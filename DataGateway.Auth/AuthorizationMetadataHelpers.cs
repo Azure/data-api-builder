@@ -14,10 +14,13 @@ namespace Azure.DataGateway.Auth
         public Dictionary<string, RoleMetadata> RoleToActionMap { get; set; } = new();
 
         /// <summary>
-        /// Given the key (actionName) returns a key/value collection of fieldName to Roles
-        /// i.e. READ action
-        /// Key(field): id -> Value(collection): permitted in {Role1, Role2, ..., RoleN}
-        /// Key(field): title -> Value(collection): permitted in {Role1}
+        /// Field to action to role mapping.
+        /// Given the key (Field aka. column name) returns a key/value collection of action to Roles
+        /// i.e. ID column
+        /// Key(field): id -> Dictionary(actions)
+        ///     each entry in the dictionary contains action to role map.
+        ///     create: permitted in {Role1, Role2, ..., RoleN}
+        ///     delete: permitted in {Role1, RoleN}
         /// </summary>
         public Dictionary<string, Dictionary<string, List<string>>> FieldToRolesMap { get; set; } = new();
 

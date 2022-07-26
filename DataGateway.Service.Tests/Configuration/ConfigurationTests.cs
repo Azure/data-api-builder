@@ -219,7 +219,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
         [TestMethod("Validates that an exception is thrown if there's a null model in filter parser.")]
         public void VerifyExceptionOnNullModelinFilterParser()
         {
-            FilterParser parser = new();
+            ODataParser parser = new();
             try
             {
                 // FilterParser has no model so we expect exception

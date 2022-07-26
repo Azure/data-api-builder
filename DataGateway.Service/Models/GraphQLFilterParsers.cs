@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
+using HotChocolate.Resolvers;
+using HotChocolate.Types;
 
 namespace Azure.DataGateway.Service.Models
 {
     /// <summary>
-    /// Contains methods to parse a GQL _filter parameter
+    /// Contains methods to parse a GQL filter parameter
     /// </summary>
     public static class GQLFilterParser
     {
@@ -16,11 +18,15 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Parse a predicate for a *FilterInput input type
         /// </summary>
+        /// <param name="ctx">The GraphQL context, used to get the query variables</param>
+        /// <param name="filterArgumentSchema">An IInputField object which describes the schema of the filter argument</param>
         /// <param name="fields">The fields in the *FilterInput being processed</param>
         /// <param name="tableAlias">The table alias underlyin the *FilterInput being processed</param>
-        /// <param name="table">The table underlyin the *FilterInput being processed</param>
+        /// <param name="table">The table underlying the *FilterInput being processed</param>
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
         public static Predicate Parse(
+            IMiddlewareContext ctx,
+            IInputField filterArgumentSchema,
             List<ObjectFieldNode> fields,
             string schemaName,
             string tableName,
@@ -28,11 +34,17 @@ namespace Azure.DataGateway.Service.Models
             TableDefinition table,
             Func<object, string> processLiterals)
         {
-            List<PredicateOperand> predicates = new();
+            InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
 
+            List<PredicateOperand> predicates = new();
             foreach (ObjectFieldNode field in fields)
             {
-                if (field.Value is NullValueNode)
+                object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+                    value: field.Value,
+                    argumentSchema: filterArgumentObject.Fields[field.Name.Value],
+                    variables: ctx.Variables);
+
+                if (fieldValue is null)
                 {
                     continue;
                 }
@@ -46,13 +58,31 @@ namespace Azure.DataGateway.Service.Models
                 {
                     PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
 
-                    List<IValueNode> otherPredicates = (List<IValueNode>)field.Value.Value!;
-                    predicates.Push(new PredicateOperand(ParseAndOr(otherPredicates, schemaName, tableName, tableAlias, table, op, processLiterals)));
+                    List<IValueNode> otherPredicates = (List<IValueNode>)fieldValue;
+                    predicates.Push(new PredicateOperand(ParseAndOr(
+                        ctx,
+                        argumentSchema: filterArgumentObject.Fields[name],
+                        filterArgumentSchema: filterArgumentSchema,
+                        otherPredicates,
+                        schemaName,
+                        tableName,
+                        tableAlias,
+                        table,
+                        op,
+                        processLiterals)));
                 }
                 else
                 {
-                    List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)field.Value.Value!;
-                    predicates.Push(new PredicateOperand(ParseScalarType(name, subfields, schemaName, tableName, tableAlias, processLiterals)));
+                    List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
+                    predicates.Push(new PredicateOperand(ParseScalarType(
+                        ctx,
+                        argumentSchema: filterArgumentObject.Fields[name],
+                        name,
+                        subfields,
+                        schemaName,
+                        tableName,
+                        tableAlias,
+                        processLiterals)));
                 }
             }
 
@@ -63,7 +93,17 @@ namespace Azure.DataGateway.Service.Models
         /// Calls the appropriate scalar type filter parser based on the type of
         /// the fields
         /// </summary>
+        /// <param name="ctx">The GraphQL context, used to get the query variables</param>
+        /// <param name="argumentSchema">An IInputField object which describes the schema of the scalar input argument (e.g. IntFilterInput)</param>
+        /// <param name="name">The name of the field</param>
+        /// <param name="fields">The subfields of the scalar field</param>
+        /// <param name="schemaName">The db schema name to which the table belongs</param>
+        /// <param name="tableName">The name of the table underlying the *FilterInput being processed</param>
+        /// <param name="tableAlias">The alias of the table underlying the *FilterInput being processed</param>
+        /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
         private static Predicate ParseScalarType(
+            IMiddlewareContext ctx,
+            IInputField argumentSchema,
             string name,
             List<ObjectFieldNode> fields,
             string schemaName,
@@ -73,7 +113,7 @@ namespace Azure.DataGateway.Service.Models
         {
             Column column = new(schemaName, tableName, columnName: name, tableAlias);
 
-            return FieldFilterParser.Parse(column, fields, processLiterals);
+            return FieldFilterParser.Parse(ctx, argumentSchema, column, fields, processLiterals);
         }
 
         /// <summary>
@@ -83,8 +123,22 @@ namespace Azure.DataGateway.Service.Models
         /// The predicate representation of the and/or.
         /// If and/or is passed as empty, a predicate representing 1 != 1 is returned
         /// </returns>
+        /// <param name="ctx">The GraphQL context, used to get the query variables</param>
+        /// <param name="argumentSchema">An IInputField object which describes the and/or filter input argument</param>
+        /// <param name="filterArgumentSchema">An IInputField object which describes the base filter input argument (e.g. BookFilterInput)
+        /// to which the and/or belongs </param>
+        /// <param name="fields">The subfields of the and/or field</param>
+        /// <param name="schemaName">The db schema name to which the table belongs</param>
+        /// <param name="tableName">The name of the table underlying the *FilterInput being processed</param>
+        /// <param name="tableAlias">The alias of the table underlying the *FilterInput being processed</param>
+        /// <param name="table">The table underlying the *FilterInput being processed</param>
+        /// <param name="op">The operation (and or or)</param>
+        /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
         private static Predicate ParseAndOr(
-            List<IValueNode> predicates,
+            IMiddlewareContext ctx,
+            IInputField argumentSchema,
+            IInputField filterArgumentSchema,
+            List<IValueNode> fields,
             string schemaName,
             string tableName,
             string tableAlias,
@@ -92,16 +146,26 @@ namespace Azure.DataGateway.Service.Models
             PredicateOperation op,
             Func<object, string> processLiterals)
         {
-            if (predicates.Count == 0)
+            if (fields.Count == 0)
             {
                 return Predicate.MakeFalsePredicate();
             }
 
             List<PredicateOperand> operands = new();
-            foreach (IValueNode predicate in predicates)
+            foreach (IValueNode field in fields)
             {
-                List<ObjectFieldNode> fields = (List<ObjectFieldNode>)predicate.Value!;
-                operands.Add(new PredicateOperand(Parse(fields, schemaName, tableName, tableAlias, table, processLiterals)));
+                object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+                    value: field,
+                    argumentSchema: argumentSchema,
+                    ctx.Variables);
+
+                if (fieldValue is null)
+                {
+                    continue;
+                }
+
+                List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
+                operands.Add(new PredicateOperand(Parse(ctx, filterArgumentSchema, subfields, schemaName, tableName, tableAlias, table, processLiterals)));
             }
 
             return MakeChainPredicate(operands, op);
@@ -110,6 +174,10 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Merge a list of predicate operands into a single predicate
         /// </summary>
+        /// <param name="operands">A list of PredicateOperands to be connected with a PredicateOperation</param>
+        /// <param name="op">An operation used to connect the predicate operands</param>
+        /// <param name="pos">No need to specify this parameter, it is used to make the method recursive</param>
+        /// <param name="addParenthesis">Specify whether the final predicate should be put in parenthesis or not</param>
         public static Predicate MakeChainPredicate(
             List<PredicateOperand> operands,
             PredicateOperation op,
@@ -137,17 +205,32 @@ namespace Azure.DataGateway.Service.Models
 
     public static class FieldFilterParser
     {
+        /// <summary>
+        /// Parse a scalar field into a predicate
+        /// </summary>
+        /// <param name="ctx">The GraphQL context, used to get the query variables</param>
+        /// <param name="argumentSchema">An IInputField object which describes the schema of the scalar input argument (e.g. IntFilterInput)</param>
+        /// <param name="column">The table column targeted by the field</param>
+        /// <param name="fields">The subfields of the scalar field</param>
+        /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
         public static Predicate Parse(
+            IMiddlewareContext ctx,
+            IInputField argumentSchema,
             Column column,
             List<ObjectFieldNode> fields,
             Func<object, string> processLiterals)
         {
             List<PredicateOperand> predicates = new();
 
+            InputObjectType argumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(argumentSchema);
             foreach (ObjectFieldNode field in fields)
             {
                 string name = field.Name.ToString();
-                object? value = ResolverMiddleware.ArgumentValue(field.Value);
+                object? value = ResolverMiddleware.ExtractValueFromIValueNode(
+                    value: field.Value,
+                    argumentSchema: argumentObject.Fields[field.Name.Value],
+                    variables: ctx.Variables);
+
                 bool processLiteral = true;
 
                 if (value is null)

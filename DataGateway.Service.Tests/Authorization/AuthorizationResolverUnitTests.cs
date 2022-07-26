@@ -611,7 +611,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         // no predicates need to be added to the database query generated for the request.
         // When a value is returned as a result, the execution behaved as expected.
         [DataTestMethod]
-        [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.READ, true, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - anonymous"  )]
+        [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.READ, true, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - anonymous")]
         [DataRow("authenticated", "authenticated", ActionType.UPDATE, ActionType.UPDATE, true, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - authenticated")]
         [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.READ, false, "id eq 1", false, DisplayName = "Fetch Policy for existing role, no policy object defined in config.")]
         [DataRow("anonymous", "authenticated", ActionType.READ, ActionType.READ, true, "id eq 1", false, DisplayName = "Fetch Policy for non-configured role")]

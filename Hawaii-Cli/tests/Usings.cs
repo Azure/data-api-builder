@@ -1,4 +1,3 @@
-global using System.Collections.Immutable;
 global using System.Text.Json;
 global using Azure.DataGateway.Config;
 global using Hawaii.Cli.Models;

@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
     {
         /// <summary>
         /// Authorization Resolver used within SqlQueryStructure to get and apply
-        /// authorization policies to GraphQL queries.
+        /// authorization policies to requests.
         /// </summary>
         protected IAuthorizationResolver AuthorizationResolver { get; }
 

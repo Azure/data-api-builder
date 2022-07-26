@@ -9,6 +9,7 @@ using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 {
@@ -54,18 +55,18 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 {
                     IValueNode arg = column.DefaultValue switch
                     {
-                        byte value => new ObjectValueNode(new ObjectFieldNode("byte", new IntValueNode(value))),
-                        short value => new ObjectValueNode(new ObjectFieldNode("short", new IntValueNode(value))),
-                        int value => new ObjectValueNode(new ObjectFieldNode("int", value)),
-                        long value => new ObjectValueNode(new ObjectFieldNode("long", new IntValueNode(value))),
-                        string value => new ObjectValueNode(new ObjectFieldNode("string", value)),
-                        bool value => new ObjectValueNode(new ObjectFieldNode("boolean", value)),
-                        float value => new ObjectValueNode(new ObjectFieldNode("single", new SingleType().ParseValue(value))),
-                        double value => new ObjectValueNode(new ObjectFieldNode("float", value)),
-                        decimal value => new ObjectValueNode(new ObjectFieldNode("decimal", new FloatValueNode(value))),
-                        DateTime value => new ObjectValueNode(new ObjectFieldNode("datetime", new DateTimeType().ParseResult(value))),
-                        DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode("datetime", new DateTimeType().ParseValue(value))),
-                        byte[] value => new ObjectValueNode(new ObjectFieldNode("bytearray", new ByteArrayType().ParseValue(value))),
+                        byte value => new ObjectValueNode(new ObjectFieldNode(BYTE_TYPE, new IntValueNode(value))),
+                        short value => new ObjectValueNode(new ObjectFieldNode(SHORT_TYPE, new IntValueNode(value))),
+                        int value => new ObjectValueNode(new ObjectFieldNode(INT_TYPE, value)),
+                        long value => new ObjectValueNode(new ObjectFieldNode(LONG_TYPE, new IntValueNode(value))),
+                        string value => new ObjectValueNode(new ObjectFieldNode(STRING_TYPE, value)),
+                        bool value => new ObjectValueNode(new ObjectFieldNode(BOOLEAN_TYPE, value)),
+                        float value => new ObjectValueNode(new ObjectFieldNode(SINGLE_TYPE, new SingleType().ParseValue(value))),
+                        double value => new ObjectValueNode(new ObjectFieldNode(FLOAT_TYPE, value)),
+                        decimal value => new ObjectValueNode(new ObjectFieldNode(DECIMAL_TYPE, new FloatValueNode(value))),
+                        DateTime value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseResult(value))),
+                        DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseValue(value))),
+                        byte[] value => new ObjectValueNode(new ObjectFieldNode(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(value))),
                         _ => throw new DataGatewayException(
                             message: $"The type {column.DefaultValue.GetType()} is not supported as a GraphQL default value",
                             statusCode: HttpStatusCode.InternalServerError,
@@ -168,17 +169,17 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
         {
             return type.Name switch
             {
-                "String" => "String",
-                "Byte" => "Byte",
-                "Int16" => "Short",
-                "Int32" => "Int",
-                "Int64" => "Long",
-                "Single" => "Single",
-                "Double" => "Float",
-                "Decimal" => "Decimal",
-                "Boolean" => "Boolean",
-                "DateTime" => "DateTime",
-                "Byte[]" => "ByteArray",
+                "String" => STRING_TYPE,
+                "Byte" => BYTE_TYPE,
+                "Int16" => SHORT_TYPE,
+                "Int32" => INT_TYPE,
+                "Int64" => LONG_TYPE,
+                "Single" => SINGLE_TYPE,
+                "Double" => FLOAT_TYPE,
+                "Decimal" => DECIMAL_TYPE,
+                "Boolean" => BOOLEAN_TYPE,
+                "DateTime" => DATETIME_TYPE,
+                "Byte[]" => BYTEARRAY_TYPE,
                 _ => throw new DataGatewayException(
                         message: $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",
                         statusCode: HttpStatusCode.InternalServerError,

@@ -656,10 +656,11 @@ namespace Azure.DataGateway.Service.Services
             using ConnectionT conn = new();
             try
             {
-                conn.ConnectionString = ConnectionString;   // "conncetionstring = asjhdlkajhsdlkjhaslkjdhalkjd"
+                conn.ConnectionString = ConnectionString;
                 // if connection string is set to empty string
                 // we throw here to avoid having to sort out
-                // complicaed db specific exception messages
+                // complicated db specific exception messages.
+                // This is caught and returned as DataGatewayException.
                 if (string.IsNullOrWhiteSpace(conn.ConnectionString))
                 {
                     throw new Exception();

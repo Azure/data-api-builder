@@ -4,7 +4,9 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.SqlTests;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataGateway.Service.Tests.UnitTests
 {
@@ -77,6 +79,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         {
             _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(db.ToString());
             _runtimeConfig.ConnectionString = connectionString;
+            _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             switch (db)
             {

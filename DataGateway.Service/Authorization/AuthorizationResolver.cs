@@ -224,33 +224,40 @@ namespace Azure.DataGateway.Service.Authorization
                                 && actionObj is not null)
                             {
                                 action = actionObj.Name;
-                                if (actionObj.Fields!.Include is not null)
+                                if (actionObj.Fields is null)
                                 {
-                                    // When a wildcard (*) is defined for Included columns, all of the table's
-                                    // columns must be resolved and placed in the actionToColumn Key/Value store.
-                                    // This is especially relevant for find requests, where actual column names must be
-                                    // resolved when no columns were included in a request.
-                                    if (actionObj.Fields.Include.Count == 1 && actionObj.Fields.Include.Contains(WILDCARD))
-                                    {
-                                        actionToColumn.Included.UnionWith(ResolveTableDefinitionColumns(entityName));
-                                    }
-                                    else
-                                    {
-                                        actionToColumn.Included = actionObj.Fields.Include!;
-                                    }
+                                    actionToColumn.Included.UnionWith(ResolveTableDefinitionColumns(entityName));
                                 }
-
-                                if (actionObj.Fields!.Exclude is not null)
+                                else
                                 {
-                                    // When a wildcard (*) is defined for Excluded columns, all of the table's
-                                    // columns must be resolved and placed in the actionToColumn Key/Value store.
-                                    if (actionObj.Fields.Exclude.Count == 1 && actionObj.Fields.Exclude.Contains(WILDCARD))
+                                    if (actionObj.Fields.Include is not null)
                                     {
-                                        actionToColumn.Excluded.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                        // When a wildcard (*) is defined for Included columns, all of the table's
+                                        // columns must be resolved and placed in the actionToColumn Key/Value store.
+                                        // This is especially relevant for find requests, where actual column names must be
+                                        // resolved when no columns were included in a request.
+                                        if (actionObj.Fields.Include.Count == 1 && actionObj.Fields.Include.Contains(WILDCARD))
+                                        {
+                                            actionToColumn.Included.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                        }
+                                        else
+                                        {
+                                            actionToColumn.Included = actionObj.Fields.Include!;
+                                        }
                                     }
-                                    else
+
+                                    if (actionObj.Fields.Exclude is not null)
                                     {
-                                        actionToColumn.Excluded = actionObj.Fields.Exclude!;
+                                        // When a wildcard (*) is defined for Excluded columns, all of the table's
+                                        // columns must be resolved and placed in the actionToColumn Key/Value store.
+                                        if (actionObj.Fields.Exclude.Count == 1 && actionObj.Fields.Exclude.Contains(WILDCARD))
+                                        {
+                                            actionToColumn.Excluded.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                        }
+                                        else
+                                        {
+                                            actionToColumn.Excluded = actionObj.Fields.Exclude!;
+                                        }
                                     }
                                 }
 

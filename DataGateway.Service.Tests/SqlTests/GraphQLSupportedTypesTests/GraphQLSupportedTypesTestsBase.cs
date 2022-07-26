@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Controllers;
-using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
@@ -14,12 +12,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
     public abstract class GraphQLSupportedTypesTestBase : SqlTestBase
     {
         protected const string TYPE_TABLE = "TypeTable";
-
-        #region Test Fixture Setup
-        protected static GraphQLService _graphQLService;
-        protected static GraphQLController _graphQLController;
-
-        #endregion
 
         #region Tests
 
@@ -81,10 +73,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            PerformTestEqualsForExtendedTypes(type, expected, actual);
+            PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
         }
 
         [DataTestMethod]
@@ -138,10 +130,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 5001);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            PerformTestEqualsForExtendedTypes(type, expected, actual);
+            PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
 
             await ResetDbStateAsync();
         }
@@ -170,10 +162,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 5001);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController, new() { { "param", value } });
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true, new() { { "param", value } });
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            PerformTestEqualsForExtendedTypes(type, expected, actual);
+            PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
 
             await ResetDbStateAsync();
         }
@@ -229,10 +221,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            PerformTestEqualsForExtendedTypes(type, expected, actual);
+            PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
 
             await ResetDbStateAsync();
         }
@@ -261,10 +253,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
 
-            string actual = await GetGraphQLResultAsync(gqlQuery, graphQLQueryName, _graphQLController, new() { { "param", value } });
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true, new() { { "param", value } });
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            PerformTestEqualsForExtendedTypes(type, expected, actual);
+            PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
 
             await ResetDbStateAsync();
         }
@@ -279,15 +271,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         {
             if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
             {
-                CompareFloatResults(type, actual, expected);
+                CompareFloatResults(type, actual.ToString(), expected);
             }
             else if (type == DATETIME_TYPE)
             {
-                CompareDateTimeResults(actual, expected);
+                CompareDateTimeResults(actual.ToString(), expected);
             }
             else
             {
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
             }
         }
 

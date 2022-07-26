@@ -9,7 +9,7 @@ using HotChocolate.Types;
 namespace Azure.DataGateway.Service.Models
 {
     /// <summary>
-    /// Contains methods to parse a GQL _filter parameter
+    /// Contains methods to parse a GQL filter parameter
     /// </summary>
     public static class GQLFilterParser
     {

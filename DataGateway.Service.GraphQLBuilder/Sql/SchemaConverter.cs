@@ -83,11 +83,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                     // Roles will not be null here if TryGetValue evaluates to true, so here we check if there are any roles to process.
                     if (roles.Count() > 0)
                     {
-                        // Add field to object definition but do not add @authorize directive
-                        // if anonymous is defined for field since authentication is not required.
-                        if (!roles.Contains(GraphQLUtils.SYSTEM_ROLE_ANONYMOUS))
+
+                        if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
+                                roles,
+                                out DirectiveNode? authZDirective))
                         {
-                            directives.Add(GraphQLUtils.CreateAuthorizationDirective(roles));
+                            directives.Add(authZDirective!);
                         }
 
                         NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
@@ -145,13 +146,11 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
             objectTypeDirectives.Add(new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName)));
 
-            // Any roles passed in will be added to the authorize directive for this ObjectType
-            // taking the form: @authorize(roles: [“role1”, ..., “roleN”])
-            // If the 'anonymous' role is present in the role list, no @authorize directive will be added
-            // because HotChocolate requires an authenticated user when the authorize directive is evaluated.
-            if (rolesAllowedForEntity.Count() >= 1 && !rolesAllowedForEntity.Contains(GraphQLUtils.SYSTEM_ROLE_ANONYMOUS))
+            if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
+                    rolesAllowedForEntity,
+                    out DirectiveNode? authorizeDirective))
             {
-                objectTypeDirectives.Add(GraphQLUtils.CreateAuthorizationDirective(rolesAllowedForEntity));
+                objectTypeDirectives.Add(authorizeDirective!);
             }
 
             return new ObjectTypeDefinitionNode(

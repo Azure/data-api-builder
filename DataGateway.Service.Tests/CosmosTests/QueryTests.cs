@@ -4,6 +4,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
+using Azure.DataGateway.Service.Resolvers;
+using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
@@ -49,9 +52,9 @@ query{
         [ClassInitialize]
         public static void TestFixtureSetup(TestContext context)
         {
-            Init(context);
-            Client.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
-            Client.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
+            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
+            cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
             OverrideEntityContainer("Planet", _containerName);
         }
@@ -152,7 +155,8 @@ query {{
             {
                 string planetConnectionQueryStringFormat = @$"
 query {{
-    planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")}, _filter: {{ id: {{eq: ""{id}""}} }}) {{
+    planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")},
+    {QueryBuilder.FILTER_FIELD_NAME}: {{ id: {{eq: ""{id}""}} }}) {{
         items {{
             id
             name
@@ -227,7 +231,8 @@ query {{
         [ClassCleanup]
         public static void TestFixtureTearDown()
         {
-            Client.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
+            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }
 }

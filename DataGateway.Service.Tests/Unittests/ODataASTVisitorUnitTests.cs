@@ -24,10 +24,14 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         private const string DEFAULT_SCHEMA_NAME = "dbo";
         private const string DEFAULT_TABLE_NAME = "books";
 
+        /// <summary>
+        /// Set the database engine for the tests
+        /// </summary>
         [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
+        public static async Task SetupAsync(TestContext context)
         {
-            await InitializeTestFixture(context, TestCategory.MSSQL);
+            DatabaseEngine = TestCategory.MSSQL;
+            await InitializeTestFixture(context);
         }
 
         #region Positive Tests
@@ -220,7 +224,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             string filterString,
             string expected)
         {
-            FilterClause ast = _sqlMetadataProvider.GetODataFilterParser().
+            FilterClause ast = _sqlMetadataProvider.GetODataParser().
                 GetFilterClause(filterString, $"{entityName}.{schemaName}.{tableName}");
             ODataASTVisitor visitor = CreateVisitor(entityName, schemaName, tableName);
             string actual = ast.Expression.Accept(visitor);

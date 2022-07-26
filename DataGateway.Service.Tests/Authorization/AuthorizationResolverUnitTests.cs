@@ -603,9 +603,75 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy);
             }
         }
+
+        // Attempts to fetch a database policy from the entityPermissionsMap
+        // fetch for exist / non-existant role
+        // fetch for exist / non-existant action
+        // fetch for existant role/action but no policy.
+        // anonymous test/ authenticated (System roles)
+        // clientRole, configuredRole, requestAction, configuredAction, addPolicyToConfig, policy
+        [DataTestMethod]
+        [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.READ, true, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - anonymous"  )]
+        [DataRow("authenticated", "authenticated", ActionType.UPDATE, ActionType.UPDATE, true, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - authenticated")]
+        [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.READ, false, "id eq 1", false, DisplayName = "Fetch Policy for existing role, no policy object defined in config.")]
+        [DataRow("anonymous", "authenticated", ActionType.READ, ActionType.READ, true, "id eq 1", false, DisplayName = "Fetch Policy for non-configured role")]
+        [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.CREATE, true, "id eq 1", false, DisplayName = "Fetch Policy for non-configured action")]
+        public void GetDBPolicyTest(
+            string clientRole,
+            string configuredRole,
+            string requestAction,
+            string configuredAction,
+            bool addPolicyToConfig,
+            string policy,
+            bool expectPolicy)
+        {
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(
+                TEST_ENTITY,
+                configuredRole,
+                configuredAction,
+                addPolicyObjectToConfig: addPolicyToConfig,
+                databasePolicy: policy
+                );
+
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            Mock<HttpContext> context = new();
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, TEST_ROLE_TYPE);
+            identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
+            ClaimsPrincipal principal = new(identity);
+            context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(clientRole);
+
+            string parsedPolicy = authZResolver.TryProcessDBPolicy(TEST_ENTITY, clientRole, requestAction, context.Object);
+            string errorMessage = "TryProcessDBPolicy returned unexpected value.";
+            if (expectPolicy)
+            {
+                Assert.AreEqual(actual: parsedPolicy, expected: policy, message: errorMessage);
+            }
+            else
+            {
+                Assert.AreEqual(actual: parsedPolicy, expected: string.Empty, message: errorMessage);
+            }
+        }
         #endregion
 
         #region Helpers
+        /// <summary>
+        /// Creates code-first in-memory RuntimeConfig.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="roleName">Role permitted to access entity.</param>
+        /// <param name="actionName">Action to allow on role</param>
+        /// <param name="includedCols">Allowed columns to access for action defined on role.</param>
+        /// <param name="excludedCols">Excluded columns to access for action defined on role.</param>
+        /// <param name="requestPolicy">Request authorization policy. (Support TBD)</param>
+        /// <param name="databasePolicy">Database authorization policy.</param>
+        /// <param name="addPolicyObjectToConfig">Whether to add Policy object to config.
+        /// True to mock policy defined in config.
+        /// False to mock policy NOT defined in config</param>
+        /// <returns></returns>
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
             string roleName = "Reader",
@@ -613,16 +679,26 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             HashSet<string>? includedCols = null,
             HashSet<string>? excludedCols = null,
             string? requestPolicy = null,
-            string? databasePolicy = null
+            string? databasePolicy = null,
+            bool addPolicyObjectToConfig = true
             )
         {
             Field fieldsForRole = new(
                 include: includedCols,
                 exclude: excludedCols);
 
-            Policy policy = new(
-                request: requestPolicy,
-                database: databasePolicy);
+            Policy policy;
+
+            if (addPolicyObjectToConfig)
+            {
+                policy = new(
+                    request: requestPolicy,
+                    database: databasePolicy);
+            }
+            else
+            {
+                policy = null;
+            }
 
             Action actionForRole = new(
                 Name: actionName,

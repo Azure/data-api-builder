@@ -464,10 +464,10 @@ namespace Azure.DataGateway.Service.Services
         /// <returns>true if non empty schema in connection string, false otherwise.</returns>
         public static bool TryGetSchemaFromConnectionString(out string schemaName, string connectionString)
         {
+            NpgsqlConnectionStringBuilder connectionStringBuilder;
             try
             {
-                NpgsqlConnectionStringBuilder connectionStringBuilder = new(connectionString);
-                schemaName = connectionStringBuilder.SearchPath is null ? string.Empty : connectionStringBuilder.SearchPath;
+                connectionStringBuilder = new(connectionString);
             }
             catch (ArgumentException)
             {
@@ -477,6 +477,7 @@ namespace Azure.DataGateway.Service.Services
                     subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
+            schemaName = connectionStringBuilder.SearchPath is null ? string.Empty : connectionStringBuilder.SearchPath;
             return string.IsNullOrEmpty(schemaName) ? false : true;
         }
 
@@ -617,15 +618,19 @@ namespace Azure.DataGateway.Service.Services
                 {
                     dataTable = await FillSchemaForTableAsync(schemaName, tableName);
                 }
+                // DataGatewayException is already in the correct format just throw
+                catch (DataGatewayException dgex)
+                {
+                    throw dgex;
+                }
+                // Other exceptions need to be inspected for their message to determine
+                // if we throw with the connection string specific message or a generic
+                // message.
                 catch (Exception ex)
                 {
                     string message;
                     // Check message content to ensure proper error message for connection string
-                    if (ex.Message.Contains($"Format of the initialization string") ||
-                        ex.Message.Contains($"The ConnectionString property has not been initialized") ||
-                        ex.Message.Contains($"Access denied") ||
-                        ex.Message.Contains($"Host can't be null") ||
-                        ex.Message.Contains($"Unable to connect"))
+                    if (ex.Message.Contains($"Format of the initialization string"))
                     {
                         message = DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE;
                     }
@@ -655,7 +660,25 @@ namespace Azure.DataGateway.Service.Services
             string tableName)
         {
             using ConnectionT conn = new();
-            conn.ConnectionString = ConnectionString;
+            try
+            {
+                conn.ConnectionString = ConnectionString;
+                // if connection string is set to empty string
+                // we throw here to avoid having to sort out
+                // complicaed db specific exception messages
+                if (string.IsNullOrWhiteSpace(conn.ConnectionString))
+                {
+                    throw new Exception();
+                }
+            }
+            catch
+            {
+                throw new DataGatewayException(
+                    DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
             await conn.OpenAsync();
 
             DataAdapterT adapterForTable = new();

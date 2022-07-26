@@ -76,7 +76,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [DataRow("", DatabaseType.mysql)]
         public async Task CheckExceptionForBadConnectionString(string connectionString, DatabaseType db)
         {
-            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
+            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(db.ToString());
             _runtimeConfig.ConnectionString = connectionString;
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             switch (db)

@@ -9,7 +9,7 @@ public class EndToEndTests
     /// <summary>
     /// Initializing config for cosmos DB.
     /// </summary>
-    private static string TEST_RUNTIME_CONFIG = "hawaii-config-test.json";
+    private static string _testRuntimeConfig = "hawaii-config-test.json";
     [TestMethod]
     public void TestInitForCosmosDB()
     {
@@ -18,7 +18,7 @@ public class EndToEndTests
                           "graphqldb", "--cosmos-container", "planet", "--graphql-schema", "schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
 
-        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(DatabaseType.cosmos, runtimeConfig.DatabaseType);
@@ -49,7 +49,7 @@ public class EndToEndTests
         string[] initArgs = { "init", "-n", "hawaii-config-test", "--database-type", "mssql", "--connection-string", "localhost:5000" };
         Program.Main(initArgs);
 
-        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
@@ -58,7 +58,7 @@ public class EndToEndTests
                             "--rest", "todo", "--graphql", "todo", "--permissions", "anonymous:*"};
         Program.Main(addArgs);
 
-        runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
+        runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(1, runtimeConfig.Entities.Count()); // 1 new entity added
         Assert.IsTrue(runtimeConfig.Entities.ContainsKey("todo"));
@@ -80,7 +80,7 @@ public class EndToEndTests
         string[] initArgs = { "init", "-n", "hawaii-config-test", "--database-type", "mssql", "--connection-string", "localhost:5000" };
         Program.Main(initArgs);
 
-        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
@@ -88,7 +88,7 @@ public class EndToEndTests
         string[] addArgs = { "add", "book", "-n", "hawaii-config-test", "--source", "s001.book", "--permissions", "anonymous:*" };
         Program.Main(addArgs);
 
-        runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
+        runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(1, runtimeConfig.Entities.Count()); // 1 new entity added
         Assert.IsTrue(runtimeConfig.Entities.ContainsKey("book"));
@@ -112,12 +112,12 @@ public class EndToEndTests
     {
         string[] initArgs = { "init", "-n", "hawaii-config-test", "--database-type", "mssql", "--connection-string", "localhost:5000" };
         Program.Main(initArgs);
-        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
         string[] addArgs = { "add", "book", "-n", "hawaii-config-test", "--source", "s001.book", "--permissions", "anonymous:*" };
         Program.Main(addArgs);
-        Assert.IsTrue(JToken.DeepEquals(JObject.Parse(GetCompleteConfigAfterAddingEntity), JObject.Parse(File.ReadAllText(TEST_RUNTIME_CONFIG))));
+        Assert.IsTrue(JToken.DeepEquals(JObject.Parse(GetCompleteConfigAfterAddingEntity), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
     }
 
     /// <summary>
@@ -131,7 +131,7 @@ public class EndToEndTests
                               "mssql", "--connection-string", "localhost:5000" };
         Program.Main(initArgs);
 
-        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
@@ -141,7 +141,7 @@ public class EndToEndTests
                             "--graphql", "todo", "--permissions", "anonymous:*"};
         Program.Main(addArgs);
 
-        runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
+        runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(1, runtimeConfig.Entities.Count()); // 1 new entity added
 
@@ -152,7 +152,7 @@ public class EndToEndTests
                             "--graphql", "books", "--permissions", "anonymous:*"};
         Program.Main(addArgs_2);
 
-        runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
+        runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(2, runtimeConfig.Entities.Count()); // 1 more entity added
 
@@ -168,7 +168,7 @@ public class EndToEndTests
                                 "--map", "id:identity,name:Company Name"};
         Program.Main(updateArgs);
 
-        runtimeConfig = TryGetRuntimeConfig(TEST_RUNTIME_CONFIG);
+        runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(2, runtimeConfig.Entities.Count()); // No new entity added
 

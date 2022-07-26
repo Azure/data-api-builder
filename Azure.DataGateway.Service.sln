@@ -27,6 +27,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Service.G
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataGateway.Auth", "DataGateway.Auth\Azure.DataGateway.Auth.csproj", "{249FF898-AD6E-46F2-B441-F6926BCD5179}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "hawaii-cli", "Hawaii-Cli\src\hawaii-cli.csproj", "{55528027-AC5E-4B3A-901A-BAE649C44C07}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "tests", "Hawaii-Cli\tests\tests.csproj", "{2D9D5A56-2025-43BA-97D6-47385C2890FE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,6 +57,14 @@ Global
 		{249FF898-AD6E-46F2-B441-F6926BCD5179}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{249FF898-AD6E-46F2-B441-F6926BCD5179}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{249FF898-AD6E-46F2-B441-F6926BCD5179}.Release|Any CPU.Build.0 = Release|Any CPU
+		{55528027-AC5E-4B3A-901A-BAE649C44C07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55528027-AC5E-4B3A-901A-BAE649C44C07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55528027-AC5E-4B3A-901A-BAE649C44C07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55528027-AC5E-4B3A-901A-BAE649C44C07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2D9D5A56-2025-43BA-97D6-47385C2890FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D9D5A56-2025-43BA-97D6-47385C2890FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D9D5A56-2025-43BA-97D6-47385C2890FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D9D5A56-2025-43BA-97D6-47385C2890FE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -215,17 +215,44 @@
     "WebsiteUser": {
       "source": "website_users",
       "rest": false,
-      "permissions": []
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "SupportedType": {
       "source": "type_table",
       "rest": false,
-      "permissions": []
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "stocks_price": {
       "source": "stocks_price",
       "rest": false,
-      "permissions": []
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "Tree": {
       "source": "trees",
@@ -278,6 +305,16 @@
       "mappings": {
         "spores": "hazards"
       }
+    },
+    "Empty": {
+      "source": "empty_table",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
     },
     "books_view_all": {
       "source": "books_view_all",

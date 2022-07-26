@@ -119,7 +119,10 @@ namespace Azure.DataGateway.Service.Resolvers
                 if (filterObject != null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-                    Predicates.Add(GQLFilterParser.Parse(fields: filterFields,
+                    Predicates.Add(GQLFilterParser.Parse(
+                        _context,
+                        filterArgumentSchema: selection.Field.Arguments[QueryBuilder.FILTER_FIELD_NAME],
+                        fields: filterFields,
                         schemaName: string.Empty,
                         tableName: _containerAlias,
                         tableAlias: _containerAlias,

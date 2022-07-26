@@ -604,12 +604,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             }
         }
 
-        // Attempts to fetch a database policy from the entityPermissionsMap
-        // fetch for exist / non-existant role
-        // fetch for exist / non-existant action
-        // fetch for existant role/action but no policy.
-        // anonymous test/ authenticated (System roles)
-        // clientRole, configuredRole, requestAction, configuredAction, addPolicyToConfig, policy
+        // Indirectly tests the AuthorizationResolver private method GetDBPolicyForRequest(string entityName, string roleName, string action)
+        // by calling public method TryProcessDBPolicy(TEST_ENTITY, clientRole, requestAction, context.Object)
+        // The result of the executing that method will determine whether exeuction behaves as expected.
+        // When string.Empty is returned, then no policy is found for the provided entity, role, and action combination, therefore,
+        // no predicates need to be added to the database query generated for the request.
+        // When a value is returned as a result, the execution behaved as expected.
         [DataTestMethod]
         [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.READ, true, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - anonymous"  )]
         [DataRow("authenticated", "authenticated", ActionType.UPDATE, ActionType.UPDATE, true, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - authenticated")]

@@ -257,10 +257,6 @@ namespace Azure.DataGateway.Service.Configurations
             // Find all the claimTypes from the policy
             MatchCollection claimTypes = GetClaimTypesInPolicy(policy);
 
-            // parsedIdx indicates the last index in the policy string from which we need to append to the
-            // processedPolicy.
-            int parsedIdx;
-
             foreach (Match claimType in claimTypes)
             {
                 // Remove the prefix @claims. from the claimType
@@ -285,11 +281,6 @@ namespace Azure.DataGateway.Service.Configurations
                         subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError
                         );
                 }
-
-                int claimIdx = claimType.Index;
-
-                // Move the parsedIdx to the index following a claimType in the policy string
-                parsedIdx = claimIdx + claimType.Value.Length;
             } // MatchType claimType
         }
 

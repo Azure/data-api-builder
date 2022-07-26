@@ -459,6 +459,36 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             }
         }
 
+        /// <summary>
+        /// Test to validate that when Field property is missing from the action, all the columns present in
+        /// the table are treated as accessible.
+        /// </summary>
+        [TestMethod]
+        public void AreColumnsAllowedForActionWithMissingFieldProperty()
+        {
+            HashSet<string> includedColumns = new() { "col1", "col2" };
+            HashSet<string> excludedColumns = new() { "col1", "col3", "col4" };
+
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                ActionType.CREATE,
+                includedCols: includedColumns,
+                excludedCols: excludedColumns,
+                includeFields: false
+                );
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            // All calls should return true as long as column names are valid as included/excluded won't have any effect
+            // when Field property is absent from the action.
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col2" }));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col1" }));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludedColumns));
+
+            // Call should fail for invalid column name.
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col5" }));
+        }
+
         #endregion
 
         #region Tests to validate Database policy parsing

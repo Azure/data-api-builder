@@ -30,7 +30,9 @@ namespace Hawaii.Cli.Models
         {
             object? rest_detail;
             if (rest is null)
+            {
                 return rest;
+            }
 
             bool trueOrFalse;
             if (bool.TryParse(rest, out trueOrFalse))

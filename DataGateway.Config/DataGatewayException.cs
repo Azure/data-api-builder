@@ -44,7 +44,19 @@ namespace Azure.DataGateway.Service.Exceptions
             /// <summary>
             /// Error encountered while initializing.
             /// </summary>
-            ErrorInInitialization
+            ErrorInInitialization,
+            /// <summary>
+            /// Cumulative column check of QueryString (OData filter parsing) failure.
+            /// </summary>
+            AuthorizationCumulativeColumnCheckFailed,
+            /// <summary>
+            /// Requested exposedColumnName does not map to backingColumnName for entity.
+            /// </summary>
+            ExposedColumnNameMappingError,
+            /// <summary>
+            /// The runtime config is invalid semantically.
+            /// </summary>
+            ConfigValidationError
         }
 
         public HttpStatusCode StatusCode { get; }

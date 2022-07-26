@@ -1,7 +1,7 @@
-using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -15,10 +15,11 @@ namespace Azure.DataGateway.Service.Services
         SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>
     {
         public MsSqlMetadataProvider(
-            IOptionsMonitor<RuntimeConfigPath> runtimeConfigPath,
+            RuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
-            IQueryBuilder sqlQueryBuilder)
-            : base(runtimeConfigPath, queryExecutor, sqlQueryBuilder)
+            IQueryBuilder sqlQueryBuilder,
+            ILogger<ISqlMetadataProvider> logger)
+            : base(runtimeConfigProvider, queryExecutor, sqlQueryBuilder, logger)
         {
         }
 

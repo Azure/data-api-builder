@@ -1,6 +1,9 @@
+using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,18 +17,14 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
     /// and utilizes the base class default handler for
     /// - AuthenticateAsync: Authenticates the current request.
     /// - Forbid Async: Creates 403 HTTP Response.
-    /// Usage modelled from Microsoft.Identity.Web.
-    ///     Ref: https://github.com/AzureAD/microsoft-identity-web/blob/master/src/Microsoft.Identity.Web/AppServicesAuth/AppServicesAuthenticationHandler.cs
     /// </summary>
     public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthenticationOptions>
     {
-        private const string EASY_AUTH_HEADER = "X-MS-CLIENT-PRINCIPAL";
-
         /// <summary>
         /// Constructor for the EasyAuthAuthenticationHandler.
         /// Note the parameters are required by the base class.
         /// </summary>
-        /// <param name="options">App service authentication options.</param>
+        /// <param name="options">Easy Auth authentication options.</param>
         /// <param name="logger">Logger factory.</param>
         /// <param name="encoder">URL encoder.</param>
         /// <param name="clock">System clock.</param>
@@ -47,16 +46,28 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
         /// <returns>An authentication result to ASP.NET Core library authentication mechanisms</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            if (Context.Request.Headers[EASY_AUTH_HEADER].Count > 0)
+            if (Context.Request.Headers[AuthenticationConfig.CLIENT_PRINCIPAL_HEADER].Count > 0)
             {
-                ClaimsIdentity? identity = EasyAuthAuthentication.Parse(Context);
-
-                if (identity is null)
+                ClaimsIdentity? identity = Options.EasyAuthProvider switch
                 {
-                    return Task.FromResult(AuthenticateResult.Fail(failureMessage: "Invalid EasyAuth token."));
+                    EasyAuthType.StaticWebApps => StaticWebAppsAuthentication.Parse(Context),
+                    EasyAuthType.AppService => AppServiceAuthentication.Parse(Context),
+                    _ => null
+                };
+
+                if (identity is null || HasOnlyAnonymousRole(identity.Claims))
+                {
+                    // Either the token is invalid, Or the role is only anonymous,
+                    // we don't terminate the pipeline since the request is
+                    // always at least in the anonymous role.
+                    // It means that anything that is exposed anonymously will still be visible.
+                    // This also represents the scenario where the user attempted to logon
+                    // but failed authentication. So, the role assigned to X-MS-API-ROLE will be anonymous.
+                    return Task.FromResult(AuthenticateResult.NoResult());
                 }
 
                 ClaimsPrincipal? claimsPrincipal = new(identity);
+
                 if (claimsPrincipal is not null)
                 {
                     // AuthenticationTicket is Asp.Net Core Abstraction of Authentication information
@@ -66,8 +77,40 @@ namespace Azure.DataGateway.Service.AuthenticationHelpers
                     return Task.FromResult(success);
                 }
             }
-            // Try another handler
+
+            // Return no result when no EasyAuth header is present,
+            // because a request is always in anonymous role in EasyAuth
+            // This scenario is not possible when front loaded with EasyAuth
+            // since the X-MS-CLIENT-PRINCIPAL header will always be present in that case.
+            // This is applicable when engine is being tested without front loading with EasyAuth.
             return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
+        /// <summary>
+        /// Helper method to check if the only role assigned is the anonymous role.
+        /// </summary>
+        /// <param name="claims"></param>
+        /// <returns></returns>
+        private static bool HasOnlyAnonymousRole(IEnumerable<Claim> claims)
+        {
+            bool isUserAnonymousOnly = false;
+            foreach (Claim claim in claims)
+            {
+                if (claim.Type is ClaimTypes.Role)
+                {
+                    if (claim.Value.Equals(AuthorizationType.Anonymous.ToString(),
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        isUserAnonymousOnly = true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return isUserAnonymousOnly;
         }
     }
 }

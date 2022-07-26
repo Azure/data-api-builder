@@ -1,5 +1,5 @@
 {
-  "$schema": "../../project-hawaii/playground/hawaii.draft-01.schema.json",
+  "$schema": "../schemas/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
     "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;"
@@ -18,18 +18,13 @@
       "allow-introspection": true
     },
     "host": {
-      "mode": "Development",
+      "mode": "development",
       "cors": {
-        "origins": [ "1", "2" ],
-        "allow-credentials": true
+        "origins": [ "http://localhost:5000" ],
+        "allow-credentials": false
       },
       "authentication": {
-        "provider": "EasyAuth",
-        "jwt": {
-          "audience": "",
-          "issuer": "",
-          "issuer-key": ""
-        }
+        "provider": "StaticWebApps"
       }
     }
   },
@@ -62,11 +57,11 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update" ]
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "read", "update" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -87,7 +82,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "update", "delete" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -110,6 +105,10 @@
           "linking.source.fields": [ "book_id" ],
           "linking.target.fields": [ "author_id" ]
         }
+      },
+      "mappings": {
+        "id": "id",
+        "title": "title"
       }
     },
     "BookWebsitePlacement": {
@@ -154,6 +153,10 @@
         {
           "role": "anonymous",
           "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -171,6 +174,10 @@
         {
           "role": "anonymous",
           "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -191,7 +198,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "read", "delete" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ]
     },
@@ -202,6 +209,10 @@
         {
           "role": "anonymous",
           "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ]
     },
@@ -220,6 +231,58 @@
       "rest": false,
       "permissions": []
     },
+    "Tree": {
+      "source": "trees",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "species": "Scientific Name",
+        "region": "United State's Region"
+      }
+    },
+    "Shrub": {
+      "source": "trees",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "species": "fancyName"
+      }
+    },
+    "Fungus": {
+      "source": "fungi",
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "spores": "hazards"
+      }
+    },
     "books_view_all": {
       "source": "books_view_all",
       "rest": true,
@@ -231,7 +294,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -248,7 +311,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -265,7 +328,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {

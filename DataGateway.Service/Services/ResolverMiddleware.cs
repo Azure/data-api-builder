@@ -2,12 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Authorization;
+using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -34,6 +38,15 @@ namespace Azure.DataGateway.Service.Services
         public async Task InvokeAsync(IMiddlewareContext context)
         {
             JsonElement jsonElement;
+            if (context.ContextData.TryGetValue("HttpContext", out object? value))
+            {
+                if (value is not null)
+                {
+                    HttpContext httpContext = (HttpContext)value;
+                    StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+                    context.ContextData.TryAdd(key: AuthorizationResolver.CLIENT_ROLE_HEADER, value: clientRoleHeader);
+                }
+            }
 
             if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
             {
@@ -66,7 +79,7 @@ namespace Azure.DataGateway.Service.Services
                 // anything for it.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    context.Result = RepresentsNullValue(jsonElement) ? null : jsonElement.ToString();
+                    context.Result = RepresentsNullValue(jsonElement) ? null : PreParseLeaf(context, jsonElement.ToString());
                 }
             }
             else if (IsInnerObject(context))
@@ -97,6 +110,28 @@ namespace Azure.DataGateway.Service.Services
             }
 
             await _next(context);
+        }
+
+        /// <summary>
+        /// Preparse a string extracted from the json result representing a leaf.
+        /// This is helpful in cases when HotChocolate's internal resolvers cannot appropriately
+        /// parse the result so we preparse the result so it can be appropriately handled by HotChocolate
+        /// later
+        /// </summary>
+        /// <remarks>
+        /// e.g. "1" despite being a valid byte value is parsed improperly by HotChocolate so we preparse it
+        /// to an actual byte value then feed the result to HotChocolate
+        /// </remarks>
+        private static object PreParseLeaf(IMiddlewareContext context, string leafJson)
+        {
+            return context.Selection.Field.Type switch
+            {
+                ByteType => byte.Parse(leafJson),
+                SingleType => Single.Parse(leafJson),
+                DateTimeType => DateTimeOffset.Parse(leafJson),
+                ByteArrayType => Convert.FromBase64String(leafJson),
+                _ => leafJson
+            };
         }
 
         public static bool RepresentsNullValue(JsonElement element)
@@ -138,8 +173,10 @@ namespace Azure.DataGateway.Service.Services
 
         /// <summary>
         /// Extract parameters from the schema and the actual instance (query) of the field
-        /// Extracts defualt parameter values from the schema or null if no default
+        /// Extracts default parameter values from the schema or null if no default
         /// Overrides default values with actual values of parameters provided
+        /// Key: (string) argument field name
+        /// Value: (object) argument value
         /// </summary>
         public static IDictionary<string, object?> GetParametersFromSchemaAndQueryFields(IObjectField schema, FieldNode query, IVariableValueCollection variables)
         {

@@ -33,11 +33,12 @@ namespace Azure.DataGateway.Service.Resolvers
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
             string predicates = JoinPredicateStrings(
+                                    structure.DbPolicyPredicates,
                                     structure.FilterPredicates,
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
 
-            string query = $"SELECT {Build(structure.Columns)}"
+            string query = $"SELECT {MakeSelectColumns(structure)}"
                 + $" FROM {fromSql}"
                 + $" WHERE {predicates}"
                 + $" ORDER BY {Build(structure.OrderByColumns)}"
@@ -67,7 +68,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
                     $"VALUES ({string.Join(", ", (structure.Values))}) " +
-                    $"RETURNING {Build(structure.ReturnColumns)};";
+                    $"RETURNING {Build(structure.OutputColumns)};";
         }
 
         /// <inheritdoc />
@@ -76,7 +77,7 @@ namespace Azure.DataGateway.Service.Resolvers
             return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"WHERE {Build(structure.Predicates)} " +
-                    $"RETURNING {Build(structure.PrimaryKey())};";
+                    $"RETURNING {Build(structure.OutputColumns)};";
         }
 
         /// <inheritdoc />
@@ -93,7 +94,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"WHERE {Build(structure.Predicates)} " +
-                    $"RETURNING {Build(structure.ReturnColumns)}, '{UPDATE_UPSERT}' AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
+                    $"RETURNING {Build(structure.OutputColumns)}, '{UPDATE_UPSERT}' AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
             }
             else
             {
@@ -101,7 +102,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     $"VALUES ({string.Join(", ", (structure.Values))}) " +
                     $"ON CONFLICT ({Build(structure.PrimaryKey())}) DO UPDATE " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
-                    $"RETURNING {Build(structure.ReturnColumns)}, " +
+                    $"RETURNING {Build(structure.OutputColumns)}, " +
                     $"case when xmax::text::int > 0 then '{UPDATE_UPSERT}' else '{INSERT_UPSERT}' end AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
             }
         }
@@ -154,6 +155,36 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             throw new ArgumentException($"Invalid {UPSERT_IDENTIFIER_COLUMN_NAME} column value.");
+        }
+
+        /// <summary>
+        /// Encode byte array columns to base64 strings instead of hex strings
+        /// when parsing the results into json
+        /// </summary>
+        private string MakeSelectColumns(SqlQueryStructure structure)
+        {
+            List<string> builtColumns = new();
+
+            // go through columns to find columns with type byte[]
+            foreach (LabelledColumn column in structure.Columns)
+            {
+                // columns which contain the json of a nested type are called SqlQueryStructure.DATA_IDENT
+                // and they are not actual columns of the underlying table so don't check for column type
+                // in that scenario
+                if (column.ColumnName != SqlQueryStructure.DATA_IDENT &&
+                    structure.GetColumnSystemType(column.ColumnName) == typeof(byte[]))
+                {
+                    // postgres bytea is not stored as base64 so a convertion is made before
+                    // producing the json result since HotChocolate handles ByteArray as base64
+                    builtColumns.Add($"encode({Build(column as Column)}, 'base64') AS {QuoteIdentifier(column.Label)}");
+                }
+                else
+                {
+                    builtColumns.Add(Build(column));
+                }
+            }
+
+            return string.Join(", ", builtColumns);
         }
     }
 }

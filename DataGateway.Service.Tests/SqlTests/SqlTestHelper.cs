@@ -1,88 +1,31 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
+using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests
 {
-    public class SqlTestHelper
+    public class SqlTestHelper : TestHelper
     {
-        public static IOptionsMonitor<RuntimeConfigPath> LoadConfig(string environment)
+        public static void RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
         {
-            string configFileName = RuntimeConfigPath.GetFileNameForEnvironment(environment);
-
-            Dictionary<string, string> configFileNameMap = new()
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
             {
-                {
-                    nameof(RuntimeConfigPath.ConfigFileName),
-                    configFileName
-                }
-            };
-
-            IConfigurationRoot config = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddInMemoryCollection(configFileNameMap)
-                .Build();
-
-            RuntimeConfigPath configPath = config.Get<RuntimeConfigPath>();
-            configPath.SetRuntimeConfigValue();
-            AddMissingEntitiesToConfig(configPath);
-            return Mock.Of<IOptionsMonitor<RuntimeConfigPath>>(_ => _.CurrentValue == configPath);
-
-        }
-
-        /// <summary>
-        /// Temporary Helper function to ensure that in testing we have an entity
-        /// that can have a custom schema. We create a new entity of 'Magazine' with
-        /// a schema of 'foo' for table 'magazines', and then add this entity to our
-        /// runtime configuration. Because MySql will not have a schema we need a way
-        /// to customize this entity, which this helper function provides. Ultimately
-        /// this will be replaced with a JSON string in the tests that can be fully
-        /// customized for testing purposes.
-        /// </summary>
-        /// <param name="configPath"></param>
-        private static void AddMissingEntitiesToConfig(RuntimeConfigPath configPath)
-        {
-            string magazineSource = configPath.ConfigValue.DatabaseType is DatabaseType.mysql ? "\"magazines\"" : "\"foo.magazines\"";
-            string magazineEntityJsonString =
-              @"{ 
-                    ""source"":  " + magazineSource + @",
-                    ""graphql"": true,
-                    ""permissions"": [
-                      {
-                        ""role"": ""anonymous"",
-                        ""actions"": [ ""read"" ]
-                      },
-                      {
-                        ""role"": ""authenticated"",
-                        ""actions"": [ ""create"", ""read"", ""delete"" ]
-                      }
-                    ]
-                }";
-
-            JsonSerializerOptions options = new()
-            {
-                PropertyNameCaseInsensitive = true,
-                Converters =
-                {
-                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
-                }
-            };
-
-            Entity magazineEntity = JsonSerializer.Deserialize<Entity>(magazineEntityJsonString, options);
-            configPath.ConfigValue.Entities.Add("Magazine", magazineEntity);
+                Entity updatedEntity = new(entity.Source, entity.Rest,
+                                           entity.GraphQL, entity.Permissions,
+                                           Relationships: null, Mappings: null);
+                runtimeConfig.Entities.Remove(entityName);
+                runtimeConfig.Entities.Add(entityName, updatedEntity);
+            }
         }
 
         /// <summary>
@@ -121,8 +64,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             Console.WriteLine(response);
 
-            Assert.IsTrue(response.Contains("\"errors\""), "No error was found where error is expected.");
-
             if (message is not null)
             {
                 Console.WriteLine(response);
@@ -145,30 +86,32 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="operationType">The operation type to be tested.</param>
         public static async Task<IActionResult> PerformApiTest(
             RestController controller,
+            string path,
             string entityName,
             string primaryKeyRoute,
             Operation operationType = Operation.Find)
 
         {
             IActionResult actionResult;
+            string pathAndEntityName = $"{path}/{entityName}";
             switch (operationType)
             {
                 case Operation.Find:
-                    actionResult = await controller.Find(entityName, primaryKeyRoute);
+                    actionResult = await controller.Find($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 case Operation.Insert:
-                    actionResult = await controller.Insert(entityName);
+                    actionResult = await controller.Insert($"{pathAndEntityName}");
                     break;
                 case Operation.Delete:
-                    actionResult = await controller.Delete(entityName, primaryKeyRoute);
+                    actionResult = await controller.Delete($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 case Operation.Update:
                 case Operation.Upsert:
-                    actionResult = await controller.Upsert(entityName, primaryKeyRoute);
+                    actionResult = await controller.Upsert($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 case Operation.UpdateIncremental:
                 case Operation.UpsertIncremental:
-                    actionResult = await controller.UpsertIncremental(entityName, primaryKeyRoute);
+                    actionResult = await controller.UpsertIncremental($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
@@ -242,6 +185,34 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             else
             {
                 Assert.AreEqual(expected, actual, ignoreCase: true);
+            }
+        }
+
+        /// <summary>
+        /// Returns the HTTP verb for a provided Operation.
+        /// </summary>
+        /// <param name="operationType">Operation such as Find, Upsert, Delete, etc.
+        /// When Operation.None is provided from some tests, return empty string.</param>
+        /// <returns>Matching HttpConstants value</returns>
+        /// <exception cref="ArgumentException"></exception>
+        public static string OperationTypeToHTTPVerb(Operation operationType)
+        {
+            switch (operationType)
+            {
+                case Operation.Find:
+                    return HttpConstants.GET;
+                case Operation.Insert:
+                    return HttpConstants.POST;
+                case Operation.Upsert:
+                    return HttpConstants.PUT;
+                case Operation.UpsertIncremental:
+                    return HttpConstants.PATCH;
+                case Operation.Delete:
+                    return HttpConstants.DELETE;
+                case Operation.None:
+                    return string.Empty;
+                default:
+                    throw new ArgumentException(message: $"Invalid operationType {operationType} provided");
             }
         }
 

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
@@ -23,6 +24,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Database { get; internal set; }
         public string? Continuation { get; internal set; }
         public int MaxItemCount { get; internal set; }
+        public string? PartitionKeyValue { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
 
         public CosmosQueryStructure(
@@ -92,6 +94,12 @@ namespace Azure.DataGateway.Service.Resolvers
                 queryParams.Remove(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME);
             }
 
+            if (queryParams.ContainsKey(QueryBuilder.PARTITION_KEY_FIELD_NAME))
+            {
+                PartitionKeyValue = (string)queryParams[QueryBuilder.PARTITION_KEY_FIELD_NAME];
+                queryParams.Remove(QueryBuilder.PARTITION_KEY_FIELD_NAME);
+            }
+
             if (queryParams.ContainsKey("orderBy"))
             {
                 object? orderByObject = queryParams["orderBy"];
@@ -155,9 +163,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 EnumValueNode enumValue = (EnumValueNode)field.Value;
 
-                if (enumValue.Value == $"{OrderByDir.Desc}")
+                if (enumValue.Value == $"{OrderBy.DESC}")
                 {
-                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName, direction: OrderByDir.Desc));
+                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName, direction: OrderBy.DESC));
                 }
                 else
                 {

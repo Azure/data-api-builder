@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.GraphQLBuilder.Sql;
@@ -40,7 +41,14 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         {
             TableDefinition table = new();
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(entityName, table, GenerateEmptyEntity(), new());
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                entityName,
+                table,
+                GenerateEmptyEntity(),
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap()
+                );
 
             Assert.AreEqual(expected, od.Name.Value);
         }
@@ -65,7 +73,14 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 SystemType = typeof(string)
             });
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, GenerateEmptyEntity(), new());
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                "table",
+                table,
+                GenerateEmptyEntity(),
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap(columnName: table.Columns.First().Key)
+                );
 
             Assert.AreEqual(expected, od.Fields[0].Name.Value);
         }
@@ -82,10 +97,18 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             });
             table.PrimaryKey.Add(columnName);
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, GenerateEmptyEntity(), new());
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                "table",
+                table,
+                GenerateEmptyEntity(),
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap()
+                );
 
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
-            Assert.AreEqual(1, field.Directives.Count);
+            // Authorization directive implicitly created so actual count should be 1 + {expected number of directives}.
+            Assert.AreEqual(2, field.Directives.Count);
             Assert.AreEqual(PrimaryKeyDirectiveType.DirectiveName, field.Directives[0].Name.Value);
         }
 
@@ -101,7 +124,14 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 table.PrimaryKey.Add(columnName);
             }
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, GenerateEmptyEntity(), new());
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                "table",
+                table,
+                GenerateEmptyEntity(),
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap()
+                );
 
             foreach (FieldDefinitionNode field in od.Fields)
             {
@@ -113,28 +143,39 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         [TestMethod]
         public void MultipleColumnsAllMapped()
         {
+            int customColumnCount = 5;
+
             TableDefinition table = new();
 
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < customColumnCount; i++)
             {
                 table.Columns.Add($"col{i}", new ColumnDefinition { SystemType = typeof(string) });
             }
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, GenerateEmptyEntity(), new());
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                "table",
+                table,
+                GenerateEmptyEntity(),
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap(additionalColumns: customColumnCount)
+                );
 
             Assert.AreEqual(table.Columns.Count, od.Fields.Count);
         }
 
         [DataTestMethod]
         [DataRow(typeof(string), "String")]
+        [DataRow(typeof(byte), "Byte")]
+        [DataRow(typeof(short), "Short")]
         [DataRow(typeof(int), "Int")]
+        [DataRow(typeof(long), "Long")]
+        [DataRow(typeof(float), "Single")]
         [DataRow(typeof(double), "Float")]
+        [DataRow(typeof(decimal), "Decimal")]
         [DataRow(typeof(bool), "Boolean")]
-        // TODO: Uncomment these once we have more GraphQL type support - https://github.com/Azure/hawaii-gql/issues/247
-        //[DataRow(typeof(int), "Int")]
-        //[DataRow(typeof(short), "Int")]
-        //[DataRow(typeof(float), "Float")]
-        //[DataRow(typeof(decimal), "Float")]
+        [DataRow(typeof(DateTime), "DateTime")]
+        [DataRow(typeof(byte[]), "ByteArray")]
         public void SystemTypeMapsToCorrectGraphQLType(Type systemType, string graphQLType)
         {
             TableDefinition table = new();
@@ -145,7 +186,14 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 SystemType = systemType
             });
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, GenerateEmptyEntity(), new());
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                "table",
+                table,
+                GenerateEmptyEntity(),
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap()
+                );
 
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
             Assert.AreEqual(graphQLType, field.Type.NamedType().Name.Value);
@@ -163,7 +211,14 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 IsNullable = true,
             });
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, GenerateEmptyEntity(), new());
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                "table",
+                table,
+                GenerateEmptyEntity(),
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap()
+                );
 
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
             Assert.IsFalse(field.Type.IsNonNullType());
@@ -181,7 +236,14 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
                 IsNullable = false,
             });
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("table", table, GenerateEmptyEntity(), new());
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                "table",
+                table,
+                GenerateEmptyEntity(),
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap()
+                );
 
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
             Assert.IsTrue(field.Type.IsNonNullType());
@@ -234,7 +296,13 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 
             ObjectTypeDefinitionNode od =
                 SchemaConverter.FromTableDefinition(
-                    SOURCE_ENTITY, table, configEntity, new() { { TARGET_ENTITY, relationshipEntity } });
+                    SOURCE_ENTITY,
+                    table,
+                    configEntity,
+                    new() { { TARGET_ENTITY, relationshipEntity } },
+                    rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                    rolesAllowedForFields: GetFieldToRolesMap()
+                    );
 
             Assert.AreEqual(2, od.Fields.Count);
         }
@@ -248,11 +316,23 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             TableDefinition table = new();
 
             Entity configEntity = GenerateEmptyEntity() with { GraphQL = new SingularPlural(singular, null) };
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(entityName, table, configEntity, new());
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                entityName,
+                table,
+                configEntity,
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap()
+                );
 
             Assert.AreEqual(expected, od.Name.Value);
         }
 
+        /// <summary>
+        /// When schema ObjectTypeDefinition is created,
+        /// its fields contain the @authorize directive
+        /// when rolesAllowedForFields() returns a role list
+        /// </summary>
         [TestMethod]
         public void AutoGeneratedFieldHasDirectiveIndicatingSuch()
         {
@@ -266,18 +346,45 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             });
 
             Entity configEntity = GenerateEmptyEntity();
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("entity", table, configEntity, new());
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                "entity",
+                table,
+                configEntity,
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap()
+                );
 
             Assert.IsTrue(od.Fields[0].Directives.Any(d => d.Name.Value == AutoGeneratedDirectiveType.DirectiveName));
         }
 
         [DataTestMethod]
+        [DataRow((byte)1, "byte", SyntaxKind.IntValue)]
+        [DataRow((short)1, "short", SyntaxKind.IntValue)]
         [DataRow(1, "int", SyntaxKind.IntValue)]
+        [DataRow(1L, "long", SyntaxKind.IntValue)]
         [DataRow("test", "string", SyntaxKind.StringValue)]
         [DataRow(true, "boolean", SyntaxKind.BooleanValue)]
-        [DataRow(1.2f, "float", SyntaxKind.FloatValue)]
+        [DataRow(1.2f, "single", SyntaxKind.FloatValue)]
+        [DataRow(1.2, "float", SyntaxKind.FloatValue)]
+        [DataRow(1.2, "decimal", SyntaxKind.FloatValue)]
+        [DataRow("1999-01-08 10:23:54", "datetime", SyntaxKind.StringValue)]
+        [DataRow("U3RyaW5neQ==", "bytearray", SyntaxKind.StringValue)]
         public void DefaultValueGetsSetOnDirective(object defaultValue, string fieldName, SyntaxKind kind)
         {
+            if (fieldName == "decimal")
+            {
+                defaultValue = decimal.Parse(defaultValue.ToString());
+            }
+            else if (fieldName == "datetime")
+            {
+                defaultValue = DateTime.Parse(defaultValue.ToString());
+            }
+            else if (fieldName == "bytearray")
+            {
+                defaultValue = Convert.FromBase64String(defaultValue.ToString());
+            }
+
             TableDefinition table = new();
             string columnName = "columnName";
             table.Columns.Add(columnName, new ColumnDefinition
@@ -288,13 +395,246 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             });
 
             Entity configEntity = GenerateEmptyEntity();
-            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition("entity", table, configEntity, new());
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                "entity",
+                table,
+                configEntity,
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap()
+                );
 
-            Assert.AreEqual(1, od.Fields[0].Directives.Count);
+            // @authorize directive is implicitly created so the count to compare to is 2
+            Assert.AreEqual(2, od.Fields[0].Directives.Count);
             DirectiveNode directive = od.Fields[0].Directives[0];
             ObjectValueNode value = (ObjectValueNode)directive.Arguments[0].Value;
             Assert.AreEqual(fieldName, value.Fields[0].Name.Value);
             Assert.AreEqual(kind, value.Fields[0].Value.Kind);
+        }
+
+        /// <summary>
+        /// Tests that each field on an ObjectTypeDefinition includes
+        /// the expected @authorize directive.
+        /// Given a the anonymous role provided by GetFieldToRolesMap()
+        ///     id - {anonymous, authenticated, role3, roleN}
+        ///     title - {authenticated}
+        ///     field3 - {role3, roleN}
+        /// Adds directive @authorize(roles=[role1, role2, role3]).
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(new string[] { "authenticated" }, DisplayName = "One non-anonymous system role (authenticated) defined for field, @authorize directive added.")]
+        [DataRow(new string[] { "authenticated", "role1" }, DisplayName = "Mixed role types (non-anonymous) roles defined for field, @authorize directive added.")]
+        [DataRow(new string[] { "role1", "role2", "role3" }, DisplayName = "Multiple non-system roles defined for field, @authorize directive added.")]
+        public void AutoGeneratedFieldHasAuthorizeDirective(string[] rolesForField)
+        {
+            TableDefinition table = new();
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string),
+                IsNullable = false,
+                IsAutoGenerated = true,
+            });
+
+            Entity configEntity = GenerateEmptyEntity();
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                "entity",
+                table,
+                configEntity,
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap(rolesForField: rolesForField)
+                );
+
+            // Ensures all fields added have the appropriate @authorize directive.
+            Assert.IsTrue(od.Fields.All(field => field.Directives.Any(d => d.Name.Value == GraphQLUtils.AUTHORIZE_DIRECTIVE)));
+        }
+
+        /// <summary>
+        /// Tests that each field on an entity's ObjectTypeDefinition does not include
+        /// an @authorize directive.
+        /// Given a set of roles provided by GetFieldToRolesMap()
+        ///     id - {anonymous, authenticated, role3, roleN}
+        ///     title - {authenticated}
+        ///     field3 - {role3, roleN}
+        /// Adds directive @authorize(roles=[role1, role2, role3]).
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(new string[] { "anonymous" }, DisplayName = "Anonymous is only role for field")]
+        [DataRow(new string[] { "anonymous", "Role1" }, DisplayName = "Anonymous is 1 of many roles for field")]
+        [DataRow(new string[] { "authenticated", "anonymous" }, DisplayName = "Anonymous and authenticated are present and randomly ordered, anonymous wins.")]
+        public void FieldWithAnonymousAccessHasNoAuthorizeDirective(string[] rolesForField)
+        {
+            TableDefinition table = new();
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string),
+                IsNullable = false,
+                IsAutoGenerated = true,
+            });
+
+            Entity configEntity = GenerateEmptyEntity();
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                "entity",
+                table,
+                configEntity,
+                new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap(rolesForField: rolesForField)
+                );
+
+            // Ensures no field has the @authorize directive.
+            Assert.IsFalse(od.Fields.All(field => field.Directives.Any(d => d.Name.Value == GraphQLUtils.AUTHORIZE_DIRECTIVE)),
+                message: "@authorize directive must not be present for field with anonymous access permissions.");
+        }
+
+        /// <summary>
+        /// Tests that an entity's ObjectTypeDefinition only includes an
+        /// @authorize directive when anonymous is not a defined role.
+        /// Given a set of roles provided by GetRolesAllowedForEntity()
+        ///     {anonymous, authenticated, role3, roleN} -> no @authorize directive as anonymous access required.
+        ///     {authenticated} -> @authorize directive included with listed roles.
+        ///     {role3, roleN} -> @authorize directive included with listed roles.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(new string[] { "anonymous" }, false, DisplayName = "Anonymous is only role for field, no authorize directive.")]
+        [DataRow(new string[] { "anonymous", "role1" }, false, DisplayName = "Anonymous is 1 of many roles for field, no authorize directive.")]
+        [DataRow(new string[] { "authenticated", "anonymous" }, false, DisplayName = "Anonymous and authenticated are present and randomly ordered, anonymous wins.")]
+        [DataRow(new string[] { "authenticated" }, true, DisplayName = "Authorize directive present for listed roles.")]
+        [DataRow(new string[] { "role1", "role2" }, true, DisplayName = "Authorize directive present for listed roles.")]
+        public void EntityObjectTypeDefinition_AuthorizeDirectivePresence(string[] roles, bool authorizeDirectiveExpected)
+        {
+            TableDefinition table = new();
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string),
+                IsNullable = false,
+                IsAutoGenerated = true,
+            });
+
+            Entity configEntity = GenerateEmptyEntity();
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                "entity",
+                table,
+                configEntity,
+                new(),
+                rolesAllowedForEntity: roles,
+                rolesAllowedForFields: GetFieldToRolesMap(rolesForField: roles)
+                );
+
+            // Prepares error message, only used if assertion fails.
+            string errorMessage = !authorizeDirectiveExpected ? $"@authorize directive must not be present for field with anonymous access permissions."
+                : $"@authorize directive must not be present for field with anonymous access permissions.";
+
+            // Ensures no field has the @authorize directive if it is NOT authorizeDirectiveExpected
+            Assert.AreEqual(expected: authorizeDirectiveExpected, actual: od.Directives.Any(d => d.Name.Value == GraphQLUtils.AUTHORIZE_DIRECTIVE),
+                 message: errorMessage);
+        }
+
+        /// <summary>
+        /// Tests that an entity's ObjectTypeDefinition only includes an
+        /// @authorize directive when anonymous is not a defined role.
+        /// Tests that an entity's ObjectTypeDefinition's fields only includes an
+        /// @authorize directive when anonymous is not a defined role.
+        /// </summary>
+        /// <param name="rolesForEntity">Roles allowed for entity.</param>
+        /// <param name="rolesForFields">Roles allowed for fields.</param>
+        /// <param name="authorizeDirectiveExpectedEntity">Directive expected to be present on entity.</param>
+        /// <param name="authorizeDirectiveExpectedFields">Directive expected to be present on fields.</param>
+        [DataTestMethod]
+        [DataRow(new string[] { "anonymous" }, new string[] { "anonymous" }, false, false, DisplayName = "No authorize directive on entity or fields.")]
+        [DataRow(new string[] { "anonymous", "role1" }, new string[] { "role1" }, false, true, DisplayName = "No authorize directive on entity, but it is on fields.")]
+        [DataRow(new string[] { "authenticated", "anonymous" }, new string[] { "anonymous" }, false, false, DisplayName = "No Authorize directive on entity or fields, mixed.")]
+        [DataRow(new string[] { "authenticated" }, new string[] { "role1" }, true, true, DisplayName = "Authorize directive on entity and on fields.")]
+        [DataRow(new string[] { "authenticated" }, new string[] { "anonymous" }, true, false, DisplayName = "Authorize Directive on entity, not on fields")]
+        public void EntityObjectTypeDefinition_AuthorizeDirectivePresenceMixed(string[] rolesForEntity, string[] rolesForFields, bool authorizeDirectiveExpectedEntity, bool authorizeDirectiveExpectedFields)
+        {
+            TableDefinition table = new();
+            string columnName = "columnName";
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string),
+                IsNullable = false,
+                IsAutoGenerated = true,
+            });
+
+            Entity configEntity = GenerateEmptyEntity();
+            ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
+                "entity",
+                table,
+                configEntity,
+                new(),
+                rolesAllowedForEntity: rolesForEntity,
+                rolesAllowedForFields: GetFieldToRolesMap(rolesForField: rolesForFields)
+                );
+
+            // Prepares error message, only used if assertion fails.
+            string entityErrorMessage = !authorizeDirectiveExpectedEntity ? $"@authorize directive must not be present on entity with anonymous access permissions."
+                : $"@authorize directive must be present on entity with anonymous access permissions.";
+
+            // Ensures no field has the @authorize directive if it is NOT authorizeDirectiveExpected
+            Assert.AreEqual(expected: authorizeDirectiveExpectedEntity, actual: od.Directives.Any(d => d.Name.Value == GraphQLUtils.AUTHORIZE_DIRECTIVE),
+                 message: entityErrorMessage);
+
+            // Prepares error message, only used if assertion fails.
+            string fieldErrorMessage = !authorizeDirectiveExpectedFields ? $"@authorize directive must not be present for field with anonymous access permissions."
+                : $"@authorize directive must be present for field with anonymous access permissions.";
+
+            // Ensures no field has the @authorize directive if it is NOT authorizeDirectiveExpected
+            Assert.AreEqual(expected: authorizeDirectiveExpectedFields, actual: od.Fields.All(field => field.Directives.Any(d => d.Name.Value == GraphQLUtils.AUTHORIZE_DIRECTIVE)),
+                 message: fieldErrorMessage);
+        }
+
+        /// <summary>
+        /// Mocks a list of roles for the Schema Converter Tests
+        /// Defaults to authenticated
+        /// </summary>
+        /// <returns>Collection of roles</returns>
+        private static IEnumerable<string> GetRolesAllowedForEntity()
+        {
+            return new List<string>() { "authenticated" };
+        }
+
+        /// <summary>
+        /// Mocks FieldToRoleMap for Schema Converter Tests
+        /// For tests that require arbitrary number of columns,
+        /// the additionalColumns argument should be used to define
+        /// the desired number of columns.
+        /// Default is 0 and results in the two constant fields created that are
+        /// relevant to most tests in SchemaConverterTests.
+        /// </summary>
+        /// <param name="additionalColumns">number of columns/fields to generate</param>
+        /// <param name="columnName">custom column name</param>
+        /// <returns>Key Value Map of Field to Roles</returns>
+        private static IDictionary<string, IEnumerable<string>> GetFieldToRolesMap(int additionalColumns = 0, string columnName = "", IEnumerable<string> rolesForField = null)
+        {
+            Dictionary<string, IEnumerable<string>> fieldToRolesMap = new();
+
+            if (rolesForField is null)
+            {
+                rolesForField = GetRolesAllowedForEntity();
+            }
+
+            if (additionalColumns != 0)
+            {
+                for (int columnNumber = 0; columnNumber < additionalColumns; columnNumber++)
+                {
+                    fieldToRolesMap.Add("col" + columnNumber.ToString(), rolesForField);
+                }
+            }
+            else if (!string.IsNullOrEmpty(columnName))
+            {
+                fieldToRolesMap.Add(columnName, rolesForField);
+            }
+            else
+            {
+                fieldToRolesMap.Add(COLUMN_NAME, rolesForField);
+                fieldToRolesMap.Add(REF_COLNAME, rolesForField);
+            }
+
+            return fieldToRolesMap;
         }
 
         private static Entity GenerateEmptyEntity()
@@ -324,10 +664,13 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
             Entity relationshipEntity = GenerateEmptyEntity();
 
-            return SchemaConverter.FromTableDefinition
-                    (SOURCE_ENTITY,
-                     table,
-                     configEntity, new() { { TARGET_ENTITY, relationshipEntity } });
+            return SchemaConverter.FromTableDefinition(
+                SOURCE_ENTITY,
+                table,
+                configEntity, new() { { TARGET_ENTITY, relationshipEntity } },
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap()
+                );
         }
 
         private static TableDefinition GenerateTableWithForeignKeyDefinition()

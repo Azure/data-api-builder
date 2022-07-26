@@ -1,6 +1,9 @@
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Resolvers;
+using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.CosmosTests
@@ -17,8 +20,8 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
                                                     }
                                                 }";
         private static readonly string _deletePlanetMutation = @"
-                                                mutation ($id: ID!) {
-                                                    deletePlanet (id: $id) {
+                                                mutation ($id: ID!, $partitionKeyValue: String!) {
+                                                    deletePlanet (id: $id, _partitionKeyValue: $partitionKeyValue) {
                                                         id
                                                         name
                                                     }
@@ -31,9 +34,9 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         [ClassInitialize]
         public static void TestFixtureSetup(TestContext context)
         {
-            Init(context);
-            Client.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
-            Client.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
+            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
+            cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             CreateItems(DATABASE_NAME, _containerName, 10);
             OverrideEntityContainer("Planet", _containerName);
         }
@@ -46,12 +49,14 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             var input = new
             {
                 id,
-                name = "test_name"
+                name = "test_name",
+                stars = new[] { new { id = "TestStar" } }
             };
             JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
+            Assert.AreEqual("test_name", response.GetProperty("name").GetString());
         }
 
         [TestMethod]
@@ -67,10 +72,10 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
 
             // Run mutation delete item;
-            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", _deletePlanetMutation, new() { { "id", id } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", _deletePlanetMutation, new() { { "id", id }, { "partitionKeyValue", id } });
 
             // Validate results
-            Assert.IsNull(response.GetProperty("id").GetString());
+            Assert.IsNull(response.GetString());
         }
 
         [TestMethod]
@@ -81,7 +86,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
             const string name = "test_name";
             string mutation = $@"
 mutation {{
-    createPlanet (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+    createPlanet (item: {{ id: ""{id}"", name: ""{name}"", stars: [{{ id: ""{id}"" }}] }}) {{
         id
         name
     }}
@@ -110,7 +115,7 @@ mutation {{
             // Run mutation delete item;
             string deleteMutation = $@"
 mutation {{
-    deletePlanet (id: ""{id}"") {{
+    deletePlanet (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
         id
         name
     }}
@@ -118,7 +123,7 @@ mutation {{
             JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", deleteMutation, variables: new());
 
             // Validate results
-            Assert.IsNull(response.GetProperty("id").GetString());
+            Assert.IsNull(response.GetString());
         }
 
         [TestMethod]
@@ -150,7 +155,7 @@ mutation {{
     }}
 }}";
             JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
-            Assert.AreEqual("id field is mandatory", response[0].GetProperty("message").ToString());
+            Assert.IsTrue(response[0].GetProperty("message").ToString().Contains("The input content is invalid because the required properties - 'id; ' - are missing"));
         }
 
         [TestMethod]
@@ -171,7 +176,7 @@ mutation {{
             const string newName = "new_name";
             mutation = $@"
 mutation {{
-    updatePlanet (id: ""{id}"", item: {{ name: ""{newName}"" }}) {{
+    updatePlanet (id: ""{id}"", _partitionKeyValue: ""{id}"", item: {{ id: ""{id}"", name: ""{newName}"", stars: [{{ id: ""{id}"" }}] }}) {{
         id
         name
     }}
@@ -198,22 +203,40 @@ mutation {{
 
             const string newName = "new_name";
             string mutation = @"
-mutation ($id: ID!, $item: UpdatePlanetInput!) {
-    updatePlanet (id: $id, item: $item) {
+mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetInput!) {
+    updatePlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
         id
         name
      }
 }";
             var update = new
             {
-                name = "new_name"
+                id = id,
+                name = "new_name",
+                stars = new[] { new { id = "TestStar" } }
             };
 
-            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new() { { "id", id }, { "item", update } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
 
             // Validate results
             Assert.AreEqual(newName, response.GetProperty("name").GetString());
             Assert.AreNotEqual(input.name, response.GetProperty("name").GetString());
+        }
+
+        [TestMethod]
+        public async Task MutationMissingRequiredPartitionKeyValueReturnError()
+        {
+            // Run mutation Add planet without id
+            string id = Guid.NewGuid().ToString();
+            string mutation = $@"
+mutation {{
+    deletePlanet (id: ""{id}"") {{
+        id
+        name
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", mutation, variables: new());
+            Assert.AreEqual("The argument `_partitionKeyValue` is required.", response[0].GetProperty("message").ToString());
         }
 
         /// <summary>
@@ -222,7 +245,8 @@ mutation ($id: ID!, $item: UpdatePlanetInput!) {
         [ClassCleanup]
         public static void TestFixtureTearDown()
         {
-            Client.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
+            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }
 }

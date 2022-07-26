@@ -3,9 +3,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
+using HotChocolate.Types;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
@@ -18,10 +20,21 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
         /// <param name="entityName">Name of the entity in the runtime config to generate the GraphQL object type for.</param>
         /// <param name="tableDefinition">SQL table definition information.</param>
         /// <param name="configEntity">Runtime config information for the table.</param>
+        /// <param name="entities">Key/Value Collection mapping entity name to the entity object,
+        /// currently used to lookup relationship metadata.</param>
+        /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
+        /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level (applies to mutations).</param>
         /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
-        public static ObjectTypeDefinitionNode FromTableDefinition(string entityName, TableDefinition tableDefinition, [NotNull] Entity configEntity, Dictionary<string, Entity> entities)
+        public static ObjectTypeDefinitionNode FromTableDefinition(
+            string entityName,
+            TableDefinition tableDefinition,
+            [NotNull] Entity configEntity,
+            Dictionary<string, Entity> entities,
+            IEnumerable<string> rolesAllowedForEntity,
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
+            List<DirectiveNode> objectTypeDirectives = new();
 
             foreach ((string columnName, ColumnDefinition column) in tableDefinition.Columns)
             {
@@ -41,26 +54,54 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 {
                     IValueNode arg = column.DefaultValue switch
                     {
+                        byte value => new ObjectValueNode(new ObjectFieldNode("byte", new IntValueNode(value))),
+                        short value => new ObjectValueNode(new ObjectFieldNode("short", new IntValueNode(value))),
                         int value => new ObjectValueNode(new ObjectFieldNode("int", value)),
+                        long value => new ObjectValueNode(new ObjectFieldNode("long", new IntValueNode(value))),
                         string value => new ObjectValueNode(new ObjectFieldNode("string", value)),
                         bool value => new ObjectValueNode(new ObjectFieldNode("boolean", value)),
-                        float value => new ObjectValueNode(new ObjectFieldNode("float", value)),
-                        _ => throw new DataGatewayException($"The type {column.DefaultValue.GetType()} is not supported as a GraphQL default value", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.GraphQLMapping)
+                        float value => new ObjectValueNode(new ObjectFieldNode("single", new SingleType().ParseValue(value))),
+                        double value => new ObjectValueNode(new ObjectFieldNode("float", value)),
+                        decimal value => new ObjectValueNode(new ObjectFieldNode("decimal", new FloatValueNode(value))),
+                        DateTime value => new ObjectValueNode(new ObjectFieldNode("datetime", new DateTimeType().ParseResult(value))),
+                        DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode("datetime", new DateTimeType().ParseValue(value))),
+                        byte[] value => new ObjectValueNode(new ObjectFieldNode("bytearray", new ByteArrayType().ParseValue(value))),
+                        _ => throw new DataGatewayException(
+                            message: $"The type {column.DefaultValue.GetType()} is not supported as a GraphQL default value",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataGatewayException.SubStatusCodes.GraphQLMapping)
                     };
 
                     directives.Add(new DirectiveNode(DefaultValueDirectiveType.DirectiveName, new ArgumentNode("value", arg)));
                 }
 
-                NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
-                FieldDefinitionNode field = new(
-                    location: null,
-                    new(FormatNameForField(columnName)),
-                    description: null,
-                    new List<InputValueDefinitionNode>(),
-                    column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
-                    directives);
+                // If no roles are allowed for the field, we should not include it in the schema.
+                // Consequently, the field is only added to schema if this conditional evaluates to TRUE.
+                if (rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles))
+                {
+                    // Roles will not be null here if TryGetValue evaluates to true, so here we check if there are any roles to process.
+                    if (roles.Count() > 0)
+                    {
 
-                fields.Add(columnName, field);
+                        if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
+                                roles,
+                                out DirectiveNode? authZDirective))
+                        {
+                            directives.Add(authZDirective!);
+                        }
+
+                        NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
+                        FieldDefinitionNode field = new(
+                            location: null,
+                            new(FormatNameForField(columnName)),
+                            description: null,
+                            new List<InputValueDefinitionNode>(),
+                            column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
+                            directives);
+
+                        fields.Add(columnName, field);
+                    }
+                }
             }
 
             if (configEntity.Relationships is not null)
@@ -79,7 +120,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         Cardinality.Many =>
                             new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(FormatNameForObject(targetEntityName, referencedEntity))),
                         _ =>
-                            throw new DataGatewayException("Specified cardinality isn't supported", HttpStatusCode.InternalServerError, DataGatewayException.SubStatusCodes.GraphQLMapping),
+                            throw new DataGatewayException(
+                                message: "Specified cardinality isn't supported",
+                                statusCode: HttpStatusCode.InternalServerError,
+                                subStatusCode: DataGatewayException.SubStatusCodes.GraphQLMapping),
                     };
 
                     FieldDefinitionNode relationshipField = new(
@@ -99,11 +143,20 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 }
             }
 
+            objectTypeDirectives.Add(new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName)));
+
+            if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
+                    rolesAllowedForEntity,
+                    out DirectiveNode? authorizeDirective))
+            {
+                objectTypeDirectives.Add(authorizeDirective!);
+            }
+
             return new ObjectTypeDefinitionNode(
                 location: null,
                 new(FormatNameForObject(entityName, configEntity)),
                 description: null,
-                new List<DirectiveNode>() { new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName)) },
+                objectTypeDirectives,
                 new List<NamedTypeNode>(),
                 fields.Values.ToImmutableList());
         }
@@ -113,16 +166,23 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
         /// </summary>
         public static string GetGraphQLTypeForColumnType(Type type)
         {
-            return Type.GetTypeCode(type) switch
+            return type.Name switch
             {
-                TypeCode.String => "String",
-                TypeCode.Int32 => "Int",
-                TypeCode.Double => "Float",
-                TypeCode.Boolean => "Boolean",
+                "String" => "String",
+                "Byte" => "Byte",
+                "Int16" => "Short",
+                "Int32" => "Int",
+                "Int64" => "Long",
+                "Single" => "Single",
+                "Double" => "Float",
+                "Decimal" => "Decimal",
+                "Boolean" => "Boolean",
+                "DateTime" => "DateTime",
+                "Byte[]" => "ByteArray",
                 _ => throw new DataGatewayException(
-                        $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",
-                        HttpStatusCode.InternalServerError,
-                        DataGatewayException.SubStatusCodes.GraphQLMapping)
+                        message: $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataGatewayException.SubStatusCodes.GraphQLMapping)
             };
         }
     }

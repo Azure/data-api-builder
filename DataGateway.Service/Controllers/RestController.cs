@@ -1,8 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
@@ -19,7 +16,7 @@ namespace Azure.DataGateway.Service.Controllers
     /// <see href="https://github.com/Microsoft/api-guidelines/blob/vNext/Guidelines.md">Microsoft REST API Guidelines</see>.
     /// </summary>
     [ApiController]
-    [Route("api/{entityName}")]
+    [Route("{*route}")]
     public class RestController : ControllerBase
     {
         /// <summary>
@@ -61,236 +58,148 @@ namespace Azure.DataGateway.Service.Controllers
         }
 
         /// <summary>
-        /// Helper function returns an OkObjectResult with provided arguments in a
-        /// form that complies with vNext Api guidelines.
-        /// </summary>
-        /// <param name="jsonElement">Value representing the Json results of the client's request.</param>
-        /// <param name="url">Value represents the complete url needed to continue with paged results.</param>
-        /// <returns></returns>
-        private OkObjectResult OkResponse(JsonElement jsonResult)
-        {
-            // For consistency we return all values as type Array
-            if (jsonResult.ValueKind != JsonValueKind.Array)
-            {
-                string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
-                jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
-            }
-
-            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
-            // More than 0 records, and the last element is of type array, then we have pagination
-            if (resultEnumerated.Count() > 0 && resultEnumerated.Last().ValueKind == JsonValueKind.Array)
-            {
-                // Get the nextLink
-                // resultEnumerated will be an array of the form
-                // [{object1}, {object2},...{objectlimit}, [{nextLinkObject}]]
-                // if the last element is of type array, we know it is nextLink
-                // we strip the "[" and "]" and then save the nextLink element
-                // into a dictionary with a key of "nextLink" and a value that
-                // represents the nextLink data we require.
-                string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated.Last());
-                Dictionary<string, object> nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString[1..^1])!;
-                IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count() - 1);
-                return Ok(new
-                {
-                    value = value,
-                    @nextLink = nextLink["nextLink"]
-                });
-            }
-
-            // no pagination, do not need nextLink
-            return Ok(new
-            {
-                value = resultEnumerated
-            });
-        }
-
-        /// <summary>
         /// Find action serving the HttpGet verb.
         /// </summary>
-        /// <param name="entityName">The name of the entity.</param>
-        /// <param name="primaryKeyRoute">The string representing the primary key route
-        /// which gets its content from the route attribute {*primaryKeyRoute}.
-        /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
-        /// primary_key = [shard_value/]id_key_value
-        /// primaryKeyRoute will be empty for FindOne or FindMany
+        /// <param name="route">The entire route which gets
+        /// its content from the route attribute {*route} defined
+        /// for the class, asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// CosmosDb: URL template: /<entityName>/[<shard_key>/<shard_value>]/[<id_key>/]<id_key_value>
-        /// MsSql/PgSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
-        /// URL may also contain a queryString
-        /// URL example: /SalesOrders/customerName/Xyz/saleOrderId/123 </param>
+        /// MsSql/PgSql: URL template: <path>/<entityName>/<primary_key_column_name>/<primary_key_value>
+        /// URL MUST NOT contain a queryString
+        /// URL example: api/Books </param>
         [HttpGet]
-        [Route("{*primaryKeyRoute}")]
         [Produces("application/json")]
         public async Task<IActionResult> Find(
-            string entityName,
-            string? primaryKeyRoute)
+            string route)
         {
             return await HandleOperation(
-                entityName,
-                Operation.Find,
-                primaryKeyRoute);
+                route,
+                Operation.Find);
         }
 
         /// <summary>
         /// Insert action serving the HttpPost verb.
         /// </summary>
-        /// <param name="entityName">The name of the entity.</param>
+        /// <param name="route">Path and entity.</param>
         /// Expected URL template is of the following form:
-        /// CosmosDb/MsSql/PgSql: URL template: /<entityName>
+        /// CosmosDb/MsSql/PgSql: URL template: <path>/<entityName>
         /// URL MUST NOT contain a queryString
-        /// URL example: /SalesOrders </param>
+        /// URL example: api/SalesOrders </param>
         [HttpPost]
         [Produces("application/json")]
         public async Task<IActionResult> Insert(
-            string entityName)
+            string route)
         {
             return await HandleOperation(
-                entityName,
-                Operation.Insert,
-                primaryKeyRoute: string.Empty);
+                route,
+                Operation.Insert);
         }
 
         /// <summary>
         /// Delete action serving the HttpDelete verb.
         /// </summary>
-        /// <param name="entityName">The name of the entity.</param>
-        /// <param name="primaryKeyRoute">The string representing the primary key route
-        /// which gets its content from the route attribute {*primaryKeyRoute}.
-        /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
-        /// primary_key = [shard_value/]id_key_value
+        /// <param name="route">The entire route which gets
+        /// its content from the route attribute {*route} defined
+        /// for the class, asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// MsSql/PgSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// MsSql/PgSql: URL template: <path>/<entityName>/<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString
-        /// URL example: /Books </param>
+        /// URL example: api/Books </param>
         [HttpDelete]
-        [Route("{*primaryKeyRoute}")]
         [Produces("application/json")]
         public async Task<IActionResult> Delete(
-            string entityName,
-            string? primaryKeyRoute)
+            string route)
         {
             return await HandleOperation(
-                entityName,
-                Operation.Delete,
-                primaryKeyRoute);
+                route,
+                Operation.Delete);
         }
 
         /// <summary>
         /// Replacement Update/Insert action serving the HttpPut verb
         /// </summary>
-        /// <param name="entityName">The name of the entity.</param>
-        /// <param name="primaryKeyRoute">The string representing the primary key route
-        /// which gets its content from the route attribute {*primaryKeyRoute}.
-        /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
-        /// primary_key = [shard_value/]id_key_value
+        /// <param name="route">The entire route which gets
+        /// its content from the route attribute {*route} defined
+        /// for the class, asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// MsSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// MsSql/PgSql: URL template: <path>/<entityName>/<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString
-        /// URL example: /Books </param>
+        /// URL example: api/Books </param>
         [HttpPut]
-        [Route("{*primaryKeyRoute}")]
         [Produces("application/json")]
         public async Task<IActionResult> Upsert(
-            string entityName,
-            string? primaryKeyRoute)
+            string route)
         {
             return await HandleOperation(
-                entityName,
-                DeterminePatchPutSemantics(Operation.Upsert),
-                primaryKeyRoute);
+                route,
+                DeterminePatchPutSemantics(Operation.Upsert));
         }
 
         /// <summary>
         /// Incremental Update/Insert action serving the HttpPatch verb
         /// </summary>
-        /// <param name="entityName">The name of the entity.</param>
-        /// <param name="primaryKeyRoute">The string representing the primary key route
-        /// which gets its content from the route attribute {*primaryKeyRoute}.
-        /// asterisk(*) here is a wild-card/catch all i.e it matches the rest of the route after {entityName}.
-        /// primary_key = [shard_value/]id_key_value
+        /// <param name="route">The entire route which gets
+        /// its content from the route attribute {*route} defined
+        /// for the class, asterisk(*) here is a wild-card/catch all.
         /// Expected URL template is of the following form:
-        /// MsSql: URL template: /<entityName>/[<primary_key_column_name>/<primary_key_value>
+        /// MsSql/PgSql: URL template: <path>/<entityName>/<primary_key_column_name>/<primary_key_value>
         /// URL MUST NOT contain a queryString
-        /// URL example: /Books </param>
+        /// URL example: api/Books </param>
         [HttpPatch]
-        [Route("{*primaryKeyRoute}")]
         [Produces("application/json")]
         public async Task<IActionResult> UpsertIncremental(
-            string entityName,
-            string? primaryKeyRoute)
+            string route)
         {
             return await HandleOperation(
-                entityName,
-                DeterminePatchPutSemantics(Operation.UpsertIncremental),
-                primaryKeyRoute);
+                route,
+                DeterminePatchPutSemantics(Operation.UpsertIncremental));
         }
 
         /// <summary>
         /// Handle the given operation.
         /// </summary>
-        /// <param name="entityName">The name of the entity.</param>
+        /// <param name="route">The entire route.</param>
         /// <param name="operationType">The kind of operation to handle.</param>
-        /// <param name="primaryKeyRoute">The string identifying the primary key route
-        /// Its value could be null depending on the kind of operation.</param>
         private async Task<IActionResult> HandleOperation(
-            string entityName,
-            Operation operationType,
-            string? primaryKeyRoute)
+            string route,
+            Operation operationType)
         {
             try
             {
+                (string entityName, string primaryKeyRoute) =
+                    _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
                 // Utilizes C#8 using syntax which does not require brackets.
-                using JsonDocument? result
+                IActionResult? result
                     = await _restService.ExecuteAsync(
                             entityName,
                             operationType,
                             primaryKeyRoute);
 
-                if (result != null)
+                if (result is null)
                 {
-                    // Clones the root element to a new JsonElement that can be
-                    // safely stored beyond the lifetime of the original JsonDocument.
-                    JsonElement resultElement = result.RootElement.Clone();
-                    OkObjectResult formattedResult = OkResponse(resultElement);
+                    throw new DataGatewayException(
+                        message: $"Not Found",
+                        statusCode: HttpStatusCode.NotFound,
+                        subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
+                }
 
-                    switch (operationType)
-                    {
-                        case Operation.Find:
-                            return formattedResult;
-                        case Operation.Insert:
-                            primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
-                            string location =
-                                UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
-                            return new CreatedResult(location: location, formattedResult.Value);
-                        case Operation.Delete:
-                            return new NoContentResult();
-                        case Operation.Upsert:
-                        case Operation.UpsertIncremental:
-                            primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
-                            location =
-                                UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
-                            return new CreatedResult(location: location, formattedResult.Value);
-                        default:
-                            throw new NotSupportedException($"Unsupported Operation: \" {operationType}\".");
-                    }
-                }
-                else
+                if (result is CreatedResult)
                 {
-                    switch (operationType)
-                    {
-                        case Operation.Update:
-                        case Operation.UpdateIncremental:
-                        case Operation.Upsert:
-                        case Operation.UpsertIncremental:
-                            // Empty result set indicates an Update successfully occurred.
-                            return new NoContentResult();
-                        default:
-                            throw new DataGatewayException(
-                                message: $"Not Found",
-                                statusCode: HttpStatusCode.NotFound,
-                                subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
-                    }
+                    // Location is made up of two parts, the first being constructed
+                    // from the HttpRequest found in the HttpContext. The other part
+                    // is the primary key route, which has already been saved in the
+                    // Location of the created result. So we form the entire location
+                    // from appending the primary key route  already stored in the
+                    // created result to the url constructed from the HttpRequest. We
+                    // then update the Location of the created result to this value.
+                    CreatedResult createdResult = (result as CreatedResult)!;
+                    string location =
+                        UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + createdResult.Location;
+                    createdResult.Location = location;
+                    result = createdResult;
                 }
+
+                return result;
             }
             catch (DataGatewayException ex)
             {

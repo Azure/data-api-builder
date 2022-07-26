@@ -5,6 +5,7 @@ using System.Net;
 using System.Text;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.Models;
 using static Azure.DataGateway.Service.Exceptions.DataGatewayException;
 
@@ -29,7 +30,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         protected virtual string Build(KeysetPaginationPredicate? predicate)
         {
-            if (predicate == null)
+            if (predicate is null)
             {
                 return string.Empty;
             }
@@ -88,13 +89,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         /// <param name="direction">String represents direction.</param>
         /// <returns>Correct comparison operator.</returns>
-        private static string GetComparisonFromDirection(OrderByDir direction)
+        private static string GetComparisonFromDirection(OrderBy direction)
         {
             switch (direction)
             {
-                case OrderByDir.Asc:
+                case OrderBy.ASC:
                     return ">";
-                case OrderByDir.Desc:
+                case OrderBy.DESC:
                     return "<";
                 default:
                     throw new DataGatewayException(message: $"Invalid sorting direction for pagination: {direction}",

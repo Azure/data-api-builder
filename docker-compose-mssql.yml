@@ -1,9 +1,9 @@
 version: "3.9"
 services:
   hawaii:
-    image: "hawaiiacr.azurecr.io/hawaii:latest"
+    image: "hawaiiacr.azurecr.io/hawaii/refs/heads/main:latest"
     ports:
       - "5000:5000"
     restart: "no"
     volumes:
-      - "./DataGateway.Service/hawaii-config.MsSql.json:/App/hawaii-config.MsSql.json"
+      - "./DataGateway.Service/hawaii-config.MsSql.json:/App/hawaii-config.json"

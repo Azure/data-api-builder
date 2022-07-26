@@ -1,9 +1,12 @@
 # Introduction
 
-# Deploy docker container from ACR (Prebuilt image)
-N.B. This section only applies if you want to use a prebuilt image, if you want to build it yourself, move on to the next section (Build and deploy as Docker Container)
+This document provides instruction for running the engine inside a Docker container.
 
-N.B. You might not have access to the container registry where the image is hosted. Reach out to someone on the team for us to give you permissions.
+## Running docker container from ACR (Prebuilt image)
+
+N.B. If you want to build your own image, use the next section (Build and deploy as Docker Container)
+
+N.B. You might not have access to the container registry where the image is hosted. Reach out to someone on the team to get access.
 
 1. You will need to login to the ACR:
 
@@ -11,78 +14,62 @@ N.B. You might not have access to the container registry where the image is host
 az acr login --name hawaiiacr
 ```
 
-2. update the configuration files for your environment:
+2. Update the configuration files for your environment:
 
-Update the config.json and the appsettings.json files for your chosen environment.
+Update `hawaii-config.json` (and `schema.gql` if using cosmos).
 
-## Running the container with docker compose
-This is the easiest way.
+3. Choose a `docker-compose-*.yml` file based on your environment (cosmos, sql, postgres)
 
-3. Choose a docker-compose-*.yml file based on your environment (cosmos, sql, postgres)
+    3.1. Open the docker-compose file and update the `image` with the tag you want to use. The `latest` tag has the latest commit.
+        To find a different tag, find the CI run that was automatically triggered after your checkin, view more details on azure pipelines, then click `Job`.
+        In the logs of `Build and push docker image` stage, search for `docker push` to find the tag that was pushed.
 
+    3.2. If you are not using the configuration from the repo, update the path to your config/schema to point to your files and map them to `/App/hawaii-config.json` and for cosmos - `/App/schema.gql` as well.
+
+    3.3. Run docker compose up to start the container:
 
 ```bash
 docker compose -f "./docker-compose.yml" up
 ```
 
-4 Your container should be accessible at localhost:5000
+4. Your container should be accessible at `http://localhost:5000`. 
 
-## Running the container manually
+    4.1 Append the `path` from the `runtime` section of configuration file to access the respective GraphQL or REST endpoint URI.
+    e.g. if you are using the configuration example from this repo, GraphQL endpoint URI will be `http://localhost:5000/graphql`
+    whereas one of the REST endpoint URIs will be `http://localhost:5000/api/Book`.
 
-3. Pull the docker image
+    4.2 Use your favorite client like Banana Cake Pop(for GraphQL) or Post Man(for both GraphQL and REST) to trigger
+    the requests. In Banana Cake Pop, make sure to configure the schema endpoint to the GraphQL endpoint
+    e.g.`http://localhost:5000/graphql` in its `Connection Settings`-> `General` tab.
 
-```bash
-docker pull hawaiiacr.azurecr.io/hawaii:latest # Note to use the desired tag here.
-```
+    ![Banana Cake Pop Connection Strings](BananaCakePopConnectionSettings.png)
 
-4. Launch the docker container and map the config.json and appsettings.json files. The command should look something like this (depending on the path to your appsettings and config files, and the image you are using):
+## Build and deploy as Docker Container
 
-```bash
-docker run --mount type=bind,source="$(pwd)\DataGateway.Service\appsettings.json",target="/App/appsettings.json" --mount type=bind,source="$(pwd)\DataGateway.Service\config.json",target="/App/config.json" -d -p 5000:5000 hawaiiacr.azurecr.io/hawaii:latest
-# Note to update to the correct tag
-```
+If you want to build your own docker image, follow these instructions.
 
-5. The container should be accessible at localhost:5000
+N.B. Ensure you have docker running, with Linux containers chosen.
 
-## Managing the Pipeline
-The pipeline has permissions to push to this ACR through this service connection in ADO: https://msdata.visualstudio.com/CosmosDB/_settings/adminservices?resourceId=6565800e-5e71-4e19-a610-6013655382b5.
-
-To push to a different container registry, we need to add a new service connection to the registry and modify the docker task in the build-pipeline.yml file to point to the new registry.
-
-# Build and deploy as Docker Container
-
-## Build Image
-
-Ensure you have docker running, with Linux containers chosen.
-Navigate to the root folder.
-
-On Windows you need to do this in a WSL terminal and run this to build a docker image
+1. Navigate to the root folder of the repo.
+2. Run docker build. If you are on Windows, you need to do this in a WSL terminal.
 
 ```bash
-docker build -t hawaii -f Dockerfile .
+docker build -t hawaii:<yourTag> -f Dockerfile .
 ```
 
-## Run Container
+3. To run a container with the image you created, follow the instructions above (Running docker container from ACR (Prebuilt image)). Make sure to replace the image in the docker-compose file with the one you built. You can skip the login step.
 
-Create and run container accessible on http://localhost:5000/ by running
-
-```bash
-docker run -d -p 5000:5000 hawaii
-```
-
-## Deploy Container
+### Deploying the Container
 
 If you are planning to deploy the container on Azure App service or elsewhere, you should deploy the image to an ACR.
 In the following example we are using `hawaiiacr.azurecr.io/hawaii` ACR, but you can use any other ACR to which have access to.
 
-### Push Image
+N.B. We automatically push images to the ACR on every CI build, so if you open a PR, it will generate an image with your changes and push it to the ACR automatically.
 
-To push the built image to the hawaiiacr ACR, do the following
-
-Tag the image correctly
+1. Update your image tag.
 
 ```bash
-docker tag hawaii hawaiiacr.azurecr.io/hawaii/<yourBranch>:<yourTag>
+docker tag hawaii:<yourTag> hawaiiacr.azurecr.io/hawaii/<yourBranch>:<yourTag>
 ```
 
 Choose something meaningful when tagging your images. This will make it easier to understand what each image is.
@@ -92,14 +79,20 @@ For example, on a user branch, one could use the branch name with the commit id 
 docker tag hawaii hawaiiacr.azurecr.io/hawaii/docker-registry:a046756c97d49347d0fc8584ecc5050029ed5840
 ```
 
-Login to the ACR with the correct credentials
+2. Login to the ACR with the correct credentials
 
 ```bash
 az acr login --name hawaiiacr
 ```
 
-Push the retagged image
+3. Push the image
 
 ```bash
 docker push hawaiiacr.azurecr.io/hawaii/<yourBranch>:<yourTag>
 ```
+
+## Managing the Pipeline
+
+The pipeline has permissions to push to this ACR through this service connection in ADO: <https://msdata.visualstudio.com/CosmosDB/_settings/adminservices?resourceId=6565800e-5e71-4e19-a610-6013655382b5>.
+
+To push to a different container registry, we need to add a new service connection to the registry and modify the docker task in the build-pipeline.yml file to point to the new registry.

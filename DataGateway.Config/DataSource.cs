@@ -16,12 +16,6 @@ namespace Azure.DataGateway.Config
         public const string DATABASE_PROPERTY_NAME = "database-type";
         public const string CONNSTRING_PROPERTY_NAME = "connection-string";
 
-        public string GetDatabaseTypeNotSupportedMessage()
-        {
-            return string.Format("The provided database-type value: {0} is currently not supported." +
-                "Please check the configuration file.", DatabaseType);
-        }
-
         [property: JsonPropertyName(CONNSTRING_PROPERTY_NAME)]
         public string ConnectionString { get; set; } = string.Empty;
     }
@@ -33,7 +27,9 @@ namespace Azure.DataGateway.Config
         string Database,
         string? Container,
         [property: JsonPropertyName(CosmosDbOptions.GRAPHQL_SCHEMA_PATH_PROPERTY_NAME)]
-        string GraphQLSchemaPath)
+        string? GraphQLSchemaPath,
+        [property: JsonIgnore]
+        string? GraphQLSchema)
     {
         public const string GRAPHQL_SCHEMA_PATH_PROPERTY_NAME = "schema";
         public const string JSON_PROPERTY_NAME = nameof(DatabaseType.cosmos);

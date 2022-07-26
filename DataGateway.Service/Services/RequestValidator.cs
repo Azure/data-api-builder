@@ -16,7 +16,7 @@ namespace Azure.DataGateway.Service.Services
     {
         /// <summary>
         /// Validates the given request by ensuring:
-        /// - each field to be returned is one of the columns in the table.
+        /// - each field to be returned is one of the exposed names for the entity.
         /// - extra fields specified in the body, will be discarded.
         /// </summary>
         /// <param name="context">Request context containing the REST operation fields and their values.</param>
@@ -26,14 +26,14 @@ namespace Azure.DataGateway.Service.Services
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, sqlMetadataProvider);
-
             foreach (string field in context.FieldsToBeReturned)
             {
-                if (!tableDefinition.Columns.ContainsKey(field))
+                // Get backing column and check that column is valid
+                if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, field, out string? backingColumn) ||
+                    !sqlMetadataProvider.GetTableDefinition(context.EntityName).Columns.ContainsKey(backingColumn!))
                 {
                     throw new DataGatewayException(
-                        message: "Invalid Column name requested: " + field,
+                        message: "Invalid field to be returned requested: " + field,
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
@@ -64,8 +64,21 @@ namespace Azure.DataGateway.Service.Services
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
 
+            List<string> primaryKeysInRequest = new();
+            foreach (string pk in context.PrimaryKeyValuePairs.Keys)
+            {
+                if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, pk, out string? backingColumn))
+                {
+                    throw new DataGatewayException(
+                    message: $"Primary key column: {pk} not found in the entity definition.",
+                    statusCode: HttpStatusCode.NotFound,
+                    subStatusCode: DataGatewayException.SubStatusCodes.EntityNotFound);
+                }
+
+                primaryKeysInRequest.Add(backingColumn!);
+            }
+
             // Verify each primary key is present in the table definition.
-            List<string> primaryKeysInRequest = new(context.PrimaryKeyValuePairs.Keys);
             IEnumerable<string> missingKeys = primaryKeysInRequest.Except(tableDefinition.PrimaryKey);
 
             if (missingKeys.Any())
@@ -171,26 +184,37 @@ namespace Azure.DataGateway.Service.Services
 
             foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
             {
-                // Request body must have value defined for included non-nullable columns
-                if (!column.Value.IsNullable && fieldsInRequestBody.Contains(column.Key))
+                // if column is not exposed we skip
+                if (!sqlMetadataProvider.TryGetExposedColumnName(
+                    entityName: insertRequestCtx.EntityName,
+                    backingFieldName: column.Key,
+                    out string? exposedName))
                 {
-                    if (insertRequestCtx.FieldValuePairsInBody[column.Key] == null)
+                    continue;
+                }
+
+                // Request body must have value defined for included non-nullable columns
+                if (!column.Value.IsNullable && fieldsInRequestBody.Contains(exposedName))
+                {
+                    if (insertRequestCtx.FieldValuePairsInBody[exposedName!] is null)
                     {
                         throw new DataGatewayException(
-                        message: $"Invalid value for field {column.Key} in request body.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                            message: $"Invalid value for field {exposedName} in request body.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
                 }
 
                 // The insert operation behaves like a replacement update, since it
                 // requires nullable fields to be defined in the request.
-                if (ValidateColumn(column, fieldsInRequestBody, isReplacementUpdate: true))
+                if (ValidateColumn(column.Value,
+                                   exposedName!,
+                                   fieldsInRequestBody,
+                                   isReplacementUpdate: true))
                 {
-                    unvalidatedFields.Remove(column.Key);
+                    unvalidatedFields.Remove(exposedName!);
                 }
             }
-
             // TO DO: If the request header contains x-ms-must-match custom header with value of "ignore"
             // this should not throw any error. Tracked by issue #158.
             if (unvalidatedFields.Any())
@@ -225,6 +249,15 @@ namespace Azure.DataGateway.Service.Services
 
             foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
             {
+                // if column is not exposed we skip
+                if (!sqlMetadataProvider.TryGetExposedColumnName(
+                    entityName: upsertRequestCtx.EntityName,
+                    backingFieldName: column.Key,
+                    out string? exposedName))
+                {
+                    continue;
+                }
+
                 // Primary Key(s) should not be present in the request body. We do not fail a request
                 // if a PK is autogenerated here, because an UPSERT request may only need to update a
                 // record. If an insert occurs on a table with autogenerated primary key,
@@ -235,22 +268,21 @@ namespace Azure.DataGateway.Service.Services
                 }
 
                 // Request body must have value defined for included non-nullable columns
-                if (!column.Value.IsNullable && fieldsInRequestBody.Contains(column.Key))
+                if (!column.Value.IsNullable && fieldsInRequestBody.Contains(exposedName))
                 {
-                    if (upsertRequestCtx.FieldValuePairsInBody[column.Key] == null)
+                    if (upsertRequestCtx.FieldValuePairsInBody[exposedName!] is null)
                     {
                         throw new DataGatewayException(
-                        message: $"Invalid value for field {column.Key} in request body.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                            message: $"Invalid value for field {exposedName} in request body.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
                 }
 
                 bool isReplacementUpdate = (upsertRequestCtx.OperationType == Operation.Upsert) ? true : false;
-
-                if (ValidateColumn(column, fieldsInRequestBody, isReplacementUpdate))
+                if (ValidateColumn(column.Value, exposedName!, fieldsInRequestBody, isReplacementUpdate))
                 {
-                    unValidatedFields.Remove(column.Key);
+                    unValidatedFields.Remove(exposedName!);
                 }
             }
 
@@ -272,18 +304,23 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="column">The column to be verified.</param>
         /// <param name="fieldsInRequestBody">The fields in the request body.</param>
         /// <returns>true if the column is validated.</returns>
-        private static bool ValidateColumn(KeyValuePair<string, ColumnDefinition> column, IEnumerable<string> fieldsInRequestBody, bool isReplacementUpdate)
+        private static bool ValidateColumn(ColumnDefinition column,
+                                           string exposedName,
+                                           IEnumerable<string> fieldsInRequestBody,
+                                           bool isReplacementUpdate)
         {
             string message;
             // Autogenerated values should never be present in a request body.
-            if (column.Value.IsAutoGenerated && fieldsInRequestBody.Contains(column.Key))
+            if (column.IsAutoGenerated && fieldsInRequestBody.Contains(exposedName))
             {
-                message = $"Invalid request body. Field not allowed in body: {column.Key}.";
+                message = $"Invalid request body. Field not allowed in body: {exposedName}.";
             }
             // Non-nullable fields must be in the body unless the request is not a replacement update.
-            else if (!column.Value.IsAutoGenerated && !column.Value.IsNullable && !column.Value.HasDefault && !fieldsInRequestBody.Contains(column.Key) && isReplacementUpdate)
+            else if (!column.IsAutoGenerated && !column.IsNullable &&
+                     !column.HasDefault && !fieldsInRequestBody.Contains(exposedName) &&
+                     isReplacementUpdate)
             {
-                message = $"Invalid request body. Missing field in body: {column.Key}.";
+                message = $"Invalid request body. Missing field in body: {exposedName}.";
             }
             else
             {

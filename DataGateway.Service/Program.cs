@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataGateway.Service
 {
@@ -12,7 +14,15 @@ namespace Azure.DataGateway.Service
     {
         public static void Main(string[] args)
         {
-            CreateHostBuilder(args).Build().Run();
+            try
+            {
+                CreateHostBuilder(args).Build().Run();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Unable to launch the runtime due to: {ex}");
+                Environment.ExitCode = -1;
+            }
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
@@ -24,7 +34,17 @@ namespace Azure.DataGateway.Service
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseStartup<Startup>();
+                    ILoggerFactory? loggerFactory = LoggerFactory
+                        .Create(builder =>
+                        {
+                            builder.AddConsole();
+                        });
+                    ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
+                    ILogger<RuntimeConfigProvider>? configProviderLogger = loggerFactory.CreateLogger<RuntimeConfigProvider>();
+                    webBuilder.UseStartup(builder =>
+                    {
+                        return new Startup(builder.Configuration, startupLogger, configProviderLogger);
+                    });
                 });
 
         // This is used for testing purposes only. The test web server takes in a
@@ -41,10 +61,7 @@ namespace Azure.DataGateway.Service
         // IWebHostbuilder, instead of a IHostBuilder.
         public static IWebHostBuilder CreateWebHostFromInMemoryUpdateableConfBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-            .ConfigureAppConfiguration((builder) =>
-            {
-                builder.AddInMemoryUpdateableConfiguration();
-            }).UseStartup<Startup>();
+            .UseStartup<Startup>();
 
         /// <summary>
         /// Adds the various configuration providers.
@@ -57,8 +74,6 @@ namespace Azure.DataGateway.Service
             IConfigurationBuilder configurationBuilder,
             string[] args)
         {
-            configurationBuilder.Sources.Clear();
-
             string configFileName
                 = RuntimeConfigPath.GetFileNameForEnvironment(env.EnvironmentName);
             Dictionary<string, string> configFileNameMap = new()
@@ -70,13 +85,9 @@ namespace Azure.DataGateway.Service
             };
 
             configurationBuilder
-                .AddInMemoryCollection(configFileNameMap);
-            configurationBuilder.AddEnvironmentVariables(
-                prefix: RuntimeConfigPath.ENVIRONMENT_PREFIX);
-
-            configurationBuilder.AddCommandLine(args);
-
-            configurationBuilder.AddInMemoryUpdateableConfiguration();
+                .AddInMemoryCollection(configFileNameMap)
+                .AddEnvironmentVariables(prefix: RuntimeConfigPath.ENVIRONMENT_PREFIX)
+                .AddCommandLine(args);
         }
     }
 }

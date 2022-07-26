@@ -43,6 +43,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public string? FilterPredicates { get; set; }
 
+        /// <summary>
+        /// DbPolicyPredicates is a string that represents the filter portion of our query
+        /// in the WHERE Clause added by virtue of the database policy.
+        /// </summary>
+        public string? DbPolicyPredicates { get; set; }
+
         public BaseSqlQueryStructure(
             ISqlMetadataProvider sqlMetadataProvider,
             string entityName,
@@ -140,6 +146,37 @@ namespace Azure.DataGateway.Service.Resolvers
             return GetUnderlyingTableDefinition().Columns.Select(col => col.Key).ToList();
         }
 
+        /// <summary>
+        /// Get a list of the output columns for this table.
+        /// An output column is a labelled column that holds
+        /// both the backing column and a label with the exposed name.
+        /// </summary>
+        /// <returns>List of LabelledColumns</returns>
+        protected List<LabelledColumn> GenerateOutputColumns()
+        {
+            List<LabelledColumn> outputColumns = new();
+            foreach (string columnName in GetUnderlyingTableDefinition().Columns.Keys)
+            {
+                // if column is not exposed we skip
+                if (!SqlMetadataProvider.TryGetExposedColumnName(
+                    entityName: EntityName,
+                    backingFieldName: columnName,
+                    out string? exposedName))
+                {
+                    continue;
+                }
+
+                outputColumns.Add(new(
+                    tableSchema: DatabaseObject.SchemaName,
+                    tableName: DatabaseObject.Name,
+                    columnName: columnName,
+                    label: exposedName!,
+                    tableAlias: TableAlias));
+            }
+
+            return outputColumns;
+        }
+
         ///<summary>
         /// Gets the value of the parameter cast as the system type
         /// of the column this parameter is associated with
@@ -151,20 +188,21 @@ namespace Azure.DataGateway.Service.Resolvers
             Type systemType = GetColumnSystemType(columnName);
             try
             {
-                switch (Type.GetTypeCode(systemType))
+                return systemType.Name switch
                 {
-                    case TypeCode.String:
-                        return param;
-                    case TypeCode.Int32:
-                        return int.Parse(param);
-                    case TypeCode.Double:
-                        return double.Parse(param);
-                    case TypeCode.Boolean:
-                        return Boolean.Parse(param);
-                    default:
-                        // should never happen due to the config being validated for correct types
-                        throw new NotSupportedException($"{systemType.Name} is not supported");
-                }
+                    "String" => param,
+                    "Byte" => byte.Parse(param),
+                    "Byte[]" => Convert.FromBase64String(param),
+                    "Int16" => short.Parse(param),
+                    "Int32" => int.Parse(param),
+                    "Int64" => long.Parse(param),
+                    "Single" => float.Parse(param),
+                    "Double" => double.Parse(param),
+                    "Decimal" => decimal.Parse(param),
+                    "Boolean" => bool.Parse(param),
+                    "DateTime" => DateTimeOffset.Parse(param),
+                    _ => throw new NotSupportedException($"{systemType.Name} is not supported")
+                };
             }
             catch (Exception e)
             {

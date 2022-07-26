@@ -469,7 +469,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 connectionStringBuilder = new(connectionString);
             }
-            catch (ArgumentException)
+            catch (Exception)
             {
                 throw new DataGatewayException(
                     message: DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE,
@@ -618,21 +618,14 @@ namespace Azure.DataGateway.Service.Services
                 {
                     dataTable = await FillSchemaForTableAsync(schemaName, tableName);
                 }
-                // DataGatewayException is already in the correct format just throw
-                catch (DataGatewayException dgex)
-                {
-                    throw dgex;
-                }
-                // Other exceptions need to be inspected for their message to determine
-                // if we throw with the connection string specific message or a generic
-                // message.
                 catch (Exception ex)
                 {
                     string message;
                     // Check message content to ensure proper error message for connection string
-                    if (ex.Message.Contains($"Format of the initialization string"))
+                    if (ex.Message.Contains(DataGatewayException.MYSQL_INVALID_CONNECTION_STRING_MESSAGE))
                     {
-                        message = DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE;
+                        message = DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE +
+                            $"Underlying Exception message: {ex.Message}";
                     }
                     else
                     {
@@ -641,6 +634,7 @@ namespace Azure.DataGateway.Service.Services
                             $"due to: {ex.Message}";
                     }
 
+                    _logger.LogError(message);
                     throw new DataGatewayException(
                         message,
                         statusCode: HttpStatusCode.ServiceUnavailable,
@@ -662,7 +656,7 @@ namespace Azure.DataGateway.Service.Services
             using ConnectionT conn = new();
             try
             {
-                conn.ConnectionString = ConnectionString;
+                conn.ConnectionString = ConnectionString;   // "conncetionstring = asjhdlkajhsdlkjhaslkjdhalkjd"
                 // if connection string is set to empty string
                 // we throw here to avoid having to sort out
                 // complicaed db specific exception messages
@@ -671,10 +665,13 @@ namespace Azure.DataGateway.Service.Services
                     throw new Exception();
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                string message = DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE +
+                    $"Underlying Exception message: {ex.Message}";
+                _logger.LogError(message);
                 throw new DataGatewayException(
-                    DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE,
+                    message,
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }

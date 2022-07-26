@@ -10,7 +10,8 @@ namespace Azure.DataGateway.Service.Exceptions
 #pragma warning disable CA1032 // Supressing since we only use the 3 argument constructor
     public class DataGatewayException : Exception
     {
-        public const string CONNECTION_STRING_ERROR_MESSAGE = "The Connection String should be provided.";
+        public const string CONNECTION_STRING_ERROR_MESSAGE = "A valid Connection String should be provided.";
+        public const string MYSQL_INVALID_CONNECTION_STRING_MESSAGE = "Format of the initialization string";
 
         public enum SubStatusCodes
         {

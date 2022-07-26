@@ -229,6 +229,10 @@ namespace Azure.DataGateway.Service.Authorization
                     {
                         string actionName = string.Empty;
                         ActionMetadata actionToColumn = new();
+
+                        // Use a hashset to store all the backing field names
+                        // that are accessible to the user.
+                        HashSet<string> allowedColumns = new();
                         IEnumerable<string> allTableColumns = ResolveTableDefinitionColumns(entityName);
 
                         // Implicitly, all table columns are 'allowed' when an actiontype is a string.
@@ -237,7 +241,7 @@ namespace Azure.DataGateway.Service.Authorization
                         {
                             actionName = actionElement.ToString();
                             actionToColumn.Included.UnionWith(allTableColumns);
-                            actionToColumn.Allowed.UnionWith(allTableColumns);
+                            allowedColumns.UnionWith(allTableColumns);
                         }
                         else
                         {
@@ -283,11 +287,14 @@ namespace Azure.DataGateway.Service.Authorization
                                 }
 
                                 // Calculate the set of allowed backing column names.
-                                actionToColumn.Allowed.UnionWith(actionToColumn.Included.Except(actionToColumn.Excluded));
+                                allowedColumns.UnionWith(actionToColumn.Included.Except(actionToColumn.Excluded));
                             }
                         }
 
-                        PopulateAllowedColumns(actionToColumn.AllowedExposedColumns, entityName, actionToColumn.Allowed);
+                        // Populate allowed exposed columns for each entity/role/action combination during startup,
+                        // so that it doesn't need to be evaluated per request.
+                        PopulateAllowedExposedColumns(actionToColumn.AllowedExposedColumns, entityName, allowedColumns);
+
                         // Try to add the actionName to the map if not present.
                         // Builds up mapping: i.e. ActionType.CREATE permitted in {Role1, Role2, ..., RoleN}
                         if (!string.IsNullOrWhiteSpace(actionName) && !entityToRoleMap.ActionToRolesMap.TryAdd(actionName, new List<string>(new string[] { role })))
@@ -295,7 +302,7 @@ namespace Azure.DataGateway.Service.Authorization
                             entityToRoleMap.ActionToRolesMap[actionName].Add(role);
                         }
 
-                        foreach (string allowedColumn in actionToColumn.Allowed)
+                        foreach (string allowedColumn in allowedColumns)
                         {
                             entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
                             entityToRoleMap.FieldToRolesMap[allowedColumn][actionName].Add(role);
@@ -312,7 +319,7 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <inheritdoc />
-        public void PopulateAllowedColumns(HashSet<string> allowedExposedColumns, string entityName, HashSet<string> allowedDBColumns)
+        public void PopulateAllowedExposedColumns(HashSet<string> allowedExposedColumns, string entityName, HashSet<string> allowedDBColumns)
         {
             foreach (string dbColumn in allowedDBColumns)
             {

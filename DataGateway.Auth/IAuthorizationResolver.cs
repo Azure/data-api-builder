@@ -51,7 +51,7 @@ namespace Azure.DataGateway.Auth
         /// <param name="allowedExposedColumns">Set of fields exposed to user.</param>
         /// <param name="entityName">Entity from request</param>
         /// <param name="allowedDBColumns">Set of allowed backing field names.</param>
-        public void PopulateAllowedColumns(HashSet<string> allowedExposedColumns, string entityName, HashSet<string> allowedDBColumns);
+        public void PopulateAllowedExposedColumns(HashSet<string> allowedExposedColumns, string entityName, HashSet<string> allowedDBColumns);
 
         /// <summary>
         /// Method to return the list of exposed columns for the given combination of

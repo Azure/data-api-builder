@@ -44,6 +44,10 @@ namespace Azure.DataGateway.Service.Exceptions
             /// </summary>
             GraphQLMapping,
             /// <summary>
+            /// Error due to trying to use unsupported feature
+            /// </summary>
+            NotSupported,
+            /// <summary>
             /// Error encountered while initializing.
             /// </summary>
             ErrorInInitialization,

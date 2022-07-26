@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 {
@@ -32,7 +33,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             ";
         }
 
-        protected override bool IsSupportedType(string type, string value = null)
+        protected override bool IsSupportedType(string type)
         {
             return type switch
             {
@@ -46,7 +47,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// </summary>
         private static string ProperlyFormatTypeTableColumn(string columnName)
         {
-            if (columnName.Contains(BYTEARRAY_TYPE))
+            if (columnName.Contains(BYTEARRAY_TYPE.ToLowerInvariant()))
             {
                 return $"encode({columnName}, 'base64')";
             }

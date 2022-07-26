@@ -249,7 +249,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update", "delete" ]
         },
         {
           "role": "authenticated",

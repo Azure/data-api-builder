@@ -761,6 +761,74 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
+        /// <summary>
+        /// Tests that orderBy order can be set using variable
+        /// </summary>
+        [TestMethod]
+        public async Task TestSettingOrderByOrderUsingVariable(string dbQuery)
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query($order: OrderBy)
+            {
+                books(first: 4 orderBy: {id: $order}) {
+                    items {
+                        id
+                        title
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "order", "DESC" } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// Tests setting complex types using variable shows an appropriate error
+        /// </summary>
+        [TestMethod]
+        public virtual async Task TestSettingComplexArgumentUsingVariables(string dbQuery)
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query($orderBy: BookOrderByInput)
+            {
+                books(first: 100 orderBy: $orderBy) {
+                    items {
+                        id
+                        title
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "orderBy", new { id = "ASC" } } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// Set query arguments to null explicitly and test t
+        /// </summary>
+        [TestMethod]
+        public virtual async Task TestQueryWithExplicitlyNullArguments(string dbQuery)
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books(first: null, after: null, orderBy: null, " + QueryBuilder.FILTER_FIELD_NAME + @": null) {
+                    items {
+                        id
+                        title
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
         #endregion
 
         #region Negative Tests

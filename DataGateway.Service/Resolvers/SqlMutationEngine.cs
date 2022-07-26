@@ -82,7 +82,8 @@ namespace Azure.DataGateway.Service.Resolvers
                 await PerformMutationOperation(
                     entityName,
                     mutationOperation,
-                    parameters);
+                    parameters,
+                    context: context);
 
             if (!context.Selection.Type.IsScalarType() && mutationOperation is not Operation.Delete)
             {
@@ -250,7 +251,8 @@ namespace Azure.DataGateway.Service.Resolvers
         private async Task<DbDataReader> PerformMutationOperation(
             string entityName,
             Operation operationType,
-            IDictionary<string, object?> parameters)
+            IDictionary<string, object?> parameters,
+            IMiddlewareContext? context = null)
         {
             string queryString;
             Dictionary<string, object?> queryParameters;
@@ -259,10 +261,9 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 case Operation.Insert:
                 case Operation.Create:
-                    SqlInsertStructure insertQueryStruct =
-                        new(entityName,
-                        _sqlMetadataProvider,
-                        parameters);
+                    SqlInsertStructure insertQueryStruct = context is null ?
+                        new(entityName, _sqlMetadataProvider, parameters) :
+                        new(context, entityName, _sqlMetadataProvider, parameters);
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
@@ -285,8 +286,15 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;
                 case Operation.UpdateGraphQL:
+                    if (context is null)
+                    {
+                        throw new ArgumentNullException("Context should not be null for a GraphQL operation.");
+                    }
+
                     SqlUpdateStructure updateGraphQLStructure =
-                        new(entityName,
+                        new(
+                        context,
+                        entityName,
                         _sqlMetadataProvider,
                         parameters);
                     queryString = _queryBuilder.Build(updateGraphQLStructure);
@@ -419,7 +427,16 @@ namespace Azure.DataGateway.Service.Resolvers
                     subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
             }
 
-            List<string> inputArgumentKeys = BaseSqlQueryStructure.InputArgumentToMutationParams(parameters, MutationBuilder.INPUT_ARGUMENT_NAME).Keys.ToList();
+            List<string> inputArgumentKeys;
+            if (mutationOperation != Operation.Delete)
+            {
+                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.INPUT_ARGUMENT_NAME, parameters);
+            }
+            else
+            {
+                inputArgumentKeys = parameters.Keys.ToList();
+            }
+
             bool isAuthorized; // False by default.
 
             switch (mutationOperation)

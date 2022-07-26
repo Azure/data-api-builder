@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS type_table;
 DROP TABLE IF EXISTS trees;
 DROP TABLE IF EXISTS fungi;
 DROP TABLE IF EXISTS empty_table;
+DROP TABLE IF EXISTS notebooks;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -135,6 +136,13 @@ CREATE TABLE empty_table (
     id int PRIMARY KEY
 );
 
+CREATE TABLE notebooks (
+    id int PRIMARY KEY,
+    notebookname varchar(max),
+    color varchar(max),
+    ownername varchar(max)
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -207,6 +215,8 @@ INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, strin
     (4, 255, 32767, 2147483647, 9223372036854775807, 'null', -3.4E38, 1.7E308, 2.929292E-100, 1, '1999-01-08 10:23:00', 0xFFFFFFFF),
     (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT type_table OFF
+
+INSERT INTO notebooks(id, noteBookName, color, ownerName) VALUES (1, 'Notebook1', 'red', 'Sean'), (2, 'Notebook2', 'green', 'Ani'), (3, 'Notebook3', 'blue', 'Jarupat'), (4, 'Notebook4', 'yellow', 'Aaron');
 
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
 INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);

@@ -461,7 +461,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryName,
                 query,
                 variables,
-                isAuthenticated ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken() : null,
+                isAuthenticated ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader) : null,
                 clientRoleHeader: clientRoleHeader
             );
         }

@@ -55,7 +55,7 @@ namespace Azure.DataGateway.Service.Tests
         /// Creates a mocked EasyAuth token, namely, the value of the header injected by EasyAuth.
         /// </summary>
         /// <returns>A Base64 encoded string of a serialized EasyAuthClientPrincipal object</returns>
-        public static string CreateStaticWebAppsEasyAuthToken(bool addAuthenticated = true)
+        public static string CreateStaticWebAppsEasyAuthToken(bool addAuthenticated = true, string specificRole = null)
         {
             List<string> roles = new();
             roles.Add("anonymous");
@@ -63,11 +63,25 @@ namespace Azure.DataGateway.Service.Tests
             // Add authenticated role conditionally
             if (addAuthenticated)
             {
-                roles.Add("authenticated");
-                roles.Add("policy_tester_01");
-                roles.Add("policy_tester_02");
-                roles.Add("policy_tester_03");
-                roles.Add("policy_tester_04");
+                if (specificRole is null)
+                {
+                    roles.Add("authenticated");
+                    roles.Add("policy_tester_01");
+                    roles.Add("policy_tester_02");
+                    roles.Add("policy_tester_03");
+                    roles.Add("policy_tester_04");
+                    roles.Add("policy_tester_05");
+                    roles.Add("policy_tester_06");
+                    roles.Add("policy_tester_07");
+                    roles.Add("policy_tester_08");
+                    roles.Add("policy_tester_09");
+                    roles.Add("policy_tester_update_noread");
+                }
+                else
+                {
+                    roles.Add(specificRole);
+                }
+
             }
 
             StaticWebAppsClientPrincipal token = new()

@@ -184,6 +184,10 @@
       "source": "books",
       "permissions": [
         {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         },
@@ -688,8 +692,56 @@
       "graphql": true,
       "permissions": [
         {
-          "role": "anonymous",
-          "actions": [ "read" ]
+          "role": "policy_tester_noupdate",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 1"
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_update_noread",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 1"
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [ "*" ]
+              }
+            },
+            {
+              "action": "delete",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 1"
+              }
+            }
+          ]
         }
       ]
     },

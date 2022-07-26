@@ -53,16 +53,16 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL.Policies.Mutatio
         /// <param name="isAuthenticated"></param>
         /// <returns></returns>
         [DataTestMethod]
-        [DataRow("policy_tester_07", true, "Could not find entity with", false, DisplayName = "Update Mutation Prohibited by Policy")]
+        [DataRow("policy_tester_noupdate", true, "Could not find entity with", false, DisplayName = "Update Mutation Prohibited by Policy")]
         [DataRow("policy_tester_update_noread", true, "The current user is not authorized to access this resource", true, DisplayName = "Update Mutation Succeeds, Disallowed Post-Update READ")]
         public async Task UpdateMutation_ErrorMessage_Policy(string roleName, bool isAuthenticated, string expectedErrorMessage, bool mutationShouldComplete)
         {
             string dbQuery = @"
-                  SELECT JSON_OBJECT('id', id, 'title', title ) AS data
+                  SELECT JSON_OBJECT('id', id, 'journalname', journalname ) AS data
                     FROM(
-                        SELECT id, title
-                        FROM `books` AS `table0` 
-                        WHERE id = 9 AND title = 'UpdatedBookTitle'
+                        SELECT id, journalname
+                        FROM `journals` AS `table0` 
+                        WHERE id = 1 AND journalname = 'UpdatedJournalName'
                     ) as subq
                 ";
 

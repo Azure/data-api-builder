@@ -65,17 +65,17 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
         [TestMethod]
         public async Task UpdateMutation_ErrorMessage_Policy(string dbQuery, string roleName, bool isAuthenticated, string expectedErrorMessage, bool mutationShouldComplete)
         {
-            string graphQLMutationName = "updateBook";
+            string graphQLMutationName = "updateJournal";
             string graphQLMutation = @"mutation {
-                updateBook(
-                    id: 9
+                updateJournal(
+                    id: 1
                     item: {
-                        title: ""UpdatedBookTitle""
+                        journalname: ""UpdatedJournalName""
                     }
                 )
                 {
                     id,
-                    title
+                    journalname
                 }
             }
             ";

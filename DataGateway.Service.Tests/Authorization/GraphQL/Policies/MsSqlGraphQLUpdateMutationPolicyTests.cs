@@ -55,16 +55,16 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL.Policies.Mutatio
         /// <returns></returns>
         [TestMethod]
         [DataTestMethod]
-        [DataRow("policy_tester_07", true, "Could not find entity with", false, DisplayName = "Update Mutation Prohibited by Policy")]
+        [DataRow("policy_tester_noupdate", true, "Could not find entity with", false, DisplayName = "Update Mutation Prohibited by Policy")]
         [DataRow("policy_tester_update_noread", true, "The current user is not authorized to access this resource", true, DisplayName = "Update Mutation Succeeds, Disallowed Post-Update READ")]
         public async Task UpdateMutation_ErrorMessage_Policy(string roleName, bool isAuthenticated, string expectedErrorMessage, bool mutationShouldComplete)
         {
             string dbQuery = @"
                 SELECT TOP 1
                 [table0].[id] AS [id],
-                [table0].[title] AS [title]
-                FROM [dbo].[books] AS [table0] 
-                WHERE ([table0].[id] = 9 and [table0].[title] = 'UpdatedBookTitle') 
+                [table0].[journalname] AS [title]
+                FROM [dbo].[journals] AS [table0] 
+                WHERE ([table0].[id] = 1 and [table0].[journalname] = 'UpdatedJournalName') 
                 ORDER BY [table0].[id] ASC 
                 FOR JSON PATH, INCLUDE_NULL_VALUES,WITHOUT_ARRAY_WRAPPER";
 

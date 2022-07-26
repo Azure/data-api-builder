@@ -4,10 +4,9 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataGateway.Service.Tests.Unittests
+namespace Azure.DataGateway.Service.Tests.SqlTests.RestBootstrapTests
 {
     [TestClass]
     public class PrimaryKeyTestsForCompositeViews : SqlTestBase

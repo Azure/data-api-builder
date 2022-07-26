@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 {
@@ -13,17 +14,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
     public abstract class GraphQLSupportedTypesTestBase : SqlTestBase
     {
         protected const string TYPE_TABLE = "TypeTable";
-        protected const string BYTE_TYPE = "Byte";
-        protected const string SHORT_TYPE = "Short";
-        protected const string INT_TYPE = "Int";
-        protected const string LONG_TYPE = "Long";
-        protected const string SINGLE_TYPE = "Single";
-        protected const string FLOAT_TYPE = "Float";
-        protected const string DECIMAL_TYPE = "Decimal";
-        protected const string STRING_TYPE = "String";
-        protected const string BOOLEAN_TYPE = "Boolean";
-        protected const string DATETIME_TYPE = "DateTime";
-        protected const string BYTEARRAY_TYPE = "ByteArray";
 
         #region Test Fixture Setup
         protected static GraphQLService _graphQLService;

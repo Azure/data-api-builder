@@ -4,6 +4,7 @@ using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 {

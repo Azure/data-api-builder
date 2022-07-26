@@ -1,9 +1,9 @@
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using HotChocolate.Types;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder
 {
@@ -34,17 +34,17 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             HashSet<string> inBuiltTypes = new()
             {
                 "ID",
-                "Byte",
-                "Short",
-                "Int",
-                "Long",
-                SingleType.TypeName,
-                "Float",
-                "Decimal",
-                "String",
-                "Boolean",
-                "DateTime",
-                "ByteArray"
+                BYTE_TYPE,
+                SHORT_TYPE,
+                INT_TYPE,
+                LONG_TYPE,
+                SINGLE_TYPE,
+                FLOAT_TYPE,
+                DECIMAL_TYPE,
+                STRING_TYPE,
+                BOOLEAN_TYPE,
+                DATETIME_TYPE,
+                BYTEARRAY_TYPE
             };
             string name = typeNode.NamedType().Name.Value;
             return inBuiltTypes.Contains(name);

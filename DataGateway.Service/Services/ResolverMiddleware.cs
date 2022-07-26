@@ -12,6 +12,7 @@ using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -186,13 +187,13 @@ namespace Azure.DataGateway.Service.Services
 
             return argumentSchema.Type.TypeName().Value switch
             {
-                "Byte" => ((IntValueNode)value).ToByte(),
-                "Short" => ((IntValueNode)value).ToInt16(),
-                "Int" => ((IntValueNode)value).ToInt32(),
-                "Long" => ((IntValueNode)value).ToInt64(),
-                "Single" => ((FloatValueNode)value).ToSingle(),
-                "Float" => ((FloatValueNode)value).ToDouble(),
-                "Decimal" => ((FloatValueNode)value).ToDecimal(),
+                BYTE_TYPE => ((IntValueNode)value).ToByte(),
+                SHORT_TYPE => ((IntValueNode)value).ToInt16(),
+                INT_TYPE => ((IntValueNode)value).ToInt32(),
+                LONG_TYPE => ((IntValueNode)value).ToInt64(),
+                SINGLE_TYPE => ((FloatValueNode)value).ToSingle(),
+                FLOAT_TYPE => ((FloatValueNode)value).ToDouble(),
+                DECIMAL_TYPE => ((FloatValueNode)value).ToDecimal(),
                 _ => value.Value
             };
         }

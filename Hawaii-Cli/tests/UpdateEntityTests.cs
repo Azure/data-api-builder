@@ -899,6 +899,70 @@ namespace Hawaii.Cli.Tests
         }
 
         /// <summary>
+        /// Test to Update Entity with New mappings containing special unicode characters
+        /// </summary>
+        [TestMethod]
+        public void TestUpdateEntityWithSpecialCharacterInMappings()
+        {
+            UpdateOptions options = new(
+                source: null,
+                permissions: null,
+                entity: "MyEntity",
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                mappingFields: new string[] { },
+                map: new string[] { "Macaroni:Mac & Cheese", "region:United State's Region", "russian:русский", "chinese:中文" },
+                name: "outputfile");
+
+            string runtimeConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": ""MyTable"",
+                                ""permissions"": [
+                                    {
+                                        ""role"": ""anonymous"",
+                                        ""actions"": [""read"",""update""]
+                                    }
+                                ]
+                            }
+                        }
+                    }";
+
+            string expectedConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": ""MyTable"",
+                                ""permissions"": [
+                                    {
+                                        ""role"": ""anonymous"",
+                                        ""actions"": [""read"", ""update""]
+                                    }
+                                ],
+                                ""mappings"": {
+                                    ""Macaroni"": ""Mac & Cheese"",
+                                    ""region"": ""United State's Region"",
+                                    ""russian"": ""русский"",
+                                    ""chinese"": ""中文""
+                                }
+                            }
+                        }
+                    }";
+
+            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+        }
+
+        /// <summary>
         /// Test to Update existing mappings of an entity
         /// </summary>
         [TestMethod]

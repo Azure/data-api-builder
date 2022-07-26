@@ -1,6 +1,7 @@
-using System.Collections;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Unicode;
 using Azure.DataGateway.Config;
 using Humanizer;
 using Action = Azure.DataGateway.Config.Action;
@@ -189,6 +190,7 @@ namespace Hawaii.Cli.Models
         {
             JsonSerializerOptions? options = new()
             {
+                Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
                 WriteIndented = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 PropertyNamingPolicy = new LowerCaseNamingPolicy()

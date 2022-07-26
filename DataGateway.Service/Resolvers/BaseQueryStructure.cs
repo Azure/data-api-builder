@@ -62,7 +62,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 FieldNode field = (FieldNode)node;
                 string fieldName = field.Name.Value;
 
-                if (fieldName == "items")
+                if (fieldName == QueryBuilder.PAGINATION_FIELD_NAME)
                 {
                     itemsField = field;
                     break;

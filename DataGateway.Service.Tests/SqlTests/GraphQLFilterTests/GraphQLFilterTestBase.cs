@@ -594,6 +594,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         /// <summary>
         /// Passes null to nullable fields and makes sure they are ignored
         /// </summary>
+        [TestMethod]
         public async Task TestExplicitNullFieldsAreIgnored()
         {
             string graphQLQueryName = "books";
@@ -604,15 +605,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
                                     or: null
                                   })
                 {
-                    id
-                    title
+                    items {
+                        id
+                        title
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id", "title" },
-                @"id >= 2");
+                @"id >= 2",
+                GetDefaultSchema());
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -624,20 +628,79 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLFilterTests
         /// </summary>
         public async Task TestInputObjectWithOnlyNullFieldsEvaluatesToFalse()
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "books";
             string gqlQuery = @"{
                 getbooks( " + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {lte: null}})
                 {
-                    id
+                    items {
+                        id
+                    }
                 }
             }";
 
             string dbQuery = MakeQueryOn(
                 "books",
                 new List<string> { "id" },
-                @"1 != 1");
+                @"1 != 1",
+                GetDefaultSchema());
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Test passing variable to filter input type fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestPassingVariablesToFilter()
+        {
+            string graphQLQueryName = "books";
+            string gqlQuery = @"query($lteValue: Int!, $gteValue: Int!)
+            {
+                books(" + QueryBuilder.FILTER_FIELD_NAME + @": {id: {lte: $lteValue} and: [{id: {gte: $gteValue}}]})
+                {
+                    items {
+                        id
+                    }
+                }
+            }";
+
+            string dbQuery = MakeQueryOn(
+                "books",
+                new List<string> { "id" },
+                @"id <= 4 AND id >= 2",
+                GetDefaultSchema());
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false, new() { { "lteValue", 4 }, { "gteValue", 2 } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Test passing variable to and field
+        /// </summary>
+        [TestMethod]
+        public async Task TestPassingVariablesToAndField()
+        {
+            string graphQLQueryName = "books";
+            string gqlQuery = @"query($and: [BookFilterInput!])
+            {
+                books(" + QueryBuilder.FILTER_FIELD_NAME + @": {and: $and})
+                {
+                    items {
+                        id
+                    }
+                }
+            }";
+
+            string dbQuery = MakeQueryOn(
+                "books",
+                new List<string> { "id" },
+                @"id < 3",
+                GetDefaultSchema());
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false, new() { { "and", new[] { new { id = new { lt = 3 } } } } });
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }

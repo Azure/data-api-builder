@@ -8,6 +8,7 @@ using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
 {
@@ -165,17 +166,17 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         }
 
         [DataTestMethod]
-        [DataRow(typeof(string), "String")]
-        [DataRow(typeof(byte), "Byte")]
-        [DataRow(typeof(short), "Short")]
-        [DataRow(typeof(int), "Int")]
-        [DataRow(typeof(long), "Long")]
-        [DataRow(typeof(float), "Single")]
-        [DataRow(typeof(double), "Float")]
-        [DataRow(typeof(decimal), "Decimal")]
-        [DataRow(typeof(bool), "Boolean")]
-        [DataRow(typeof(DateTime), "DateTime")]
-        [DataRow(typeof(byte[]), "ByteArray")]
+        [DataRow(typeof(string), STRING_TYPE)]
+        [DataRow(typeof(byte), BYTE_TYPE)]
+        [DataRow(typeof(short), SHORT_TYPE)]
+        [DataRow(typeof(int), INT_TYPE)]
+        [DataRow(typeof(long), LONG_TYPE)]
+        [DataRow(typeof(float), SINGLE_TYPE)]
+        [DataRow(typeof(double), FLOAT_TYPE)]
+        [DataRow(typeof(decimal), DECIMAL_TYPE)]
+        [DataRow(typeof(bool), BOOLEAN_TYPE)]
+        [DataRow(typeof(DateTime), DATETIME_TYPE)]
+        [DataRow(typeof(byte[]), BYTEARRAY_TYPE)]
         public void SystemTypeMapsToCorrectGraphQLType(Type systemType, string graphQLType)
         {
             TableDefinition table = new();
@@ -359,28 +360,28 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         }
 
         [DataTestMethod]
-        [DataRow((byte)1, "byte", SyntaxKind.IntValue)]
-        [DataRow((short)1, "short", SyntaxKind.IntValue)]
-        [DataRow(1, "int", SyntaxKind.IntValue)]
-        [DataRow(1L, "long", SyntaxKind.IntValue)]
-        [DataRow("test", "string", SyntaxKind.StringValue)]
-        [DataRow(true, "boolean", SyntaxKind.BooleanValue)]
-        [DataRow(1.2f, "single", SyntaxKind.FloatValue)]
-        [DataRow(1.2, "float", SyntaxKind.FloatValue)]
-        [DataRow(1.2, "decimal", SyntaxKind.FloatValue)]
-        [DataRow("1999-01-08 10:23:54", "datetime", SyntaxKind.StringValue)]
-        [DataRow("U3RyaW5neQ==", "bytearray", SyntaxKind.StringValue)]
+        [DataRow((byte)1, BYTE_TYPE, SyntaxKind.IntValue)]
+        [DataRow((short)1, SHORT_TYPE, SyntaxKind.IntValue)]
+        [DataRow(1, INT_TYPE, SyntaxKind.IntValue)]
+        [DataRow(1L, LONG_TYPE, SyntaxKind.IntValue)]
+        [DataRow("test", STRING_TYPE, SyntaxKind.StringValue)]
+        [DataRow(true, BOOLEAN_TYPE, SyntaxKind.BooleanValue)]
+        [DataRow(1.2f, SINGLE_TYPE, SyntaxKind.FloatValue)]
+        [DataRow(1.2, FLOAT_TYPE, SyntaxKind.FloatValue)]
+        [DataRow(1.2, DECIMAL_TYPE, SyntaxKind.FloatValue)]
+        [DataRow("1999-01-08 10:23:54", DATETIME_TYPE, SyntaxKind.StringValue)]
+        [DataRow("U3RyaW5neQ==", BYTEARRAY_TYPE, SyntaxKind.StringValue)]
         public void DefaultValueGetsSetOnDirective(object defaultValue, string fieldName, SyntaxKind kind)
         {
-            if (fieldName == "decimal")
+            if (fieldName == DECIMAL_TYPE)
             {
                 defaultValue = decimal.Parse(defaultValue.ToString());
             }
-            else if (fieldName == "datetime")
+            else if (fieldName == DATETIME_TYPE)
             {
                 defaultValue = DateTime.Parse(defaultValue.ToString());
             }
-            else if (fieldName == "bytearray")
+            else if (fieldName == BYTEARRAY_TYPE)
             {
                 defaultValue = Convert.FromBase64String(defaultValue.ToString());
             }

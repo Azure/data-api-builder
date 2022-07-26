@@ -575,18 +575,18 @@ namespace Hawaii.Cli.Models
 
             Cardinality updatedCardinality = Enum.Parse<Cardinality>(options.Cardinality!, ignoreCase: true);
 
-            if (options.MappingFields is not null && options.MappingFields.Any())
+            if (options.RelationshipFields is not null && options.RelationshipFields.Any())
             {
                 // Getting source and target fields from mapping fields
                 //
-                if (options.MappingFields.Count() != 2)
+                if (options.RelationshipFields.Count() != 2)
                 {
-                    Console.WriteLine("Please provide the --mapping.fields in the correct format using ':' between source and target fields.");
+                    Console.WriteLine("Please provide the --relationship.fields in the correct format using ':' between source and target fields.");
                     return null;
                 }
 
-                updatedSourceFields = options.MappingFields.ElementAt(0).Split(",");
-                updatedTargetFields = options.MappingFields.ElementAt(1).Split(",");
+                updatedSourceFields = options.RelationshipFields.ElementAt(0).Split(",");
+                updatedTargetFields = options.RelationshipFields.ElementAt(1).Split(",");
             }
 
             return new Relationship(updatedCardinality,

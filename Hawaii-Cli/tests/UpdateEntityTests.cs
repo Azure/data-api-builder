@@ -28,7 +28,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: null,
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
-                mappingFields: new string[] { },
+                relationshipFields: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
@@ -98,7 +98,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: null,
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
-                mappingFields: new string[] { },
+                relationshipFields: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
@@ -169,7 +169,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: null,
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
-                mappingFields: new string[] { },
+                relationshipFields: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
@@ -237,7 +237,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: null,
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
-                mappingFields: new string[] { },
+                relationshipFields: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
@@ -333,7 +333,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: null,
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
-                mappingFields: null,
+                relationshipFields: null,
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
@@ -399,7 +399,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: null,
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
-                mappingFields: new string[] { },
+                relationshipFields: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
@@ -508,7 +508,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: "entity_link",
                 linkingSourceFields: new string[] { "eid1" },
                 linkingTargetFields: new string[] { "eid2", "fid2" },
-                mappingFields: new string[] { "e1", "e2,t2" },
+                relationshipFields: new string[] { "e1", "e2,t2" },
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
@@ -626,7 +626,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: "entity_link",
                 linkingSourceFields: new string[] { "eid1" },
                 linkingTargetFields: new string[] { "eid2", "fid2" },
-                mappingFields: new string[] { "e1", "e2,t2" },
+                relationshipFields: new string[] { "e1", "e2,t2" },
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
@@ -665,7 +665,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: "entity_link",
                 linkingSourceFields: new string[] { "eid1", "fid1" },
                 linkingTargetFields: new string[] { "eid2", "fid2" },
-                mappingFields: new string[] { "e1", "e2,t2" },
+                relationshipFields: new string[] { "e1", "e2,t2" },
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
@@ -685,10 +685,10 @@ namespace Hawaii.Cli.Tests
         }
 
         /// <summary>
-        /// Test to check creation of a relationship with multiple mapping fields
+        /// Test to check creation of a relationship with multiple relationship fields
         /// </summary>
         [TestMethod]
-        public void TestCreateNewRelationshipWithMultipleMappingFields()
+        public void TestCreateNewRelationshipWithMultipleRelationshipFields()
         {
             UpdateOptions options = new(
                 source: null,
@@ -704,7 +704,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: "entity_link",
                 linkingSourceFields: new string[] { "eid1" },
                 linkingTargetFields: new string[] { "eid2", "fid2" },
-                mappingFields: new string[] { "e1,t1", "e2,t2" },
+                relationshipFields: new string[] { "e1,t1", "e2,t2" },
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
@@ -753,7 +753,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: null,
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
-                mappingFields: new string[] { },
+                relationshipFields: new string[] { },
                 map: new string[] { },
                 name: "outputfile"
             );
@@ -799,7 +799,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: null,
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
-                mappingFields: new string[] { },
+                relationshipFields: new string[] { },
                 map: new string[] { },
                 name: "outputfile"
             );
@@ -858,7 +858,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: null,
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
-                mappingFields: new string[] { },
+                relationshipFields: new string[] { },
                 map: new string[] { "id:Identity", "name:Company Name" },
                 name: "outputfile");
 
@@ -920,7 +920,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: null,
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
-                mappingFields: new string[] { },
+                relationshipFields: new string[] { },
                 map: new string[] { "Macaroni:Mac & Cheese", "region:United State's Region", "russian:русский", "chinese:中文" },
                 name: "outputfile");
 
@@ -984,7 +984,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: null,
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
-                mappingFields: new string[] { },
+                relationshipFields: new string[] { },
                 map: new string[] { "name:Company Name", "addr:Company Address", "number:Contact Details" },
                 name: "outputfile");
 
@@ -1039,7 +1039,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: null,
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
-                mappingFields: new string[] { },
+                relationshipFields: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
@@ -1084,7 +1084,7 @@ namespace Hawaii.Cli.Tests
         /// Test to check creation of a new relationship with Invalid Mapping fields
         /// </summary>
         [TestMethod]
-        public void TestCreateNewRelationshipWithInvalidMappingFields()
+        public void TestCreateNewRelationshipWithInvalidRelationshipFields()
         {
 
             UpdateOptions options = new(
@@ -1101,7 +1101,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: "entity_link",
                 linkingSourceFields: new string[] { "eid1" },
                 linkingTargetFields: new string[] { "eid2", "fid2" },
-                mappingFields: new string[] { "e1,e2,t2" }, // Invalid value. Correct format uses ':' to separate source and target fields
+                relationshipFields: new string[] { "e1,e2,t2" }, // Invalid value. Correct format uses ':' to separate source and target fields
                 policyRequest: null,
                 policyDatabase: null,
                 map: null,
@@ -1137,7 +1137,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: null,
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
-                mappingFields: new string[] { },
+                relationshipFields: new string[] { },
                 map: mappings.Split(','),
                 name: "outputfile");
 
@@ -1186,7 +1186,7 @@ namespace Hawaii.Cli.Tests
                 linkingObject: null,
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
-                mappingFields: new string[] { },
+                relationshipFields: new string[] { },
                 map: null,
                 name: "outputfile"
             );

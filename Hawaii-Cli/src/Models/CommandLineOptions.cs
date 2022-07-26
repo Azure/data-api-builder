@@ -164,7 +164,7 @@ namespace Hawaii.Cli.Models
             string? linkingObject,
             IEnumerable<string>? linkingSourceFields,
             IEnumerable<string>? linkingTargetFields,
-            IEnumerable<string>? mappingFields,
+            IEnumerable<string>? relationshipFields,
             IEnumerable<string>? map,
             string entity,
             string? restRoute,
@@ -191,7 +191,7 @@ namespace Hawaii.Cli.Models
             this.LinkingObject = linkingObject;
             this.LinkingSourceFields = linkingSourceFields;
             this.LinkingTargetFields = linkingTargetFields;
-            this.MappingFields = mappingFields;
+            this.RelationshipFields = relationshipFields;
             this.Map = map;
         }
 
@@ -219,8 +219,8 @@ namespace Hawaii.Cli.Models
         [Option("linking.target.fields", Required = false, Separator = ',', HelpText = "Database fields in the linking object to connect to the related item in the target entity.")]
         public IEnumerable<string>? LinkingTargetFields { get; }
 
-        [Option("mapping.fields", Required = false, Separator = ':', HelpText = "Specify fields to be used for mapping the entities.")]
-        public IEnumerable<string>? MappingFields { get; }
+        [Option("relationship.fields", Required = false, Separator = ':', HelpText = "Specify fields to be used for mapping the entities.")]
+        public IEnumerable<string>? RelationshipFields { get; }
 
         [Option('m', "map", Separator = ',', Required = false, HelpText = "Specify mappings between database fields and GraphQL and REST fields. format: --map \"backendName1:exposedName1,backendName2:exposedName2,...\".")]
         public IEnumerable<string>? Map { get; }

@@ -161,7 +161,7 @@ public class EndToEndTests
                                 "--permissions", "anonymous:create,delete",
                                 "--fields.include", "id,content", "--fields.exclude", "rating,level",
                                 "--relationship", "r1", "--cardinality", "one",
-                                "--target.entity", "books", "--mapping.fields", "id:book_id",
+                                "--target.entity", "books", "--relationship.fields", "id:book_id",
                                 "--linking.object", "todo_books",
                                 "--linking.source.fields", "todo_id",
                                 "--linking.target.fields", "id",

@@ -70,13 +70,13 @@ hawaii add category --name todo-005 --source s005.categories  --permissions "aut
 
 hawaii update category --name todo-005 --graphql category
 
-hawaii update category --name todo-005 --relationship todos --target.entity todo --cardinality many --mapping.fields "id:category_id" 
+hawaii update category --name todo-005 --relationship todos --target.entity todo --cardinality many --relationship.fields "id:category_id"
 
-hawaii update todo --name todo-005 --relationship category --target.entity category --cardinality one --mapping.fields "category_id:id" 
+hawaii update todo --name todo-005 --relationship category --target.entity category --cardinality one --relationship.fields "category_id:id"
 
-hawaii update user --name todo-005 --relationship owns --target.entity todo --cardinality many --mapping.fields "id:owner_id" 
+hawaii update user --name todo-005 --relationship owns --target.entity todo --cardinality many --relationship.fields "id:owner_id"
 
-hawaii update todo --name todo-005 --relationship owner --target.entity user --cardinality one --mapping.fields "owner_id:id"
+hawaii update todo --name todo-005 --relationship owner --target.entity user --cardinality one --relationship.fields "owner_id:id"
  
 ```
 

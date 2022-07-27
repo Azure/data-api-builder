@@ -8,6 +8,11 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.RestBootstrapTests
 {
+    /// <summary>
+    /// Test class to perform tests on MsSql, MySql, PostgreSql for REST to check if the primary key
+    /// can be determined for a complex composite view. In case it cannot be determined, the runtime
+    /// would fail during boot up.
+    /// </summary>
     [TestClass]
     public class PrimaryKeyTestsForCompositeViews : SqlTestBase
     {
@@ -30,7 +35,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestBootstrapTests
                 _compositeViewQuery +
                 ")";
 
-            await AddViewToDatabaseTestAsync(compositeViewDbQuery, TestCategory.MSSQL, true);
+            await SetupDatabaseAsync(compositeViewDbQuery, TestCategory.MSSQL, true);
         }
 
         /// <summary>
@@ -50,7 +55,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestBootstrapTests
                 "END " +
                 "$do$";
 
-            await AddViewToDatabaseTestAsync(compositeViewDbQuery, TestCategory.POSTGRESQL, true);
+            await SetupDatabaseAsync(compositeViewDbQuery, TestCategory.POSTGRESQL, true);
         }
 
         /// <summary>
@@ -66,10 +71,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestBootstrapTests
                 _compositeViewQuery +
                 ";" +
                 "execute stmt4";
-            await AddViewToDatabaseTestAsync(compositeViewDbQuery, TestCategory.MYSQL, false);
+            await SetupDatabaseAsync(compositeViewDbQuery, TestCategory.MYSQL, false);
         }
 
-        private static async Task AddViewToDatabaseTestAsync(string compositeDbViewquery, string dbEngine, bool isExceptionExpected)
+        /// <summary>
+        /// Helper method to setup dependencies to perform tests and setup the database,
+        /// i.e. add all the tables and the complex view to the database.
+        /// </summary>
+        /// <param name="compositeDbViewquery">Query to add composite view to database.</param>
+        /// <param name="dbEngine">The database engine. For eg. MsSql.</param>
+        /// <param name="isExceptionExpected">Boolean value indicating whether boot up is expected to fail.</param>
+        /// <returns></returns>
+        private static async Task SetupDatabaseAsync(string compositeDbViewquery, string dbEngine, bool isExceptionExpected)
         {
             // Setup dependencies
             DatabaseEngine = dbEngine;

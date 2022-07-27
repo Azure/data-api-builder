@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Net;
 using Azure.DataGateway.Config;
@@ -164,6 +163,62 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             {
                 // This block should not be hit.
                 Assert.Fail();
+            }
+        }
+
+        /// <summary>
+        /// Test to validate that no other field can be present in included set if wildcard is present
+        /// in it.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(Operation.All, DisplayName = "Wildcard Field with another field in included set test1")]
+        [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in included set test2")]
+        public void WildCardAndOtherFieldsPresentInIncludeSet(Operation actionOp)
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                actionOp,
+                includedCols: new HashSet<string> { "*", "col2" }
+                );
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            try
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            }
+            catch (DataGatewayException ex)
+            {
+                string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
+                Assert.AreEqual($"No other field can be present with wildcard in the included set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
+                    $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
+                Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+                Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow(Operation.All, DisplayName = "Wildcard Field with another field in included set test1")]
+        [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in included set test2")]
+        public void WildCardAndOtherFieldsPresentInExcludeSet(Operation actionOp)
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                actionOp,
+                excludedCols: new HashSet<string> { "*", "col1" }
+                );
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            try
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            }
+            catch (DataGatewayException ex)
+            {
+                string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
+                Assert.AreEqual($"No other field can be present with wildcard in the excluded set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
+                    $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
+                Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+                Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
         }
     }

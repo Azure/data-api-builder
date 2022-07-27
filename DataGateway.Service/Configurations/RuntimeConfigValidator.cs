@@ -186,9 +186,10 @@ namespace Azure.DataGateway.Service.Configurations
                                 configAction.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Exclude.Count > 1)
                             {
                                 string incExc = configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Include.Count > 1 ? "included" : "excluded";
+                                string actionName = actionOp is Operation.All? "*" : actionOp.ToString();
                                 throw new DataGatewayException(
                                         message: $"No other field can be present with wildcard in the {incExc} set for: entity:{entityName}," +
-                                                 $" role:{permissionSetting.Role}, action:{actionOp}",
+                                                 $" role:{permissionSetting.Role}, action:{actionName}",
                                         statusCode: System.Net.HttpStatusCode.InternalServerError,
                                         subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
                             }

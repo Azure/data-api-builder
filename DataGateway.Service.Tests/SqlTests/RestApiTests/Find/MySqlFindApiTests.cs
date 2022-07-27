@@ -44,6 +44,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
                     ) AS subq"
             },
             {
+                "FindOnTableWithUniqueCharacters",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('┬─┬ノ( º _ ºノ)', NoteNum,
+                  '始計', DetailAssessmentAndPlanning, '作戰', WagingWar,
+                  '謀攻', StrategicAttack)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationUniqueCharactersTable + @"
+                  ) AS subq"
+            },
+            {
                 "FindViewAll",
                 @"
                   SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data

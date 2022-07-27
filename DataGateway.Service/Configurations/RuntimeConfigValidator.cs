@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataGateway.Config;
@@ -201,7 +200,7 @@ namespace Azure.DataGateway.Service.Configurations
                                     configAction.Fields.Include, configAction.Fields.Exclude);
 
                                 // validate that all the claimTypes in the policy are well formed.
-                                ValidateOrProcessClaimsInPolicy(configAction.Policy.Database, true);
+                                ValidateClaimsInPolicy(configAction.Policy.Database);
                             }
                         }
                     }
@@ -240,9 +239,6 @@ namespace Azure.DataGateway.Service.Configurations
                             {
                                 // Remove all the occurences of @item. directive from the policy.
                                 configAction.Policy.Database = ProcessFieldsInPolicy(configAction.Policy.Database);
-
-                                // Remove redundant spaces and parenthesis around claimTypes.
-                                configAction.Policy.Database = ValidateOrProcessClaimsInPolicy(configAction.Policy.Database, false);
                             }
 
                             processedActions.Add(JsonSerializer.SerializeToElement(configAction));
@@ -272,34 +268,22 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Method to do different validations/ pre-process claims in the policy.
-        /// The decision to validate/preprocess is made by the isValidation boolean parameter.
-        /// If isValidation is set to true, we do validation, else pre-process.
+        /// Method to do different validations on claims in the policy.
         /// </summary>
         /// <param name="policy">The policy to be validated and processed.</param>
         /// <returns>Processed policy</returns>
         /// <exception cref="DataGatewayException">Throws exception when one or the other validations fail.</exception>
-        private static string ValidateOrProcessClaimsInPolicy(string policy, bool isValidation)
+        private static void ValidateClaimsInPolicy(string policy)
         {
-            StringBuilder processedPolicy = new();
-            policy = RemoveRedundantSpacesFromPolicy(policy);
-
             // Find all the claimTypes from the policy
             MatchCollection claimTypes = GetClaimTypesInPolicy(policy);
-
-            // parsedIdx indicates the last index in the policy string from which we need to append to the
-            // processedPolicy.
-            int parsedIdx = 0;
 
             foreach (Match claimType in claimTypes)
             {
                 // Remove the prefix @claims. from the claimType
-                string typeOfClaimWithOpenParenthesis = claimType.Value.Substring(AuthorizationResolver.CLAIM_PREFIX.Length);
+                string typeOfClaim = claimType.Value.Substring(AuthorizationResolver.CLAIM_PREFIX.Length);
 
-                //Process typeOfClaimWithParenthesis to remove opening parenthesis.
-                string typeOfClaim = GetClaimTypeWithoutOpeningParenthesis(typeOfClaimWithOpenParenthesis);
-
-                if (isValidation && string.IsNullOrWhiteSpace(typeOfClaim))
+                if (string.IsNullOrWhiteSpace(typeOfClaim))
                 {
                     // Empty claimType is not allowed
                     throw new DataGatewayException(
@@ -309,7 +293,7 @@ namespace Azure.DataGateway.Service.Configurations
                         );
                 }
 
-                if (isValidation && _invalidClaimCharsRgx.IsMatch(typeOfClaim))
+                if (_invalidClaimCharsRgx.IsMatch(typeOfClaim))
                 {
                     // Not a valid claimType containing allowed characters
                     throw new DataGatewayException(
@@ -318,59 +302,7 @@ namespace Azure.DataGateway.Service.Configurations
                         subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError
                         );
                 }
-
-                int claimIdx = claimType.Index;
-
-                if (!isValidation)
-                {
-                    // Add token for the portion of policy string between the current and the previous @claims.*** claimType
-                    // to the processedPolicy.
-                    processedPolicy.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx));
-
-                    // Add token for the claimType to processedPolicy
-                    processedPolicy.Append(AuthorizationResolver.CLAIM_PREFIX + typeOfClaim);
-                }
-
-                // Move the parsedIdx to the index following a claimType in the policy string
-                parsedIdx = claimIdx + claimType.Value.Length;
-
-                // Expected number of closing parenthesis after the claimType,
-                // equal to the number of opening parenthesis before the claimType.
-                int expNumClosingParenthesis = typeOfClaimWithOpenParenthesis.Length - typeOfClaim.Length;
-
-                // Ensure that there are atleast expectedNumClosingParenthesis following a claim type.
-                while (expNumClosingParenthesis > 0)
-                {
-                    if (isValidation && (parsedIdx >= policy.Length || (policy[parsedIdx] != ')' && policy[parsedIdx] != ' ')))
-                    {
-                        // No. of closing parenthesis is less than opening parenthesis,
-                        // which does not form a valid claimType.
-                        throw new DataGatewayException(
-                            message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
-                            statusCode: System.Net.HttpStatusCode.InternalServerError,
-                            subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError
-                            );
-                    }
-
-                    // If the code reaches here, either the character is ')' or ' '.
-                    // If its a ' ', we ignore as it is an extra space.
-                    // If its a ')', we decrement the required closing parenthesis by 1.
-                    if (policy[parsedIdx] == ')')
-                    {
-                        expNumClosingParenthesis--;
-                    }
-
-                    parsedIdx++;
-                }
             } // MatchType claimType
-
-            if (!isValidation && parsedIdx < policy.Length)
-            {
-                // Append if there is still some part of policy string left to be appended to the result.
-                processedPolicy.Append(policy.Substring(parsedIdx));
-            }
-
-            return processedPolicy.ToString();
         }
 
         /// <summary>
@@ -433,41 +365,7 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Helper method to preprocess the policy by replacing "( " with "(", i.e. remove
-        /// extra spaces after opening parenthesis. This will prevent allowed claimTypes
-        /// from being invalidated.
-        /// </summary>
-        /// <param name="policy"></param>
-        /// <returns>Policy string without redundant spaces.</returns>
-        private static string RemoveRedundantSpacesFromPolicy(string policy)
-        {
-            // Pre-process the policy to replace "( " with "(", i.e. remove
-            // extra spaces after opening parenthesis. This will prevent allowed claimTypes
-            // from being invalidated.
-            string reduntantSpaceRgx = @"\(\s*";
-            return Regex.Replace(policy, reduntantSpaceRgx, "(");
-        }
-
-        /// <summary>
-        /// Helper method to extract the claimType without opening parenthesis from
-        /// the typeOfClaimWithParenthesis.
-        /// </summary>
-        /// <param name="typeOfClaimWithParenthesis">The claimType which potentially has opening parenthesis</param>
-        /// <returns>claimType without opening parenthesis</returns>
-        private static string GetClaimTypeWithoutOpeningParenthesis(string typeOfClaimWithParenthesis)
-        {
-            // Find the index of first non parenthesis character in the claimType
-            int idx = 0;
-            while (idx < typeOfClaimWithParenthesis.Length && typeOfClaimWithParenthesis[idx] == '(')
-            {
-                idx++;
-            }
-
-            return typeOfClaimWithParenthesis.Substring(idx);
-        }
-
-        /// <summary>
-        /// Method to throw exception when there is an invalid action specified in config.
+        /// Helper function to throw an exception if the actionName is not valid.
         /// </summary>
         /// <param name="entityName">Name of entity for which invalid action is supplied.</param>
         /// <param name="roleName">Name of role for which invalid action is supplied.</param>

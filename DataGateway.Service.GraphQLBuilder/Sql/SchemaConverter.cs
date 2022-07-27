@@ -117,9 +117,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                     INullableTypeNode targetField = relationship.Cardinality switch
                     {
                         Cardinality.One =>
-                            new NamedTypeNode(FormatNameForObject(targetEntityName, referencedEntity)),
+                            new NamedTypeNode(targetEntityName),
                         Cardinality.Many =>
-                            new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(FormatNameForObject(targetEntityName, referencedEntity))),
+                            new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(targetEntityName)),
                         _ =>
                             throw new DataGatewayException(
                                 message: "Specified cardinality isn't supported",
@@ -136,7 +136,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         new NonNullTypeNode(targetField),
                         new List<DirectiveNode> {
                             new(RelationshipDirectiveType.DirectiveName,
-                                new ArgumentNode("target", FormatNameForObject(targetEntityName, referencedEntity)),
+                                new ArgumentNode("target", targetEntityName),
                                 new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
                         });
 
@@ -155,7 +155,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
             return new ObjectTypeDefinitionNode(
                 location: null,
-                new(FormatNameForObject(entityName, configEntity)),
+                //name: new(FormatNameForObject(entityName, configEntity)),
+                name: new(value: entityName),
                 description: null,
                 objectTypeDirectives,
                 new List<NamedTypeNode>(),

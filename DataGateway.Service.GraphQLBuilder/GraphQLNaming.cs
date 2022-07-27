@@ -11,17 +11,20 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
         // Name must start with an upper or lowercase letter
         private static readonly Regex _graphQLNameStart = new("^[a-zA-Z].*");
 
+        // Regex to match invalid GraphQL characters.
         // Letters, numbers and _ are only valid in names, so strip all that aren't.
         // Although we'll leave whitespace in so that downstream consumers can still
         // enforce their casing requirements
-        private static readonly Regex _graphQLValidSymbols = new("[^a-zA-Z0-9_\\s]");
+        private static readonly Regex _graphQLInvalidSymbols = new("[^a-zA-Z0-9_\\s]");
 
         /// <summary>
         /// Enforces the GraphQL naming restrictions on <paramref name="name"/>.
+        /// Completely removes invalid characters from the input parameter: name.
+        /// Splits up the name into segments where *space* is the splitting token.
         /// </summary>
         /// <param name="name">String the enforce naming rules on</param>
         /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
-        /// <returns>A name that complies with the GraphQL name rules</returns>
+        /// <returns>nameSegments, where each indice is a part of the name that complies with the GraphQL name rules.</returns>
         private static string[] SanitizeGraphQLName(string name)
         {
             if (!_graphQLNameStart.Match(name).Success)
@@ -30,12 +33,21 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
                 name = name[1..];
             }
 
-            name = _graphQLValidSymbols.Replace(name, "");
+            name = _graphQLInvalidSymbols.Replace(name, "");
 
             string[] nameSegments = name.Split(' ');
             return nameSegments;
         }
 
+        /// <summary>
+        /// Formats the name argument into a GraphQL allowed string by:
+        /// - Singularizes name
+        /// - Removing disallowed characters
+        /// - Capitalizing the first character of each space separated segment of the string
+        /// </summary>
+        /// <param name="name">Entity name to format.</param>
+        /// <param name="configEntity">Contain GraphQL configuration metadata for the entity.</param>
+        /// <returns></returns>
         public static string FormatNameForObject(string name, Entity configEntity)
         {
             if (configEntity.GraphQL is SingularPlural namingRules)

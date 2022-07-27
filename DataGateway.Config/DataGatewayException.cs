@@ -12,6 +12,7 @@ namespace Azure.DataGateway.Service.Exceptions
     {
         public const string CONNECTION_STRING_ERROR_MESSAGE = "A valid Connection String should be provided.";
         public const string MYSQL_INVALID_CONNECTION_STRING_MESSAGE = "Format of the initialization string";
+        public const string MYSQL_INVALID_CONNECTION_STRING_OPTIONS = "GetOptionForKey";
 
         public enum SubStatusCodes
         {

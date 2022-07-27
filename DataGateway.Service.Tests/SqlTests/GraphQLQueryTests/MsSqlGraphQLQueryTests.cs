@@ -195,6 +195,27 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
             await TestOrderByWithOnlyNullFieldsDefaultsToPkSorting(msSqlQuery);
         }
 
+        [TestMethod]
+        public async Task TestSettingOrderByOrderUsingVariable()
+        {
+            string msSqlQuery = $"SELECT TOP 4 id, title FROM books ORDER BY id DESC FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await TestSettingOrderByOrderUsingVariable(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task TestSettingComplexArgumentUsingVariables()
+        {
+            string msSqlQuery = $"SELECT TOP 100 id, title FROM books ORDER BY id ASC FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await base.TestSettingComplexArgumentUsingVariables(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task TestQueryWithExplicitlyNullArguments()
+        {
+            string msSqlQuery = $"SELECT id, title FROM books ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await TestQueryWithExplicitlyNullArguments(msSqlQuery);
+        }
+
         #endregion
     }
 }

@@ -1,6 +1,7 @@
 using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using HotChocolate.Language;
 using HotChocolate.Types;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 {
@@ -200,17 +201,17 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         public static Dictionary<string, InputObjectTypeDefinitionNode> InputTypes = new()
         {
             { "ID", IdInputType() },
-            { "Byte", ByteInputType() },
-            { "Short", ShortInputType() },
-            { "Int", IntInputType() },
-            { "Long", LongInputType() },
-            { "Single", SingleInputType() },
-            { "Float", FloatInputType() },
-            { "Decimal", DecimalInputType() },
-            { "Boolean", BooleanInputType() },
-            { "String", StringInputType() },
-            { "DateTime", DateTimeInputType() },
-            { "ByteArray", ByteArrayInputType() }
+            { BYTE_TYPE, ByteInputType() },
+            { SHORT_TYPE, ShortInputType() },
+            { INT_TYPE, IntInputType() },
+            { LONG_TYPE, LongInputType() },
+            { SINGLE_TYPE, SingleInputType() },
+            { FLOAT_TYPE, FloatInputType() },
+            { DECIMAL_TYPE, DecimalInputType() },
+            { BOOLEAN_TYPE, BooleanInputType() },
+            { STRING_TYPE, StringInputType() },
+            { DATETIME_TYPE, DateTimeInputType() },
+            { BYTEARRAY_TYPE, ByteArrayInputType() }
         };
     }
 }

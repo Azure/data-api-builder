@@ -59,6 +59,35 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
+        /// Tests the InsertOne functionality with a REST POST request using
+        /// unique unicode characters in the exposed names.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneUniqueCharactersTest()
+        {
+            string requestBody = @"
+            {
+                ""┬─┬ノ( º _ ºノ)"": 2,
+                ""始計"": ""new chapter 1 notes: "",
+                ""作戰"": ""new chapter 2 notes: "",
+                ""謀攻"": ""new chapter 3 notes: ""
+            }";
+
+            string expectedLocationHeader = $"┬─┬ノ( º _ ºノ)/2";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entity: _integrationUniqueCharactersEntity,
+                sqlQuery: GetQuery(nameof(InsertOneUniqueCharactersTest)),
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
         /// Tests the InsertOne functionality with a REST POST request
         /// where the entity has mapping defined for its columns.
         /// </summary>

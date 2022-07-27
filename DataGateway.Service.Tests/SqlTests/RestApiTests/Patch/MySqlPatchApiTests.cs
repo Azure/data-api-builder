@@ -23,6 +23,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
                 "
             },
             {
+                "PatchOne_Insert_UniqueCharacters_Test",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('┬─┬ノ( º _ ºノ)', NoteNum,
+                  '始計', DetailAssessmentAndPlanning, '作戰', WagingWar,
+                  '謀攻', StrategicAttack)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationUniqueCharactersTable + @"
+                      WHERE NoteNum = 2
+                  ) AS subq
+                "
+            },
+            {
                 "PatchOne_Insert_Mapping_Test",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species,

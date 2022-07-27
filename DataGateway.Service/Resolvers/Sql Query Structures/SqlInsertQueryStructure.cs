@@ -6,7 +6,7 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
-
+using HotChocolate.Resolvers;
 namespace Azure.DataGateway.Service.Resolvers
 {
     /// <summary>
@@ -30,19 +30,28 @@ namespace Azure.DataGateway.Service.Resolvers
         public List<LabelledColumn> OutputColumns { get; }
 
         public SqlInsertStructure(
+            IMiddlewareContext context,
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
-            IDictionary<string, object?> mutationParams)
+            IDictionary<string, object?> mutationParams
+        ) : this(
+            entityName,
+            sqlMetadataProvider,
+            GQLMutArgumentToDictParams(context, CreateMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams))
+        { }
+
+        public SqlInsertStructure(
+            string entityName,
+            ISqlMetadataProvider sqlMetadataProvider,
+            IDictionary<string, object?> mutationParams
+            )
         : base(sqlMetadataProvider, entityName: entityName)
         {
             InsertColumns = new();
             Values = new();
             OutputColumns = GenerateOutputColumns();
 
-            IDictionary<string, object?> createInput =
-                InputArgumentToMutationParams(mutationParams, CreateMutationBuilder.INPUT_ARGUMENT_NAME);
-
-            foreach (KeyValuePair<string, object?> param in createInput)
+            foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 PopulateColumnsAndParams(backingColumn!, param.Value);

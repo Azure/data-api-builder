@@ -44,6 +44,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
                     ) AS subq"
             },
             {
+                "FindOnTableWithUniqueCharacters",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('┬─┬ノ( º _ ºノ)', NoteNum,
+                  '始計', DetailAssessmentAndPlanning, '作戰', WagingWar,
+                  '謀攻', StrategicAttack)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationUniqueCharactersTable + @"
+                  ) AS subq"
+            },
+            {
                 "FindViewAll",
                 @"
                   SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
@@ -572,7 +583,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'name', name, 'birthdate', birthdate)) AS data
                   FROM (
                       SELECT *
-                      FROM " + _integrationTieBreakTable + @" 
+                      FROM " + _integrationTieBreakTable + @"
                       ORDER BY birthdate, name, id desc
                       LIMIT 2
                   ) AS subq"
@@ -584,9 +595,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationTieBreakTable + @"
-                      WHERE ((birthdate > '2001-01-01') OR(birthdate = '2001-01-01' AND name > 'Aniruddh') OR 
-                      (birthdate = '2001-01-01' AND name = 'Aniruddh' AND id > 125)) 
-                      ORDER BY birthdate, name, id 
+                      WHERE ((birthdate > '2001-01-01') OR(birthdate = '2001-01-01' AND name > 'Aniruddh') OR
+                      (birthdate = '2001-01-01' AND name = 'Aniruddh' AND id > 125))
+                      ORDER BY birthdate, name, id
                       LIMIT 2
                   ) AS subq"
             },

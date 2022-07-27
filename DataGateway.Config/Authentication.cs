@@ -21,7 +21,7 @@ namespace Azure.DataGateway.Config
 
     /// <summary>
     /// Settings useful for validating the received Json Web Token (JWT).
-    /// </summary> 
+    /// </summary>
     /// <param name="Audience"></param>
     /// <param name="Issuer"></param>
     public record Jwt(string Audience, string Issuer);

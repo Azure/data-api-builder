@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Net;
 using Azure.DataGateway.Config;
@@ -139,6 +140,31 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             {
                 Assert.IsTrue(ex.Message.StartsWith("Invalid format for claim type"));
                 Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            }
+        }
+
+        /// <summary>
+        /// Test to validate that wildcard action passes all stages of config validation.
+        /// </summary>
+        [TestMethod]
+        public void WildcardActionSpecifiedForARole()
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                Operation.UpsertIncremental,
+                includedCols: new HashSet<string> { "col1", "col2", "col3" }
+                );
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            try
+            {
+                // All the validations would pass.
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            }
+            catch
+            {
+                // This block should not be hit.
+                Assert.Fail();
             }
         }
     }

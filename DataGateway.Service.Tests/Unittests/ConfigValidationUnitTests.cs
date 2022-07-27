@@ -152,7 +152,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.UpsertIncremental,
+                Operation.All,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);

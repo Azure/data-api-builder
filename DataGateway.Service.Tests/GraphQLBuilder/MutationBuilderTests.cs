@@ -17,6 +17,18 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
     public class MutationBuilderTests
     {
         private Dictionary<string, EntityMetadata> _entityPermissions;
+        private const string FOOS_ENTITY_GQL = @"
+                type Foos @model {
+                    id: ID!
+                }";
+        private const string LEAVES_ENTITY_GQL = @"
+                    type Leaves @model {
+                        id: ID!
+                }";
+        private const string HERBS_ENTITY_GQL = @"
+                    type Herbs @model {
+                        id: ID!
+                }";
 
         /// <summary>
         /// Create stub entityPermissions to enable MutationBuilder to create
@@ -38,6 +50,15 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
         private static Entity GenerateEmptyEntity()
         {
             return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
+        }
+        private static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity)
+        {
+            return new Entity(Source: "dbo.entity",
+                              Rest: null,
+                              GraphQL: new SingularPlural(singularNameForEntity, pluralNameForEntity),
+                              Permissions: Array.Empty<PermissionSetting>(),
+                              Relationships: new(),
+                              Mappings: new());
         }
 
         [DataTestMethod]
@@ -628,6 +649,61 @@ type Foo @model {
                 query.Fields.Where(f => f.Name.Value == $"deleteFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
                 actual: deleteField.Directives.Count);
+        }
+
+        /// <summary>
+        /// This test validates that the delete mutations are explicitly created with singular entity names. This also
+        /// validates that when a singular name is available in the config, delete mutation is created with that.
+        /// </summary>
+        /// <param name="gql"> Type definition for the entity.</param>
+        /// <param name="entityName"> Name of the entity for which delete mutation is being valdiated.</param>
+        /// <param name="singularName"> Singular name for the entity defined in the config.</param>
+        /// <param name="pluralName"> Plural name for the entity defined in the config.</param>
+        [DataTestMethod]
+        [TestCategory("Mutation Builder - Delete")]
+        [TestCategory("Schema Builder - Simple Type")]
+        [DataRow(FOOS_ENTITY_GQL, "Foos", null, null,
+            DisplayName = "Validates delete mutation creation with simple plural entity name.")]
+        [DataRow(LEAVES_ENTITY_GQL, "Leaves", null, null,
+            DisplayName = "Validates delete mutation creation with indirect plural entity name.")]
+        [DataRow(HERBS_ENTITY_GQL, "Herbs", "Plant", "Plants",
+            DisplayName = "Validates delete mutation creation with a defined singular name.")]
+        public void CanGenerateDeleteMutationWithSingularEntityName(string gql, string entityName, string singularName, string pluralName)
+        {
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Entity entity = (singularName is not null && pluralName is not null)
+                                ? GenerateEntityWithSingularPlural(singularName, pluralName)
+                                : GenerateEmptyEntity();
+
+            Dictionary<string, EntityMetadata> entityPermissionsMap = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                                                                        new string[] { entityName },
+                                                                        new string[] { ActionType.DELETE },
+                                                                        new string[] { "anonymous", "authenticated" });
+
+            string expectedDeleteMutationName = (singularName is not null && pluralName is not null)
+                                                        ? $"delete{singularName}"
+                                                        : GetExpectedDeleteMutationName(entityName);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(root,
+                                                              DatabaseType.cosmos,
+                                                              new Dictionary<string, Entity> { { entityName, entity } },
+                                                              entityPermissionsMap: entityPermissionsMap
+                                                              );
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+
+            Assert.IsNotNull(query);
+            Assert.AreEqual(1, query.Fields.Count);
+            Assert.IsTrue(query.Fields.Any(f => f.Name.Value == expectedDeleteMutationName));
+        }
+
+        private static string GetExpectedDeleteMutationName(string entityName)
+        {
+            return entityName switch
+            {
+                "Foos" => "deleteFoo",
+                "Leaves" => "deleteLeaf",
+                _ => $"delete{entityName}"
+            };
         }
 
         [TestMethod]

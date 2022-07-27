@@ -659,7 +659,7 @@ type Foo @model {
         /// <param name="entityName"> Name of the entity for which delete mutation is being valdiated.</param>
         /// <param name="singularName"> Singular name for the entity defined in the config.</param>
         /// <param name="pluralName"> Plural name for the entity defined in the config.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(FOOS_ENTITY_GQL, "Foos", null, null,
             DisplayName = "Validates delete mutation creation with simple plural entity name.")]
         [DataRow(LEAVES_ENTITY_GQL, "Leaves", null, null,

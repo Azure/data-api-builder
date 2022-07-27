@@ -181,8 +181,9 @@ namespace Azure.DataGateway.Service.Configurations
                                     AreFieldsAccessible(configAction.Policy.Database,
                                         configAction.Fields.Include, configAction.Fields.Exclude);
 
-                                // validate that all the claimTypes in the policy are well formed.
-                                ValidateClaimsInPolicy(configAction.Policy.Database);
+                                    // validate that all the claimTypes in the policy are well formed.
+                                    ValidateClaimsInPolicy(configAction.Policy.Database);
+                                }
                             }
                         }
                     }

@@ -660,8 +660,6 @@ type Foo @model {
         /// <param name="singularName"> Singular name for the entity defined in the config.</param>
         /// <param name="pluralName"> Plural name for the entity defined in the config.</param>
         [DataTestMethod]
-        [TestCategory("Mutation Builder - Delete")]
-        [TestCategory("Schema Builder - Simple Type")]
         [DataRow(FOOS_ENTITY_GQL, "Foos", null, null,
             DisplayName = "Validates delete mutation creation with simple plural entity name.")]
         [DataRow(LEAVES_ENTITY_GQL, "Leaves", null, null,

@@ -13,9 +13,6 @@ variables:
   solution: '**/*.sln'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
-  Major: '0'
-  Minor: '0'
-  Patch: '4'
 
 steps:
 - task: UseDotNet@2
@@ -57,22 +54,23 @@ steps:
   displayName: "Creating Nuget Package"
   inputs:
     command: pack
-    versioningScheme: byPrereleaseNumber
-    majorVersion: '$(Major)'
-    minorVersion: '$(Minor)'
-    patchVersion: '$(Patch)'
     packagesToPack: '**Hawaii.Cli.csproj'
     packDestination: '$(Build.ArtifactStagingDirectory)'
 
-# This task will publish the NuGet Package
-# - task: NuGetAuthenticate@0
-#   displayName: 'NuGet Authenticate'
-# - task: NuGetCommand@2
-#   displayName: 'NuGet push'
-#   inputs:
-#     command: push
-#     publishVstsFeed: '<projectName>/<feed>'
-#     allowPackageConflicts: true
+This task will publish the NuGet Package
+- task: NuGetAuthenticate@0
+  displayName: 'NuGet Authenticate'
+- task: NuGetCommand@2
+  displayName: 'NuGet push'
+  inputs:
+    command: 'push'
+    feedsToUse: 'select'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: 'internal'
+    vstsFeed: Hawaii_Packages/nuget
+    publishVstsFeed: Hawaii_Packages/nuget
+    versioningScheme: 'off'
+    allowPackageConflicts: true
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

@@ -683,7 +683,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             Policy? policy;
 
-            if (databasePolicy is not null|| requestPolicy is not null)
+            if (databasePolicy is not null || requestPolicy is not null)
             {
                 policy = new(
                     request: requestPolicy,

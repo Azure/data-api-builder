@@ -57,7 +57,7 @@ steps:
     packagesToPack: '**Hawaii.Cli.csproj'
     packDestination: '$(Build.ArtifactStagingDirectory)'
 
-This task will publish the NuGet Package
+# This task will publish the NuGet Package
 - task: NuGetAuthenticate@0
   displayName: 'NuGet Authenticate'
 - task: NuGetCommand@2

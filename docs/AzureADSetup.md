@@ -104,3 +104,16 @@ Examples include a frontend webpage, or PostMan (this guide is for PostMan).
    2. Select a role: choose a role you want to assign to your account. (Note: if you don't see your role, wait a few minutes for Azure AD replication to finish from when you added the role to your App Registration earlier.)
    3. Repeat this step for all the roles you want to add to your account.
 5. To be assigned these new roles, you must acquire a new access token in PostMan.
+
+## DataAPIBuilder Runtime Configuration
+
+1. Using the Application Registration ID from your `DataAPIBuilder` App registration, add this value to your runtime configuration.
+
+```json
+      "authentication": {
+        "provider": "AzureAD",
+        "jwt": {
+          "audience": "<ID_DataAPIBuilder>",
+          "issuer": "https://login.microsoftonline.com/<AZURE_AD_ TENANT_ID>/v2.0"
+        }
+```

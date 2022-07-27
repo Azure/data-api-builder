@@ -146,12 +146,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="customEntities">List of test specific entities.</param>
         private static void AddCustomEntities(List<string[]> customEntities)
         {
-            foreach (string[] customEntity in customEntities)
+            if (customEntities is not null)
             {
-                string objectKey = customEntity[0];
-                string objectName = customEntity[1];
-                string schemaName = customEntity[2];
-                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, objectKey, objectName, schemaName);
+                foreach (string[] customEntity in customEntities)
+                {
+                    string objectKey = customEntity[0];
+                    string objectName = customEntity[1];
+                    string schemaName = customEntity[2];
+                    TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, objectKey, objectName, schemaName);
+                }
             }
         }
 

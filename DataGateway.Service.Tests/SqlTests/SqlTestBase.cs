@@ -64,13 +64,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// this class.
         /// </summary>
         /// <param name="context"></param>
-        protected static async Task InitializeTestFixture(TestContext context)
+        /// <param name="customQueries">Test specific queries to be executed on database.</param>
+        /// <param name="customEntities">Test specific entities to be added to database.</param>
+        /// <returns></returns>
+        protected static async Task InitializeTestFixture(TestContext context, List<string> customQueries = null,
+            List<string[]> customEntities = null)
         {
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{DatabaseEngine}");
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
             TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "Magazine", "magazines", "foo");
+
+            // Add custom entities for the test, if any.
+            AddCustomEntities(customEntities);
+
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
 
             SetUpSQLMetadataProvider();
@@ -87,6 +95,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
             await ResetDbStateAsync();
+
+            //Execute additional queries, if any.
+            await ExecuteQueriesOnDbAsync(customQueries);
+
             await _sqlMetadataProvider.InitializeAsync();
 
             //Initialize the authorization resolver object
@@ -121,6 +133,37 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 });
 
             HttpClient = _application.CreateClient();
+        }
+
+        /// <summary>
+        /// Helper method to add test specific entities to the entity mapping.
+        /// </summary>
+        /// <param name="customEntities">List of test specific entities.</param>
+        private static void AddCustomEntities(List<string[]> customEntities)
+        {
+            foreach (string[] customEntity in customEntities)
+            {
+                string objectKey = customEntity[0];
+                string objectName = customEntity[1];
+                string schemaName = customEntity[2];
+                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, objectKey, objectName, schemaName);
+            }
+        }
+
+        /// <summary>
+        /// Helper method to execute all the additional queries for a test on the database.
+        /// </summary>
+        /// <param name="customQueries"></param>
+        /// <returns></returns>
+        private static async Task ExecuteQueriesOnDbAsync(List<string> customQueries)
+        {
+            if (customQueries is not null)
+            {
+                foreach (string query in customQueries)
+                {
+                    await _queryExecutor.ExecuteQueryAsync(query, parameters: null);
+                }
+            }
         }
 
         protected static void SetUpSQLMetadataProvider()

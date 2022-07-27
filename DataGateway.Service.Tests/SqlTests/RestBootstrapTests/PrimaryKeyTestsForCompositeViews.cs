@@ -1,9 +1,9 @@
-using System.IO;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.RestBootstrapTests
@@ -86,30 +86,49 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestBootstrapTests
         {
             // Setup dependencies
             DatabaseEngine = dbEngine;
-            string dbQuery = File.ReadAllText($"{DatabaseEngine}Books.sql");
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(DatabaseEngine);
-            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
-            SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
-            TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, _compositeViewName, _compositeViewName);
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
-            SetUpSQLMetadataProvider();
-
-            await _queryExecutor.ExecuteQueryAsync(dbQuery + compositeDbViewquery, parameters: null);
-
+            string[] customEntity = { _compositeViewName, _compositeViewName, "" };
             if (isExceptionExpected)
             {
-                DataGatewayException ex = await Assert.ThrowsExceptionAsync<DataGatewayException>(() => _sqlMetadataProvider.InitializeAsync());
+                DataGatewayException ex = await Assert.ThrowsExceptionAsync<DataGatewayException>(() =>
+                InitializeTestFixture(null, new List<string> { compositeDbViewquery }, new List<string[]> { customEntity }));
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual($"Primary key not configured on the given database object {_compositeViewName}", ex.Message);
                 Assert.AreEqual(DataGatewayException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
             }
             else
             {
-                await _sqlMetadataProvider.InitializeAsync();
+                await InitializeTestFixture(null, new List<string> { compositeDbViewquery },
+                    new List<string[]> { customEntity });
 
-                // Validate that when exception is not thrown, the view's definition has been
-                // successfully added to the Entity map.
-                Assert.IsTrue(_sqlMetadataProvider.EntityToDatabaseObject.ContainsKey(_compositeViewName));
+                // Perform a GET operation on the view to confirm that it is functional.
+                // Set up rest controller.
+                RestService _restService = new(_queryEngine,
+                _mutationEngine,
+                _sqlMetadataProvider,
+                _httpContextAccessor.Object,
+                _authorizationService.Object,
+                _authorizationResolver,
+                _runtimeConfigProvider);
+                RestController _restController = new(_restService);
+
+                // Query to validate the GET operation result.
+                string query = @"
+                                 SELECT JSON_OBJECT( 'title', title, 'name', name, 'birthdate',
+                                 birthdate, 'book_id', book_id, 'author_id', author_id) AS data
+                                 FROM (
+                                     SELECT *
+                                     FROM " + _compositeViewName + @"
+                                     WHERE book_id = 1 AND author_id = 123
+                                     ) AS subq";
+
+                // Perform GET operation on the view.
+                await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "book_id/1/author_id/123",
+                    queryString: string.Empty,
+                    entity: _compositeViewName,
+                    sqlQuery: query,
+                    controller: _restController
+                );
             }
         }
 

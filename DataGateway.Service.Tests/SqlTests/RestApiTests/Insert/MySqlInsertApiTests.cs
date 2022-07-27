@@ -21,7 +21,21 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Insert
                         WHERE id = 5001
                     ) AS subq
                 "
-            },{
+            },
+            {
+                "InsertOneUniqueCharactersTest",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('┬─┬ノ( º _ ºノ)', NoteNum,
+                  '始計', DetailAssessmentAndPlanning, '作戰', WagingWar,
+                  '謀攻', StrategicAttack)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationUniqueCharactersTable + @"
+                      WHERE NoteNum = 2
+                  ) AS subq
+                "
+            },
+            {
                 "InsertOneWithMappingTest",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species,

@@ -72,10 +72,6 @@ steps:
     versioningScheme: 'off'
     allowPackageConflicts: true
 
-- task: PowerShell@2
-  inputs:
-    command: echo $(Build.ArtifactStagingDirectory)
-
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'
   inputs:

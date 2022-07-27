@@ -50,7 +50,7 @@ steps:
     projects: '**/*Tests*.csproj'
     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
-- task: NuGetCommand@2
+- task: DotNetCoreCLI@2
   displayName: "Creating Nuget Package"
   inputs:
     command: pack

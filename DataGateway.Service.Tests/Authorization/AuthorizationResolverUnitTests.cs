@@ -611,17 +611,16 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         // no predicates need to be added to the database query generated for the request.
         // When a value is returned as a result, the execution behaved as expected.
         [DataTestMethod]
-        [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.READ, true, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - anonymous")]
-        [DataRow("authenticated", "authenticated", ActionType.UPDATE, ActionType.UPDATE, true, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - authenticated")]
-        [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.READ, false, "id eq 1", false, DisplayName = "Fetch Policy for existing role, no policy object defined in config.")]
-        [DataRow("anonymous", "authenticated", ActionType.READ, ActionType.READ, true, "id eq 1", false, DisplayName = "Fetch Policy for non-configured role")]
-        [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.CREATE, true, "id eq 1", false, DisplayName = "Fetch Policy for non-configured action")]
+        [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.READ, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - anonymous")]
+        [DataRow("authenticated", "authenticated", ActionType.UPDATE, ActionType.UPDATE, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - authenticated")]
+        [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.READ, null, false, DisplayName = "Fetch Policy for existing role, no policy object defined in config.")]
+        [DataRow("anonymous", "authenticated", ActionType.READ, ActionType.READ, "id eq 1", false, DisplayName = "Fetch Policy for non-configured role")]
+        [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.CREATE, "id eq 1", false, DisplayName = "Fetch Policy for non-configured action")]
         public void GetDBPolicyTest(
             string clientRole,
             string configuredRole,
             string requestAction,
             string configuredAction,
-            bool addPolicyToConfig,
             string policy,
             bool expectPolicy)
         {
@@ -629,7 +628,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 TEST_ENTITY,
                 configuredRole,
                 configuredAction,
-                addPolicyObjectToConfig: addPolicyToConfig,
                 databasePolicy: policy
                 );
 
@@ -668,9 +666,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// <param name="excludedCols">Excluded columns to access for action defined on role.</param>
         /// <param name="requestPolicy">Request authorization policy. (Support TBD)</param>
         /// <param name="databasePolicy">Database authorization policy.</param>
-        /// <param name="addPolicyObjectToConfig">Whether to add Policy object to config.
-        /// True to mock policy defined in config.
-        /// False to mock policy NOT defined in config</param>
         /// <returns></returns>
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
@@ -679,17 +674,16 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             HashSet<string>? includedCols = null,
             HashSet<string>? excludedCols = null,
             string? requestPolicy = null,
-            string? databasePolicy = null,
-            bool addPolicyObjectToConfig = true
+            string? databasePolicy = null
             )
         {
             Field fieldsForRole = new(
                 include: includedCols,
                 exclude: excludedCols);
 
-            Policy policy;
+            Policy? policy;
 
-            if (addPolicyObjectToConfig)
+            if (databasePolicy is not null|| requestPolicy is not null)
             {
                 policy = new(
                     request: requestPolicy,

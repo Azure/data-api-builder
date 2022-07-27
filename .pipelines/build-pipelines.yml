@@ -68,8 +68,8 @@ steps:
     feedsToUse: 'select'
     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
     nuGetFeedType: 'internal'
-    vstsFeed: Hawaii_Packages/nuget
-    publishVstsFeed: Hawaii_Packages/nuget
+    vstsFeed: CosmosDB/Hawaii_Packages
+    publishVstsFeed: CosmosDB/Hawaii_Packages
     versioningScheme: 'off'
     allowPackageConflicts: true
 

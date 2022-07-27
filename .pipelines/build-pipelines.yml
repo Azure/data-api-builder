@@ -54,7 +54,7 @@ steps:
   displayName: "Creating Nuget Package"
   inputs:
     command: pack
-    packagesToPack: '**Hawaii.Cli.csproj'
+    packagesToPack: '**/Hawaii.Cli.csproj'
     packDestination: '$(Build.ArtifactStagingDirectory)'
 
 # This task will publish the NuGet Package
@@ -71,6 +71,10 @@ steps:
     publishVstsFeed: Hawaii_Packages/nuget
     versioningScheme: 'off'
     allowPackageConflicts: true
+
+- task: directory Info
+  inputs:
+    command: echo $(Build.ArtifactStagingDirectory)
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

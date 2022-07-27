@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 {
@@ -38,11 +39,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// </summary>
         private static string ProperlyFormatTypeTableColumn(string columnName)
         {
-            if (columnName.Contains(BOOLEAN_TYPE))
+            if (columnName.Contains(BOOLEAN_TYPE.ToLowerInvariant()))
             {
                 return $"cast({columnName} is true as json)";
             }
-            else if (columnName.Contains(BYTEARRAY_TYPE))
+            else if (columnName.Contains(BYTEARRAY_TYPE.ToLowerInvariant()))
             {
                 return $"to_base64({columnName})";
             }

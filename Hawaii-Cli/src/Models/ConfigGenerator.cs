@@ -96,6 +96,15 @@ namespace Hawaii.Cli.Models
         }
 
         /// <summary>
+        /// This method will start the hawaii-engine
+        /// using the config and project name
+        /// </summary>
+        public static void TryStartEngineWithOptions(StartOptions options)
+        {
+            Azure.DataGateway.Service.Program.Main(new string[]{"--project", options.Project, "--ConfigFileName", options.Config});
+        }
+
+        /// <summary>
         /// This method will add a new Entity with the given REST and GraphQL endpoints, source, and permissions.
         /// It also supports fields that needs to be included or excluded for a given role and action.
         /// </summary>

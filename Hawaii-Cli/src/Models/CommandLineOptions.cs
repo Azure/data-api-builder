@@ -225,4 +225,25 @@ namespace Hawaii.Cli.Models
         [Option('m', "map", Separator = ',', Required = false, HelpText = "Specify mappings between database fields and GraphQL and REST fields. format: --map \"backendName1:exposedName1,backendName2:exposedName2,...\".")]
         public IEnumerable<string>? Map { get; }
     }
+
+    /// <summary>
+    /// Start command options
+    /// </summary>
+    [Verb("start", isDefault: false, HelpText = "Start Hawaii Engine", Hidden = false)]
+    public class StartOptions
+    {
+        public StartOptions(
+            string project,
+            string config)
+        {
+            this.Project = project;
+            this.Config = config;
+        }
+
+        [Option("project", Required = true, HelpText = "project name")]
+        public string Project { get; }
+
+        [Option("config", Required = true, HelpText = "Path to config file.")]
+        public string Config { get; }
+    }
 }

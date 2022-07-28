@@ -336,7 +336,7 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <inheritdoc />
-        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string actionName)
+        public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, string actionName)
         {
             return EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[actionName].AllowedExposedColumns;
         }

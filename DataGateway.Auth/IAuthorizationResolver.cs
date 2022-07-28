@@ -50,7 +50,7 @@ namespace Azure.DataGateway.Auth
         /// <param name="roleName">Role defined in client role header</param>
         /// <param name="actionName">Action type: Create, Read, Update, Delete</param>
         /// <returns>List of allowed columns</returns>
-        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string actionName);
+        public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, string actionName);
 
         /// <summary>
         /// Retrieves the policy of an action within an entity's role entry

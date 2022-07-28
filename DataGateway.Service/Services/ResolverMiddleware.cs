@@ -17,7 +17,7 @@ using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes.SupportedType
 namespace Azure.DataGateway.Service.Services
 {
     /// <summary>
-    /// The resolver middleware that is used by the schema executor to resolve
+    /// The field resolver middleware that is used by the schema executor to resolve
     /// the queries and mutations
     /// </summary>
     public class ResolverMiddleware
@@ -36,6 +36,15 @@ namespace Azure.DataGateway.Service.Services
             _mutationEngine = mutationEngine;
         }
 
+        /// <summary>
+        /// HotChocolate invokes this method when this ResolverMiddleware is utilized
+        /// in the request pipeline.
+        /// From this method, the Query and Mutation engines are executed, and the execution
+        /// results saved in the IMiddlewareContext's result property.
+        /// </summary>
+        /// <seealso cref="https://chillicream.com/docs/hotchocolate/execution-engine/field-middleware"/>
+        /// <param name="context">HotChocolate middleware context containing request metadata.</param>
+        /// <returns>Does not explicitly return data.</returns>
         public async Task InvokeAsync(IMiddlewareContext context)
         {
             JsonElement jsonElement;

@@ -12,10 +12,10 @@ namespace Azure.DataGateway.Service.Parsers
     /// </summary>
     public class ODataASTVisitor : QueryNodeVisitor<string>
     {
-        private SqlQueryStructure _struct;
+        private BaseSqlQueryStructure _struct;
         private ISqlMetadataProvider _metadataProvider;
 
-        public ODataASTVisitor(SqlQueryStructure structure, ISqlMetadataProvider metadataProvider)
+        public ODataASTVisitor(BaseSqlQueryStructure structure, ISqlMetadataProvider metadataProvider)
         {
             _struct = structure;
             _metadataProvider = metadataProvider;

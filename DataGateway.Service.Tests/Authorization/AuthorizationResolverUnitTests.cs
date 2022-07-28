@@ -464,8 +464,11 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// the table are treated as accessible. Since we are not explicitly specifying the includeCols/excludedCols
         /// parameters, Field will be nullified.
         /// </summary>
-        [TestMethod]
-        public void AreColumnsAllowedForActionWithMissingFieldProperty()
+        [DataTestMethod]
+        [DataRow(true, "col1", "col2", DisplayName = "Accessible fields test 1")]
+        [DataRow(true, "col3", "col4", DisplayName = "Accessile fields test 2")]
+        [DataRow(false, "col5", DisplayName = "Inaccessible field test 1")]
+        public void AreColumnsAllowedForActionWithMissingFieldProperty(bool expected, params string[] columnsToCheck)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
@@ -475,11 +478,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
             // All calls should return true as long as column names are valid.
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col2" }));
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col1" }));
-
-            // Call should fail for invalid column name.
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col5" }));
+            // The entity is expected to have "col1", "col2", "col3", "col4" fields accessible on it.
+            Assert.AreEqual(expected,
+                authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string>(columnsToCheck)));
         }
 
         #endregion

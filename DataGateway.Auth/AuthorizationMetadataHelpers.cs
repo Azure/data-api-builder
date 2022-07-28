@@ -57,6 +57,6 @@ namespace Azure.DataGateway.Auth
         public string? DatabasePolicy { get; set; }
         public HashSet<string> Included { get; set; } = new();
         public HashSet<string> Excluded { get; set; } = new();
-        public HashSet<string> Allowed { get; set; } = new();
+        public HashSet<string> AllowedExposedColumns { get; set; } = new();
     }
 }

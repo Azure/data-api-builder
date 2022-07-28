@@ -205,6 +205,10 @@ namespace Azure.DataGateway.Service.Authorization
                     {
                         Operation action = Operation.None;
                         ActionMetadata actionToColumn = new();
+
+                        // Use a hashset to store all the backing field names
+                        // that are accessible to the user.
+                        HashSet<string> allowedColumns = new();
                         IEnumerable<string> allTableColumns = ResolveTableDefinitionColumns(entityName);
 
                         // Implicitly, all table columns are 'allowed' when an actiontype is a string.
@@ -214,7 +218,7 @@ namespace Azure.DataGateway.Service.Authorization
                             string actionName = actionElement.ToString();
                             action = AuthorizationResolver.WILDCARD.Equals(actionName) ? Operation.All : Enum.Parse<Operation>(actionName, ignoreCase: true);
                             actionToColumn.Included.UnionWith(allTableColumns);
-                            actionToColumn.Allowed.UnionWith(allTableColumns);
+                            allowedColumns.UnionWith(allTableColumns);
                         }
                         else
                         {
@@ -260,9 +264,13 @@ namespace Azure.DataGateway.Service.Authorization
                                 }
 
                                 // Calculate the set of allowed backing column names.
-                                actionToColumn.Allowed.UnionWith(actionToColumn.Included.Except(actionToColumn.Excluded));
+                                allowedColumns.UnionWith(actionToColumn.Included.Except(actionToColumn.Excluded));
                             }
                         }
+
+                        // Populate allowed exposed columns for each entity/role/action combination during startup,
+                        // so that it doesn't need to be evaluated per request.
+                        PopulateAllowedExposedColumns(actionToColumn.AllowedExposedColumns, entityName, allowedColumns);
 
                         IEnumerable<Operation> actions = GetAllActions(action);
                         foreach (Operation actionOp in actions)
@@ -274,7 +282,7 @@ namespace Azure.DataGateway.Service.Authorization
                                 entityToRoleMap.ActionToRolesMap[actionOp].Add(role);
                             }
 
-                            foreach (string allowedColumn in actionToColumn.Allowed)
+                            foreach (string allowedColumn in allowedColumns)
                             {
                                 entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
                                 entityToRoleMap.FieldToRolesMap[allowedColumn][actionOp].Add(role);
@@ -302,22 +310,35 @@ namespace Azure.DataGateway.Service.Authorization
             return action is Operation.All ? RuntimeConfigValidator.ValidActions : new List<Operation> { action };
         }
 
-        /// <inheritdoc />
-        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, Operation action)
+        /// <summary>
+        /// From the given parameters, processes the included and excluded column permissions to output
+        /// a list of columns that are "allowed".
+        /// -- IncludedColumns minus ExcludedColumns == Allowed Columns
+        /// -- Does not yet account for either being wildcard (*).
+        /// </summary>
+        /// <param name="allowedExposedColumns">Set of fields exposed to user.</param>
+        /// <param name="entityName">Entity from request</param>
+        /// <param name="allowedDBColumns">Set of allowed backing field names.</param>
+        private void PopulateAllowedExposedColumns(HashSet<string> allowedExposedColumns,
+            string entityName,
+            HashSet<string> allowedDBColumns)
         {
-            ActionMetadata actionMetadata = EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action];
-            IEnumerable<string> allowedDBColumns = actionMetadata.Allowed;
-            List<string> allowedExposedColumns = new();
-
             foreach (string dbColumn in allowedDBColumns)
             {
                 if (_metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: dbColumn, out string? exposedName))
                 {
-                    allowedExposedColumns.Append(exposedName);
+                    if (exposedName is not null)
+                    {
+                        allowedExposedColumns.Add(exposedName);
+                    }
                 }
             }
+        }
 
-            return allowedExposedColumns;
+        /// <inheritdoc />
+        public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, Operation action)
+        {
+            return EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action].AllowedExposedColumns;
         }
 
         /// <summary>

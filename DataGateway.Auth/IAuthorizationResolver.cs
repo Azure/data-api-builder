@@ -44,16 +44,14 @@ namespace Azure.DataGateway.Auth
         public bool AreColumnsAllowedForAction(string entityName, string roleName, Operation action, IEnumerable<string> columns);
 
         /// <summary>
-        /// From the given parameters, processes the included and excluded column permissions to output
-        /// a list of columns that are "allowed".
-        /// -- IncludedColumns minus ExcludedColumns == Allowed Columns
-        /// -- Does not yet account for either being wildcard (*).
+        /// Method to return the list of exposed columns for the given combination of
+        /// entityName, roleName, action.
         /// </summary>
         /// <param name="entityName">Entity from request</param>
         /// <param name="roleName">Role defined in client role header</param>
         /// <param name="action">Action type: Create, Read, Update, Delete</param>
         /// <returns></returns>
-        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, Operation action);
+        public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, Operation action);
 
         /// <summary>
         /// Retrieves the policy of an action within an entity's role entry

@@ -252,7 +252,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
                 Operation.Read,
                 It.IsAny<IEnumerable<string>>() // Can be any IEnumerable<string>, as find request result field list is depedent on AllowedColumns.
                 )).Returns(areColumnsAllowed);
-            authorizationResolver.Setup(x => x.GetAllowedColumns(
+            authorizationResolver.Setup(x => x.GetAllowedExposedColumns(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 Operation.Read

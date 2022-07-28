@@ -11,6 +11,7 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Services.MetadataProviders;
+using HotChocolate.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -190,9 +191,10 @@ namespace Azure.DataGateway.Service
             services.AddControllers();
         }
 
-        private static void AddGraphQL(IServiceCollection services)
+        private void AddGraphQL(IServiceCollection services)
         {
             services.AddGraphQLServer()
+                    .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                     .ConfigureSchema((serviceProvider, schemaBuilder) =>
                     {
                         GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
@@ -201,11 +203,18 @@ namespace Azure.DataGateway.Service
                     .AddAuthorization()
                     .AddErrorFilter(error =>
                     {
-                        if (error.Exception != null)
+                        if (error.Exception is not null)
                         {
-                            Console.Error.WriteLine(error.Exception.Message);
-                            Console.Error.WriteLine(error.Exception.StackTrace);
+                            _logger.LogError(error.Exception.Message);
+                            _logger.LogError(error.Exception.StackTrace);
                             return error.WithMessage(error.Exception.Message);
+                        }
+
+                        if (error.Code is not null)
+                        {
+                            _logger.LogError(error.Code);
+                            _logger.LogError(error.Message);
+                            return error.WithMessage(error.Message);
                         }
 
                         return error;

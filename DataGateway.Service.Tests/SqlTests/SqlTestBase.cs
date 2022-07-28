@@ -122,27 +122,37 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _queryExecutor,
                 _queryBuilder,
                 _sqlMetadataProvider,
-                _httpContextAccessor.Object);
+                _httpContextAccessor.Object,
+                _authorizationResolver);
             _mutationEngine =
                 new SqlMutationEngine(
                 _queryEngine,
                 _queryExecutor,
                 _queryBuilder,
                 _sqlMetadataProvider,
-                _authorizationResolver);
-
-            //Initialize the authorization resolver object
-            _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
+                _authorizationResolver,
+                _httpContextAccessor.Object);
 
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
                 {
                     builder.ConfigureTestServices(services =>
                     {
+                        services.AddHttpContextAccessor();
                         services.AddSingleton(_runtimeConfigProvider);
                         services.AddSingleton(_queryEngine);
-                        services.AddSingleton(_mutationEngine);
+                        services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
+                        {
+                            return new SqlMutationEngine(
+                                    _queryEngine,
+                                    _queryExecutor,
+                                    _queryBuilder,
+                                    _sqlMetadataProvider,
+                                    _authorizationResolver,
+                                    ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider));
+                        });
                         services.AddSingleton(_sqlMetadataProvider);
+                        services.AddSingleton(_authorizationResolver);
                     });
                 });
 
@@ -524,7 +534,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="httpClient"></param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns>string in JSON format</returns>
-        protected virtual async Task<JsonElement> ExecuteGraphQLRequestAsync(string query, string queryName, bool isAuthenticated, Dictionary<string, object> variables = null)
+        protected virtual async Task<JsonElement> ExecuteGraphQLRequestAsync(
+            string query,
+            string queryName,
+            bool isAuthenticated,
+            Dictionary<string, object> variables = null,
+            string clientRoleHeader = null)
         {
             RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
             return await GraphQLRequestExecutor.PostGraphQLRequestAsync(
@@ -533,7 +548,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryName,
                 query,
                 variables,
-                isAuthenticated ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken() : null
+                isAuthenticated ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader) : null,
+                clientRoleHeader: clientRoleHeader
             );
         }
     }

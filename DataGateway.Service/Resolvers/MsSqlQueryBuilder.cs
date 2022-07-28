@@ -80,12 +80,14 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        ///
+        /// Todo: parametrize parameters
+        /// for find requests - FOR JSON PATH isn't gonna always happen.. so have to change dbdatareader
+        /// for find requests - only first result set gonna be returned
         /// </summary>
         public string Build(SqlExecuteStructure structure)
         {
             return $"EXECUTE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                $"{structure.BuildProcedureParameterList()};";
+                $"{structure.BuildProcedureParameterList()}";
         }
 
         /// <summary>

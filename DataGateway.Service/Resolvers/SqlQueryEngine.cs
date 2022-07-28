@@ -108,14 +108,31 @@ namespace Azure.DataGateway.Service.Resolvers
         // <summary>
         // Given the FindRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         // </summary>
-        public async Task<IActionResult> ExecuteAsync(RestRequestContext context)
+        public async Task<IActionResult> ExecuteAsync(FindRequestContext context)
         {
-            SqlQueryStructure structure = new(context, _sqlMetadataProvider);
+            BaseSqlQueryStructure structure;
+            if (context is StoredProcedureRequestContext)
+            {
+                structure = new SqlExecuteStructure(context.EntityName, _sqlMetadataProvider, context.ParsedQueryString);
+            }
+            else
+            {
+                structure = new SqlQueryStructure(context, _sqlMetadataProvider);
+            }
+            //SqlQueryStructure structure = new(context, _sqlMetadataProvider);
             using JsonDocument queryJson = await ExecuteAsync(structure);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty table, return an empty json array
             return queryJson is null ? FormatFindResult(JsonDocument.Parse("[]"), (FindRequestContext)context) :
                                        FormatFindResult(queryJson, (FindRequestContext)context);
+        }
+
+        public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context)
+        {
+            SqlExecuteStructure structure = new(context.EntityName, _sqlMetadataProvider, context.ParsedQueryString);
+            using JsonDocument queryJson = await ExecuteAsync(structure);
+            return queryJson is null ? OkResponse(JsonDocument.Parse("[]").RootElement.Clone()) :
+                                       OkResponse(queryJson.RootElement.Clone());
         }
 
         /// <summary>
@@ -239,11 +256,15 @@ namespace Azure.DataGateway.Service.Resolvers
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         // </summary>
-        private async Task<JsonDocument> ExecuteAsync(SqlQueryStructure structure)
+        private async Task<JsonDocument> ExecuteAsync(BaseSqlQueryStructure structure)
         {
             // Open connection and execute query using _queryExecutor
-            //
-            string queryString = _queryBuilder.Build(structure);
+            // dynamic vs. downcasting vs. moving build method to structure
+            // if (structure is SqlExecuteStructure) {
+            //      _queryBuilder.Build((SqlExecuteStructure)structure);
+            // }
+            // structure.dispatch(_queryBuilder) ... in structure: dispatch(_queryBuilder) { _queryBuilder.Build(this)} 
+            string queryString = _queryBuilder.Build((dynamic)structure);
             Console.WriteLine(queryString);
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
             JsonDocument jsonDocument = null;

@@ -4,9 +4,12 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
+using Azure.DataGateway.Service.Resolvers;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Models
@@ -100,6 +103,15 @@ namespace Azure.DataGateway.Service.Models
         /// A collection of all unique column names present in the request.
         /// </summary>
         public ISet<string> CumulativeColumns { get; } = new HashSet<string>();
+
+        /// <summary>
+        /// Visitor pattern/double dispatch strategy for execution of a request context
+        /// Not all children need to implement this, only Find and StoredProcedure requests
+        /// </summary>
+        public virtual Task<IActionResult> DispatchExecute(IQueryEngine _queryEngine)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// Populates the CumulativeColumns property with a unique list

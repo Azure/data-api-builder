@@ -1,4 +1,9 @@
+using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Services;
 
@@ -29,20 +34,65 @@ namespace Azure.DataGateway.Service.Resolvers
                 }
                 else
                 { // fill with default value
-                    ProcedureParameters.Add(paramKey, paramValue.ConfigDefaultValue!);
+                    if (paramValue.HasConfigDefault)
+                    {
+                        ProcedureParameters.Add(paramKey, paramValue.ConfigDefaultValue!);
+                    }
+                    else
+                    {
+                        // ideally should check if a default is set in sql, but no easy way to do that
+                        // catching the database error will have to suffice then
+                    }
                 } 
             }
         }
 
+        /// <summary>
+        /// If constructing with collection of query strings, convert to dictionary of key-value pairs 
+        /// </summary>
+        public SqlExecuteStructure(
+            string entityName,
+            ISqlMetadataProvider sqlMetadataProvider,
+            NameValueCollection parsedQueryString)
+        : this(entityName, sqlMetadataProvider, parsedQueryString.Cast<string>().ToDictionary(k => k, k =>(object?)parsedQueryString[k]))
+        {
+        }
+        
         public string BuildProcedureParameterList()
         {
+            Stopwatch timer = Stopwatch.StartNew();
+
+            IEnumerable<string> paramsList = ProcedureParameters.Select(x => $"{x.Key} = {x.Value}");
+            string list = string.Join(", ", paramsList);
+            timer.Stop();
+            Console.WriteLine(timer.Elapsed.ToString());
+
+            timer = Stopwatch.StartNew();
+
             string parameterList = string.Empty;
-            foreach((string paramKey, object paramValue) in ProcedureParameters)
+            foreach ((string paramKey, object paramValue) in ProcedureParameters)
             {
                 parameterList += $"@{paramKey} = {paramValue}, ";
             }
+
+            parameterList = parameterList.Length > 0 ? parameterList[..^2] : parameterList;
+            timer.Stop();
+            Console.WriteLine(timer.Elapsed.ToString());
+
+            timer = Stopwatch.StartNew();
+            StringBuilder sb = new();
+            foreach ((string paramKey, object paramValue) in ProcedureParameters)
+            {
+                sb.Append($"@{paramKey} = {paramValue}, ");
+            }
+
+            parameterList = sb.ToString();
+            parameterList = parameterList.Length > 0 ? parameterList[..^2] : parameterList;
+            timer.Stop();
+            Console.WriteLine(timer.Elapsed.ToString());
+            
             // At least one parameter added, remove trailing comma and space, else return empty string
-            return parameterList.Length > 0 ? parameterList[..^2] : parameterList;
+            return parameterList;
         }
     }
 }

@@ -153,8 +153,11 @@ namespace Azure.DataGateway.Service.Parsers
             // that has a key, then an entity set can be thought of as a table made up of those rows.
             foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
-                string entityName = $"{entityAndDbObject.Value.FullName}";
-                container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);
+                if (entityAndDbObject.Value.ObjectType != SourceType.StoredProcedure)
+                {
+                    string entityName = $"{entityAndDbObject.Value.FullName}";
+                    container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);
+                }   
             }
 
             return this;

@@ -87,6 +87,14 @@ namespace Azure.DataGateway.Service.Resolvers
                     $"WHERE {Build(structure.Predicates)}";
         }
 
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public string Build(SqlExecuteStructure structure)
+        {
+            return string.Empty;
+        }
+
         public string Build(SqlUpsertQueryStructure structure)
         {
             if (structure.IsFallbackToUpdate)

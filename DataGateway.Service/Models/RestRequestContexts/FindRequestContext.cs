@@ -1,4 +1,7 @@
+using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Resolvers;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Models
 {
@@ -20,6 +23,11 @@ namespace Azure.DataGateway.Service.Models
             FieldValuePairsInBody = new();
             IsMany = isList;
             OperationType = Operation.Find;
+        }
+
+        public override async Task<IActionResult> DispatchExecute(IQueryEngine _queryEngine)
+        {
+            return await _queryEngine.ExecuteAsync(this);
         }
     }
 }

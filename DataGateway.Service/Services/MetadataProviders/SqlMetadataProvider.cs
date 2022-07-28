@@ -260,7 +260,9 @@ namespace Azure.DataGateway.Service.Services
                             statusCode: System.Net.HttpStatusCode.NotImplemented,
                             subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
                     }
-                    else if (configParamValueType is not null && parameterDefinition.SystemType != configParamValueType)
+                    // Deserialization labels all integers as Int64, no need to type mismatch on initialization
+                    else if (configParamValueType is not null && parameterDefinition.SystemType != configParamValueType
+                        && !(configParamValueType == typeof(long) && (parameterDefinition.SystemType == typeof(int) || parameterDefinition.SystemType == typeof(short))))
                     {
                         throw new DataGatewayException(
                             message: $"Type mismatch between parameters specified in config and those found in database schema for stored procedure \"{storedProcedureName}\": " +

@@ -200,7 +200,7 @@ namespace Azure.DataGateway.Service.Services
             switch (operationType)
             {
                 case Operation.Find:
-                    return await _queryEngine.ExecuteAsync(context);
+                    return await context.DispatchExecute(_queryEngine);
                 case Operation.Insert:
                 case Operation.Delete:
                 case Operation.Update:

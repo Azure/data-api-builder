@@ -41,6 +41,116 @@
         {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "policy_tester_01",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 1940"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_02",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 1940"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_03",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 1940"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_04",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 1940"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_06",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 1940"
+              }
+            },
+            "delete"
+          ]
         }
       ],
       "relationships": {
@@ -83,6 +193,198 @@
         {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "policy_tester_01",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.title eq 'Policy-Test-01'"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_02",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.title ne 'Policy-Test-01'"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_03",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.title eq 'Policy-Test-01'"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_04",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.title ne 'Policy-Test-01'"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_05",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 9"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_06",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 10"
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_07",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 9"
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "delete",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 9"
+              }
+            }
+          ]
+        },
+        {
+          "role": "policy_tester_08",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 9"
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            {
+              "action": "delete",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 9"
+              }
+            }
+          ]
         }
       ],
       "relationships": {
@@ -303,6 +605,20 @@
         {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "policy_tester_01",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.region ne 'northeast'"
+              }
+            }
+          ]
         }
       ],
       "mappings": {
@@ -316,6 +632,89 @@
         {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
+    },
+    "Notebook": {
+      "source": "notebooks",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 1"
+              }
+            },
+            "create",
+            "update",
+            "delete"
+          ]
+        }
+      ]
+    },
+    "Journal": {
+      "source": "journals",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "policy_tester_noupdate",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id ne 1"
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [ "*" ]
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_update_noread",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 1"
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [ "*" ]
+              }
+            },
+            {
+              "action": "delete",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 1"
+              }
+            }
+          ]
         }
       ]
     },

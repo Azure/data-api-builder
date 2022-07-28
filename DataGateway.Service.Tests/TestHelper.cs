@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -111,20 +112,18 @@ namespace Azure.DataGateway.Service.Tests
 
         /// <summary>
         /// Temporary Helper function to ensure that in testing we have an entity
-        /// that can have a custom schema. We create a new entity of 'Magazine' with
-        /// a schema of 'foo' for table 'magazines', and then add this entity to our
-        /// runtime configuration. Because MySql will not have a schema we need a way
-        /// to customize this entity, which this helper function provides. Ultimately
-        /// this will be replaced with a JSON string in the tests that can be fully
-        /// customized for testing purposes.
+        /// that can have a custom schema. Ultimately this will be replaced with a JSON string
+        /// in the tests that can be fully customized for testing purposes.
         /// </summary>
-        /// <param name="configPath"></param>
-        public static void AddMissingEntitiesToConfig(RuntimeConfig config)
+        /// <param name="config">Runtimeconfig object</param>
+        /// <param name="dbObjectKey">The key with which the entity is to be added.</param>
+        /// <param name="dbObjectName">The source name of the entity.</param>
+        public static void AddMissingEntitiesToConfig(RuntimeConfig config, string dbObjectKey, string dbObjectName)
         {
-            string magazineSource = config.DatabaseType is DatabaseType.mysql ? "\"magazines\"" : "\"foo.magazines\"";
-            string magazineEntityJsonString =
-              @"{ 
-                    ""source"":  " + magazineSource + @",
+            string source = "\"" + dbObjectName + "\"";
+            string entityJsonString =
+              @"{
+                    ""source"":  " + source + @",
                     ""graphql"": true,
                     ""permissions"": [
                       {
@@ -133,8 +132,8 @@ namespace Azure.DataGateway.Service.Tests
                       },
                       {
                         ""role"": ""authenticated"",
-                        ""actions"": [ ""create"", ""update"", ""read"", ""delete"" ]
-                      }
+                        ""actions"": [" + $" \"{ActionType.CREATE}\", \"{ActionType.READ}\", \"{ActionType.DELETE}\", \"{ActionType.UPDATE}\" ]" +
+                      @"}
                     ]
                 }";
 
@@ -147,8 +146,8 @@ namespace Azure.DataGateway.Service.Tests
                 }
             };
 
-            Entity magazineEntity = JsonSerializer.Deserialize<Entity>(magazineEntityJsonString, options);
-            config.Entities.Add("Magazine", magazineEntity);
+            Entity entity = JsonSerializer.Deserialize<Entity>(entityJsonString, options);
+            config.Entities.Add(dbObjectKey, entity);
         }
     }
 }

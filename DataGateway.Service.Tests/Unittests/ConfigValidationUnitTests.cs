@@ -152,7 +152,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// in it.
         /// </summary>
         [DataTestMethod]
-        [DataRow(Operation.All, DisplayName = "Wildcard Field with another field in included set test1")]
+        [DataRow(Operation.Create, DisplayName = "Wildcard Field with another field in included set test1")]
         [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in included set test2")]
         public void WildCardAndOtherFieldsPresentInIncludeSet(Operation actionOp)
         {
@@ -166,7 +166,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
 
             // Assert that expected exception is thrown.
             DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
-            string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
+            string actionName = actionOp.ToString();
             Assert.AreEqual($"No other field can be present with wildcard in the included set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
                 $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
             Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
@@ -174,7 +174,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(Operation.All, DisplayName = "Wildcard Field with another field in excluded set test 1")]
+        [DataRow(Operation.Create, DisplayName = "Wildcard Field with another field in excluded set test 1")]
         [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in excluded set test 2")]
         public void WildCardAndOtherFieldsPresentInExcludeSet(Operation actionOp)
         {
@@ -188,7 +188,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
 
             // Assert that expected exception is thrown.
             DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
-            string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
+            string actionName = actionOp.ToString();
             Assert.AreEqual($"No other field can be present with wildcard in the excluded set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
                 $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
             Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);

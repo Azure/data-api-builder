@@ -321,7 +321,8 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="entityName">Entity from request</param>
         /// <param name="allowedDBColumns">Set of allowed backing field names.</param>
         private void PopulateAllowedExposedColumns(HashSet<string> allowedExposedColumns,
-            string entityName, HashSet<string> allowedDBColumns)
+            string entityName,
+            HashSet<string> allowedDBColumns)
         {
             foreach (string dbColumn in allowedDBColumns)
             {

@@ -434,9 +434,10 @@ namespace Azure.DataGateway.Service.Services
             if (string.IsNullOrEmpty(schemaName))
             {
                 // if DatabaseType is not postgresql will short circuit and use default
-                if (_databaseType is not DatabaseType.postgresql || !TryGetSchemaFromConnectionString(
-                                                                    out schemaName,
-                                                                    connectionString: ConnectionString))
+                if (_databaseType is not DatabaseType.postgresql ||
+                    !PostgreSqlMetadataProvider.TryGetSchemaFromConnectionString(
+                        out schemaName,
+                        connectionString: ConnectionString))
                 {
                     schemaName = GetDefaultSchemaName();
                 }
@@ -449,36 +450,6 @@ namespace Azure.DataGateway.Service.Services
             }
 
             return (schemaName, dbObjectName);
-        }
-
-        /// <summary>
-        /// Only used for PostgreSql.
-        /// The connection string could contain the schema,
-        /// in which case it will be associated with the
-        /// property 'SearchPath' in the string builder we create.
-        /// If `SearchPath` is null we assign the empty string to the
-        /// the out param schemaName, otherwise we assign the
-        /// value associated with `SearchPath`.
-        /// </summary>
-        /// <param name="schemaName">the schema name we save.</param>
-        /// <returns>true if non empty schema in connection string, false otherwise.</returns>
-        public static bool TryGetSchemaFromConnectionString(out string schemaName, string connectionString)
-        {
-            NpgsqlConnectionStringBuilder connectionStringBuilder;
-            try
-            {
-                connectionStringBuilder = new(connectionString);
-            }
-            catch (Exception)
-            {
-                throw new DataGatewayException(
-                    message: DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE,
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
-            }
-
-            schemaName = connectionStringBuilder.SearchPath is null ? string.Empty : connectionStringBuilder.SearchPath;
-            return string.IsNullOrEmpty(schemaName) ? false : true;
         }
 
         /// <summary>
@@ -618,6 +589,10 @@ namespace Azure.DataGateway.Service.Services
                 {
                     dataTable = await FillSchemaForTableAsync(schemaName, tableName);
                 }
+                catch (DataGatewayException)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     string message;
@@ -668,7 +643,7 @@ namespace Azure.DataGateway.Service.Services
                 // This is caught and returned as DataGatewayException.
                 if (string.IsNullOrWhiteSpace(conn.ConnectionString))
                 {
-                    throw new Exception();
+                    throw new Exception("Connection String is empty");
                 }
             }
             catch (Exception ex)

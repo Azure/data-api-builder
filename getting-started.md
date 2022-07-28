@@ -68,6 +68,8 @@ In this tutorial we'll be creating the backend API for a small solution that all
 - Books
 - Authors
 
+Both the business entities need a modern endpoint, REST and/or GraphQL, to allow third party developers to build mobile and desktop application to manage the library catalog.
+
 ## Configure the Entities
 
 Depending if you want to use Azure SQL Database or Cosmos DB, continue to the appropriate link:

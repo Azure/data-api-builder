@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using HotChocolate.AspNetCore.Authorization;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
 
@@ -62,19 +63,25 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
 
     /// <summary>
     /// Get the value of the CLIENT_ROLE_HEADER HTTP Header from the HttpContext.
-    /// To get HttpContext, enable HttpRequestInterceptor when configuring HotChocolate
+    /// HttpContext will be present in IMiddlewareContext.ContextData
+    /// when HotChocolate is configured to use HttpRequestInterceptor
     /// https://chillicream.com/docs/hotchocolate/server/interceptors/#ihttprequestinterceptor
     /// </summary>
     /// <param name="context"></param>
     /// <param name="clientRole"></param>
-    /// <returns></returns>
+    /// <returns>True, if clientRoleHeader is resolved and clientRole value
+    /// False, if clientRoleHeader is not resolved, null clientRole value</returns>
     private static bool TryGetApiRoleHeader(IMiddlewareContext context, [NotNullWhen(true)] out string? clientRole)
     {
-        if (context.ContextData.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out object? o)
-            && o is StringValues clientRoleHeader)
+        if (context.ContextData.TryGetValue("HttpContext", out object? value))
         {
-            clientRole = clientRoleHeader.ToString();
-            return true;
+            if (value is not null)
+            {
+                HttpContext httpContext = (HttpContext)value;
+                StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+                clientRole = clientRoleHeader.ToString();
+                return true;
+            }
         }
 
         clientRole = null;

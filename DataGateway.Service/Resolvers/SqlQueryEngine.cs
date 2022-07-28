@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Resolvers;
@@ -25,6 +26,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly IQueryExecutor _queryExecutor;
         private readonly IQueryBuilder _queryBuilder;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IAuthorizationResolver _authorizationResolver;
 
         // <summary>
         // Constructor.
@@ -33,12 +35,14 @@ namespace Azure.DataGateway.Service.Resolvers
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder,
             ISqlMetadataProvider sqlMetadataProvider,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            IAuthorizationResolver authorizationResolver)
         {
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
             _sqlMetadataProvider = sqlMetadataProvider;
             _httpContextAccessor = httpContextAccessor;
+            _authorizationResolver = authorizationResolver;
         }
 
         public static async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader, IQueryExecutor executor)
@@ -62,10 +66,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json and its related pagination metadata back.
+        /// This method is called by the ResolverMiddleware processing GraphQL queries.
         /// </summary>
+        /// <param name="context">HotChocolate Request Pipeline context containing request metadata</param>
+        /// <param name="parameters">GraphQL Query Parameters from schema retrieved from ResolverMiddleware.GetParametersFromSchemaAndQueryFields()</param>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider);
+            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider, _authorizationResolver);
 
             if (structure.PaginationMetadata.IsPaginated)
             {
@@ -87,7 +94,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider);
+            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider, _authorizationResolver);
             string queryString = _queryBuilder.Build(structure);
             Console.WriteLine(queryString);
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);

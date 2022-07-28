@@ -25,9 +25,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
         /// <param name="name">String the enforce naming rules on</param>
         /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
         /// <returns>nameSegments, where each indice is a part of the name that complies with the GraphQL name rules.</returns>
-        private static string[] SanitizeGraphQLName(string name)
+        public static string[] SanitizeGraphQLName(string name)
         {
-            if (!_graphQLNameStart.Match(name).Success)
+            if (ViolatesNamePrefixRequirements(name))
             {
                 // strip an illegal first character
                 name = name[1..];
@@ -37,6 +37,30 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 
             string[] nameSegments = name.Split(' ');
             return nameSegments;
+        }
+
+        /// <summary>
+        /// Checks whether name has invalid characters at the start of the name provided.
+        /// - GraphQL specification requires that a name start with an upper or lowercase letter.
+        /// </summary>
+        /// <param name="name">Name to be checked.</param>
+        /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
+        /// <returns>True if the provided name violates requirements.</returns>
+        public static bool ViolatesNamePrefixRequirements(string name)
+        {
+            return !_graphQLNameStart.Match(name).Success; 
+        }
+
+        /// <summary>
+        /// Checks whether name has invalid characters.
+        /// - GraphQL specification requires that a name start with an upper or lowercase letter.
+        /// </summary>
+        /// <param name="name">Name to be checked.</param>
+        /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
+        /// <returns>True if the provided name violates requirements.</returns>
+        public static bool ViolatesNameRequirements(string name)
+        {
+            return _graphQLInvalidSymbols.Match(name).Success;
         }
 
         /// <summary>

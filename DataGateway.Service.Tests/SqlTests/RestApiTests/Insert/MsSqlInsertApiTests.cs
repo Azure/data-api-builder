@@ -25,6 +25,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Insert
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "InsertOneUniqueCharactersTest",
+                // This query is the query for the result we get back from the database
+                // after the insert operation. Not the query that we generate to perform
+                // the insertion.
+                $"SELECT [NoteNum] AS [┬─┬ノ( º _ ºノ)], [DetailAssessmentAndPlanning] AS [始計], " +
+                $"[WagingWar] AS [作戰], [StrategicAttack] AS [謀攻] FROM { _integrationUniqueCharactersTable } " +
+                $"WHERE [NoteNum] = 2 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "InsertOneWithMappingTest",
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform

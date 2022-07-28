@@ -31,6 +31,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
                 $"WHERE 1 != 1 FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindOnTableWithUniqueCharacters",
+                $"SELECT [NoteNum] AS [┬─┬ノ( º _ ºノ)], [DetailAssessmentAndPlanning] AS [始計], " +
+                $"[WagingWar] AS [作戰], [StrategicAttack] AS [謀攻] FROM { _integrationUniqueCharactersTable } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindViewAll",
                 $"SELECT * FROM { _simple_all_books } " +
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"

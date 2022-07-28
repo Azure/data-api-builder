@@ -37,6 +37,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
         }
+
         /// <summary>
         /// Operates on a single entity with mapping defined
         /// for its columns, and with target object identified in the
@@ -53,6 +54,31 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     primaryKeyRoute: "treeId/1",
                     queryString: null,
                     entity: _integrationMappingEntity,
+                    sqlQuery: null,
+                    controller: _restController,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
+
+        /// <summary>
+        /// Operates on a single entity with mapping defined
+        /// for its columns using unique unicode character in the exposed
+        /// name, and with target object identified in the
+        /// primaryKeyRoute. No requestBody is used for this type of
+        /// request. sqlQuery is not used because we are confirming the
+        /// NoContent result of a successful delete operation.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeleteOneUniqueCharacterTest()
+        {
+            //expected status code 204
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "┬─┬ノ( º _ ºノ)/1",
+                    queryString: null,
+                    entity: _integrationUniqueCharactersEntity,
                     sqlQuery: null,
                     controller: _restController,
                     operationType: Operation.Delete,

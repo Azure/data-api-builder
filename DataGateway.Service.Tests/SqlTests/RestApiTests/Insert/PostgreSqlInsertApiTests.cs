@@ -22,7 +22,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Insert
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
                     ) AS subq
                 "
-            },{
+            },
+            {
+                "InsertOneUniqueCharactersTest",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT  ""NoteNum"" AS ""┬─┬ノ( º _ ºノ)"", ""DetailAssessmentAndPlanning""
+                        AS ""始計"", ""WagingWar"" AS ""作戰"", ""StrategicAttack"" AS ""謀攻""
+                        FROM " + _integrationUniqueCharactersTable + @"
+                        WHERE ""NoteNum"" = 2
+                    ) AS subq
+                "
+            },
+            {
                 "InsertOneWithMappingTest",
                 @"
                     SELECT to_jsonb(subq) AS data

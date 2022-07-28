@@ -254,27 +254,37 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [TestMethod]
         public void TestAuthenticatedRoleWhenAnonymousRoleIsDefined()
         {
-            string authenticatedRole = AuthorizationType.Authenticated.ToString().ToLower();
-            string anonymousRole = AuthorizationType.Anonymous.ToString().ToLower();
-
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
-                anonymousRole,
+                AuthorizationResolver.ROLE_ANONYMOUS,
                 ActionType.CREATE);
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            // Create action should be defined for anonymous role.
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, anonymousRole, ActionType.CREATE));
+            foreach (string actionName in RuntimeConfigValidator.ValidActions)
+            {
+                if (actionName.Equals(ActionType.CREATE))
+                {
+                    // Create action should be defined for anonymous role.
+                    Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
+                        AuthorizationResolver.ROLE_ANONYMOUS, actionName));
 
-            // Create action should be defined for authenticated role as well,
-            // because it is defined for anonymous role.
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, authenticatedRole, ActionType.CREATE));
+                    // Create action should be defined for authenticated role as well,
+                    // because it is defined for anonymous role.
+                    Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
+                        AuthorizationResolver.ROLE_AUTHENTICATED, actionName));
+                }
+                else
+                {
 
-            // Check that no other action is defined for the authenticated role to ensure
-            // the authenticated role's permissions match that of the anonymous role's permissions.
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, authenticatedRole, ActionType.READ));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, authenticatedRole, ActionType.READ));
+                    // Check that no other action is defined for the authenticated role to ensure
+                    // the authenticated role's permissions match that of the anonymous role's permissions.
+                    Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
+                        AuthorizationResolver.ROLE_AUTHENTICATED, actionName));
+                    Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
+                        AuthorizationResolver.ROLE_ANONYMOUS, actionName));
+                }
+            }
 
             // Anonymous role's permissions are mocked for authenticated role only.
             // Assert by checking for an arbitrary role.
@@ -283,14 +293,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// Test to validate that the permissions for authenticated role are derived from anonymous role
-        /// when authenticate role is not defined, but anonymous role is defined.
+        /// Test to validate that the no permissions for authenticated role are derived when
+        /// both anonymous and authenticated role are not defined.
         /// </summary>
         [TestMethod]
         public void TestAuthenticatedRoleWhenAnonymousRoleIsNotDefined()
         {
-            string authenticatedRole = AuthorizationType.Authenticated.ToString().ToLower();
-
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
@@ -298,13 +306,13 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            // Create action should be defined for anonymous role.
+            // Create action should be defined for test role.
             Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE, ActionType.CREATE));
 
             // Create action should not be defined for authenticated role,
             // because neither authenticated nor anonymous role is defined.
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, authenticatedRole, ActionType.CREATE));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, AuthorizationResolver.ROLE_AUTHENTICATED, ActionType.CREATE));
         }
 
         /// <summary>
@@ -314,9 +322,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [TestMethod]
         public void TestAuthenticatedRoleWhenBothAnonymousAndAuthenticatedAreDefined()
         {
-            string authenticatedRole = AuthorizationType.Authenticated.ToString().ToLower();
-            string anonymousRole = AuthorizationType.Anonymous.ToString().ToLower();
-
             Field fieldsForRole = new(
                 include: new HashSet<string> { "col1" },
                 exclude: null);
@@ -332,11 +337,11 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 Policy: null);
 
             PermissionSetting authenticatedPermission = new(
-                role: authenticatedRole,
+                role: AuthorizationResolver.ROLE_AUTHENTICATED,
                 actions: new object[] { JsonSerializer.SerializeToElement(readAction) });
 
             PermissionSetting anonymousPermission = new(
-            role: anonymousRole,
+            role: AuthorizationResolver.ROLE_ANONYMOUS,
             actions: new object[] { JsonSerializer.SerializeToElement(readAction), JsonSerializer.SerializeToElement(updateAction) });
 
             Entity sampleEntity = new(
@@ -366,9 +371,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Assert that for authenticated role, only read action is allowed and
             // update action is not allowed even though update is allowed for anonymous role.
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, authenticatedRole, ActionType.READ));
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, anonymousRole, ActionType.UPDATE));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, authenticatedRole, ActionType.UPDATE));
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationResolver.ROLE_AUTHENTICATED, ActionType.READ));
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationResolver.ROLE_ANONYMOUS, ActionType.UPDATE));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationResolver.ROLE_AUTHENTICATED, ActionType.UPDATE));
         }
         #endregion
 
@@ -589,12 +597,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [TestMethod]
         public void TestAuthenticatedRoleForColumnPermissionsWhenAnonymousRoleIsDefined()
         {
-            string authenticatedRole = AuthorizationType.Authenticated.ToString().ToLower();
-            string anonymousRole = AuthorizationType.Anonymous.ToString().ToLower();
-
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
-                anonymousRole,
+                AuthorizationResolver.ROLE_ANONYMOUS,
                 AuthorizationResolver.WILDCARD,
                 includedCols: new HashSet<string> { "col1" });
 
@@ -603,13 +608,13 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             foreach (string actionName in RuntimeConfigValidator.ValidActions)
             {
                 // col1 should be accessible for anonymous role.
-                Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, anonymousRole,
-                    actionName, new List<string> { "col1" }));
+                Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY,
+                    AuthorizationResolver.ROLE_ANONYMOUS, actionName, new List<string> { "col1" }));
 
                 // col1 should be accessible for authenticated role as well,
                 // because it is defined for anonymous role.
-                Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, authenticatedRole,
-                    actionName, new List<string> { "col1" }));
+                Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY,
+                    AuthorizationResolver.ROLE_AUTHENTICATED, actionName, new List<string> { "col1" }));
             }
         }
 

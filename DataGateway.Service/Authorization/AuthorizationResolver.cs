@@ -29,6 +29,8 @@ namespace Azure.DataGateway.Service.Authorization
         public const string CLAIM_PREFIX = "@claims.";
         public const string FIELD_PREFIX = "@item.";
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
+        public const string ROLE_ANONYMOUS = "anonymous";
+        public const string ROLE_AUTHENTICATED = "authenticated";
         private const string SHORT_CLAIM_TYPE_NAME = "http://schemas.xmlsoap.org/ws/2005/05/identity/claimproperties/ShortTypeName";
 
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
@@ -290,12 +292,10 @@ namespace Azure.DataGateway.Service.Authorization
 
                 // Check if anonymous role is defined but authenticated is not. If that is the case,
                 // then make sure the authenticated role derives permissions that are atleast equal to anonymous role.
-                string anonymousRole = AuthorizationType.Anonymous.ToString().ToLower();
-                string authenticatedRole = AuthorizationType.Authenticated.ToString().ToLower();
-                if (entityToRoleMap.RoleToActionMap.ContainsKey(anonymousRole) &&
-                    !entityToRoleMap.RoleToActionMap.ContainsKey(authenticatedRole))
+                if (entityToRoleMap.RoleToActionMap.ContainsKey(ROLE_ANONYMOUS) &&
+                    !entityToRoleMap.RoleToActionMap.ContainsKey(ROLE_AUTHENTICATED))
                 {
-                    entityToRoleMap.RoleToActionMap[authenticatedRole] = entityToRoleMap.RoleToActionMap[anonymousRole];
+                    entityToRoleMap.RoleToActionMap[ROLE_AUTHENTICATED] = entityToRoleMap.RoleToActionMap[ROLE_ANONYMOUS];
                 }
 
                 EntityPermissionsMap[entityName] = entityToRoleMap;

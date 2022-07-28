@@ -167,12 +167,12 @@ namespace Azure.DataGateway.Service.Configurations
                                     configAction.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Exclude.Count > 1)
                                 {
                                     // See if included or excluded columns contain wildcard and another field.
-                                    // If thats the case with both of them, we speicify included in error.
-                                    string incExc = configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
+                                    // If thats the case with both of them, we specify 'included' in error.
+                                    string misconfiguredColumnSet = configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
                                         && configAction.Fields.Include.Count > 1 ? "included" : "excluded";
                                     throw new DataGatewayException(
-                                            message: $"No other field can be present with wildcard in the {incExc} set for: entity:{entityName}," +
-                                                     $" role:{permissionSetting.Role}, action:{actionName}",
+                                            message: $"No other field can be present with wildcard in the {misconfiguredColumnSet} set for:" +
+                                            $" entity:{entityName}, role:{permissionSetting.Role}, action:{actionName}",
                                             statusCode: System.Net.HttpStatusCode.InternalServerError,
                                             subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
                                 }

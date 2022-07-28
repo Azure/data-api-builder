@@ -462,11 +462,11 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// <summary>
         /// Test to validate that when Field property is missing from the action, all the columns present in
         /// the table are treated as accessible. Since we are not explicitly specifying the includeCols/excludedCols
-        /// parameters, Field will be nullified.
+        /// parameters when initializing the RuntimeConfig, Field will be nullified.
         /// </summary>
         [DataTestMethod]
-        [DataRow(true, "col1", "col2", DisplayName = "Accessible fields test 1")]
-        [DataRow(true, "col3", "col4", DisplayName = "Accessile fields test 2")]
+        [DataRow(true, "col1", "col2", DisplayName = "Accessible fields col1,col2")]
+        [DataRow(true, "col3", "col4", DisplayName = "Accessible fields test col3,col4")]
         [DataRow(false, "col5", DisplayName = "Inaccessible field test 1")]
         public void AreColumnsAllowedForActionWithMissingFieldProperty(bool expected, params string[] columnsToCheck)
         {

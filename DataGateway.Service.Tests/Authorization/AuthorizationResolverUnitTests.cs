@@ -473,8 +473,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            // All calls should return true as long as column names are valid as included/excluded won't have any effect
-            // when Field property is absent from the action.
+            // All calls should return true as long as column names are valid.
             Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col2" }));
             Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col1" }));
 

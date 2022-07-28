@@ -180,28 +180,34 @@ namespace Azure.DataGateway.Service.Configurations
                                 ThrowInvalidActionException(entityName, roleName, actionElement.ToString());
                             }
 
-                            // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
-                            // don't contain any other field. If they do, we throw an appropriate exception.
-                            if (configAction.Fields!.Include.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Include.Count > 1 ||
-                                configAction.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Exclude.Count > 1)
+                            if (configAction.Fields is not null)
                             {
-                                string incExc = configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Include.Count > 1 ? "included" : "excluded";
-                                string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
-                                throw new DataGatewayException(
-                                        message: $"No other field can be present with wildcard in the {incExc} set for: entity:{entityName}," +
-                                                 $" role:{permissionSetting.Role}, action:{actionName}",
-                                        statusCode: System.Net.HttpStatusCode.InternalServerError,
-                                        subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
-                            }
+                                // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
+                                // don't contain any other field. If they do, we throw an appropriate exception.
+                                if (configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Include.Count > 1 ||
+                                    configAction.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Exclude.Count > 1)
+                                {
+                                    // See if included or excluded columns contain wildcard and another field.
+                                    // If thats the case with both of them, we specify 'included' in error.
+                                    string misconfiguredColumnSet = configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
+                                        && configAction.Fields.Include.Count > 1 ? "included" : "excluded";
+                                    string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
+                                    throw new DataGatewayException(
+                                            message: $"No other field can be present with wildcard in the {misconfiguredColumnSet} set for:" +
+                                            $" entity:{entityName}, role:{permissionSetting.Role}, action:{actionName}",
+                                            statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                            subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
+                                }
 
-                            if (configAction.Policy is not null && configAction.Policy.Database is not null)
-                            {
-                                // validate that all the fields mentioned in database policy are accessible to user.
-                                AreFieldsAccessible(configAction.Policy.Database,
-                                    configAction.Fields.Include, configAction.Fields.Exclude);
+                                if (configAction.Policy is not null && configAction.Policy.Database is not null)
+                                {
+                                    // validate that all the fields mentioned in database policy are accessible to user.
+                                    AreFieldsAccessible(configAction.Policy.Database,
+                                        configAction.Fields.Include, configAction.Fields.Exclude);
 
-                                // validate that all the claimTypes in the policy are well formed.
-                                ValidateClaimsInPolicy(configAction.Policy.Database);
+                                    // validate that all the claimTypes in the policy are well formed.
+                                    ValidateClaimsInPolicy(configAction.Policy.Database);
+                                }
                             }
                         }
                     }

@@ -217,7 +217,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string queryStringUrl = null,
             IHeaderDictionary headers = null,
             string bodyData = null,
-            Operation operation = Operation.Find)
+            Operation operation = Operation.Read)
         {
             DefaultHttpContext httpContext;
             IFeatureCollection features = new FeatureCollection();
@@ -269,7 +269,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <returns>string in JSON format</returns>
         protected static async Task<string> GetDatabaseResultAsync(
             string queryText,
-            Operation operationType = Operation.Find)
+            Operation operationType = Operation.Read)
         {
             string result;
 
@@ -315,7 +315,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string entity,
             string sqlQuery,
             RestController controller,
-            Operation operationType = Operation.Find,
+            Operation operationType = Operation.Read,
             string path = "api",
             IHeaderDictionary headers = null,
             string requestBody = null,
@@ -384,7 +384,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 {
                     string dbResult = await GetDatabaseResultAsync(sqlQuery);
                     // For FIND requests, null result signifies an empty result set
-                    dbResult = (operationType is Operation.Find && dbResult is null) ? "[]" : dbResult;
+                    dbResult = (operationType is Operation.Read && dbResult is null) ? "[]" : dbResult;
                     expected = $"{{\"value\":{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";
                 }
             }

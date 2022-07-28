@@ -58,7 +58,7 @@ namespace Azure.DataGateway.Config
         // *
         All,
         // Common Operations
-        Find, Delete, Read,
+        Delete, Read,
 
         // Cosmos operations
         Upsert, Create,

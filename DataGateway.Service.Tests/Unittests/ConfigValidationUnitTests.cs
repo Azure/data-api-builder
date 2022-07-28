@@ -35,15 +35,12 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
                 databasePolicy: dbPolicy
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
-            try
-            {
-                configValidator.ValidatePermissionsInConfig(runtimeConfig);
-            }
-            catch (DataGatewayException ex)
-            {
-                Assert.AreEqual("Not all the columns required by policy are accessible.", ex.Message);
-                Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
-            }
+
+            // Assert that expected exception is thrown.
+            DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            Assert.AreEqual("Not all the columns required by policy are accessible.", ex.Message);
+            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
         /// <summary>
@@ -53,9 +50,9 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// <param name="dbPolicy">Database policy.</param>
         /// <param name="action">The action to be validated.</param>
         [DataTestMethod]
-        [DataRow("@claims.id eq @item.col1", Operation.Insert, DisplayName = "Invalid action insert specified in config")]
-        [DataRow("@claims.id eq @item.col2", Operation.Upsert, DisplayName = "Invalid action upsert specified in config")]
-        [DataRow("@claims.id eq @item.col3", Operation.Find, DisplayName = "Invalid action find specified in config")]
+        [DataRow("@claims.id eq @item.col1", Operation.Insert, DisplayName = "Invalid action Insert specified in config")]
+        [DataRow("@claims.id eq @item.col2", Operation.Upsert, DisplayName = "Invalid action Upsert specified in config")]
+        [DataRow("@claims.id eq @item.col3", Operation.UpsertIncremental, DisplayName = "Invalid action UpsertIncremental specified in config")]
         public void InvalidActionSpecifiedForARole(string dbPolicy, Operation action)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
@@ -66,16 +63,13 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
                 databasePolicy: dbPolicy
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
-            try
-            {
-                configValidator.ValidatePermissionsInConfig(runtimeConfig);
-            }
-            catch (DataGatewayException ex)
-            {
-                Assert.AreEqual($"action:{action.ToString()} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
+
+            // Assert that expected exception is thrown.
+            DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            Assert.AreEqual($"action:{action.ToString()} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
                     $" role:{AuthorizationHelpers.TEST_ROLE} is not valid.", ex.Message);
-                Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
-            }
+            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
         /// <summary>
@@ -96,15 +90,12 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
                 databasePolicy: dbPolicy
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
-            try
-            {
-                configValidator.ValidatePermissionsInConfig(runtimeConfig);
-            }
-            catch (DataGatewayException ex)
-            {
-                Assert.AreEqual("Claimtype cannot be empty.", ex.Message);
-                Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
-            }
+
+            // Assert that expected exception is thrown.
+            DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            Assert.AreEqual("Claimtype cannot be empty.", ex.Message);
+            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
         /// <summary>
@@ -130,15 +121,12 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
                 databasePolicy: policy
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
-            try
-            {
-                configValidator.ValidatePermissionsInConfig(runtimeConfig);
-            }
-            catch (DataGatewayException ex)
-            {
-                Assert.IsTrue(ex.Message.StartsWith("Invalid format for claim type"));
-                Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
-            }
+
+            // Assert that expected exception is thrown.
+            DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            Assert.IsTrue(ex.Message.StartsWith("Invalid format for claim type"));
+            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
         /// <summary>
@@ -154,16 +142,9 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
                 includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
-            try
-            {
-                // All the validations would pass.
-                configValidator.ValidatePermissionsInConfig(runtimeConfig);
-            }
-            catch
-            {
-                // This block should not be hit.
-                Assert.Fail();
-            }
+
+            // All the validations would pass, and no exception would be thrown.
+            configValidator.ValidatePermissionsInConfig(runtimeConfig);
         }
 
         /// <summary>
@@ -182,18 +163,14 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
                 includedCols: new HashSet<string> { "*", "col2" }
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
-            try
-            {
-                configValidator.ValidatePermissionsInConfig(runtimeConfig);
-            }
-            catch (DataGatewayException ex)
-            {
-                string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
-                Assert.AreEqual($"No other field can be present with wildcard in the included set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
-                    $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
-                Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
-                Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-            }
+
+            // Assert that expected exception is thrown.
+            DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
+            Assert.AreEqual($"No other field can be present with wildcard in the included set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
+                $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
+            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
         [DataTestMethod]
@@ -208,18 +185,14 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
                 excludedCols: new HashSet<string> { "*", "col1" }
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
-            try
-            {
-                configValidator.ValidatePermissionsInConfig(runtimeConfig);
-            }
-            catch (DataGatewayException ex)
-            {
-                string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
-                Assert.AreEqual($"No other field can be present with wildcard in the excluded set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
-                    $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
-                Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
-                Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-            }
+
+            // Assert that expected exception is thrown.
+            DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
+            Assert.AreEqual($"No other field can be present with wildcard in the excluded set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
+                $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
+            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
     }
 }

@@ -79,7 +79,7 @@ namespace Azure.DataGateway.Service.Services
             RestRequestContext context;
             switch (operationType)
             {
-                case Operation.Find:
+                case Operation.Read:
                     context = new FindRequestContext(entityName,
                                                      dbo: dbObject,
                                                      isList: string.IsNullOrEmpty(primaryKeyRoute));
@@ -155,7 +155,7 @@ namespace Azure.DataGateway.Service.Services
 
             switch (operationType)
             {
-                case Operation.Find:
+                case Operation.Read:
                     return await _queryEngine.ExecuteAsync(context);
                 case Operation.Insert:
                 case Operation.Delete:

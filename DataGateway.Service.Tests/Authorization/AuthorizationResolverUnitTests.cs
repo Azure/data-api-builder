@@ -466,16 +466,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         [TestMethod]
         public void AreColumnsAllowedForActionWithMissingFieldProperty()
         {
-            HashSet<string> includedColumns = new() { "col1", "col2" };
-            HashSet<string> excludedColumns = new() { "col1", "col3", "col4" };
-
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
-                includedCols: includedColumns,
-                excludedCols: excludedColumns,
-                includeFields: false
+                ActionType.CREATE
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -483,7 +477,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // when Field property is absent from the action.
             Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col2" }));
             Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col1" }));
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludedColumns));
 
             // Call should fail for invalid column name.
             Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col5" }));

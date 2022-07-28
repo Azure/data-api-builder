@@ -74,6 +74,37 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
         /// Expects: 201 Created where sqlQuery validates insert.
         /// </summary>
         [TestMethod]
+        public virtual async Task PatchOne_Insert_UniqueCharacters_Test()
+        {
+            string requestBody = @"
+            {
+                ""始計"": ""Revised Chapter 1 notes: "",
+                ""作戰"": ""Revised Chapter 2 notes: "",
+                ""謀攻"": ""Revised Chapter 3 notes: ""
+            }";
+
+            string expectedLocationHeader = $"┬─┬ノ( º _ ºノ)/2";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"┬─┬ノ( º _ ºノ)/2",
+                    queryString: null,
+                    entity: _integrationUniqueCharactersEntity,
+                    sqlQuery: GetQuery(nameof(PatchOne_Insert_UniqueCharacters_Test)),
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        /// <summary>
+        /// Tests REST PatchOne which results in an insert.
+        /// URI Path: PK of record that does not exist.
+        /// Req Body: Valid Parameters.
+        /// Expects: 201 Created where sqlQuery validates insert.
+        /// </summary>
+        [TestMethod]
         public virtual async Task PatchOne_Insert_NonAutoGenPK_Test()
         {
             string requestBody = @"

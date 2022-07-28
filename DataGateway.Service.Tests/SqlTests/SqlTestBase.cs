@@ -76,7 +76,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
-            TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "Magazine", "magazines", "foo");
+
+            // Add magazines entity to the 
+            if (TestCategory.MYSQL.Equals(DatabaseEngine))
+            {
+                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "Magazine", "magazines", "");
+            }
+            else
+            {
+                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "Magazine", "magazines", "foo");
+            }
 
             // Add custom entities for the test, if any.
             AddCustomEntities(customEntities);

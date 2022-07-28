@@ -121,7 +121,7 @@ namespace Azure.DataGateway.Service.Tests
         /// <param name="schema">The schema in which the entity is present.</param>
         public static void AddMissingEntitiesToConfig(RuntimeConfig config, string dbObjectKey, string dbObjectName, string schema = "")
         {
-            string source = config.DatabaseType is DatabaseType.mysql || string.IsNullOrEmpty(schema) ? $"\"{dbObjectName}\"" : $"\"{schema}.{dbObjectName}\"";
+            string source = string.IsNullOrEmpty(schema) ? $"\"{dbObjectName}\"" : $"\"{schema}.{dbObjectName}\"";
             string entityJsonString =
               @"{
                     ""source"":  " + source + @",

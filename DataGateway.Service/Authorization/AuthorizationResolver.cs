@@ -288,6 +288,16 @@ namespace Azure.DataGateway.Service.Authorization
                     entityToRoleMap.RoleToActionMap[role] = roleToAction;
                 }
 
+                // Check if anonymous role is defined but authenticated is not. If that is the case,
+                // then make sure the authenticated role derives permissions that are atleast equal to anonymous role.
+                string anonymousRole = AuthorizationType.Anonymous.ToString().ToLower();
+                string authenticatedRole = AuthorizationType.Authenticated.ToString().ToLower();
+                if (entityToRoleMap.RoleToActionMap.ContainsKey(anonymousRole) &&
+                    !entityToRoleMap.RoleToActionMap.ContainsKey(authenticatedRole))
+                {
+                    entityToRoleMap.RoleToActionMap[authenticatedRole] = entityToRoleMap.RoleToActionMap[anonymousRole];
+                }
+
                 EntityPermissionsMap[entityName] = entityToRoleMap;
             }
         }

@@ -635,7 +635,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             Mock<HttpContext> context = new();
 
-            //Add identity object to the Mock context object.
+            // Add identity object to the Mock context object.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, TEST_ROLE_TYPE);
             identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
             ClaimsPrincipal principal = new(identity);
@@ -666,7 +666,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// <param name="excludedCols">Excluded columns to access for action defined on role.</param>
         /// <param name="requestPolicy">Request authorization policy. (Support TBD)</param>
         /// <param name="databasePolicy">Database authorization policy.</param>
-        /// <returns></returns>
+        /// <returns>Mocked RuntimeConfig containing metadata provided in method arguments.</returns>
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
             string roleName = "Reader",
@@ -681,17 +681,13 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 include: includedCols,
                 exclude: excludedCols);
 
-            Policy? policy;
+            Policy? policy = null;
 
             if (databasePolicy is not null || requestPolicy is not null)
             {
                 policy = new(
                     request: requestPolicy,
                     database: databasePolicy);
-            }
-            else
-            {
-                policy = null;
             }
 
             Action actionForRole = new(

@@ -302,7 +302,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         _sqlMetadataProvider,
                         parameters);
                     AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                        ActionType.UPDATE,
+                        Operation.Update,
                         updateGraphQLStructure,
                         _httpContextAccessor.HttpContext!,
                         _authorizationResolver,
@@ -316,7 +316,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         _sqlMetadataProvider,
                         parameters);
                     AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                        ActionType.DELETE,
+                        Operation.Delete,
                         deleteStructure,
                         _httpContextAccessor.HttpContext!,
                         _authorizationResolver,

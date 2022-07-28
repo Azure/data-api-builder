@@ -461,7 +461,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
         /// <summary>
         /// Test to validate that when Field property is missing from the action, all the columns present in
-        /// the table are treated as accessible.
+        /// the table are treated as accessible. Since we are not explicitly specifying the includeCols/excludedCols
+        /// parameters, Field will be nullified.
         /// </summary>
         [TestMethod]
         public void AreColumnsAllowedForActionWithMissingFieldProperty()

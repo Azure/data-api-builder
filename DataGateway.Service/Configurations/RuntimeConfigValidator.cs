@@ -163,9 +163,11 @@ namespace Azure.DataGateway.Service.Configurations
                             {
                                 // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
                                 // don't contain any other field. If they do, we throw an appropriate exception.
-                                if (configAction.Fields!.Include.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Include.Count > 1 ||
+                                if (configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Include.Count > 1 ||
                                     configAction.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Exclude.Count > 1)
                                 {
+                                    // See if included or excluded columns contain wildcard and another field.
+                                    // If thats the case with both of them, we speicify included in error.
                                     string incExc = configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
                                         && configAction.Fields.Include.Count > 1 ? "included" : "excluded";
                                     throw new DataGatewayException(

@@ -242,7 +242,7 @@ namespace Azure.DataGateway.Service.Authorization
                                         }
                                         else
                                         {
-                                            actionToColumn.Included = actionObj.Fields.Include!;
+                                            actionToColumn.Included = actionObj.Fields.Include;
                                         }
                                     }
 
@@ -256,7 +256,7 @@ namespace Azure.DataGateway.Service.Authorization
                                         }
                                         else
                                         {
-                                            actionToColumn.Excluded = actionObj.Fields.Exclude!;
+                                            actionToColumn.Excluded = actionObj.Fields.Exclude;
                                         }
                                     }
                                 }

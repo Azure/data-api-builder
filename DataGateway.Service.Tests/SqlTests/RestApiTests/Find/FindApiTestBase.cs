@@ -61,6 +61,22 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
             );
         }
 
+        /// <summary>
+        /// Tests the Rest Api to validate that unique unicode
+        /// characters work in queries.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task FindOnTableWithUniqueCharacters()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationUniqueCharactersEntity,
+                sqlQuery: GetQuery("FindOnTableWithUniqueCharacters"),
+                controller: _restController);
+        }
+
         ///<summary>
         /// Tests the Rest Api for GET operations on Database Views,
         /// either simple or composite.

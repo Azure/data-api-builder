@@ -153,7 +153,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// </summary>
         [DataTestMethod]
         [DataRow(Operation.Create, DisplayName = "Wildcard Field with another field in included set and create action")]
-        [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in included set and create action")]
+        [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in included set and update action")]
         public void WildCardAndOtherFieldsPresentInIncludeSet(Operation actionOp)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(

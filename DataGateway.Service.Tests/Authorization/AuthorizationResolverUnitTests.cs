@@ -248,8 +248,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// Test to validate that the permissions for authenticated role are derived from anonymous role
-        /// when authenticate role is not defined, but anonymous role is defined.
+        /// Test to validate that the permissions for the system role "authenticated" are derived the permissions of
+        /// the system role "anonymous" when authenticated role is not defined, but anonymous role is defined.
         /// </summary>
         [TestMethod]
         public void TestAuthenticatedRoleWhenAnonymousRoleIsDefined()
@@ -271,11 +271,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // because it is defined for anonymous role.
             Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, authenticatedRole, ActionType.CREATE));
 
-            // No other action should be defined for anonymous/authenticated role because of same reasoning.
+            // Check that no other action is defined for the authenticated role to ensure
+            // the authenticated role's permissions match that of the anonymous role's permissions.
             Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, authenticatedRole, ActionType.READ));
             Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, authenticatedRole, ActionType.READ));
 
-            // Anonymous role's permissions are mimiced for authenticated role only.
+            // Anonymous role's permissions are mocked for authenticated role only.
             // Assert by checking for an arbitrary role.
             Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE, ActionType.CREATE));
@@ -308,7 +309,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
         /// <summary>
         /// Test to validate that when anonymous and authenticated role are both defined, then
-        /// authenticate role does not derive permission from anonymous role.
+        /// the authenticated role does not derive permissions from anonymous role's permissions.
         /// </summary>
         [TestMethod]
         public void TestAuthenticatedRoleWhenBothAnonymousAndAuthenticatedAreDefined()
@@ -583,7 +584,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
         /// <summary>
         /// Test to validate that the column permissions for authenticated role are derived from anonymous role
-        /// when authenticate role is not defined, but anonymous role is defined.
+        /// when the authenticated role is not defined, but anonymous role is defined.
         /// </summary>
         [TestMethod]
         public void TestAuthenticatedRoleForColumnPermissionsWhenAnonymousRoleIsDefined()

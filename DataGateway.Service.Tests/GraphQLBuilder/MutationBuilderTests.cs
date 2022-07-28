@@ -655,9 +655,9 @@ type Foo @model {
         /// <param name="singularName"> Singular name for the entity defined in the config.</param>
         /// <param name="pluralName"> Plural name for the entity defined in the config.</param>
         [DataTestMethod]
-        [DataRow("Foos", "", "", "deleteFoo", DisplayName = "Validates delete mutation creation with simple plural entity name." )]
-        [DataRow("Leaves", "", "", "deleteLeaf", DisplayName = "Validates delete mutation creation with indirect plural entity name." )]
-        [DataRow("Herbs", "Plant", "Plants", "deletePlant", DisplayName = "Validates delete mutation creation with a defined singular name." )]
+        [DataRow("Foos", "", "", "deleteFoo", DisplayName = "Validates delete mutation creation with simple plural entity name.")]
+        [DataRow("Leaves", "", "", "deleteLeaf", DisplayName = "Validates delete mutation creation with indirect plural entity name.")]
+        [DataRow("Herbs", "Plant", "Plants", "deletePlant", DisplayName = "Validates delete mutation creation with a defined singular name.")]
         public void CanGenerateDeleteMutationWith_SingularEntityName(
             string entityName,
             string singularName,

@@ -155,7 +155,6 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
 
             return new ObjectTypeDefinitionNode(
                 location: null,
-                //name: new(FormatNameForObject(entityName, configEntity)),
                 name: new(value: entityName),
                 description: null,
                 objectTypeDirectives,

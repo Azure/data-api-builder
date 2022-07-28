@@ -174,8 +174,8 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(Operation.All, DisplayName = "Wildcard Field with another field in included set test1")]
-        [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in included set test2")]
+        [DataRow(Operation.All, DisplayName = "Wildcard Field with another field in excluded set test 1")]
+        [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in excluded set test 2")]
         public void WildCardAndOtherFieldsPresentInExcludeSet(Operation actionOp)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(

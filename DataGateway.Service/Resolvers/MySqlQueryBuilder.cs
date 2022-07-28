@@ -77,12 +77,15 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             (string sets, string updates, string select) = MakeStoreUpdatePK(structure.AllColumns(),
                                                                              structure.OutputColumns);
+            string predicates = JoinPredicateStrings(
+                       structure.DbPolicyPredicates,
+                       Build(structure.Predicates));
 
             return sets + ";\n" +
                     $"UPDATE {QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                         ", " + updates +
-                    $" WHERE {Build(structure.Predicates)}; " +
+                    $" WHERE {predicates}; " +
                     $" SET @ROWCOUNT=ROW_COUNT(); " +
                     $"SELECT " + select + $" WHERE @ROWCOUNT > 0;";
         }
@@ -90,8 +93,12 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlDeleteStructure structure)
         {
+            string predicates = JoinPredicateStrings(
+                    structure.DbPolicyPredicates,
+                    Build(structure.Predicates));
+
             return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                    $"WHERE {Build(structure.Predicates)}";
+                    $"WHERE {predicates}";
         }
 
         /// <inheritdoc />

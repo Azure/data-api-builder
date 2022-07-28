@@ -113,9 +113,25 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 {
                   ""id"": 8,
                   ""title"": ""Time to Eat""
+                },
+                {
+                  ""id"": 9,
+                  ""title"": ""Policy-Test-01""
+                },
+                {
+                  ""id"": 10,
+                  ""title"": ""Policy-Test-02""
+                },
+                {
+                  ""id"": 11,
+                  ""title"": ""Policy-Test-04""
+                },
+                {
+                  ""id"": 12,
+                  ""title"": ""Time to Eat 2""
                 }
               ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":8,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]") + @""",
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":12,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]") + @""",
               ""hasNextPage"": false
             }";
 
@@ -635,9 +651,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
             JsonElement actual1 = await ExecuteGraphQLRequestAsync(graphQLQuery1, graphQLQueryName, isAuthenticated: false);
 
             string expectedAfter1 = SqlPaginationUtil.Base64Encode(
-                  "[{\"Value\":\"Time to Eat\",\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"title\"}," +
-                  "{\"Value\":2324,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"publisher_id\"}," +
-                  "{\"Value\":8,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
+                  "[{\"Value\":\"Time to Eat 2\",\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"title\"}," +
+                  "{\"Value\":1941,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"publisher_id\"}," +
+                  "{\"Value\":12,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
 
             string expected1 = @"{
               ""items"": [
@@ -647,9 +663,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                   ""publisher_id"": 2345
                 },
                 {
-                  ""id"": 8,
-                  ""title"": ""Time to Eat"",
-                  ""publisher_id"": 2324
+                  ""id"": 12,
+                  ""title"": ""Time to Eat 2"",
+                  ""publisher_id"": 1941
                 }
               ],
               ""endCursor"": """ + expectedAfter1 + @""",
@@ -673,20 +689,20 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
             JsonElement actual2 = await ExecuteGraphQLRequestAsync(graphQLQuery2, graphQLQueryName, isAuthenticated: false);
 
             string expectedAfter2 = SqlPaginationUtil.Base64Encode(
-                  "[{\"Value\":\"The Groovy Bar\",\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"title\"}," +
+                  "[{\"Value\":\"The Palace Door\",\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"title\"}," +
                   "{\"Value\":2324,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"publisher_id\"}," +
-                  "{\"Value\":7,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
+                  "{\"Value\":6,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
 
             string expected2 = @"{
               ""items"": [
                 {
-                  ""id"": 6,
-                  ""title"": ""The Palace Door"",
+                  ""id"": 8,
+                  ""title"": ""Time to Eat"",
                   ""publisher_id"": 2324
                 },
                 {
-                  ""id"": 7,
-                  ""title"": ""The Groovy Bar"",
+                  ""id"": 6,
+                  ""title"": ""The Palace Door"",
                   ""publisher_id"": 2324
                 }
               ],

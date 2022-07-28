@@ -465,8 +465,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// </summary>
         [DataTestMethod]
         [DataRow(true, "col1", "col2", DisplayName = "Accessible fields col1,col2")]
-        [DataRow(true, "col3", "col4", DisplayName = "Accessible fields test col3,col4")]
-        [DataRow(false, "col5", DisplayName = "Inaccessible field test 1")]
+        [DataRow(true, "col3", "col4", DisplayName = "Accessible fields col3,col4")]
+        [DataRow(false, "col5", DisplayName = "Inaccessible field col5")]
         public void AreColumnsAllowedForActionWithMissingFieldProperty(bool expected, params string[] columnsToCheck)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(

@@ -152,8 +152,8 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// in it.
         /// </summary>
         [DataTestMethod]
-        [DataRow(Operation.Create, DisplayName = "Wildcard Field with another field in included set test1")]
-        [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in included set test2")]
+        [DataRow(Operation.Create, DisplayName = "Wildcard Field with another field in included set and create action")]
+        [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in included set and create action")]
         public void WildCardAndOtherFieldsPresentInIncludeSet(Operation actionOp)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
@@ -174,8 +174,8 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(Operation.Create, DisplayName = "Wildcard Field with another field in excluded set test 1")]
-        [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in excluded set test 2")]
+        [DataRow(Operation.Create, DisplayName = "Wildcard Field with another field in excluded set and create action")]
+        [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in excluded set and update action")]
         public void WildCardAndOtherFieldsPresentInExcludeSet(Operation actionOp)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(

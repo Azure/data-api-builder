@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.Models;
 using Microsoft.Extensions.Logging;
 using Action = Azure.DataGateway.Config.Action;
@@ -90,6 +91,31 @@ namespace Azure.DataGateway.Service.Configurations
             }
 
             ValidateAuthenticationConfig();
+            ValidateEntityNamesInConfig(runtimeConfig.Entities);
+        }
+
+        /// <summary>
+        /// Check whether the entity name defined in runtime config only contains
+        /// characters allowed for GraphQL names.
+        /// </summary>
+        /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
+        /// <param name="runtimeConfig"></param>
+        public void ValidateEntityNamesInConfig(Dictionary<string, Entity> entityCollection)
+        {
+            foreach (string entityName in entityCollection.Keys)
+            {
+                if (GraphQLNaming.ViolatesNamePrefixRequirements(entityName) ||
+                    GraphQLNaming.ViolatesNameRequirements(entityName))
+                {
+                    string errorMessage = $"Entity {entityName} contains characters disallowed by GraphQL.";
+                    _logger.LogCritical(message: errorMessage);
+
+                    throw new DataGatewayException(
+                        message: errorMessage,
+                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
+                }
+            }
         }
 
         private void ValidateAuthenticationConfig()

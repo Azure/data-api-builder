@@ -59,19 +59,19 @@ steps:
     packDestination: '$(Build.ArtifactStagingDirectory)'
 
 # This task will publish the NuGet Package
-- task: NuGetAuthenticate@0
-  displayName: 'NuGet Authenticate'
-- task: NuGetCommand@2
-  displayName: 'NuGet push'
-  inputs:
-    command: 'push'
-    feedsToUse: 'select'
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
-    nuGetFeedType: 'internal'
-    vstsFeed: CosmosDB/Hawaii_Packages
-    publishVstsFeed: CosmosDB/Hawaii_Packages
-    versioningScheme: 'off'
-    allowPackageConflicts: true
+# - task: NuGetAuthenticate@0
+#   displayName: 'NuGet Authenticate'
+# - task: NuGetCommand@2
+#   displayName: 'NuGet push'
+#   inputs:
+#     command: 'push'
+#     feedsToUse: 'select'
+#     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+#     nuGetFeedType: 'internal'
+#     vstsFeed: CosmosDB/Hawaii_Packages
+#     publishVstsFeed: CosmosDB/Hawaii_Packages
+#     versioningScheme: 'off'
+#     allowPackageConflicts: true
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

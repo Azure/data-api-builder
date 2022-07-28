@@ -311,8 +311,17 @@ namespace Azure.DataGateway.Service.Authorization
             return WILDCARD.Equals(action) ? RuntimeConfigValidator.ValidActions : new List<string> { action };
         }
 
-        /// <inheritdoc />
-        public void PopulateAllowedExposedColumns(HashSet<string> allowedExposedColumns, string entityName, HashSet<string> allowedDBColumns)
+        /// <summary>
+        /// From the given parameters, processes the included and excluded column permissions to output
+        /// a list of columns that are "allowed".
+        /// -- IncludedColumns minus ExcludedColumns == Allowed Columns
+        /// -- Does not yet account for either being wildcard (*).
+        /// </summary>
+        /// <param name="allowedExposedColumns">Set of fields exposed to user.</param>
+        /// <param name="entityName">Entity from request</param>
+        /// <param name="allowedDBColumns">Set of allowed backing field names.</param>
+        public void PopulateAllowedExposedColumns(HashSet<string> allowedExposedColumns,
+            string entityName, HashSet<string> allowedDBColumns)
         {
             foreach (string dbColumn in allowedDBColumns)
             {

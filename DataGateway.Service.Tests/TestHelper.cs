@@ -120,9 +120,10 @@ namespace Azure.DataGateway.Service.Tests
         /// <param name="dbObjectName">The source name of the entity.</param>
         public static void AddMissingEntitiesToConfig(RuntimeConfig config, string dbObjectKey, string dbObjectName)
         {
+            string source = "\"" + dbObjectName + "\"";
             string entityJsonString =
               @"{
-                    ""source"":  " + dbObjectName + @",
+                    ""source"":  " + source + @",
                     ""graphql"": true,
                     ""permissions"": [
                       {

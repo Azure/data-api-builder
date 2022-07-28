@@ -22,6 +22,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PatchOne_Insert_UniqueCharacters_Test",
+                $"SELECT [NoteNum] AS [┬─┬ノ( º _ ºノ)], [DetailAssessmentAndPlanning] AS [始計], " +
+                $"[WagingWar] AS [作戰], [StrategicAttack] AS [謀攻] " +
+                $"FROM { _integrationUniqueCharactersTable } " +
+                $"WHERE [NoteNum] = 2 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PatchOne_Insert_CompositeNonAutoGenPK_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +

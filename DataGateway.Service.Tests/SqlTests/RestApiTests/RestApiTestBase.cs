@@ -31,6 +31,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationMappingTable = "trees";
         protected static readonly string _integrationMappingDifferentEntity = "Shrub";
         protected static readonly string _integrationBrokenMappingEntity = "Fungus";
+        protected static readonly string _integrationUniqueCharactersEntity = "ArtOfWar";
+        protected static readonly string _integrationUniqueCharactersTable = "aow";
         protected static readonly string _nonExistentEntityName = "!@#$%^&*()_+definitely_nonexistent_entity!@#$%^&*()_+";
         protected static readonly string _emptyTableEntityName = "Empty";
         protected static readonly string _emptyTableTableName = "empty_table";

@@ -40,6 +40,21 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
             return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
         }
 
+        /// <summary>
+        /// Creates an entity with the defined singular and plural entity names.
+        /// </summary>
+        /// <param name="singularNameForEntity"> The singular name for the entity as a string.</param>
+        /// <param name="pluralNameForEntity"> The plural name for the entity as a string.</param>
+        private static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity)
+        {
+            return new Entity(Source: "dbo.entity",
+                              Rest: null,
+                              GraphQL: new SingularPlural(singularNameForEntity, pluralNameForEntity),
+                              Permissions: Array.Empty<PermissionSetting>(),
+                              Relationships: new(),
+                              Mappings: new());
+        }
+
         [DataTestMethod]
         [TestCategory("Mutation Builder - Create")]
         [TestCategory("Schema Builder - Simple Type")]
@@ -628,6 +643,52 @@ type Foo @model {
                 query.Fields.Where(f => f.Name.Value == $"deleteFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
                 actual: deleteField.Directives.Count);
+        }
+
+        /// <summary>
+        /// Test to validate that the delete mutations are explicitly created with singular entity names. This also
+        /// validates that when a singular name is available in the config, delete mutation is created with that.
+        /// </summary>
+        /// <param name="gql"> Type definition for the entity.</param>
+        /// <param name="entityName"> Name of the entity for which delete mutation is being valdiated.</param>
+        /// <param name="singularName"> Singular name for the entity defined in the config.</param>
+        /// <param name="pluralName"> Plural name for the entity defined in the config.</param>
+        [DataTestMethod]
+        [TestCategory("Mutation Builder - Delete")]
+        [TestCategory("Schema Builder - Simple Type")]
+        [DataRow("Foos", null, null, "deleteFoo",
+            DisplayName = "Validates delete mutation creation with simple plural entity name.")]
+        [DataRow("Leaves", null, null, "deleteLeaf",
+            DisplayName = "Validates delete mutation creation with indirect plural entity name.")]
+        [DataRow("Herbs", "Plant", "Plants", "deletePlant",
+            DisplayName = "Validates delete mutation creation with a defined singular name.")]
+        public void CanGenerateDeleteMutationWithSingularEntityName(
+            string entityName,
+            string singularName,
+            string pluralName,
+            string expectedDeleteMutationName)
+        {
+            Entity entity = (singularName is not null && pluralName is not null)
+                                ? GenerateEntityWithSingularPlural(singularName, pluralName)
+                                : GenerateEmptyEntity();
+
+            NameNode node = new(entityName);
+            ObjectTypeDefinitionNode objectTypeDefinitionNode = new(location: null,
+                name: node,
+                description: null,
+                directives: Array.Empty<DirectiveNode>(),
+                interfaces: Array.Empty<NamedTypeNode>(),
+                fields: Array.Empty<FieldDefinitionNode>()
+                );
+
+            FieldDefinitionNode deleteMutationNode = DeleteMutationBuilder.Build(
+                node,
+                objectTypeDefinitionNode,
+                entity,
+                DatabaseType.cosmos);
+
+            Assert.IsNotNull(deleteMutationNode);
+            Assert.AreEqual(expectedDeleteMutationName, deleteMutationNode.Name.Value);
         }
 
         [TestMethod]

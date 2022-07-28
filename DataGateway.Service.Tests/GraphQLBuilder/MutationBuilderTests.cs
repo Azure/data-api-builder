@@ -8,6 +8,7 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
+using Castle.Core.Internal;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -654,23 +655,18 @@ type Foo @model {
         /// <param name="singularName"> Singular name for the entity defined in the config.</param>
         /// <param name="pluralName"> Plural name for the entity defined in the config.</param>
         [DataTestMethod]
-        [TestCategory("Mutation Builder - Delete")]
-        [TestCategory("Schema Builder - Simple Type")]
-        [DataRow("Foos", null, null, "deleteFoo",
-            DisplayName = "Validates delete mutation creation with simple plural entity name.")]
-        [DataRow("Leaves", null, null, "deleteLeaf",
-            DisplayName = "Validates delete mutation creation with indirect plural entity name.")]
-        [DataRow("Herbs", "Plant", "Plants", "deletePlant",
-            DisplayName = "Validates delete mutation creation with a defined singular name.")]
-        public void CanGenerateDeleteMutationWithSingularEntityName(
+        [DataRow("Foos", "", "", "deleteFoo", DisplayName = "Validates delete mutation creation with simple plural entity name." )]
+        [DataRow("Leaves", "", "", "deleteLeaf", DisplayName = "Validates delete mutation creation with indirect plural entity name." )]
+        [DataRow("Herbs", "Plant", "Plants", "deletePlant", DisplayName = "Validates delete mutation creation with a defined singular name." )]
+        public void CanGenerateDeleteMutationWith_SingularEntityName(
             string entityName,
             string singularName,
             string pluralName,
             string expectedDeleteMutationName)
         {
-            Entity entity = (singularName is not null && pluralName is not null)
-                                ? GenerateEntityWithSingularPlural(singularName, pluralName)
-                                : GenerateEmptyEntity();
+            Entity entity = (singularName.IsNullOrEmpty() || pluralName.IsNullOrEmpty())
+                                ? GenerateEmptyEntity()
+                                : GenerateEntityWithSingularPlural(singularName, pluralName);
 
             NameNode node = new(entityName);
             ObjectTypeDefinitionNode objectTypeDefinitionNode = new(location: null,

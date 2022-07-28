@@ -118,13 +118,11 @@ namespace Azure.DataGateway.Service.Tests
         /// <param name="config">Runtimeconfig object</param>
         /// <param name="dbObjectKey">The key with which the entity is to be added.</param>
         /// <param name="dbObjectName">The source name of the entity.</param>
-        /// <param name="schema">The schema in which the entity is present.</param>
-        public static void AddMissingEntitiesToConfig(RuntimeConfig config, string dbObjectKey, string dbObjectName, string schema = "")
+        public static void AddMissingEntitiesToConfig(RuntimeConfig config, string dbObjectKey, string dbObjectName)
         {
-            string source = string.IsNullOrEmpty(schema) ? $"\"{dbObjectName}\"" : $"\"{schema}.{dbObjectName}\"";
             string entityJsonString =
               @"{
-                    ""source"":  " + source + @",
+                    ""source"":  " + dbObjectName + @",
                     ""graphql"": true,
                     ""permissions"": [
                       {

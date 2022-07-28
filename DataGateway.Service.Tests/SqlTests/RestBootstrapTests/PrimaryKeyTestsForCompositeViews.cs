@@ -103,12 +103,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestBootstrapTests
                 // Perform a GET operation on the view to confirm that it is functional.
                 // Set up rest controller.
                 RestService _restService = new(_queryEngine,
-                _mutationEngine,
-                _sqlMetadataProvider,
-                _httpContextAccessor.Object,
-                _authorizationService.Object,
-                _authorizationResolver,
-                _runtimeConfigProvider);
+                    _mutationEngine,
+                    _sqlMetadataProvider,
+                    _httpContextAccessor.Object,
+                    _authorizationService.Object,
+                    _authorizationResolver,
+                    _runtimeConfigProvider);
                 RestController _restController = new(_restService);
 
                 // Query to validate the GET operation result.

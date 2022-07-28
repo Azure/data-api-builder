@@ -80,11 +80,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             // Add magazines entity to the 
             if (TestCategory.MYSQL.Equals(DatabaseEngine))
             {
-                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "Magazine", "magazines", "");
+                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "Magazine", "magazines");
             }
             else
             {
-                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "Magazine", "magazines", "foo");
+                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "Magazine", "foo.magazines");
             }
 
             // Add custom entities for the test, if any.
@@ -161,8 +161,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 {
                     string objectKey = customEntity[0];
                     string objectName = customEntity[1];
-                    string schemaName = customEntity[2];
-                    TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, objectKey, objectName, schemaName);
+                    TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, objectKey, objectName);
                 }
             }
         }

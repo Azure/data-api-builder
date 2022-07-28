@@ -132,7 +132,11 @@ namespace Azure.DataGateway.Service.Tests
                       },
                       {
                         ""role"": ""authenticated"",
-                        ""actions"": [" + $" \"{ActionType.CREATE}\", \"{ActionType.READ}\", \"{ActionType.DELETE}\", \"{ActionType.UPDATE}\" ]" +
+                        ""actions"": [" +
+                        $" \"{Operation.Create.ToString().ToLower()}\"," +
+                        $" \"{Operation.Read.ToString().ToLower()}\"," +
+                        $" \"{Operation.Delete.ToString().ToLower()}\"," +
+                        $" \"{Operation.Update.ToString().ToLower()}\" ]" +
                       @"}
                     ]
                 }";

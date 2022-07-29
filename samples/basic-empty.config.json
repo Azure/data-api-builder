@@ -4,6 +4,11 @@
         "database-type": "",
         "connection-string": ""
     },
+    "runtime": {
+      "host": {
+        "mode": "development"
+      }
+    },
     "entities": {
     }
 }

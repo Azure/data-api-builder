@@ -7,11 +7,12 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.AuthenticationHelpers;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.ServerTiming;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Services.MetadataProviders;
-using HotChocolate.Language;
+using HotChocolate.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -22,6 +23,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Npgsql;
 
@@ -29,9 +31,16 @@ namespace Azure.DataGateway.Service
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        private ILogger<Startup> _logger;
+        private ILogger<RuntimeConfigProvider> _configProviderLogger;
+
+        public Startup(IConfiguration configuration,
+            ILogger<Startup> logger,
+            ILogger<RuntimeConfigProvider> configProviderLogger)
         {
             Configuration = configuration;
+            _logger = logger;
+            _configProviderLogger = configProviderLogger;
         }
 
         public IConfiguration Configuration { get; }
@@ -39,12 +48,16 @@ namespace Azure.DataGateway.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.Configure<RuntimeConfigPath>(Configuration);
+            RuntimeConfigPath runtimeConfigPath = new();
+            Configuration.Bind(runtimeConfigPath);
 
-            services.AddSingleton<RuntimeConfigProvider>();
+            RuntimeConfigProvider runtimeConfigurationProvider = new(runtimeConfigPath, _configProviderLogger);
+
+            services.AddSingleton(runtimeConfigurationProvider);
             services.AddSingleton<RuntimeConfigValidator>();
 
             services.AddSingleton<CosmosClientProvider>();
+            services.AddHealthChecks();
 
             services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
             {
@@ -161,9 +174,7 @@ namespace Azure.DataGateway.Service
                 }
             });
 
-            services.AddSingleton<IDocumentHashProvider, Sha256DocumentHashProvider>();
-            services.AddSingleton<IDocumentCache, DocumentCache>();
-            services.AddSingleton<GraphQLService>();
+            services.AddSingleton<GraphQLSchemaCreator>();
             services.AddSingleton<RestService>();
             services.AddSingleton<IFileSystem, FileSystem>();
             services.AddServerTiming();
@@ -171,12 +182,58 @@ namespace Azure.DataGateway.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            ConfigureAuthentication(services);
+            ConfigureAuthentication(services, runtimeConfigurationProvider);
+
             services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
 
+            AddGraphQL(services);
+
             services.AddControllers();
+        }
+
+        private void AddGraphQL(IServiceCollection services)
+        {
+            services.AddGraphQLServer()
+                    .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
+                    .ConfigureSchema((serviceProvider, schemaBuilder) =>
+                    {
+                        GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
+                        graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
+                    })
+                    .AddAuthorization()
+                    .AddErrorFilter(error =>
+                    {
+                        if (error.Exception is not null)
+                        {
+                            _logger.LogError(error.Exception.Message);
+                            _logger.LogError(error.Exception.StackTrace);
+                            return error.WithMessage(error.Exception.Message);
+                        }
+
+                        if (error.Code is not null)
+                        {
+                            _logger.LogError(error.Code);
+                            _logger.LogError(error.Message);
+                            return error.WithMessage(error.Message);
+                        }
+
+                        return error;
+                    })
+                    .AddErrorFilter(error =>
+                    {
+                        if (error.Exception is DataGatewayException thrownException)
+                        {
+                            return error.RemoveException()
+                                    .RemoveLocations()
+                                    .RemovePath()
+                                    .WithMessage(thrownException.Message)
+                                    .WithCode($"{thrownException.SubStatusCode}");
+                        }
+
+                        return error;
+                    });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -243,8 +300,8 @@ namespace Azure.DataGateway.Service
             });
             app.UseAuthentication();
 
-            // Conditionally add authentication middleware in Production Mode
-            if (runtimeConfig is not null && !runtimeConfigProvider.IsDeveloperMode())
+            // Add authentication middleware to the pipeline.
+            if (runtimeConfig is not null)
             {
                 app.UseAuthenticationMiddleware();
             }
@@ -265,8 +322,55 @@ namespace Azure.DataGateway.Service
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapBananaCakePop(toolPath: "/graphql");
+                if (runtimeConfig is not null && runtimeConfig.GraphQLGlobalSettings.Enabled)
+                {
+                    endpoints.MapGraphQL(runtimeConfig.GraphQLGlobalSettings.Path);
+                    endpoints.MapBananaCakePop();
+                }
+
+                endpoints.MapHealthChecks("/");
             });
+        }
+
+        /// <summary>
+        /// Add services necessary for Authentication Middleware and based on the loaded
+        /// runtime configuration set the AuthenticationOptions to be either
+        /// EasyAuth based (by default) or JwtBearerOptions.
+        /// </summary>
+        /// <param name="services">The service collection to add authentication services to.</param>
+        /// <param name="runtimeConfig">The loaded runtime configuration.</param>
+        private static void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
+        {
+            if (runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            {
+                // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
+                // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
+                // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
+                if (runtimeConfig!.AuthNConfig != null &&
+                    !runtimeConfig.IsEasyAuthAuthenticationProvider())
+                {
+                    services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                    .AddJwtBearer(options =>
+                    {
+                        options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
+                        options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
+                    });
+                }
+                else if (runtimeConfig!.AuthNConfig != null)
+                {
+                    services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                        .AddEasyAuthAuthentication(
+                            (EasyAuthType)Enum.Parse(typeof(EasyAuthType),
+                                runtimeConfig.AuthNConfig.Provider,
+                                ignoreCase: true));
+                }
+                else
+                // If no authentication configuration section specified, defaults to StaticWebApps EasyAuth.
+                {
+                    services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                        .AddEasyAuthAuthentication(EasyAuthType.StaticWebApps);
+                }
+            }
         }
 
         /// <summary>
@@ -275,7 +379,7 @@ namespace Azure.DataGateway.Service
         /// </summary>
         /// <param name="app"></param>
         /// <returns>Indicates if the runtime is ready to accept requests.</returns>
-        private static async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app)
+        private async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app)
         {
             try
             {
@@ -295,50 +399,22 @@ namespace Azure.DataGateway.Service
                 // Pre-process the permissions section in the runtimeconfig.
                 runtimeConfigValidator.ProcessPermissionsInConfig(runtimeConfig);
 
-                ISqlMetadataProvider? sqlMetadataProvider =
-                    app.ApplicationServices.GetService<ISqlMetadataProvider>();
+                ISqlMetadataProvider sqlMetadataProvider =
+                    app.ApplicationServices.GetRequiredService<ISqlMetadataProvider>();
 
                 if (sqlMetadataProvider is not null)
                 {
                     await sqlMetadataProvider.InitializeAsync();
                 }
 
+                _logger.LogInformation($"Successfully completed runtime initialization.");
                 return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unable to complete runtime " +
-                    $"intialization operations due to: {ex.Message}.");
+                _logger.LogError($"Unable to complete runtime " +
+                    $"intialization operations due to: \n{ex}");
                 return false;
-            }
-        }
-
-        private void ConfigureAuthentication(IServiceCollection services)
-        {
-            // Read configuration and use it locally.
-            RuntimeConfigPath runtimeConfigPath = Configuration.Get<RuntimeConfigPath>();
-            RuntimeConfig? runtimeConfig = runtimeConfigPath.LoadRuntimeConfigValue();
-
-            // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
-            // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
-            // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
-            if (runtimeConfig != null &&
-                runtimeConfig.AuthNConfig != null &&
-                !runtimeConfig.IsEasyAuthAuthenticationProvider())
-            {
-                services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
-                {
-                    options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
-                    options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
-                });
-            }
-            else if (runtimeConfig != null &&
-                runtimeConfig.AuthNConfig != null &&
-                runtimeConfig.IsEasyAuthAuthenticationProvider())
-            {
-                services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                    .AddEasyAuthAuthentication((EasyAuthType)Enum.Parse(typeof(EasyAuthType), runtimeConfig.AuthNConfig.Provider, ignoreCase: true));
             }
         }
 

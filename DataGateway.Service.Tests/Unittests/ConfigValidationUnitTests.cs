@@ -8,7 +8,7 @@ using Azure.DataGateway.Service.Tests.Authorization;
 using Azure.DataGateway.Service.Tests.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataGateway.Service.Tests.SqlTests
+namespace Azure.DataGateway.Service.Tests.UnitTests
 {
     /// <summary>
     /// Test class to perform semantic validations on the runtime config object. At this point,
@@ -85,9 +85,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// </summary>
         /// <param name="policy"></param>
         [DataTestMethod]
-        [DataRow("@claims.() eq @item.col1", DisplayName = "Empty claim type test 1")]
-        [DataRow("@claims. eq @item.col2", DisplayName = "Empty claim type test 2")]
-        [DataRow("@item.col3 eq @claims.( ())", DisplayName = "Empty claim type test 3")]
+        [DataRow("@claims. eq @item.col1", DisplayName = "Empty claim type test 1")]
+        [DataRow("@claims. ne @item.col2", DisplayName = "Empty claim type test 2")]
         public void EmptyClaimTypeSuppliedInPolicy(string dbPolicy)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
@@ -120,8 +119,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         [DataRow("@claims.user_email eq @item.col1 and not ( true eq @claims.isemp%loyee or @claims.name eq 'Aaron')"
             , DisplayName = "% in claimType")]
         [DataRow("@claims.user+email eq @item.col1 and @claims.isemployee eq @item.col2", DisplayName = "+ in claimType")]
-        [DataRow("@claims.(use(r) eq @item.col1 and @claims.isemployee eq @item.col2", DisplayName = "unbalanced parenthesis in claimType 1")]
-        [DataRow("@claims.user_email eq @item.col1 and @claims.((isemployee eq @item.col2", DisplayName = "unbalanced parenthesis in claimType 2")]
+        [DataRow("@claims.(use(r) eq @item.col1 and @claims.isemployee eq @item.col2", DisplayName = "Parenthesis in claimType 1")]
+        [DataRow("@claims.(user_email) eq @item.col1 and @claims.isemployee eq @item.col2", DisplayName = "Parenthesis in claimType 2")]
         public void ParseInvalidDbPolicyWithInvalidClaimTypeFormat(string policy)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(

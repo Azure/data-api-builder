@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
@@ -9,6 +10,9 @@ using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
+using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -35,6 +39,15 @@ namespace Azure.DataGateway.Service.Services
         public async Task InvokeAsync(IMiddlewareContext context)
         {
             JsonElement jsonElement;
+            if (context.ContextData.TryGetValue("HttpContext", out object? value))
+            {
+                if (value is not null)
+                {
+                    HttpContext httpContext = (HttpContext)value;
+                    StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+                    context.ContextData.TryAdd(key: AuthorizationResolver.CLIENT_ROLE_HEADER, value: clientRoleHeader);
+                }
+            }
 
             if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
             {
@@ -145,36 +158,69 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Extract the value from a IValueNode
-        /// Note that if the node type is Variable, the parameter variables needs to be specified
-        /// as well in order to extract the value.
+        /// Extracts the value from an IValueNode. That includes extracting the value of the variable
+        /// if the IValueNode is a variable and extracting the correct type from the IValueNode
         /// </summary>
-        public static object? ArgumentValue(IValueNode value, IVariableValueCollection? variables = null)
+        /// <param name="value">the IValueNode from which to extract the value</param>
+        /// <param name="argumentSchema">describes the schema of the argument that the IValueNode represents</param>
+        /// <param name="variables">the request context variable values needed to resolve value nodes represented as variables</param>
+        public static object? ExtractValueFromIValueNode(IValueNode value, IInputField argumentSchema, IVariableValueCollection variables)
         {
-            return value.Kind switch
+            // extract value from the variable if the IValueNode is a variable
+            if (value.Kind == SyntaxKind.Variable)
             {
-                SyntaxKind.IntValue => ((IntValueNode)value).ToInt32(),
-                SyntaxKind.Variable => variables?.GetVariable<object>(((VariableNode)value).Value),
+                string variableName = ((VariableNode)value).Name.Value;
+                IValueNode? variableValue = variables.GetVariable<IValueNode>(variableName);
+
+                if (variableValue is null)
+                {
+                    return null;
+                }
+
+                return ExtractValueFromIValueNode(variableValue, argumentSchema, variables);
+            }
+
+            if (value is NullValueNode)
+            {
+                return null;
+            }
+
+            return argumentSchema.Type.TypeName().Value switch
+            {
+                BYTE_TYPE => ((IntValueNode)value).ToByte(),
+                SHORT_TYPE => ((IntValueNode)value).ToInt16(),
+                INT_TYPE => ((IntValueNode)value).ToInt32(),
+                LONG_TYPE => ((IntValueNode)value).ToInt64(),
+                SINGLE_TYPE => ((FloatValueNode)value).ToSingle(),
+                FLOAT_TYPE => ((FloatValueNode)value).ToDouble(),
+                DECIMAL_TYPE => ((FloatValueNode)value).ToDecimal(),
                 _ => value.Value
             };
         }
 
         /// <summary>
         /// Extract parameters from the schema and the actual instance (query) of the field
-        /// Extracts defualt parameter values from the schema or null if no default
+        /// Extracts default parameter values from the schema or null if no default
         /// Overrides default values with actual values of parameters provided
+        /// Key: (string) argument field name
+        /// Value: (object) argument value
         /// </summary>
         public static IDictionary<string, object?> GetParametersFromSchemaAndQueryFields(IObjectField schema, FieldNode query, IVariableValueCollection variables)
         {
             IDictionary<string, object?> parameters = new Dictionary<string, object?>();
 
             // Fill the parameters dictionary with the default argument values
-            IFieldCollection<IInputField> availableArguments = schema.Arguments;
-            foreach (IInputField argument in availableArguments)
+            IFieldCollection<IInputField> argumentSchemas = schema.Arguments;
+            foreach (IInputField argument in argumentSchemas)
             {
                 if (argument.DefaultValue != null)
                 {
-                    parameters.Add(argument.Name.Value, ArgumentValue(argument.DefaultValue, variables));
+                    parameters.Add(
+                        argument.Name.Value,
+                        ExtractValueFromIValueNode(
+                            value: argument.DefaultValue,
+                            argumentSchema: argument,
+                            variables: variables));
                 }
             }
 
@@ -182,17 +228,54 @@ namespace Azure.DataGateway.Service.Services
             IReadOnlyList<ArgumentNode> passedArguments = query.Arguments;
             foreach (ArgumentNode argument in passedArguments)
             {
-                if (parameters.ContainsKey(argument.Name.Value))
+                string argumentName = argument.Name.Value;
+                IInputField argumentSchema = argumentSchemas[argumentName];
+
+                if (parameters.ContainsKey(argumentName))
                 {
-                    parameters[argument.Name.Value] = ArgumentValue(argument.Value, variables);
+                    parameters[argumentName] =
+                        ExtractValueFromIValueNode(
+                            value: argument.Value,
+                            argumentSchema: argumentSchema,
+                            variables: variables);
                 }
                 else
                 {
-                    parameters.Add(argument.Name.Value, ArgumentValue(argument.Value, variables));
+                    parameters.Add(
+                        argumentName,
+                        ExtractValueFromIValueNode(
+                            value: argument.Value,
+                            argumentSchema: argumentSchema,
+                            variables: variables));
                 }
             }
 
             return parameters;
+        }
+
+        /// <summary>
+        /// InnerMostType is innermost type of the passed Graph QL type.
+        /// This strips all modifiers, such as List and Non-Null.
+        /// So the following GraphQL types would all have the underlyingType Book:
+        /// - Book
+        /// - [Book]
+        /// - Book!
+        /// - [Book]!
+        /// - [Book!]!
+        /// </summary>
+        internal static IType InnerMostType(IType type)
+        {
+            if (type.ToString() == type.InnerType().ToString())
+            {
+                return type;
+            }
+
+            return InnerMostType(type.InnerType());
+        }
+
+        public static InputObjectType InputObjectTypeFromIInputField(IInputField field)
+        {
+            return (InputObjectType)(InnerMostType(field.Type));
         }
 
         protected static IDictionary<string, object?> GetParametersFromContext(IMiddlewareContext context)

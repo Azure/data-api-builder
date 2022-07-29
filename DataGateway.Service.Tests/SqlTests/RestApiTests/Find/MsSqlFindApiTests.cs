@@ -1,22 +1,16 @@
-using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
-using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
+namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
 {
     /// <summary>
     /// Test REST Apis validating expected results are obtained.
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class MsSqlRestApiTests : RestApiTestBase
+    public class MsSqlFindApiTests : FindApiTestBase
     {
         protected static string DEFAULT_SCHEMA = "dbo";
         private static Dictionary<string, string> _queryMap = new()
@@ -35,6 +29,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 "FindEmptyResultSetWithQueryFilter",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE 1 != 1 FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindOnTableWithUniqueCharacters",
+                $"SELECT [NoteNum] AS [┬─┬ノ( º _ ºノ)], [DetailAssessmentAndPlanning] AS [始計], " +
+                $"[WagingWar] AS [作戰], [StrategicAttack] AS [謀攻] FROM { _integrationUniqueCharactersTable } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindViewAll",
@@ -386,259 +386,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 $"WHERE [trees].[treeId] < 2 " +
                 $"ORDER BY [trees].[species], [trees].[treeId] " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
-            },
-            {
-                "InsertOneTest",
-                // This query is the query for the result we get back from the database
-                // after the insert operation. Not the query that we generate to perform
-                // the insertion.
-                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
-                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'My New Book' " +
-                $"AND [publisher_id] = 1234 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "InsertOneInCompositeNonAutoGenPKTest",
-                // This query is the query for the result we get back from the database
-                // after the insert operation. Not the query that we generate to perform
-                // the insertion.
-                $"SELECT [categoryid],[pieceid],[categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 5 AND [pieceid] = 2 AND [categoryName] = 'FairyTales' " +
-                $"AND [piecesAvailable] = 0 AND [piecesRequired] = 0 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "InsertOneInCompositeKeyTableTest",
-                // This query is the query for the result we get back from the database
-                // after the insert operation. Not the query that we generate to perform
-                // the insertion.
-                $"SELECT [id], [content], [book_id] FROM { _tableWithCompositePrimaryKey } " +
-                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [book_id] = 1 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "InsertOneInDefaultTestTable",
-                $"SELECT [id], [book_id], [content] FROM { _tableWithCompositePrimaryKey } " +
-                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS + 1} AND [book_id] = 2 AND [content] = 'Its a classic' " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "DeleteOneTest",
-                // This query is used to confirm that the item no longer exists, not the
-                // actual delete query.
-                $"SELECT [id] FROM { _integrationTableName } " +
-                $"WHERE id = 5 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Update_Test",
-                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
-                $"WHERE id = 7 AND [title] = 'The Hobbit Returns to The Shire' " +
-                $"AND [publisher_id] = 1234" +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Update_IfMatchHeaders_Test_Confirm_Update",
-                $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id = 1 AND title = 'The Return of the King' " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Update_Default_Test",
-                $"SELECT [id], [book_id], [content] FROM { _tableWithCompositePrimaryKey } " +
-                $"WHERE [id] = 568 AND [book_id] = 1 AND [content]='Good book to read' " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Update_CompositeNonAutoGenPK_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName], [piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
-                $"AND [piecesAvailable] = 10  AND [piecesRequired] = 5 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Update_NullOutMissingField_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
-                $"AND [piecesAvailable] is NULL  AND [piecesRequired] = 5 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Update_Empty_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = '' " +
-                $"AND [piecesAvailable] = 2  AND [piecesRequired] = 3 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Update_Nulled_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'FairyTales' " +
-                $"AND [piecesAvailable] is NULL  AND [piecesRequired] = 4 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Insert_Test",
-                $"SELECT [id], [title], [issue_number] FROM [foo].{ _integration_NonAutoGenPK_TableName } " +
-                $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Batman Returns' " +
-                $"AND [issue_number] = 1234" +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Insert_Nullable_Test",
-                $"SELECT [id], [title], [issue_number] FROM [foo].{ _integration_NonAutoGenPK_TableName } " +
-                $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS + 1 } AND [title] = 'Times' " +
-                $"AND [issue_number] IS NULL " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Insert_PKAutoGen_Test",
-                $"INSERT INTO { _integrationTableName } " +
-                $"(id, title, publisher_id)" +
-                $"VALUES (1000,'The Hobbit Returns to The Shire',1234)"
-            },
-            {
-                "PutOne_Insert_AutoGenNonPK_Test",
-                $"SELECT [id], [title], [volume], [categoryName] FROM { _integration_AutoGenNonPK_TableName } " +
-                $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Star Trek' " +
-                $"AND [categoryName] = 'Suspense' " +
-                $"AND [volume] IS NOT NULL " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Insert_CompositeNonAutoGenPK_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
-                $"AND [piecesAvailable] = 2 AND [piecesRequired] = 1 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Insert_Default_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 8 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
-                $"AND [piecesAvailable] = 0 AND [piecesRequired] = 0 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Insert_Empty_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 4 AND [pieceid] = 1 AND [categoryName] = '' " +
-                $"AND [piecesAvailable] = 2 AND [piecesRequired] = 3 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOne_Insert_Nulled_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 4 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
-                $"AND [piecesAvailable] is NULL AND [piecesRequired] = 4 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOne_Insert_NonAutoGenPK_Test",
-                $"SELECT [id], [title], [issue_number] FROM [foo].{ _integration_NonAutoGenPK_TableName } " +
-                $"WHERE id = 2 AND [title] = 'Batman Begins' " +
-                $"AND [issue_number] = 1234 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOne_Insert_CompositeNonAutoGenPK_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 4 AND [pieceid] = 1 AND [categoryName] = 'FairyTales' " +
-                $"AND [piecesAvailable] = 5 AND [piecesRequired] = 4 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOne_Insert_Empty_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 5 AND [pieceid] = 1 AND [categoryName] = '' " +
-                $"AND [piecesAvailable] = 5 AND [piecesRequired] = 4 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOne_Insert_Default_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 7 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
-                $"AND [piecesAvailable] = 0 AND [piecesRequired] = 0 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOne_Insert_Nulled_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
-                $"AND [piecesAvailable] is NULL AND [piecesRequired] = 4 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOne_Update_Test",
-                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
-                $"WHERE id = 8 AND [title] = 'Heart of Darkness' " +
-                $"AND [publisher_id] = 2324 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOne_Update_IfMatchHeaders_Test_Confirm_Update",
-                $"SELECT * FROM { _integrationTableName } " +
-                $"WHERE id = 1 AND title = 'The Hobbit Returns to The Shire' " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOne_Update_Default_Test",
-                $"SELECT [id], [book_id], [content] FROM { _tableWithCompositePrimaryKey } " +
-                $"WHERE id = 567 AND [book_id] = 1 AND [content] = 'That's a great book' " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOne_Update_CompositeNonAutoGenPK_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
-                $"AND [piecesAvailable]= 10 AND [piecesRequired] = 0 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOne_Update_Empty_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = '' " +
-                $"AND [piecesAvailable]= 10 AND [piecesRequired] = 0 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOne_Update_Nulled_Test",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'books' " +
-                $"AND [piecesAvailable] is NULL AND [piecesRequired] = 0 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "InsertOneWithNullFieldValue",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
-                $"AND [piecesAvailable] is NULL AND [piecesRequired] = 1 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOne_Insert_PKAutoGen_Test",
-                $"INSERT INTO { _integrationTableName } " +
-                $"(id, title, publisher_id)" +
-                $"VALUES (1000,'The Hobbit Returns to The Shire',1234)"
             }
         };
-
         #region Test Fixture Setup
 
         /// <summary>
@@ -647,10 +396,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        public static async Task InitializeTestFixture(TestContext context)
+        public static async Task SetupAsync(TestContext context)
         {
-            await InitializeTestFixture(context, TestCategory.MSSQL);
-
+            DatabaseEngine = TestCategory.MSSQL;
+            await InitializeTestFixture(context);
             // Setup REST Components
             _restService = new RestService(_queryEngine,
                 _mutationEngine,
@@ -669,39 +418,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         public async Task TestCleanup()
         {
             await ResetDbStateAsync();
-        }
-
-        #endregion
-
-        #region Additional tests
-
-        /// <summary>
-        /// This test verifies that when we have an unsupported opration,
-        /// in this case a none operation, that we return the correct error
-        /// response.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public async Task HandleAndExecuteUnsupportedOperationUnitTestAsync()
-        {
-            string expected = "{\"error\":{\"code\":\"BadRequest\",\"message\":\"This operation is not supported.\",\"status\":400}}";
-            // need header to instantiate identity in controller
-            HeaderDictionary headers = new();
-            headers.Add("x-ms-client-principal", Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"hello\":\"world\"}")));
-
-            ConfigureRestController(_restController, string.Empty, Operation.None);
-
-            // Setup params to invoke function with
-            // Must use valid entity name
-            string path = "api";
-            string entityName = "Book";
-            Operation operationType = Operation.None;
-            string primaryKeyRoute = string.Empty;
-
-            // Reflection to invoke a private method to unit test all code paths
-            PrivateObject testObject = new(_restController);
-            IActionResult actionResult = await testObject.Invoke("HandleOperation", new object[] { $"{path}/{entityName}/{primaryKeyRoute}", operationType });
-            SqlTestHelper.VerifyResult(actionResult, expected, System.Net.HttpStatusCode.BadRequest, string.Empty);
         }
 
         #endregion
@@ -729,48 +445,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         public override string GetQuery(string key)
         {
             return _queryMap[key];
-        }
-
-        /// <summary>
-        /// We have 1 test that is named
-        /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
-        /// which will have Db specific error messages.
-        /// We return the mssql specific message here.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetUniqueDbErrorMessage()
-        {
-            return "Cannot insert the value NULL into column 'piecesRequired', " +
-                   "table 'master.dbo.stocks'; column does not allow nulls. UPDATE fails.";
-        }
-
-        #endregion
-
-        #region Private helpers
-
-        /// <summary>
-        /// Helper function uses reflection to invoke
-        /// private methods from outside class.
-        /// Expects async method returning Task.
-        /// </summary>
-        class PrivateObject
-        {
-            private readonly object _classToInvoke;
-            public PrivateObject(object classToInvoke)
-            {
-                _classToInvoke = classToInvoke;
-            }
-
-            public Task<IActionResult> Invoke(string privateMethodName, params object[] privateMethodArgs)
-            {
-                MethodInfo methodInfo = _classToInvoke.GetType().GetMethod(privateMethodName, BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (methodInfo is null)
-                {
-                    throw new System.Exception($"{privateMethodName} not found in class '{_classToInvoke.GetType()}'");
-                }
-
-                return (Task<IActionResult>)methodInfo.Invoke(_classToInvoke, privateMethodArgs);
-            }
         }
 
         #endregion

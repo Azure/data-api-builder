@@ -1,10 +1,8 @@
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Resolvers;
-using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
@@ -16,13 +14,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
     [TestClass]
     public abstract class GraphQLPaginationTestBase : SqlTestBase
     {
-        #region Test Fixture Setup
-        protected static GraphQLService _graphQLService;
-        protected static GraphQLController _graphQLController;
-        protected static readonly string _integrationTableName = "books";
-
-        #endregion
-
         #region Tests
 
         /// <summary>
@@ -46,7 +37,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = @"{
               ""items"": [
                 {
@@ -66,7 +57,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
               ""hasNextPage"": true
             }";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <summary>
@@ -88,7 +79,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = @"{
               ""items"": [
                 {
@@ -122,13 +113,29 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 {
                   ""id"": 8,
                   ""title"": ""Time to Eat""
+                },
+                {
+                  ""id"": 9,
+                  ""title"": ""Policy-Test-01""
+                },
+                {
+                  ""id"": 10,
+                  ""title"": ""Policy-Test-02""
+                },
+                {
+                  ""id"": 11,
+                  ""title"": ""Policy-Test-04""
+                },
+                {
+                  ""id"": 12,
+                  ""title"": ""Time to Eat 2""
                 }
               ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":8,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]") + @""",
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":12,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]") + @""",
               ""hasNextPage"": false
             }";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <summary>
@@ -148,7 +155,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = @"{
               ""items"": [
                 {
@@ -162,7 +169,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
               ]
             }";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <summary>
@@ -183,12 +190,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement root = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            root = root.GetProperty("data").GetProperty(graphQLQueryName);
+            JsonElement root = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string actual = SqlPaginationUtil.Base64Decode(root.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME).GetString());
             string expected = "[{\"Value\":3,\"Direction\":0, \"TableSchema\":\"\",\"TableName\":\"\", \"ColumnName\":\"id\"}]";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <summary>
@@ -209,8 +215,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement root = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            root = root.GetProperty("data").GetProperty(graphQLQueryName);
+            JsonElement root = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             bool actual = root.GetProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME).GetBoolean();
 
             Assert.AreEqual(true, actual);
@@ -234,8 +239,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement root = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
-            root = root.GetProperty("data").GetProperty(graphQLQueryName);
+            JsonElement root = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected: "[]", root.GetProperty("items").ToString());
             Assert.AreEqual(null, root.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME).GetString());
@@ -271,7 +275,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = @"{
               ""items"": [
                 {
@@ -315,7 +319,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
               ""hasNextPage"": true
             }";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <summary>
@@ -342,7 +346,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                     }
                 }
             ";
-            string actual = await GetGraphQLResultAsync(graphQLMutation, graphQLMutationName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
             string expected = @"{
               ""publishers"": {
                 ""books"": {
@@ -362,7 +366,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
               }
             }";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
 
             // reset database after mutation
             await ResetDbStateAsync();
@@ -411,7 +415,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
 
             string after = "[{\"Value\":1,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"book_id\"}," +
                             "{\"Value\":568,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]";
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = @"
 {
   ""items"": [
@@ -503,7 +507,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
   ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]") + @"""
 }";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <summary>
@@ -528,7 +532,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
 
             after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"book_id\"}," +
                                                     "{\"Value\":569,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = @"{
               ""items"": [
                 {
@@ -544,11 +548,11 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
               ""endCursor"": """ + after + @"""
             }";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <summary>
-        /// Restrict the pagination result using the _filter argument
+        /// Restrict the pagination result using the filter argument
         /// </summary>
         [TestMethod]
         public async Task PaginationWithFilterArgument()
@@ -556,7 +560,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
-                books(first: 2, after: """ + after + @""", _filter: {publisher_id: {eq: 2345}}) {
+                books(first: 2, after: """ + after + @""", " + QueryBuilder.FILTER_FIELD_NAME + @" : {publisher_id: {eq: 2345}}) {
                     items {
                         id
                         publisher_id
@@ -566,7 +570,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = @"{
               ""items"": [
                 {
@@ -582,7 +586,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
               ""hasNextPage"": false
             }";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <summary>
@@ -603,7 +607,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual = await GetGraphQLResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = @"{
               ""items"": [
                 {
@@ -621,7 +625,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
               ""hasNextPage"": true
             }";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <summary>
@@ -644,12 +648,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual1 = await GetGraphQLResultAsync(graphQLQuery1, graphQLQueryName, _graphQLController);
+            JsonElement actual1 = await ExecuteGraphQLRequestAsync(graphQLQuery1, graphQLQueryName, isAuthenticated: false);
 
             string expectedAfter1 = SqlPaginationUtil.Base64Encode(
-                  "[{\"Value\":\"Time to Eat\",\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"title\"}," +
-                  "{\"Value\":2324,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"publisher_id\"}," +
-                  "{\"Value\":8,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
+                  "[{\"Value\":\"Time to Eat 2\",\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"title\"}," +
+                  "{\"Value\":1941,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"publisher_id\"}," +
+                  "{\"Value\":12,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
 
             string expected1 = @"{
               ""items"": [
@@ -659,16 +663,16 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                   ""publisher_id"": 2345
                 },
                 {
-                  ""id"": 8,
-                  ""title"": ""Time to Eat"",
-                  ""publisher_id"": 2324
+                  ""id"": 12,
+                  ""title"": ""Time to Eat 2"",
+                  ""publisher_id"": 1941
                 }
               ],
               ""endCursor"": """ + expectedAfter1 + @""",
               ""hasNextPage"": true
             }";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected1, actual1);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected1, actual1.ToString());
 
             string graphQLQuery2 = @"{
                 books(first: 2, after: """ + expectedAfter1 + @""" orderBy: {title: DESC publisher_id: ASC id: DESC}) {
@@ -682,23 +686,23 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual2 = await GetGraphQLResultAsync(graphQLQuery2, graphQLQueryName, _graphQLController);
+            JsonElement actual2 = await ExecuteGraphQLRequestAsync(graphQLQuery2, graphQLQueryName, isAuthenticated: false);
 
             string expectedAfter2 = SqlPaginationUtil.Base64Encode(
-                  "[{\"Value\":\"The Groovy Bar\",\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"title\"}," +
+                  "[{\"Value\":\"The Palace Door\",\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"title\"}," +
                   "{\"Value\":2324,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"publisher_id\"}," +
-                  "{\"Value\":7,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
+                  "{\"Value\":6,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
 
             string expected2 = @"{
               ""items"": [
                 {
-                  ""id"": 6,
-                  ""title"": ""The Palace Door"",
+                  ""id"": 8,
+                  ""title"": ""Time to Eat"",
                   ""publisher_id"": 2324
                 },
                 {
-                  ""id"": 7,
-                  ""title"": ""The Groovy Bar"",
+                  ""id"": 6,
+                  ""title"": ""The Palace Door"",
                   ""publisher_id"": 2324
                 }
               ],
@@ -706,7 +710,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
               ""hasNextPage"": true
             }";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected2, actual2);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected2, actual2.ToString());
         }
 
         /// <summary>
@@ -728,7 +732,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual1 = await GetGraphQLResultAsync(graphQLQuery1, graphQLQueryName, _graphQLController);
+            JsonElement actual1 = await ExecuteGraphQLRequestAsync(graphQLQuery1, graphQLQueryName, isAuthenticated: false);
 
             string expectedAfter1 = SqlPaginationUtil.Base64Encode(
                   "[{\"Value\":2324,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"publisher_id\"}," +
@@ -757,7 +761,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
               ""hasNextPage"": true
             }";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected1, actual1);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected1, actual1.ToString());
 
             string graphQLQuery2 = @"{
                 books(first: 2, after: """ + expectedAfter1 + @""" orderBy: {publisher_id: DESC}) {
@@ -770,7 +774,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string actual2 = await GetGraphQLResultAsync(graphQLQuery2, graphQLQueryName, _graphQLController);
+            JsonElement actual2 = await ExecuteGraphQLRequestAsync(graphQLQuery2, graphQLQueryName, isAuthenticated: false);
 
             string expectedAfter2 = SqlPaginationUtil.Base64Encode(
                   "[{\"Value\":2323,\"Direction\":1,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"publisher_id\"}," +
@@ -791,7 +795,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
               ""hasNextPage"": true
             }";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected2, actual2);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected2, actual2.ToString());
         }
 
         #endregion
@@ -813,7 +817,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -832,7 +836,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -851,7 +855,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -870,7 +874,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -890,7 +894,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -912,7 +916,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -933,7 +937,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -956,7 +960,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 
@@ -978,7 +982,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            JsonElement result = await GetGraphQLControllerResultAsync(graphQLQuery, graphQLQueryName, _graphQLController);
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataGatewayException.SubStatusCodes.BadRequest}");
         }
 

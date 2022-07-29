@@ -32,6 +32,7 @@ namespace Azure.DataGateway.Config
         string? Container,
         [property: JsonPropertyName(CosmosDbOptions.GRAPHQL_SCHEMA_PATH_PROPERTY_NAME)]
         string? GraphQLSchemaPath,
+        [property: JsonIgnore]
         string? GraphQLSchema)
     {
         public const string GRAPHQL_SCHEMA_PATH_PROPERTY_NAME = "schema";

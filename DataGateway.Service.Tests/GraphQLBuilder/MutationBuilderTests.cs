@@ -40,10 +40,18 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
             return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
         }
 
-        [TestMethod]
+        [DataTestMethod]
         [TestCategory("Mutation Builder - Create")]
         [TestCategory("Schema Builder - Simple Type")]
-        public void CanGenerateCreateMutationWith_SimpleType()
+        [DataRow(new string[] { "authenticated" }, true,
+            DisplayName = "Validates @authorize directive is added.")]
+        [DataRow(new string[] { "anonymous" }, false,
+            DisplayName = "Validates @authorize directive is NOT added.")]
+        [DataRow(new string[] { "anonymous", "authenticated" }, false,
+            DisplayName = "Validates @authorize directive is NOT added - multiple roles")]
+        public void CanGenerateCreateMutationWith_SimpleType(
+            IEnumerable<string> roles,
+            bool isAuthorizeDirectiveExpected)
         {
             string gql =
                 @"
@@ -54,15 +62,23 @@ type Foo @model {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, EntityMetadata> entityPermissionsMap
+                = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    new string[] { "Foo" },
+                    new string[] { ActionType.CREATE },
+                    roles);
             DocumentNode mutationRoot = MutationBuilder.Build(root,
                 DatabaseType.cosmos,
                 new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
-                entityPermissionsMap: _entityPermissions
+                entityPermissionsMap: entityPermissionsMap
                 );
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"createFoo"));
+            FieldDefinitionNode createField =
+                query.Fields.Where(f => f.Name.Value == $"createFoo").First();
+            Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
+                actual: createField.Directives.Count);
         }
 
         [TestMethod]
@@ -565,10 +581,18 @@ type Foo @model {
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"deleteFoo"));
         }
 
-        [TestMethod]
+        [DataTestMethod]
         [TestCategory("Mutation Builder - Delete")]
         [TestCategory("Schema Builder - Simple Type")]
-        public void DeleteMutationIdAsInput_SimpleType()
+        [DataRow(new string[] { "authenticated" }, true,
+            DisplayName = "Validates @authorize directive is added.")]
+        [DataRow(new string[] { "anonymous" }, false,
+            DisplayName = "Validates @authorize directive is NOT added.")]
+        [DataRow(new string[] { "anonymous", "authenticated" }, false,
+            DisplayName = "Validates @authorize directive is NOT added - multiple roles")]
+        public void DeleteMutationIdAsInput_SimpleType(
+            IEnumerable<string> roles,
+            bool isAuthorizeDirectiveExpected)
         {
             string gql =
                 @"
@@ -579,11 +603,15 @@ type Foo @model {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, EntityMetadata> entityPermissionsMap
+                = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    new string[] { "Foo" },
+                    new string[] { ActionType.DELETE },
+                    roles);
             DocumentNode mutationRoot = MutationBuilder.Build(root,
                 DatabaseType.cosmos,
                 new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
-                entityPermissionsMap: _entityPermissions
+                entityPermissionsMap: entityPermissionsMap
                 );
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
@@ -595,6 +623,11 @@ type Foo @model {
             Assert.AreEqual("_partitionKeyValue", field.Arguments[1].Name.Value);
             Assert.AreEqual("String", field.Arguments[1].Type.NamedType().Name.Value);
             Assert.IsTrue(field.Arguments[1].Type.IsNonNullType());
+
+            FieldDefinitionNode deleteField =
+                query.Fields.Where(f => f.Name.Value == $"deleteFoo").First();
+            Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
+                actual: deleteField.Directives.Count);
         }
 
         [TestMethod]
@@ -654,10 +687,18 @@ type Foo @model {
             Assert.AreEqual("bar", argType.Fields[1].Name.Value);
         }
 
-        [TestMethod]
+        [DataTestMethod]
         [TestCategory("Mutation Builder - Update")]
         [TestCategory("Schema Builder - Simple Type")]
-        public void UpdateMutationIdFieldAsArgument_SimpleType()
+        [DataRow(new string[] { "authenticated" }, true,
+            DisplayName = "Validates @authorize directive is added.")]
+        [DataRow(new string[] { "anonymous" }, false,
+            DisplayName = "Validates @authorize directive is NOT added.")]
+        [DataRow(new string[] { "anonymous", "authenticated" }, false,
+            DisplayName = "Validates @authorize directive is NOT added - multiple roles")]
+        public void UpdateMutationIdFieldAsArgument_SimpleType(
+            IEnumerable<string> roles,
+            bool isAuthorizeDirectiveExpected)
         {
             string gql =
                 @"
@@ -668,12 +709,16 @@ type Foo @model {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, EntityMetadata> entityPermissionsMap
+                = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    new string[] { "Foo" },
+                    new string[] { ActionType.UPDATE },
+                    roles);
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
                 DatabaseType.cosmos,
                 new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
-                entityPermissionsMap: _entityPermissions
+                entityPermissionsMap: entityPermissionsMap
                 );
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
@@ -685,6 +730,77 @@ type Foo @model {
             Assert.AreEqual("_partitionKeyValue", field.Arguments[1].Name.Value);
             Assert.AreEqual("String", field.Arguments[1].Type.NamedType().Name.Value);
             Assert.IsTrue(field.Arguments[1].Type.IsNonNullType());
+
+            FieldDefinitionNode collectionField =
+                query.Fields.Where(f => f.Name.Value == $"updateFoo").First();
+            Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
+                actual: collectionField.Directives.Count);
+        }
+
+        [TestMethod]
+        [TestCategory("Mutation Builder - Updated")]
+        [TestCategory("Schema Builder - Nested Type")]
+        public void UpdateMutationWithNestedInnerObject_NonNullableListTypeNonNullableItems()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID!
+    bar: [Bar!]!
+}
+
+type Bar {
+    baz: Int
+}
+                ";
+
+            (DocumentNode mutationRoot, FieldDefinitionNode field) = GenerateTestMutationFieldNodes(gql);
+            InputValueDefinitionNode inputArg = field.Arguments[2];
+            InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
+            Assert.AreEqual(2, inputObj.Fields.Count);
+
+            Assert.AreEqual("id", inputObj.Fields[0].Name.Value);
+            Assert.AreEqual("ID", inputObj.Fields[0].Type.NamedType().Name.Value);
+            Assert.IsTrue(inputObj.Fields[0].Type.IsNonNullType(), "id field shouldn't be null");
+
+            Assert.AreEqual("bar", inputObj.Fields[1].Name.Value);
+            Assert.AreEqual("UpdateBarInput", inputObj.Fields[1].Type.NamedType().Name.Value);
+            Assert.IsTrue(inputObj.Fields[1].Type.IsNonNullType(), "bar field shouldn't be null");
+            Assert.IsTrue(inputObj.Fields[1].Type.InnerType().IsListType(), "bar field should be a list");
+            Assert.IsTrue(inputObj.Fields[1].Type.InnerType().InnerType().IsNonNullType(), "list fields aren't nullable");
+        }
+
+        [TestMethod]
+        [TestCategory("Mutation Builder - Updated")]
+        [TestCategory("Schema Builder - Nested Type")]
+        public void UpdateMutationWithNestedInnerObject_NullableListTypeNullableItems()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID
+    bar: [Bar]
+}
+
+type Bar {
+    baz: Int
+}
+                ";
+
+            (DocumentNode mutationRoot, FieldDefinitionNode field) = GenerateTestMutationFieldNodes(gql);
+            InputValueDefinitionNode inputArg = field.Arguments[2];
+            InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
+            Assert.AreEqual(2, inputObj.Fields.Count);
+
+            Assert.AreEqual("id", inputObj.Fields[0].Name.Value);
+            Assert.AreEqual("ID", inputObj.Fields[0].Type.NamedType().Name.Value);
+            Assert.IsFalse(inputObj.Fields[0].Type.IsNonNullType(), "id field should allow null for schema validation");
+
+            Assert.AreEqual("bar", inputObj.Fields[1].Name.Value);
+            Assert.AreEqual("UpdateBarInput", inputObj.Fields[1].Type.NamedType().Name.Value);
+            Assert.IsFalse(inputObj.Fields[1].Type.IsNonNullType(), "bar field shouldn't be null");
+            Assert.IsTrue(inputObj.Fields[1].Type.IsListType(), "bar field should be a list");
+            Assert.IsFalse(inputObj.Fields[1].Type.InnerType().IsNonNullType(), "list fields should be nullable");
         }
 
         [TestMethod]
@@ -705,9 +821,10 @@ type Baz @model {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.cosmos,
+                DatabaseType.mssql,
                 new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Baz", GenerateEmptyEntity() } },
                 entityPermissionsMap: _entityPermissions
                 );
@@ -719,6 +836,41 @@ type Baz @model {
             InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[0].Type.NamedType().Name);
             Assert.AreEqual(1, argType.Fields.Count);
             Assert.AreEqual("id", argType.Fields[0].Name.Value);
+        }
+
+        [TestMethod]
+        [TestCategory("Mutation Builder - Create")]
+        public void CreateMutationWillCreateNestedModelsOnInputForCosmos()
+        {
+            string gql =
+                @"
+type Foo @model {
+    id: ID!
+    baz: Baz!
+}
+
+type Baz @model {
+    id: ID!
+    x: String!
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(
+                    root,
+                    DatabaseType.cosmos,
+                    new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Baz", GenerateEmptyEntity() } },
+                    entityPermissionsMap: _entityPermissions
+                    );
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
+            Assert.AreEqual(1, field.Arguments.Count);
+
+            InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[0].Type.NamedType().Name);
+            Assert.AreEqual(2, argType.Fields.Count);
+            Assert.AreEqual("id", argType.Fields[0].Name.Value);
+            Assert.AreEqual("baz", argType.Fields[1].Name.Value);
         }
 
         [DataTestMethod]
@@ -755,6 +907,22 @@ type Foo @model {{
         {
             return (ObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is ObjectTypeDefinitionNode node && node.Name.Value == "Mutation");
 
+        }
+
+        private (DocumentNode mutationRoot, FieldDefinitionNode field) GenerateTestMutationFieldNodes(string gql)
+        {
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(
+                root,
+                DatabaseType.cosmos,
+                new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } },
+                entityPermissionsMap: _entityPermissions
+                );
+
+            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
+            return (mutationRoot, field);
         }
     }
 }

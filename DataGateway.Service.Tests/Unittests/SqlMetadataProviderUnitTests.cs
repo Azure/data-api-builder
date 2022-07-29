@@ -1,7 +1,11 @@
 using System.Threading.Tasks;
+using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.SqlTests;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataGateway.Service.Tests.UnitTests
 {
@@ -12,6 +16,15 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class SqlMetadataProviderUnitTests : SqlTestBase
     {
+        /// <summary>
+        /// Set the database engine for the tests
+        /// </summary>
+        [ClassInitialize]
+        public static void Setup(TestContext context)
+        {
+            DatabaseEngine = TestCategory.POSTGRESQL;
+        }
+
         /// <summary>
         /// Verify we parse the connection string for the
         /// schema correctly when it is of various relevant
@@ -39,12 +52,15 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// </summary>
         [TestMethod]
-        public async Task CheckNoExceptionForNoForiegnKey()
+        public async Task CheckNoExceptionForNoForeignKey()
         {
-            _testCategory = TestCategory.POSTGRESQL;
-            _runtimeConfig = SqlTestHelper.LoadConfig(_testCategory).CurrentValue;
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(DatabaseEngine);
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
+            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
-            SqlTestBase.SetUpSQLMetadataProvider();
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
+            SetUpSQLMetadataProvider();
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
         }

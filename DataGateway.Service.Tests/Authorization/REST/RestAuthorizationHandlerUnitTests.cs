@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
@@ -251,7 +252,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
                 ActionType.READ,
                 It.IsAny<IEnumerable<string>>() // Can be any IEnumerable<string>, as find request result field list is depedent on AllowedColumns.
                 )).Returns(areColumnsAllowed);
-            authorizationResolver.Setup(x => x.GetAllowedColumns(
+            authorizationResolver.Setup(x => x.GetAllowedExposedColumns(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 ActionType.READ
@@ -346,15 +347,20 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
         }
 
         /// <summary>
-        /// Sets up an authorization resolver with a config that specifies the wildcard ("*") as the test entity's actions
+        /// Sets up an authorization resolver with a config that specifies the wildcard ("*") as the test entity's actions.
+        /// Explicitly use this instead of AuthorizationHelpers.InitRuntimeConfig() because we want to create actions as
+        /// array of string instead of array of object.
         /// </summary>
         private static AuthorizationResolver SetupAuthResolverWithWildcardActions()
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: "admin",
-                actionName: "*"
-                );
+                actionName: "*");
+
+            // Override the action to be a list of string for wildcard instead of a list of object created by InitRuntimeConfig()
+            //
+            runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY].Permissions[0].Actions = new object[] { JsonSerializer.SerializeToElement(AuthorizationResolver.WILDCARD) };
 
             return AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
         }

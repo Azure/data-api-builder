@@ -6,8 +6,12 @@ using System.Net;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Models;
+using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
+using HotChocolate.Resolvers;
+using HotChocolate.Types;
+using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -146,6 +150,37 @@ namespace Azure.DataGateway.Service.Resolvers
             return GetUnderlyingTableDefinition().Columns.Select(col => col.Key).ToList();
         }
 
+        /// <summary>
+        /// Get a list of the output columns for this table.
+        /// An output column is a labelled column that holds
+        /// both the backing column and a label with the exposed name.
+        /// </summary>
+        /// <returns>List of LabelledColumns</returns>
+        protected List<LabelledColumn> GenerateOutputColumns()
+        {
+            List<LabelledColumn> outputColumns = new();
+            foreach (string columnName in GetUnderlyingTableDefinition().Columns.Keys)
+            {
+                // if column is not exposed we skip
+                if (!SqlMetadataProvider.TryGetExposedColumnName(
+                    entityName: EntityName,
+                    backingFieldName: columnName,
+                    out string? exposedName))
+                {
+                    continue;
+                }
+
+                outputColumns.Add(new(
+                    tableSchema: DatabaseObject.SchemaName,
+                    tableName: DatabaseObject.Name,
+                    columnName: columnName,
+                    label: exposedName!,
+                    tableAlias: TableAlias));
+            }
+
+            return outputColumns;
+        }
+
         ///<summary>
         /// Gets the value of the parameter cast as the system type
         /// of the column this parameter is associated with
@@ -188,19 +223,67 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// Creates the dictionary of fields and their values
-        /// to be set in the mutation from the MutationInput argument name "item".
-        /// This is only applicable for GraphQL since the input we get from the request
-        /// is of the EntityInput object form.
-        /// For REST, we simply get the mutation values in the request body as is - so
-        /// we will not find the argument of name "item" in the mutationParams.
+        /// Very similar to GQLArgumentToDictParams but only extracts the argument names from
+        /// the specified field which means that the method does not need a middleware context
+        /// to resolve the values of the arguments
         /// </summary>
-        /// <exception cref="InvalidDataException"></exception>
-        internal static IDictionary<string, object?> InputArgumentToMutationParams(
-            IDictionary<string, object?> mutationParams, string argumentName)
+        /// <param name="fieldName">the field from which to extract the argument names</param>
+        /// <param name="mutationParameters">a dictionary of mutation parameters</param>
+        internal static List<string> GetSubArgumentNamesFromGQLMutArguments
+        (
+            string fieldName,
+            IDictionary<string, object?> mutationParameters)
         {
-            if (mutationParams.TryGetValue(argumentName, out object? item))
+            string errMsg;
+
+            if (mutationParameters.TryGetValue(fieldName, out object? item))
             {
+                // An inline argument was set
+                // TODO: This assumes the input was NOT nullable.
+                if (item is List<ObjectFieldNode> mutationInputRaw)
+                {
+                    return mutationInputRaw.Select(node => node.Name.Value).ToList();
+                }
+                else
+                {
+                    errMsg = $"Unexpected {fieldName} argument format.";
+                }
+            }
+            else
+            {
+                errMsg = $"Expected {fieldName} argument in mutation arguments.";
+            }
+
+            // should not happen due to gql schema validation
+            throw new DataGatewayException(
+                message: errMsg,
+                subStatusCode: DataGatewayException.SubStatusCodes.BadRequest,
+                statusCode: HttpStatusCode.BadRequest);
+        }
+
+        /// <summary>
+        /// Creates a dictionary of fields and their values
+        /// from a field with type List<ObjectFieldNode> fetched
+        /// a dictionary of parameters
+        /// Used to extract values from parameters
+        /// </summary>
+        /// <param name="context">GQL middleware context used to resolve the values of arguments</param>
+        /// <param name="fieldName">the gql field from which to extract the parameters</param>
+        /// <param name="mutationParameters">a dictionary of mutation parameters</param>
+        /// <exception cref="InvalidDataException"></exception>
+        internal static IDictionary<string, object?> GQLMutArgumentToDictParams(
+            IMiddlewareContext context,
+            string fieldName,
+            IDictionary<string, object?> mutationParameters)
+        {
+            string errMsg;
+
+            if (mutationParameters.TryGetValue(fieldName, out object? item))
+            {
+                IObjectField fieldSchema = context.Selection.Field;
+                IInputField itemsArgumentSchema = fieldSchema.Arguments[fieldName];
+                InputObjectType itemsArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(itemsArgumentSchema);
+
                 Dictionary<string, object?> mutationInput;
                 // An inline argument was set
                 // TODO: This assumes the input was NOT nullable.
@@ -209,28 +292,57 @@ namespace Azure.DataGateway.Service.Resolvers
                     mutationInput = new Dictionary<string, object?>();
                     foreach (ObjectFieldNode node in mutationInputRaw)
                     {
-                        mutationInput.Add(node.Name.Value, node.Value.Value);
+                        string nodeName = node.Name.Value;
+                        mutationInput.Add(nodeName, ResolverMiddleware.ExtractValueFromIValueNode(
+                            value: node.Value,
+                            argumentSchema: itemsArgumentObject.Fields[nodeName],
+                            variables: context.Variables));
                     }
-                }
-                // Variables were provided to the mutation
-                else if (item is Dictionary<string, object?> dict)
-                {
-                    mutationInput = dict;
+
+                    return mutationInput;
                 }
                 else
                 {
-                    throw new DataGatewayException(
-                        message: "The type of argument for the provided data is unsupported.",
-                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest,
-                        statusCode: HttpStatusCode.BadRequest);
+                    errMsg = $"Unexpected {fieldName} argument format.";
                 }
-
-                return mutationInput;
+            }
+            else
+            {
+                errMsg = $"Expected {fieldName} argument in mutation arguments.";
             }
 
-            // Its ok to not find the input argument name in the mutation params dictionary
-            // because it indicates the REST scenario.
-            return mutationParams;
+            // should not happen due to gql schema validation
+            throw new DataGatewayException(
+                message: errMsg,
+                subStatusCode: DataGatewayException.SubStatusCodes.BadRequest,
+                statusCode: HttpStatusCode.BadRequest);
+        }
+
+        /// <summary>
+        /// After SqlQueryStructure is instantiated, process a database authorization policy
+        /// for GraphQL requests with the ODataASTVisitor to populate DbPolicyPredicates.
+        /// Processing will also occur for GraphQL sub-queries.
+        /// </summary>
+        /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
+        /// <exception cref="DataGatewayException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
+        public void ProcessOdataClause(FilterClause odataClause)
+        {
+            ODataASTVisitor visitor = new(this, this.SqlMetadataProvider);
+            try
+            {
+                DbPolicyPredicates = GetFilterPredicatesFromOdataClause(odataClause, visitor);
+            }
+            catch
+            {
+                throw new DataGatewayException(message: "Policy query parameter is not well formed for GraphQL Policy Processing.",
+                                               statusCode: HttpStatusCode.Forbidden,
+                                               subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+        }
+
+        protected static string? GetFilterPredicatesFromOdataClause(FilterClause filterClause, ODataASTVisitor visitor)
+        {
+            return filterClause.Expression.Accept<string>(visitor);
         }
     }
 }

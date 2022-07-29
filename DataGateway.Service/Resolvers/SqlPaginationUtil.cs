@@ -180,12 +180,15 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <summary>
         /// Parse the value of "after" parameter from query parameters, validate it, and return the json object it stores
         /// </summary>
-        public static IEnumerable<PaginationColumn> ParseAfterFromQueryParams(IDictionary<string, object> queryParams, PaginationMetadata paginationMetadata)
+        public static IEnumerable<PaginationColumn> ParseAfterFromQueryParams(IDictionary<string, object?> queryParams, PaginationMetadata paginationMetadata)
         {
             if (queryParams.TryGetValue(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME, out object? continuationObject))
             {
-                string afterPlainText = (string)continuationObject;
-                return ParseAfterFromJsonString(afterPlainText, paginationMetadata);
+                if (continuationObject is not null)
+                {
+                    string afterPlainText = (string)continuationObject;
+                    return ParseAfterFromJsonString(afterPlainText, paginationMetadata);
+                }
             }
 
             return Enumerable.Empty<PaginationColumn>();

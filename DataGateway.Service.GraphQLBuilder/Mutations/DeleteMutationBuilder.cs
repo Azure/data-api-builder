@@ -43,9 +43,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
             // Create authorize directive denoting allowed roles
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
-            if (rolesAllowedForMutation is not null)
+
+            if (CreateAuthorizationDirectiveIfNecessary(
+                    rolesAllowedForMutation,
+                    out DirectiveNode? authorizeDirective))
             {
-                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForMutation));
+                fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
 
             return new(

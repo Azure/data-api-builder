@@ -27,10 +27,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// <returns>AuthorizationResolver object</returns>
         public static AuthorizationResolver InitAuthorizationResolver(RuntimeConfig runtimeConfig)
         {
-            Mock<RuntimeConfigProvider> runtimeConfigProvider = new();
-            runtimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
-            runtimeConfigProvider.Setup(x => x.TryGetRuntimeConfiguration(out runtimeConfig)).Returns(true);
-
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(runtimeConfig);
             Mock<ISqlMetadataProvider> metadataProvider = new();
             TableDefinition sampleTable = CreateSampleTable();
             metadataProvider.Setup(x => x.GetTableDefinition(TEST_ENTITY)).Returns(sampleTable);
@@ -42,7 +39,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                               .Callback(new metaDataCallback((string entity, string exposedField, out string backingColumn) => _ = _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn)))
                               .Returns((string entity, string exposedField, string backingColumn) => _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn));
 
-            return new AuthorizationResolver(runtimeConfigProvider.Object, metadataProvider.Object);
+            return new AuthorizationResolver(runtimeConfigProvider, metadataProvider.Object);
         }
 
         /// <summary>
@@ -65,9 +62,15 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string? requestPolicy = null
             )
         {
-            Field fieldsForRole = new(
-                include: includedCols,
-                exclude: excludedCols);
+            Field? fieldsForRole = null;
+
+            if (includedCols is not null || excludedCols is not null)
+            {
+                // Only create object for Fields if inc/exc cols is not null.
+                fieldsForRole = new(
+                    include: includedCols,
+                    exclude: excludedCols);
+            }
 
             Policy policy = new(requestPolicy, databasePolicy);
 

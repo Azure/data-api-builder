@@ -104,7 +104,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
             // When creating, you don't need to provide the data for nested models, but you will for other nested types
-            if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType))
+            // For cosmos, allow updating nested objects
+            if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType) && databaseType != DatabaseType.cosmos)
             {
                 return false;
             }
@@ -237,9 +238,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
             // Create authorize directive denoting allowed roles
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
-            if (rolesAllowedForMutation is not null)
+
+            if (CreateAuthorizationDirectiveIfNecessary(
+                    rolesAllowedForMutation,
+                    out DirectiveNode? authorizeDirective))
             {
-                fieldDefinitionNodeDirectives.Add(CreateAuthorizationDirective(rolesAllowedForMutation));
+                fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
 
             return new(

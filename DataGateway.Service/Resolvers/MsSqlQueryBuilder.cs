@@ -59,24 +59,32 @@ namespace Azure.DataGateway.Service.Resolvers
         {
 
             return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
-                    $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
+                    $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
                     $"VALUES ({string.Join(", ", structure.Values)});";
         }
 
         /// <inheritdoc />
         public string Build(SqlUpdateStructure structure)
         {
+            string predicates = JoinPredicateStrings(
+                                   structure.DbPolicyPredicates,
+                                   Build(structure.Predicates));
+
             return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
-                    $"OUTPUT {MakeOutputColumns(structure.PrimaryKey(), OutputQualifier.Inserted)} " +
-                    $"WHERE {Build(structure.Predicates)};";
+                    $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
+                    $"WHERE {predicates};";
         }
 
         /// <inheritdoc />
         public string Build(SqlDeleteStructure structure)
         {
+            string predicates = JoinPredicateStrings(
+                       structure.DbPolicyPredicates,
+                       Build(structure.Predicates));
+
             return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                    $"WHERE {Build(structure.Predicates)} ";
+                    $"WHERE {predicates} ";
         }
 
         /// <summary>
@@ -91,19 +99,19 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
-                    $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
+                    $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
                     $"WHERE {Build(structure.Predicates)};";
             }
             else
             {
                 return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"WITH(UPDLOCK) SET {Build(structure.UpdateOperations, ", ")} " +
-                    $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
+                    $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
                     $"WHERE {Build(structure.Predicates)} " +
                     $"IF @@ROWCOUNT = 0 " +
                     $"BEGIN; " +
                     $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
-                    $"OUTPUT {MakeOutputColumns(structure.ReturnColumns, OutputQualifier.Inserted)} " +
+                    $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
                     $"VALUES ({string.Join(", ", structure.Values)}) " +
                     $"END; COMMIT TRANSACTION";
             }
@@ -116,14 +124,24 @@ namespace Azure.DataGateway.Service.Resolvers
         private enum OutputQualifier { Inserted, Deleted };
 
         /// <summary>
-        /// Adds qualifiers (inserted or deleted) to columns in OUTPUT clause and joins them with commas.
-        /// e.g. for columns [C1, C2, C3] and output qualifier Inserted
-        /// return Inserted.C1, Inserted.C2, Inserted.C3
+        /// Adds qualifiers (inserted or deleted) to output columns in OUTPUT clause
+        /// and joins them with commas. e.g. for outputcolumns [C1, C2, C3] and output
+        /// qualifier Inserted return
+        /// Inserted.ColumnName1 AS {Label1}, Inserted.ColumnName2 AS {Label2},
+        /// Inserted.ColumnName3 AS {Label3}
         /// </summary>
-        private string MakeOutputColumns(List<string> columns, OutputQualifier outputQualifier)
+        private string MakeOutputColumns(List<LabelledColumn> columns, OutputQualifier outputQualifier)
         {
-            List<string> outputColumns = columns.Select(column => $"{outputQualifier}.{QuoteIdentifier(column)}").ToList();
-            return string.Join(", ", outputColumns);
+            return string.Join(", ", columns.Select(c => Build(c, outputQualifier)));
+        }
+
+        /// <summary>
+        /// Build a labelled column as a column and attach
+        /// ... AS {Label} to it
+        /// </summary>
+        private string Build(LabelledColumn column, OutputQualifier outputQualifier)
+        {
+            return $"{outputQualifier}.{QuoteIdentifier(column.ColumnName)} AS {QuoteIdentifier(column.Label)}";
         }
 
         /// <summary>

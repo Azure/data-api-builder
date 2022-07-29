@@ -43,7 +43,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [DataRow("", "SearchPath=\"\";Host=localhost;Database=graphql")]
         public void CheckConnectionStringParsingTest(string expected, string connectionString)
         {
-            PostgreSqlMetadataProvider.TryGetSchemaFromConnectionString(out string actual, connectionString);
+            PostgreSqlMetadataProvider.TryGetSchemaFromConnectionString(connectionString, out string actual);
             Assert.AreEqual(expected, actual);
         }
 

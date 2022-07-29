@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="schemaName">the schema name we save.</param>
         /// <returns>true if non empty schema in connection string, false otherwise.</returns>
-        public static bool TryGetSchemaFromConnectionString(out string schemaName, string connectionString)
+        public static bool TryGetSchemaFromConnectionString(string connectionString, out string schemaName)
         {
             NpgsqlConnectionStringBuilder connectionStringBuilder;
             try

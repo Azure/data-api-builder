@@ -435,8 +435,8 @@ namespace Azure.DataGateway.Service.Services
                 // if DatabaseType is not postgresql will short circuit and use default
                 if (_databaseType is not DatabaseType.postgresql ||
                     !PostgreSqlMetadataProvider.TryGetSchemaFromConnectionString(
-                        out schemaName,
-                        connectionString: ConnectionString))
+                        connectionString: ConnectionString,
+                        out schemaName))
                 {
                     schemaName = GetDefaultSchemaName();
                 }
@@ -632,10 +632,13 @@ namespace Azure.DataGateway.Service.Services
             string tableName)
         {
             using ConnectionT conn = new();
-            // if connection string is set to empty string
+            // If connection string is set to empty string
             // we throw here to avoid having to sort out
             // complicated db specific exception messages.
             // This is caught and returned as DataGatewayException.
+            // The runtime config has a public setter so we check
+            // here for empty connection string to ensure that
+            // it was not set to an invalid state after initialization.
             if (string.IsNullOrWhiteSpace(ConnectionString))
             {
                 throw new DataGatewayException(

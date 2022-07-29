@@ -588,11 +588,7 @@ namespace Azure.DataGateway.Service.Services
                 {
                     dataTable = await FillSchemaForTableAsync(schemaName, tableName);
                 }
-                catch (DataGatewayException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not DataGatewayException)
                 {
                     string message;
                     // Check exception content to ensure proper error message for connection string.

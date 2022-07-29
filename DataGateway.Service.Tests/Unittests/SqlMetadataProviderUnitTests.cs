@@ -18,6 +18,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
     public class SqlMetadataProviderUnitTests : SqlTestBase
     {
         /// <summary>
+        /// Only for PostgreSql connection strings.
         /// Verify we parse the connection string for the
         /// schema correctly when it is of various relevant
         /// formats.
@@ -43,7 +44,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// for all the tables based on the entities relationship.
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// </summary>
-        [DataTestMethod]
+        [DataTestMethod, TestCategory(TestCategory.POSTGRESQL)]
         [DataRow(TestCategory.MSSQL)]
         [DataRow(TestCategory.MYSQL)]
         [DataRow(TestCategory.POSTGRESQL)]

@@ -613,7 +613,6 @@ namespace Azure.DataGateway.Service.Services
                             $"due to: {ex.Message}";
                     }
 
-                    _logger.LogError(message);
                     throw new DataGatewayException(
                         message,
                         statusCode: HttpStatusCode.ServiceUnavailable,
@@ -656,7 +655,6 @@ namespace Azure.DataGateway.Service.Services
             {
                 string message = DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE +
                     $" Underlying Exception message: {ex.Message}";
-                _logger.LogError(message);
                 throw new DataGatewayException(
                     message,
                     statusCode: HttpStatusCode.ServiceUnavailable,

@@ -64,7 +64,7 @@ Examples include a frontend webpage, or PostMan (this guide is for PostMan).
       2. Authorized Scopes: `api://<APP_ID_DataAPIBuilder>/EndpointAccess`
       3. Select **Add application**
 
-## Addition Client App Registration Configuration
+## Additional Client App Registration Configuration
 
 1. Navigate to your App Registration (`PostmanDataApiBuilderClient`) overview page.
 1. Under *API permissions*, select **Add a permission**

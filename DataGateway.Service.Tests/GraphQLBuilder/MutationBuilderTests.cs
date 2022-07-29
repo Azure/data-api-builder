@@ -659,7 +659,7 @@ type Foo @model {
             string entityName = "Foos";
             string singularName = null;
             string pluralName = null;
-            string expectedDeleteMutationName = "Foo";
+            string expectedDeleteMutationName = "deleteFoo";
 
             Entity entity = (singularName is not null && pluralName is not null)
                                 ? GenerateEntityWithSingularPlural(singularName, pluralName)

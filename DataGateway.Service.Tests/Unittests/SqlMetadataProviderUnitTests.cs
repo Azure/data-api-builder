@@ -44,13 +44,10 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// for all the tables based on the entities relationship.
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// </summary>
-        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
-        [DataRow(TestCategory.MSSQL)]
-        [DataRow(TestCategory.MYSQL)]
-        [DataRow(TestCategory.POSTGRESQL)]
-        public async Task CheckNoExceptionForNoForeignKey(string db)
+        [DataTestMethod, TestCategory(TestCategory.POSTGRESQL)]
+        public async Task CheckNoExceptionForNoForeignKey()
         {
-            DatabaseEngine = db;
+            DatabaseEngine = TestCategory.POSTGRESQL;
             _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);

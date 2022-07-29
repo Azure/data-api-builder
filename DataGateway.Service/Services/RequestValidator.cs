@@ -258,7 +258,7 @@ namespace Azure.DataGateway.Service.Services
                     }
                 }
 
-                bool isReplacementUpdate = (upsertRequestCtx.OperationType == Operation.Upsert) ? true : false;
+                bool isReplacementUpdate = (upsertRequestCtx.OperationType == Config.Operation.Upsert) ? true : false;
                 if (ValidateColumn(column, fieldsInRequestBody, isReplacementUpdate))
                 {
                     unValidatedFields.Remove(column.Key);

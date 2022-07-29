@@ -3,7 +3,7 @@ using Azure.DataGateway.Config;
 using HotChocolate.Language;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLUtils;
-
+using Operation = Azure.DataGateway.Config.Operation;
 namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 {
     public static class MutationBuilder

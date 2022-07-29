@@ -27,7 +27,7 @@ namespace Azure.DataGateway.Service.Configurations
         {
             if (runtimeConfigPath != null)
             {
-                RuntimeConfiguration = runtimeConfigPath.Value.LoadRuntimeConfigValue();
+//                RuntimeConfiguration = runtimeConfigPath.Value.LoadRuntimeConfigValue();
             }
         }
 
@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <param name="configuration">The engine configuration.</param>
         /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
         /// <param name="connectionString">The connection string to the database.</param>
-        public void Initialize(string configuration, string? schema, string connectionString)
+        public void Initialize(string configuration, string? schema, string connectionString, string aadToken, string accountEndpoint)
         {
             if (string.IsNullOrEmpty(connectionString))
             {
@@ -52,6 +52,8 @@ namespace Azure.DataGateway.Service.Configurations
             RuntimeConfiguration = RuntimeConfig.GetDeserializedConfig<RuntimeConfig>(configuration);
             RuntimeConfiguration.DetermineGlobalSettings();
             RuntimeConfiguration.ConnectionString = connectionString;
+            RuntimeConfiguration.AadToken = aadToken;
+            RuntimeConfiguration.AccountEndpoint = accountEndpoint;
 
             if (RuntimeConfiguration.DatabaseType == DatabaseType.cosmos)
             {

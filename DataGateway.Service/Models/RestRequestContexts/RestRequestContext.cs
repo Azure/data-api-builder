@@ -93,7 +93,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// The database engine operation type this request is.
         /// </summary>
-        public Operation OperationType { get; set; }
+        public Config.Operation OperationType { get; set; }
 
         /// <summary>
         /// A collection of all unique column names present in the request.

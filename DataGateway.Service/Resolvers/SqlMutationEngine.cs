@@ -58,9 +58,9 @@ namespace Azure.DataGateway.Service.Resolvers
             string entityName = context.Selection.Field.Type.TypeName();
 
             Tuple<JsonDocument, IMetadata>? result = null;
-            Operation mutationOperation =
+            Config.Operation mutationOperation =
                 MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
-            if (mutationOperation == Operation.Delete)
+            if (mutationOperation == Config.Operation.Delete)
             {
                 // compute the mutation result before removing the element
                 result = await _queryEngine.ExecuteAsync(context, parameters);
@@ -133,7 +133,7 @@ namespace Azure.DataGateway.Service.Resolvers
 
             switch (context.OperationType)
             {
-                case Operation.Delete:
+                case Config.Operation.Delete:
                     // Records affected tells us that item was successfully deleted.
                     // No records affected happens for a DELETE request on nonexistent object
                     // Returning empty JSON result triggers a NoContent result in calling REST service.
@@ -143,11 +143,11 @@ namespace Azure.DataGateway.Service.Resolvers
                     }
 
                     break;
-                case Operation.Insert:
+                case Config.Operation.Insert:
                     jsonResultString = JsonSerializer.Serialize(resultRecord);
                     break;
-                case Operation.Update:
-                case Operation.UpdateIncremental:
+                case Config.Operation.Update:
+                case Config.Operation.UpdateIncremental:
                     // Nothing to update means we throw Exception
                     if (resultRecord is null || resultRecord.Count == 0)
                     {
@@ -158,8 +158,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     // Valid REST updates return empty result set
                     jsonResultString = null;
                     break;
-                case Operation.Upsert:
-                case Operation.UpsertIncremental:
+                case Config.Operation.Upsert:
+                case Config.Operation.UpsertIncremental:
                     /// Processes a second result set from DbDataReader if it exists.
                     /// In MsSQL upsert:
                     /// result set #1: result of the UPDATE operation.
@@ -212,7 +212,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         private async Task<DbDataReader> PerformMutationOperation(
             string entityName,
-            Operation operationType,
+            Config.Operation operationType,
             IDictionary<string, object?> parameters)
         {
             string queryString;
@@ -220,8 +220,8 @@ namespace Azure.DataGateway.Service.Resolvers
 
             switch (operationType)
             {
-                case Operation.Insert:
-                case Operation.Create:
+                case Config.Operation.Insert:
+                case Config.Operation.Create:
                     SqlInsertStructure insertQueryStruct =
                         new(entityName,
                         _sqlMetadataProvider,
@@ -229,7 +229,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
-                case Operation.Update:
+                case Config.Operation.Update:
                     SqlUpdateStructure updateStructure =
                         new(entityName,
                         _sqlMetadataProvider,
@@ -238,7 +238,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
                     break;
-                case Operation.UpdateIncremental:
+                case Config.Operation.UpdateIncremental:
                     SqlUpdateStructure updateIncrementalStructure =
                         new(entityName,
                         _sqlMetadataProvider,
@@ -247,7 +247,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;
-                case Operation.UpdateGraphQL:
+                case Config.Operation.UpdateGraphQL:
                     SqlUpdateStructure updateGraphQLStructure =
                         new(entityName,
                         _sqlMetadataProvider,
@@ -255,7 +255,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryString = _queryBuilder.Build(updateGraphQLStructure);
                     queryParameters = updateGraphQLStructure.Parameters;
                     break;
-                case Operation.Delete:
+                case Config.Operation.Delete:
                     SqlDeleteStructure deleteStructure =
                         new(entityName,
                         _sqlMetadataProvider,
@@ -263,7 +263,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryString = _queryBuilder.Build(deleteStructure);
                     queryParameters = deleteStructure.Parameters;
                     break;
-                case Operation.Upsert:
+                case Config.Operation.Upsert:
                     SqlUpsertQueryStructure upsertStructure =
                         new(entityName,
                         _sqlMetadataProvider,
@@ -272,7 +272,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     queryString = _queryBuilder.Build(upsertStructure);
                     queryParameters = upsertStructure.Parameters;
                     break;
-                case Operation.UpsertIncremental:
+                case Config.Operation.UpsertIncremental:
                     SqlUpsertQueryStructure upsertIncrementalStructure =
                         new(entityName,
                         _sqlMetadataProvider,
@@ -296,14 +296,14 @@ namespace Azure.DataGateway.Service.Resolvers
 
             switch (context.OperationType)
             {
-                case Operation.Delete:
+                case Config.Operation.Delete:
                     // DeleteOne based off primary key in request.
                     parameters = new(context.PrimaryKeyValuePairs!);
                     break;
-                case Operation.Upsert:
-                case Operation.UpsertIncremental:
-                case Operation.Update:
-                case Operation.UpdateIncremental:
+                case Config.Operation.Upsert:
+                case Config.Operation.UpsertIncremental:
+                case Config.Operation.Update:
+                case Config.Operation.UpdateIncremental:
                     // Combine both PrimaryKey/Field ValuePairs
                     // because we create an update statement.
                     parameters = new(context.PrimaryKeyValuePairs!);

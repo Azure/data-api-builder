@@ -18,6 +18,10 @@ namespace Azure.DataGateway.Config
 
         [property: JsonPropertyName(CONNSTRING_PROPERTY_NAME)]
         public string ConnectionString { get; set; } = string.Empty;
+        [property: JsonPropertyName("aad-token")]
+        public string AadToken { get; set; } = string.Empty;
+        [property: JsonPropertyName("account-endPoint")]
+        public string AccountEndpoint { get; set; } = string.Empty;
     }
 
     /// <summary>

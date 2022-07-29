@@ -173,6 +173,35 @@ namespace Azure.DataGateway.Config
         }
 
         [JsonIgnore]
+        public string AadToken
+        {
+            get
+            {
+                return DataSource.AadToken;
+            }
+
+            set
+            {
+                DataSource.AadToken = value;
+            }
+        }
+
+
+        [JsonIgnore]
+        public string AccountEndpoint
+        {
+            get
+            {
+                return DataSource.AccountEndpoint;
+            }
+
+            set
+            {
+                DataSource.AccountEndpoint = value;
+            }
+        }
+
+        [JsonIgnore]
         public AuthenticationConfig? AuthNConfig
         {
             get

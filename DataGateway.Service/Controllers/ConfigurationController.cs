@@ -38,7 +38,9 @@ namespace Azure.DataGateway.Service.Controllers
             _configurationProvider.Initialize(
                 configuration.Configuration,
                 configuration.Schema,
-                configuration.ConnectionString);
+                configuration.ConnectionString,
+                configuration.AadToken,
+                configuration.AccountEndpoint);
             stopwatch.Stop();
             _serverTiming.Metrics.Add(new ServerTimingMetric("Graphql-BindAsync", stopwatch.ElapsedMilliseconds, ""));
 
@@ -52,9 +54,12 @@ namespace Azure.DataGateway.Service.Controllers
     /// <param name="Configuration">The runtime configuration.</param>
     /// <param name="Schema">The GraphQL schema. Can be left empty for SQL databases.</param>
     /// <param name="ConnectionString">The database connection string.</param>
+    /// <param name="AadToken">Client AAD token</param>
     public record class ConfigurationPostParameters(
         string Configuration,
         string? Schema,
-        string ConnectionString)
+        string ConnectionString,
+        string AadToken,
+        string AccountEndpoint)
     { }
 }

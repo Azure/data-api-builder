@@ -18,7 +18,6 @@ using Azure.DataGateway.Service.Resolvers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
-
 namespace Azure.DataGateway.Service.Services
 {
     /// <summary>
@@ -62,7 +61,7 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="primaryKeyRoute">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
         public async Task<JsonDocument?> ExecuteAsync(
             string entityName,
-            Operation operationType,
+            Config.Operation operationType,
             string? primaryKeyRoute)
         {
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
@@ -82,12 +81,12 @@ namespace Azure.DataGateway.Service.Services
             RestRequestContext context;
             switch (operationType)
             {
-                case Operation.Find:
+                case Config.Operation.Find:
                     context = new FindRequestContext(entityName,
                                                      dbo: dbObject,
                                                      isList: string.IsNullOrEmpty(primaryKeyRoute));
                     break;
-                case Operation.Insert:
+                case Config.Operation.Insert:
                     JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
                     context = new InsertRequestContext(
                         entityName,
@@ -98,16 +97,16 @@ namespace Azure.DataGateway.Service.Services
                         (InsertRequestContext)context,
                         _sqlMetadataProvider);
                     break;
-                case Operation.Delete:
+                case Config.Operation.Delete:
                     context = new DeleteRequestContext(entityName,
                                                        dbo: dbObject,
                                                        isList: false);
                     RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                     break;
-                case Operation.Update:
-                case Operation.UpdateIncremental:
-                case Operation.Upsert:
-                case Operation.UpsertIncremental:
+                case Config.Operation.Update:
+                case Config.Operation.UpdateIncremental:
+                case Config.Operation.Upsert:
+                case Config.Operation.UpsertIncremental:
                     JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
                     context = new UpsertRequestContext(entityName,
                                                        dbo: dbObject,
@@ -158,14 +157,14 @@ namespace Azure.DataGateway.Service.Services
 
             switch (operationType)
             {
-                case Operation.Find:
+                case Config.Operation.Find:
                     return FormatFindResult(await _queryEngine.ExecuteAsync(context), (FindRequestContext)context);
-                case Operation.Insert:
-                case Operation.Delete:
-                case Operation.Update:
-                case Operation.UpdateIncremental:
-                case Operation.Upsert:
-                case Operation.UpsertIncremental:
+                case Config.Operation.Insert:
+                case Config.Operation.Delete:
+                case Config.Operation.Update:
+                case Config.Operation.UpdateIncremental:
+                case Config.Operation.Upsert:
+                case Config.Operation.UpsertIncremental:
                     return await _mutationEngine.ExecuteAsync(context);
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");

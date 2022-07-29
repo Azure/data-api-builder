@@ -121,7 +121,7 @@ namespace Azure.DataGateway.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                Operation.Find);
+                Config.Operation.Find);
         }
 
         /// <summary>
@@ -139,7 +139,7 @@ namespace Azure.DataGateway.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                Operation.Insert);
+                Azure.DataGateway.Config.Operation.Insert);
         }
 
         /// <summary>
@@ -159,7 +159,7 @@ namespace Azure.DataGateway.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                Operation.Delete);
+                Azure.DataGateway.Config.Operation.Delete);
         }
 
         /// <summary>
@@ -179,7 +179,7 @@ namespace Azure.DataGateway.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                DeterminePatchPutSemantics(Operation.Upsert));
+                DeterminePatchPutSemantics(Config.Operation.Upsert));
         }
 
         /// <summary>
@@ -199,7 +199,7 @@ namespace Azure.DataGateway.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                DeterminePatchPutSemantics(Operation.UpsertIncremental));
+                DeterminePatchPutSemantics(Config.Operation.UpsertIncremental));
         }
 
         /// <summary>
@@ -209,7 +209,7 @@ namespace Azure.DataGateway.Service.Controllers
         /// <param name="operationType">The kind of operation to handle.</param>
         private async Task<IActionResult> HandleOperation(
             string route,
-            Operation operationType)
+            Config.Operation operationType)
         {
             try
             {
@@ -231,17 +231,17 @@ namespace Azure.DataGateway.Service.Controllers
 
                     switch (operationType)
                     {
-                        case Operation.Find:
+                        case Config.Operation.Find:
                             return formattedResult;
-                        case Operation.Insert:
+                        case Config.Operation.Insert:
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             string location =
                                 UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
                             return new CreatedResult(location: location, formattedResult.Value);
-                        case Operation.Delete:
+                        case Config.Operation.Delete:
                             return new NoContentResult();
-                        case Operation.Upsert:
-                        case Operation.UpsertIncremental:
+                        case Config.Operation.Upsert:
+                        case Config.Operation.UpsertIncremental:
                             primaryKeyRoute = _restService.ConstructPrimaryKeyRoute(entityName, resultElement);
                             location =
                                 UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + primaryKeyRoute;
@@ -254,10 +254,10 @@ namespace Azure.DataGateway.Service.Controllers
                 {
                     switch (operationType)
                     {
-                        case Operation.Update:
-                        case Operation.UpdateIncremental:
-                        case Operation.Upsert:
-                        case Operation.UpsertIncremental:
+                        case Config.Operation.Update:
+                        case Config.Operation.UpdateIncremental:
+                        case Config.Operation.Upsert:
+                        case Config.Operation.UpsertIncremental:
                             // Empty result set indicates an Update successfully occurred.
                             return new NoContentResult();
                         default:
@@ -301,7 +301,7 @@ namespace Azure.DataGateway.Service.Controllers
         /// </summary>
         /// <param name="operation">opertion to be used.</param>
         /// <returns>correct opertion based on headers.</returns>
-        private Operation DeterminePatchPutSemantics(Operation operation)
+        private Config.Operation DeterminePatchPutSemantics(Config.Operation operation)
         {
 
             if (HttpContext.Request.Headers.ContainsKey("If-Match"))
@@ -315,11 +315,11 @@ namespace Azure.DataGateway.Service.Controllers
 
                 switch (operation)
                 {
-                    case Operation.Upsert:
-                        operation = Operation.Update;
+                    case Config.Operation.Upsert:
+                        operation = Config.Operation.Update;
                         break;
-                    case Operation.UpsertIncremental:
-                        operation = Operation.UpdateIncremental;
+                    case Config.Operation.UpsertIncremental:
+                        operation = Config.Operation.UpdateIncremental;
                         break;
                 }
             }

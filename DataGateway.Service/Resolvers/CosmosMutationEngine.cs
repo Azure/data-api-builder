@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
@@ -57,9 +56,9 @@ namespace Azure.DataGateway.Service.Resolvers
 
             ItemResponse<JObject>? response = resolver.OperationType switch
             {
-                Operation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
-                Operation.Create => await HandleCreateAsync(queryArgs, container),
-                Operation.Delete => await HandleDeleteAsync(queryArgs, container),
+                Config.Operation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
+                Config.Operation.Create => await HandleCreateAsync(queryArgs, container),
+                Config.Operation.Delete => await HandleDeleteAsync(queryArgs, container),
                 _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
             };
 
@@ -244,7 +243,7 @@ namespace Azure.DataGateway.Service.Resolvers
             string containerName = _metadataProvider.GetDatabaseObjectName(entityName);
 
             string graphqlMutationName = context.Selection.Field.Name.Value;
-            Operation mutationOperation =
+            Config.Operation mutationOperation =
                 MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
 
             CosmosOperationMetadata mutation = new(databaseName, containerName, mutationOperation);

@@ -634,17 +634,24 @@ namespace Azure.DataGateway.Service.Services
             string tableName)
         {
             using ConnectionT conn = new();
+            // if connection string is set to empty string
+            // we throw here to avoid having to sort out
+            // complicated db specific exception messages.
+            // This is caught and returned as DataGatewayException.
+            if (string.IsNullOrWhiteSpace(ConnectionString))
+            {
+                throw new DataGatewayException(
+                    DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE +
+                    " Connection string is null, empty, or whitespace.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
             try
             {
+                // for non-MySql DB types, this will throw an exception
+                // for malformed connection strings
                 conn.ConnectionString = ConnectionString;
-                // if connection string is set to empty string
-                // we throw here to avoid having to sort out
-                // complicated db specific exception messages.
-                // This is caught and returned as DataGatewayException.
-                if (string.IsNullOrWhiteSpace(conn.ConnectionString))
-                {
-                    throw new Exception("Connection String is empty");
-                }
             }
             catch (Exception ex)
             {

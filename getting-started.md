@@ -63,7 +63,7 @@ The remaining property is the `entities` property and it is empty for now. This 
 
 ## The sample scenario
 
-In this tutorial we'll be creating the backend API for a small solution that allow end-user to keep track of the book in their library. Therefore the business entities we'll be dealing with are 
+In this tutorial we'll be creating the backend API for a small solution that allow end-user to keep track of the book in their library. Therefore the business entities we'll be dealing with are
 
 - Books
 - Authors
@@ -74,6 +74,6 @@ Both the business entities need a modern endpoint, REST and/or GraphQL, to allow
 
 Depending if you want to use Azure SQL Database or Cosmos DB, continue to the appropriate link:
 
-- [Getting Started with Data API builder for Azure SQL DB](getting-started-azure-sql-db.md)
-- [Getting Started Data API builder for with Azure Cosmos DB](getting-started-cosmos-db.md)
+- [Getting Started with Data API builder for Azure SQL DB](./getting-started-azure-sql-db.md)
+- [Getting Started Data API builder for with Azure Cosmos DB](./getting-started-cosmos-db.md)
 

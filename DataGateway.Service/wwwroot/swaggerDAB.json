@@ -1,0 +1,134 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Azure.DataGateway.Service",
+    "version": "1.0"
+  },
+  "paths": {
+    "/Book": {
+      "post": {
+        "summary": "Add a new book.",
+        "tags": [
+          "Rest"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "publisher_id": {
+                    "type": "integer",
+                    "format": "int32"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "format": "int32"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "publisher_id": {
+                      "type": "integer",
+                      "format": "int32"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Rest"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/Book/id/{id}": {
+      "get": {
+        "tags": [
+          "Rest"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Rest"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConfigurationPostParameters": {
+        "type": "object",
+        "properties": {
+          "configuration": {
+            "type": "string",
+            "nullable": true
+          },
+          "schema": {
+            "type": "string",
+            "nullable": true
+          },
+          "connectionString": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

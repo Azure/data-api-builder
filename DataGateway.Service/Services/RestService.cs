@@ -184,8 +184,8 @@ namespace Azure.DataGateway.Service.Services
         /// <exception cref="DataGatewayException"></exception>
         public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string route)
         {
-            string path = _runtimeConfigProvider.RestPath.TrimStart('/');
-            if (!route.StartsWith(path))
+/*            string expectedPathBase = _runtimeConfigProvider.RestPath.TrimStart('/');
+            if (!route.StartsWith(expectedPathBase))
             {
                 throw new DataGatewayException(message: $"Invalid Path for route: {route}.",
                                                statusCode: HttpStatusCode.BadRequest,
@@ -194,7 +194,8 @@ namespace Azure.DataGateway.Service.Services
 
             // entity name comes after the path, so get substring starting from
             // the end of path. If path is not empty we trim the '/' following the path.
-            string routeAfterPath = string.IsNullOrEmpty(path) ? route : route.Substring(path.Length).TrimStart('/');
+            string routeAfterPath = string.IsNullOrEmpty(expectedPathBase) ? route : route.Substring(expectedPathBase.Length).TrimStart('/');*/
+            string routeAfterPath = route;
             string primaryKeyRoute = string.Empty;
             string entityName;
             // a '/' remaining in this substring means we have a primary key route

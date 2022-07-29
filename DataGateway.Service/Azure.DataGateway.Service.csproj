@@ -80,6 +80,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="6.4.0" />
     <PackageReference Include="System.IO.Abstractions" Version="$(SystemIOAbstractionsVersion)" />
   </ItemGroup>
   <ItemGroup>
@@ -89,5 +91,8 @@
     <ProjectReference Include="..\DataGateway.Auth\Azure.DataGateway.Auth.csproj" />
     <ProjectReference Include="..\DataGateway.Config\Azure.DataGateway.Config.csproj" />
     <ProjectReference Include="..\DataGateway.Service.GraphQLBuilder\Azure.DataGateway.Service.GraphQLBuilder.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
   </ItemGroup>
 </Project>

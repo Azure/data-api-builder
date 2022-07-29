@@ -188,6 +188,7 @@ namespace Azure.DataGateway.Service
             AddGraphQL(services);
 
             services.AddControllers();
+            services.AddSwaggerGen();
         }
 
         private static void AddGraphQL(IServiceCollection services)
@@ -240,6 +241,14 @@ namespace Azure.DataGateway.Service
                     isRuntimeReady = await PerformOnConfigChangeAsync(app);
                 };
             }
+            app.UseStaticFiles();
+            app.UseSwagger();
+            app.UseSwaggerUI( c=>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "DataAPIBuilderAlpha");
+                c.SwaggerEndpoint("/swaggerDAB.json", "DataAPIBuilderAlpha-Custom");
+            }
+            );
 
             if (env.IsDevelopment())
             {
@@ -247,6 +256,11 @@ namespace Azure.DataGateway.Service
             }
 
             app.UseHttpsRedirection();
+
+            if (runtimeConfig is not null && runtimeConfig.RestGlobalSettings.Path is not null)
+            {
+                app.UsePathBase(pathBase: runtimeConfig.RestGlobalSettings.Path);
+            }
 
             app.UseRouting();
 

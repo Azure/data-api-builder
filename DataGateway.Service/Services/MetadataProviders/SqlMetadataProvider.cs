@@ -595,10 +595,14 @@ namespace Azure.DataGateway.Service.Services
                 catch (Exception ex)
                 {
                     string message;
-                    // Check message content to ensure proper error message for connection string
-                    // If MySql has a non-empty, invalid connection string, it will either have
-                    // the MYSQL_INVALID_CONNECTION_STRING_MESSAGE in its message, or will have a
-                    // targetsite with a name of MYSQL_INVALID_CONNECTION_STRING_OPTIONS
+                    // Check exception content to ensure proper error message for connection string.
+                    // If MySql has a non-empty, invalid connection string, it will have the
+                    // MYSQL_INVALID_CONNECTION_STRING_MESSAGE in its message when the connection
+                    // string is totally invalid and lacks even the basic format of a valid connection
+                    // string (ie: ConnectionString="&#@&^@*&^#$"), or will have a targetsite in
+                    // the exception with a name of MYSQL_INVALID_CONNECTION_STRING_OPTIONS in the
+                    // case where the connection string follows the correct general form, but does
+                    // not have keys with valid names (ie: ConnectionString="foo=bar;baz=qux")
                     if (ex.Message.Contains(MySqlMetadataProvider.MYSQL_INVALID_CONNECTION_STRING_MESSAGE) ||
                        (ex.TargetSite is not null &&
                         string.Equals(ex.TargetSite.Name, MySqlMetadataProvider.MYSQL_INVALID_CONNECTION_STRING_OPTIONS)))

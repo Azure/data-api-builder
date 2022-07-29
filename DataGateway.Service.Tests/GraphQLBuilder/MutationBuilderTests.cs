@@ -8,7 +8,6 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
-using HotChocolate;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

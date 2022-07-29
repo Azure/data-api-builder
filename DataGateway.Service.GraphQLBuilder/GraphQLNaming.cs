@@ -91,5 +91,15 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 
             return modelDirective.Arguments.Count == 1 ? (string)(modelDirective.Arguments[0].Value.Value ?? node.Name.Value) : node.Name.Value;
         }
+
+        /// <summary>
+        /// This function is used to singularize the name of a Node during schema generation.
+        /// </summary>
+        /// <param name="name">Takes in the name of the node as NameNode.</param>
+        /// <returns> A singularized name of the node.</returns>
+        public static string Singularize(NameNode name)
+        {
+            return name.Value.Singularize(inputIsKnownToBePlural: false);
+        }
     }
 }

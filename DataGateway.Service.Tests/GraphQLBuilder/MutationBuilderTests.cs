@@ -8,6 +8,7 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
+using HotChocolate;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -38,6 +39,21 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
         private static Entity GenerateEmptyEntity()
         {
             return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
+        }
+
+        /// <summary>
+        /// Creates an entity with the defined singular and plural entity names.
+        /// </summary>
+        /// <param name="singularNameForEntity"> The singular name for the entity as a string.</param>
+        /// <param name="pluralNameForEntity"> The plural name for the entity as a string.</param>
+        private static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity)
+        {
+            return new Entity(Source: "dbo.entity",
+                              Rest: null,
+                              GraphQL: new SingularPlural(singularNameForEntity, pluralNameForEntity),
+                              Permissions: Array.Empty<PermissionSetting>(),
+                              Relationships: new(),
+                              Mappings: new());
         }
 
         [DataTestMethod]
@@ -579,6 +595,50 @@ type Foo @model {
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"deleteFoo"));
+        }
+
+        [DataTestMethod]
+        [DataRow("Foos", "", "", "deleteFoo",
+            DisplayName = "Validate delete mutation is created with singular entity name for simple plural name")]
+        [DataRow("Leaves", "", "", "deleteLeaf",
+            DisplayName = "Validate delete mutation is created with singular entity name for indirect plural name")]
+        [DataRow("Herbs", "Plant", "Plants", "deletePlant",
+            DisplayName = "Validates delete mutation is created with defined singular entity name when available")]
+        public void DeleteMutationGenerationWithSingularEntityName(
+            string entityName,
+            string singularName,
+            string pluralName,
+            string expectedEntityName)
+        {
+
+            Entity entity = GenerateEntityWithSingularPlural(singularName, pluralName);
+            NameNode node = new(entityName);
+            NamedTypeNode namedNode = new("ID");
+            FieldDefinitionNode idField = new(
+                location: null,
+                name: new NameNode("id"),
+                description: null,
+                directives: Array.Empty<DirectiveNode>(),
+                arguments: Array.Empty<InputValueDefinitionNode>(),
+                type: namedNode);
+
+            ObjectTypeDefinitionNode objectTypeDefinitionNode = new(
+                location: null,
+                name: node,
+                description: null,
+                directives: Array.Empty<DirectiveNode>(),
+                interfaces: Array.Empty<NamedTypeNode>(),
+                fields: new FieldDefinitionNode[] { idField }
+                );
+
+            FieldDefinitionNode deleteMutationNode = DeleteMutationBuilder.Build(
+                name: node,
+                objectTypeDefinitionNode: objectTypeDefinitionNode,
+                configEntity: entity,
+                databaseType: DatabaseType.cosmos);
+
+            Assert.IsNotNull(deleteMutationNode);
+            Assert.AreEqual(expectedEntityName, deleteMutationNode.Name.Value);
         }
 
         [DataTestMethod]

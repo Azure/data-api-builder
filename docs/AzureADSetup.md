@@ -86,8 +86,8 @@ Examples include a frontend webpage, or PostMan (this guide is for PostMan).
       2. Grant Type: **Authorization Code**
       3. Callback URL: `https://oauth.pstmn.io/v1/callback` (remember this was set on redirect URIs for your client app registration)
       4. Select: **Authorize using browser**
-      5. Auth URL:
-      6. Access Token URL:
+      5. Auth URL: `https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/authorize`
+      6. Access Token URL: `https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/token`
       7. Client ID: `Client_APP_Registration_ID` (Recommended: store as Postman variable, and use value `{{ClientID_VariableName}}` here)
       8. Client Secret: `Client_APP_Secret` this was created earlier. (Recommended: store as Postman variable, and use value `{{ClientSecret_VariableName}}` here)
       9. Scope: `api://<APP_ID_DataAPIBuilder>/EndpointAccess` (Note: don't forget this or authentication will fail.)

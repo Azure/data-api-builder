@@ -599,9 +599,9 @@ namespace Azure.DataGateway.Service.Services
                     // If MySql has a non-empty, invalid connection string, it will either have
                     // the MYSQL_INVALID_CONNECTION_STRING_MESSAGE in its message, or will have a
                     // targetsite with a name of MYSQL_INVALID_CONNECTION_STRING_OPTIONS
-                    if (ex.Message.Contains(DataGatewayException.MYSQL_INVALID_CONNECTION_STRING_MESSAGE) ||
+                    if (ex.Message.Contains(MySqlMetadataProvider.MYSQL_INVALID_CONNECTION_STRING_MESSAGE) ||
                        (ex.TargetSite is not null &&
-                        string.Equals(ex.TargetSite.Name, DataGatewayException.MYSQL_INVALID_CONNECTION_STRING_OPTIONS)))
+                        string.Equals(ex.TargetSite.Name, MySqlMetadataProvider.MYSQL_INVALID_CONNECTION_STRING_OPTIONS)))
                     {
                         message = DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE +
                             $"Underlying Exception message: {ex.Message}";

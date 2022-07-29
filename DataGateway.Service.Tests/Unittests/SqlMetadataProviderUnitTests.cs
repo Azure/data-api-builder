@@ -44,7 +44,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// for all the tables based on the entities relationship.
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// </summary>
-        [DataTestMethod, TestCategory(TestCategory.POSTGRESQL)]
+        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
         [DataRow(TestCategory.MSSQL)]
         [DataRow(TestCategory.MYSQL)]
         [DataRow(TestCategory.POSTGRESQL)]

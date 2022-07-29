@@ -12,7 +12,6 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
 {

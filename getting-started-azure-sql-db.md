@@ -261,3 +261,29 @@ Done, you can now restart the Data API builder engine, and using GraphQL you can
   }
 }
 ```
+
+or
+
+```graphql
+{
+  authors(
+    filter: {
+        or: [
+          { first_name: { eq: "Isaac" } }
+          { last_name: { eq: "Asimov" } }
+        ]
+    }
+  ) {
+    items {
+      first_name
+      last_name
+      books {
+        items {
+          title
+        }
+      }
+    }
+  }
+}
+```
+

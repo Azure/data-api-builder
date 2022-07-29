@@ -33,7 +33,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>DbDataReader object for reading the result set.</returns>
         public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
         {
-            Console.WriteLine(_connectionString);
             ConnectionT conn = new()
             {
                 ConnectionString = _connectionString

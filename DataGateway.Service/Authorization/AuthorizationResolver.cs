@@ -206,6 +206,10 @@ namespace Azure.DataGateway.Service.Authorization
                     {
                         string action = string.Empty;
                         ActionMetadata actionToColumn = new();
+
+                        // Use a hashset to store all the backing field names
+                        // that are accessible to the user.
+                        HashSet<string> allowedColumns = new();
                         IEnumerable<string> allTableColumns = ResolveTableDefinitionColumns(entityName);
 
                         // Implicitly, all table columns are 'allowed' when an actiontype is a string.
@@ -214,7 +218,7 @@ namespace Azure.DataGateway.Service.Authorization
                         {
                             action = actionElement.ToString();
                             actionToColumn.Included.UnionWith(allTableColumns);
-                            actionToColumn.Allowed.UnionWith(allTableColumns);
+                            allowedColumns.UnionWith(allTableColumns);
                         }
                         else
                         {
@@ -224,33 +228,40 @@ namespace Azure.DataGateway.Service.Authorization
                                 && actionObj is not null)
                             {
                                 action = actionObj.Name;
-                                if (actionObj.Fields!.Include is not null)
+                                if (actionObj.Fields is null)
                                 {
-                                    // When a wildcard (*) is defined for Included columns, all of the table's
-                                    // columns must be resolved and placed in the actionToColumn Key/Value store.
-                                    // This is especially relevant for find requests, where actual column names must be
-                                    // resolved when no columns were included in a request.
-                                    if (actionObj.Fields.Include.Count == 1 && actionObj.Fields.Include.Contains(WILDCARD))
-                                    {
-                                        actionToColumn.Included.UnionWith(ResolveTableDefinitionColumns(entityName));
-                                    }
-                                    else
-                                    {
-                                        actionToColumn.Included = actionObj.Fields.Include!;
-                                    }
+                                    actionToColumn.Included.UnionWith(ResolveTableDefinitionColumns(entityName));
                                 }
-
-                                if (actionObj.Fields!.Exclude is not null)
+                                else
                                 {
-                                    // When a wildcard (*) is defined for Excluded columns, all of the table's
-                                    // columns must be resolved and placed in the actionToColumn Key/Value store.
-                                    if (actionObj.Fields.Exclude.Count == 1 && actionObj.Fields.Exclude.Contains(WILDCARD))
+                                    if (actionObj.Fields.Include is not null)
                                     {
-                                        actionToColumn.Excluded.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                        // When a wildcard (*) is defined for Included columns, all of the table's
+                                        // columns must be resolved and placed in the actionToColumn Key/Value store.
+                                        // This is especially relevant for find requests, where actual column names must be
+                                        // resolved when no columns were included in a request.
+                                        if (actionObj.Fields.Include.Count == 1 && actionObj.Fields.Include.Contains(WILDCARD))
+                                        {
+                                            actionToColumn.Included.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                        }
+                                        else
+                                        {
+                                            actionToColumn.Included = actionObj.Fields.Include;
+                                        }
                                     }
-                                    else
+
+                                    if (actionObj.Fields.Exclude is not null)
                                     {
-                                        actionToColumn.Excluded = actionObj.Fields.Exclude!;
+                                        // When a wildcard (*) is defined for Excluded columns, all of the table's
+                                        // columns must be resolved and placed in the actionToColumn Key/Value store.
+                                        if (actionObj.Fields.Exclude.Count == 1 && actionObj.Fields.Exclude.Contains(WILDCARD))
+                                        {
+                                            actionToColumn.Excluded.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                        }
+                                        else
+                                        {
+                                            actionToColumn.Excluded = actionObj.Fields.Exclude;
+                                        }
                                     }
                                 }
 
@@ -260,9 +271,13 @@ namespace Azure.DataGateway.Service.Authorization
                                 }
 
                                 // Calculate the set of allowed backing column names.
-                                actionToColumn.Allowed.UnionWith(actionToColumn.Included.Except(actionToColumn.Excluded));
+                                allowedColumns.UnionWith(actionToColumn.Included.Except(actionToColumn.Excluded));
                             }
                         }
+
+                        // Populate allowed exposed columns for each entity/role/action combination during startup,
+                        // so that it doesn't need to be evaluated per request.
+                        PopulateAllowedExposedColumns(actionToColumn.AllowedExposedColumns, entityName, allowedColumns);
 
                         IEnumerable<string> actionNames = GetAllActions(action);
                         foreach (string actionName in actionNames)
@@ -275,7 +290,7 @@ namespace Azure.DataGateway.Service.Authorization
                                 entityToRoleMap.ActionToRolesMap[actionName].Add(role);
                             }
 
-                            foreach (string allowedColumn in actionToColumn.Allowed)
+                            foreach (string allowedColumn in allowedColumns)
                             {
                                 entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
                                 entityToRoleMap.FieldToRolesMap[allowedColumn][actionName].Add(role);
@@ -303,22 +318,35 @@ namespace Azure.DataGateway.Service.Authorization
             return WILDCARD.Equals(action) ? RuntimeConfigValidator.ValidActions : new List<string> { action };
         }
 
-        /// <inheritdoc />
-        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action)
+        /// <summary>
+        /// From the given parameters, processes the included and excluded column permissions to output
+        /// a list of columns that are "allowed".
+        /// -- IncludedColumns minus ExcludedColumns == Allowed Columns
+        /// -- Does not yet account for either being wildcard (*).
+        /// </summary>
+        /// <param name="allowedExposedColumns">Set of fields exposed to user.</param>
+        /// <param name="entityName">Entity from request</param>
+        /// <param name="allowedDBColumns">Set of allowed backing field names.</param>
+        private void PopulateAllowedExposedColumns(HashSet<string> allowedExposedColumns,
+            string entityName,
+            HashSet<string> allowedDBColumns)
         {
-            ActionMetadata actionMetadata = EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action];
-            IEnumerable<string> allowedDBColumns = actionMetadata.Allowed;
-            List<string> allowedExposedColumns = new();
-
             foreach (string dbColumn in allowedDBColumns)
             {
                 if (_metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: dbColumn, out string? exposedName))
                 {
-                    allowedExposedColumns.Append(exposedName);
+                    if (exposedName is not null)
+                    {
+                        allowedExposedColumns.Add(exposedName);
+                    }
                 }
             }
+        }
 
-            return allowedExposedColumns;
+        /// <inheritdoc />
+        public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, string actionName)
+        {
+            return EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[actionName].AllowedExposedColumns;
         }
 
         /// <summary>

@@ -2,7 +2,7 @@
 
 ## Create Azure AD tenant
 
- 1. Create an Azure AD tenant in your Azure Subscription by following this guide.
+ 1. Create an Azure AD tenant in your Azure Subscription by following [this guide](https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/active-directory-access-create-new-tenant).
 
 ## Create Client App Registration
 

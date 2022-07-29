@@ -130,13 +130,16 @@ namespace Azure.DataGateway.Service.Tests.Unittests
 
             Mock<IAuthorizationService> authorizationService = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
+            DefaultHttpContext context = new();
+            httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
+            AuthorizationResolver authorizationResolver = new(runtimeConfigProvider, sqlMetadataProvider);
+
             SqlQueryEngine queryEngine = new(
                 queryExecutor,
                 queryBuilder,
                 sqlMetadataProvider,
-                httpContextAccessor.Object);
-
-            AuthorizationResolver authZResolver = new(runtimeConfigProvider, sqlMetadataProvider);
+                httpContextAccessor.Object,
+                authorizationResolver);
 
             SqlMutationEngine mutationEngine =
                 new(
@@ -144,7 +147,8 @@ namespace Azure.DataGateway.Service.Tests.Unittests
                 queryExecutor,
                 queryBuilder,
                 sqlMetadataProvider,
-                authZResolver);
+                authorizationResolver,
+                httpContextAccessor.Object);
 
             // Setup REST Service
             _restService = new RestService(
@@ -153,7 +157,7 @@ namespace Azure.DataGateway.Service.Tests.Unittests
                 sqlMetadataProvider,
                 httpContextAccessor.Object,
                 authorizationService.Object,
-                authZResolver,
+                authorizationResolver,
                 runtimeConfigProvider);
         }
 

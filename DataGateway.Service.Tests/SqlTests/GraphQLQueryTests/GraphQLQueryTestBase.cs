@@ -250,6 +250,66 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.GraphQLQueryTests
     ""authors"": {
         ""items"": []
     }
+},
+  {
+    ""id"": 9,
+    ""title"": ""Policy-Test-01"",
+    ""publisher_id"": 1940,
+    ""publishers"": {
+        ""id"": 1940,
+      ""name"": ""Policy Publisher 01""
+    },
+    ""reviews"": {
+        ""items"": []
+    },
+    ""authors"": {
+        ""items"": []
+    }
+},
+  {
+    ""id"": 10,
+    ""title"": ""Policy-Test-02"",
+    ""publisher_id"": 1940,
+    ""publishers"": {
+        ""id"": 1940,
+      ""name"": ""Policy Publisher 01""
+    },
+    ""reviews"": {
+        ""items"": []
+    },
+    ""authors"": {
+        ""items"": []
+    }
+},
+  {
+    ""id"": 11,
+    ""title"": ""Policy-Test-04"",
+    ""publisher_id"": 1941,
+    ""publishers"": {
+        ""id"": 1941,
+      ""name"": ""Policy Publisher 02""
+    },
+    ""reviews"": {
+        ""items"": []
+    },
+    ""authors"": {
+        ""items"": []
+    }
+},
+{
+    ""id"": 12,
+    ""title"": ""Time to Eat 2"",
+    ""publisher_id"": 1941,
+    ""publishers"": {
+        ""id"": 1941,
+      ""name"": ""Policy Publisher 02""
+    },
+    ""reviews"": {
+        ""items"": []
+    },
+    ""authors"": {
+        ""items"": []
+    }
 }
 ]";
 

@@ -62,9 +62,15 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             string? requestPolicy = null
             )
         {
-            Field fieldsForRole = new(
-                include: includedCols,
-                exclude: excludedCols);
+            Field? fieldsForRole = null;
+
+            if (includedCols is not null || excludedCols is not null)
+            {
+                // Only create object for Fields if inc/exc cols is not null.
+                fieldsForRole = new(
+                    include: includedCols,
+                    exclude: excludedCols);
+            }
 
             Policy policy = new(requestPolicy, databasePolicy);
 

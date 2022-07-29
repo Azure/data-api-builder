@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
+using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 
 namespace Azure.DataGateway.Service.Tests
@@ -16,7 +17,8 @@ namespace Azure.DataGateway.Service.Tests
             string queryName,
             string query,
             Dictionary<string, object> variables = null,
-            string authToken = null)
+            string authToken = null,
+            string clientRoleHeader = null)
         {
             object payload = variables == null ?
                 new { query } :
@@ -38,6 +40,11 @@ namespace Azure.DataGateway.Service.Tests
             if (!string.IsNullOrEmpty(authToken))
             {
                 request.Headers.Add(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, authToken);
+            }
+
+            if (!string.IsNullOrEmpty(clientRoleHeader))
+            {
+                request.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader);
             }
 
             HttpResponseMessage response = await client.SendAsync(request);

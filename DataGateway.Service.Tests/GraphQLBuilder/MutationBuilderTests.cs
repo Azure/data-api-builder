@@ -653,21 +653,14 @@ type Foo @model {
         /// <param name="entityName"> Name of the entity for which delete mutation is being valdiated.</param>
         /// <param name="singularName"> Singular name for the entity defined in the config.</param>
         /// <param name="pluralName"> Plural name for the entity defined in the config.</param>
-        [DataTestMethod]
-        [TestCategory("Mutation Builder - Delete")]
-        [TestCategory("Schema Builder - Simple Type")]
-        [DataRow("Foos", null, null, "deleteFoo",
-            DisplayName = "Validates delete mutation creation with simple plural entity name.")]
-        [DataRow("Leaves", null, null, "deleteLeaf",
-            DisplayName = "Validates delete mutation creation with indirect plural entity name.")]
-        [DataRow("Herbs", "Plant", "Plants", "deletePlant",
-            DisplayName = "Validates delete mutation creation with a defined singular name.")]
-        public void CanGenerateDeleteMutationWithSingularEntityName(
-            string entityName,
-            string singularName,
-            string pluralName,
-            string expectedDeleteMutationName)
+        [TestMethod]
+        public void CanGenerateDeleteMutationWithSingularEntityName()
         {
+            string entityName = "Foos";
+            string singularName = null;
+            string pluralName = null;
+            string expectedDeleteMutationName = "Foo";
+
             Entity entity = (singularName is not null && pluralName is not null)
                                 ? GenerateEntityWithSingularPlural(singularName, pluralName)
                                 : GenerateEmptyEntity();

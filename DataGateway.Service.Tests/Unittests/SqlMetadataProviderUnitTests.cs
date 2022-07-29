@@ -14,18 +14,9 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
     /// Units testing for our connection string parser
     /// to retreive schema.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
+    [TestClass]
     public class SqlMetadataProviderUnitTests : SqlTestBase
     {
-        /// <summary>
-        /// Set the database engine for the tests
-        /// </summary>
-        [ClassInitialize]
-        public static void Setup(TestContext context)
-        {
-            DatabaseEngine = TestCategory.POSTGRESQL;
-        }
-
         /// <summary>
         /// Verify we parse the connection string for the
         /// schema correctly when it is of various relevant
@@ -52,9 +43,13 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// for all the tables based on the entities relationship.
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// </summary>
-        [TestMethod]
-        public async Task CheckNoExceptionForNoForeignKey()
+        [DataTestMethod]
+        [DataRow(TestCategory.MSSQL)]
+        [DataRow(TestCategory.MYSQL)]
+        [DataRow(TestCategory.POSTGRESQL)]
+        public async Task CheckNoExceptionForNoForeignKey(string db)
         {
+            DatabaseEngine = db;
             _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);

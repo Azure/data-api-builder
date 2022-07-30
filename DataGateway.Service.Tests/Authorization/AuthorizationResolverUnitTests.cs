@@ -141,7 +141,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // All the wildcard action should be expand to explicit actions.
             //
-            foreach (Operation action in RuntimeConfigValidator.ValidActions)
+            foreach (Operation action in RuntimeConfigValidator.ValidPermissionActions)
             {
                 Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, action));
 
@@ -449,7 +449,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            foreach (Operation action in RuntimeConfigValidator.ValidActions)
+            foreach (Operation action in RuntimeConfigValidator.ValidPermissionActions)
             {
                 // Validate that the authorization check passes for valid CRUD actions
                 // because columns are accessbile or inaccessible.

@@ -33,7 +33,11 @@ namespace Azure.DataGateway.Service.Configurations
         private static readonly string _claimChars = @"@claims\.[^\s\)]*";
 
         // Set of allowed actions for a request.
-        public static readonly HashSet<Operation> ValidActions = new() { Operation.Create, Operation.Read, Operation.Update, Operation.Delete };
+        public static readonly HashSet<Operation> ValidPermissionActions = new() { Operation.Create, Operation.Read, Operation.Update, Operation.Delete };
+
+        // actionKey is the key used in json runtime config to
+        // specify the action name.
+        public static readonly string _actionKey = "action";
 
         public RuntimeConfigValidator(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -131,7 +135,7 @@ namespace Azure.DataGateway.Service.Configurations
                     {
                         if (action is null)
                         {
-                            ThrowInvalidActionException(entityName, roleName, "null");
+                            throw GetInvalidActionException(entityName, roleName, actionName: "null");
                         }
 
                         // Evaluate actionOp as the current operation to be validated.
@@ -141,9 +145,9 @@ namespace Azure.DataGateway.Service.Configurations
                             string actionName = action.ToString()!;
                             actionOp = AuthorizationResolver.WILDCARD.Equals(actionName) ? Operation.All : Enum.Parse<Operation>(actionName, ignoreCase: true);
 
-                            if (!IsValidAction(actionOp))
+                            if (!IsValidPermissionAction(actionOp))
                             {
-                                ThrowInvalidActionException(entityName, roleName, actionName);
+                                throw GetInvalidActionException(entityName, roleName, actionName);
                             }
                         }
                         else
@@ -165,9 +169,9 @@ namespace Azure.DataGateway.Service.Configurations
                             actionOp = configAction.Name;
                             // If we have reached this point, it means that we don't have any invalid
                             // data type in actions. However we need to ensure that the actionOp is valid.
-                            if (!IsValidAction(actionOp))
+                            if (!IsValidPermissionAction(actionOp))
                             {
-                                bool isActionPresent = ((JsonElement)action).TryGetProperty("action",
+                                bool isActionPresent = ((JsonElement)action).TryGetProperty(_actionKey,
                                     out JsonElement actionElement);
                                 if (!isActionPresent)
                                 {
@@ -177,7 +181,7 @@ namespace Azure.DataGateway.Service.Configurations
                                         subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
                                 }
 
-                                ThrowInvalidActionException(entityName, roleName, actionElement.ToString());
+                                throw GetInvalidActionException(entityName, roleName, actionElement.ToString());
                             }
 
                             if (configAction.Fields is not null)
@@ -372,15 +376,16 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Helper function to throw an exception if the actionName is not valid.
+        /// Helper function to create a DataGatewayException object.
+        /// Called when the actionName is not valid.
         /// </summary>
         /// <param name="entityName">Name of entity for which invalid action is supplied.</param>
         /// <param name="roleName">Name of role for which invalid action is supplied.</param>
         /// <param name="actionName">Name of invalid action.</param>
-        /// <exception cref="DataGatewayException"></exception>
-        private static void ThrowInvalidActionException(string entityName, string roleName, string actionName)
+        /// <returns></returns>
+        private static DataGatewayException GetInvalidActionException(string entityName, string roleName, string actionName)
         {
-            throw new DataGatewayException(
+            return new DataGatewayException(
                 message: $"action:{actionName} specified for entity:{entityName}, role:{roleName} is not valid.",
                 statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
@@ -393,9 +398,9 @@ namespace Azure.DataGateway.Service.Configurations
         /// </summary>
         /// <param name="action"></param>
         /// <returns>Boolean value indicating whether the action is valid or not.</returns>
-        public static bool IsValidAction(Operation action)
+        public static bool IsValidPermissionAction(Operation action)
         {
-            return action is Operation.All || ValidActions.Contains(action);
+            return action is Operation.All || ValidPermissionActions.Contains(action);
         }
     }
 }

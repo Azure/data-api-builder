@@ -314,7 +314,7 @@ namespace Azure.DataGateway.Service.Authorization
         /// <returns>IEnumerable of all available action name</returns>
         private static IEnumerable<Operation> GetAllActions(Operation action)
         {
-            return action is Operation.All ? RuntimeConfigValidator.ValidActions : new List<Operation> { action };
+            return action is Operation.All ? RuntimeConfigValidator.ValidPermissionActions : new List<Operation> { action };
         }
 
         /// <summary>

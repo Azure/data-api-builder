@@ -135,6 +135,38 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
+        /// Validates a stored procedure request does not specify a primary key route.
+        /// Applies to all stored procedure requests, both Queries and Mutations
+        /// Mutations also validated using ValidateInsertRequestContext call in RestService
+        /// </summary>
+        /// <param name="primaryKeyRoute">Primary key route from the url.</param>
+        /// <exception cref="DataGatewayException"></exception>
+        public static void ValidateStoredProcedureRequest(string? primaryKeyRoute)
+        {
+            if (!string.IsNullOrWhiteSpace(primaryKeyRoute))
+            {
+                throw new DataGatewayException(
+                    message: "Primary key route not supported for stored procedure request.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Validates all required input parameters are supplied either in query string or request body
+        /// Checks query string for Find operations, body for all other operations
+        /// Can also do type checking, parameter length checking, etc. here
+        /// </summary>
+        /// <param name="spRequestCtx"></param>
+        /// <param name="sqlMetadataProvider"></param>
+        public static void ValidateStoredProcedureRequestContext(
+            StoredProcedureRequestContext spRequestCtx,
+            ISqlMetadataProvider sqlMetadataProvider)
+        {
+
+        }
+
+        /// <summary>
         /// Validates the primarykeyroute is populated with respect to an Update or Upsert operation.
         /// </summary>
         /// <param name="primaryKeyRoute">Primary key route from the url.</param>

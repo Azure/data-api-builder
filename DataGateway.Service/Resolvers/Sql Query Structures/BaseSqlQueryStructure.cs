@@ -45,6 +45,10 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public string? FilterPredicates { get; set; }
 
+        public virtual string DispatchBuild(IQueryBuilder _queryBuilder)
+        {
+            throw new NotImplementedException();
+        }
         /// <summary>
         /// DbPolicyPredicates is a string that represents the filter portion of our query
         /// in the WHERE Clause added by virtue of the database policy.
@@ -198,21 +202,7 @@ namespace Azure.DataGateway.Service.Resolvers
             Type systemType = GetColumnSystemType(columnName);
             try
             {
-                return systemType.Name switch
-                {
-                    "String" => param,
-                    "Byte" => byte.Parse(param),
-                    "Byte[]" => Convert.FromBase64String(param),
-                    "Int16" => short.Parse(param),
-                    "Int32" => int.Parse(param),
-                    "Int64" => long.Parse(param),
-                    "Single" => float.Parse(param),
-                    "Double" => double.Parse(param),
-                    "Decimal" => decimal.Parse(param),
-                    "Boolean" => bool.Parse(param),
-                    "DateTime" => DateTimeOffset.Parse(param),
-                    _ => throw new NotSupportedException($"{systemType.Name} is not supported")
-                };
+                return ParseParamAsSystemType(param, systemType);
             }
             catch (Exception e)
             {
@@ -226,6 +216,33 @@ namespace Azure.DataGateway.Service.Resolvers
 
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Tries to parse the string parameter to the given system type
+        /// Useful for inferring parameter types for columns or procedure parameters
+        /// </summary>
+        /// <param name="param"></param>
+        /// <param name="systemType"></param>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException"></exception>
+        protected object ParseParamAsSystemType(string param, Type systemType)
+        {
+            return systemType.Name switch
+            {
+                "String" => param,
+                "Byte" => byte.Parse(param),
+                "Byte[]" => Convert.FromBase64String(param),
+                "Int16" => short.Parse(param),
+                "Int32" => int.Parse(param),
+                "Int64" => long.Parse(param),
+                "Single" => float.Parse(param),
+                "Double" => double.Parse(param),
+                "Decimal" => decimal.Parse(param),
+                "Boolean" => bool.Parse(param),
+                "DateTime" => DateTimeOffset.Parse(param),
+                _ => throw new NotSupportedException($"{systemType.Name} is not supported")
+            };
         }
 
         /// <summary>

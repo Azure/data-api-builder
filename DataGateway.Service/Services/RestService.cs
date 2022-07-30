@@ -113,9 +113,22 @@ namespace Azure.DataGateway.Service.Services
                                                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
 
                 }
-                // todo: validate stored proc request context (parameters match by name, type..)
-                //RequestValidator.ValidateStoredProcedureRequestContext(context, )
+                // Throws bad request if primaryKeyRoute set
+                RequestValidator.ValidateStoredProcedureRequest(primaryKeyRoute);
                 
+                // Don't want to use RequestParser.ParseQueryString here since for all non-sp requests,
+                // arbitrary keys shouldn't be allowed/recognized in the querystring.
+                // So, for the time being, filter, select, etc. fields aren't populated for sp requests
+                // So, $filter will be treated as any other parameter, which will error out
+                if (!string.IsNullOrWhiteSpace(queryString))
+                {
+                    context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
+                }
+
+                // Downcasting is fine, but double dispatch/visitor pattern may be preferred here.
+                // E.g. context.DispatchValidateRequestContext(ISqlMetadataProvider)
+                RequestValidator.ValidateStoredProcedureRequestContext(
+                    (StoredProcedureRequestContext)context, _sqlMetadataProvider);
             }
             else
             {
@@ -159,21 +172,20 @@ namespace Azure.DataGateway.Service.Services
                                                        statusCode: HttpStatusCode.BadRequest,
                                                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                 }
-            } 
-            
 
-            if (!string.IsNullOrEmpty(primaryKeyRoute))
-            {
-                // After parsing primary key, the Context will be populated with the
-                // correct PrimaryKeyValuePairs.
-                RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
-                RequestValidator.ValidatePrimaryKey(context, _sqlMetadataProvider);
-            }
+                if (!string.IsNullOrEmpty(primaryKeyRoute))
+                {
+                    // After parsing primary key, the Context will be populated with the
+                    // correct PrimaryKeyValuePairs.
+                    RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
+                    RequestValidator.ValidatePrimaryKey(context, _sqlMetadataProvider);
+                }
 
-            if (!string.IsNullOrWhiteSpace(queryString))
-            {
-                context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
-                RequestParser.ParseQueryString(context, _sqlMetadataProvider);
+                if (!string.IsNullOrWhiteSpace(queryString))
+                {
+                    context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
+                    RequestParser.ParseQueryString(context, _sqlMetadataProvider);
+                }
             }
 
             string role = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];

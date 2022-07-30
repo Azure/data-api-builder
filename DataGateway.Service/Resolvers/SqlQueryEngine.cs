@@ -259,12 +259,23 @@ namespace Azure.DataGateway.Service.Resolvers
         private async Task<JsonDocument> ExecuteAsync(BaseSqlQueryStructure structure)
         {
             // Open connection and execute query using _queryExecutor
-            // dynamic vs. downcasting vs. moving build method to structure
-            // if (structure is SqlExecuteStructure) {
-            //      _queryBuilder.Build((SqlExecuteStructure)structure);
-            // }
-            // structure.dispatch(_queryBuilder) ... in structure: dispatch(_queryBuilder) { _queryBuilder.Build(this)} 
-            string queryString = _queryBuilder.Build((dynamic)structure);
+
+            //option 1: dynamic cast
+            _queryBuilder.Build((dynamic)structure);
+
+            //option 2: conditional downcast
+            if (structure is SqlExecuteStructure)
+            {
+                _queryBuilder.Build((SqlExecuteStructure)structure);
+            } else
+            {
+                _queryBuilder.Build((SqlQueryStructure)structure);
+            }
+
+            //option 3: double dispatch/visitor pattern
+            string queryString = structure.DispatchBuild(_queryBuilder);
+
+
             Console.WriteLine(queryString);
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
             JsonDocument jsonDocument = null;

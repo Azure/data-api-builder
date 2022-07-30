@@ -223,6 +223,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Helper function handles the loading of the runtime config.
+        /// </summary>
+        public static RuntimeConfig SetupRuntimeConfig(string databaseEngine)
+        {
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(databaseEngine);
+            return TestHelper.GetRuntimeConfig(TestHelper.GetRuntimeConfigProvider(configPath));
+        }
+
+        /// <summary>
         /// For testing we use a JSON string that represents
         /// the runtime config that would otherwise be generated
         /// by the client for use by the runtime. This makes it

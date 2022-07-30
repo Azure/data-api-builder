@@ -165,10 +165,9 @@ namespace Azure.DataGateway.Service.Authorization
         /// action, the role defined in the the request and the action to be executed.
         /// When no database policy is found, no database query predicates need to be added.
         /// 1) _entityPermissionMap[entityName] finds the entityMetaData for the current entityName
-        /// 2) _entityPermissionMap[entityName] finds the entityMetaData for the current entityName
-        /// 3) entityMetaData.RoleToActionMap[roleName] finds the roleMetaData for the current roleName
-        /// 4) roleMetaData.ActionToColumnMap[action] finds the actionMetaData for the current action
-        /// 5) actionMetaData.databasePolicy finds the required database policy
+        /// 2) entityMetaData.RoleToActionMap[roleName] finds the roleMetaData for the current roleName
+        /// 3) roleMetaData.ActionToColumnMap[action] finds the actionMetaData for the current action
+        /// 4) actionMetaData.databasePolicy finds the required database policy
         /// </summary>
         /// <param name="entityName">Entity from request.</param>
         /// <param name="roleName">Role defined in client role header.</param>

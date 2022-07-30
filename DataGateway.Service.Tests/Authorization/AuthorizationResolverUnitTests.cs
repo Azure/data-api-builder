@@ -631,7 +631,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
         // Indirectly tests the AuthorizationResolver private method GetDBPolicyForRequest(string entityName, string roleName, string action)
         // by calling public method TryProcessDBPolicy(TEST_ENTITY, clientRole, requestAction, context.Object)
-        // The result of the executing that method will determine whether exeuction behaves as expected.
+        // The result of executing that method will determine whether execution behaves as expected.
         // When string.Empty is returned, then no policy is found for the provided entity, role, and action combination, therefore,
         // no predicates need to be added to the database query generated for the request.
         // When a value is returned as a result, the execution behaved as expected.

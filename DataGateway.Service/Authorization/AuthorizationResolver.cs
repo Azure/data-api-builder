@@ -519,23 +519,6 @@ namespace Azure.DataGateway.Service.Authorization
         }
 
         /// <summary>
-        /// Returns a list of roles which define permissions for the provided action.
-        /// i.e. list of roles which allow the action "read" on entityName.
-        /// </summary>
-        /// <param name="entityName">Entity to lookup permissions</param>
-        /// <param name="actionName">Action to lookup applicable roles</param>
-        /// <returns>Collection of roles.</returns>
-        public IEnumerable<string> GetRolesForAction(string entityName, string actionName)
-        {
-            if (EntityPermissionsMap[entityName].ActionToRolesMap.TryGetValue(actionName, out List<string>? roleList) && roleList is not null)
-            {
-                return roleList;
-            }
-
-            return new List<string>();
-        }
-
-        /// <summary>
         /// Returns the collection of roles which can perform {actionName} the provided field.
         /// Applicable to GraphQL field directive @authorize on ObjectType fields.
         /// </summary>

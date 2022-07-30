@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
@@ -150,7 +151,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
                 CollectionAssert.AreEquivalent(expectedRoles, actualRolesForCol1.ToList());
 
-                IEnumerable<string> actualRolesForAction = authZResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, actionName);
+                IEnumerable<string> actualRolesForAction = IAuthorizationResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, actionName, authZResolver.EntityPermissionsMap);
                 CollectionAssert.AreEquivalent(expectedRoles, actualRolesForAction.ToList());
             }
 
@@ -241,9 +242,9 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             IEnumerable<string> actualUpdateRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", ActionType.UPDATE);
             CollectionAssert.AreEquivalent(expectedRolesForUpdate, actualUpdateRolesForCol1.ToList());
 
-            IEnumerable<string> actualRolesForRead = authZResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, ActionType.READ);
+            IEnumerable<string> actualRolesForRead = IAuthorizationResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, ActionType.READ, authZResolver.EntityPermissionsMap);
             CollectionAssert.AreEquivalent(expectedRolesForRead, actualRolesForRead.ToList());
-            IEnumerable<string> actualRolesForUpdate = authZResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, ActionType.UPDATE);
+            IEnumerable<string> actualRolesForUpdate = IAuthorizationResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, ActionType.UPDATE, authZResolver.EntityPermissionsMap);
             CollectionAssert.AreEquivalent(expectedRolesForUpdate, actualRolesForUpdate.ToList());
         }
 

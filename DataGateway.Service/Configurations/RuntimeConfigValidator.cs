@@ -158,7 +158,7 @@ namespace Azure.DataGateway.Service.Configurations
                             {
                                 throw new DataGatewayException(
                                     message: $"One of the action specified for entity:{entityName} is not well formed.",
-                                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                                     subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
                             }
 
@@ -173,7 +173,7 @@ namespace Azure.DataGateway.Service.Configurations
                                 {
                                     throw new DataGatewayException(
                                         message: $"action cannot be omitted for entity: {entityName}, role:{roleName}",
-                                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                                         subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
                                 }
 
@@ -195,7 +195,7 @@ namespace Azure.DataGateway.Service.Configurations
                                     throw new DataGatewayException(
                                             message: $"No other field can be present with wildcard in the {misconfiguredColumnSet} set for:" +
                                             $" entity:{entityName}, role:{permissionSetting.Role}, action:{actionName}",
-                                            statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                                             subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
                                 }
 
@@ -295,7 +295,7 @@ namespace Azure.DataGateway.Service.Configurations
                     // Empty claimType is not allowed
                     throw new DataGatewayException(
                         message: $"Claimtype cannot be empty.",
-                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError
                         );
                 }
@@ -305,7 +305,7 @@ namespace Azure.DataGateway.Service.Configurations
                     // Not a valid claimType containing allowed characters
                     throw new DataGatewayException(
                         message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
-                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError
                         );
                 }
@@ -331,7 +331,7 @@ namespace Azure.DataGateway.Service.Configurations
                 {
                     throw new DataGatewayException(
                     message: $"Not all the columns required by policy are accessible.",
-                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
                 }
             }
@@ -382,7 +382,7 @@ namespace Azure.DataGateway.Service.Configurations
         {
             throw new DataGatewayException(
                 message: $"action:{actionName} specified for entity:{entityName}, role:{roleName} is not valid.",
-                statusCode: System.Net.HttpStatusCode.InternalServerError,
+                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
         }
 

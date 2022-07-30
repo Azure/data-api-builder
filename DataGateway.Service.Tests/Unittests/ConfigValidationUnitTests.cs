@@ -39,7 +39,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             // Assert that expected exception is thrown.
             DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.AreEqual("Not all the columns required by policy are accessible.", ex.Message);
-            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
@@ -68,7 +68,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.AreEqual($"action:{action.ToString()} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
                     $" role:{AuthorizationHelpers.TEST_ROLE} is not valid.", ex.Message);
-            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
@@ -94,7 +94,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             // Assert that expected exception is thrown.
             DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.AreEqual("Claimtype cannot be empty.", ex.Message);
-            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
@@ -125,7 +125,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             // Assert that expected exception is thrown.
             DataGatewayException ex = Assert.ThrowsException<DataGatewayException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.IsTrue(ex.Message.StartsWith("Invalid format for claim type"));
-            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
@@ -169,7 +169,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             string actionName = actionOp.ToString();
             Assert.AreEqual($"No other field can be present with wildcard in the included set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
                 $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
-            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
@@ -191,7 +191,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             string actionName = actionOp.ToString();
             Assert.AreEqual($"No other field can be present with wildcard in the excluded set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
                 $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
-            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
     }

@@ -173,7 +173,7 @@ namespace Azure.DataGateway.Service.Authorization
                             if (restContext.FieldsToBeReturned.Count == 0 && restContext.OperationType == Operation.Find)
                             {
                                 // Union performed to avoid duplicate field names in FieldsToBeReturned.
-                                IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
+                                IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedExposedColumns(entityName, roleName, action);
                                 restContext.UpdateReturnFields(fieldsReturnedForFind);
                             }
                         }
@@ -184,7 +184,7 @@ namespace Azure.DataGateway.Service.Authorization
                             // so only those included columns are present in the result(s).
                             // - For other operation types, columnsToCheck is a result of identifying
                             // any reference to a column in all parts of a request (body, URL, querystring)
-                            IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedColumns(entityName, roleName, action);
+                            IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedExposedColumns(entityName, roleName, action);
                             restContext.UpdateReturnFields(fieldsReturnedForFind);
                         }
                         else

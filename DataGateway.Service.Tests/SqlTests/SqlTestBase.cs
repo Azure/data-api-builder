@@ -107,7 +107,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
 
             await ResetDbStateAsync();
 
-            //Execute additional queries, if any.
+            // Execute additional queries, if any.
             await ExecuteQueriesOnDbAsync(customQueries);
 
             await _sqlMetadataProvider.InitializeAsync();

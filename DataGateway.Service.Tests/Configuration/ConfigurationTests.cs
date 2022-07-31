@@ -301,15 +301,16 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 {
                     foreach (object action in permission.Actions)
                     {
-                        HashSet<string> allowedActions =
-                            new() { "*", "create", "read", "update", "delete" };
+                        HashSet<Operation> allowedActions =
+                            new() { Operation.All, Operation.Create, Operation.Read,
+                                Operation.Update, Operation.Delete };
                         Assert.IsTrue(((JsonElement)action).ValueKind == JsonValueKind.String ||
                             ((JsonElement)action).ValueKind == JsonValueKind.Object);
                         if (((JsonElement)action).ValueKind == JsonValueKind.Object)
                         {
                             Config.Action configAction =
                                 ((JsonElement)action).Deserialize<Config.Action>(RuntimeConfig.SerializerOptions);
-                            Assert.IsTrue(allowedActions.Contains(configAction.Name.ToString().ToLower()));
+                            Assert.IsTrue(allowedActions.Contains(configAction.Name));
                             Assert.IsTrue(configAction.Policy == null
                                 || configAction.Policy.GetType() == typeof(Policy));
                             Assert.IsTrue(configAction.Fields == null
@@ -317,7 +318,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                         }
                         else
                         {
-                            string name = ((JsonElement)action).Deserialize<string>(RuntimeConfig.SerializerOptions);
+                            Operation name = ((JsonElement)action).Deserialize<Operation>(RuntimeConfig.SerializerOptions);
                             Assert.IsTrue(allowedActions.Contains(name));
                         }
                     }

@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Configurations
 
         // actionKey is the key used in json runtime config to
         // specify the action name.
-        public static readonly string _actionKey = "action";
+        private static readonly string _actionKey = "action";
 
         public RuntimeConfigValidator(
             RuntimeConfigProvider runtimeConfigProvider,

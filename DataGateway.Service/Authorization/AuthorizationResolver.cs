@@ -165,23 +165,31 @@ namespace Azure.DataGateway.Service.Authorization
         /// <summary>
         /// Helper function to fetch the database policy associated with the current request based on the entity under
         /// action, the role defined in the the request and the action to be executed.
+        /// When no database policy is found, no database query predicates need to be added.
+        /// 1) _entityPermissionMap[entityName] finds the entityMetaData for the current entityName
+        /// 2) entityMetaData.RoleToActionMap[roleName] finds the roleMetaData for the current roleName
+        /// 3) roleMetaData.ActionToColumnMap[action] finds the actionMetaData for the current action
+        /// 4) actionMetaData.databasePolicy finds the required database policy
         /// </summary>
         /// <param name="entityName">Entity from request.</param>
         /// <param name="roleName">Role defined in client role header.</param>
         /// <param name="action">Action type: create, read, update, delete.</param>
-        /// <returns></returns>
+        /// <returns>Policy string if a policy exists in config.
+        /// Empty string if a policy does not exist in config.</returns>
         private string GetDBPolicyForRequest(string entityName, string roleName, string action)
         {
-            // Fetch the database policy by using the sequence of following steps:
-            // _entityPermissionMap[entityName] finds the entityMetaData for the current entityName
-            // entityMetaData.RoleToActionMap[roleName] finds the roleMetaData for the current roleName
-            // roleMetaData.ActionToColumnMap[action] finds the actionMetaData for the current action
-            // actionMetaData.databasePolicy finds the required database policy
-            RoleMetadata roleMetadata = EntityPermissionsMap[entityName].RoleToActionMap[roleName];
-            roleMetadata.ActionToColumnMap.TryGetValue(action, out ActionMetadata? actionMetadata);
+            if (!EntityPermissionsMap[entityName].RoleToActionMap.TryGetValue(roleName, out RoleMetadata? roleMetadata))
+            {
+                return string.Empty;
+            }
+
+            if (!roleMetadata.ActionToColumnMap.TryGetValue(action, out ActionMetadata? actionMetadata))
+            {
+                return string.Empty;
+            }
 
             // Get the database policy for the specified action.
-            string? dbPolicy = actionMetadata!.DatabasePolicy;
+            string? dbPolicy = actionMetadata.DatabasePolicy;
 
             return dbPolicy is not null ? dbPolicy : string.Empty;
         }
@@ -520,23 +528,6 @@ namespace Azure.DataGateway.Service.Authorization
         public IEnumerable<string> GetRolesForEntity(string entityName)
         {
             return EntityPermissionsMap[entityName].RoleToActionMap.Keys;
-        }
-
-        /// <summary>
-        /// Returns a list of roles which define permissions for the provided action.
-        /// i.e. list of roles which allow the action "read" on entityName.
-        /// </summary>
-        /// <param name="entityName">Entity to lookup permissions</param>
-        /// <param name="actionName">Action to lookup applicable roles</param>
-        /// <returns>Collection of roles.</returns>
-        public IEnumerable<string> GetRolesForAction(string entityName, string actionName)
-        {
-            if (EntityPermissionsMap[entityName].ActionToRolesMap.TryGetValue(actionName, out List<string>? roleList) && roleList is not null)
-            {
-                return roleList;
-            }
-
-            return new List<string>();
         }
 
         /// <summary>

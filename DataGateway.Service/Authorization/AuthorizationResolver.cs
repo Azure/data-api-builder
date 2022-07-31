@@ -310,6 +310,8 @@ namespace Azure.DataGateway.Service.Authorization
                 if (entityToRoleMap.RoleToActionMap.ContainsKey(ROLE_ANONYMOUS) &&
                     !entityToRoleMap.RoleToActionMap.ContainsKey(ROLE_AUTHENTICATED))
                 {
+                    // Using assignment operator overrides the existing value for the key /
+                    // adds a new entry for (key,value) pair if absent, to the map.
                     entityToRoleMap.RoleToActionMap[ROLE_AUTHENTICATED] = entityToRoleMap.RoleToActionMap[ROLE_ANONYMOUS];
                 }
 

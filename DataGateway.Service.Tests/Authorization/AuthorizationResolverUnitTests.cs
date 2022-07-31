@@ -619,30 +619,34 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// Test to validate that the column permissions for authenticated role are derived from anonymous role
         /// when the authenticated role is not defined, but anonymous role is defined.
         /// </summary>
-        [TestMethod]
-        public void TestAuthenticatedRoleForColumnPermissionsWhenAnonymousRoleIsDefined()
+        [DataRow(new string[] { "col1", "col2", "col3" }, new string[] { "col4" },
+            new string[] { "col2", "col3" }, true, DisplayName = "fields in include check" )]
+        [DataRow(new string[] { "col2", "col4" }, new string[] { "col1", "col3" },
+            new string[] { "col1", "col4" }, false, DisplayName = "fields in exclude check")]
+        [DataRow(new string[] { "col1" }, new string[] { "col2" },
+            new string[] { "col2" }, false, DisplayName = "fields in include/exclude mix check")]
+        [DataTestMethod]
+        public void TestAuthenticatedRoleForColumnPermissionsWhenAnonymousRoleIsDefined(
+            string[] includeCols,
+            string[] excludeCols,
+            string[] columnsToCheck,
+            bool expected)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationResolver.ROLE_ANONYMOUS,
                 AuthorizationResolver.WILDCARD,
-                includedCols: new HashSet<string> { "col1" });
+                includedCols: new HashSet<string>(includeCols),
+                excludedCols: new HashSet<string>(excludeCols));
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
             foreach (string actionName in RuntimeConfigValidator.ValidActions)
             {
-                // col1 should be accessible for anonymous role.
-                Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY,
-                    AuthorizationResolver.ROLE_ANONYMOUS, actionName, new List<string> { "col1" }));
-
-                // col1 should be accessible for authenticated role as well,
-                // because it is defined for anonymous role.
-                Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY,
-                    AuthorizationResolver.ROLE_AUTHENTICATED, actionName, new List<string> { "col1" }));
+                Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY,
+                    AuthorizationResolver.ROLE_ANONYMOUS, actionName, new List<string>(columnsToCheck)));
             }
         }
-
         #endregion
 
         #region Tests to validate Database policy parsing

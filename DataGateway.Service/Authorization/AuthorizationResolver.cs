@@ -163,23 +163,31 @@ namespace Azure.DataGateway.Service.Authorization
         /// <summary>
         /// Helper function to fetch the database policy associated with the current request based on the entity under
         /// action, the role defined in the the request and the action to be executed.
+        /// When no database policy is found, no database query predicates need to be added.
+        /// 1) _entityPermissionMap[entityName] finds the entityMetaData for the current entityName
+        /// 2) entityMetaData.RoleToActionMap[roleName] finds the roleMetaData for the current roleName
+        /// 3) roleMetaData.ActionToColumnMap[action] finds the actionMetaData for the current action
+        /// 4) actionMetaData.databasePolicy finds the required database policy
         /// </summary>
         /// <param name="entityName">Entity from request.</param>
         /// <param name="roleName">Role defined in client role header.</param>
         /// <param name="action">Action type: create, read, update, delete.</param>
-        /// <returns></returns>
+        /// <returns>Policy string if a policy exists in config.
+        /// Empty string if a policy does not exist in config.</returns>
         private string GetDBPolicyForRequest(string entityName, string roleName, string action)
         {
-            // Fetch the database policy by using the sequence of following steps:
-            // _entityPermissionMap[entityName] finds the entityMetaData for the current entityName
-            // entityMetaData.RoleToActionMap[roleName] finds the roleMetaData for the current roleName
-            // roleMetaData.ActionToColumnMap[action] finds the actionMetaData for the current action
-            // actionMetaData.databasePolicy finds the required database policy
-            RoleMetadata roleMetadata = EntityPermissionsMap[entityName].RoleToActionMap[roleName];
-            roleMetadata.ActionToColumnMap.TryGetValue(action, out ActionMetadata? actionMetadata);
+            if (!EntityPermissionsMap[entityName].RoleToActionMap.TryGetValue(roleName, out RoleMetadata? roleMetadata))
+            {
+                return string.Empty;
+            }
+
+            if (!roleMetadata.ActionToColumnMap.TryGetValue(action, out ActionMetadata? actionMetadata))
+            {
+                return string.Empty;
+            }
 
             // Get the database policy for the specified action.
-            string? dbPolicy = actionMetadata!.DatabasePolicy;
+            string? dbPolicy = actionMetadata.DatabasePolicy;
 
             return dbPolicy is not null ? dbPolicy : string.Empty;
         }
@@ -206,6 +214,10 @@ namespace Azure.DataGateway.Service.Authorization
                     {
                         string action = string.Empty;
                         ActionMetadata actionToColumn = new();
+
+                        // Use a hashset to store all the backing field names
+                        // that are accessible to the user.
+                        HashSet<string> allowedColumns = new();
                         IEnumerable<string> allTableColumns = ResolveTableDefinitionColumns(entityName);
 
                         // Implicitly, all table columns are 'allowed' when an actiontype is a string.
@@ -214,7 +226,7 @@ namespace Azure.DataGateway.Service.Authorization
                         {
                             action = actionElement.ToString();
                             actionToColumn.Included.UnionWith(allTableColumns);
-                            actionToColumn.Allowed.UnionWith(allTableColumns);
+                            allowedColumns.UnionWith(allTableColumns);
                         }
                         else
                         {
@@ -224,33 +236,40 @@ namespace Azure.DataGateway.Service.Authorization
                                 && actionObj is not null)
                             {
                                 action = actionObj.Name;
-                                if (actionObj.Fields!.Include is not null)
+                                if (actionObj.Fields is null)
                                 {
-                                    // When a wildcard (*) is defined for Included columns, all of the table's
-                                    // columns must be resolved and placed in the actionToColumn Key/Value store.
-                                    // This is especially relevant for find requests, where actual column names must be
-                                    // resolved when no columns were included in a request.
-                                    if (actionObj.Fields.Include.Count == 1 && actionObj.Fields.Include.Contains(WILDCARD))
-                                    {
-                                        actionToColumn.Included.UnionWith(ResolveTableDefinitionColumns(entityName));
-                                    }
-                                    else
-                                    {
-                                        actionToColumn.Included = actionObj.Fields.Include!;
-                                    }
+                                    actionToColumn.Included.UnionWith(ResolveTableDefinitionColumns(entityName));
                                 }
-
-                                if (actionObj.Fields!.Exclude is not null)
+                                else
                                 {
-                                    // When a wildcard (*) is defined for Excluded columns, all of the table's
-                                    // columns must be resolved and placed in the actionToColumn Key/Value store.
-                                    if (actionObj.Fields.Exclude.Count == 1 && actionObj.Fields.Exclude.Contains(WILDCARD))
+                                    if (actionObj.Fields.Include is not null)
                                     {
-                                        actionToColumn.Excluded.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                        // When a wildcard (*) is defined for Included columns, all of the table's
+                                        // columns must be resolved and placed in the actionToColumn Key/Value store.
+                                        // This is especially relevant for find requests, where actual column names must be
+                                        // resolved when no columns were included in a request.
+                                        if (actionObj.Fields.Include.Count == 1 && actionObj.Fields.Include.Contains(WILDCARD))
+                                        {
+                                            actionToColumn.Included.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                        }
+                                        else
+                                        {
+                                            actionToColumn.Included = actionObj.Fields.Include;
+                                        }
                                     }
-                                    else
+
+                                    if (actionObj.Fields.Exclude is not null)
                                     {
-                                        actionToColumn.Excluded = actionObj.Fields.Exclude!;
+                                        // When a wildcard (*) is defined for Excluded columns, all of the table's
+                                        // columns must be resolved and placed in the actionToColumn Key/Value store.
+                                        if (actionObj.Fields.Exclude.Count == 1 && actionObj.Fields.Exclude.Contains(WILDCARD))
+                                        {
+                                            actionToColumn.Excluded.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                        }
+                                        else
+                                        {
+                                            actionToColumn.Excluded = actionObj.Fields.Exclude;
+                                        }
                                     }
                                 }
 
@@ -260,9 +279,13 @@ namespace Azure.DataGateway.Service.Authorization
                                 }
 
                                 // Calculate the set of allowed backing column names.
-                                actionToColumn.Allowed.UnionWith(actionToColumn.Included.Except(actionToColumn.Excluded));
+                                allowedColumns.UnionWith(actionToColumn.Included.Except(actionToColumn.Excluded));
                             }
                         }
+
+                        // Populate allowed exposed columns for each entity/role/action combination during startup,
+                        // so that it doesn't need to be evaluated per request.
+                        PopulateAllowedExposedColumns(actionToColumn.AllowedExposedColumns, entityName, allowedColumns);
 
                         IEnumerable<string> actionNames = GetAllActions(action);
                         foreach (string actionName in actionNames)
@@ -275,7 +298,7 @@ namespace Azure.DataGateway.Service.Authorization
                                 entityToRoleMap.ActionToRolesMap[actionName].Add(role);
                             }
 
-                            foreach (string allowedColumn in actionToColumn.Allowed)
+                            foreach (string allowedColumn in allowedColumns)
                             {
                                 entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
                                 entityToRoleMap.FieldToRolesMap[allowedColumn][actionName].Add(role);
@@ -303,22 +326,35 @@ namespace Azure.DataGateway.Service.Authorization
             return WILDCARD.Equals(action) ? RuntimeConfigValidator.ValidActions : new List<string> { action };
         }
 
-        /// <inheritdoc />
-        public IEnumerable<string> GetAllowedColumns(string entityName, string roleName, string action)
+        /// <summary>
+        /// From the given parameters, processes the included and excluded column permissions to output
+        /// a list of columns that are "allowed".
+        /// -- IncludedColumns minus ExcludedColumns == Allowed Columns
+        /// -- Does not yet account for either being wildcard (*).
+        /// </summary>
+        /// <param name="allowedExposedColumns">Set of fields exposed to user.</param>
+        /// <param name="entityName">Entity from request</param>
+        /// <param name="allowedDBColumns">Set of allowed backing field names.</param>
+        private void PopulateAllowedExposedColumns(HashSet<string> allowedExposedColumns,
+            string entityName,
+            HashSet<string> allowedDBColumns)
         {
-            ActionMetadata actionMetadata = EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[action];
-            IEnumerable<string> allowedDBColumns = actionMetadata.Allowed;
-            List<string> allowedExposedColumns = new();
-
             foreach (string dbColumn in allowedDBColumns)
             {
                 if (_metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: dbColumn, out string? exposedName))
                 {
-                    allowedExposedColumns.Append(exposedName);
+                    if (exposedName is not null)
+                    {
+                        allowedExposedColumns.Add(exposedName);
+                    }
                 }
             }
+        }
 
-            return allowedExposedColumns;
+        /// <inheritdoc />
+        public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, string actionName)
+        {
+            return EntityPermissionsMap[entityName].RoleToActionMap[roleName].ActionToColumnMap[actionName].AllowedExposedColumns;
         }
 
         /// <summary>
@@ -480,23 +516,6 @@ namespace Azure.DataGateway.Service.Authorization
         public IEnumerable<string> GetRolesForEntity(string entityName)
         {
             return EntityPermissionsMap[entityName].RoleToActionMap.Keys;
-        }
-
-        /// <summary>
-        /// Returns a list of roles which define permissions for the provided action.
-        /// i.e. list of roles which allow the action "read" on entityName.
-        /// </summary>
-        /// <param name="entityName">Entity to lookup permissions</param>
-        /// <param name="actionName">Action to lookup applicable roles</param>
-        /// <returns>Collection of roles.</returns>
-        public IEnumerable<string> GetRolesForAction(string entityName, string actionName)
-        {
-            if (EntityPermissionsMap[entityName].ActionToRolesMap.TryGetValue(actionName, out List<string>? roleList) && roleList is not null)
-            {
-                return roleList;
-            }
-
-            return new List<string>();
         }
 
         /// <summary>

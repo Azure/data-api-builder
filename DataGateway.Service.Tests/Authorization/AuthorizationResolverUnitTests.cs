@@ -621,7 +621,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// when the authenticated role is not defined, but anonymous role is defined.
         /// </summary>
         [DataRow(new string[] { "col1", "col2", "col3" }, new string[] { "col4" },
-            new string[] { "col2", "col3" }, true, DisplayName = "fields in include check" )]
+            new string[] { "col2", "col3" }, true, DisplayName = "fields in include check")]
         [DataRow(new string[] { "col2", "col4" }, new string[] { "col1", "col3" },
             new string[] { "col1", "col4" }, false, DisplayName = "fields in exclude check")]
         [DataRow(new string[] { "col1" }, new string[] { "col2" },

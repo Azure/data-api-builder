@@ -20,7 +20,7 @@ namespace Azure.DataGateway.Service.Services
     /// Reads schema information from the database to make it
     /// available for the GraphQL/REST services.
     /// </summary>
-    public class SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT> : ISqlMetadataProvider
+    public abstract class SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT> : ISqlMetadataProvider
         where ConnectionT : DbConnection, new()
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
@@ -207,6 +207,7 @@ namespace Azure.DataGateway.Service.Services
 
             string[] procedureRestrictions = new string[NUMBER_OF_RESTRICTIONS];
 
+            // To restrict the parameters for the current stored procedure, specify its name
             procedureRestrictions[0] = conn.Database;
             procedureRestrictions[1] = schemaName;
             procedureRestrictions[2] = storedProcedureName;
@@ -222,15 +223,8 @@ namespace Azure.DataGateway.Service.Services
                     subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
-            string[] procedureParamRestrictions = new string[NUMBER_OF_RESTRICTIONS];
-
-            // To restrict the parameters for the current stored procedure, specify its name
-            procedureParamRestrictions[0] = conn.Database;
-            procedureParamRestrictions[1] = schemaName;
-            procedureParamRestrictions[2] = storedProcedureName;
-
             // Each row in the procedureParams DataTable corresponds to a single parameter
-            DataTable parameterMetadata = await conn.GetSchemaAsync(collectionName: "ProcedureParameters", restrictionValues: procedureParamRestrictions);
+            DataTable parameterMetadata = await conn.GetSchemaAsync(collectionName: "ProcedureParameters", restrictionValues: procedureRestrictions);
             Dictionary<string, JValue>? configParameters = procedureEntity.GetSourceObject().Parameters;
 
             // For each row/parameter, add an entry to StoredProcedureDefinition.Parameters dictionary
@@ -256,7 +250,7 @@ namespace Azure.DataGateway.Service.Services
                     if (!storedProcedureDefinition.Parameters.TryGetValue(configParamKey, out ParameterDefinition? parameterDefinition))
                     {
                         throw new DataGatewayException(
-                            message: $"Could not find parameter \"{configParamKey}\" specified in config in database schema for stored procedure \"{storedProcedureName}\"",
+                            message: $"Could not find parameter \"{configParamKey}\" specified in config for procedure \"{schemaName}.{storedProcedureName}\"",
                             statusCode: System.Net.HttpStatusCode.NotImplemented,
                             subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
                     }
@@ -265,7 +259,7 @@ namespace Azure.DataGateway.Service.Services
                         && !(configParamValueType == typeof(long) && (parameterDefinition.SystemType == typeof(int) || parameterDefinition.SystemType == typeof(short))))
                     {
                         throw new DataGatewayException(
-                            message: $"Type mismatch between parameters specified in config and those found in database schema for stored procedure \"{storedProcedureName}\": " +
+                            message: $"Type mismatch between parameters specified in config and those found in schema for stored procedure \"{schemaName}.{storedProcedureName}\": " +
                             $"expected {parameterDefinition.SystemType}, got {configParamValueType} for param \"{configParamKey}\"",
                             statusCode: System.Net.HttpStatusCode.NotImplemented,
                             subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
@@ -273,76 +267,23 @@ namespace Azure.DataGateway.Service.Services
                     else
                     {
                         parameterDefinition.HasConfigDefault = true;
-                        parameterDefinition.ConfigDefaultValue = configParamValue;
-                        //Console.WriteLine($"db param type: {parameterDefinition.SystemType} \n config param type: {configParamValueType}");
-
+                        parameterDefinition.ConfigDefaultValue = configParamValue.Value;
                     }
                 }
             }
-
         }
 
         /// <summary>
         /// Takes a string version of a sql data type and returns its .NET common language runtime (CLR) counterpart
-        /// As per https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/sql-server-data-type-mappings
-        /// Hilariously, I can't seem to find a method .NET exposes to do this for us.
-        /// Note: this is probably sql server specific.
         /// </summary>
-        public static Type SqlToCLRType(string sqlType)
-        {
-            switch (sqlType)
-            {
-                case "bigint":
-                case "real":
-                    return typeof(long);
-                case "numeric":
-                    return typeof(decimal);
-                case "bit":
-                    return typeof(bool);
-                case "smallint":
-                    return typeof(short);
-                case "decimal":
-                case "smallmoney":
-                case "money":
-                    return typeof(decimal);
-                case "int":
-                    return typeof(int);
-                case "tinyint":
-                    return typeof(byte);
-                case "float":
-                    return typeof(float);
-                case "date":
-                case "datetime2":
-                case "smalldatetime":
-                case "datetime":
-                case "time":
-                    return typeof(DateTime);
-                case "datetimeoffset":
-                    return typeof(DateTimeOffset);
-                case "char":
-                case "varchar":
-                case "text":
-                case "nchar":
-                case "nvarchar":
-                case "ntext":
-                    return typeof(string);
-                case "binary":
-                case "varbinary":
-                case "image":
-                    return typeof(byte[]);
-                case "uniqueidentifier":
-                    return typeof(Guid);
-                default:
-                    throw new ArgumentException("Tried to convert unsupported data type");
-            }
-        }
+        public abstract Type SqlToCLRType(string sqlType);
 
-    /// <summary>
-    /// Returns the default schema name. Throws exception here since
-    /// each derived class should override this method.
-    /// </summary>
-    /// <exception cref="NotSupportedException"></exception>
-    protected virtual string GetDefaultSchemaName()
+        /// <summary>
+        /// Returns the default schema name. Throws exception here since
+        /// each derived class should override this method.
+        /// </summary>
+        /// <exception cref="NotSupportedException"></exception>
+        protected virtual string GetDefaultSchemaName()
         {
             throw new NotSupportedException($"Cannot get default schema " +
                 $"name for database type {_databaseType}");

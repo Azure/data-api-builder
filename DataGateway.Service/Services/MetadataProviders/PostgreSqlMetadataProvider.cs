@@ -1,3 +1,4 @@
+using System;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Extensions.Logging;
@@ -26,6 +27,15 @@ namespace Azure.DataGateway.Service.Services
         protected override string GetDefaultSchemaName()
         {
             return "public";
+        }
+
+        /// <summary>
+        /// Takes a string version of a PostgreSql data type and returns its .NET common language runtime (CLR) counterpart
+        /// TODO: For PostgreSql stored procedure support, this needs to be implemented.
+        /// </summary>
+        public override Type SqlToCLRType(string sqlType)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -14,14 +14,15 @@ namespace Azure.DataGateway.Service.Resolvers
     public class SqlExecuteStructure : BaseSqlQueryStructure
     {
         // Holds the final, resolved parameters that will be passed when building the execute stored procedure query
-        // Keys are the stored procedure parameters (e.g. @id, @username...)
-        // Values are the parametrized, referencing parameters (e.g. @param0, @param1...)
+        // Keys are the stored procedure arguments (e.g. @id, @username...)
+        // Values are the engine-generated referencing parameters (e.g. @param0, @param1...)
         public Dictionary<string, object> ProcedureParameters { get; set; }
 
         /// <summary>
         /// Constructs a structure with all needed components to build an EXECUTE stored procedure call
         /// requestParams will be resolved from either the request querystring or body by this point
-        /// construct the ProcedureParameters dictionary through resolving requestParams and defaults from config/metadata
+        /// Construct the ProcedureParameters dictionary through resolving requestParams and defaults from config/metadata
+        /// Also performs type checking at this stage instead of in RequestValidator to prevent code duplication 
         /// </summary>
         public SqlExecuteStructure(
             string entityName,
@@ -29,30 +30,41 @@ namespace Azure.DataGateway.Service.Resolvers
             IDictionary<string, object?> requestParams)
         : base(sqlMetadataProvider, entityName: entityName)
         {
-            StoredProcedureDefinition storedProcedureDefinition = SqlMetadataProvider.GetStoredProcedureDefinition(entityName);
+            StoredProcedureDefinition storedProcedureDefinition = GetUnderlyingStoredProcedureDefinition();
             ProcedureParameters = new();
-            foreach((string paramKey, ParameterDefinition paramValue) in storedProcedureDefinition.Parameters)
+            foreach((string paramKey, ParameterDefinition paramDefinition) in storedProcedureDefinition.Parameters)
             {
-                // populate with request param if able
+                // Populate with request param if able
                 if (requestParams.TryGetValue(paramKey, out object? requestParamValue))
                 {
-                    // Parametrize, then add referencing parameter to ProcedureParameters dictionary
-                    string param = MakeParamWithValue(GetParamAsProcedureParameterType((string)requestParamValue, paramKey));
-                    ProcedureParameters.Add(paramKey, param);
+                    // Parameterize, then add referencing parameter to ProcedureParameters dictionary
+                    try
+                    {
+                        string param = MakeParamWithValue(GetParamAsProcedureParameterType((string)requestParamValue, paramKey));
+                        ProcedureParameters.Add(paramKey, $"@{param}");
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        // In the case GetParamAsProcedureParameterType fails to parse as SystemType from database metadata
+                        throw new DataGatewayException(
+                            message: ex.Message,
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    }
                 }
                 else
-                { // fill with default value
-                    if (paramValue.HasConfigDefault)
+                { // Fill with default value
+                    if (paramDefinition.HasConfigDefault)
                     {
-                        string param = MakeParamWithValue(paramValue.ConfigDefaultValue!);
-                        ProcedureParameters.Add(paramKey, param);
+                        string param = MakeParamWithValue(paramDefinition.ConfigDefaultValue!);
+                        ProcedureParameters.Add(paramKey, $"@{param}");
                     }
                     else
                     {
-                        // ideally should check if a default is set in sql, but no easy way to do that
-                        // catching the database error will have to suffice then
-                        // error should already be thrown by this point, but if not:
-                        throw new DataGatewayException(message: "did not provide all req'd params",
+                        // This case of not all parameters being explicitly between request and config should already be
+                        // handled in the request validation stage.
+
+                        throw new DataGatewayException(message: $"did not provide all req'd params. missing \"{paramKey}\"",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
@@ -60,16 +72,16 @@ namespace Azure.DataGateway.Service.Resolvers
             }
         }
 
-        /// <summary>
-        /// If constructing with collection of query strings, convert to dictionary of key-value pairs 
-        /// </summary>
-        public SqlExecuteStructure(
-            string entityName,
-            ISqlMetadataProvider sqlMetadataProvider,
-            NameValueCollection parsedQueryString)
-        : this(entityName, sqlMetadataProvider, parsedQueryString.Cast<string>().ToDictionary(k => k, k =>(object?)parsedQueryString[k]))
-        {
-        }
+        ///// <summary>
+        ///// If constructing with collection of query strings, convert to dictionary of key-value pairs 
+        ///// </summary>
+        //public SqlExecuteStructure(
+        //    string entityName,
+        //    ISqlMetadataProvider sqlMetadataProvider,
+        //    NameValueCollection parsedQueryString)
+        //: this(entityName, sqlMetadataProvider, parsedQueryString.Cast<string>().ToDictionary(k => k, k =>(object?)parsedQueryString[k]))
+        //{
+        //}
         
         public string BuildProcedureParameterList()
         {
@@ -133,8 +145,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     e is ArgumentNullException ||
                     e is OverflowException)
                 {
-                    throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as stored procedure parameter \"{procParamName}\" " +
-                        $"with type \"{systemType.Name}\".");
+                    throw new ArgumentException($@"Parameter ""{param}"" cannot be resolved as stored procedure parameter ""{procParamName}"" " +
+                        $@"with type ""{systemType.Name}"".");
                 }
 
                 throw;

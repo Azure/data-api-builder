@@ -110,26 +110,29 @@ namespace Azure.DataGateway.Service.Resolvers
         // </summary>
         public async Task<IActionResult> ExecuteAsync(FindRequestContext context)
         {
-            BaseSqlQueryStructure structure;
-            if (context is StoredProcedureRequestContext)
-            {
-                structure = new SqlExecuteStructure(context.EntityName, _sqlMetadataProvider, context.ParsedQueryString);
-            }
-            else
-            {
-                structure = new SqlQueryStructure(context, _sqlMetadataProvider);
-            }
-            //SqlQueryStructure structure = new(context, _sqlMetadataProvider);
+            //BaseSqlQueryStructure structure;
+            //if (context is StoredProcedureRequestContext)
+            //{
+            //    structure = new SqlExecuteStructure(context.EntityName, _sqlMetadataProvider, context.ParsedQueryString);
+            //}
+            //else
+            //{
+            //    structure = new SqlQueryStructure(context, _sqlMetadataProvider);
+            //}
+            SqlQueryStructure structure = new(context, _sqlMetadataProvider);
             using JsonDocument queryJson = await ExecuteAsync(structure);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty table, return an empty json array
-            return queryJson is null ? FormatFindResult(JsonDocument.Parse("[]"), (FindRequestContext)context) :
-                                       FormatFindResult(queryJson, (FindRequestContext)context);
+            return queryJson is null ? FormatFindResult(JsonDocument.Parse("[]"), context) :
+                                       FormatFindResult(queryJson, context);
         }
 
+        /// <summary>
+        /// Given the StoredProcedureRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
+        /// </summary>
         public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context)
         {
-            SqlExecuteStructure structure = new(context.EntityName, _sqlMetadataProvider, context.ParsedQueryString);
+            SqlExecuteStructure structure = new(context.EntityName, _sqlMetadataProvider, context.ResolvedParameters);
             using JsonDocument queryJson = await ExecuteAsync(structure);
             return queryJson is null ? OkResponse(JsonDocument.Parse("[]").RootElement.Clone()) :
                                        OkResponse(queryJson.RootElement.Clone());
@@ -260,8 +263,8 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             // Open connection and execute query using _queryExecutor
 
-            //option 1: dynamic cast
-            _queryBuilder.Build((dynamic)structure);
+            ////option 1: dynamic cast
+            //_queryBuilder.Build((dynamic)structure);
 
             //option 2: conditional downcast
             if (structure is SqlExecuteStructure)
@@ -274,7 +277,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
             //option 3: double dispatch/visitor pattern
             string queryString = structure.DispatchBuild(_queryBuilder);
-
 
             Console.WriteLine(queryString);
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);

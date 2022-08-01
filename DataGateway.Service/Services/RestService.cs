@@ -77,19 +77,29 @@ namespace Azure.DataGateway.Service.Services
             }
 
             RestRequestContext context;
-            // If request has resolved to a stored procedure entity, initialize appropriate request context
+            // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
             if (dbObject.ObjectType is SourceType.StoredProcedure)
             {
                 switch (operationType)
                 {
 
                     case Operation.Find:
-                        // No need to add request body for find operation, parameters passed in query string
+                        // Parameters passed in query string, request body is ignored for find requests
                         context = new StoredProcedureRequestContext(
                             entityName,
                             dbo: dbObject,
-                            null,
+                            requestPayloadRoot: null,
                             operationType);
+
+                        // Don't want to use RequestParser.ParseQueryString here since for all non-sp requests,
+                        // arbitrary keys shouldn't be allowed/recognized in the querystring.
+                        // So, for the time being, filter, select, etc. fields aren't populated for sp requests
+                        // So, $filter will be treated as any other parameter (inevitably will raise a Bad Request)
+                        if (!string.IsNullOrWhiteSpace(queryString))
+                        {
+                            context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
+                        }
+
                         break;
                     case Operation.Insert:
                     case Operation.Delete:
@@ -111,19 +121,13 @@ namespace Azure.DataGateway.Service.Services
                         throw new DataGatewayException(message: "This operation is not supported.",
                                                        statusCode: HttpStatusCode.BadRequest,
                                                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
-
                 }
+
                 // Throws bad request if primaryKeyRoute set
                 RequestValidator.ValidateStoredProcedureRequest(primaryKeyRoute);
-                
-                // Don't want to use RequestParser.ParseQueryString here since for all non-sp requests,
-                // arbitrary keys shouldn't be allowed/recognized in the querystring.
-                // So, for the time being, filter, select, etc. fields aren't populated for sp requests
-                // So, $filter will be treated as any other parameter, which will error out
-                if (!string.IsNullOrWhiteSpace(queryString))
-                {
-                    context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
-                }
+
+                // At this point, either query string or request body is populated with params, so resolve which will be passed
+                ((StoredProcedureRequestContext)context).PopulateResolvedParameters();
 
                 // Downcasting is fine, but double dispatch/visitor pattern may be preferred here.
                 // E.g. context.DispatchValidateRequestContext(ISqlMetadataProvider)

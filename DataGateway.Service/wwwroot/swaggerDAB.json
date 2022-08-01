@@ -4,6 +4,9 @@
     "title": "Azure.DataGateway.Service",
     "version": "1.0"
   },
+  "host": "localhost:5000",
+  "basePath": "/api",
+  "schemes": ["http"],
   "paths": {
     "/Book": {
       "post": {

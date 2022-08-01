@@ -255,7 +255,7 @@ namespace Azure.DataGateway.Service
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
 
             if (runtimeConfig is not null && runtimeConfig.RestGlobalSettings.Path is not null)
             {

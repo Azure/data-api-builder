@@ -74,6 +74,27 @@ query ($filter: PlanetFilterInput!) {{
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, new() { { "filter", filter } });
         }
 
+        /// <summary>
+        /// Tests eq of StringFilterInput
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersEqWithNestedVariables()
+        {
+            const string nameContains = "n";
+            string gqlQuery = $@"
+query ($nameContains: String!) {{
+    planets(first: 10, {QueryBuilder.FILTER_FIELD_NAME}: {{ name: {{ contains: $nameContains }} }}) {{
+        items {{
+            name
+        }}
+    }}
+}}";
+
+            string dbQuery = $"select c.name from c where c.name like \"%{nameContains}%\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, new() { { "nameContains", nameContains } });
+        }
+
         private static async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery, Dictionary<string, object> variables = null)
         {
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery, variables);

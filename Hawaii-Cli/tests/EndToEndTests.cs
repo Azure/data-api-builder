@@ -203,6 +203,31 @@ public class EndToEndTests
         Assert.AreEqual("{\"id\":\"identity\",\"name\":\"Company Name\"}", JsonSerializer.Serialize(entity.Mappings));
     }
 
+    /// <summary>
+    /// Test to verify updating an existing Entity.
+    /// It tests updating permissions as well as relationship
+    /// </summary>
+    // [TestMethod]
+    // public void TestStartEngine()
+    // {
+    //     Assert.IsTrue(File.Exists("hawaii-config.MsSql.json"));
+    //     string[] initArgs = { "start", "--project", "DataGateway.Service", "--config", "hawaii-config.MsSql.json" };
+    //     TestStartEngine(initArgs);
+    //     Thread.Sleep(100);
+    //     Console.WriteLine("baba1");
+    // }
+
+    // public static async Task TestStartEngine(string[] args)
+    // {
+    //     await Task.Run(() =>
+    //     {
+    //         Program.Main(args);
+
+    //     });
+    //     Console.WriteLine("baba2");
+    //     Environment.Exit(0);
+    // }
+
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)
     {
         string jsonString;

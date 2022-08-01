@@ -99,9 +99,15 @@ namespace Hawaii.Cli.Models
         /// This method will start the hawaii-engine
         /// using the config and project name
         /// </summary>
-        public static void TryStartEngineWithOptions(StartOptions options)
+        public static bool TryStartEngineWithOptions(StartOptions options)
         {
-            Azure.DataGateway.Service.Program.Main(new string[]{"--project", options.Project, "--ConfigFileName", options.Config});
+            if (!File.Exists(options.Config))
+            {
+                Console.WriteLine($"Config file:{options.Config} not found.");
+                return false;
+            }
+
+            return Azure.DataGateway.Service.Program.StartEngine(new string[]{"--project", options.Project, "--ConfigFileName", options.Config});
         }
 
         /// <summary>

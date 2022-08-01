@@ -164,6 +164,19 @@ namespace Hawaii.Cli.Tests
         }
 
         /// <summary>
+        /// Test the start command
+        /// </summary>
+        [TestMethod]
+        public void StartEngineTest()
+        {
+            StartOptions options = new(
+                project: "DataGateway.Service",
+                config: "hawaii-config.Invalid.json");
+
+            Assert.IsFalse(ConfigGenerator.TryStartEngineWithOptions(options));
+        }
+
+        /// <summary>
         /// Call ConfigGenerator.TryCreateRuntimeConfig and verify json result.
         /// </summary>
         /// <param name="options">InitOptions.</param>

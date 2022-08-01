@@ -57,7 +57,16 @@ namespace Hawaii.Cli
                 })
                 .WithParsed<StartOptions>(options =>
                 {
-                    ConfigGenerator.TryStartEngineWithOptions(options);
+                    bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(options);
+
+                    if(isSuccess)
+                    {
+                        Console.WriteLine("Engine Started.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Engine Failed to start.");
+                    }
                 });
 
             return result is Parsed<object> ? 0 : -1;

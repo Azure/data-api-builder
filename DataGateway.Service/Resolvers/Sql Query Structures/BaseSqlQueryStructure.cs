@@ -183,7 +183,8 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Gets the value of the parameter cast as the system type
         /// of the column this parameter is associated with
         ///</summary>
-        /// <exception cref="ArgumentException">columnName is not a valid column of table or param
+        /// <exception cref="ArgumentException">Parsing of the parameter into the matched datatype failed.
+        /// columnName is not a valid column of table or param
         /// does not have a valid value type</exception>
         protected object GetParamAsColumnSystemType(string param, string columnName)
         {
@@ -206,17 +207,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     _ => throw new NotSupportedException($"{systemType.Name} is not supported")
                 };
             }
-            catch (Exception e)
+            catch (Exception e) when (e is FormatException || e is ArgumentNullException || e is OverflowException)
             {
-                if (e is FormatException ||
-                    e is ArgumentNullException ||
-                    e is OverflowException)
-                {
-                    throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
-                        $"with type \"{systemType.Name}\".");
-                }
-
-                throw;
+                throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
+                        $"with type \"{systemType.Name}\".", innerException: e);
             }
         }
 

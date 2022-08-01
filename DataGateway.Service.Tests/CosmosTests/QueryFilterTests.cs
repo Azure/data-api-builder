@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Resolvers;
@@ -51,9 +52,31 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
 
         }
 
-        private static async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
+        /// <summary>
+        /// Tests eq of StringFilterInput
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersEqWithVariables()
         {
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery);
+            var nameFilter = new { contains = "n" };
+            var filter = new { name = nameFilter };
+            string gqlQuery = $@"
+query ($filter: PlanetFilterInput!) {{
+    planets(first: 10, {QueryBuilder.FILTER_FIELD_NAME}: $filter) {{
+        items {{
+            name
+        }}
+    }}
+}}";
+
+            string dbQuery = "select c.name from c where c.name like \"%n%\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, new() { { "filter", filter } });
+        }
+
+        private static async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery, Dictionary<string, object> variables = null)
+        {
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery, variables);
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
             ValidateResults(actual.GetProperty("items"), expected.RootElement);
         }
@@ -62,7 +85,7 @@ namespace Azure.DataGateway.Service.Tests.CosmosTests
         {
             Assert.IsNotNull(expected);
             Assert.IsNotNull(actual);
-            Assert.IsTrue(JToken.DeepEquals(JToken.Parse(actual.ToString()), JToken.Parse(expected.ToString())));
+            Assert.IsTrue(JToken.DeepEquals(JToken.Parse(actual.ToString()), JToken.Parse(expected.ToString())), $"Expected: {expected}{Environment.NewLine}Actual: {actual}");
         }
 
         /// <summary>

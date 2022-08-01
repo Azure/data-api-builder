@@ -16,10 +16,10 @@ Clone the repository locally:
 git clone https://github.com/Azure/hawaii-engine.git
 ```
 
-then move into the folder where the Data API builder for Azure Databases engine has been cloned and then move into the `samples` folder, for example:
+then move into the folder where the Data API builder for Azure Databases engine has been cloned and then move into the `samples/getting-started` folder, for example:
 
 ```
-cd ./hawaii-engine/samples
+cd ./hawaii-engine/samples/getting-started
 ```
 
 ## Create the configuration file

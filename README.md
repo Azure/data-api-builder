@@ -8,7 +8,7 @@ With Data API builder, database objects can be exposed as a REST or GraphQL endp
 
 ## Getting Started
 
-To get started quickly with Data API builder for Azure Databases, you can use the [Getting Started](getting-started.md) tutorial, that will help to get familiar with some basic tools and conceptes while giving you a good experience on how much Data API builder for Azure Databases can make you more efficient, but removing the need to write a lot of plumbing code.
+To get started quickly with Data API builder for Azure Databases, you can use the [Getting Started](./docs/getting-started/getting-started.md) tutorial, that will help to get familiar with some basic tools and conceptes while giving you a good experience on how much Data API builder for Azure Databases can make you more efficient, but removing the need to write a lot of plumbing code.
 
 ## Documentation
 

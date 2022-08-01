@@ -239,6 +239,35 @@ mutation {{
             Assert.AreEqual("The argument `_partitionKeyValue` is required.", response[0].GetProperty("message").ToString());
         }
 
+        [TestMethod]
+        public async Task CreateThenReadReturnsExpectedData()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            string name = "test_name";
+
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", @"
+mutation ($id: ID, $name: String!, $stars: [CreateStarInput]) {
+    createPlanet (item: { id: $id, name: $name, stars: $stars }) {
+        id
+        name
+    }
+}", new() { { "id", id }, { "name", name }, { "stars", new[] { new { id = "TestStar" } } } });
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", @"
+query getPlanet($id: ID, $partitionKeyValue: String) {
+    planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) {
+        id
+        name
+    }
+}
+", new() { { "id", id }, { "partitionKeyValue", id } });
+
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+            Assert.AreEqual(name, response.GetProperty("name").GetString());
+        }
+
         /// <summary>
         /// Runs once after all tests in this class are executed
         /// </summary>

@@ -66,13 +66,30 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// this class.
         /// </summary>
         /// <param name="context"></param>
-        protected static async Task InitializeTestFixture(TestContext context)
+        /// <param name="customQueries">Test specific queries to be executed on database.</param>
+        /// <param name="customEntities">Test specific entities to be added to database.</param>
+        /// <returns></returns>
+        protected static async Task InitializeTestFixture(TestContext context, List<string> customQueries = null,
+            List<string[]> customEntities = null)
         {
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{DatabaseEngine}");
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
-            TestHelper.AddMissingEntitiesToConfig(_runtimeConfig);
+
+            // Add magazines entity to the 
+            if (TestCategory.MYSQL.Equals(DatabaseEngine))
+            {
+                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "Magazine", "magazines");
+            }
+            else
+            {
+                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "Magazine", "foo.magazines");
+            }
+
+            // Add custom entities for the test, if any.
+            AddCustomEntities(customEntities);
+
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
 
             SetUpSQLMetadataProvider();
@@ -89,6 +106,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
 
             await ResetDbStateAsync();
+
+            //Execute additional queries, if any.
+            await ExecuteQueriesOnDbAsync(customQueries);
+
             await _sqlMetadataProvider.InitializeAsync();
 
             // sets the database name using the connection string
@@ -101,31 +122,74 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _queryExecutor,
                 _queryBuilder,
                 _sqlMetadataProvider,
-                _httpContextAccessor.Object);
+                _httpContextAccessor.Object,
+                _authorizationResolver);
             _mutationEngine =
                 new SqlMutationEngine(
                 _queryEngine,
                 _queryExecutor,
                 _queryBuilder,
                 _sqlMetadataProvider,
-                _authorizationResolver);
-
-            //Initialize the authorization resolver object
-            _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
+                _authorizationResolver,
+                _httpContextAccessor.Object);
 
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
                 {
                     builder.ConfigureTestServices(services =>
                     {
+                        services.AddHttpContextAccessor();
                         services.AddSingleton(_runtimeConfigProvider);
                         services.AddSingleton(_queryEngine);
-                        services.AddSingleton(_mutationEngine);
+                        services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
+                        {
+                            return new SqlMutationEngine(
+                                    _queryEngine,
+                                    _queryExecutor,
+                                    _queryBuilder,
+                                    _sqlMetadataProvider,
+                                    _authorizationResolver,
+                                    ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider));
+                        });
                         services.AddSingleton(_sqlMetadataProvider);
+                        services.AddSingleton(_authorizationResolver);
                     });
                 });
 
             HttpClient = _application.CreateClient();
+        }
+
+        /// <summary>
+        /// Helper method to add test specific entities to the entity mapping.
+        /// </summary>
+        /// <param name="customEntities">List of test specific entities.</param>
+        private static void AddCustomEntities(List<string[]> customEntities)
+        {
+            if (customEntities is not null)
+            {
+                foreach (string[] customEntity in customEntities)
+                {
+                    string objectKey = customEntity[0];
+                    string objectName = customEntity[1];
+                    TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, objectKey, objectName);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to execute all the additional queries for a test on the database.
+        /// </summary>
+        /// <param name="customQueries"></param>
+        /// <returns></returns>
+        private static async Task ExecuteQueriesOnDbAsync(List<string> customQueries)
+        {
+            if (customQueries is not null)
+            {
+                foreach (string query in customQueries)
+                {
+                    await _queryExecutor.ExecuteQueryAsync(query, parameters: null);
+                }
+            }
         }
 
         /// <summary>
@@ -470,7 +534,12 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         /// <param name="httpClient"></param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns>string in JSON format</returns>
-        protected virtual async Task<JsonElement> ExecuteGraphQLRequestAsync(string query, string queryName, bool isAuthenticated, Dictionary<string, object> variables = null)
+        protected virtual async Task<JsonElement> ExecuteGraphQLRequestAsync(
+            string query,
+            string queryName,
+            bool isAuthenticated,
+            Dictionary<string, object> variables = null,
+            string clientRoleHeader = null)
         {
             RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
             return await GraphQLRequestExecutor.PostGraphQLRequestAsync(
@@ -479,7 +548,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 queryName,
                 query,
                 variables,
-                isAuthenticated ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken() : null
+                isAuthenticated ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader) : null,
+                clientRoleHeader: clientRoleHeader
             );
         }
     }

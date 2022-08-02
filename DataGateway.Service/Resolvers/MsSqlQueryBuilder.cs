@@ -66,17 +66,25 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlUpdateStructure structure)
         {
+            string predicates = JoinPredicateStrings(
+                                   structure.DbPolicyPredicates,
+                                   Build(structure.Predicates));
+
             return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
-                    $"WHERE {Build(structure.Predicates)};";
+                    $"WHERE {predicates};";
         }
 
         /// <inheritdoc />
         public string Build(SqlDeleteStructure structure)
         {
+            string predicates = JoinPredicateStrings(
+                       structure.DbPolicyPredicates,
+                       Build(structure.Predicates));
+
             return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                    $"WHERE {Build(structure.Predicates)} ";
+                    $"WHERE {predicates} ";
         }
 
         /// <summary>

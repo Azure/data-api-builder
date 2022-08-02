@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
@@ -565,9 +566,10 @@ namespace Azure.DataGateway.Service.Services
             if (string.IsNullOrEmpty(schemaName))
             {
                 // if DatabaseType is not postgresql will short circuit and use default
-                if (_databaseType is not DatabaseType.postgresql || !TryGetSchemaFromConnectionString(
-                                                                    out schemaName,
-                                                                    connectionString: ConnectionString))
+                if (_databaseType is not DatabaseType.postgresql ||
+                    !PostgreSqlMetadataProvider.TryGetSchemaFromConnectionString(
+                        connectionString: ConnectionString,
+                        out schemaName))
                 {
                     schemaName = GetDefaultSchemaName();
                 }
@@ -580,24 +582,6 @@ namespace Azure.DataGateway.Service.Services
             }
 
             return (schemaName, dbObjectName);
-        }
-
-        /// <summary>
-        /// Only used for PostgreSql.
-        /// The connection string could contain the schema,
-        /// in which case it will be associated with the
-        /// property 'SearchPath' in the string builder we create.
-        /// If `SearchPath` is null we assign the empty string to the
-        /// the out param schemaName, otherwise we assign the
-        /// value associated with `SearchPath`.
-        /// </summary>
-        /// <param name="schemaName">the schema name we save.</param>
-        /// <returns>true if non empty schema in connection string, false otherwise.</returns>
-        public static bool TryGetSchemaFromConnectionString(out string schemaName, string connectionString)
-        {
-            NpgsqlConnectionStringBuilder connectionStringBuilder = new(connectionString);
-            schemaName = connectionStringBuilder.SearchPath is null ? string.Empty : connectionStringBuilder.SearchPath;
-            return string.IsNullOrEmpty(schemaName) ? false : true;
         }
 
         /// <summary>
@@ -686,12 +670,14 @@ namespace Azure.DataGateway.Service.Services
         /// <param name="schemaName">Name of the schema.</param>
         /// <param name="tableName">Name of the table.</param>
         /// <param name="tableDefinition">Table definition to fill.</param>
+        /// <param name="entityName">EntityName included to pass on for error messaging.</param>
         private async Task PopulateTableDefinitionAsync(
+            string entityName,
             string schemaName,
             string tableName,
             TableDefinition tableDefinition)
         {
-            DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(schemaName, tableName);
+            DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(entityName, schemaName, tableName);
 
             List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);
 
@@ -699,7 +685,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 throw new DataGatewayException(
                        message: $"Primary key not configured on the given database object {tableName}",
-                       statusCode: System.Net.HttpStatusCode.NotImplemented,
+                       statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                        subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
@@ -736,16 +722,50 @@ namespace Azure.DataGateway.Service.Services
         /// If not present, fills it first and returns the same.
         /// </summary>
         private async Task<DataTable> GetTableWithSchemaFromDataSetAsync(
+            string entityName,
             string schemaName,
             string tableName)
         {
             DataTable? dataTable = EntitiesDataSet.Tables[tableName];
-            if (dataTable == null)
+            if (dataTable is null)
             {
-                dataTable = await FillSchemaForTableAsync(schemaName, tableName);
+                try
+                {
+                    dataTable = await FillSchemaForTableAsync(schemaName, tableName);
+                }
+                catch (Exception ex) when (ex is not DataGatewayException)
+                {
+                    string message;
+                    // Check exception content to ensure proper error message for connection string.
+                    // If MySql has a non-empty, invalid connection string, it will have the
+                    // MYSQL_INVALID_CONNECTION_STRING_MESSAGE in its message when the connection
+                    // string is totally invalid and lacks even the basic format of a valid connection
+                    // string (ie: ConnectionString="&#@&^@*&^#$"), or will have a targetsite in
+                    // the exception with a name of MYSQL_INVALID_CONNECTION_STRING_OPTIONS in the
+                    // case where the connection string follows the correct general form, but does
+                    // not have keys with valid names (ie: ConnectionString="foo=bar;baz=qux")
+                    if (ex.Message.Contains(MySqlMetadataProvider.MYSQL_INVALID_CONNECTION_STRING_MESSAGE) ||
+                       (ex.TargetSite is not null &&
+                        string.Equals(ex.TargetSite.Name, MySqlMetadataProvider.MYSQL_INVALID_CONNECTION_STRING_OPTIONS)))
+                    {
+                        message = DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE +
+                            $"Underlying Exception message: {ex.Message}";
+                    }
+                    else
+                    {
+                        message = $"Cannot obtain Schema for entity {entityName} " +
+                            $"with underlying database object source: {schemaName}.{tableName} " +
+                            $"due to: {ex.Message}";
+                    }
+
+                    throw new DataGatewayException(
+                        message,
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+                }
             }
 
-            return dataTable;
+            return dataTable!;
         }
 
         /// <summary>
@@ -757,7 +777,38 @@ namespace Azure.DataGateway.Service.Services
             string tableName)
         {
             using ConnectionT conn = new();
-            conn.ConnectionString = ConnectionString;
+            // If connection string is set to empty string
+            // we throw here to avoid having to sort out
+            // complicated db specific exception messages.
+            // This is caught and returned as DataGatewayException.
+            // The runtime config has a public setter so we check
+            // here for empty connection string to ensure that
+            // it was not set to an invalid state after initialization.
+            if (string.IsNullOrWhiteSpace(ConnectionString))
+            {
+                throw new DataGatewayException(
+                    DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE +
+                    " Connection string is null, empty, or whitespace.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            try
+            {
+                // for non-MySql DB types, this will throw an exception
+                // for malformed connection strings
+                conn.ConnectionString = ConnectionString;
+            }
+            catch (Exception ex)
+            {
+                string message = DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE +
+                    $" Underlying Exception message: {ex.Message}";
+                throw new DataGatewayException(
+                    message,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+            }
+
             await conn.OpenAsync();
 
             DataAdapterT adapterForTable = new();

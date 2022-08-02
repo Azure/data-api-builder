@@ -16,6 +16,9 @@ namespace Azure.DataGateway.Service.Services
     /// </summary>
     public class MySqlMetadataProvider : SqlMetadataProvider<MySqlConnection, MySqlDataAdapter, MySqlCommand>, ISqlMetadataProvider
     {
+        public const string MYSQL_INVALID_CONNECTION_STRING_MESSAGE = "Format of the initialization string";
+        public const string MYSQL_INVALID_CONNECTION_STRING_OPTIONS = "GetOptionForKey";
+
         public MySqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,

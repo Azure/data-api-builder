@@ -76,6 +76,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             List<string[]> customEntities = null)
         {
             _queryEngineLogger = new Mock<ILogger<IQueryEngine>>().Object;
+            _queryExecutorLogger = new Mock<ILogger<IQueryExecutor>>().Object;
             _mutationEngineLogger = new Mock<ILogger<IMutationEngine>>().Object;
 
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{DatabaseEngine}");

@@ -183,7 +183,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
         [ClassInitialize]
         public static async Task SetupAsync(TestContext context)
         {
-            Mock<ILogger<RestController>> restControllerLogger = new();
             DatabaseEngine = TestCategory.POSTGRESQL;
             await InitializeTestFixture(context);
             _restService = new RestService(_queryEngine,
@@ -193,7 +192,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
                 _authorizationService.Object,
                 _authorizationResolver,
                 _runtimeConfigProvider);
-            _restController = new RestController(_restService, restControllerLogger.Object);
+            _restController = new RestController(_restService,
+                                                 _restControllerLogger);
         }
 
         #endregion

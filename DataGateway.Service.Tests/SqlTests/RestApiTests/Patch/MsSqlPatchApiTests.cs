@@ -130,7 +130,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
         [ClassInitialize]
         public static async Task SetupAsync(TestContext context)
         {
-            Mock<ILogger<RestController>> restControllerLogger = new();
             DatabaseEngine = TestCategory.MSSQL;
             await InitializeTestFixture(context);
             // Setup REST Components
@@ -141,7 +140,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
                 _authorizationService.Object,
                 _authorizationResolver,
                 _runtimeConfigProvider);
-            _restController = new RestController(_restService, restControllerLogger.Object);
+            _restController = new RestController(_restService,
+                                                 _restControllerLogger);
         }
 
         /// <summary>

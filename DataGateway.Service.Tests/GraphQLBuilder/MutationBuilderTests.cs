@@ -6,7 +6,6 @@ using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -30,7 +29,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
         {
             _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo", "Baz" },
-                    new string[] { ActionType.CREATE, ActionType.UPDATE, ActionType.DELETE },
+                    new Operation[] { Operation.Create, Operation.Update, Operation.Delete },
                     new string[] { "anonymous", "authenticated" }
                     );
         }
@@ -65,7 +64,7 @@ type Foo @model {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new string[] { ActionType.CREATE },
+                    new Operation[] { Operation.Create },
                     roles);
             DocumentNode mutationRoot = MutationBuilder.Build(root,
                 DatabaseType.cosmos,
@@ -606,7 +605,7 @@ type Foo @model {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new string[] { ActionType.DELETE },
+                    new Operation[] { Operation.Delete },
                     roles);
             DocumentNode mutationRoot = MutationBuilder.Build(root,
                 DatabaseType.cosmos,
@@ -712,7 +711,7 @@ type Foo @model {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new string[] { ActionType.UPDATE },
+                    new Operation[] { Operation.Update },
                     roles);
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,

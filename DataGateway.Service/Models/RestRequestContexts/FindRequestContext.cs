@@ -19,7 +19,7 @@ namespace Azure.DataGateway.Service.Models
             PrimaryKeyValuePairs = new();
             FieldValuePairsInBody = new();
             IsMany = isList;
-            OperationType = Operation.Read;
+            OperationType = Operation.Find;
         }
     }
 }

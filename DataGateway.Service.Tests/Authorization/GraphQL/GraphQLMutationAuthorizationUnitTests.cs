@@ -19,14 +19,14 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
         /// </summary>
         /// <param name="roles"></param>
         /// <param name="expectedAuthorizeDirective"></param>
-        [DataRow(Operation.Create, new string[] { }, "",
+        [DataRow("create", new string[] { }, "",
             DisplayName = "No Roles -> Expects no objectTypeDefinition created")]
-        [DataRow(Operation.Create, new string[] { "role1" }, @"@authorize(roles: [""role1""])",
+        [DataRow("create", new string[] { "role1" }, @"@authorize(roles: [""role1""])",
             DisplayName = "One Role added to Authorize Directive")]
-        [DataRow(Operation.Create, new string[] { "role1", "role2" }, @"@authorize(roles: [""role1"",""role2""])",
+        [DataRow("create", new string[] { "role1", "role2" }, @"@authorize(roles: [""role1"",""role2""])",
             DisplayName = "Two Roles added to Authorize Directive")]
         [DataTestMethod]
-        public void AuthorizeDirectiveAddedForMutation(Operation operationType, string[] rolesDefinedInPermissions, string expectedAuthorizeDirective)
+        public void AuthorizeDirectiveAddedForMutation(string operationType, string[] rolesDefinedInPermissions, string expectedAuthorizeDirective)
         {
             string gql =
 @"
@@ -42,7 +42,7 @@ type Foo @model(name: ""Foo""){
                 entities: new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 entityPermissionsMap: GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     entityNames: new string[] { "Foo" },
-                    actions: new Operation[] { operationType },
+                    actionNames: new string[] { operationType },
                     roles: rolesDefinedInPermissions)
                 );
 

@@ -79,7 +79,7 @@ namespace Azure.DataGateway.Service.Services
             RestRequestContext context;
             switch (operationType)
             {
-                case Operation.Read:
+                case Operation.Find:
                     context = new FindRequestContext(entityName,
                                                      dbo: dbObject,
                                                      isList: string.IsNullOrEmpty(primaryKeyRoute));
@@ -133,7 +133,7 @@ namespace Azure.DataGateway.Service.Services
             }
 
             string role = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-            Operation action = HttpVerbToActions(GetHttpContext().Request.Method);
+            string action = HttpVerbToActions(GetHttpContext().Request.Method);
             string dbPolicy = _authorizationResolver.TryProcessDBPolicy(entityName, role, action, GetHttpContext());
             if (!string.IsNullOrEmpty(dbPolicy))
             {
@@ -155,7 +155,7 @@ namespace Azure.DataGateway.Service.Services
 
             switch (operationType)
             {
-                case Operation.Read:
+                case Operation.Find:
                     return await _queryEngine.ExecuteAsync(context);
                 case Operation.Insert:
                 case Operation.Delete:
@@ -258,21 +258,21 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="httpVerb"></param>
         /// <returns>The CRUD operation for the given httpverb.</returns>
-        public static Operation HttpVerbToActions(string httpVerbName)
+        public static string HttpVerbToActions(string httpVerbName)
         {
             switch (httpVerbName)
             {
                 case "POST":
-                    return Operation.Create;
+                    return ActionType.CREATE;
                 case "PUT":
                 case "PATCH":
                     // Please refer to the use of this method, which is to look out for policy based on crud operation type.
                     // Since create doesn't have filter predicates, PUT/PATCH would resolve to update operation.
-                    return Operation.Update;
+                    return ActionType.UPDATE;
                 case "DELETE":
-                    return Operation.Delete;
+                    return ActionType.DELETE;
                 case "GET":
-                    return Operation.Read;
+                    return ActionType.READ;
                 default:
                     throw new DataGatewayException(
                         message: "Unsupported operation type.",

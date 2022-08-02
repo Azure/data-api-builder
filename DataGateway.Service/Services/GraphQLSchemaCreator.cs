@@ -11,6 +11,7 @@ using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.GraphQLBuilder.Sql;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services.MetadataProviders;
 using HotChocolate;
@@ -144,7 +145,7 @@ namespace Azure.DataGateway.Service.Services
                 Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
                 foreach (string column in tableDefinition.Columns.Keys)
                 {
-                    IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, action: Operation.Read);
+                    IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, actionName: ActionType.READ);
                     if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
                     {
                         throw new DataGatewayException(

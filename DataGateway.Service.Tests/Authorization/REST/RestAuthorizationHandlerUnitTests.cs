@@ -146,22 +146,22 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
             authorizationResolver.Setup(x => x.AreRoleAndActionDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create
+                ActionType.CREATE
                 )).Returns(isValidCreateRoleAction);
             authorizationResolver.Setup(x => x.AreRoleAndActionDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Read
+                ActionType.READ
                 )).Returns(isValidReadRoleAction);
             authorizationResolver.Setup(x => x.AreRoleAndActionDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Update
+                ActionType.UPDATE
                 )).Returns(isValidUpdateRoleAction);
             authorizationResolver.Setup(x => x.AreRoleAndActionDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Delete
+                ActionType.DELETE
                 )).Returns(isValidDeleteRoleAction);
 
             HttpContext httpContext = CreateHttpContext(httpMethod);
@@ -249,13 +249,13 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
             authorizationResolver.Setup(x => x.AreColumnsAllowedForAction(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Read,
+                ActionType.READ,
                 It.IsAny<IEnumerable<string>>() // Can be any IEnumerable<string>, as find request result field list is depedent on AllowedColumns.
                 )).Returns(areColumnsAllowed);
             authorizationResolver.Setup(x => x.GetAllowedExposedColumns(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Read
+                ActionType.READ
                 )).Returns(allowedColumns);
 
             string httpMethod = HttpConstants.GET;
@@ -356,7 +356,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.REST
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: "admin",
-                action: Operation.All);
+                actionName: "*");
 
             // Override the action to be a list of string for wildcard instead of a list of object created by InitRuntimeConfig()
             //

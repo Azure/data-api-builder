@@ -40,9 +40,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     Entity entity = entities[dbEntityName];
 
-                    AddMutations(dbEntityName, action: Operation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entity, mutationFields);
-                    AddMutations(dbEntityName, action: Operation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entity, mutationFields);
-                    AddMutations(dbEntityName, action: Operation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entity, mutationFields);
+                    AddMutations(dbEntityName, actionName: "create", entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entity, mutationFields);
+                    AddMutations(dbEntityName, actionName: "update", entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entity, mutationFields);
+                    AddMutations(dbEntityName, actionName: "delete", entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entity, mutationFields);
                 }
             }
 
@@ -59,7 +59,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         /// Helper function to create mutation definitions.
         /// </summary>
         /// <param name="dbEntityName"></param>
-        /// <param name="action"></param>
+        /// <param name="actionName"></param>
         /// <param name="entityPermissionsMap"></param>
         /// <param name="name"></param>
         /// <param name="inputs"></param>
@@ -71,7 +71,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         private static void AddMutations(
             string dbEntityName,
-            Operation action,
+            string actionName,
             Dictionary<string, EntityMetadata>? entityPermissionsMap,
             NameNode name,
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
@@ -82,22 +82,22 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             List<FieldDefinitionNode> mutationFields
             )
         {
-            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, action: action, entityPermissionsMap);
+            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, actionName: actionName, entityPermissionsMap);
             if (rolesAllowedForMutation.Count() > 0)
             {
-                switch (action)
+                switch (actionName)
                 {
-                    case Operation.Create:
+                    case "create":
                         mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entity, rolesAllowedForMutation));
                         break;
-                    case Operation.Update:
+                    case "update":
                         mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entity, databaseType, rolesAllowedForMutation));
                         break;
-                    case Operation.Delete:
+                    case "delete":
                         mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entity, databaseType, rolesAllowedForMutation));
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException(paramName: "action", message: "Invalid argument value provided.");
+                        throw new ArgumentOutOfRangeException(paramName: "actionName", message: "Invalid argument value provided.");
                 }
             }
         }

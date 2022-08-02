@@ -302,7 +302,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         _sqlMetadataProvider,
                         parameters);
                     AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                        Operation.Update,
+                        ActionType.UPDATE,
                         updateGraphQLStructure,
                         _httpContextAccessor.HttpContext!,
                         _authorizationResolver,
@@ -316,7 +316,7 @@ namespace Azure.DataGateway.Service.Resolvers
                         _sqlMetadataProvider,
                         parameters);
                     AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                        Operation.Delete,
+                        ActionType.DELETE,
                         deleteStructure,
                         _httpContextAccessor.HttpContext!,
                         _authorizationResolver,
@@ -458,10 +458,10 @@ namespace Azure.DataGateway.Service.Resolvers
             switch (mutationOperation)
             {
                 case Operation.UpdateGraphQL:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: Operation.Update, inputArgumentKeys);
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: ActionType.UPDATE, inputArgumentKeys);
                     break;
                 case Operation.Create:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: Operation.Create, inputArgumentKeys);
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: ActionType.CREATE, inputArgumentKeys);
                     break;
                 case Operation.Delete:
                     // Delete operations are not checked for authorization on field level,

@@ -3,6 +3,7 @@ using System.Linq;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Tests.GraphQLBuilder;
 using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
@@ -40,7 +41,7 @@ type Foo @model(name: ""Foo""){
                 inputTypes: new(),
                 GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     entityNames: new string[] { "Foo" },
-                    actions: new Operation[] { Operation.Read },
+                    actionNames: new string[] { ActionType.READ },
                     roles: rolesDefinedInPermissions)
                 );
 

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -157,7 +158,7 @@ type Star @model {
         {
             return GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     entityNames: entities,
-                    actions: new Operation[] { Operation.Create, Operation.Read, Operation.Update, Operation.Delete },
+                    actionNames: new string[] { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE },
                     roles: new string[] { "anonymous", "authenticated" }
                 );
         }

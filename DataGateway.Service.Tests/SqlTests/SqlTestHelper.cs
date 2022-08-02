@@ -95,14 +95,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string path,
             string entityName,
             string primaryKeyRoute,
-            Operation operationType = Operation.Read)
+            Operation operationType = Operation.Find)
 
         {
             IActionResult actionResult;
             string pathAndEntityName = $"{path}/{entityName}";
             switch (operationType)
             {
-                case Operation.Read:
+                case Operation.Find:
                     actionResult = await controller.Find($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 case Operation.Insert:
@@ -205,7 +205,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             switch (operationType)
             {
-                case Operation.Read:
+                case Operation.Find:
                     return HttpConstants.GET;
                 case Operation.Insert:
                     return HttpConstants.POST;

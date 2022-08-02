@@ -301,9 +301,8 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                 {
                     foreach (object action in permission.Actions)
                     {
-                        HashSet<Operation> allowedActions =
-                            new() { Operation.All, Operation.Create, Operation.Read,
-                                Operation.Update, Operation.Delete };
+                        HashSet<string> allowedActions =
+                            new() { "*", "create", "read", "update", "delete" };
                         Assert.IsTrue(((JsonElement)action).ValueKind == JsonValueKind.String ||
                             ((JsonElement)action).ValueKind == JsonValueKind.Object);
                         if (((JsonElement)action).ValueKind == JsonValueKind.Object)
@@ -318,7 +317,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
                         }
                         else
                         {
-                            Operation name = ((JsonElement)action).Deserialize<Operation>(RuntimeConfig.SerializerOptions);
+                            string name = ((JsonElement)action).Deserialize<string>(RuntimeConfig.SerializerOptions);
                             Assert.IsTrue(allowedActions.Contains(name));
                         }
                     }

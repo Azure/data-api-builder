@@ -14,8 +14,4 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\DataGateway.Config\Azure.DataGateway.Config.csproj" />
-  </ItemGroup>
-
 </Project>

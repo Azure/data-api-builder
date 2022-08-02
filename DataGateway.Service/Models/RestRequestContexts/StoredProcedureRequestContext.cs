@@ -43,7 +43,7 @@ namespace Azure.DataGateway.Service.Models
         /// </summary>
         public void PopulateResolvedParameters()
         {
-            if (OperationType is Operation.Find)
+            if (OperationType is Operation.Read)
             {
                 if (ParsedQueryString is not null)
                 {

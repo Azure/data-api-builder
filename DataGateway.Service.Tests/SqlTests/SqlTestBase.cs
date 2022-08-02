@@ -242,7 +242,10 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigProvider, _dbExceptionParser, _queryExecutorLogger);
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(
+                        _runtimeConfigProvider,
+                        _dbExceptionParser,
+                        _queryExecutorLogger);
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
                             _runtimeConfigProvider,
@@ -254,7 +257,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
-                    _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigProvider,
+                    _queryExecutor = new QueryExecutor<SqlConnection>(
+                        _runtimeConfigProvider,
                         _dbExceptionParser,
                         _queryExecutorLogger);
                     _sqlMetadataProvider =
@@ -267,7 +271,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfigProvider,
+                    _queryExecutor = new QueryExecutor<MySqlConnection>(
+                        _runtimeConfigProvider,
                         _dbExceptionParser,
                         _queryExecutorLogger);
                     _sqlMetadataProvider =

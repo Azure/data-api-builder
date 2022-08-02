@@ -71,5 +71,14 @@ namespace Azure.DataGateway.Service.Models
             return _queryEngine.ExecuteAsync(this);
         }
 
+        /// <summary>
+        /// Implements the visitor pattern/double dispatch
+        /// Helps avoid dynamic cast or downcast in SqlMutationEngine
+        /// </summary>
+        public override Task<IActionResult?> DispatchExecute(IMutationEngine _mutationEngine)
+        {
+            return _mutationEngine.ExecuteAsync(this);
+        }
+
     }
 }

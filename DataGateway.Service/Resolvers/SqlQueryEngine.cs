@@ -110,15 +110,6 @@ namespace Azure.DataGateway.Service.Resolvers
         // </summary>
         public async Task<IActionResult> ExecuteAsync(FindRequestContext context)
         {
-            //BaseSqlQueryStructure structure;
-            //if (context is StoredProcedureRequestContext)
-            //{
-            //    structure = new SqlExecuteStructure(context.EntityName, _sqlMetadataProvider, context.ParsedQueryString);
-            //}
-            //else
-            //{
-            //    structure = new SqlQueryStructure(context, _sqlMetadataProvider);
-            //}
             SqlQueryStructure structure = new(context, _sqlMetadataProvider);
             using JsonDocument queryJson = await ExecuteAsync(structure);
             // queryJson is null if dbreader had no rows to return
@@ -129,11 +120,14 @@ namespace Azure.DataGateway.Service.Resolvers
 
         /// <summary>
         /// Given the StoredProcedureRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
+        /// Only the first result set will be returned, regardless of the contents of the stored procedure.
         /// </summary>
         public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context)
         {
             SqlExecuteStructure structure = new(context.EntityName, _sqlMetadataProvider, context.ResolvedParameters);
             using JsonDocument queryJson = await ExecuteAsync(structure);
+            // queryJson is null if dbreader had no rows to return
+            // If no rows/empty result set, return an empty json array
             return queryJson is null ? OkResponse(JsonDocument.Parse("[]").RootElement.Clone()) :
                                        OkResponse(queryJson.RootElement.Clone());
         }
@@ -259,26 +253,13 @@ namespace Azure.DataGateway.Service.Resolvers
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         // </summary>
-        private async Task<JsonDocument> ExecuteAsync(BaseSqlQueryStructure structure)
+        private async Task<JsonDocument> ExecuteAsync(SqlQueryStructure structure)
         {
             // Open connection and execute query using _queryExecutor
 
-            ////option 1: dynamic cast
-            //_queryBuilder.Build((dynamic)structure);
-
-            //option 2: conditional downcast
-            if (structure is SqlExecuteStructure)
-            {
-                _queryBuilder.Build((SqlExecuteStructure)structure);
-            } else
-            {
-                _queryBuilder.Build((SqlQueryStructure)structure);
-            }
-
-            //option 3: double dispatch/visitor pattern
-            string queryString = structure.DispatchBuild(_queryBuilder);
-
+            string queryString = _queryBuilder.Build(structure);
             Console.WriteLine(queryString);
+
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
             JsonDocument jsonDocument = null;
 
@@ -294,6 +275,33 @@ namespace Azure.DataGateway.Service.Resolvers
             else
             {
                 Console.WriteLine("Did not return enough rows in the JSON result.");
+            }
+
+            return jsonDocument;
+        }
+
+        // <summary>
+        // Given the SqlExecuteStructure structure, obtains the query text and executes it against the backend. Useful for REST API scenarios.
+        // Unlike a normal query, result from database may not be JSON. Instead we treat output as SqlMutationEngine does (extract by row).
+        // As such, this could feasibly be moved to the mutation engine. 
+        // </summary>
+        private async Task<JsonDocument> ExecuteAsync(SqlExecuteStructure structure)
+        {
+            string queryString = _queryBuilder.Build(structure);
+            Console.WriteLine(queryString);
+
+            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
+            Dictionary<string, object> resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
+            JsonDocument jsonDocument = null;
+
+            // If result set is non-empty, parse rows into json array
+            if (dbDataReader.HasRows)
+            {
+                jsonDocument = JsonDocument.Parse($"[{JsonSerializer.Serialize(resultRecord)}]");
+            }
+            else
+            {
+                Console.WriteLine("Did not return enough rows.");
             }
 
             return jsonDocument;

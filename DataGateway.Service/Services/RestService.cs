@@ -129,8 +129,7 @@ namespace Azure.DataGateway.Service.Services
                 // At this point, either query string or request body is populated with params, so resolve which will be passed
                 ((StoredProcedureRequestContext)context).PopulateResolvedParameters();
 
-                // Downcasting is fine, but double dispatch/visitor pattern may be preferred here.
-                // E.g. context.DispatchValidateRequestContext(ISqlMetadataProvider)
+                // Validate the request parameters
                 RequestValidator.ValidateStoredProcedureRequestContext(
                     (StoredProcedureRequestContext)context, _sqlMetadataProvider);
             }
@@ -211,7 +210,11 @@ namespace Azure.DataGateway.Service.Services
             RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
 
             // The final authorization check on columns occurs after the request is fully parsed and validated.
-            await AuthorizationCheckForRequirementAsync(resource: context, requirement: new ColumnsPermissionsRequirement());
+            // Stored procedures do not yet have semantics defnined for column-level permissions
+            if (dbObject.ObjectType is not SourceType.StoredProcedure)
+            {
+                await AuthorizationCheckForRequirementAsync(resource: context, requirement: new ColumnsPermissionsRequirement());
+            }
 
             switch (operationType)
             {
@@ -223,7 +226,7 @@ namespace Azure.DataGateway.Service.Services
                 case Operation.UpdateIncremental:
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
-                    return await _mutationEngine.ExecuteAsync(context);
+                    return await context.DispatchExecute(_mutationEngine);
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             };

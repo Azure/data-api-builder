@@ -257,5 +257,11 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             throw new NotImplementedException();
         }
+
+        /// <inheritdoc/>
+        public Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

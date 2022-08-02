@@ -45,10 +45,6 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         public string? FilterPredicates { get; set; }
 
-        public virtual string DispatchBuild(IQueryBuilder _queryBuilder)
-        {
-            throw new NotImplementedException();
-        }
         /// <summary>
         /// DbPolicyPredicates is a string that represents the filter portion of our query
         /// in the WHERE Clause added by virtue of the database policy.

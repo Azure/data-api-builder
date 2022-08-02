@@ -153,7 +153,7 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Validates all required input parameters are supplied by request
+        /// Validates all required input parameters are supplied by request, and no extraneous parameters are provided
         /// Checks query string for Find operations, body for all other operations
         /// Defers type checking until parameterizing stage to prevent duplicating work
         /// </summary>

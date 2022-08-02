@@ -882,10 +882,5 @@ namespace Azure.DataGateway.Service.Resolvers
                 ColumnLabelToParam.Add(column.Label, $"@{MakeParamWithValue(column.Label)}");
             }
         }
-
-        public override string DispatchBuild(IQueryBuilder _queryBuilder)
-        {
-            return _queryBuilder.Build(this);
-        }
     }
 }

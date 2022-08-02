@@ -87,7 +87,7 @@ namespace Azure.DataGateway.Service.Resolvers
         public string Build(SqlExecuteStructure structure)
         {
             return $"EXECUTE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                $"{structure.BuildProcedureParameterList()}";
+                $"{BuildProcedureParameterList(structure.ProcedureParameters)}";
         }
 
         /// <summary>
@@ -172,6 +172,25 @@ namespace Azure.DataGateway.Service.Resolvers
                         WrapSubqueryColumn(c, structure.JoinQueries[c.TableAlias!]) + $" AS {QuoteIdentifier(c.Label)}" :
                         Build(c)
             ));
+        }
+
+        /// <summary>
+        /// Builds the parameter list for the stored procedure execute call
+        /// paramKeys are the user-generated procedure parameter names
+        /// paramValues are the auto-generated, parameterized values (@param0, @param1..)
+        /// </summary>
+        private static string BuildProcedureParameterList(Dictionary<string, object> procedureParameters)
+        {
+            // Using the Diagnostics Stopwatch class, this is generally much faster than the corresponding
+            // Linq/string.join or StringBuilder implementations, likely due to the overhead of those methods.
+            string parameterList = string.Empty;
+            foreach ((string paramKey, object paramValue) in procedureParameters)
+            {
+                parameterList += $"@{paramKey} = {paramValue}, ";
+            }
+
+            // If at least one parameter added, remove trailing comma and space, else return empty string
+            return parameterList.Length > 0 ? parameterList[..^2] : parameterList;
         }
     }
 }

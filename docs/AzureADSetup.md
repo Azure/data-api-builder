@@ -80,7 +80,7 @@ The following steps configure [delegated permissions](https://docs.microsoft.com
 
 ## Postman Configuration
 
-1. Create a new Postman collection, you will configuration authorization for the collection.
+1. Create a new Postman collection, you will configure authorization for the collection.
    so it can be used for all requests (REST and GraphQL).
 2. Select the collection, then navigate to **Authorization**
    1. Type: **OAuth 2.0**

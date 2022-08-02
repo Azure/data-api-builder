@@ -83,7 +83,7 @@ namespace Azure.DataGateway.Service.Services
                 switch (operationType)
                 {
 
-                    case Operation.Find:
+                    case Operation.Read:
                         // Parameters passed in query string, request body is ignored for find requests
                         context = new StoredProcedureRequestContext(
                             entityName,
@@ -137,7 +137,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 switch (operationType)
                 {
-                    case Operation.Find:
+                    case Operation.Read:
                         context = new FindRequestContext(entityName,
                                                          dbo: dbObject,
                                                          isList: string.IsNullOrEmpty(primaryKeyRoute));
@@ -192,7 +192,7 @@ namespace Azure.DataGateway.Service.Services
             }
 
             string role = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-            string action = HttpVerbToActions(GetHttpContext().Request.Method);
+            Operation action = HttpVerbToActions(GetHttpContext().Request.Method);
             string dbPolicy = _authorizationResolver.TryProcessDBPolicy(entityName, role, action, GetHttpContext());
             if (!string.IsNullOrEmpty(dbPolicy))
             {
@@ -218,8 +218,8 @@ namespace Azure.DataGateway.Service.Services
 
             switch (operationType)
             {
-                case Operation.Find:
-                    return await context.DispatchExecute(_queryEngine);
+                case Operation.Read:
+                    return await _queryEngine.ExecuteAsync(context);
                 case Operation.Insert:
                 case Operation.Delete:
                 case Operation.Update:
@@ -321,21 +321,21 @@ namespace Azure.DataGateway.Service.Services
         /// </summary>
         /// <param name="httpVerb"></param>
         /// <returns>The CRUD operation for the given httpverb.</returns>
-        public static string HttpVerbToActions(string httpVerbName)
+        public static Operation HttpVerbToActions(string httpVerbName)
         {
             switch (httpVerbName)
             {
                 case "POST":
-                    return ActionType.CREATE;
+                    return Operation.Create;
                 case "PUT":
                 case "PATCH":
                     // Please refer to the use of this method, which is to look out for policy based on crud operation type.
                     // Since create doesn't have filter predicates, PUT/PATCH would resolve to update operation.
-                    return ActionType.UPDATE;
+                    return Operation.Update;
                 case "DELETE":
-                    return ActionType.DELETE;
+                    return Operation.Delete;
                 case "GET":
-                    return ActionType.READ;
+                    return Operation.Read;
                 default:
                     throw new DataGatewayException(
                         message: "Unsupported operation type.",

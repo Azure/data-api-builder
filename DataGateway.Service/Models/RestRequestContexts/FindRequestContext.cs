@@ -22,7 +22,7 @@ namespace Azure.DataGateway.Service.Models
             PrimaryKeyValuePairs = new();
             FieldValuePairsInBody = new();
             IsMany = isList;
-            OperationType = Operation.Find;
+            OperationType = Operation.Read;
         }
 
         public override async Task<IActionResult> DispatchExecute(IQueryEngine _queryEngine)

@@ -3,7 +3,6 @@ using System.Linq;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -29,7 +28,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
         {
             _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new string[] { ActionType.READ },
+                    new Operation[] { Operation.Read },
                     new string[] { "anonymous", "authenticated" }
                     );
         }
@@ -58,7 +57,7 @@ type Foo @model {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new string[] { ActionType.READ },
+                    new Operation[] { Operation.Read },
                     roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
@@ -133,7 +132,7 @@ type Foo @model {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new string[] { ActionType.READ },
+                    new Operation[] { Operation.Read },
                     roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,

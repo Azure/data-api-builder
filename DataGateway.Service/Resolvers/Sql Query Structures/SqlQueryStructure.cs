@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
@@ -12,7 +13,7 @@ using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
-using Microsoft.OData.UriParser;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -25,6 +26,12 @@ namespace Azure.DataGateway.Service.Resolvers
     /// </summary>
     public class SqlQueryStructure : BaseSqlQueryStructure
     {
+        /// <summary>
+        /// Authorization Resolver used within SqlQueryStructure to get and apply
+        /// authorization policies to requests.
+        /// </summary>
+        protected IAuthorizationResolver AuthorizationResolver { get; }
+
         public const string DATA_IDENT = "data";
 
         /// <summary>
@@ -96,13 +103,15 @@ namespace Azure.DataGateway.Service.Resolvers
         public SqlQueryStructure(
             IMiddlewareContext ctx,
             IDictionary<string, object?> queryParams,
-            ISqlMetadataProvider sqlMetadataProvider)
+            ISqlMetadataProvider sqlMetadataProvider,
+            IAuthorizationResolver authorizationResolver)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
             : this(ctx,
                 queryParams,
                 sqlMetadataProvider,
+                authorizationResolver,
                 ctx.Selection.Field,
                 ctx.Selection.SyntaxNode,
                 // The outermost query is where we start, so this can define
@@ -183,7 +192,7 @@ namespace Azure.DataGateway.Service.Resolvers
                 ODataASTVisitor visitor = new(this, sqlMetadataProvider);
                 try
                 {
-                    FilterPredicates = GetFilterPredicatesFromFilterClause(context.FilterClauseInUrl, visitor);
+                    FilterPredicates = GetFilterPredicatesFromOdataClause(context.FilterClauseInUrl, visitor);
                 }
                 catch
                 {
@@ -197,10 +206,9 @@ namespace Azure.DataGateway.Service.Resolvers
             {
                 // Similar to how we have added FilterPredicates above,
                 // we will add DbPolicyPredicates here.
-                ODataASTVisitor visitor = new(this, sqlMetadataProvider);
                 try
                 {
-                    DbPolicyPredicates = GetFilterPredicatesFromFilterClause(context.DbPolicyClause, visitor);
+                    ProcessOdataClause(context.DbPolicyClause);
                 }
                 catch
                 {
@@ -220,11 +228,6 @@ namespace Azure.DataGateway.Service.Resolvers
 
             _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
             ParametrizeColumns();
-        }
-
-        private static string? GetFilterPredicatesFromFilterClause(FilterClause filterClause, ODataASTVisitor visitor)
-        {
-            return filterClause.Expression.Accept<string>(visitor);
         }
 
         /// <summary>
@@ -252,12 +255,14 @@ namespace Azure.DataGateway.Service.Resolvers
                 IMiddlewareContext ctx,
                 IDictionary<string, object?> queryParams,
                 ISqlMetadataProvider sqlMetadataProvider,
+                IAuthorizationResolver authorizationResolver,
                 IObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter,
                 string entityName = ""
         ) : this(sqlMetadataProvider, counter, entityName: entityName)
         {
+            AuthorizationResolver = authorizationResolver;
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
             _underlyingFieldType = UnderlyingGraphQLEntityType(outputType);
@@ -302,10 +307,26 @@ namespace Azure.DataGateway.Service.Resolvers
             DatabaseObject.Name = sqlMetadataProvider.GetDatabaseObjectName(EntityName);
             TableAlias = CreateTableAlias();
 
+            // SelectionSet will not be null when a field is not a leaf.
+            // There may be another entity to resolve as a sub-query.
             if (queryField != null && queryField.SelectionSet != null)
             {
                 AddGraphQLFields(queryField.SelectionSet.Selections);
             }
+
+            // Get HttpContext from IMiddlewareContext and fail if resolved value is null.
+            if (!_ctx.ContextData.TryGetValue(nameof(HttpContext), out object? httpContextValue))
+            {
+                throw new DataGatewayException(
+                    message: "No HttpContext found in GraphQL Middleware Context.",
+                    statusCode: System.Net.HttpStatusCode.Forbidden,
+                    subStatusCode: DataGatewayException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
+            HttpContext httpContext = (HttpContext)httpContextValue!;
+
+            // Process Authorization Policy of the entity being processed.
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(Operation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
 
             if (outputType.IsNonNullType())
             {
@@ -573,12 +594,14 @@ namespace Azure.DataGateway.Service.Resolvers
         /// AddGraphQLFields looks at the fields that are selected in the
         /// GraphQL query and all the necessary elements to the query which are
         /// required to return these fields. This includes adding the columns
-        /// to the result set, but also adding any subqueries or joins that are
-        /// required to fetch nested data.
+        /// to the result set.
+        /// Additionally, if a field has a selection set, sub-query or join processing
+        /// takes place which is required to fetch nested data.
         /// </summary>
-        private void AddGraphQLFields(IReadOnlyList<ISelectionNode> Selections)
+        /// <param name="selections">Fields selection in the GraphQL Query.</param>
+        private void AddGraphQLFields(IReadOnlyList<ISelectionNode> selections)
         {
-            foreach (ISelectionNode node in Selections)
+            foreach (ISelectionNode node in selections)
             {
                 FieldNode field = (FieldNode)node;
                 string fieldName = field.Name.Value;
@@ -600,8 +623,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     }
 
                     IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
-
-                    SqlQueryStructure subquery = new(_ctx, subqueryParams, SqlMetadataProvider, subschemaField, field, Counter);
+                    SqlQueryStructure subquery = new(_ctx, subqueryParams, SqlMetadataProvider, AuthorizationResolver, subschemaField, field, Counter);
 
                     if (PaginationMetadata.IsPaginated)
                     {

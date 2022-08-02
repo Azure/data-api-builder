@@ -4,7 +4,6 @@ using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
-using Azure.DataGateway.Service.Models;
 using Azure.DataGateway.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -48,28 +47,34 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// </summary>
         /// <param name="entityName"></param>
         /// <param name="roleName"></param>
-        /// <param name="actionName"></param>
+        /// <param name="action"></param>
         /// <param name="includedCols"></param>
         /// <param name="excludedCols"></param>
         /// <returns></returns>
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
             string roleName = "Reader",
-            string actionName = ActionType.CREATE,
+            Operation action = Operation.Create,
             HashSet<string>? includedCols = null,
             HashSet<string>? excludedCols = null,
             string? databasePolicy = null,
             string? requestPolicy = null
             )
         {
-            Field fieldsForRole = new(
-                include: includedCols,
-                exclude: excludedCols);
+            Field? fieldsForRole = null;
+
+            if (includedCols is not null || excludedCols is not null)
+            {
+                // Only create object for Fields if inc/exc cols is not null.
+                fieldsForRole = new(
+                    include: includedCols,
+                    exclude: excludedCols);
+            }
 
             Policy policy = new(requestPolicy, databasePolicy);
 
             Action actionForRole = new(
-                Name: actionName,
+                Name: action,
                 Fields: fieldsForRole,
                 Policy: policy);
 

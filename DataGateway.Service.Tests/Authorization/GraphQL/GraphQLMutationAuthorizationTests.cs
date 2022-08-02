@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Azure.DataGateway.Auth;
+using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
@@ -9,6 +10,7 @@ using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -101,13 +103,16 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
             Mock<IQueryExecutor> _queryExecutor = new();
             Mock<IQueryBuilder> _queryBuilder = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            DefaultHttpContext context = new();
+            httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
 
             // Creates Mock AuthorizationResolver to return a preset result based on [TestMethod] input.
             Mock<IAuthorizationResolver> _authorizationResolver = new();
             _authorizationResolver.Setup(x => x.AreColumnsAllowedForAction(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<string>(),
+                It.IsAny<Operation>(),
                 It.IsAny<IEnumerable<string>>()
                 )).Returns(isAuthorized);
 
@@ -116,7 +121,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
                 _queryExecutor.Object,
                 _queryBuilder.Object,
                 _sqlMetadataProvider.Object,
-                _authorizationResolver.Object
+                _authorizationResolver.Object,
+                httpContextAccessor.Object
                 );
         }
     }

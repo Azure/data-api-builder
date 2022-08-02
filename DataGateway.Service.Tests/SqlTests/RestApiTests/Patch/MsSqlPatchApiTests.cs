@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
 {
@@ -128,6 +130,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
         [ClassInitialize]
         public static async Task SetupAsync(TestContext context)
         {
+            Mock<ILogger<RestController>> restControllerLogger = new();
             DatabaseEngine = TestCategory.MSSQL;
             await InitializeTestFixture(context);
             // Setup REST Components
@@ -138,7 +141,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Patch
                 _authorizationService.Object,
                 _authorizationResolver,
                 _runtimeConfigProvider);
-            _restController = new RestController(_restService);
+            _restController = new RestController(_restService, restControllerLogger.Object);
         }
 
         /// <summary>

@@ -54,6 +54,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         private static WebApplicationFactory<Program> _application;
         protected static RuntimeConfig _runtimeConfig;
         protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
+        protected static ILogger<IMutationEngine> _mutationEngineLogger;
+        protected static ILogger<IQueryEngine> _queryEngineLogger;
+        protected static ILogger<IQueryExecutor> _queryExecutorLogger;
         protected const string MSSQL_DEFAULT_DB_NAME = "master";
 
         protected static string DatabaseName { get; set; }
@@ -72,6 +75,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static async Task InitializeTestFixture(TestContext context, List<string> customQueries = null,
             List<string[]> customEntities = null)
         {
+            _queryEngineLogger = new Mock<ILogger<IQueryEngine>>().Object;
+            _mutationEngineLogger = new Mock<ILogger<IMutationEngine>>().Object;
+
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{DatabaseEngine}");
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
@@ -123,7 +129,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _queryBuilder,
                 _sqlMetadataProvider,
                 _httpContextAccessor.Object,
-                _authorizationResolver);
+                _authorizationResolver,
+                _queryEngineLogger);
             _mutationEngine =
                 new SqlMutationEngine(
                 _queryEngine,
@@ -131,7 +138,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 _queryBuilder,
                 _sqlMetadataProvider,
                 _authorizationResolver,
-                _httpContextAccessor.Object);
+                _httpContextAccessor.Object,
+                _mutationEngineLogger);
 
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
@@ -149,7 +157,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                                     _queryBuilder,
                                     _sqlMetadataProvider,
                                     _authorizationResolver,
-                                    ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider));
+                                    ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
+                                    _mutationEngineLogger);
                         });
                         services.AddSingleton(_sqlMetadataProvider);
                         services.AddSingleton(_authorizationResolver);
@@ -230,7 +239,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(_runtimeConfigProvider, _dbExceptionParser, _queryExecutorLogger);
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
                             _runtimeConfigProvider,
@@ -242,7 +251,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
-                    _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<SqlConnection>(_runtimeConfigProvider,
+                        _dbExceptionParser,
+                        _queryExecutorLogger);
                     _sqlMetadataProvider =
                         new MsSqlMetadataProvider(
                             _runtimeConfigProvider,
@@ -253,7 +264,9 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfigProvider, _dbExceptionParser);
+                    _queryExecutor = new QueryExecutor<MySqlConnection>(_runtimeConfigProvider,
+                        _dbExceptionParser,
+                        _queryExecutorLogger);
                     _sqlMetadataProvider =
                          new MySqlMetadataProvider(
                              _runtimeConfigProvider,

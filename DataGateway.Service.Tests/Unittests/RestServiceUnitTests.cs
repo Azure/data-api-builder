@@ -120,8 +120,14 @@ namespace Azure.DataGateway.Service.Tests.Unittests
                 TestHelper.GetMockRuntimeConfigProvider(runtimeConfigPath, path);
             MsSqlQueryBuilder queryBuilder = new();
             DbExceptionParser dbExceptionParser = new(runtimeConfigProvider);
-            QueryExecutor<SqlConnection> queryExecutor = new(runtimeConfigProvider, dbExceptionParser);
+            Mock<ILogger<IQueryExecutor>> queryExecutorLogger = new();
             Mock<ILogger<ISqlMetadataProvider>> sqlMetadataLogger = new();
+            Mock<ILogger<IQueryEngine>> queryEngineLogger = new();
+            Mock<ILogger<IMutationEngine>> mutationEngingLogger = new();
+
+            QueryExecutor<SqlConnection> queryExecutor = new(runtimeConfigProvider,
+                dbExceptionParser,
+                queryExecutorLogger.Object);
             MsSqlMetadataProvider sqlMetadataProvider = new(
                 runtimeConfigProvider,
                 queryExecutor,
@@ -139,7 +145,8 @@ namespace Azure.DataGateway.Service.Tests.Unittests
                 queryBuilder,
                 sqlMetadataProvider,
                 httpContextAccessor.Object,
-                authorizationResolver);
+                authorizationResolver,
+                queryEngineLogger.Object);
 
             SqlMutationEngine mutationEngine =
                 new(
@@ -148,7 +155,8 @@ namespace Azure.DataGateway.Service.Tests.Unittests
                 queryBuilder,
                 sqlMetadataProvider,
                 authorizationResolver,
-                httpContextAccessor.Object);
+                httpContextAccessor.Object,
+                mutationEngingLogger.Object);
 
             // Setup REST Service
             _restService = new RestService(

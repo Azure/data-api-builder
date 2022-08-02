@@ -18,6 +18,7 @@ using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataGateway.Service.Resolvers
@@ -33,6 +34,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly IQueryBuilder _queryBuilder;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ILogger<IMutationEngine> _logger;
 
         /// <summary>
         /// Constructor
@@ -43,7 +45,8 @@ namespace Azure.DataGateway.Service.Resolvers
             IQueryBuilder queryBuilder,
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            ILogger<IMutationEngine> logger)
         {
             _queryEngine = queryEngine;
             _queryExecutor = queryExecutor;
@@ -51,6 +54,7 @@ namespace Azure.DataGateway.Service.Resolvers
             _sqlMetadataProvider = sqlMetadataProvider;
             _authorizationResolver = authorizationResolver;
             _httpContextAccessor = httpContextAccessor;
+            _logger = logger;
         }
 
         /// <summary>
@@ -346,7 +350,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
             }
 
-            Console.WriteLine(queryString);
+            _logger.LogInformation(queryString);
 
             return await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
         }

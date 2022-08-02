@@ -8,9 +8,11 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Mutations;
 using Azure.DataGateway.Service.Resolvers;
 using Azure.DataGateway.Service.Services;
+using Castle.Core.Logging;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -104,6 +106,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
             Mock<IQueryExecutor> _queryExecutor = new();
             Mock<IQueryBuilder> _queryBuilder = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
+            Mock<ILogger<IMutationEngine>> _mutationEngineLogger = new();
             DefaultHttpContext context = new();
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
 
@@ -122,7 +125,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
                 _queryBuilder.Object,
                 _sqlMetadataProvider.Object,
                 _authorizationResolver.Object,
-                httpContextAccessor.Object
+                httpContextAccessor.Object,
+                _mutationEngineLogger.Object
                 );
         }
     }

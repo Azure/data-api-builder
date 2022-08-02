@@ -8,7 +8,9 @@ using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
 {
@@ -37,6 +39,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         [ClassInitialize]
         public static async Task SetupAsync(TestContext context)
         {
+            Mock<ILogger<RestController>> restControllerLogger = new();
             DatabaseEngine = TestCategory.MSSQL;
             await InitializeTestFixture(context);
             // Setup REST Components
@@ -47,7 +50,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 _authorizationService.Object,
                 _authorizationResolver,
                 _runtimeConfigProvider);
-            _restController = new RestController(_restService);
+            _restController = new RestController(_restService, restControllerLogger.Object);
         }
 
         /// <summary>

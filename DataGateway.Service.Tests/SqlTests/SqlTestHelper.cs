@@ -95,14 +95,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             string path,
             string entityName,
             string primaryKeyRoute,
-            Operation operationType = Operation.Find)
+            Operation operationType = Operation.Read)
 
         {
             IActionResult actionResult;
             string pathAndEntityName = $"{path}/{entityName}";
             switch (operationType)
             {
-                case Operation.Find:
+                case Operation.Read:
                     actionResult = await controller.Find($"{pathAndEntityName}/{primaryKeyRoute}");
                     break;
                 case Operation.Insert:
@@ -205,7 +205,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         {
             switch (operationType)
             {
-                case Operation.Find:
+                case Operation.Read:
                     return HttpConstants.GET;
                 case Operation.Insert:
                     return HttpConstants.POST;
@@ -220,6 +220,15 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                 default:
                     throw new ArgumentException(message: $"Invalid operationType {operationType} provided");
             }
+        }
+
+        /// <summary>
+        /// Helper function handles the loading of the runtime config.
+        /// </summary>
+        public static RuntimeConfig SetupRuntimeConfig(string databaseEngine)
+        {
+            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(databaseEngine);
+            return TestHelper.GetRuntimeConfig(TestHelper.GetRuntimeConfigProvider(configPath));
         }
 
         /// <summary>

@@ -88,7 +88,7 @@ namespace Hawaii.Cli.Tests
                           ""role"": ""anonymous"",
                           ""actions"": [
                                 {
-                                    ""action"": ""delete"",
+                                    ""action"": ""Delete"",
                                     ""policy"": {
                                         ""request"": ""@claims.name eq 'hawaii'"",
                                         ""database"": ""@claims.id eq @item.id""
@@ -114,7 +114,7 @@ namespace Hawaii.Cli.Tests
                           ""role"": ""anonymous"",
                           ""actions"": [
                                 {
-                                    ""action"": ""delete"",
+                                    ""action"": ""Delete"",
                                     ""fields"": {
                                         ""include"": [ ""*"" ],
                                         ""exclude"": [ ""level"", ""rating"" ]
@@ -140,7 +140,7 @@ namespace Hawaii.Cli.Tests
                           ""role"": ""anonymous"",
                           ""actions"": [
                                 {
-                                    ""action"": ""delete"",
+                                    ""action"": ""Delete"",
                                     ""policy"": {
                                         ""request"": ""@claims.name eq 'hawaii'"",
                                         ""database"": ""@claims.id eq @item.id""
@@ -170,7 +170,7 @@ namespace Hawaii.Cli.Tests
                           ""role"": ""anonymous"",
                           ""actions"": [
                                 {
-                                    ""action"": ""delete"",
+                                    ""action"": ""Delete"",
                                     ""policy"": {
                                         ""request"": ""@claims.name eq 'hawaii'"",
                                         ""database"": ""@claims.id eq @item.id""
@@ -201,7 +201,7 @@ namespace Hawaii.Cli.Tests
                           ""role"": ""anonymous"",
                           ""actions"": [
                                 {
-                                    ""action"": ""delete"",
+                                    ""action"": ""Delete"",
                                     ""policy"": {
                                         ""request"": ""@claims.name eq 'hawaii'"",
                                         ""database"": ""@claims.id eq @item.id""
@@ -227,7 +227,7 @@ namespace Hawaii.Cli.Tests
                           ""role"": ""anonymous"",
                           ""actions"": [
                                 {
-                                    ""action"": ""delete"",
+                                    ""action"": ""Delete"",
                                     ""fields"": {
                                         ""include"": [ ""*"" ],
                                         ""exclude"": [ ""level"", ""rating"" ]

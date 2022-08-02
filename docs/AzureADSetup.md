@@ -95,7 +95,9 @@ The following steps configure [delegated permissions](https://docs.microsoft.com
       4. Select: **Authorize using browser**
       5. Auth URL: `https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/authorize`
       6. Access Token URL: `https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/token`
-      7. Client ID: `Client_APP_Registration_ID` (Recommended: store as Postman variable, and use value `{{ClientID_VariableName}}` here)
+      7. Client ID: `Client_APP_Registration_ID` 
+         1. Recommended: store as Postman variable, and use value `{{ClientID_VariableName}}` here.
+         2. The client ID value can be found on the client app registration overview page.
       8. Client Secret: `Client_APP_Secret` this was created earlier. (Recommended: store as Postman variable, and use value `{{ClientSecret_VariableName}}` here)
       9. Scope: `api://<APP_ID_DataAPIBuilder>/EndpointAccess` (Note: don't forget this or authentication will fail.)
 3. Select Get New Access Token, and sign in with your Azure AD tenant credentials.

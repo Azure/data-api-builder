@@ -599,6 +599,7 @@ namespace Azure.DataGateway.Service.Services
                 if (entitySourceType is SourceType.Table || entitySourceType is SourceType.View)
                 {
                     await PopulateTableDefinitionAsync(
+                        entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         GetTableDefinition(entityName));

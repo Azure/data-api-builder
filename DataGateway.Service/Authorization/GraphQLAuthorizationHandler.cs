@@ -24,7 +24,12 @@ namespace Azure.DataGateway.Service.Authorization;
 public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization.IAuthorizationHandler
 {
     /// <summary>
-    /// Authorize current directive using Microsoft.AspNetCore.Authorization.
+    /// Authorize access to field based on contents of @authorize directive.
+    /// Validates that the requestor is authenticated, and that the
+    /// clientRoleHeader is present.
+    /// Role membership is checked
+    /// and/or (authorize directive may define policy, roles, or both)
+    /// An authorization policy is evaluated, if present.
     /// </summary>
     /// <param name="context">The current middleware context.</param>
     /// <param name="directive">The authorization directive.</param>
@@ -65,22 +70,24 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
     /// Get the value of the CLIENT_ROLE_HEADER HTTP Header from the HttpContext.
     /// HttpContext will be present in IMiddlewareContext.ContextData
     /// when HotChocolate is configured to use HttpRequestInterceptor
-    /// https://chillicream.com/docs/hotchocolate/server/interceptors/#ihttprequestinterceptor
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="clientRole"></param>
+    /// <param name="context">HotChocolate Middleware Context</param>
+    /// <param name="clientRole">Value of the client role header.</param>
+    /// <seealso cref="https://chillicream.com/docs/hotchocolate/server/interceptors/#ihttprequestinterceptor"/>
     /// <returns>True, if clientRoleHeader is resolved and clientRole value
     /// False, if clientRoleHeader is not resolved, null clientRole value</returns>
     private static bool TryGetApiRoleHeader(IMiddlewareContext context, [NotNullWhen(true)] out string? clientRole)
     {
-        if (context.ContextData.TryGetValue("HttpContext", out object? value))
+        if (context.ContextData.TryGetValue(nameof(HttpContext), out object? value))
         {
             if (value is not null)
             {
                 HttpContext httpContext = (HttpContext)value;
-                StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                clientRole = clientRoleHeader.ToString();
-                return true;
+                if (httpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues clientRoleHeader))
+                {
+                    clientRole = clientRoleHeader.ToString();
+                    return true;
+                }
             }
         }
 
@@ -99,7 +106,7 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
         string clientRoleHeader,
         IReadOnlyList<string>? roles)
     {
-        if (roles == null || roles.Count == 0)
+        if (roles is null || roles.Count == 0)
         {
             return true;
         }
@@ -112,7 +119,13 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
         return false;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// This method is used verbatim from HotChocolate DefaultAuthorizationHandler.
+    /// Retrieves the authenticated ClaimsPrincipal.
+    /// To be authenticted, at least one ClaimsIdentity in ClaimsPrincipal.Identities
+    /// must be authenticated.
+    /// </summary>
+    /// <seealso cref="https://github.com/ChilliCream/hotchocolate/blob/main/src/HotChocolate/AspNetCore/src/AspNetCore.Authorization/DefaultAuthorizationHandler.cs"/>
     private static bool TryGetAuthenticatedPrincipal(
         IMiddlewareContext context,
         [NotNullWhen(true)] out ClaimsPrincipal? principal)
@@ -129,13 +142,24 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
         return false;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// This method is used verbatim from HotChocolate DefaultAuthorizationHandler.
+    /// Checks whether a policy is present on the authorize directive
+    /// e.g. @authorize(policy: "SalesDepartment")
+    /// </summary>
+    /// <seealso cref="https://github.com/ChilliCream/hotchocolate/blob/main/src/HotChocolate/AspNetCore/src/AspNetCore.Authorization/DefaultAuthorizationHandler.cs"/>
     private static bool NeedsPolicyValidation(AuthorizeDirective directive)
         => directive.Roles == null
            || directive.Roles.Count == 0
            || !string.IsNullOrEmpty(directive.Policy);
 
-    /// <inheritdoc />
+    /// <summary>
+    /// This method is used verbatim from HotChocolate DefaultAuthorizationHandler.
+    /// Authorizes the user based on a policy, if present on the authorize directive
+    /// e.g. @authorize(policy: "SalesDepartment")
+    /// </summary>
+    /// <seealso cref="https://github.com/ChilliCream/hotchocolate/blob/main/src/HotChocolate/AspNetCore/src/AspNetCore.Authorization/DefaultAuthorizationHandler.cs"/>
+    /// <returns></returns>
     private static async Task<AuthorizeResult> AuthorizeWithPolicyAsync(
         IMiddlewareContext context,
         AuthorizeDirective directive,

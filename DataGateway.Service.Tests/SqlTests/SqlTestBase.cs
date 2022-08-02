@@ -57,6 +57,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static ILogger<IMutationEngine> _mutationEngineLogger;
         protected static ILogger<IQueryEngine> _queryEngineLogger;
         protected static ILogger<IQueryExecutor> _queryExecutorLogger;
+        protected static ILogger<RestController> _restControllerLogger;
         protected const string MSSQL_DEFAULT_DB_NAME = "master";
 
         protected static string DatabaseName { get; set; }
@@ -78,6 +79,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             _queryEngineLogger = new Mock<ILogger<IQueryEngine>>().Object;
             _queryExecutorLogger = new Mock<ILogger<IQueryExecutor>>().Object;
             _mutationEngineLogger = new Mock<ILogger<IMutationEngine>>().Object;
+            _restControllerLogger = new Mock<ILogger<RestController>>().Object;
 
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{DatabaseEngine}");
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();

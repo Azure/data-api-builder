@@ -15,7 +15,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
     {
         protected static RestService _restService;
         protected static RestController _restController;
-        protected static ILogger<RestController> _restControllerLogger = new Mock<ILogger<RestController>>().Object;
         protected static readonly string _integrationEntityName = "Book";
         protected static readonly string _integrationTableName = "books";
         protected static readonly string _entityWithCompositePrimaryKey = "Review";

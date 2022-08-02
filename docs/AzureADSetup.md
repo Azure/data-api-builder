@@ -2,7 +2,8 @@
 
 ## Create Azure AD tenant
 
- 1. Create an Azure AD tenant in your Azure Subscription by following [this guide](https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/active-directory-access-create-new-tenant).
+ 1. Create an Azure AD tenant in your Azure Subscription by following [this guide](https://docs.microsoft.com/azure/active-directory/fundamentals/active-directory-access-create-new-tenant).
+ 2. Make note of your tenantID which can be found on the Overview page of your newly created tenant resource in the Azure Portal.
 
 ## Create Client App Registration
 
@@ -40,14 +41,16 @@ Examples include a frontend webpage, or PostMan (this guide is for PostMan).
 
 ### Configure Server App Registration
 
+Note: The following steps can also be found in the Microsoft Doc: [QuickStart: Configure an application to expose a web API](https://docs.microsoft.com/azure/active-directory/develop/quickstart-configure-app-expose-web-apis).
+
 1. Navigate to `Expose an API` from your App Registration (`DataAPIBuilder`) overview page.
-2. Under *Scopes defined by this API*, select **Add a scope**
+2. Under *Scopes defined by this API*, select **Add a scope**. For more details on why scopes are defined, see this [Microsoft Identity Platform doc](https://docs.microsoft.com/azure/active-directory/develop/v2-permissions-and-consent#request-the-permissions-from-a-directory-admin).
    1. Scope name: `EndpointAccess`
    2. Who can consent?: `Admins and users`
    3. Admin consent display name: `Execute requests against DataAPIBuilder`
    4. Admin consent description: `Allows client app to send requests to DataAPIBuilder endpoint.`
    5. User consent display name: `Execute requests against DataAPIBuilder`
-   6. user consent description: `Allows client app to send requests to DataAPIBuilder endpoint.`
+   6. User consent description: `Allows client app to send requests to DataAPIBuilder endpoint.`
    7. State: `Enabled`
    8. Select **Add scope**
 3. Navigate to `App roles` from your App Registration overview page.
@@ -66,8 +69,10 @@ Examples include a frontend webpage, or PostMan (this guide is for PostMan).
 
 ## Additional Client App Registration Configuration
 
+The following steps configure [delegated permissions](https://docs.microsoft.com/azure/active-directory/develop/v2-permissions-and-consent#permission-types) for the client app registration. This means that the client app will be delegated with the permission to act as a signed-in user when it makes calls to the target resource (DataAPIBuilder).
+
 1. Navigate to your App Registration (`PostmanDataApiBuilderClient`) overview page.
-1. Under *API permissions*, select **Add a permission**
+2. Under *API permissions*, select **Add a permission**
    1. Under *Select an API*, select **My APIs**
    2. Select `DataAPIBuilder`
    3. Select **Delegated permissions**
@@ -75,7 +80,7 @@ Examples include a frontend webpage, or PostMan (this guide is for PostMan).
 
 ## Postman Configuration
 
-1. Create a new Postman collection, you will configuration authorization for the collection 
+1. Create a new Postman collection, you will configuration authorization for the collection.
    so it can be used for all requests (REST and GraphQL).
 2. Select the collection, then navigate to **Authorization**
    1. Type: **OAuth 2.0**
@@ -84,7 +89,9 @@ Examples include a frontend webpage, or PostMan (this guide is for PostMan).
    4. Under *Configure New Token*, and under *Configuration Options*
       1. Token Name: `Azure AD Token`
       2. Grant Type: **Authorization Code**
-      3. Callback URL: `https://oauth.pstmn.io/v1/callback` (remember this was set on redirect URIs for your client app registration)
+      3. Callback URL: `https://oauth.pstmn.io/v1/callback` 
+         1. Remember this was set on redirect URIs for your client app registration.
+         2. For more information on this redirect URI, see PostMan's OAuth 2.0 Configuration [Documentation](https://learning.postman.com/docs/sending-requests/authorization/#requesting-an-oauth-20-token).
       4. Select: **Authorize using browser**
       5. Auth URL: `https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/authorize`
       6. Access Token URL: `https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/token`
@@ -116,4 +123,5 @@ Examples include a frontend webpage, or PostMan (this guide is for PostMan).
           "audience": "<ID_DataAPIBuilder>",
           "issuer": "https://login.microsoftonline.com/<AZURE_AD_ TENANT_ID>/v2.0"
         }
+      }
 ```

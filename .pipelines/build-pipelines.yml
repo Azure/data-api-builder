@@ -50,28 +50,45 @@ steps:
     projects: '**/*Tests*.csproj'
     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
+- task: conficient.VersionReaderTask.version-reader-build-task.VersionReaderTask@2
+  displayName: 'Generate build variables'
+  inputs:
+    searchPattern: '**/Hawaii.Cli.csproj'
+    variablesPrefix: DAB
+    buildPrefix: '.'
+
 - task: DotNetCoreCLI@2
   displayName: "Creating Nuget Package"
   inputs:
     command: pack
+    versioningScheme: byEnvVar
+    versionEnvVar: 'DAB_VERSION_BUILD'
     arguments: '--configuration $(buildConfiguration)'
     packagesToPack: '**/Hawaii.Cli.csproj'
     packDestination: '$(Build.ArtifactStagingDirectory)'
 
-# This task will publish the NuGet Package
-- task: NuGetAuthenticate@0
-  displayName: 'NuGet Authenticate'
-- task: NuGetCommand@2
-  displayName: 'NuGet push'
+# # This task will publish the NuGet Package
+# - task: NuGetAuthenticate@0
+#   displayName: 'NuGet Authenticate'
+# - task: NuGetCommand@2
+#   displayName: 'NuGet push'
+#   inputs:
+#     command: 'push'
+#     feedsToUse: 'select'
+#     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+#     nuGetFeedType: 'internal'
+#     vstsFeed: CosmosDB/Hawaii_Packages
+#     publishVstsFeed: CosmosDB/Hawaii_Packages
+#     versioningScheme: 'off'
+#     allowPackageConflicts: true
+
+# Upload the nuget file for the current run
+- task: PublishPipelineArtifact@1
   inputs:
-    command: 'push'
-    feedsToUse: 'select'
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
-    nuGetFeedType: 'internal'
-    vstsFeed: CosmosDB/Hawaii_Packages
-    publishVstsFeed: CosmosDB/Hawaii_Packages
-    versioningScheme: 'off'
-    allowPackageConflicts: true
+    targetPath: '$(Pipeline.Workspace)'
+    artifactName: 'DAB'
+    artifactType: 'pipeline'
+    fileSharePath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

@@ -188,7 +188,8 @@ namespace Azure.DataGateway.Service.Services
             // this should not throw any error. Tracked by issue #158.
             if (extraFields.Count > 0)
             {
-                 throw new DataGatewayException(message: $"Invalid request. Contained unexpected fields: {string.Join(", ", extraFields)}",
+                throw new DataGatewayException(
+                    message: $"Invalid request. Contained unexpected fields: {string.Join(", ", extraFields)}",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
@@ -196,10 +197,12 @@ namespace Azure.DataGateway.Service.Services
             // If missing a parameter in the request and do not have a default specified in config
             if (missingFields.Count > 0)
             {
-                throw new DataGatewayException(message: $"Invalid request. Missing required procedure parameters: {string.Join(", ", missingFields)}",
+                throw new DataGatewayException(
+                    message: $"Invalid request. Missing required procedure parameters: {string.Join(", ", missingFields)}",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
-            }            
+            }
+
         }
 
         /// <summary>

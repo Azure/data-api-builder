@@ -1,5 +1,3 @@
-using System.Data.SqlTypes;
-
 namespace Azure.DataGateway.Config
 {
     /// <summary>
@@ -53,13 +51,13 @@ namespace Azure.DataGateway.Config
 
     public class StoredProcedureDefinition
     {
-        
         /// <summary>
         /// The list of input parameters
         /// Key: parameter name, Value: ParameterDefinition object
         /// </summary>
         public Dictionary<string, ParameterDefinition> Parameters { get; set; } = new();
     }
+
     public class ParameterDefinition
     {
         public string? SqlDataType { get; set; }

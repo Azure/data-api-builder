@@ -1,8 +1,5 @@
-using System.Collections.Generic;
-using System.Net;
 using System.Text.Json;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Exceptions;
 
 namespace Azure.DataGateway.Service.Models
 {

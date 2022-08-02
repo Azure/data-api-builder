@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             StoredProcedureDefinition storedProcedureDefinition = GetUnderlyingStoredProcedureDefinition();
             ProcedureParameters = new();
-            foreach((string paramKey, ParameterDefinition paramDefinition) in storedProcedureDefinition.Parameters)
+            foreach ((string paramKey, ParameterDefinition paramDefinition) in storedProcedureDefinition.Parameters)
             {
                 // Populate with request param if able
                 if (requestParams.TryGetValue(paramKey, out object? requestParamValue))
@@ -64,7 +64,8 @@ namespace Azure.DataGateway.Service.Resolvers
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
-                } 
+                }
+
             }
         }
 

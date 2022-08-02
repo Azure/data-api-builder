@@ -81,7 +81,8 @@ namespace Azure.DataGateway.Config
                 }
             };
 
-            if (sourceJson.ValueKind is JsonValueKind.String) {
+            if (sourceJson.ValueKind is JsonValueKind.String)
+            {
                 return new(SourceType.Table, JsonSerializer.Deserialize<string>(sourceJson)!, null);
             }
             else if (sourceJson.ValueKind is JsonValueKind.Object)
@@ -104,7 +105,7 @@ namespace Azure.DataGateway.Config
     /// in case its a stored procedure. Allowed types are boolean/string/number/null </param>
     public record DatabaseObjectSource(
         SourceType Type,
-        [property: JsonPropertyName("object")] [JsonProperty("object")] string Name,
+        [property: JsonPropertyName("object")][JsonProperty("object")] string Name,
         Dictionary<string, JValue>? Parameters);
 
     /// <summary>

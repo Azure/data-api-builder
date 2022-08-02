@@ -13,7 +13,6 @@ using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
-using Npgsql;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -187,7 +186,8 @@ namespace Azure.DataGateway.Service.Services
                     procedureEntity,
                     GetSchemaName(entityName),
                     GetDatabaseObjectName(entityName),
-                    GetStoredProcedureDefinition(entityName));   
+                    GetStoredProcedureDefinition(entityName));
+
             }
         }
 

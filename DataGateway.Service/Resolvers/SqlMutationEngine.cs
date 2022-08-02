@@ -177,7 +177,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     {
                         // If no result set returned, return 200 Ok response with empty array instead of array with single null value
                         return new OkObjectResult(JsonDocument.Parse("[]").RootElement.Clone());
-                    } 
+                    }
+
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             }

@@ -157,7 +157,8 @@ namespace Azure.DataGateway.Service.Parsers
                 {
                     string entityName = $"{entityAndDbObject.Value.FullName}";
                     container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);
-                }   
+                }
+
             }
 
             return this;

@@ -9,7 +9,6 @@ using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -23,7 +22,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
     {
         private const string TEST_ENTITY = "SampleEntity";
         private const string TEST_ROLE = "Writer";
-        private const string TEST_ACTION = ActionType.CREATE;
+        private const Operation TEST_ACTION = Operation.Create;
         private const string TEST_AUTHENTICATION_TYPE = "TestAuth";
         private const string TEST_CLAIMTYPE_NAME = "TestName";
         private const string TEST_ROLE_TYPE = "TestRole";
@@ -101,21 +100,21 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// Request Action does not match an action defined for role (role has >=1 defined action) -> INVALID
         /// </summary>
         [DataTestMethod]
-        [DataRow("Writer", ActionType.CREATE, "Writer", ActionType.CREATE, true)]
-        [DataRow("Reader", ActionType.CREATE, "Reader", "", false)]
-        [DataRow("Writer", ActionType.CREATE, "Writer", ActionType.UPDATE, false)]
+        [DataRow("Writer", Operation.Create, "Writer", Operation.Create, true)]
+        [DataRow("Reader", Operation.Create, "Reader", Operation.None, false)]
+        [DataRow("Writer", Operation.Create, "Writer", Operation.Update, false)]
         public void AreRoleAndActionDefinedForEntityTest(
             string configRole,
-            string configAction,
+            Operation configAction,
             string roleName,
-            string actionName,
+            Operation action,
             bool expected)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(AuthorizationHelpers.TEST_ENTITY, configRole, configAction);
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
             // Mock Request Values
-            Assert.AreEqual(expected, authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, roleName, actionName));
+            Assert.AreEqual(expected, authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, roleName, action));
         }
 
         /// <summary>
@@ -130,7 +129,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                AuthorizationResolver.WILDCARD);
+                Operation.All);
 
             // Override the action to be a list of string for wildcard instead of a list of object created by InitRuntimeConfig()
             //
@@ -139,26 +138,26 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // There should not be a wildcard action in AuthorizationResolver.EntityPermissionsMap
             //
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, AuthorizationResolver.WILDCARD));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.All));
 
             // All the wildcard action should be expand to explicit actions.
             //
-            foreach (string actionName in RuntimeConfigValidator.ValidActions)
+            foreach (Operation action in RuntimeConfigValidator.ValidPermissionActions)
             {
-                Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, actionName));
+                Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, action));
 
-                IEnumerable<string> actualRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", actionName);
+                IEnumerable<string> actualRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", action);
 
                 CollectionAssert.AreEquivalent(expectedRoles, actualRolesForCol1.ToList());
 
-                IEnumerable<string> actualRolesForAction = IAuthorizationResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, actionName, authZResolver.EntityPermissionsMap);
+                IEnumerable<string> actualRolesForAction = IAuthorizationResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, action, authZResolver.EntityPermissionsMap);
                 CollectionAssert.AreEquivalent(expectedRoles, actualRolesForAction.ToList());
             }
 
             // Validate that the authorization check fails because the actions are invalid.
             //
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, "patch"));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, "fetch"));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, Operation.Insert));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, TEST_ROLE, Operation.Upsert));
         }
 
         /// <summary>
@@ -178,12 +177,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 exclude: null);
 
             Action readAction = new(
-                Name: ActionType.READ,
+                Name: Operation.Read,
                 Fields: fieldsForRole,
                 Policy: null);
 
             Action updateAction = new(
-                Name: ActionType.UPDATE,
+                Name: Operation.Update,
                 Fields: fieldsForRole,
                 Policy: null);
 
@@ -222,29 +221,29 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Verify that read only role has permission for read and nothing else.
             //
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, ActionType.READ));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, ActionType.UPDATE));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, ActionType.CREATE));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, ActionType.DELETE));
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, Operation.Read));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, Operation.Update));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, Operation.Create));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, Operation.Delete));
 
-            // Verify that read only role has permission for read and nothing else.
+            // Verify that read only role has permission for read/update and nothing else.
             //
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, ActionType.READ));
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, ActionType.UPDATE));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, ActionType.CREATE));
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, ActionType.DELETE));
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, Operation.Read));
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, Operation.Update));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, Operation.Create));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, Operation.Delete));
 
             List<string> expectedRolesForRead = new() { READ_ONLY_ROLE, READ_AND_UPDATE_ROLE };
             List<string> expectedRolesForUpdate = new() { READ_AND_UPDATE_ROLE };
 
-            IEnumerable<string> actualReadRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", ActionType.READ);
+            IEnumerable<string> actualReadRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", Operation.Read);
             CollectionAssert.AreEquivalent(expectedRolesForRead, actualReadRolesForCol1.ToList());
-            IEnumerable<string> actualUpdateRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", ActionType.UPDATE);
+            IEnumerable<string> actualUpdateRolesForCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", Operation.Update);
             CollectionAssert.AreEquivalent(expectedRolesForUpdate, actualUpdateRolesForCol1.ToList());
 
-            IEnumerable<string> actualRolesForRead = IAuthorizationResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, ActionType.READ, authZResolver.EntityPermissionsMap);
+            IEnumerable<string> actualRolesForRead = IAuthorizationResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, Operation.Read, authZResolver.EntityPermissionsMap);
             CollectionAssert.AreEquivalent(expectedRolesForRead, actualRolesForRead.ToList());
-            IEnumerable<string> actualRolesForUpdate = IAuthorizationResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, ActionType.UPDATE, authZResolver.EntityPermissionsMap);
+            IEnumerable<string> actualRolesForUpdate = IAuthorizationResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, Operation.Update, authZResolver.EntityPermissionsMap);
             CollectionAssert.AreEquivalent(expectedRolesForUpdate, actualRolesForUpdate.ToList());
         }
 
@@ -266,22 +265,22 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
+                Operation.Create,
                 includedCols: includedColumns
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, includedColumns));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, includedColumns));
 
             // Not allow column.
             //
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col4" }));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, new List<string> { "col4" }));
 
             // Mix of allow and not allow. Should result in not allow.
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col3", "col4" }));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, new List<string> { "col3", "col4" }));
 
             // Column does not exist 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col5", "col6" }));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, new List<string> { "col5", "col6" }));
         }
 
         /// <summary>
@@ -298,22 +297,22 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
+                Operation.Create,
                 includedCols: includeColumns,
                 excludedCols: excludeColumns
                 );
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, includeColumns));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, includeColumns));
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludeColumns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, excludeColumns));
 
             // Not exist column in the inclusion or exclusion list
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col4" }));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, new List<string> { "col4" }));
 
             // Mix of allow and not allow. Should result in not allow.
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col1", "col3" }));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, new List<string> { "col1", "col3" }));
         }
 
         /// <summary>
@@ -329,7 +328,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
+                Operation.Create,
                 includedCols: includedColumns,
                 excludedCols: excludedColumns
                 );
@@ -337,13 +336,13 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Col2 should be included.
             //
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col2" }));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, new List<string> { "col2" }));
 
             // Col1 should NOT to included since it is in exclusion list.
             //
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string> { "col1" }));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, new List<string> { "col1" }));
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludedColumns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, excludedColumns));
         }
 
         /// <summary>
@@ -355,14 +354,14 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
+                Operation.Create,
                 includedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
             List<string> includedColumns = new() { "col1", "col2", "col3", "col4" };
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, includedColumns));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, includedColumns));
         }
 
         /// <summary>
@@ -378,14 +377,14 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
+                Operation.Create,
                 includedCols: new HashSet<string> { AuthorizationResolver.WILDCARD },
                 excludedCols: excludedColumns
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, includedColumns));
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludedColumns));
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, includedColumns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, excludedColumns));
         }
 
         /// <summary>
@@ -399,12 +398,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
+                Operation.Create,
                 excludedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludedColumns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, excludedColumns));
         }
 
         /// <summary>
@@ -420,14 +419,14 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE,
+                Operation.Create,
                 includedCols: includedColumns,
                 excludedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, includedColumns));
-            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, excludedColumns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, includedColumns));
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, Operation.Create, excludedColumns));
         }
 
         /// <summary>
@@ -444,19 +443,19 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                AuthorizationResolver.WILDCARD,
+                Operation.All,
                 includedCols: includeColumns,
                 excludedCols: excludeColumns
                 );
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            foreach (string actionName in RuntimeConfigValidator.ValidActions)
+            foreach (Operation action in RuntimeConfigValidator.ValidPermissionActions)
             {
                 // Validate that the authorization check passes for valid CRUD actions
                 // because columns are accessbile or inaccessible.
-                Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, actionName, includeColumns));
-                Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, actionName, excludeColumns));
+                Assert.IsTrue(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, action, includeColumns));
+                Assert.IsFalse(authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, action, excludeColumns));
             }
         }
 
@@ -467,14 +466,14 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// </summary>
         [DataTestMethod]
         [DataRow(true, "col1", "col2", DisplayName = "Accessible fields col1,col2")]
-        [DataRow(true, "col3", "col4", DisplayName = "Accessible fields test col3,col4")]
-        [DataRow(false, "col5", DisplayName = "Inaccessible field test 1")]
+        [DataRow(true, "col3", "col4", DisplayName = "Accessible fields col3,col4")]
+        [DataRow(false, "col5", DisplayName = "Inaccessible field col5")]
         public void AreColumnsAllowedForActionWithMissingFieldProperty(bool expected, params string[] columnsToCheck)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                ActionType.CREATE
+                Operation.Create
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -482,7 +481,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             // The entity is expected to have "col1", "col2", "col3", "col4" fields accessible on it.
             Assert.AreEqual(expected,
                 authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE, ActionType.CREATE, new List<string>(columnsToCheck)));
+                AuthorizationHelpers.TEST_ROLE, Operation.Create, new List<string>(columnsToCheck)));
         }
 
         #endregion
@@ -637,16 +636,16 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         // no predicates need to be added to the database query generated for the request.
         // When a value is returned as a result, the execution behaved as expected.
         [DataTestMethod]
-        [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.READ, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - anonymous")]
-        [DataRow("authenticated", "authenticated", ActionType.UPDATE, ActionType.UPDATE, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - authenticated")]
-        [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.READ, null, false, DisplayName = "Fetch Policy for existing role, no policy object defined in config.")]
-        [DataRow("anonymous", "authenticated", ActionType.READ, ActionType.READ, "id eq 1", false, DisplayName = "Fetch Policy for non-configured role")]
-        [DataRow("anonymous", "anonymous", ActionType.READ, ActionType.CREATE, "id eq 1", false, DisplayName = "Fetch Policy for non-configured action")]
+        [DataRow("anonymous", "anonymous", Operation.Read, Operation.Read, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - anonymous")]
+        [DataRow("authenticated", "authenticated", Operation.Update, Operation.Update, "id eq 1", true, DisplayName = "Fetch Policy for existing system role - authenticated")]
+        [DataRow("anonymous", "anonymous", Operation.Read, Operation.Read, null, false, DisplayName = "Fetch Policy for existing role, no policy object defined in config.")]
+        [DataRow("anonymous", "authenticated", Operation.Read, Operation.Read, "id eq 1", false, DisplayName = "Fetch Policy for non-configured role")]
+        [DataRow("anonymous", "anonymous", Operation.Read, Operation.Create, "id eq 1", false, DisplayName = "Fetch Policy for non-configured action")]
         public void GetDBPolicyTest(
             string clientRole,
             string configuredRole,
-            string requestAction,
-            string configuredAction,
+            Operation requestAction,
+            Operation configuredAction,
             string policy,
             bool expectPolicy)
         {
@@ -696,7 +695,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
             string roleName = "Reader",
-            string actionName = ActionType.CREATE,
+            Operation action = Operation.Create,
             HashSet<string>? includedCols = null,
             HashSet<string>? excludedCols = null,
             string? requestPolicy = null,
@@ -717,7 +716,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             }
 
             Action actionForRole = new(
-                Name: actionName,
+                Name: action,
                 Fields: fieldsForRole,
                 Policy: policy);
 

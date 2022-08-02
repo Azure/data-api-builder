@@ -224,6 +224,34 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetInput!) {
         }
 
         [TestMethod]
+        public async Task CanUpdateItemWithInlineVariables()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            var input = new
+            {
+                id,
+                name = "test_name"
+            };
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
+
+            const string newName = "new_name";
+            string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!, $name: String) {
+    updatePlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: { name: $name }) {
+        id
+        name
+     }
+}";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "name", newName } });
+
+            // Validate results
+            Assert.AreEqual(newName, response.GetProperty("name").GetString());
+            Assert.AreNotEqual(input.name, response.GetProperty("name").GetString());
+        }
+
+        [TestMethod]
         public async Task MutationMissingRequiredPartitionKeyValueReturnError()
         {
             // Run mutation Add planet without id

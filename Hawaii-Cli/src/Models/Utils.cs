@@ -399,6 +399,11 @@ namespace Hawaii.Cli.Models
                     {
                         containsWildcardAction = true;
                     }
+                    else if (!Action.ValidPermissionActions.Contains(op))
+                    {
+                        Console.Error.WriteLine("Invalid actions found in --permissions");
+                        return false;
+                    }
                 }
                 else
                 {

@@ -61,7 +61,7 @@ steps:
 # Publish (upload) a file or directory as a named artifact for the current run
 - task: PublishPipelineArtifact@1
   inputs:
-    targetPath: '$(Build.SourcesDirectory)/Hawaii-Cli/src/bin/Release/net6.0/' # Required 
+    targetPath: '$(Build.SourcesDirectory)/out' # Required 
     #artifactName: 'drop' # Optional
     #artifactType: 'pipeline' # Required. Options: pipeline, filepath. Default value: pipeline
     #fileSharePath: '\server\folderName' # Required when artifactType = filepath

@@ -54,7 +54,7 @@ steps:
   displayName: 'Generate build variables'
   inputs:
     searchPattern: '**/Hawaii.Cli.csproj'
-    variablesPrefix: DAB
+    variablesPrefix: Hawaii
     buildPrefix: '.'
 
 # - task: DotNetCoreCLI@2

@@ -32,7 +32,7 @@ namespace Azure.DataGateway.Service.Controllers
 
         /// <summary>
         /// Constructor.
-        /// </summary)
+        /// </summary>
         public RestController(RestService restService, ILogger<RestController> logger)
         {
             _restService = restService;

@@ -59,7 +59,7 @@ namespace Hawaii.Cli
                 {
                     bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(options);
 
-                    if(isSuccess)
+                    if (isSuccess)
                     {
                         Console.WriteLine("Engine Started.");
                     }

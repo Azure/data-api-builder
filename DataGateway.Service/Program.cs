@@ -14,7 +14,7 @@ namespace Azure.DataGateway.Service
     {
         public static void Main(string[] args)
         {
-            if(!StartEngine(args))
+            if (!StartEngine(args))
             {
                 Environment.ExitCode = -1;
             }

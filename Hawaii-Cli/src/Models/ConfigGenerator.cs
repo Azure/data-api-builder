@@ -3,7 +3,6 @@ using System.Text.Json;
 using Azure.DataGateway.Config;
 using static Hawaii.Cli.Models.Utils;
 using Action = Azure.DataGateway.Config.Action;
-using Azure.DataGateway.Service;
 
 namespace Hawaii.Cli.Models
 {
@@ -581,7 +580,7 @@ namespace Hawaii.Cli.Models
 
         public static bool TryStartEngineWithOptions(StartOptions options)
         {
-            return Azure.DataGateway.Service.Program.StartEngine(new string[]{"--project", options.Project, "--ConfigFileName", options.Config});
+            return Azure.DataGateway.Service.Program.StartEngine(new string[] { "--project", options.Project, "--ConfigFileName", options.Config });
         }
     }
 }

@@ -10,6 +10,10 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>hawaii</ToolCommandName>
     <PackageOutputPath>./nupkg</PackageOutputPath>
+    
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <PublishReadyToRun>true</PublishReadyToRun>
 
     <BaseOutputPath>..\..\out\cli</BaseOutputPath>
   </PropertyGroup>

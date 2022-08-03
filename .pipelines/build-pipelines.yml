@@ -50,12 +50,44 @@ steps:
     projects: '**/*Tests*.csproj'
     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
-
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'
   inputs:
     codeCoverageTool: Cobertura
     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+
+- task: DotNetCoreCLI@2
+  displayName: Publish engine win-x64
+  inputs:
+    command: publish
+    publishWebProjects: True
+    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)\publish\win-x64 --runtime win-x64 $(Build.SourcesDirectory)\DataGateway.Service\Azure.DataGateway.Service.csproj'
+    zipAfterPublish: True
+    modifyOutputPath: True
+
+- task: DotNetCoreCLI@2
+  displayName: Publish engine linux-x64
+  inputs:
+    command: publish
+    publishWebProjects: True
+    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)\publish\linux-x64 --runtime linux-x64 $(Build.SourcesDirectory)\DataGateway.Service\Azure.DataGateway.Service.csproj'
+    zipAfterPublish: True
+    modifyOutputPath: True
+
+- task: DotNetCoreCLI@2
+  displayName: Publish engine osx-x64
+  inputs:
+    command: publish
+    publishWebProjects: True
+    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)\publish\osx-x64 --runtime osx-x64 $(Build.SourcesDirectory)\DataGateway.Service\Azure.DataGateway.Service.csproj'
+    zipAfterPublish: True
+    modifyOutputPath: True
+
+# this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)' 
+    artifactName: 'engine'
 
 # Publish pipeline artifacts
 # Publish (upload) a file or directory as a named artifact for the current run

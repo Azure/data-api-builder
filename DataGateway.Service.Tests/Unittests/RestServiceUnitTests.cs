@@ -125,7 +125,8 @@ namespace Azure.DataGateway.Service.Tests.Unittests
             Mock<ILogger<IQueryEngine>> queryEngineLogger = new();
             Mock<ILogger<IMutationEngine>> mutationEngingLogger = new();
 
-            QueryExecutor<SqlConnection> queryExecutor = new(runtimeConfigProvider,
+            QueryExecutor<SqlConnection> queryExecutor = new(
+                runtimeConfigProvider,
                 dbExceptionParser,
                 queryExecutorLogger.Object);
             MsSqlMetadataProvider sqlMetadataProvider = new(

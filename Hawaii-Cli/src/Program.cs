@@ -15,7 +15,7 @@ namespace Hawaii.Cli
         /// <returns>0 on success, -1 on failure.</returns>
         public static int Main(string[] args)
         {
-            ParserResult<object>? result = Parser.Default.ParseArguments<InitOptions, AddOptions, UpdateOptions>(args)
+            ParserResult<object>? result = Parser.Default.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
                 .WithParsed<InitOptions>(options =>
                 {
                     bool isSuccess = ConfigGenerator.TryGenerateConfig(options);
@@ -53,6 +53,19 @@ namespace Hawaii.Cli
                     else
                     {
                         Console.WriteLine($"Could not update the entity:{options.Entity}.");
+                    }
+                })
+                .WithParsed<StartOptions>(options =>
+                {
+                    bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(options);
+
+                    if(isSuccess)
+                    {
+                        Console.WriteLine("Engine Started.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Engine Failed to start.");
                     }
                 });
 

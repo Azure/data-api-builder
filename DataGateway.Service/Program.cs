@@ -14,14 +14,23 @@ namespace Azure.DataGateway.Service
     {
         public static void Main(string[] args)
         {
+            if(!StartEngine(args))
+            {
+                Environment.ExitCode = -1;
+            }
+        }
+
+        public static bool StartEngine(string[] args)
+        {
             try
             {
                 CreateHostBuilder(args).Build().Run();
+                return true;
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Unable to launch the runtime due to: {ex}");
-                Environment.ExitCode = -1;
+                return false;
             }
         }
 

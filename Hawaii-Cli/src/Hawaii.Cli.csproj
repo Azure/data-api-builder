@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\DataGateway.Config\Azure.DataGateway.Config.csproj" />
+    <ProjectReference Include="..\..\DataGateway.Service\Azure.DataGateway.Service.csproj" />
   </ItemGroup>
 
 </Project>

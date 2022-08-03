@@ -81,7 +81,7 @@ jobs:
         $(BuildDate)-$(Build.SourceVersion)
         latest
 
-- job: Publish Nuget
+- job: Publish
   dependsOn: Build
   pool:
     vmImage: 'windows-latest'

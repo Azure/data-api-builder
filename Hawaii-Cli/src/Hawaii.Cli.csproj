@@ -10,6 +10,8 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>hawaii</ToolCommandName>
     <PackageOutputPath>./nupkg</PackageOutputPath>
+
+    <BaseOutputPath>..\..\out\cli</BaseOutputPath>
   </PropertyGroup>
 
   <ItemGroup>

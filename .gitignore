@@ -5,6 +5,7 @@
 **/coveragereport
 **/TestResults
 system-commandline-sentinel-files/
+out/
 
 # only include appsettings for a few default environments
 appsettings.*.json

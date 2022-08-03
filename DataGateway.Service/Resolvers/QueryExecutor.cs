@@ -12,16 +12,16 @@ namespace Azure.DataGateway.Service.Resolvers
     /// <summary>
     /// Encapsulates query execution apis.
     /// </summary>
-    public class QueryExecutor<ConnectionT> : IQueryExecutor
-        where ConnectionT : DbConnection, new()
+    public class QueryExecutor<TConnection> : IQueryExecutor
+        where TConnection : DbConnection, new()
     {
         private readonly string _connectionString;
         private readonly DbExceptionParser _dbExceptionParser;
-        private readonly ILogger<IQueryExecutor> _logger;
+        private readonly ILogger<QueryExecutor<TConnection>> _logger;
 
         public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider,
                              DbExceptionParser dbExceptionParser,
-                             ILogger<IQueryExecutor> logger)
+                             ILogger<QueryExecutor<TConnection>> logger)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
@@ -38,7 +38,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>DbDataReader object for reading the result set.</returns>
         public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
         {
-            ConnectionT conn = new()
+            TConnection conn = new()
             {
                 ConnectionString = _connectionString
             };

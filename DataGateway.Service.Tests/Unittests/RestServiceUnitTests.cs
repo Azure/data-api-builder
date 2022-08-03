@@ -120,10 +120,10 @@ namespace Azure.DataGateway.Service.Tests.Unittests
                 TestHelper.GetMockRuntimeConfigProvider(runtimeConfigPath, path);
             MsSqlQueryBuilder queryBuilder = new();
             DbExceptionParser dbExceptionParser = new(runtimeConfigProvider);
-            Mock<ILogger<IQueryExecutor>> queryExecutorLogger = new();
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<ILogger<ISqlMetadataProvider>> sqlMetadataLogger = new();
-            Mock<ILogger<IQueryEngine>> queryEngineLogger = new();
-            Mock<ILogger<IMutationEngine>> mutationEngingLogger = new();
+            Mock<ILogger<SqlQueryEngine>> queryEngineLogger = new();
+            Mock<ILogger<SqlMutationEngine>> mutationEngingLogger = new();
 
             QueryExecutor<SqlConnection> queryExecutor = new(
                 runtimeConfigProvider,

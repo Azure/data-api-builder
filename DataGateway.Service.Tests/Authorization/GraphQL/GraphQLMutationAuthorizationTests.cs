@@ -105,7 +105,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
             Mock<IQueryExecutor> _queryExecutor = new();
             Mock<IQueryBuilder> _queryBuilder = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            Mock<ILogger<IMutationEngine>> _mutationEngineLogger = new();
+            Mock<ILogger<SqlMutationEngine>> _mutationEngineLogger = new();
             DefaultHttpContext context = new();
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
 

@@ -28,7 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly IQueryBuilder _queryBuilder;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationResolver _authorizationResolver;
-        private readonly ILogger<IQueryEngine> _logger;
+        private readonly ILogger<SqlQueryEngine> _logger;
 
         // <summary>
         // Constructor.
@@ -39,7 +39,7 @@ namespace Azure.DataGateway.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,
-            ILogger<IQueryEngine> logger)
+            ILogger<SqlQueryEngine> logger)
         {
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;

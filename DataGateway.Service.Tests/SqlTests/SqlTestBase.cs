@@ -54,9 +54,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         private static WebApplicationFactory<Program> _application;
         protected static RuntimeConfig _runtimeConfig;
         protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
-        protected static ILogger<IMutationEngine> _mutationEngineLogger;
-        protected static ILogger<IQueryEngine> _queryEngineLogger;
-        protected static ILogger<IQueryExecutor> _queryExecutorLogger;
+        protected static ILogger<SqlMutationEngine> _mutationEngineLogger;
+        protected static ILogger<SqlQueryEngine> _queryEngineLogger;
         protected static ILogger<RestController> _restControllerLogger;
         protected const string MSSQL_DEFAULT_DB_NAME = "master";
 
@@ -76,9 +75,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
         protected static async Task InitializeTestFixture(TestContext context, List<string> customQueries = null,
             List<string[]> customEntities = null)
         {
-            _queryEngineLogger = new Mock<ILogger<IQueryEngine>>().Object;
-            _queryExecutorLogger = new Mock<ILogger<IQueryExecutor>>().Object;
-            _mutationEngineLogger = new Mock<ILogger<IMutationEngine>>().Object;
+            _queryEngineLogger = new Mock<ILogger<SqlQueryEngine>>().Object;
+            _mutationEngineLogger = new Mock<ILogger<SqlMutationEngine>>().Object;
             _restControllerLogger = new Mock<ILogger<RestController>>().Object;
 
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{DatabaseEngine}");
@@ -239,13 +237,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
             switch (DatabaseEngine)
             {
                 case TestCategory.POSTGRESQL:
+                    Mock<ILogger<QueryExecutor<NpgsqlConnection>>> pgQueryExecutorLogger = new();
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
-                        _queryExecutorLogger);
+                        pgQueryExecutorLogger.Object);
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
                             _runtimeConfigProvider,
@@ -254,13 +253,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                             _sqlMetadataLogger);
                     break;
                 case TestCategory.MSSQL:
+                    Mock<ILogger<QueryExecutor<SqlConnection>>> msSqlQueryExecutorLogger = new();
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<SqlConnection>(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
-                        _queryExecutorLogger);
+                        msSqlQueryExecutorLogger.Object);
                     _sqlMetadataProvider =
                         new MsSqlMetadataProvider(
                             _runtimeConfigProvider,
@@ -268,13 +268,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                             _sqlMetadataLogger);
                     break;
                 case TestCategory.MYSQL:
+                    Mock<ILogger<QueryExecutor<MySqlConnection>>> mySqlQueryExecutorLogger = new();
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<MySqlConnection>(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
-                        _queryExecutorLogger);
+                        mySqlQueryExecutorLogger.Object);
                     _sqlMetadataProvider =
                          new MySqlMetadataProvider(
                              _runtimeConfigProvider,

@@ -58,7 +58,7 @@ steps:
     buildPrefix: '.'
 
 - task: DotNetCoreCLI@2
-  displayName: "Creating Nuget Package"
+  displayName: 'Creating Nuget Package'
   inputs:
     command: pack
     versioningScheme: byEnvVar

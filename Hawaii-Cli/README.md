@@ -10,7 +10,7 @@ C#
    	4.Add/Update relationship between entities.
 
  - Let the user to run locally in any environment
- 
+
 ## Install
 If you have the .nuget package, run the below command to install directly:
 ```
@@ -37,7 +37,7 @@ hawaii init --name <<filename>> --database-type <<db_type>> --connection-string 
 ```
 ### Add entity to the config:
 ```
-hawaii add <<entity>> -source <<source.DB>> --rest <<rest_route>> --graphql <<graphql_type>> --permissions <<rules:actions>>
+hawaii add <<entity>> -source <<source.DB>> --rest <<rest_route>> --graphql <<graphql_type>> --permissions <<roles:actions>>
 ```
 ### Update entity to the config:
 ```
@@ -45,15 +45,15 @@ hawaii update <<entity>> -source <<new_source.DB>> --rest <<new_rest_route>> --g
 ```
 
 ## Example
-```	
+```
 hawaii init -n todo-001 --database_type "mysql" --connection_string "localhost:8000"
-```	
+```
 The Generated config will be in the current directory as todo-001.json
-```	
+```
 hawaii add todo --source s001.todo --rest todo --graphql todo --permission "anonymous:*"
 ```
 Entity will be added to the config with given rest route, graphql type and permissions.
-```	
+```
 hawaii update todo --permission "authenticate:create" --fields.include "id,name,category"
 ```
 Entity will be updated in the config with the provided changes.
@@ -62,9 +62,9 @@ Generate config with some permissions and relationship
 ```
 hawaii init --name todo-005 --database-type mssql --connection-string ""
 
-hawaii add todo --name todo-005 --source s005.todos --permissions "authenticated:*" 
+hawaii add todo --name todo-005 --source s005.todos --permissions "authenticated:*"
 
-hawaii add user --name todo-005 --source s005.users --permissions "authenticated:*" 
+hawaii add user --name todo-005 --source s005.users --permissions "authenticated:*"
 
 hawaii add category --name todo-005 --source s005.categories  --permissions "authenticated:read"
 
@@ -77,7 +77,7 @@ hawaii update todo --name todo-005 --relationship category --target.entity categ
 hawaii update user --name todo-005 --relationship owns --target.entity todo --cardinality many --relationship.fields "id:owner_id"
 
 hawaii update todo --name todo-005 --relationship owner --target.entity user --cardinality one --relationship.fields "owner_id:id"
- 
+
 ```
 
 ## Contributing

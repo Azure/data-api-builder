@@ -84,10 +84,10 @@ jobs:
 - job: Publish Nuget
   dependsOn: Build CI
   pool:
-    vmImage: 'windows-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
+    vmImage: 'windows-latest'
 
   variables:
-    # buildConfiguration: 'Release'
+    buildConfiguration: 'Release'
 
   steps:
   - task: PowerShell@2

@@ -1,9 +1,6 @@
 using Azure.DataGateway.Service.Controllers;
 using Azure.DataGateway.Service.Services;
-using Castle.Core.Logging;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 
 namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
 {

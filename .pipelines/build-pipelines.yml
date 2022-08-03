@@ -70,7 +70,7 @@ steps:
     versionSuffix: '$(packVersionSuffix)'
     packagesToPack: '**/Hawaii.Cli.csproj'
     arguments: '--configuration $(buildConfiguration) --version-suffix $(packVersionSuffix)'
-    packDestination: '$(Build.ArtifactStagingDirectory)/dab-nupkg'
+    packDestination: '$(Build.ArtifactStagingDirectory)'
 
 # # This task will publish the NuGet Package
 # - task: NuGetAuthenticate@0
@@ -93,7 +93,7 @@ steps:
     targetPath: '$(Pipeline.Workspace)'
     artifactName: 'DAB'
     artifactType: 'pipeline'
-    fileSharePath: '$(Build.ArtifactStagingDirectory)/dab-nupkg'
+    fileSharePath: '$(Build.ArtifactStagingDirectory)/Hawaii-Cli/src/nupkg/'
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

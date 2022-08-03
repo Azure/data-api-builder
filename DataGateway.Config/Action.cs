@@ -12,18 +12,22 @@ namespace Azure.DataGateway.Config
     /// <param name="Fields">Details what fields to include or exclude</param>
     public record Action(
         [property: JsonPropertyName("action"),
-        JsonConverter(typeof(StringEnumJsonConverter))]
+        JsonConverter(typeof(OperationEnumJsonConverter))]
         Operation Name,
         [property: JsonPropertyName("policy")]
         Policy? Policy,
         [property: JsonPropertyName("fields")]
-        Field? Fields);
+        Field? Fields)
+    {
+        // Set of allowed actions for a request.
+        public static readonly HashSet<Operation> ValidPermissionActions = new() { Operation.Create, Operation.Read, Operation.Update, Operation.Delete };
+    }
 
     /// <summary>
     /// Class to specify custom converter used while deserialising action from json config
     /// to Action.Name.
     /// </summary>
-    public class StringEnumJsonConverter : JsonConverter<Operation>
+    public class OperationEnumJsonConverter : JsonConverter<Operation>
     {
         // Creating another constant for "*" as we can't use the constant defined in
         // AuthorizationResolver class because of circular dependency.

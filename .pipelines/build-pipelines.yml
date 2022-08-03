@@ -92,8 +92,8 @@ steps:
   inputs:
     targetPath: '$(Pipeline.Workspace)'
     artifactName: 'DAB'
-    artifactType: 'pipeline'
-    fileSharePath: '$(Build.ArtifactStagingDirectory)/Hawaii-Cli/src/nupkg/'
+    artifactType: 'filepath'
+    fileSharePath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

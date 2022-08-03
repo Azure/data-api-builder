@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Text.Json;
 using Azure.DataGateway.Config;
 using static Hawaii.Cli.Models.Utils;
@@ -93,21 +94,6 @@ namespace Hawaii.Cli.Models
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
             return true;
-        }
-
-        /// <summary>
-        /// This method will start the hawaii-engine
-        /// using the config and project name
-        /// </summary>
-        public static bool TryStartEngineWithOptions(StartOptions options)
-        {
-            if (!File.Exists(options.Config))
-            {
-                Console.WriteLine($"Config file:{options.Config} not found.");
-                return false;
-            }
-
-            return Azure.DataGateway.Service.Program.StartEngine(new string[]{"--project", options.Project, "--ConfigFileName", options.Config});
         }
 
         /// <summary>
@@ -417,18 +403,11 @@ namespace Hawaii.Cli.Models
                     }
                     else
                     {
-                        // User didn't use WILDCARD, and wants to update some of the CRUD actions.
-                        //
-                        List<object> actionList = permission.Actions.ToList();
-                        if (permission.Actions.Length is 1 && GetCRUDOperation((JsonElement)permission.Actions[0]) is WILDCARD)
-                        {
-                            // Expanding WILDCARD operation to all the CRUD operations before updating.
-                            //
-                            actionList = ExpandWildcardToAllCRUDActions(permission);
-                        }
+                        // User didn't use WILDCARD, and wants to update some of the actions.
+                        IDictionary<Operation, Action> existingActions = ConvertActionArrayToIEnumerable(permission.Actions);
 
-                        // updating the current action list
-                        object[] updatedActionArray = GetUpdatedActionArray(newActionArray, policy, fields, actionList);
+                        // Merge existing actions with new actions
+                        object[] updatedActionArray = GetUpdatedActionArray(newActionArray, policy, fields, existingActions);
 
                         updatedPermissionsList.Add(new PermissionSetting(newRole, updatedActionArray));
                     }
@@ -450,86 +429,72 @@ namespace Hawaii.Cli.Models
         }
 
         /// <summary>
-        /// This Method will expand Wildcard("*") to all the CRUD actions.
-        /// It is useful in cases where we need to update some of the actions.
-        /// </summary>
-        /// <param name="permission">permission which needs to be updated</param>
-        /// <returns>List of all the CRUD objects</returns>
-        private static List<object> ExpandWildcardToAllCRUDActions(PermissionSetting permission)
-        {
-            List<object> actionList = new();
-            Action? action = ToActionObject((JsonElement)permission.Actions[0]);
-
-            if (action!.Policy is null && action!.Fields is null)
-            {
-                actionList = Enum.GetNames(typeof(CRUD)).ToList<object>();
-            }
-            else
-            {
-                foreach (string op in Enum.GetNames(typeof(CRUD)))
-                {
-                    actionList.Add(new Action(Name: op, Policy: action.Policy, Fields: action.Fields));
-                }
-            }
-
-            return actionList;
-        }
-
-        /// <summary>
         /// Merge old and new actions into a new list. Take all new updated actions.
         /// Only add existing actions to the merged list if there is no update.
         /// </summary>
-        ///
         /// <param name="newActions">action items to update received from user.</param>
         /// <param name="fieldsToInclude">fields to allow the action permission</param>
         /// <param name="fieldsToExclude">fields that will be excluded form the action permission.</param>
         /// <param name="existingActions">action items present in the config.</param>
-        /// <returns>Array of updated Action objects</returns>
+        /// <returns>Array of updated action objects</returns>
         private static object[] GetUpdatedActionArray(string[] newActions,
                                                         Policy? newPolicy,
                                                         Field? newFields,
-                                                        List<object> existingActions)
+                                                        IDictionary<Operation, Action> existingActions)
         {
-            // a new list to store merged result.
-            List<object> updatedActionList = new();
+            Dictionary<Operation, Action> updatedActions = new();
 
-            // create a hash table of new action
-            HashSet<string> newActionSet = newActions.ToHashSet();
-
-            Dictionary<string, Action> existingActionMap = GetDictionaryFromActionObjectList(existingActions);
             Policy? existingPolicy = null;
             Field? existingFields = null;
+
             // Adding the new Actions in the updatedActionList
-            foreach (string action in newActionSet)
+            foreach (string action in newActions)
             {
                 // Getting existing Policy and Fields
-                if (existingActionMap.ContainsKey(action))
+                if (TryConvertActionNameToOperation(action, out Operation op))
                 {
-                    existingPolicy = existingActionMap[action].Policy;
-                    existingFields = existingActionMap[action].Fields;
+                    if (existingActions.ContainsKey(op))
+                    {
+                        existingPolicy = existingActions[op].Policy;
+                        existingFields = existingActions[op].Fields;
+                    }
+
+                    // Checking if Policy and Field update is required
+                    Policy? updatedPolicy = newPolicy is null ? existingPolicy : newPolicy;
+                    Field? updatedFields = newFields is null ? existingFields : newFields;
+
+                    updatedActions.Add(op, new Action(op, updatedPolicy, updatedFields));
                 }
-
-                // Checking if Policy and Field update is required
-                Policy? updatedPolicy = newPolicy is null ? existingPolicy : newPolicy;
-                Field? updatedFields = newFields is null ? existingFields : newFields;
-
-                updatedActionList.Add(new Action(action, updatedPolicy, updatedFields));
             }
 
             // Looping through existing actions
-            foreach (object action in existingActions)
+            foreach (KeyValuePair<Operation, Action> action in existingActions)
             {
-                // getting action name from action object
-                string actionName = GetCRUDOperation(JsonSerializer.SerializeToElement(action));
-
                 // if any existing action doesn't require update, it is added as it is.
-                if (!newActionSet.Contains(actionName))
+                if (!updatedActions.ContainsKey(action.Key))
                 {
-                    updatedActionList.Add(action);
+                    updatedActions.Add(action.Key, action.Value);
                 }
             }
 
-            return updatedActionList.ToArray();
+            // Convert action object to an array.
+            // If there is no policy or field for this action, it will be converted to a string.
+            // Otherwise, it is added as action object.
+            //
+            ArrayList updatedActionArray = new();
+            foreach (Action updatedAction in updatedActions.Values)
+            {
+                if (updatedAction.Policy is null && updatedAction.Fields is null)
+                {
+                    updatedActionArray.Add(updatedAction.Name.ToString());
+                }
+                else
+                {
+                    updatedActionArray.Add(updatedAction);
+                }
+            }
+
+            return updatedActionArray.ToArray();
         }
 
         /// <summary>
@@ -611,6 +576,11 @@ namespace Hawaii.Cli.Models
                                     options.LinkingObject,
                                     updatedLinkingSourceFields,
                                     updatedLinkingTargetFields);
+        }
+
+        public static bool TryStartEngineWithOptions(StartOptions options)
+        {
+            return Azure.DataGateway.Service.Program.StartEngine(new string[]{"--project", options.Project, "--ConfigFileName", options.Config});
         }
     }
 }

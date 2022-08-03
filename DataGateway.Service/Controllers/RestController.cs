@@ -74,7 +74,7 @@ namespace Azure.DataGateway.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                Operation.Find);
+                Operation.Read);
         }
 
         /// <summary>

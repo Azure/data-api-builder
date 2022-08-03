@@ -11,13 +11,6 @@ using Action = Azure.DataGateway.Config.Action;
 /// </summary>
 namespace Hawaii.Cli.Models
 {
-    public enum CRUD
-    {
-        create,
-        read,
-        update,
-        delete
-    }
     public class Utils
     {
         public const string WILDCARD = "*";
@@ -96,17 +89,26 @@ namespace Hawaii.Cli.Models
         }
 
         /// <summary>
-        /// translates the JsonElement to the Action Object
+        /// Try convert action string to Operation Enum.
         /// </summary>
-        public static Action? ToActionObject(JsonElement element)
+        /// <param name="actionName">Action string.</param>
+        /// <param name="operation">Operation Enum output.</param>
+        /// <returns>True if convert is successful. False otherwise.</returns>
+        public static bool TryConvertActionNameToOperation(string actionName, out Operation operation)
         {
-            if (element.ValueKind is JsonValueKind.String)
+            if (!Enum.TryParse(actionName, ignoreCase: true, out operation))
             {
-                return new Action(element.GetRawText(), Policy: null, Fields: null);
+                if (actionName.Equals(WILDCARD, StringComparison.OrdinalIgnoreCase))
+                {
+                    operation = Operation.All;
+                }
+                else
+                {
+                    return false;
+                }
             }
 
-            string json = element.GetRawText();
-            return JsonSerializer.Deserialize<Action>(json);
+            return true;
         }
 
         /// <summary>
@@ -123,7 +125,7 @@ namespace Hawaii.Cli.Models
 
             if (actions is WILDCARD)
             {
-                action_items = new object[] { new Action(actions, policy, fields) };
+                action_items = new object[] { new Action(Operation.All, policy, fields) };
             }
             else
             {
@@ -133,8 +135,11 @@ namespace Hawaii.Cli.Models
                     List<object>? action_list = new();
                     foreach (string? action_element in action_elements)
                     {
-                        Action? action_item = new(action_element, policy, fields);
-                        action_list.Add(action_item);
+                        if (TryConvertActionNameToOperation(action_element, out Operation op))
+                        {
+                            Action? action_item = new(op, policy, fields);
+                            action_list.Add(action_item);
+                        }
                     }
 
                     action_items = action_list.ToArray();
@@ -149,20 +154,56 @@ namespace Hawaii.Cli.Models
         }
 
         /// <summary>
-        /// creates a Dictionary with Key as the action name and value as the Action object
+        /// Given an array of actions, which is a type of JsonElement, convert it to a dictionary
+        /// key: Valid action operation (wild card operation will be expanded)
+        /// value: Action object
         /// </summary>
-        public static Dictionary<string, Action> GetDictionaryFromActionObjectList(IEnumerable<object> actionList)
+        /// <param name="Actions">Array of actions which is of type JsonElement.</param>
+        /// <returns>Dictionary of actions</returns>
+        public static IDictionary<Operation, Action> ConvertActionArrayToIEnumerable(object[] Actions)
         {
-            Dictionary<string, Action> actionMap = new();
-            foreach (object action in actionList)
+            Dictionary<Operation, Action> result = new();
+            foreach (object action in Actions)
             {
-                JsonElement actionJsonElement = JsonSerializer.SerializeToElement(action);
-                string actionName = GetCRUDOperation(actionJsonElement);
-                Action actionObject = ToActionObject(actionJsonElement)!;
-                actionMap.Add(actionName, actionObject);
+                JsonElement actionJson = (JsonElement)action;
+                if (actionJson.ValueKind is JsonValueKind.String)
+                {
+                    if (TryConvertActionNameToOperation(actionJson.GetString(), out Operation op))
+                    {
+                        if (op is Operation.All)
+                        {
+                            // Expand wildcard to all valid actions
+                            foreach (Operation validOp in Action.ValidPermissionActions)
+                            {
+                                result.Add(validOp, new Action(validOp, null, null));
+                            }
+                        }
+                        else
+                        {
+                            result.Add(op, new Action(op, null, null));
+                        }
+                    }
+                }
+                else
+                {
+                    Action ac = JsonSerializer.Deserialize<Action>(actionJson, GetSerializationOptions())!;
+
+                    if (ac.Name is Operation.All)
+                    {
+                        // Expand wildcard to all valid actions
+                        foreach (Operation validOp in Action.ValidPermissionActions)
+                        {
+                            result.Add(validOp, new Action(validOp, Policy: ac.Policy, Fields: ac.Fields));
+                        }
+                    }
+                    else
+                    {
+                        result.Add(ac.Name, ac);
+                    }
+                }
             }
 
-            return actionMap;
+            return result;
         }
 
         /// <summary>
@@ -200,19 +241,6 @@ namespace Hawaii.Cli.Models
 
             options.Converters.Add(new JsonStringEnumConverter(namingPolicy: new LowerCaseNamingPolicy()));
             return options;
-        }
-
-        /// <summary>
-        /// returns the Action name from the parsed JsonElement from Config file.
-        /// </summary>
-        public static string GetCRUDOperation(JsonElement op)
-        {
-            if (op.ValueKind is JsonValueKind.String)
-            {
-                return op.ToString();
-            }
-
-            return ToActionObject(op)!.Name;
         }
 
         /// <summary>
@@ -365,19 +393,23 @@ namespace Hawaii.Cli.Models
             bool containsWildcardAction = false;
             foreach (string action in uniqueActions)
             {
-                CRUD crud;
-                if (!Enum.TryParse<CRUD>(action.ToLower(), out crud))
+                if (TryConvertActionNameToOperation(action, out Operation op))
                 {
-                    if (action is WILDCARD)
+                    if (op is Operation.All)
                     {
                         containsWildcardAction = true;
                     }
-                    else
+                    else if (!Action.ValidPermissionActions.Contains(op))
                     {
-                        // Check for invalid CRUD actions such as fetch, creates, etc.
                         Console.Error.WriteLine("Invalid actions found in --permissions");
                         return false;
                     }
+                }
+                else
+                {
+                    // Check for invalid actions.
+                    Console.Error.WriteLine("Invalid actions found in --permissions");
+                    return false;
                 }
             }
 

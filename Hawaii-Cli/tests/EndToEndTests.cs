@@ -68,7 +68,7 @@ public class EndToEndTests
         Assert.AreEqual(1, entity.Permissions.Length);
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
         Assert.AreEqual(1, entity.Permissions[0].Actions.Length);
-        Assert.AreEqual(WILDCARD, GetCRUDOperation((JsonElement)entity.Permissions[0].Actions[0]));
+        Assert.AreEqual(WILDCARD, ((JsonElement)entity.Permissions[0].Actions[0]).GetString());
     }
 
     /// <summary>
@@ -99,7 +99,7 @@ public class EndToEndTests
         Assert.AreEqual(1, entity.Permissions.Length);
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
         Assert.AreEqual(1, entity.Permissions[0].Actions.Length);
-        Assert.AreEqual(WILDCARD, GetCRUDOperation((JsonElement)entity.Permissions[0].Actions[0]));
+        Assert.AreEqual(WILDCARD, ((JsonElement)entity.Permissions[0].Actions[0]).GetString());
         Assert.IsNull(entity.Mappings);
         Assert.IsNull(entity.Relationships);
     }
@@ -183,10 +183,10 @@ public class EndToEndTests
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
         Assert.AreEqual(4, entity.Permissions[0].Actions.Length);
         //Only create and delete are updated.
-        Assert.AreEqual("{\"action\":\"create\",\"fields\":{\"include\":[\"id\",\"content\"],\"exclude\":[\"rating\",\"level\"]}}", JsonSerializer.Serialize(entity.Permissions[0].Actions[0]));
-        Assert.AreEqual("{\"action\":\"delete\",\"fields\":{\"include\":[\"id\",\"content\"],\"exclude\":[\"rating\",\"level\"]}}", JsonSerializer.Serialize(entity.Permissions[0].Actions[1]));
-        Assert.AreEqual("\"read\"", JsonSerializer.Serialize(entity.Permissions[0].Actions[2]));
-        Assert.AreEqual("\"update\"", JsonSerializer.Serialize(entity.Permissions[0].Actions[3]));
+        Assert.AreEqual("{\"action\":\"create\",\"fields\":{\"include\":[\"id\",\"content\"],\"exclude\":[\"rating\",\"level\"]}}", JsonSerializer.Serialize(entity.Permissions[0].Actions[0]), ignoreCase: true);
+        Assert.AreEqual("{\"action\":\"delete\",\"fields\":{\"include\":[\"id\",\"content\"],\"exclude\":[\"rating\",\"level\"]}}", JsonSerializer.Serialize(entity.Permissions[0].Actions[1]), ignoreCase: true);
+        Assert.AreEqual("\"read\"", JsonSerializer.Serialize(entity.Permissions[0].Actions[2]), ignoreCase: true);
+        Assert.AreEqual("\"update\"", JsonSerializer.Serialize(entity.Permissions[0].Actions[3]), ignoreCase: true);
 
         Assert.IsTrue(entity.Relationships!.ContainsKey("r1"));
         Relationship relationship = entity.Relationships["r1"];
@@ -202,31 +202,6 @@ public class EndToEndTests
         Assert.IsNotNull(entity.Mappings);
         Assert.AreEqual("{\"id\":\"identity\",\"name\":\"Company Name\"}", JsonSerializer.Serialize(entity.Mappings));
     }
-
-    /// <summary>
-    /// Test to verify updating an existing Entity.
-    /// It tests updating permissions as well as relationship
-    /// </summary>
-    // [TestMethod]
-    // public void TestStartEngine()
-    // {
-    //     Assert.IsTrue(File.Exists("hawaii-config.MsSql.json"));
-    //     string[] initArgs = { "start", "--project", "DataGateway.Service", "--config", "hawaii-config.MsSql.json" };
-    //     TestStartEngine(initArgs);
-    //     Thread.Sleep(100);
-    //     Console.WriteLine("baba1");
-    // }
-
-    // public static async Task TestStartEngine(string[] args)
-    // {
-    //     await Task.Run(() =>
-    //     {
-    //         Program.Main(args);
-
-    //     });
-    //     Console.WriteLine("baba2");
-    //     Environment.Exit(0);
-    // }
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)
     {

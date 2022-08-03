@@ -57,14 +57,14 @@ namespace Hawaii.Cli.Tests
                                         ""role"": ""anonymous"",
                                         ""actions"": [
                                             {
-                                                ""action"": ""create"",
+                                                ""action"": ""Create"",
                                                 ""fields"": {
                                                     ""include"": [""id"", ""rating""],
                                                     ""exclude"": [""level""]
                                                 }
                                             },
-                                            ""read"",
-                                            ""update""
+                                            ""Read"",
+                                            ""Update""
                                         ],
                                     }
                                 ]
@@ -198,13 +198,13 @@ namespace Hawaii.Cli.Tests
                                         ""role"": ""anonymous"",
                                         ""actions"": [
                                             {
-                                                ""action"": ""update"",
+                                                ""action"": ""Update"",
                                                 ""fields"": {
                                                     ""include"": [""id"", ""rating""],
                                                     ""exclude"": [""level""]
                                                 }
                                             },
-                                            ""read""
+                                            ""Read""
                                         ]
                                     }
                                 ]
@@ -274,28 +274,28 @@ namespace Hawaii.Cli.Tests
                                         ""role"": ""anonymous"",
                                         ""actions"": [
                                             {
-                                                ""action"": ""read"",
+                                                ""action"": ""Read"",
                                                 ""fields"": {
                                                     ""include"": [""id"", ""type"", ""quantity""],
                                                     ""exclude"": []
                                                 }
                                             },
                                             {
-                                                ""action"": ""delete"",
+                                                ""action"": ""Delete"",
                                                 ""fields"": {
                                                     ""include"": [""id"", ""type"", ""quantity""],
                                                     ""exclude"": []
                                                 }
                                             },
                                             {
-                                                ""action"": ""create"",
+                                                ""action"": ""Create"",
                                                 ""fields"": {
                                                     ""include"": [""id"", ""rating""],
                                                     ""exclude"": [""level""]
                                                 }
                                             },
                                             {
-                                                ""action"": ""update"",
+                                                ""action"": ""Update"",
                                                 ""fields"": {
                                                     ""include"": [""id"", ""rating""],
                                                     ""exclude"": [""level""]
@@ -815,7 +815,7 @@ namespace Hawaii.Cli.Tests
                           ""role"": ""anonymous"",
                           ""actions"": [
                                 {
-                                    ""action"": ""delete"",
+                                    ""action"": ""Delete"",
                                     ""policy"": {
                                         ""request"": ""@claims.name eq 'api_builder'"",
                                         ""database"": ""@claims.name eq @item.name""

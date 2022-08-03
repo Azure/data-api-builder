@@ -66,7 +66,7 @@ namespace Hawaii.Cli.Models
     }
 
     /// <summary>
-    /// Commond options for entitiy manipulation.
+    /// Command options for entity manipulation.
     /// </summary>
     public class EntityOptions : Options
     {
@@ -142,7 +142,7 @@ namespace Hawaii.Cli.Models
             this.Permissions = permissions;
         }
 
-        [Option('s', "source", Required = true, HelpText = "Name of the source table or container.")]
+        [Option('s', "source", Required = true, HelpText = "Name of the source database object.")]
         public string Source { get; }
 
         [Option("permissions", Required = true, Separator = ':', HelpText = "Permissions required to access the source table or container.")]

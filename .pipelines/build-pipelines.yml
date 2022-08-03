@@ -87,7 +87,7 @@ steps:
 #     versioningScheme: 'off'
 #     allowPackageConflicts: true
 
-Upload the nuget file for the current run
+# Upload the nuget file for the current run
 - task: PublishPipelineArtifact@1
   inputs:
     targetPath: '$(Pipeline.Workspace)'

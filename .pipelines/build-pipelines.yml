@@ -83,12 +83,12 @@ steps:
 #     allowPackageConflicts: true
 
 # Upload the nuget file for the current run
-- task: PublishPipelineArtifact@1
-  inputs:
-    targetPath: '$(Pipeline.Workspace)'
-    artifactName: 'DAB'
-    artifactType: 'pipeline'
-    fileSharePath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
+# - task: PublishPipelineArtifact@1
+#   inputs:
+#     targetPath: '$(Pipeline.Workspace)'
+#     artifactName: 'DAB'
+#     artifactType: 'pipeline'
+#     fileSharePath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

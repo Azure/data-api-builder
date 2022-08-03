@@ -81,55 +81,55 @@ jobs:
         $(BuildDate)-$(Build.SourceVersion)
         latest
 
-- job: Publish Nuget
-  dependsOn: Build CI
-  pool:
-    vmImage: 'windows-latest'
+# - job: Publish Nuget
+#   dependsOn: Build CI
+#   pool:
+#     vmImage: 'windows-latest'
 
-  variables:
-    buildConfiguration: 'Release'
+#   variables:
+#     buildConfiguration: 'Release'
 
-  steps:
-  - task: PowerShell@2
-    displayName: 'Set versionSuffix'
-    inputs:
-      targetType: 'inline'
-      script: |
-          $packVersionSuffix = "$(Build.SourceBranchName).$(Build.BuildId)"
-          echo "packVersionSuffix is: ${packVersionSuffix}"
-          # This sets the variable in the whole pipeline
-          echo "##vso[task.setvariable variable=packVersionSuffix]$packVersionSuffix"
+#   steps:
+#   - task: PowerShell@2
+#     displayName: 'Set versionSuffix'
+#     inputs:
+#       targetType: 'inline'
+#       script: |
+#           $packVersionSuffix = "$(Build.SourceBranchName).$(Build.BuildId)"
+#           echo "packVersionSuffix is: ${packVersionSuffix}"
+#           # This sets the variable in the whole pipeline
+#           echo "##vso[task.setvariable variable=packVersionSuffix]$packVersionSuffix"
 
-  - task: DotNetCoreCLI@2
-    displayName: 'Creating Nuget Package'
-    inputs:
-      command: custom
-      custom: pack
-      buildProperties: 'VersionSuffix="$(packVersionSuffix)"'
-      versionSuffix: '$(packVersionSuffix)'
-      packagesToPack: '**/Hawaii.Cli.csproj'
-      arguments: '--version-suffix $(packVersionSuffix)'
-      packDestination: '$(Build.ArtifactStagingDirectory)'
+#   - task: DotNetCoreCLI@2
+#     displayName: 'Creating Nuget Package'
+#     inputs:
+#       command: custom
+#       custom: pack
+#       buildProperties: 'VersionSuffix="$(packVersionSuffix)"'
+#       versionSuffix: '$(packVersionSuffix)'
+#       packagesToPack: '**/Hawaii.Cli.csproj'
+#       arguments: '--version-suffix $(packVersionSuffix)'
+#       packDestination: '$(Build.ArtifactStagingDirectory)'
 
-  # # This task will publish the NuGet Package
-  # - task: NuGetAuthenticate@0
-  #   displayName: 'NuGet Authenticate'
-  # - task: NuGetCommand@2
-  #   displayName: 'NuGet push'
-  #   inputs:
-  #     command: 'push'
-  #     feedsToUse: 'select'
-  #     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
-  #     nuGetFeedType: 'internal'
-  #     vstsFeed: CosmosDB/Hawaii_Packages
-  #     publishVstsFeed: CosmosDB/Hawaii_Packages
-  #     versioningScheme: 'off'
-  #     allowPackageConflicts: true
+#   # # This task will publish the NuGet Package
+#   # - task: NuGetAuthenticate@0
+#   #   displayName: 'NuGet Authenticate'
+#   # - task: NuGetCommand@2
+#   #   displayName: 'NuGet push'
+#   #   inputs:
+#   #     command: 'push'
+#   #     feedsToUse: 'select'
+#   #     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+#   #     nuGetFeedType: 'internal'
+#   #     vstsFeed: CosmosDB/Hawaii_Packages
+#   #     publishVstsFeed: CosmosDB/Hawaii_Packages
+#   #     versioningScheme: 'off'
+#   #     allowPackageConflicts: true
 
-  # Upload the nuget file for the current run
-  - task: PublishPipelineArtifact@1
-    inputs:
-      targetPath: '$(Pipeline.Workspace)'
-      artifactName: 'DAB'
-      artifactType: 'filepath'
-      fileSharePath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
+#   # Upload the nuget file for the current run
+#   - task: PublishPipelineArtifact@1
+#     inputs:
+#       targetPath: '$(Pipeline.Workspace)'
+#       artifactName: 'DAB'
+#       artifactType: 'filepath'
+#       fileSharePath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'

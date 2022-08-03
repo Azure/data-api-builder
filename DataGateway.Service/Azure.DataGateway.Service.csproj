@@ -5,9 +5,13 @@
     <Configurations>Debug;Release;Docker</Configurations>
     <OutputPath>$(BaseOutputPath)\engine</OutputPath>
 
-    <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
-    <PublishReadyToRun>true</PublishReadyToRun>
+    <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' OR '$(RuntimeIdentifier)' == 'win-x86'">
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
   </PropertyGroup>
 
   <ItemGroup>

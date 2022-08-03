@@ -61,8 +61,8 @@ steps:
   displayName: 'Creating Nuget Package'
   inputs:
     command: pack
-    versioningScheme: byEnvVar
-    versionEnvVar: 'DAB_VERSION_BUILD'
+    # versioningScheme: byEnvVar
+    # versionEnvVar: 'DAB_VERSION_BUILD'
     arguments: '--configuration $(buildConfiguration)'
     packagesToPack: '**/Hawaii.Cli.csproj'
     packDestination: '$(Build.ArtifactStagingDirectory)'

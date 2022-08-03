@@ -89,6 +89,7 @@ jobs:
   variables:
     # buildConfiguration: 'Release'
 
+  steps:
   - task: PowerShell@2
     displayName: 'Set versionSuffix'
     inputs:
@@ -98,7 +99,6 @@ jobs:
           echo "packVersionSuffix is: ${packVersionSuffix}"
           # This sets the variable in the whole pipeline
           echo "##vso[task.setvariable variable=packVersionSuffix]$packVersionSuffix"
-
 
   - task: DotNetCoreCLI@2
     displayName: 'Creating Nuget Package'

@@ -1,6 +1,7 @@
+using System.Net;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Services;
 using Azure.DataGateway.Service.Tests.SqlTests;
 using Microsoft.Extensions.Logging;
@@ -13,19 +14,11 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
     /// Units testing for our connection string parser
     /// to retreive schema.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
+    [TestClass]
     public class SqlMetadataProviderUnitTests : SqlTestBase
     {
         /// <summary>
-        /// Set the database engine for the tests
-        /// </summary>
-        [ClassInitialize]
-        public static void Setup(TestContext context)
-        {
-            DatabaseEngine = TestCategory.POSTGRESQL;
-        }
-
-        /// <summary>
+        /// Only for PostgreSql connection strings.
         /// Verify we parse the connection string for the
         /// schema correctly when it is of various relevant
         /// formats.
@@ -42,7 +35,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         [DataRow("", "SearchPath=\"\";Host=localhost;Database=graphql")]
         public void CheckConnectionStringParsingTest(string expected, string connectionString)
         {
-            PostgreSqlMetadataProvider.TryGetSchemaFromConnectionString(out string actual, connectionString);
+            PostgreSqlMetadataProvider.TryGetSchemaFromConnectionString(connectionString, out string actual);
             Assert.AreEqual(expected, actual);
         }
 
@@ -51,18 +44,84 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
         /// for all the tables based on the entities relationship.
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.POSTGRESQL)]
         public async Task CheckNoExceptionForNoForeignKey()
         {
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(DatabaseEngine);
-            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
-            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
+            DatabaseEngine = TestCategory.POSTGRESQL;
+            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             SetUpSQLMetadataProvider();
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Load runtimeConfig and set connection string and db type
+        /// according to data row.
+        /// <code>Check: </code>  Verify malformed connection string throws correct exception.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(";;;;;fooBarBAZ", DatabaseType.mssql)]
+        [DataRow(";;;;;fooBarBAZ", DatabaseType.mysql)]
+        [DataRow(";;;;;fooBarBAZ", DatabaseType.postgresql)]
+        [DataRow("!&^%*&$$%#$%@$%#@()", DatabaseType.mssql)]
+        [DataRow("!&^%*&$$%#$%@$%#@()", DatabaseType.mysql)]
+        [DataRow("!&^%*&$$%#$%@$%#@()", DatabaseType.postgresql)]
+        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", DatabaseType.mssql)]
+        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", DatabaseType.mysql)]
+        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", DatabaseType.postgresql)]
+        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", DatabaseType.mssql)]
+        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", DatabaseType.mysql)]
+        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", DatabaseType.postgresql)]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.mssql)]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.postgresql)]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.mysql)]
+        [DataRow("", DatabaseType.mssql)]
+        [DataRow("", DatabaseType.postgresql)]
+        [DataRow("", DatabaseType.mysql)]
+        public async Task CheckExceptionForBadConnectionString(string connectionString, DatabaseType db)
+        {
+            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(db.ToString());
+            _runtimeConfig.ConnectionString = connectionString;
+            _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
+            switch (db)
+            {
+                case DatabaseType.mssql:
+                    _sqlMetadataProvider =
+                       new MsSqlMetadataProvider(_runtimeConfigProvider,
+                           _queryExecutor,
+                           _queryBuilder,
+                           _sqlMetadataLogger);
+                    break;
+                case DatabaseType.mysql:
+                    _sqlMetadataProvider =
+                       new MySqlMetadataProvider(_runtimeConfigProvider,
+                           _queryExecutor,
+                           _queryBuilder,
+                           _sqlMetadataLogger);
+                    break;
+                case DatabaseType.postgresql:
+                    _sqlMetadataProvider =
+                       new PostgreSqlMetadataProvider(_runtimeConfigProvider,
+                           _queryExecutor,
+                           _queryBuilder,
+                           _sqlMetadataLogger);
+                    break;
+            }
+
+            try
+            {
+                await _sqlMetadataProvider.InitializeAsync();
+            }
+            catch (DataGatewayException ex)
+            {
+                // use contains to correctly cover db/user unique error messaging
+                Assert.IsTrue(ex.Message.Contains(DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE));
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataGatewayException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+            }
         }
     }
 }

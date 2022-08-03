@@ -2,13 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
-using System.Text;
+using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
 using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Models;
 using Microsoft.Extensions.Logging;
 using Action = Azure.DataGateway.Config.Action;
 
@@ -34,8 +33,9 @@ namespace Azure.DataGateway.Service.Configurations
         // of the form @claims.*** delimited by space character,end of the line or end of the string.
         private static readonly string _claimChars = @"@claims\.[^\s\)]*";
 
-        // Set of allowed actions for a request.
-        public static readonly HashSet<string> ValidActions = new() { ActionType.CREATE, ActionType.READ, ActionType.UPDATE, ActionType.DELETE };
+        // actionKey is the key used in json runtime config to
+        // specify the action name.
+        private static readonly string _actionKey = "action";
 
         public RuntimeConfigValidator(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -66,10 +66,13 @@ namespace Azure.DataGateway.Service.Configurations
 
             if (string.IsNullOrWhiteSpace(runtimeConfig.ConnectionString))
             {
-                throw new NotSupportedException($"The Connection String should be provided.");
+                throw new DataGatewayException(
+                    message: DataGatewayException.CONNECTION_STRING_ERROR_MESSAGE,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
-            if (runtimeConfig.DatabaseType == DatabaseType.cosmos)
+            if (runtimeConfig.DatabaseType is DatabaseType.cosmos)
             {
                 if (runtimeConfig.CosmosDb is null)
                 {
@@ -127,16 +130,26 @@ namespace Azure.DataGateway.Service.Configurations
             {
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
                 {
+                    string roleName = permissionSetting.Role;
                     Object[] actions = permissionSetting.Actions;
                     foreach (Object action in actions)
                     {
-                        string actionName;
-                        if (((JsonElement)action).ValueKind == JsonValueKind.String)
+                        if (action is null)
                         {
-                            actionName = action.ToString()!;
-                            // If we have reached this point, it means that we don't have any invalid
-                            // data type in actions. However we need to ensure that the actionName is valid.
-                            ValidateActionName(actionName, entityName, permissionSetting.Role);
+                            throw GetInvalidActionException(entityName, roleName, actionName: "null");
+                        }
+
+                        // Evaluate actionOp as the current operation to be validated.
+                        Operation actionOp;
+                        if (((JsonElement)action!).ValueKind is JsonValueKind.String)
+                        {
+                            string actionName = action.ToString()!;
+                            actionOp = AuthorizationResolver.WILDCARD.Equals(actionName) ? Operation.All : Enum.Parse<Operation>(actionName, ignoreCase: true);
+
+                            if (!IsValidPermissionAction(actionOp))
+                            {
+                                throw GetInvalidActionException(entityName, roleName, actionName);
+                            }
                         }
                         else
                         {
@@ -150,37 +163,56 @@ namespace Azure.DataGateway.Service.Configurations
                             {
                                 throw new DataGatewayException(
                                     message: $"One of the action specified for entity:{entityName} is not well formed.",
-                                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                                     subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
                             }
 
-                            actionName = configAction.Name;
-
+                            actionOp = configAction.Name;
                             // If we have reached this point, it means that we don't have any invalid
-                            // data type in actions. However we need to ensure that the actionName is valid.
-                            ValidateActionName(actionName, entityName, permissionSetting.Role);
-
-                            // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
-                            // don't contain any other field. If they do, we throw an appropriate exception.
-                            if (configAction.Fields!.Include.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Include.Count > 1 ||
-                                configAction.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Exclude.Count > 1)
+                            // data type in actions. However we need to ensure that the actionOp is valid.
+                            if (!IsValidPermissionAction(actionOp))
                             {
-                                string incExc = configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Include.Count > 1 ? "included" : "excluded";
-                                throw new DataGatewayException(
-                                        message: $"No other field can be present with wildcard in the {incExc} set for: entity:{entityName}," +
-                                                 $" role:{permissionSetting.Role}, action:{actionName}",
-                                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                bool isActionPresent = ((JsonElement)action).TryGetProperty(_actionKey,
+                                    out JsonElement actionElement);
+                                if (!isActionPresent)
+                                {
+                                    throw new DataGatewayException(
+                                        message: $"action cannot be omitted for entity: {entityName}, role:{roleName}",
+                                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                                         subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
+                                }
+
+                                throw GetInvalidActionException(entityName, roleName, actionElement.ToString());
                             }
 
-                            if (configAction.Policy is not null && configAction.Policy.Database is not null)
+                            if (configAction.Fields is not null)
                             {
-                                // validate that all the fields mentioned in database policy are accessible to user.
-                                AreFieldsAccessible(configAction.Policy.Database,
-                                    configAction.Fields.Include, configAction.Fields.Exclude);
+                                // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
+                                // don't contain any other field. If they do, we throw an appropriate exception.
+                                if (configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Include.Count > 1 ||
+                                    configAction.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Exclude.Count > 1)
+                                {
+                                    // See if included or excluded columns contain wildcard and another field.
+                                    // If thats the case with both of them, we specify 'included' in error.
+                                    string misconfiguredColumnSet = configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
+                                        && configAction.Fields.Include.Count > 1 ? "included" : "excluded";
+                                    string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
+                                    throw new DataGatewayException(
+                                            message: $"No other field can be present with wildcard in the {misconfiguredColumnSet} set for:" +
+                                            $" entity:{entityName}, role:{permissionSetting.Role}, action:{actionName}",
+                                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                            subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
+                                }
 
-                                // validate that all the claimTypes in the policy are well formed.
-                                ValidateOrProcessClaimsInPolicy(configAction.Policy.Database, true);
+                                if (configAction.Policy is not null && configAction.Policy.Database is not null)
+                                {
+                                    // validate that all the fields mentioned in database policy are accessible to user.
+                                    AreFieldsAccessible(configAction.Policy.Database,
+                                        configAction.Fields.Include, configAction.Fields.Exclude);
+
+                                    // validate that all the claimTypes in the policy are well formed.
+                                    ValidateClaimsInPolicy(configAction.Policy.Database);
+                                }
                             }
                         }
                     }
@@ -219,9 +251,6 @@ namespace Azure.DataGateway.Service.Configurations
                             {
                                 // Remove all the occurences of @item. directive from the policy.
                                 configAction.Policy.Database = ProcessFieldsInPolicy(configAction.Policy.Database);
-
-                                // Remove redundant spaces and parenthesis around claimTypes.
-                                configAction.Policy.Database = ValidateOrProcessClaimsInPolicy(configAction.Policy.Database, false);
                             }
 
                             processedActions.Add(JsonSerializer.SerializeToElement(configAction));
@@ -251,105 +280,41 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Method to do different validations/ pre-process claims in the policy.
-        /// The decision to validate/preprocess is made by the isValidation boolean parameter.
-        /// If isValidation is set to true, we do validation, else pre-process.
+        /// Method to do different validations on claims in the policy.
         /// </summary>
         /// <param name="policy">The policy to be validated and processed.</param>
         /// <returns>Processed policy</returns>
         /// <exception cref="DataGatewayException">Throws exception when one or the other validations fail.</exception>
-        private static string ValidateOrProcessClaimsInPolicy(string policy, bool isValidation)
+        private static void ValidateClaimsInPolicy(string policy)
         {
-            StringBuilder processedPolicy = new();
-            policy = RemoveRedundantSpacesFromPolicy(policy);
-
             // Find all the claimTypes from the policy
             MatchCollection claimTypes = GetClaimTypesInPolicy(policy);
-
-            // parsedIdx indicates the last index in the policy string from which we need to append to the
-            // processedPolicy.
-            int parsedIdx = 0;
 
             foreach (Match claimType in claimTypes)
             {
                 // Remove the prefix @claims. from the claimType
-                string typeOfClaimWithOpenParenthesis = claimType.Value.Substring(AuthorizationResolver.CLAIM_PREFIX.Length);
+                string typeOfClaim = claimType.Value.Substring(AuthorizationResolver.CLAIM_PREFIX.Length);
 
-                //Process typeOfClaimWithParenthesis to remove opening parenthesis.
-                string typeOfClaim = GetClaimTypeWithoutOpeningParenthesis(typeOfClaimWithOpenParenthesis);
-
-                if (isValidation && string.IsNullOrWhiteSpace(typeOfClaim))
+                if (string.IsNullOrWhiteSpace(typeOfClaim))
                 {
                     // Empty claimType is not allowed
                     throw new DataGatewayException(
                         message: $"Claimtype cannot be empty.",
-                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError
                         );
                 }
 
-                if (isValidation && _invalidClaimCharsRgx.IsMatch(typeOfClaim))
+                if (_invalidClaimCharsRgx.IsMatch(typeOfClaim))
                 {
                     // Not a valid claimType containing allowed characters
                     throw new DataGatewayException(
                         message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
-                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError
                         );
                 }
-
-                int claimIdx = claimType.Index;
-
-                if (!isValidation)
-                {
-                    // Add token for the portion of policy string between the current and the previous @claims.*** claimType
-                    // to the processedPolicy.
-                    processedPolicy.Append(policy.Substring(parsedIdx, claimIdx - parsedIdx));
-
-                    // Add token for the claimType to processedPolicy
-                    processedPolicy.Append(AuthorizationResolver.CLAIM_PREFIX + typeOfClaim);
-                }
-
-                // Move the parsedIdx to the index following a claimType in the policy string
-                parsedIdx = claimIdx + claimType.Value.Length;
-
-                // Expected number of closing parenthesis after the claimType,
-                // equal to the number of opening parenthesis before the claimType.
-                int expNumClosingParenthesis = typeOfClaimWithOpenParenthesis.Length - typeOfClaim.Length;
-
-                // Ensure that there are atleast expectedNumClosingParenthesis following a claim type.
-                while (expNumClosingParenthesis > 0)
-                {
-                    if (isValidation && (parsedIdx >= policy.Length || (policy[parsedIdx] != ')' && policy[parsedIdx] != ' ')))
-                    {
-                        // No. of closing parenthesis is less than opening parenthesis,
-                        // which does not form a valid claimType.
-                        throw new DataGatewayException(
-                            message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
-                            statusCode: System.Net.HttpStatusCode.InternalServerError,
-                            subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError
-                            );
-                    }
-
-                    // If the code reaches here, either the character is ')' or ' '.
-                    // If its a ' ', we ignore as it is an extra space.
-                    // If its a ')', we decrement the required closing parenthesis by 1.
-                    if (policy[parsedIdx] == ')')
-                    {
-                        expNumClosingParenthesis--;
-                    }
-
-                    parsedIdx++;
-                }
             } // MatchType claimType
-
-            if (!isValidation && parsedIdx < policy.Length)
-            {
-                // Append if there is still some part of policy string left to be appended to the result.
-                processedPolicy.Append(policy.Substring(parsedIdx));
-            }
-
-            return processedPolicy.ToString();
         }
 
         /// <summary>
@@ -371,7 +336,7 @@ namespace Azure.DataGateway.Service.Configurations
                 {
                     throw new DataGatewayException(
                     message: $"Not all the columns required by policy are accessible.",
-                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
                 }
             }
@@ -412,67 +377,31 @@ namespace Azure.DataGateway.Service.Configurations
         }
 
         /// <summary>
-        /// Helper method to preprocess the policy by replacing "( " with "(", i.e. remove
-        /// extra spaces after opening parenthesis. This will prevent allowed claimTypes
-        /// from being invalidated.
+        /// Helper function to create a DataGatewayException object.
+        /// Called when the actionName is not valid.
         /// </summary>
-        /// <param name="policy"></param>
-        /// <returns>Policy string without redundant spaces.</returns>
-        private static string RemoveRedundantSpacesFromPolicy(string policy)
+        /// <param name="entityName">Name of entity for which invalid action is supplied.</param>
+        /// <param name="roleName">Name of role for which invalid action is supplied.</param>
+        /// <param name="actionName">Name of invalid action.</param>
+        /// <returns></returns>
+        private static DataGatewayException GetInvalidActionException(string entityName, string roleName, string actionName)
         {
-            // Pre-process the policy to replace "( " with "(", i.e. remove
-            // extra spaces after opening parenthesis. This will prevent allowed claimTypes
-            // from being invalidated.
-            string reduntantSpaceRgx = @"\(\s*";
-            return Regex.Replace(policy, reduntantSpaceRgx, "(");
+            return new DataGatewayException(
+                message: $"action:{actionName} specified for entity:{entityName}, role:{roleName} is not valid.",
+                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
         }
 
         /// <summary>
-        /// Helper method to extract the claimType without opening parenthesis from
-        /// the typeOfClaimWithParenthesis.
-        /// </summary>
-        /// <param name="typeOfClaimWithParenthesis">The claimType which potentially has opening parenthesis</param>
-        /// <returns>claimType without opening parenthesis</returns>
-        private static string GetClaimTypeWithoutOpeningParenthesis(string typeOfClaimWithParenthesis)
-        {
-            // Find the index of first non parenthesis character in the claimType
-            int idx = 0;
-            while (idx < typeOfClaimWithParenthesis.Length && typeOfClaimWithParenthesis[idx] == '(')
-            {
-                idx++;
-            }
-
-            return typeOfClaimWithParenthesis.Substring(idx);
-        }
-
-        /// <summary>
-        /// Helper function to throw an exception if the actionName is not valid.
-        /// </summary>
-        /// <param name="actionName">The actionName to be validated.</param>
-        /// <param name="entityName">Name of the entity on which the action is to be executed.</param>
-        /// <exception cref="DataGatewayException">Exception thrown if the actionName is invalid.</exception>
-        private static void ValidateActionName(string actionName, string entityName, string roleName)
-        {
-            if (!IsValidActionName(actionName))
-            {
-                // If the actionName is invalid, we throw an appropriate exception for the same.
-                throw new DataGatewayException(
-                        message: $"One of the action specified for entity:{entityName}, role:{roleName} is not valid.",
-                        statusCode: System.Net.HttpStatusCode.InternalServerError,
-                        subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
-            }
-        }
-
-        /// <summary>
-        /// Returns whether the actionName is a valid
+        /// Returns whether the action is a valid
         /// - Create, Read, Update, Delete (CRUD) operation
-        /// - Wildcard (*)
+        /// - All (*)
         /// </summary>
-        /// <param name="actionName"></param>
-        /// <returns>Boolean value indicating whether the actionName is valid or not.</returns>
-        public static bool IsValidActionName(string actionName)
+        /// <param name="action"></param>
+        /// <returns>Boolean value indicating whether the action is valid or not.</returns>
+        public static bool IsValidPermissionAction(Operation action)
         {
-            return actionName.Equals(AuthorizationResolver.WILDCARD) || ValidActions.Contains(actionName);
+            return action is Operation.All || Action.ValidPermissionActions.Contains(action);
         }
     }
 }

@@ -53,8 +53,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
 
             return new(
                 null,
-                new NameNode($"delete{FormatNameForObject(Singularize(name), configEntity)}"),
-                new StringValueNode($"Delete a {Singularize(name)}"),
+                new NameNode($"delete{FormatNameForObject(name, configEntity)}"),
+                new StringValueNode($"Delete a {name}"),
                 inputValues,
                 new NamedTypeNode(FormatNameForObject(name, configEntity)),
                 fieldDefinitionNodeDirectives

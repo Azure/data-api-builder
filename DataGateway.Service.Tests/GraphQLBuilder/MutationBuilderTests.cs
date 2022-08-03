@@ -595,60 +595,6 @@ type Foo @model {
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"deleteFoo"));
         }
 
-        /// <summary>
-        /// Test to validate that delete mutations are created with singular entity names. Incase the singular name
-        /// is defined for the entity, then the delete mutation should be created with that name. 
-        /// </summary>
-        /// <param name="entityName">Name of the entity for which the delete mutation is being created</param>
-        /// <param name="singularName">Singular name defined for the entity</param>
-        /// <param name="pluralName">Plural name defined for the entity</param>
-        /// <param name="expectedDeleteMutationName">Expected name for the created delete mutation</param>
-        [DataTestMethod]
-        [DataRow("Foos", null, null, "deleteFoo",
-            DisplayName = "Validates delete mutation is created with singular entity name for simple plural name")]
-        [DataRow("Leaves", null, null, "deleteLeaf",
-            DisplayName = "Validates delete mutation is created with singular entity name for indirect plural name")]
-        [DataRow("Herbs", "Plant", "Plants", "deletePlant",
-            DisplayName = "Validates delete mutation is created with defined singular entity name when available")]
-        public void DeleteMutationGenerationWithSingularEntityName(
-                string entityName,
-                string singularName,
-                string pluralName,
-                string expectedDeleteMutationName)
-        {
-
-            Entity entity = (singularName is null || pluralName is null)
-                                ? GenerateEmptyEntity()
-                                : GenerateEntityWithSingularPlural(singularName, pluralName);
-            NameNode node = new(entityName);
-            NamedTypeNode namedNode = new("ID");
-            FieldDefinitionNode idField = new(
-                location: null,
-                name: new NameNode("id"),
-                description: null,
-                directives: Array.Empty<DirectiveNode>(),
-                arguments: Array.Empty<InputValueDefinitionNode>(),
-                type: namedNode);
-
-            ObjectTypeDefinitionNode objectTypeDefinitionNode = new(
-                location: null,
-                name: node,
-                description: null,
-                directives: Array.Empty<DirectiveNode>(),
-                interfaces: Array.Empty<NamedTypeNode>(),
-                fields: new FieldDefinitionNode[] { idField }
-                );
-
-            FieldDefinitionNode deleteMutationNode = DeleteMutationBuilder.Build(
-                name: node,
-                objectTypeDefinitionNode: objectTypeDefinitionNode,
-                configEntity: entity,
-                databaseType: DatabaseType.cosmos);
-
-            Assert.IsNotNull(deleteMutationNode);
-            Assert.AreEqual(expectedDeleteMutationName, deleteMutationNode.Name.Value);
-        }
-
         [DataTestMethod]
         [TestCategory("Mutation Builder - Delete")]
         [TestCategory("Schema Builder - Simple Type")]

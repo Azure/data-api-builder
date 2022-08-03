@@ -7,7 +7,7 @@ trigger:
 - main
 
 jobs:
-- job: Build CI
+- job: Build
   pool:
     vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
 

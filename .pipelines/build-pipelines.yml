@@ -64,11 +64,12 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: 'Creating Nuget Package'
   inputs:
-    command: pack
+    command: custom
+    custom: pack
     buildProperties: 'VersionSuffix="$(packVersionSuffix)"'
     versionSuffix: '$(packVersionSuffix)'
-    arguments: '--configuration $(buildConfiguration) --version-suffix $(packVersionSuffix)'
     packagesToPack: '**/Hawaii.Cli.csproj'
+    arguments: '--configuration $(buildConfiguration) --version-suffix $(packVersionSuffix)'
     packDestination: '$(Build.ArtifactStagingDirectory)'
 
 # # This task will publish the NuGet Package
@@ -86,13 +87,13 @@ steps:
 #     versioningScheme: 'off'
 #     allowPackageConflicts: true
 
-# Upload the nuget file for the current run
-# - task: PublishPipelineArtifact@1
-#   inputs:
-#     targetPath: '$(Pipeline.Workspace)'
-#     artifactName: 'DAB'
-#     artifactType: 'pipeline'
-#     fileSharePath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
+Upload the nuget file for the current run
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(Pipeline.Workspace)'
+    artifactName: 'DAB'
+    artifactType: 'pipeline'
+    fileSharePath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

@@ -81,13 +81,13 @@ jobs:
         $(BuildDate)-$(Build.SourceVersion)
         latest
 
-- job: Publish
+- job: Publish_Nuget
   dependsOn: Build
   pool:
     vmImage: 'windows-latest'
 
   variables:
-    buildConfiguration: 'Release'
+    pipelineStage: 'Debug'  # change it to Release, when nuget package is to be released in nuget artifacts
 
   steps:
   - task: PowerShell@2
@@ -130,6 +130,5 @@ jobs:
   - task: PublishPipelineArtifact@1
     inputs:
       targetPath: '$(Pipeline.Workspace)'
-      artifactName: 'DAB'
       artifactType: 'filepath'
       fileSharePath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'

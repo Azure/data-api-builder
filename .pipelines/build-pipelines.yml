@@ -50,19 +50,19 @@ steps:
     projects: '**/*Tests*.csproj'
     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
-# - task: conficient.VersionReaderTask.version-reader-build-task.VersionReaderTask@2
-#   displayName: 'Generate build variables'
-#   inputs:
-#     searchPattern: '**/Hawaii.Cli.csproj'
-#     variablesPrefix: DAB
-#     buildPrefix: '.'
+- task: conficient.VersionReaderTask.version-reader-build-task.VersionReaderTask@2
+  displayName: 'Generate build variables'
+  inputs:
+    searchPattern: '**/Hawaii.Cli.csproj'
+    variablesPrefix: DAB
+    buildPrefix: '.'
 
 # - task: DotNetCoreCLI@2
 #   displayName: 'Creating Nuget Package'
 #   inputs:
 #     command: pack
-#     # versioningScheme: byEnvVar
-#     # versionEnvVar: 'DAB_VERSION_BUILD'
+#     versioningScheme: byEnvVar
+#     versionEnvVar: 'DAB_VERSION_BUILD'
 #     arguments: '--configuration $(buildConfiguration)'
 #     packagesToPack: '**/Hawaii.Cli.csproj'
 #     packDestination: '$(Build.ArtifactStagingDirectory)'

@@ -65,10 +65,11 @@ steps:
   displayName: 'Creating Nuget Package'
   inputs:
     command: pack
-    buildProperties: 'VersionSuffix="$(packVersionSuffix)"'
-    versionSuffix: '$(packVersionSuffix)'
-    projects: '**/Hawaii.Cli.csproj'
+    # buildProperties: 'VersionSuffix="$(packVersionSuffix)"'
+    # versionSuffix: '$(packVersionSuffix)'
+    # projects: '**/Hawaii.Cli.csproj'
     arguments: '--configuration $(buildConfiguration) --version-suffix $(packVersionSuffix)'
+    packagesToPack: '**/Hawaii.Cli.csproj'
     packDirectory: '$(Build.ArtifactStagingDirectory)'
 
 # # TODO: to publish nuget package to nuget feed when releasing else
@@ -92,7 +93,7 @@ steps:
 # Upload the nuget file for the current run
 - task: PublishPipelineArtifact@1
   inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
+    targetPath: '$(Build.ArtifactStagingDirectory)/*.nupkg'
     artifactName: 'DAB'
     artifactType: 'pipeline'
     # fileSharePath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'

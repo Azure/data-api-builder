@@ -18,7 +18,6 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers
                     }
                     ";
 
-
         public const string BOOKSGQL =
                     @"
                     type Books @model {

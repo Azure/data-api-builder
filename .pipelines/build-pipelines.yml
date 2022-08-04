@@ -8,6 +8,8 @@ trigger:
 
 jobs:
 - job: Build
+  dependsOn: Release_Nuget
+  condition: failed()
   pool:
     vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
 
@@ -127,7 +129,7 @@ jobs:
 
 - job: Release_Nuget
   displayName: Release Nuget Package to Nuget Feed
-  dependsOn: Build
+  # dependsOn: Build
 
   pool:
     vmImage: 'ubuntu-latest'
@@ -135,10 +137,10 @@ jobs:
   variables:
     NugetRelease: false
 
-  condition: eq( $(NugetRelease), true)
+  condition: eq( $(variables.NugetRelease), true)
 
   steps:
-  - script: echo $(NugetRelease)
+  - script: echo $(variables.NugetRelease)
   # - task: UseDotNet@2
   #   displayName: Setup .NET SDK v6.0.x
   #   inputs:

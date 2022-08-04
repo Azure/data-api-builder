@@ -199,7 +199,7 @@ namespace Azure.DataGateway.Service.Models
                 try
                 {
                     Dictionary<string, object?>? fieldValuePairs = JsonSerializer.Deserialize<Dictionary<string, object?>>(payload);
-                    if (fieldValuePairs != null)
+                    if (fieldValuePairs is not null)
                     {
                         FieldValuePairsInBody = fieldValuePairs;
                     }

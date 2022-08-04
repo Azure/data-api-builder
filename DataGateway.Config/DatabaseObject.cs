@@ -60,8 +60,7 @@ namespace Azure.DataGateway.Config
 
     public class ParameterDefinition
     {
-        public string? SqlDataType { get; set; }
-        public Type? SystemType { get; set; }
+        public Type SystemType { get; set; } = null!;
         public bool HasConfigDefault { get; set; }
         public object? ConfigDefaultValue { get; set; }
     }

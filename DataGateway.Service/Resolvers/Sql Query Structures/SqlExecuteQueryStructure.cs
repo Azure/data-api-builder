@@ -7,6 +7,9 @@ using Azure.DataGateway.Service.Services;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
+    ///<summary>
+    /// Wraps all the required data and logic to write a SQL EXECUTE query
+    ///</summary>
     public class SqlExecuteStructure : BaseSqlQueryStructure
     {
         // Holds the final, resolved parameters that will be passed when building the execute stored procedure query
@@ -49,8 +52,9 @@ namespace Azure.DataGateway.Service.Resolvers
                             subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
                 }
+                // Fill with default value from runtime config
                 else
-                { // Fill with default value
+                {   
                     if (paramDefinition.HasConfigDefault)
                     {
                         string parameterizedName = MakeParamWithValue(paramDefinition.ConfigDefaultValue);
@@ -73,7 +77,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// Gets the value of the parameter cast as the system type
         /// of the stored procedure parameter this parameter is associated with
         /// </summary>
-        protected object GetParamAsProcedureParameterType(string param, string procParamName)
+        private object GetParamAsProcedureParameterType(string param, string procParamName)
         {
             Type systemType = GetUnderlyingStoredProcedureDefinition().Parameters[procParamName].SystemType!;
             try

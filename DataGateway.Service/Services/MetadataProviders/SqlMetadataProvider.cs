@@ -226,7 +226,6 @@ namespace Azure.DataGateway.Service.Services
 
             // Each row in the procedureParams DataTable corresponds to a single parameter
             DataTable parameterMetadata = await conn.GetSchemaAsync(collectionName: "ProcedureParameters", restrictionValues: procedureRestrictions);
-            Dictionary<string, JValue>? configParameters = procedureEntity.GetSourceObject().Parameters;
 
             // For each row/parameter, add an entry to StoredProcedureDefinition.Parameters dictionary
             foreach (DataRow row in parameterMetadata.Rows)
@@ -235,7 +234,6 @@ namespace Azure.DataGateway.Service.Services
                 storedProcedureDefinition.Parameters.Add(((string)row["PARAMETER_NAME"])[1..],
                     new()
                     {
-                        SqlDataType = (string)row["DATA_TYPE"],
                         SystemType = SqlToCLRType((string)row["DATA_TYPE"]),
                     }
                 );
@@ -243,6 +241,7 @@ namespace Azure.DataGateway.Service.Services
 
             // Loop through parameters specified in config, throw error if not found in schema or type mismatch,
             // else set runtime config defined default values.
+            Dictionary<string, JValue>? configParameters = procedureEntity.GetSourceObject().Parameters;
             if (configParameters is not null)
             {
                 foreach ((string configParamKey, JValue configParamValue) in configParameters)

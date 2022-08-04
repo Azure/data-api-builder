@@ -57,9 +57,9 @@ steps:
     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
 - task: ShellScript@2
-  displayName: "Publish projects to mutliple platform"
+  displayName: "Package build output to mutliple platforms"
   inputs:
-    scriptPath: publish.sh
+    scriptPath: publish.sh $(buildConfiguration)
 
 # this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
 - task: PublishPipelineArtifact@1

@@ -136,7 +136,7 @@ The following HTTP verbs are supported:
 
 - `GET`: return one or more items
 - `POST`: create a new item
-- `PUT`: update or create an item
+- `PUT` `PATCH`: update or create an item
 - `DELETE`: delete an item
 
 Whenver you need to access a single item, you can get the item you want by specifying its primary key:

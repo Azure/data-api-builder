@@ -61,13 +61,12 @@ jobs:
       packagesToPack: '**/Hawaii.Cli.csproj'
       packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
 
-  # Upload the nuget file for the current run
   - task: PublishPipelineArtifact@1
+    displayName: 'Publish nuget package for the current build'
     inputs:
       targetPath: '$(Build.ArtifactStagingDirectory)/nupkg'
       artifactName: 'DAB_nuget_package'
       artifactType: 'pipeline'
-
 
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish code coverage'

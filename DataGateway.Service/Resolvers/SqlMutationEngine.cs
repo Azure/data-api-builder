@@ -165,7 +165,13 @@ namespace Azure.DataGateway.Service.Resolvers
                     }
                     else
                     {   // If no result set returned, just return a 201 Created with empty array instead of array with single null value
-                        return new CreatedResult(location: context.EntityName, JsonDocument.Parse("[]").RootElement.Clone());
+                        return new CreatedResult(
+                            location: context.EntityName,
+                            value: new
+                            {
+                                value = JsonDocument.Parse("[]").RootElement.Clone()
+                            }
+                        );
                     }
                 case Operation.Update:
                 case Operation.UpdateIncremental:
@@ -180,7 +186,12 @@ namespace Azure.DataGateway.Service.Resolvers
                     else
                     {
                         // If no result set returned, return 200 Ok response with empty array instead of array with single null value
-                        return new OkObjectResult(JsonDocument.Parse("[]").RootElement.Clone());
+                        return new OkObjectResult(
+                            value: new
+                            {
+                                value = JsonDocument.Parse("[]").RootElement.Clone()
+                            }
+                        );
                     }
 
                 default:

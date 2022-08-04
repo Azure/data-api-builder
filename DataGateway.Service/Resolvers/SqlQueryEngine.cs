@@ -303,7 +303,7 @@ namespace Azure.DataGateway.Service.Resolvers
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
             Dictionary<string, object> resultRecord;
             JsonArray resultArray = new();
-            
+
             while ((resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader)) is not null)
             {
                 JsonElement result = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(resultRecord));

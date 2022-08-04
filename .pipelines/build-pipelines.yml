@@ -8,8 +8,6 @@ trigger:
 
 jobs:
 - job: Build
-  dependsOn: Release_Nuget
-  condition: failed()
   pool:
     vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
 
@@ -73,23 +71,6 @@ jobs:
       packagesToPack: '**/Hawaii.Cli.csproj'
       packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
 
-  # # TODO: to publish nuget package to nuget feed when releasing else
-  # # publish to pipeline artifact.
-  # # This task will publish the NuGet Package
-  # - task: NuGetAuthenticate@0
-  #   displayName: 'NuGet Authenticate'
-  # - task: NuGetCommand@2
-  #   displayName: 'NuGet push'
-  #   inputs:
-  #     command: 'push'
-  #     feedsToUse: 'select'
-  #     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
-  #     nuGetFeedType: 'internal'
-  #     vstsFeed: CosmosDB/Hawaii_Packages
-  #     publishVstsFeed: CosmosDB/Hawaii_Packages
-  #     versioningScheme: 'off'
-  #     allowPackageConflicts: true
-
   # Upload the nuget file for the current run
   - task: PublishPipelineArtifact@1
     inputs:
@@ -129,28 +110,37 @@ jobs:
 
 - job: Release_Nuget
   displayName: Release Nuget Package to Nuget Feed
-  # dependsOn: Build
+  dependsOn: Build
 
   pool:
     vmImage: 'ubuntu-latest'
 
   variables:
-    NugetRelease: true
+    NugetRelease: false # change it to true when releasing the nuget package to feed.
 
-  # condition: and( eq($[Build.SourceBranchName], 'main' ), eq(variables.NugetRelease, true))
-  condition: and( eq(variables['System.PullRequest.SourceBranch'], 'dev/abhishekkuma/nuget-publishing'), eq(variables.NugetRelease, true))
+  condition: and( eq(variables['System.PullRequest.SourceBranch'], 'main'), eq(variables.NugetRelease, true))
 
   steps:
-  - bash: echo $(System.PullRequest.SourceBranch)
-  # - task: UseDotNet@2
-  #   displayName: Setup .NET SDK v6.0.x
-  #   inputs:
-  #     packageType: sdk
-  #     version: 6.0.x
-  #     installationPath: $(Agent.ToolsDirectory)/dotnet
+  - task: DotNetCoreCLI@2
+    displayName: 'Creating Nuget Package for Release'
+    inputs:
+      command: pack
+      verbosityPack: 'minimal'
+      packagesToPack: '**/Hawaii.Cli.csproj'
+      packDirectory: '$(Build.ArtifactStagingDirectory)'
 
-  # - task: NuGetToolInstaller@1
-
-  # - task: NuGetCommand@2
-  #   inputs:
-  #     restoreSolution: '$(solution)'
+  # This task will publish the NuGet Package
+  # To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.
+  - task: NuGetAuthenticate@0
+    displayName: 'NuGet Authenticate'
+  - task: NuGetCommand@2
+    displayName: 'NuGet push'
+    inputs:
+      command: 'push'
+      feedsToUse: 'select'
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+      nuGetFeedType: 'internal'
+      vstsFeed: CosmosDB/Hawaii_Packages
+      publishVstsFeed: CosmosDB/Hawaii_Packages
+      versioningScheme: 'off'
+      allowPackageConflicts: false

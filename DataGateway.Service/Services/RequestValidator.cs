@@ -446,19 +446,20 @@ namespace Azure.DataGateway.Service.Services
         }
 
         /// <summary>
-        /// Tries to get the stored procedure definition for the given entity from the Metadata provider.
+        /// Tries to get the stored procedure definition for the given entity
+        /// Throws a DataGatewayException to return Bad Request to client instead of Unexpected Error
+        /// Useful for accessing the definition within the request pipeline
         /// </summary>
         private static StoredProcedureDefinition TryGetStoredProcedureDefinition(string entityName, ISqlMetadataProvider sqlMetadataProvider)
         {
             try
             {
-                StoredProcedureDefinition storedProcedureDefinition = sqlMetadataProvider.GetStoredProcedureDefinition(entityName);
-                return storedProcedureDefinition;
+                return sqlMetadataProvider.GetStoredProcedureDefinition(entityName);
             }
-            catch (KeyNotFoundException)
+            catch (InvalidCastException)
             {
                 throw new DataGatewayException(
-                    message: $"StoredProcedureDefinition for entity: {entityName} does not exist.",
+                    message: $"Underlying database object for entity {entityName} does not exist.",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }

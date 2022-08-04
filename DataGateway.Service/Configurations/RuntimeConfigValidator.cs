@@ -33,9 +33,6 @@ namespace Azure.DataGateway.Service.Configurations
         // of the form @claims.*** delimited by space character,end of the line or end of the string.
         private static readonly string _claimChars = @"@claims\.[^\s\)]*";
 
-        // Set of allowed actions for a request.
-        public static readonly HashSet<Operation> ValidPermissionActions = new() { Operation.Create, Operation.Read, Operation.Update, Operation.Delete };
-
         // actionKey is the key used in json runtime config to
         // specify the action name.
         private static readonly string _actionKey = "action";
@@ -404,7 +401,7 @@ namespace Azure.DataGateway.Service.Configurations
         /// <returns>Boolean value indicating whether the action is valid or not.</returns>
         public static bool IsValidPermissionAction(Operation action)
         {
-            return action is Operation.All || ValidPermissionActions.Contains(action);
+            return action is Operation.All || Action.ValidPermissionActions.Contains(action);
         }
     }
 }

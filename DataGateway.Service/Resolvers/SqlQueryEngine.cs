@@ -14,6 +14,7 @@ using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
@@ -27,6 +28,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private readonly IQueryBuilder _queryBuilder;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationResolver _authorizationResolver;
+        private readonly ILogger<SqlQueryEngine> _logger;
 
         // <summary>
         // Constructor.
@@ -36,13 +38,15 @@ namespace Azure.DataGateway.Service.Resolvers
             IQueryBuilder queryBuilder,
             ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
-            IAuthorizationResolver authorizationResolver)
+            IAuthorizationResolver authorizationResolver,
+            ILogger<SqlQueryEngine> logger)
         {
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
             _sqlMetadataProvider = sqlMetadataProvider;
             _httpContextAccessor = httpContextAccessor;
             _authorizationResolver = authorizationResolver;
+            _logger = logger;
         }
 
         public static async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader, IQueryExecutor executor)
@@ -96,7 +100,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider, _authorizationResolver);
             string queryString = _queryBuilder.Build(structure);
-            Console.WriteLine(queryString);
+            _logger.LogInformation(queryString);
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
 
             // Parse Results into Json and return
@@ -264,8 +268,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             // Open connection and execute query using _queryExecutor
             string queryString = _queryBuilder.Build(structure);
-            Console.WriteLine(queryString);
-
+            _logger.LogInformation(queryString);
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
             JsonDocument jsonDocument = null;
 
@@ -280,7 +283,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else
             {
-                Console.WriteLine("Did not return enough rows in the JSON result.");
+                _logger.LogInformation("Did not return enough rows in the JSON result.");
             }
 
             return jsonDocument;

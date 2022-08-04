@@ -114,7 +114,7 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
             return false;
         }
 
-        if (roles.Any(role => role.Equals(clientRoleHeader, StringComparison.Ordinal)))
+        if (roles.Any(role => role.Equals(clientRoleHeader, StringComparison.InvariantCultureIgnoreCase)))
         {
             return true;
         }

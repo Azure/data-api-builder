@@ -31,15 +31,11 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
         /// <param name="errorExpected">bool whether an error is expected</param>
         /// <param name="expectedErrorMessageFragment">string value of message frament to search for in error.</param>
         /// <returns></returns>
-        // Unauthenticated Request accessing field stamped with @authorize directive -> NotAuthenticatedError
-        // Authenticated Request accessing field stamped with @authorize directive but no clientRoleHeader -> NotAllowed Error
-        // Authenticated Request accessing field stamped with @authorize directive with clientRoleHeader NOT present in directive roles -> NotAllowed Error
-        // Authenticated Request accessing field stamped with @authorize directive with clientRoleHeader present in directive roles -> Allowed
         [TestMethod]
         [DataRow(false, "anonymous", true, "The current user is not authorized to access this resource.", DisplayName = "Unauthenticated request to field with @authorize directive")]
         [DataRow(true, "", true, "The current user is not authorized to access this resource.", DisplayName = "Authenticated, no client role header, accessing to field with @authorize directive")]
         [DataRow(true, "RoleNotDefinedForEntity", true, "The current user is not authorized to access this resource.", DisplayName = "Authenticated, clientRoleHeader does not match @authorize directive.")]
-        [DataRow(true, "AuthorizationHandlerTester", true, "The current user is not authorized to access this resource.", DisplayName = "Authenticated access to field with @authorize directive, invalid clientRoleHeader due to case sensitivity")]
+        [DataRow(true, "AuthorizationHandlerTester", false, "", DisplayName = "Authenticated access to field with @authorize directive, valid clientRoleHeader due to case insensitivity")]
         [DataRow(true, "authorizationHandlerTester", false, "", DisplayName = "Authenticated access to field with @authorize directive, valid clientRoleHeader")]
         public async Task FieldAuthorizationProcessing(bool isAuthenticated, string clientRoleHeader, bool errorExpected, string expectedErrorMessageFragment)
         {

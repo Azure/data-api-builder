@@ -59,7 +59,8 @@ steps:
 - task: ShellScript@2
   displayName: "Package build output to mutliple platforms"
   inputs:
-    scriptPath: publish.sh $(buildConfiguration)
+    scriptPath: publish.sh
+    args: $(buildConfiguration)
 
 # this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
 - task: PublishPipelineArtifact@1

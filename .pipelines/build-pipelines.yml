@@ -52,21 +52,21 @@ jobs:
       projects: '**/*Tests*.csproj'
       arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
-  - task: PowerShell@2
-    displayName: 'Set versionSuffix'
-    inputs:
-      targetType: 'inline'
-      script: |
-          $packVersionSuffix = "$(Build.SourceBranchName).$(Build.BuildId)"
-          echo "packVersionSuffix is: ${packVersionSuffix}"
-          # This sets the variable in the whole pipeline
-          echo "##vso[task.setvariable variable=packVersionSuffix]$packVersionSuffix"
+  # - task: PowerShell@2
+  #   displayName: 'Set versionSuffix'
+  #   inputs:
+  #     targetType: 'inline'
+  #     script: |
+  #         $packVersionSuffix = "$(Build.BuildId)"
+  #         echo "packVersionSuffix is: ${packVersionSuffix}"
+  #         # This sets the variable in the whole pipeline
+  #         echo "##vso[task.setvariable variable=packVersionSuffix]$packVersionSuffix"
 
   - task: DotNetCoreCLI@2
     displayName: 'Creating Nuget Package'
     inputs:
       command: pack
-      buildProperties: 'VersionSuffix="$(packVersionSuffix)"'
+      buildProperties: 'VersionSuffix="$(Build.BuildId)"'
       verbosityPack: 'minimal'
       packagesToPack: '**/Hawaii.Cli.csproj'
       packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'

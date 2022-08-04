@@ -141,9 +141,9 @@ Whenver you need to access a single item, you can get the item you want by speci
 GET /api/Book/id/1000
 ```
 
-The ability to filter by primary key is supported by all verbs with the exception of POST as that verb is used to create a new iteam and therefore searching an item by its primary key is not applicable.
+The ability to filter by primary key is supported by all verbs with the exception of POST as that verb is used to create a new item and therefore searching an item by its primary key is not applicable.
 
-The GET verbs also support several query parameters that allows you to manipulate and refine the requested data:
+The GET verb also supports several query parameters that allow you to manipulate and refine the requested data:
 - `$orderby`: defines how the returned data will be sorted
 - `$first`: returns only the top `n` items
 - `$filter`: filters the returned items

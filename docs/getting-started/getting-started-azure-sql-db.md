@@ -2,7 +2,7 @@
 
 Make sure you have read the [Getting Started](getting-started.md) document.
 
-As mentioned before, this tutorial assumes that you have already a SQL Server or an Azure SQL database that can used as playground.
+As mentioned before, this tutorial assumes that you already have a SQL Server or an Azure SQL database that can be used as playground.
 
 ## Get the database connection string
 
@@ -18,17 +18,17 @@ Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<pass
 To connect to a local SQL Server, for example:
 
 ```
-Server=localhost;Database=Library;User ID=dab_user;Password=StrongP@ssw0rd!;TrustServerCertificate=true
+Server=localhost;Database=Library;User ID=dab_user;Password=<password>;TrustServerCertificate=true
 ```
 
-More details on Azure SQL and SQL Server connection strings can be found here: https://docs.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax?view=sql-server-ver16
+More details on Azure SQL and SQL Server connection strings can be found here: https://docs.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax
 
 Once you have your connection string, add it to the configuration file you have created before. It will look like the following (if you are using a local SQL Server):
 
 ```json
 "data-source": {
     "database-type": "mssql",
-    "connection-string": "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=StrongP@ssw0rd!;TrustServerCertificate=true"
+    "connection-string": "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=<Password>;TrustServerCertificate=true"
 }
 ```
 
@@ -146,10 +146,10 @@ The ability to filter by primary key is supported by all verbs with the exceptio
 The GET verbs also support several query parameters that allows you to manipulate and refine the requested data:
 - `$orderby`: defines how the returned data will be sorted
 - `$first`: returns only the top `n` items
-- `$filter`: filter the returned items
-- `$select`: return only the selected columns
+- `$filter`: filters the returned items
+- `$select`: returns only the selected columns
 
-For more details on how they can be used, read refer to the [REST documentation](./docs/REST.md)
+For more details on how they can be used, refer to the [REST documentation](./docs/REST.md)
 
 ### GraphQL endpoint
 
@@ -182,7 +182,7 @@ Stop the engine and go back to the `library.config.json` and add the `relationsh
 
 ```json
 "relationships": {
-    "Books": {
+    "books": {
         "cardinality": "many",
         "target.entity": "Book",
         "linking.object": "dbo.books_authors"
@@ -190,10 +190,10 @@ Stop the engine and go back to the `library.config.json` and add the `relationsh
 }
 ```
 
-The element under `relationship` is used to add a field - `books` in the sample - to the generated GraphQL object, so that one will be able to navigate the relationship between an Author and its Books. Within the `Books` object there are three fields:
+The element under `relationship` is used to add a field - `books` in the sample - to the generated GraphQL object, so that one will be able to navigate the relationship between an Author and its Books. Within the `books` object there are three fields:
 
 - `cardinality`: set to `many` as an Author can be associated with more than one Book
-- `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample is `Book` as we are creating the relationship on the `Author` enntity.
+- `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample is `Book` as we are creating the relationship on the `Author` entity.
 - `linking.object`: the database table used to support the many-to-many relationship. That table is the `dbo.books_authors`.
 
 Data API Builder will automatically figure out what are the columns that are used to support the relationship between all the involved parts by analyzing the forieng keys constratins that exist between the involved tables. For this reason the configuration is done! (If you don't have foreign keys you can always manually specify the columns you want to use to navigate from one table to another. More on this in the [Relationships](relationships.md) document)
@@ -210,7 +210,7 @@ The `Author` entity shuold now look like the following:
         }
     ],
     "relationships": {
-        "Books": {
+        "books": {
             "cardinality": "many",
             "target.entity": "Book",
             "linking.object": "dbo.books_authors"
@@ -233,7 +233,7 @@ as we also want to enable quering a Book and getting its authors, we need to als
         }
     ],
     "relationships": {
-        "Authors": {
+        "authors": {
             "cardinality": "many",
             "target.entity": "Author",
             "linking.object": "dbo.books_authors"

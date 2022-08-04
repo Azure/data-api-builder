@@ -51,20 +51,20 @@ The content of the file is the following:
 
 Aside the `$schema` property that points to the JSON schema that can be used to validate the configuration file, and that will be used by IDE like Visual Studio Code to provide intellisense and autocomplete, there are a few other properties that you need to know.
 
-In the `data-source` section you have to specifiy the database type and the connection string to connect to the database containing the objects you want to expose.
+In the `data-source` section you have to specify the database type and the connection string to connect to the database containing the objects you want to expose.
 
 `database-type` can be any of the following:
 - `mssql`: for Azure SQL DB, Azure SQL MI or SQL Server
-- `cosmosdb`: for Azure Cosmos DB
+- `cosmos`: for Azure Cosmos DB
 - `postgresql`: for PostgreSQL
 - `mariadb`: for MariaDB
 - `mysql`: for MySQL
 
-Set the value of `database-type` to the database you plan to use. For this tutorial we'll be using `mssql` or `cosmosdb` to showcase both the relational and non-relational support.
+Set the value of `database-type` to the database you plan to use. For this tutorial we'll be using `mssql` or `cosmos` to showcase both the relational and non-relational support.
 
 Once you have chosen the database you want to connect to, you need to provide the connection string in the `connection-string` property. This is a standard ADO.NET connection string for the database you'll be using and you can get it from the Azure Portal, for example. If don't know the connection string, no worries, we'll take care of that later.
 
-The `runtime` section is telling Data API builder to run in `development` mode. This means database errors will be surfaced and returned with full detail. This is great for development, but can be a security risk when running in production: that's why swithing to `production` mode will disable this ability.
+The `runtime` section is telling Data API builder to run in `development` mode. This means database errors will be surfaced and returned with full detail. This is great for development, but can be a security risk when running in production: that's why switching to `production` mode will disable this ability.
 
 The remaining property is the `entities` property and it is empty for now. This propety will contain all the object you want to be exposed as REST or GraphQL endpoints.
 

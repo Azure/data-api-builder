@@ -279,7 +279,7 @@ When testing out the API, take note of the service root URI displayed in the win
 
 When manually testing the API with postman, this is the beginning of the uri that will contain your request. You must also include the route, and any desired query strings. Request expectations can be found in [Microsoft REST API Guidelines]( https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md).
 
-- For example, to invoke a FindMany on the Table "Books" and retrieve the "id" and "title" we would have do a GET request on uri `https://localhost:5001/books/?_f=id,title`
+- For example, to invoke a FindMany on the Table "Books" and retrieve the "id" and "title" we would have do a GET request on uri `https://localhost:5001/books/?_select=id,title`
 
 #### Debugging
 
@@ -287,7 +287,7 @@ To see code execution flow, the first place to start would be to set breakpoints
 
 ## Using Docker Containers
 
-Instructions for using Docker containers can be found under [docs/GetStarted.md](./GetStarted.md)
+Instructions for using Docker containers can be found under [docs/internals/GetStarted.md](./GetStarted.md)
 
 ### Contributing
 

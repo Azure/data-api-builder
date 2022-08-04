@@ -64,7 +64,7 @@ Start by adding the `author` entity:
 
 within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL). The name `author`, in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case is `dbo.authors`.
 
-> **NOTE**: Entities names are case sensitive and they will exposed via REST and GraphQL as you have typed them.
+> **NOTE**: Entities names are case sensitive and they will be exposed via REST and GraphQL as you have typed them.
 
 After that, you need to specify the permission for the exposed entity, so that you can be sure only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial we're just allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `author` entity.
 
@@ -202,7 +202,7 @@ The element under `relationship` is used to add a field - `books` in the sample 
 
 Data API Builder will automatically figure out what are the columns that are used to support the relationship between all the involved parts by analyzing the forieng keys constratins that exist between the involved tables. For this reason the configuration is done! (If you don't have foreign keys you can always manually specify the columns you want to use to navigate from one table to another. More on this in the [relationships documentation](relationships.md))
 
-The `Author` entity should now look like the following:
+The `author` entity should now look like the following:
 
 ```json
 "author": {

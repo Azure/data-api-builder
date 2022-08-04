@@ -174,16 +174,43 @@ namespace Azure.DataGateway.Service.Services
             switch (operationType)
             {
                 case Operation.Read:
-                    return await context.DispatchExecute(_queryEngine);
+                    return await DispatchQuery(context);
                 case Operation.Insert:
                 case Operation.Delete:
                 case Operation.Update:
                 case Operation.UpdateIncremental:
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
-                    return await context.DispatchExecute(_mutationEngine);
+                    return await DispatchMutation(context);
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
+            };
+        }
+
+        /// <summary>
+        /// Dispatch execution of a request context to the query engine
+        /// The two overloads to ExecuteAsync take FindRequestContext and StoredProcedureRequestContext
+        /// </summary>
+        private Task<IActionResult> DispatchQuery(RestRequestContext context)
+        {
+            return context switch
+            {
+                FindRequestContext => _queryEngine.ExecuteAsync((FindRequestContext)context),
+                StoredProcedureRequestContext => _queryEngine.ExecuteAsync((StoredProcedureRequestContext)context),
+                _ => throw new NotSupportedException("This operation is not yet supported."),
+            };
+        }
+
+        /// <summary>
+        /// Dispatch execution of a request context to the mutation engine
+        /// The two overloads to ExecuteAsync take StoredProcedureRequestContext and RestRequestContext
+        /// </summary>
+        private Task<IActionResult?> DispatchMutation(RestRequestContext context)
+        {
+            return context switch
+            {
+                StoredProcedureRequestContext => _mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context),
+                _ => _mutationEngine.ExecuteAsync(context)
             };
         }
 

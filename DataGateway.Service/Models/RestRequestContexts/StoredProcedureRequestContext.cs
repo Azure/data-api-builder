@@ -1,10 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Resolvers;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Models
 {
@@ -60,24 +57,6 @@ namespace Azure.DataGateway.Service.Models
             {
                 ResolvedParameters = FieldValuePairsInBody;
             }
-        }
-
-        /// <summary>
-        /// Implements the visitor pattern/double dispatch
-        /// Helps avoid dynamic cast or downcast in SqlQueryEngine
-        /// </summary>
-        public override Task<IActionResult> DispatchExecute(IQueryEngine _queryEngine)
-        {
-            return _queryEngine.ExecuteAsync(this);
-        }
-
-        /// <summary>
-        /// Implements the visitor pattern/double dispatch
-        /// Helps avoid dynamic cast or downcast in SqlMutationEngine
-        /// </summary>
-        public override Task<IActionResult?> DispatchExecute(IMutationEngine _mutationEngine)
-        {
-            return _mutationEngine.ExecuteAsync(this);
         }
 
     }

@@ -1,7 +1,4 @@
-using System.Threading.Tasks;
 using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Resolvers;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataGateway.Service.Models
 {
@@ -25,9 +22,5 @@ namespace Azure.DataGateway.Service.Models
             OperationType = Operation.Read;
         }
 
-        public override async Task<IActionResult> DispatchExecute(IQueryEngine _queryEngine)
-        {
-            return await _queryEngine.ExecuteAsync(this);
-        }
     }
 }

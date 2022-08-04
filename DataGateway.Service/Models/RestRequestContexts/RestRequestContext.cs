@@ -105,24 +105,6 @@ namespace Azure.DataGateway.Service.Models
         public ISet<string> CumulativeColumns { get; } = new HashSet<string>();
 
         /// <summary>
-        /// Visitor pattern/double dispatch strategy for execution of a request context by the query engine
-        /// Not all children need to implement this, only Find and StoredProcedure requests
-        /// </summary>
-        public virtual Task<IActionResult> DispatchExecute(IQueryEngine _queryEngine)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Visitor pattern/double dispatch strategy for execution of a request context by the mutation engine
-        /// Not all children need to implement this, so virtual implementation is provided
-        /// </summary>
-        public virtual Task<IActionResult?> DispatchExecute(IMutationEngine _mutationEngine)
-        {
-            return _mutationEngine.ExecuteAsync(this);
-        }
-
-        /// <summary>
         /// Populates the CumulativeColumns property with a unique list
         /// of all columns present in a request. Primarily used
         /// for authorization purposes.

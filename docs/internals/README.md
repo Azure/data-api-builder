@@ -287,11 +287,11 @@ To see code execution flow, the first place to start would be to set breakpoints
 
 ## Using Docker Containers
 
-Instructions for using Docker containers can be found under [docs/GetStarted.md](https://github.com/Azure/hawaii-gql/blob/main/docs/GetStarted.md)
+Instructions for using Docker containers can be found under [docs/GetStarted.md](./GetStarted.md)
 
 ### Contributing
 
-If you wish to contribute to this project please see [Contributing.md](https://github.com/Azure/hawaii-gql/blob/main/CONTRIBUTING.md)
+If you wish to contribute to this project please see [Contributing.md](../../CONTRIBUTING.md)
 
 ## Trademarks
 

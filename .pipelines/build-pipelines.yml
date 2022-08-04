@@ -50,6 +50,54 @@ steps:
     projects: '**/*Tests*.csproj'
     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
+- task: PowerShell@2
+  displayName: 'Set versionSuffix'
+  inputs:
+    targetType: 'inline'
+    script: |
+         $packVersionSuffix = "$(Build.SourceBranchName).$(Build.BuildId)"
+         echo "packVersionSuffix is: ${packVersionSuffix}"
+         # This sets the variable in the whole pipeline
+         echo "##vso[task.setvariable variable=packVersionSuffix]$packVersionSuffix"
+
+# TODO: conditional versioning of nuget package for release and build pipeline
+- task: DotNetCoreCLI@2
+  displayName: 'Creating Nuget Package'
+  inputs:
+    command: custom
+    custom: pack
+    buildProperties: 'VersionSuffix="$(packVersionSuffix)"'
+    versionSuffix: '$(packVersionSuffix)'
+    packagesToPack: '**/Hawaii.Cli.csproj'
+    arguments: '--configuration $(buildConfiguration) --version-suffix $(packVersionSuffix)'
+    packDestination: '$(Build.ArtifactStagingDirectory)'
+
+# # TODO: to publish nuget package to nuget feed when releasing else
+# # publish to pipeline artifact.
+# # This task will publish the NuGet Package
+# - task: NuGetAuthenticate@0
+#   displayName: 'NuGet Authenticate'
+# - task: NuGetCommand@2
+#   displayName: 'NuGet push'
+#   inputs:
+#     command: 'push'
+#     feedsToUse: 'select'
+#     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+#     nuGetFeedType: 'internal'
+#     vstsFeed: CosmosDB/Hawaii_Packages
+#     publishVstsFeed: CosmosDB/Hawaii_Packages
+#     versioningScheme: 'off'
+#     allowPackageConflicts: true
+
+# TODO: below task is only supported on windows machine
+# Upload the nuget file for the current run
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
+    artifactName: 'DAB'
+    artifactType: 'pipeline'
+    # fileSharePath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
+
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

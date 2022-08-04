@@ -220,7 +220,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 throw new DataGatewayException(
                     message: $"No stored procedure definition found for the given database object {storedProcedureName}",
-                    statusCode: System.Net.HttpStatusCode.NotImplemented,
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
@@ -237,12 +237,12 @@ namespace Azure.DataGateway.Service.Services
                     {
                         SqlDataType = (string)row["DATA_TYPE"],
                         SystemType = SqlToCLRType((string)row["DATA_TYPE"]),
-                        ParameterMode = (string)row["PARAMETER_MODE"]
                     }
                 );
             }
 
-            // Loop through parameters specified in config, throw error if not found in schema or type mismatch, else set default values
+            // Loop through parameters specified in config, throw error if not found in schema or type mismatch,
+            // else set runtime config defined default values.
             if (configParameters is not null)
             {
                 foreach ((string configParamKey, JValue configParamValue) in configParameters)
@@ -252,7 +252,7 @@ namespace Azure.DataGateway.Service.Services
                     {
                         throw new DataGatewayException(
                             message: $"Could not find parameter \"{configParamKey}\" specified in config for procedure \"{schemaName}.{storedProcedureName}\"",
-                            statusCode: System.Net.HttpStatusCode.NotImplemented,
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
                     }
                     // Deserialization labels all integers as Int64, no need to type mismatch on initialization
@@ -262,7 +262,7 @@ namespace Azure.DataGateway.Service.Services
                         throw new DataGatewayException(
                             message: $"Type mismatch between parameters specified in config and those found in schema for stored procedure \"{schemaName}.{storedProcedureName}\": " +
                             $"expected {parameterDefinition.SystemType}, got {configParamValueType} for param \"{configParamKey}\"",
-                            statusCode: System.Net.HttpStatusCode.NotImplemented,
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
                     }
                     else

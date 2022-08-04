@@ -83,6 +83,7 @@ Justification **for** allowing permission configuration for all CRUD operations:
 - Davide: the "simplification" would complicate authorization with no real benefit. True in that the authorization logic would need to change conditioned on whether the entity source was a stored procedure.
 - Aniruddh: we should leave the responsibility for the developer to properly configure hawaii; it's not our fault if they configure against the API guidelines 
 
+**Conclusion**: we treat stored procedures as any other entity when it comes to CRUD support and role/action AuthZ.
 ## Implementation Overview
 
 Implementation was segmented into 5 main sections:
@@ -92,7 +93,7 @@ Implementation was segmented into 5 main sections:
 > - Exposing the `DatabaseObjectSource` object rather than `source` being a simple string.
 > - Stored procedures must be specified as "stored-procedure" source type
 >     - See [sample source config](#sample-source)
-> - Unfortunately, System.Text.Json does not support Kebab-casing for string to enum conversion. As such, Newtonsoft is used for deserialization. 
+> - Unfortunately, System.Text.Json does not natively support Kebab-casing for converting hyphenated strings ("stored-procedure") to a CamelCase enum (StoredProcedure). As such, Newtonsoft is used for deserialization. If we want to migrate to System.Text.Json, we either need to change the spec and only accept non-hyphenated strings or write our own custom string-to-enum converter, which was out of scope for v1.
 
 ### 2.  Metadata Validation
 
@@ -110,8 +111,8 @@ Implementation was segmented into 5 main sections:
 > - Instead, we introduce the `PopulateStoredProcedureDefinitionForEntities()` method, which iterates over only entites labeled as stored procedures to fill their metadata, and we simply skip over entities labeled as Stored Procedures in the `PopulateTableDefinitionForEntities()` method.
 > - We use the ADO.NET `GetSchemaAsync` method to retrieve procedure metadata and parameter metadata from the Procedures and Procedure Parameters collections respectively: https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/sql-server-schema-collections. These collections are listed as SQL Server-specific, so this implementation might not be extensible to MySQL and Postgres.
 >     - In this case, we should just directly access the ANSI-standard information_schema and retrieve metadata using:
->        - `SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE SPECIFIC_NAME = {source_name_in_config}`
->        - `SELECT * FROM INFORMATION_SCHEMA.PARAMETERS WHERE SPECIFIC_NAME = {source_name}`
+>        - `SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE SPECIFIC_NAME = {procedure_name}`
+>        - `SELECT * FROM INFORMATION_SCHEMA.PARAMETERS WHERE SPECIFIC_NAME = {procedure_name}`
 > - Using metadata, we first verify procedures specified in config are present in the database. Then, we verify all parameters for each procedure specified in config are actually present in the database, otherwise we fail runtime initialization. We also verify that any parameters specified in config match the type retrieved from the parameter metadata. 
 >     - TODO: more logic is needed for determining whether a value specified in config can be parsed into the metadata type. For example, providing a string in config might be parse-able into a datetime value, but right now it will be rejected. We should relax this constraint at runtime initialization and potentially fall back to request-time validation.
 
@@ -175,7 +176,7 @@ Implementation was segmented into 5 main sections:
 > - Separated `ExecuteAsync(RestRequestContext)` into `ExecuteAsync(FindRequestContext)` and `ExecuteAsync(StoredProcedureRequestContext)`. Seems to be better practice than doing type checking and conditional downcasting.
 > - `ExecuteAsync(StoredProcedureRequestContext)` initializes the `SqlExecuteStructure` with the context's resolved parameters, and calls a new `ExecuteAsync(SqlExecuteStructure)` method. Result returned simply as an `OkResponse` instead of using the `FormatFindResult` method. The pagination methods of `FormatFindResult` don't play well with stored procedures at the moment, since it relies on fields from a `TableDefinition`, but pagination can and should be added to a future version.
 >     - The response from this method will always be a `200 OK` if there were no database errors. If there was no result set returned, we will return an empty json array. **NOTE: Only the first result set returned by the procedure is considered.**
-> - `ExecuteAsync(SqlExecuteStructure)` is needed because **we have no guarantee the result set is JSON**. As such, we can't use the same strategy that `ExecuteAsync(SqlQueryStructure)` does in using `GetJsonStringFromDbReader`. Instead, we do basically identical fetching as the mutation engine does in using `ExtractRowFromDbDataReader`. As such, one could argue that stored procedures could entirely be the responsible of the mutation engine.
+> - `ExecuteAsync(SqlExecuteStructure)` is needed because **we have no guarantee the result set is JSON**. As such, we can't use the same strategy that `ExecuteAsync(SqlQueryStructure)` does in using `GetJsonStringFromDbReader`. Instead, we do basically identical fetching as the mutation engine does in using `ExtractRowFromDbDataReader`. As such, one could argue that stored procedures could entirely be the responsibility of the mutation engine.
 
 <br/>
 

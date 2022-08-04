@@ -263,7 +263,6 @@ namespace Azure.DataGateway.Service.Resolvers
         private async Task<JsonDocument> ExecuteAsync(SqlQueryStructure structure)
         {
             // Open connection and execute query using _queryExecutor
-
             string queryString = _queryBuilder.Build(structure);
             Console.WriteLine(queryString);
 

@@ -190,7 +190,6 @@ namespace Azure.DataGateway.Service.Models
 
         /// <summary>
         /// Tries to parse the json request body into FieldValuePairsInBody dictionary
-        /// Migrating from derived classes to here as more request contexts need it 
         /// </summary>
         public void PopulateFieldValuePairsInBody(JsonElement? jsonBody)
         {
@@ -221,7 +220,6 @@ namespace Azure.DataGateway.Service.Models
             {
                 FieldValuePairsInBody = new();
             }
-
         }
     }
 }

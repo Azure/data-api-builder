@@ -64,13 +64,6 @@ namespace Azure.DataGateway.Config
         public Type? SystemType { get; set; }
         public bool HasConfigDefault { get; set; }
         public object? ConfigDefaultValue { get; set; }
-        public string? ParameterMode { get; set; }
-
-        public enum ParameterModeType
-        {
-            IN,
-            OUT
-        }
     }
 
     public class TableDefinition

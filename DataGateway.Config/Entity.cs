@@ -72,6 +72,11 @@ namespace Azure.DataGateway.Config
         /// </summary>
         public DatabaseObjectSource GetSourceObject()
         {
+            if (Source is null)
+            {
+                throw new JsonException(message: "Must specify entity source.");
+            }
+
             JsonElement sourceJson = (JsonElement)Source;
             JsonSerializerSettings options = new()
             {
@@ -88,7 +93,13 @@ namespace Azure.DataGateway.Config
             else if (sourceJson.ValueKind is JsonValueKind.Object)
             {
                 // unfortunately, hyphenated string to enum conversion is impossible with system.text.json alone
-                return JsonConvert.DeserializeObject<DatabaseObjectSource>(Source.ToString()!, options)!;
+                DatabaseObjectSource? objectSource = JsonConvert.DeserializeObject<DatabaseObjectSource>(Source.ToString()!, options);
+                if (objectSource is null)
+                {
+                    throw new JsonException(message: "Could not deserialize source object.");
+                }
+
+                return objectSource;
             }
 
             throw new JsonException(message: $"Source not one of string or object");
@@ -101,8 +112,9 @@ namespace Azure.DataGateway.Config
     /// </summary>
     /// <param name="Type">Type of the database object.</param>
     /// <param name="Name">The name of the database object.</param>
-    /// <param name="Parameters">The Parameters to be used for constructing this object
-    /// in case its a stored procedure. Allowed types are boolean/string/number/null </param>
+    /// <param name="Parameters">If Type is SourceType.StoredProcedure, Parameters to be
+    /// passed as defaults to the procedure call. Allowed parameter value types are
+    /// boolean/string/number/null </param>
     public record DatabaseObjectSource(
         SourceType Type,
         [property: JsonPropertyName("object")][JsonProperty("object")] string Name,

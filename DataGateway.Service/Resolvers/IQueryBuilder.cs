@@ -35,6 +35,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// query.
         /// </summary>
         public string Build(SqlUpsertQueryStructure structure);
+
         /// <summary>
         /// Builds the query specific to the target database for the given
         /// SqlExecuteStructure object which holds the major components of the

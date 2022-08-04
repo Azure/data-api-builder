@@ -37,7 +37,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     try
                     {
                         string parameterizedName = MakeParamWithValue(requestParamValue is null ? null :
-                            GetParamAsProcedureParameterType(requestParamValue!.ToString()!, paramKey));
+                            GetParamAsProcedureParameterType(requestParamValue.ToString()!, paramKey));
                         ProcedureParameters.Add(paramKey, $"@{parameterizedName}");
                     }
                     catch (ArgumentException ex)
@@ -58,8 +58,8 @@ namespace Azure.DataGateway.Service.Resolvers
                     }
                     else
                     {
-                        // This case of not all parameters being explicitly between request and config should already be
-                        // handled in the request validation stage.
+                        // In case required parameters not found in request and no default specified in config
+                        // Should already be handled in the request validation step
                         throw new DataGatewayException(message: $"Did not provide all procedure params, missing: \"{paramKey}\"",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);

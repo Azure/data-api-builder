@@ -102,11 +102,11 @@ namespace Azure.DataGateway.Service.Resolvers
         }
 
         /// <summary>
-        /// TODO
+        /// TODO; tracked here: https://github.com/Azure/hawaii-engine/issues/630
         /// </summary>
         public string Build(SqlExecuteStructure structure)
         {
-            return string.Empty;
+            throw new NotImplementedException();
         }
 
         /// <inheritdoc />

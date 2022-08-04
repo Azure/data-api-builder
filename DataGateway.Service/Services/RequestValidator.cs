@@ -146,7 +146,7 @@ namespace Azure.DataGateway.Service.Services
             if (!string.IsNullOrWhiteSpace(primaryKeyRoute))
             {
                 throw new DataGatewayException(
-                    message: "Primary key route not supported for stored procedure request.",
+                    message: "Primary key route not supported for this entity.",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
             }
@@ -165,7 +165,7 @@ namespace Azure.DataGateway.Service.Services
                 TryGetStoredProcedureDefinition(spRequestCtx.EntityName, sqlMetadataProvider);
 
             HashSet<string> missingFields = new();
-            HashSet<string> extraFields = new(spRequestCtx.ResolvedParameters!.Keys);
+            HashSet<string> extraFields = new(spRequestCtx.ResolvedParameters.Keys);
             foreach ((string paramKey, ParameterDefinition paramDefinition) in storedProcedureDefinition.Parameters)
             {
                 // If parameter not specified in request OR config

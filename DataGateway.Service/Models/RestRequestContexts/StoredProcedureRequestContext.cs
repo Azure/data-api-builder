@@ -18,7 +18,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// Represents the parameters that this request is calling the stored procedure with
         /// </summary>
-        public Dictionary<string, object?>? ResolvedParameters { get; set; }
+        public Dictionary<string, object?> ResolvedParameters { get; private set; } = new();
 
         /// <summary>
         /// Represents a request to execute a stored procedure. At the time of construction, populates the FieldValuePairsInBody
@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.Models
                 {
                     // Query string may have malformed/null keys, if so just ignore them
                     ResolvedParameters = ParsedQueryString.Cast<string>()
-                        .Where(k => k != null).ToDictionary(k => k, k => (object?)ParsedQueryString[k]);
+                        .Where(k => k is not null).ToDictionary(k => k, k => (object?)ParsedQueryString[k]);
                 }
                 else
                 {

@@ -136,10 +136,10 @@ namespace Azure.DataGateway.Service.Resolvers
         public async Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context)
         {
             SqlExecuteStructure executeQueryStructure = new(context.EntityName, _sqlMetadataProvider, context.ResolvedParameters!);
-            string queryString = _queryBuilder.Build(executeQueryStructure);
-            Console.WriteLine(queryString);
+            string queryText = _queryBuilder.Build(executeQueryStructure);
+            Console.WriteLine(queryText);
 
-            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, executeQueryStructure.Parameters);
+            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, executeQueryStructure.Parameters);
             Dictionary<string, object?>? resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
 
             // A note on returning stored procedure results:

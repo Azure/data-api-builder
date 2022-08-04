@@ -210,7 +210,7 @@ namespace Azure.DataGateway.Service.Services
             RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
 
             // The final authorization check on columns occurs after the request is fully parsed and validated.
-            // Stored procedures do not yet have semantics defnined for column-level permissions
+            // Stored procedures do not yet have semantics defined for column-level permissions
             if (dbObject.ObjectType is not SourceType.StoredProcedure)
             {
                 await AuthorizationCheckForRequirementAsync(resource: context, requirement: new ColumnsPermissionsRequirement());

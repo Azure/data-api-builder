@@ -715,6 +715,10 @@
               }
             }
           ]
+        },
+        {
+          "role": "authorizationHandlerTester",
+          "actions": [ "read" ]
         }
       ]
     },

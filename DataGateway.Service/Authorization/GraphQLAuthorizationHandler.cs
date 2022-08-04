@@ -98,6 +98,9 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
     /// <summary>
     /// Checks the pre-validated clientRoleHeader value
     /// against the roles listed in @authorize directive's roles.
+    /// The runtime's GraphQLSchemaBuilder will not add an @authorize directive without any roles defined,
+    /// however, since the Roles property of HotChocolate's AuthorizeDirective object is nullable,
+    /// handle the possible null gracefully.
     /// </summary>
     /// <param name="clientRoleHeader">Role defined in request HTTP Header, X-MS-API-ROLE</param>
     /// <param name="roles">Roles defined on the @authorize directive.</param>
@@ -108,7 +111,7 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
     {
         if (roles is null || roles.Count == 0)
         {
-            return true;
+            return false;
         }
 
         if (roles.Any(role => role.Equals(clientRoleHeader, StringComparison.OrdinalIgnoreCase)))

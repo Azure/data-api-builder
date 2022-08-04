@@ -7,7 +7,6 @@ using System.Text.Json;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Authorization;
-using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -142,7 +141,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // All the wildcard action should be expand to explicit actions.
             //
-            foreach (Operation action in RuntimeConfigValidator.ValidPermissionActions)
+            foreach (Operation action in Action.ValidPermissionActions)
             {
                 Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ROLE, action));
 
@@ -450,7 +449,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            foreach (Operation action in RuntimeConfigValidator.ValidPermissionActions)
+            foreach (Operation action in Action.ValidPermissionActions)
             {
                 // Validate that the authorization check passes for valid CRUD actions
                 // because columns are accessbile or inaccessible.

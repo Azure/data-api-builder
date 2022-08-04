@@ -313,7 +313,7 @@ namespace Azure.DataGateway.Service.Authorization
 
                         if (ROLE_ANONYMOUS.Equals(role))
                         {
-                            // Saving the allowed columns for anonymous role in case we need to mock the
+                            // Saving the allowed columns for anonymous role in case we need to copy the
                             // allowed columns for authenticated role. This reduces the time complexity
                             // for copying over permissions to authenticated role from anonymous role.
                             allowedColumnsForAnonymousRole = allowedColumns;

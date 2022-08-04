@@ -57,7 +57,8 @@ namespace Hawaii.Cli
                 })
                 .WithParsed<StartOptions>(options =>
                 {
-                    bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(options);
+                    /// This will start the runtime engine with project name and config file.
+                    bool isSuccess = Azure.DataGateway.Service.Program.StartEngine(new string[] { "--project", options.Project, "--ConfigFileName", options.Config });;
 
                     if (isSuccess)
                     {

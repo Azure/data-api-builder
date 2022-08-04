@@ -578,9 +578,5 @@ namespace Hawaii.Cli.Models
                                     updatedLinkingTargetFields);
         }
 
-        public static bool TryStartEngineWithOptions(StartOptions options)
-        {
-            return Azure.DataGateway.Service.Program.StartEngine(new string[] { "--project", options.Project, "--ConfigFileName", options.Config });
-        }
     }
 }

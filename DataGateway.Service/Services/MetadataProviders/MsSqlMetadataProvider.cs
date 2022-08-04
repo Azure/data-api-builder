@@ -1,5 +1,7 @@
 using System;
+using System.Net;
 using Azure.DataGateway.Service.Configurations;
+using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -78,7 +80,9 @@ namespace Azure.DataGateway.Service.Services
                 case "uniqueidentifier":
                     return typeof(Guid);
                 default:
-                    throw new ArgumentException("Tried to convert unsupported data type");
+                    throw new DataGatewayException(message: $"Tried to convert unsupported data type: {sqlType}",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
         }
     }

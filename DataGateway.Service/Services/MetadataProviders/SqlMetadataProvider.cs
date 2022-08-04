@@ -197,7 +197,7 @@ namespace Azure.DataGateway.Service.Services
             {
                 throw new DataGatewayException(
                     message: $"No stored procedure definition found for the given database object {storedProcedureName}",
-                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
             }
 
@@ -228,7 +228,7 @@ namespace Azure.DataGateway.Service.Services
                     {
                         throw new DataGatewayException(
                             message: $"Could not find parameter \"{configParamKey}\" specified in config for procedure \"{schemaName}.{storedProcedureName}\"",
-                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
                     }
                     // Deserialization labels all integers as Int64, no need to type mismatch on initialization
@@ -238,7 +238,7 @@ namespace Azure.DataGateway.Service.Services
                         throw new DataGatewayException(
                             message: $"Type mismatch between parameters specified in config and those found in schema for stored procedure \"{schemaName}.{storedProcedureName}\": " +
                             $"expected {parameterDefinition.SystemType}, got {configParamValueType} for param \"{configParamKey}\"",
-                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
                     }
                     else

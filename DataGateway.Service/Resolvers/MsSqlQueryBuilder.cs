@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Text;
 using Azure.DataGateway.Service.Models;
 using Microsoft.Data.SqlClient;
 
@@ -185,14 +186,13 @@ namespace Azure.DataGateway.Service.Resolvers
         /// </summary>
         private static string BuildProcedureParameterList(Dictionary<string, object> procedureParameters)
         {
-            // Using the Diagnostics Stopwatch class, this is generally much faster than the corresponding
-            // Linq/string.join or StringBuilder implementations, likely due to the overhead of those methods.
-            string parameterList = string.Empty;
+            StringBuilder sb = new();
             foreach ((string paramKey, object paramValue) in procedureParameters)
             {
-                parameterList += $"@{paramKey} = {paramValue}, ";
+                sb.Append($"@{paramKey} = {paramValue}, ");
             }
 
+            string parameterList = sb.ToString();
             // If at least one parameter added, remove trailing comma and space, else return empty string
             return parameterList.Length > 0 ? parameterList[..^2] : parameterList;
         }

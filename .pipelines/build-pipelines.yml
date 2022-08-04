@@ -93,7 +93,7 @@ steps:
 # Upload the nuget file for the current run
 - task: PublishPipelineArtifact@1
   inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)/*.nupkg'
+    targetPath: '$(Build.ArtifactStagingDirectory)'
     artifactName: 'DAB'
     artifactType: 'pipeline'
     # fileSharePath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'

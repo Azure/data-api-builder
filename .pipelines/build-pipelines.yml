@@ -65,8 +65,9 @@ steps:
   displayName: 'Creating Nuget Package'
   inputs:
     command: pack
-    buildProperties: 'VersionSuffix="$(packVersionSuffix)"'
+    # buildProperties: 'VersionSuffix="$(packVersionSuffix)"'
     versionSuffix: '$(packVersionSuffix)'
+    Verbosity: 'minimal'
     # projects: '**/Hawaii.Cli.csproj'
     # arguments: '--configuration $(buildConfiguration) --version-suffix $(packVersionSuffix)'
     packagesToPack: '**/Hawaii.Cli.csproj'

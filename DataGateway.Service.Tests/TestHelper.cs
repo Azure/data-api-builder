@@ -115,11 +115,11 @@ namespace Azure.DataGateway.Service.Tests
         /// in the tests that can be fully customized for testing purposes.
         /// </summary>
         /// <param name="config">Runtimeconfig object</param>
-        /// <param name="dbObjectKey">The key with which the entity is to be added.</param>
-        /// <param name="dbObjectName">The source name of the entity.</param>
-        public static void AddMissingEntitiesToConfig(RuntimeConfig config, string dbObjectKey, string dbObjectName)
+        /// <param name="entityKey">The key with which the entity is to be added.</param>
+        /// <param name="entityName">The source name of the entity.</param>
+        public static void AddMissingEntitiesToConfig(RuntimeConfig config, string entityKey, string entityName)
         {
-            string source = "\"" + dbObjectName + "\"";
+            string source = "\"" + entityName + "\"";
             string entityJsonString =
               @"{
                     ""source"":  " + source + @",
@@ -150,7 +150,7 @@ namespace Azure.DataGateway.Service.Tests
             };
 
             Entity entity = JsonSerializer.Deserialize<Entity>(entityJsonString, options);
-            config.Entities.Add(dbObjectKey, entity);
+            config.Entities.Add(entityKey, entity);
         }
     }
 }

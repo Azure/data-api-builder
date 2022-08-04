@@ -374,21 +374,21 @@ type Table @model(name: ""table"") {
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             Assert.IsNotNull(query);
 
-            // Two queries - 1) Query for an item using PK 2) Query for all items, should have been created.
+            // Two queries - 1) Query for an item using PK 2) Query for all items should be created.
             // Check to validate the count of queries created.
             Assert.AreEqual(2, query.Fields.Count);
 
-            // Validations for the PK query's name and description.
+            // Name and Description validations for the query for fetching by PK.
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == expectedQueryNameForPK));
-            FieldDefinitionNode pkQueryfieldNode = query.Fields.First(f => f.Name.Value == expectedQueryNameForPK);
+            FieldDefinitionNode pkQueryFieldNode = query.Fields.First(f => f.Name.Value == expectedQueryNameForPK);
             string expectedPKQueryDescription = $"Get a {expectedNameInPKQueryDescription} from the database by its ID/primary key";
-            Assert.AreEqual(expectedPKQueryDescription, pkQueryfieldNode.Description.Value);
+            Assert.AreEqual(expectedPKQueryDescription, pkQueryFieldNode.Description.Value);
 
-            // Validations for List query's name and description.
+            // Name and Description validations for the query for fetching all items.
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == expectedQueryNameForList));
-            FieldDefinitionNode allItemsQueryfieldNode = query.Fields.First(f => f.Name.Value == expectedQueryNameForList);
+            FieldDefinitionNode allItemsQueryFieldNode = query.Fields.First(f => f.Name.Value == expectedQueryNameForList);
             string expectedAllQueryDescription = $"Get a list of all the {expectedNameInAllQueryDescription} items from the database";
-            Assert.AreEqual(expectedAllQueryDescription, allItemsQueryfieldNode.Description.Value);
+            Assert.AreEqual(expectedAllQueryDescription, allItemsQueryFieldNode.Description.Value);
         }
 
         public static ObjectTypeDefinitionNode GetQueryNode(DocumentNode queryRoot)

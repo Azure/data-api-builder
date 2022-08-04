@@ -204,6 +204,10 @@ namespace Azure.DataGateway.Service.Authorization
             foreach ((string entityName, Entity entity) in runtimeConfig!.Entities)
             {
                 EntityMetadata entityToRoleMap = new();
+
+                // Store the allowedColumns for anonymous role.
+                // In case the authenticated role is not defined on the entity,
+                // this will help in copying over permissions from anonymous role to authenticated role.
                 HashSet<string> allowedColumnsForAnonymousRole = new();
                 foreach (PermissionSetting permission in entity.Permissions)
                 {

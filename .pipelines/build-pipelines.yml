@@ -138,7 +138,7 @@ jobs:
     NugetRelease: true
 
   # condition: and( eq($[Build.SourceBranchName], 'main' ), eq(variables.NugetRelease, true))
-  condition: and( eq(System.PullRequest.SourceBranch, 'dev/abhishekkuma/nuget-publishing'), eq(variables.NugetRelease, true))
+  condition: and( eq($(System.PullRequest.SourceBranch), 'dev/abhishekkuma/nuget-publishing'), eq(variables.NugetRelease, true))
 
   steps:
   - bash: echo $(System.PullRequest.SourceBranch)

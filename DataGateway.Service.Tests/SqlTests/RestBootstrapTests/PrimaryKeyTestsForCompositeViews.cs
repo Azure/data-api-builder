@@ -35,7 +35,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestBootstrapTests
                 _compositeViewQuery +
                 ")";
 
-            await SetupDatabaseAsync(compositeViewDbQuery, TestCategory.MSSQL, true);
+            await SetupDatabaseAsync(compositeViewDbQuery, TestCategory.MSSQL, isExceptionExpected: true);
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestBootstrapTests
                 "END " +
                 "$do$";
 
-            await SetupDatabaseAsync(compositeViewDbQuery, TestCategory.POSTGRESQL, true);
+            await SetupDatabaseAsync(compositeViewDbQuery, TestCategory.POSTGRESQL, isExceptionExpected: true);
         }
 
         /// <summary>
@@ -71,12 +71,14 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestBootstrapTests
                 _compositeViewQuery +
                 ";" +
                 "execute stmt4";
-            await SetupDatabaseAsync(compositeViewDbQuery, TestCategory.MYSQL, false);
+            await SetupDatabaseAsync(compositeViewDbQuery, TestCategory.MYSQL, isExceptionExpected: false);
         }
 
         /// <summary>
         /// Helper method to setup dependencies to perform tests and setup the database,
         /// i.e. add all the tables and the complex view to the database.
+        /// Not all databases are expected to succeed in this operation. i.e. why isExceptionExpected
+        /// is different for each database type.
         /// </summary>
         /// <param name="compositeDbViewquery">Query to add composite view to database.</param>
         /// <param name="dbEngine">The database engine. For eg. MsSql.</param>
@@ -90,14 +92,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestBootstrapTests
             if (isExceptionExpected)
             {
                 DataGatewayException ex = await Assert.ThrowsExceptionAsync<DataGatewayException>(() =>
-                InitializeTestFixture(null, new List<string> { compositeDbViewquery }, new List<string[]> { customEntity }));
+                InitializeTestFixture(
+                    context: null,
+                    new List<string> { compositeDbViewquery },
+                    new List<string[]> { customEntity }));
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual($"Primary key not configured on the given database object {_compositeViewName}", ex.Message);
                 Assert.AreEqual(DataGatewayException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
             }
             else
             {
-                await InitializeTestFixture(null, new List<string> { compositeDbViewquery },
+                await InitializeTestFixture(
+                    context: null,
+                    new List<string> { compositeDbViewquery },
                     new List<string[]> { customEntity });
                 // Perform a GET operation on the view to confirm that it is functional.
                 // Set up rest controller.

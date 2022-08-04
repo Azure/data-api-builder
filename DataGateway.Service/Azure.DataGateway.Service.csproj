@@ -6,7 +6,6 @@
     <OutputPath>$(BaseOutputPath)\engine</OutputPath>
 
     <SelfContained>false</SelfContained>
-    <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' OR '$(RuntimeIdentifier)' == 'win-x86'">

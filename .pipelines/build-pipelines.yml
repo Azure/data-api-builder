@@ -62,7 +62,7 @@ steps:
     command: publish
     publishWebProjects: True
     projects: $(Build.SourcesDirectory)\DataGateway.Service\Azure.DataGateway.Service.csproj
-    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish/win-x64 --runtime win-x64 --self-contained'
+    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish/win-x64 --runtime win-x64'
     zipAfterPublish: True
     modifyOutputPath: True
 
@@ -72,7 +72,7 @@ steps:
     command: publish
     publishWebProjects: True
     projects: $(Build.SourcesDirectory)\DataGateway.Service\Azure.DataGateway.Service.csproj
-    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish/linux-x64 --runtime linux-x64 --self-contained'
+    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish/linux-x64 --runtime linux-x64'
     zipAfterPublish: True
     modifyOutputPath: True
 
@@ -82,7 +82,7 @@ steps:
     command: publish
     publishWebProjects: True
     projects: $(Build.SourcesDirectory)\DataGateway.Service\Azure.DataGateway.Service.csproj
-    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish/osx-x64 --runtime osx-x64 --self-contained'
+    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish/osx-x64 --runtime osx-x64'
     zipAfterPublish: True
     modifyOutputPath: True
 

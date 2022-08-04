@@ -11,11 +11,14 @@
     <ToolCommandName>hawaii</ToolCommandName>
     <PackageOutputPath>./nupkg</PackageOutputPath>
     
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>false</SelfContained>
-    <PublishReadyToRun>true</PublishReadyToRun>
-
     <BaseOutputPath>..\..\out\cli</BaseOutputPath>
+    
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' OR '$(RuntimeIdentifier)' == 'win-x86'">
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
   </PropertyGroup>
 
   <ItemGroup>

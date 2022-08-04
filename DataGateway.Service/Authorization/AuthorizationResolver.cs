@@ -204,7 +204,7 @@ namespace Azure.DataGateway.Service.Authorization
             foreach ((string entityName, Entity entity) in runtimeConfig!.Entities)
             {
                 EntityMetadata entityToRoleMap = new();
-
+                HashSet<string> allowedColumnsForAnonymousRole = new();
                 foreach (PermissionSetting permission in entity.Permissions)
                 {
                     string role = permission.Role;
@@ -306,19 +306,49 @@ namespace Azure.DataGateway.Service.Authorization
 
                             roleToAction.ActionToColumnMap[actionOp] = actionToColumn;
                         }
+
+                        if (ROLE_ANONYMOUS.Equals(role))
+                        {
+                            // Saving the allowed columns for anonymous role in case we need to mock the
+                            // allowed columns for authenticated role. This optimireduces the time complexity
+                            // for mocking.
+                            allowedColumnsForAnonymousRole = allowedColumns;
+                        }
                     }
 
                     entityToRoleMap.RoleToActionMap[role] = roleToAction;
                 }
 
                 // Check if anonymous role is defined but authenticated is not. If that is the case,
-                // then make sure the authenticated role derives permissions that are atleast equal to anonymous role.
+                // then the authenticated role derives permissions that are atleast equal to anonymous role.
                 if (entityToRoleMap.RoleToActionMap.ContainsKey(ROLE_ANONYMOUS) &&
                     !entityToRoleMap.RoleToActionMap.ContainsKey(ROLE_AUTHENTICATED))
                 {
                     // Using assignment operator overrides the existing value for the key /
                     // adds a new entry for (key,value) pair if absent, to the map.
                     entityToRoleMap.RoleToActionMap[ROLE_AUTHENTICATED] = entityToRoleMap.RoleToActionMap[ROLE_ANONYMOUS];
+
+                    // Mock ActionToRolesMap for authenticated role.
+                    Dictionary<Operation, ActionMetadata> allowedActionMap =
+                        entityToRoleMap.RoleToActionMap[ROLE_ANONYMOUS].ActionToColumnMap;
+                    foreach (Operation operation in allowedActionMap.Keys)
+                    {
+                        entityToRoleMap.ActionToRolesMap[operation].Add(ROLE_AUTHENTICATED);
+                    }
+
+                    // Mock FieldToRolesMap for authenticated role.
+                    foreach (string allowedColumnInAnonymousRole in allowedColumnsForAnonymousRole)
+                    {
+                        Dictionary<Operation, List<string>> allowedOperationsForField =
+                            entityToRoleMap.FieldToRolesMap[allowedColumnInAnonymousRole];
+                        foreach (Operation operation in allowedOperationsForField.Keys)
+                        {
+                            if (allowedOperationsForField[operation].Contains(ROLE_ANONYMOUS))
+                            {
+                                allowedOperationsForField[operation].Add(ROLE_AUTHENTICATED);
+                            }
+                        }
+                    }
                 }
 
                 EntityPermissionsMap[entityName] = entityToRoleMap;

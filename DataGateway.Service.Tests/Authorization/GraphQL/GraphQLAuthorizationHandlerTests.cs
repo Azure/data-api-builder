@@ -7,8 +7,10 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
 {
     /// <summary>
     /// Tests Database Authorization Policies applied to GraphQL Queries
+    /// These tests are DB Engine agnostic, though require a result to
+    /// validate operation completion if no errors are expected.
     /// </summary>
-    [TestClass]
+    [TestClass, TestCategory(TestCategory.MSSQL)]
     public class GraphQLAuthorizationHandlerTests : SqlTestBase
     {
         /// <summary>

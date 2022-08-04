@@ -131,7 +131,9 @@ namespace Azure.DataGateway.Service.Services
             // First pass - build up the object and input types for all the entities
             foreach ((string entityName, Entity entity) in entities)
             {
-                if (entity.GraphQL is not null && entity.GraphQL is bool graphql && graphql == false)
+                // GraphQL flag is ignored - tracked by #628
+                if (entity.GetSourceObject().Type is SourceType.StoredProcedure
+                    || entity.GraphQL is not null && entity.GraphQL is bool graphql && graphql == false)
                 {
                     continue;
                 }

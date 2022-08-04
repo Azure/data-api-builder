@@ -91,5 +91,20 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 
             return modelDirective.Arguments.Count == 1 ? (string)(modelDirective.Arguments[0].Value.Value ?? node.Name.Value) : node.Name.Value;
         }
+
+        /// <summary>
+        /// Determines the name to be used for creating queries and mutations for an entity.
+        /// When a singular name is provided by the user in the config, it will be used.
+        /// If it is not provided, then the entity's name will be used.
+        /// </summary>
+        /// <param name="name">Entity's name</param>
+        /// <param name="configEntity">Entity object constructed using definitions from the config. </param>
+        /// <returns>Entity name to be used for creating queries and mutations in the schema.</returns>
+        public static string TryGetDefinedSingularName(NameNode name, Entity configEntity){
+            
+            return (configEntity.GraphQL is SingularPlural singularPlural
+                    && !string.IsNullOrEmpty(singularPlural.Singular)) ? singularPlural.Singular : name.Value;
+        }
+
     }
 }

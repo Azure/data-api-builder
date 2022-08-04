@@ -57,7 +57,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
                     if (rolesAllowedForRead.Count() > 0)
                     {
                         queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity, rolesAllowedForRead));
-                        queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, rolesAllowedForRead));
+                        queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, entity, rolesAllowedForRead));
                     }
                 }
             }
@@ -70,7 +70,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return new(definitionNodes);
         }
 
-        public static FieldDefinitionNode GenerateByPKQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name, DatabaseType databaseType, IEnumerable<string>? rolesAllowedForRead = null)
+        public static FieldDefinitionNode GenerateByPKQuery(
+            ObjectTypeDefinitionNode objectTypeDefinitionNode, 
+            NameNode name, 
+            DatabaseType databaseType, 
+            Entity entity,
+            IEnumerable<string>? rolesAllowedForRead = null)
         {
             IEnumerable<FieldDefinitionNode> primaryKeyFields =
             FindPrimaryKeyFields(objectTypeDefinitionNode, databaseType);
@@ -97,8 +102,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
 
             return new(
                 location: null,
-                new NameNode($"{FormatNameForField(name)}_by_pk"),
-                new StringValueNode($"Get a {name} from the database by its ID/primary key"),
+                new NameNode($"{FormatNameForField(TryGetDefinedSingularName(name, entity))}_by_pk"),
+                new StringValueNode($"Get a {TryGetDefinedSingularName(name, entity)} from the database by its ID/primary key"),
                 inputValues,
                 new NamedTypeNode(name),
                 fieldDefinitionNodeDirectives
@@ -142,7 +147,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
             return new(
                 location: null,
                 Pluralize(name, entity),
-                new StringValueNode($"Get a list of all the {name} items from the database"),
+                new StringValueNode($"Get a list of all the {TryGetDefinedSingularName(name, entity)} items from the database"),
                 QueryArgumentsForField(filterInputName, orderByInputName),
                 new NonNullTypeNode(new NamedTypeNode(returnType.Name)),
                 fieldDefinitionNodeDirectives

@@ -11,6 +11,35 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers
 {
     public static class GraphQLTestHelpers
     {
+        public const string BOOKGQL =
+                    @"
+                    type Book @model {
+                        book_id: Int! @primaryKey
+                    }
+                    ";
+
+
+        public const string BOOKSGQL =
+                    @"
+                    type Books @model {
+                        book_id: Int! @primaryKey
+                    }
+                    ";
+
+        public const string PERSONGQL =
+                    @"
+                    type Person @model {
+                        person_id: Int! @primaryKey
+                    }
+                    ";
+
+        public const string PEOPLEGQL =
+                    @"
+                    type People @model {
+                        people_id: Int! @primaryKey
+                    }
+                    ";
+
         /// <summary>
         /// Mock the entityPermissionsMap which resolves which roles need to be included
         /// in an authorize directive used on a GraphQL object type definition.
@@ -44,6 +73,21 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers
         public static Entity GenerateEmptyEntity()
         {
             return new Entity("foo", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
+        }
+
+        /// <summary>
+        /// Creates an entity with the defined singular and plural entity names.
+        /// </summary>
+        /// <param name="singularNameForEntity"> Singular name defined by user in the config.</param>
+        /// <param name="pluralNameForEntity"> Plural name defined by user in the config.</param>
+        public static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity)
+        {
+            return new Entity(Source: "foo",
+                              Rest: null,
+                              GraphQL: new SingularPlural(singularNameForEntity, pluralNameForEntity),
+                              Permissions: Array.Empty<PermissionSetting>(),
+                              Relationships: new(),
+                              Mappings: new());
         }
 
         /// <summary>

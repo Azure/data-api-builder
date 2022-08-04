@@ -938,5 +938,93 @@ type Foo @model {{
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
             return (mutationRoot, field);
         }
+
+        /// <summary>
+        /// We assume that the user will provide a singular name for the entity. Users have the option of providing singular and
+        /// plural names for an entity in the config to have more control over the graphql schema generation.
+        /// When singular and plural names are specified by the user, these names will be used for generating the
+        /// queries and mutations in the schema.
+        /// When singular and plural names are not provided, the queries and mutations will be generated with the entity's name.
+        /// This test validates that this naming convention is followed for the mutations when the schema is generated.
+        /// </summary>
+        /// <param name="gql">Type definition for the entity</param>
+        /// <param name="entityName">Name of the entity</param>
+        /// <param name="singularName">Singular name provided by the user</param>
+        /// <param name="pluralName">Plural name provided by the user</param>
+        /// <param name="databaseType">Database type. Will be one of cosmos, mssql, mysql, postgresql</param>
+        /// <param name="expectedName"> Expected name of the entity in the mutation. Used to construct the exact expected mutation names.</param>
+        [DataTestMethod]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", null, null, DatabaseType.cosmos, "People")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", null, null, DatabaseType.mssql, "People")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", null, null, DatabaseType.mysql, "People")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", null, null, DatabaseType.postgresql, "People")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "Person", "People", DatabaseType.cosmos, "Person")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "Person", "People", DatabaseType.mssql, "Person")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "Person", "People", DatabaseType.mysql, "Person")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "Person", "People", DatabaseType.postgresql, "Person")]
+        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", null, null, DatabaseType.cosmos, "Person")]
+        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", null, null, DatabaseType.mssql, "Person")]
+        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", null, null, DatabaseType.mysql, "Person")]
+        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", null, null, DatabaseType.postgresql, "Person")]
+        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", "Person", "People", DatabaseType.cosmos, "Person")]
+        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", "Person", "People", DatabaseType.mssql, "Person")]
+        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", "Person", "People", DatabaseType.mysql, "Person")]
+        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", "Person", "People", DatabaseType.postgresql, "Person")]
+        public void ValidateMutationsAreCreatedWithRightName(
+            string gql,
+            string entityName,
+            string singularName, 
+            string pluralName,
+            DatabaseType databaseType,
+            string expectedName
+            )
+        {
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, EntityMetadata> entityPermissionsMap = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    new string[] { entityName },
+                    new Operation[] { Operation.Create, Operation.Update, Operation.Delete },
+                    new string[] { "anonymous", "authenticated"});
+
+            Entity entity = (singularName is not null && pluralName is not null) 
+                                ?   GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, pluralName)
+                                :   GraphQLTestHelpers.GenerateEmptyEntity(); 
+
+            DocumentNode mutationRoot = MutationBuilder.Build(
+                root,
+                databaseType,
+                new Dictionary<string, Entity> { { entityName, entity } },
+                entityPermissionsMap: entityPermissionsMap
+                );
+
+            ObjectTypeDefinitionNode mutation = GetMutationNode(mutationRoot);
+            Assert.IsNotNull(mutation);
+
+            // The permissions are setup for create, update and delete operations.
+            // So create, update and delete mutations should get generated.
+            // A Check to validate that the count of mutations generated is 3.
+            Assert.AreEqual(3, mutation.Fields.Count);
+
+            // Name and Description validations for Create mutation
+            string expectedCreateMutationName = $"create{expectedName}";
+            string expectedCreateMutationDescription = $"Creates a new {expectedName}";
+            Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedCreateMutationName));
+            FieldDefinitionNode createMutation = mutation.Fields.First(f => f.Name.Value == expectedCreateMutationName);
+            Assert.AreEqual(expectedCreateMutationDescription, createMutation.Description.Value);
+
+            // Name and Description validations for Update mutation
+            string expectedUpdateMutationName = $"update{expectedName}";
+            string expectedUpdateMutationDescription = $"Updates a {expectedName}";
+            Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedUpdateMutationName));
+            FieldDefinitionNode updateMutation = mutation.Fields.First(f => f.Name.Value == expectedUpdateMutationName);
+            Assert.AreEqual(expectedUpdateMutationDescription, updateMutation.Description.Value);
+            
+            // Name and Description validations for Delete mutation
+            string expectedDeleteMutationName = $"delete{expectedName}";
+            string expectedDeleteMutationDescription = $"Delete a {expectedName}";
+            Assert.AreEqual(1, mutation.Fields.Count(f =>  f.Name.Value == expectedDeleteMutationName));
+            FieldDefinitionNode deleteMutation = mutation.Fields.First(f => f.Name.Value == expectedDeleteMutationName);
+            Assert.AreEqual(expectedDeleteMutationDescription, deleteMutation.Description.Value);
+
+        }
     }
 }

@@ -249,7 +249,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             return new(
                 location: null,
                 new NameNode($"create{FormatNameForObject(name, entity)}"),
-                new StringValueNode($"Creates a new {name}"),
+                new StringValueNode($"Creates a new {FormatNameForObject(name, entity)}"),
                 new List<InputValueDefinitionNode> {
                 new InputValueDefinitionNode(
                     location : null,

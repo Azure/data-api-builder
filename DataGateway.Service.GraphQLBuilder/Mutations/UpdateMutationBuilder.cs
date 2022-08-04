@@ -231,7 +231,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Mutations
             return new(
                 location: null,
                 new NameNode($"update{FormatNameForObject(name, entity)}"),
-                new StringValueNode($"Updates a {name}"),
+                new StringValueNode($"Updates a {FormatNameForObject(name, entity)}"),
                 inputValues,
                 new NamedTypeNode(FormatNameForObject(name, entity)),
                 fieldDefinitionNodeDirectives

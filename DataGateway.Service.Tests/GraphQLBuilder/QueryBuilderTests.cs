@@ -291,6 +291,106 @@ type Table @model(name: ""table"") {
             Assert.AreEqual(0, field.Arguments.Count, "No query fields on cardinality of One relationshop");
         }
 
+        /// <summary>
+        /// We assume that the user will provide a singular name for the entity. Users have the option of providing singular and
+        /// plural names for an entity in the config to have more control over the graphql schema generation.
+        /// When singular and plural names are specified by the user, these names will be used for generating the
+        /// queries and mutations in the schema.
+        /// When singular and plural names are not provided, the queries and mutations will be generated with the entity's name.
+        /// This test validates that this naming convention is followed for the queries when the schema is generated.
+        /// </summary>
+        /// <param name="gql">Type definition for the entity</param>
+        /// <param name="entityName">Name of the entity</param>
+        /// <param name="singularName">Singular name provided by the user</param>
+        /// <param name="pluralName">Plural name provided by the user</param>
+        /// <param name="databaseType">Database type. Will be one of cosmos, mssql, mysql, postgresql</param>
+        /// <param name="expectedQueryNameForPK"> Expected name for the primary key query</param>
+        /// <param name="expectedQueryNameForList"> Expected name for the query to fetch all items </param>
+        /// <param name="expectedNameInPKQueryDescription">Expected description for primary key query</param>
+        /// <param name="expectedNameInAllQueryDescription">Expected description for the query to fetch all items</param>
+        [DataTestMethod]
+        [DataRow(GraphQLTestHelpers.BOOKSGQL, "Books", null, null, DatabaseType.cosmos, "books_by_pk", "books",
+            "Books", "Books")]
+        [DataRow(GraphQLTestHelpers.BOOKSGQL, "Books", null, null, DatabaseType.mssql, "books_by_pk", "books",
+            "Books", "Books")]
+        [DataRow(GraphQLTestHelpers.BOOKSGQL, "Books", null, null, DatabaseType.mysql, "books_by_pk", "books",
+            "Books", "Books")]
+        [DataRow(GraphQLTestHelpers.BOOKSGQL, "Books", null, null, DatabaseType.postgresql, "books_by_pk", "books",
+            "Books", "Books")]
+        [DataRow(GraphQLTestHelpers.BOOKSGQL, "Books", "book", "books", DatabaseType.cosmos, "book_by_pk", "books",
+            "book", "book" )]
+        [DataRow(GraphQLTestHelpers.BOOKSGQL, "Books", "book", "books", DatabaseType.mssql, "book_by_pk", "books",
+            "book", "book")]
+        [DataRow(GraphQLTestHelpers.BOOKSGQL, "Books", "book", "books", DatabaseType.mysql, "book_by_pk", "books",
+            "book", "book")]
+        [DataRow(GraphQLTestHelpers.BOOKSGQL, "Books", "book", "books", DatabaseType.postgresql, "book_by_pk", "books",
+            "book", "book")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "Person", "People", DatabaseType.cosmos, "person_by_pk", "People",
+            "Person", "Person")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "person", "people", DatabaseType.mssql, "person_by_pk", "people",
+            "person", "person")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "person", "people", DatabaseType.mysql, "person_by_pk", "people",
+            "person", "person")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "person", "people", DatabaseType.postgresql, "person_by_pk", "people",
+            "person", "person")]
+        [DataRow(GraphQLTestHelpers.BOOKGQL, "Book", null, null, DatabaseType.cosmos, "book_by_pk", "books",
+            "Book", "Book")]
+        [DataRow(GraphQLTestHelpers.BOOKGQL, "Book", null, null, DatabaseType.mssql, "book_by_pk", "books",
+            "Book", "Book")]
+        [DataRow(GraphQLTestHelpers.BOOKGQL, "Book", "book", "books", DatabaseType.cosmos, "book_by_pk", "books",
+            "book", "book")]
+        [DataRow(GraphQLTestHelpers.BOOKGQL, "Book", "book", "books", DatabaseType.mssql, "book_by_pk", "books",
+            "book", "book")]
+        public void ValidateQueriesAreCreatedWithRightName(
+            string gql,
+            string entityName,
+            string singularName,
+            string pluralName,
+            DatabaseType databaseType,
+            string expectedQueryNameForPK,
+            string expectedQueryNameForList,
+            string expectedNameInPKQueryDescription,
+            string expectedNameInAllQueryDescription)
+        {
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, EntityMetadata> entityPermissionsMap
+                = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    new string[] { entityName },
+                    new Operation[] { Operation.Read },
+                    new string[] { "anonymous", "authenticated"});
+
+            Entity entity = (singularName is not null && pluralName is not null) 
+                                ?   GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, pluralName)
+                                :   GraphQLTestHelpers.GenerateEmptyEntity(); 
+
+            DocumentNode queryRoot = QueryBuilder.Build(
+                root,
+                databaseType,
+                new Dictionary<string, Entity> { { entityName, entity } },
+                inputTypes: new(),
+                entityPermissionsMap: entityPermissionsMap
+                );
+
+            ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
+            Assert.IsNotNull(query);
+            
+            // Two queries - 1) Query for an item using PK 2) Query for all items, should have been created.
+            // Check to validate the count of queries created.
+            Assert.AreEqual(2, query.Fields.Count);
+            
+            // Validations for the PK query's name and description.
+            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == expectedQueryNameForPK));
+            FieldDefinitionNode pkQueryfieldNode = query.Fields.First(f => f.Name.Value == expectedQueryNameForPK);
+            string expectedPKQueryDescription = $"Get a {expectedNameInPKQueryDescription} from the database by its ID/primary key";
+            Assert.AreEqual(expectedPKQueryDescription, pkQueryfieldNode.Description.Value);
+        
+            // Validations for List query's name and description.
+            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == expectedQueryNameForList));
+            FieldDefinitionNode allItemsQueryfieldNode = query.Fields.First(f => f.Name.Value == expectedQueryNameForList);
+            string expectedAllQueryDescription = $"Get a list of all the {expectedNameInAllQueryDescription} items from the database";
+            Assert.AreEqual(expectedAllQueryDescription, allItemsQueryfieldNode.Description.Value);
+        }
+
         public static ObjectTypeDefinitionNode GetQueryNode(DocumentNode queryRoot)
         {
             return (ObjectTypeDefinitionNode)queryRoot.Definitions.First(d => d is ObjectTypeDefinitionNode node && node.Name.Value == "Query");

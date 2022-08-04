@@ -141,8 +141,7 @@ jobs:
   condition: eq(variables.NugetRelease, true)
 
   steps:
-  - bash: echo $(Build.SourceBranch)
-  - bash: echo variables.NugetRelease
+  - bash: echo $(System.PullRequest.SourceBranch)
   # - task: UseDotNet@2
   #   displayName: Setup .NET SDK v6.0.x
   #   inputs:

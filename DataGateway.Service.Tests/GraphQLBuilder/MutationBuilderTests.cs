@@ -39,21 +39,6 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder
             return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
         }
 
-        /// <summary>
-        /// Creates an entity with the defined singular and plural entity names.
-        /// </summary>
-        /// <param name="singularNameForEntity"> The singular name for the entity as a string.</param>
-        /// <param name="pluralNameForEntity"> The plural name for the entity as a string.</param>
-        private static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity)
-        {
-            return new Entity(Source: "dbo.entity",
-                              Rest: null,
-                              GraphQL: new SingularPlural(singularNameForEntity, pluralNameForEntity),
-                              Permissions: Array.Empty<PermissionSetting>(),
-                              Relationships: new(),
-                              Mappings: new());
-        }
-
         [DataTestMethod]
         [TestCategory("Mutation Builder - Create")]
         [TestCategory("Schema Builder - Simple Type")]
@@ -973,7 +958,7 @@ type Foo @model {{
         public void ValidateMutationsAreCreatedWithRightName(
             string gql,
             string entityName,
-            string singularName, 
+            string singularName,
             string pluralName,
             DatabaseType databaseType,
             string expectedName
@@ -983,11 +968,11 @@ type Foo @model {{
             Dictionary<string, EntityMetadata> entityPermissionsMap = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { entityName },
                     new Operation[] { Operation.Create, Operation.Update, Operation.Delete },
-                    new string[] { "anonymous", "authenticated"});
+                    new string[] { "anonymous", "authenticated" });
 
-            Entity entity = (singularName is not null && pluralName is not null) 
-                                ?   GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, pluralName)
-                                :   GraphQLTestHelpers.GenerateEmptyEntity(); 
+            Entity entity = (singularName is not null && pluralName is not null)
+                                ? GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, pluralName)
+                                : GraphQLTestHelpers.GenerateEmptyEntity();
 
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
@@ -1017,11 +1002,11 @@ type Foo @model {{
             Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedUpdateMutationName));
             FieldDefinitionNode updateMutation = mutation.Fields.First(f => f.Name.Value == expectedUpdateMutationName);
             Assert.AreEqual(expectedUpdateMutationDescription, updateMutation.Description.Value);
-            
+
             // Name and Description validations for Delete mutation
             string expectedDeleteMutationName = $"delete{expectedName}";
             string expectedDeleteMutationDescription = $"Delete a {expectedName}";
-            Assert.AreEqual(1, mutation.Fields.Count(f =>  f.Name.Value == expectedDeleteMutationName));
+            Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedDeleteMutationName));
             FieldDefinitionNode deleteMutation = mutation.Fields.First(f => f.Name.Value == expectedDeleteMutationName);
             Assert.AreEqual(expectedDeleteMutationDescription, deleteMutation.Description.Value);
 

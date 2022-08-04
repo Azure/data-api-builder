@@ -100,8 +100,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
         /// <param name="name">Entity's name</param>
         /// <param name="configEntity">Entity object constructed using definitions from the config. </param>
         /// <returns>Entity name to be used for creating queries and mutations in the schema.</returns>
-        public static string TryGetDefinedSingularName(NameNode name, Entity configEntity){
-            
+        public static string TryGetDefinedSingularName(NameNode name, Entity configEntity)
+        {
+
             return (configEntity.GraphQL is SingularPlural singularPlural
                     && !string.IsNullOrEmpty(singularPlural.Singular)) ? singularPlural.Singular : name.Value;
         }

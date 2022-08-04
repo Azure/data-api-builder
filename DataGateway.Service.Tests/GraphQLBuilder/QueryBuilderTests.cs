@@ -318,7 +318,7 @@ type Table @model(name: ""table"") {
         [DataRow(GraphQLTestHelpers.BOOKSGQL, "Books", null, null, DatabaseType.postgresql, "books_by_pk", "books",
             "Books", "Books")]
         [DataRow(GraphQLTestHelpers.BOOKSGQL, "Books", "book", "books", DatabaseType.cosmos, "book_by_pk", "books",
-            "book", "book" )]
+            "book", "book")]
         [DataRow(GraphQLTestHelpers.BOOKSGQL, "Books", "book", "books", DatabaseType.mssql, "book_by_pk", "books",
             "book", "book")]
         [DataRow(GraphQLTestHelpers.BOOKSGQL, "Books", "book", "books", DatabaseType.mysql, "book_by_pk", "books",
@@ -357,11 +357,11 @@ type Table @model(name: ""table"") {
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { entityName },
                     new Operation[] { Operation.Read },
-                    new string[] { "anonymous", "authenticated"});
+                    new string[] { "anonymous", "authenticated" });
 
-            Entity entity = (singularName is not null && pluralName is not null) 
-                                ?   GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, pluralName)
-                                :   GraphQLTestHelpers.GenerateEmptyEntity(); 
+            Entity entity = (singularName is not null && pluralName is not null)
+                                ? GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, pluralName)
+                                : GraphQLTestHelpers.GenerateEmptyEntity();
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
@@ -373,17 +373,17 @@ type Table @model(name: ""table"") {
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             Assert.IsNotNull(query);
-            
+
             // Two queries - 1) Query for an item using PK 2) Query for all items, should have been created.
             // Check to validate the count of queries created.
             Assert.AreEqual(2, query.Fields.Count);
-            
+
             // Validations for the PK query's name and description.
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == expectedQueryNameForPK));
             FieldDefinitionNode pkQueryfieldNode = query.Fields.First(f => f.Name.Value == expectedQueryNameForPK);
             string expectedPKQueryDescription = $"Get a {expectedNameInPKQueryDescription} from the database by its ID/primary key";
             Assert.AreEqual(expectedPKQueryDescription, pkQueryfieldNode.Description.Value);
-        
+
             // Validations for List query's name and description.
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == expectedQueryNameForList));
             FieldDefinitionNode allItemsQueryfieldNode = query.Fields.First(f => f.Name.Value == expectedQueryNameForList);

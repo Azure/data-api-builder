@@ -71,9 +71,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Queries
         }
 
         public static FieldDefinitionNode GenerateByPKQuery(
-            ObjectTypeDefinitionNode objectTypeDefinitionNode, 
-            NameNode name, 
-            DatabaseType databaseType, 
+            ObjectTypeDefinitionNode objectTypeDefinitionNode,
+            NameNode name,
+            DatabaseType databaseType,
             Entity entity,
             IEnumerable<string>? rolesAllowedForRead = null)
         {

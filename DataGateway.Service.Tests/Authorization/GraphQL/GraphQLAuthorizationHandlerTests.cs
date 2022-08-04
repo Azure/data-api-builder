@@ -37,6 +37,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization.GraphQL
         [DataRow(false, "anonymous", true, "The current user is not authorized to access this resource.", DisplayName = "Unauthenticated request to field with @authorize directive")]
         [DataRow(true, "", true, "The current user is not authorized to access this resource.", DisplayName = "Authenticated, no client role header, accessing to field with @authorize directive")]
         [DataRow(true, "RoleNotDefinedForEntity", true, "The current user is not authorized to access this resource.", DisplayName = "Authenticated, clientRoleHeader does not match @authorize directive.")]
+        [DataRow(true, "AuthorizationHandlerTester", true, "The current user is not authorized to access this resource.", DisplayName = "Authenticated access to field with @authorize directive, invalid clientRoleHeader due to case sensitivity")]
         [DataRow(true, "authorizationHandlerTester", false, "", DisplayName = "Authenticated access to field with @authorize directive, valid clientRoleHeader")]
         public async Task FieldAuthorizationProcessing(bool isAuthenticated, string clientRoleHeader, bool errorExpected, string expectedErrorMessageFragment)
         {

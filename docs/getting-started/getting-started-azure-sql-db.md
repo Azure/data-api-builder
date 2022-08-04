@@ -62,11 +62,11 @@ Start by adding the `Author` entity:
 }
 ```
 
-within the `entities` object you can create any entity with any name (as long as is valid for REST and GraphQL). That name `Author` in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case is `dbo.authors`.
+within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL, and preferably a singular noun). That name `Author` in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case is `dbo.authors`.
 
 After that, you need to specify the permission for the exposed entity, so that you can be sure only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial we're just allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `Author` entity.
 
-You can also add the `Book` entity now, applying the same concepts you just learned for the `Author` entity. Once you have added the `Author` entity, the `entities` object of configuration file will look like the following:
+You can also add the `Book` entity now, applying the same concepts you just learnt for the `Author` entity. Once you have added the `Author` entity, the `entities` object of configuration file will look like the following:
 
 ```json
 "entities": {

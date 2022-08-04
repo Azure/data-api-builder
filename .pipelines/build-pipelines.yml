@@ -60,18 +60,14 @@ steps:
          # This sets the variable in the whole pipeline
          echo "##vso[task.setvariable variable=packVersionSuffix]$packVersionSuffix"
 
-# TODO: conditional versioning of nuget package for release and build pipeline
 - task: DotNetCoreCLI@2
   displayName: 'Creating Nuget Package'
   inputs:
     command: pack
-    buildProperties: 'VersionSuffix="$(packVersionSuffix)";Verbosity=minimal'
-    # versionSuffix: '$(packVersionSuffix)'
-    # Verbosity: 'minimal'
-    # projects: '**/Hawaii.Cli.csproj'
-    # arguments: '--configuration $(buildConfiguration) --version-suffix $(packVersionSuffix)'
+    buildProperties: 'VersionSuffix="$(packVersionSuffix)"'
+    verbosityPack: 'minimal'
     packagesToPack: '**/Hawaii.Cli.csproj'
-    packDirectory: '$(Build.ArtifactStagingDirectory)'
+    packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
 
 # # TODO: to publish nuget package to nuget feed when releasing else
 # # publish to pipeline artifact.
@@ -90,14 +86,12 @@ steps:
 #     versioningScheme: 'off'
 #     allowPackageConflicts: true
 
-# TODO: below task is only supported on windows machine
 # Upload the nuget file for the current run
 - task: PublishPipelineArtifact@1
   inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)'
+    targetPath: '$(Build.ArtifactStagingDirectory)/nupkg'
     artifactName: 'DAB_nuget_package'
     artifactType: 'pipeline'
-    # fileSharePath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
 
 
 - task: PublishCodeCoverageResults@1

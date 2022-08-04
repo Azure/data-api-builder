@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Service.Models;
@@ -300,13 +301,21 @@ namespace Azure.DataGateway.Service.Resolvers
             _logger.LogInformation(queryString);
 
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
-            Dictionary<string, object> resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
+            Dictionary<string, object> resultRecord;
+            JsonArray resultArray = new();
+            
+            while ((resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader)) is not null)
+            {
+                JsonElement result = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(resultRecord));
+                resultArray.Add(result);
+            }
+
             JsonDocument jsonDocument = null;
 
             // If result set is non-empty, parse rows into json array
-            if (dbDataReader.HasRows)
+            if (resultArray.Count > 0)
             {
-                jsonDocument = JsonDocument.Parse($"[{JsonSerializer.Serialize(resultRecord)}]");
+                jsonDocument = JsonDocument.Parse(resultArray.ToJsonString());
             }
             else
             {

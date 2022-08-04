@@ -56,52 +56,16 @@ steps:
     codeCoverageTool: Cobertura
     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
-- task: DotNetCoreCLI@2
-  displayName: Publish engine win-x64
+- task: ShellScript@2
+  displayName: "Publish projects to mutliple platform"
   inputs:
-    command: publish
-    publishWebProjects: True
-    projects: $(Build.SourcesDirectory)\DataGateway.Service\Azure.DataGateway.Service.csproj
-    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish/win-x64 --runtime win-x64'
-    zipAfterPublish: True
-    modifyOutputPath: True
-
-- task: DotNetCoreCLI@2
-  displayName: Publish engine linux-x64
-  inputs:
-    command: publish
-    publishWebProjects: True
-    projects: $(Build.SourcesDirectory)\DataGateway.Service\Azure.DataGateway.Service.csproj
-    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish/linux-x64 --runtime linux-x64'
-    zipAfterPublish: True
-    modifyOutputPath: True
-
-- task: DotNetCoreCLI@2
-  displayName: Publish engine osx-x64
-  inputs:
-    command: publish
-    publishWebProjects: True
-    projects: $(Build.SourcesDirectory)\DataGateway.Service\Azure.DataGateway.Service.csproj
-    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish/osx-x64 --runtime osx-x64'
-    zipAfterPublish: True
-    modifyOutputPath: True
+    scriptPath: publish.sh
 
 # this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
 - task: PublishPipelineArtifact@1
+  displayName: "Upload build artifacts"
   inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)' 
-    artifactName: 'engine'
-
-# Publish pipeline artifacts
-# Publish (upload) a file or directory as a named artifact for the current run
-- task: PublishPipelineArtifact@1
-  inputs:
-    targetPath: '$(Build.SourcesDirectory)/out' # Required 
-    #artifactName: 'drop' # Optional
-    #artifactType: 'pipeline' # Required. Options: pipeline, filepath. Default value: pipeline
-    #fileSharePath: '\server\folderName' # Required when artifactType = filepath
-    #parallel: false # Optional. Default value: false
-    #parallelCount: 1 # Optional. Value must be at least 1 and not greater than 128. Default value: 8
+    targetPath: '$(Build.SourcesDirectory)/publish' 
 
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.

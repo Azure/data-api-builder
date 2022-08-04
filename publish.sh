@@ -1,5 +1,4 @@
-
-# Absolute path this script is in, thus /home/user/bin
+#!/bin/bash
 BuildRoot=$(dirname "$0")
 BuildConfiguration=$1
 

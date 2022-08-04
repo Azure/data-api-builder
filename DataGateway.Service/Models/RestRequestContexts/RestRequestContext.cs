@@ -4,12 +4,9 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
-using Azure.DataGateway.Service.Resolvers;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.OData.UriParser;
 
 namespace Azure.DataGateway.Service.Models

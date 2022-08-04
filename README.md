@@ -12,7 +12,7 @@ To get started quickly with Data API builder for Azure Databases, you can use th
 
 ## Documentation
 
-TDB
+Documentation is available in the [`docs`](./docs) folder.
 
 ## How to Contribute
 

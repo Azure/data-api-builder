@@ -6,119 +6,146 @@
 trigger:
 - main
 
-pool:
-  vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
+jobs:
+- job: Build
+  pool:
+    vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
 
-variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
+  variables:
+    solution: '**/*.sln'
+    buildPlatform: 'Any CPU'
+    buildConfiguration: 'Release'
 
-steps:
-- task: UseDotNet@2
-  displayName: Setup .NET SDK v6.0.x
-  inputs:
-    packageType: sdk
-    version: 6.0.x
-    installationPath: $(Agent.ToolsDirectory)/dotnet
+  steps:
+  - task: UseDotNet@2
+    displayName: Setup .NET SDK v6.0.x
+    inputs:
+      packageType: sdk
+      version: 6.0.x
+      installationPath: $(Agent.ToolsDirectory)/dotnet
 
-- task: NuGetToolInstaller@1
+  - task: NuGetToolInstaller@1
 
-- task: NuGetCommand@2
-  inputs:
-    restoreSolution: '$(solution)'
+  - task: NuGetCommand@2
+    inputs:
+      restoreSolution: '$(solution)'
 
-- task: DotNetCoreCLI@2
-  displayName: Check formatting
-  inputs:
-    command: custom
-    custom: format
-    projects: '$(solution)'
-    arguments: '--verify-no-changes'
+  - task: DotNetCoreCLI@2
+    displayName: Check formatting
+    inputs:
+      command: custom
+      custom: format
+      projects: '$(solution)'
+      arguments: '--verify-no-changes'
 
-- task: DotNetCoreCLI@2
-  displayName: Build
-  inputs:
-    command: build
-    projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration)' # Update this to match your need
+  - task: DotNetCoreCLI@2
+    displayName: Build
+    inputs:
+      command: build
+      projects: '**/*.csproj'
+      arguments: '--configuration $(buildConfiguration)' # Update this to match your need
 
-- task: DotNetCoreCLI@2
-  displayName: "Run Unit Tests"
-  inputs:
-    command: test
-    projects: '**/*Tests*.csproj'
-    arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+  - task: DotNetCoreCLI@2
+    displayName: "Run Unit Tests"
+    inputs:
+      command: test
+      projects: '**/*Tests*.csproj'
+      arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
-- task: PowerShell@2
-  displayName: 'Set versionSuffix'
-  inputs:
-    targetType: 'inline'
-    script: |
-         $packVersionSuffix = "$(Build.SourceBranchName).$(Build.BuildId)"
-         echo "packVersionSuffix is: ${packVersionSuffix}"
-         # This sets the variable in the whole pipeline
-         echo "##vso[task.setvariable variable=packVersionSuffix]$packVersionSuffix"
+  - task: PowerShell@2
+    displayName: 'Set versionSuffix'
+    inputs:
+      targetType: 'inline'
+      script: |
+          $packVersionSuffix = "$(Build.SourceBranchName).$(Build.BuildId)"
+          echo "packVersionSuffix is: ${packVersionSuffix}"
+          # This sets the variable in the whole pipeline
+          echo "##vso[task.setvariable variable=packVersionSuffix]$packVersionSuffix"
 
-- task: DotNetCoreCLI@2
-  displayName: 'Creating Nuget Package'
-  inputs:
-    command: pack
-    buildProperties: 'VersionSuffix="$(packVersionSuffix)"'
-    verbosityPack: 'minimal'
-    packagesToPack: '**/Hawaii.Cli.csproj'
-    packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
+  - task: DotNetCoreCLI@2
+    displayName: 'Creating Nuget Package'
+    inputs:
+      command: pack
+      buildProperties: 'VersionSuffix="$(packVersionSuffix)"'
+      verbosityPack: 'minimal'
+      packagesToPack: '**/Hawaii.Cli.csproj'
+      packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
 
-# # TODO: to publish nuget package to nuget feed when releasing else
-# # publish to pipeline artifact.
-# # This task will publish the NuGet Package
-# - task: NuGetAuthenticate@0
-#   displayName: 'NuGet Authenticate'
-# - task: NuGetCommand@2
-#   displayName: 'NuGet push'
-#   inputs:
-#     command: 'push'
-#     feedsToUse: 'select'
-#     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
-#     nuGetFeedType: 'internal'
-#     vstsFeed: CosmosDB/Hawaii_Packages
-#     publishVstsFeed: CosmosDB/Hawaii_Packages
-#     versioningScheme: 'off'
-#     allowPackageConflicts: true
+  # # TODO: to publish nuget package to nuget feed when releasing else
+  # # publish to pipeline artifact.
+  # # This task will publish the NuGet Package
+  # - task: NuGetAuthenticate@0
+  #   displayName: 'NuGet Authenticate'
+  # - task: NuGetCommand@2
+  #   displayName: 'NuGet push'
+  #   inputs:
+  #     command: 'push'
+  #     feedsToUse: 'select'
+  #     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+  #     nuGetFeedType: 'internal'
+  #     vstsFeed: CosmosDB/Hawaii_Packages
+  #     publishVstsFeed: CosmosDB/Hawaii_Packages
+  #     versioningScheme: 'off'
+  #     allowPackageConflicts: true
 
-# Upload the nuget file for the current run
-- task: PublishPipelineArtifact@1
-  inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)/nupkg'
-    artifactName: 'DAB_nuget_package'
-    artifactType: 'pipeline'
+  # Upload the nuget file for the current run
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: '$(Build.ArtifactStagingDirectory)/nupkg'
+      artifactName: 'DAB_nuget_package'
+      artifactType: 'pipeline'
 
 
-- task: PublishCodeCoverageResults@1
-  displayName: 'Publish code coverage'
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish code coverage'
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
-# This task gets the current date and saves it to a variable so the docker task can use the build's
-# date and time as a tag.
-- task: PowerShell@2
-  displayName: "Get date for Docker image Tag"
-  inputs:
-    targetType: 'inline'
-    script: |
-      Write-Host "Setting up the date and time as a build variable for the Docker tag"
-      $date=$(Get-Date -format yyyyMMdd-HHmmss)
-      Write-Host "##vso[task.setvariable variable=BuildDate]$date"
+  # This task gets the current date and saves it to a variable so the docker task can use the build's
+  # date and time as a tag.
+  - task: PowerShell@2
+    displayName: "Get date for Docker image Tag"
+    inputs:
+      targetType: 'inline'
+      script: |
+        Write-Host "Setting up the date and time as a build variable for the Docker tag"
+        $date=$(Get-Date -format yyyyMMdd-HHmmss)
+        Write-Host "##vso[task.setvariable variable=BuildDate]$date"
 
-# Build a docker image and push it to the container registry.
-- task: Docker@2
-  displayName: "Build and push docker image to Azure Container Registry"
-  inputs:
-    containerRegistry: 'CosmosDB GraphQL/Hawaii'
-    repository: 'hawaii/$(Build.SourceBranch)'
-    command: 'buildAndPush'
-    Dockerfile: '**/Dockerfile'
-    tags: |
-      $(BuildDate)-$(Build.SourceVersion)
-      latest
+  # Build a docker image and push it to the container registry.
+  - task: Docker@2
+    displayName: "Build and push docker image to Azure Container Registry"
+    inputs:
+      containerRegistry: 'CosmosDB GraphQL/Hawaii'
+      repository: 'hawaii/$(Build.SourceBranch)'
+      command: 'buildAndPush'
+      Dockerfile: '**/Dockerfile'
+      tags: |
+        $(BuildDate)-$(Build.SourceVersion)
+        latest
+
+- job: Release_Nuget
+  displayName: Release Nuget Package to Nuget Feed
+  dependsOn: Build
+
+  pool:
+    vmImage: 'ubuntu-latest'
+
+  variables:
+    NugetRelease: false
+
+  steps:
+  - script: echo variables['build.sourceBranch']
+  # - task: UseDotNet@2
+  #   displayName: Setup .NET SDK v6.0.x
+  #   inputs:
+  #     packageType: sdk
+  #     version: 6.0.x
+  #     installationPath: $(Agent.ToolsDirectory)/dotnet
+
+  # - task: NuGetToolInstaller@1
+
+  # - task: NuGetCommand@2
+  #   inputs:
+  #     restoreSolution: '$(solution)'

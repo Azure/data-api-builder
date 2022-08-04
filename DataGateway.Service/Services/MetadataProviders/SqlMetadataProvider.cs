@@ -31,9 +31,6 @@ namespace Azure.DataGateway.Service.Services
 
         private readonly Dictionary<string, Entity> _entities;
 
-        // An efficient way to access entities labeled as stored procedures instead of iterating over all entities each time
-        private readonly Dictionary<string, Entity> _storedProcedureEntities;
-
         // nullable since Mock tests do not need it.
         // TODO: Refactor the Mock tests to remove the nullability here
         // once the runtime config is implemented tracked by #353.
@@ -69,8 +66,6 @@ namespace Azure.DataGateway.Service.Services
 
             _databaseType = runtimeConfig.DatabaseType;
             _entities = runtimeConfig.Entities;
-            _storedProcedureEntities = _entities.Where(kv => kv.Value.GetSourceObject().Type is SourceType.StoredProcedure)
-                        .ToDictionary(dict => dict.Key, dict => dict.Value);
             ConnectionString = runtimeConfig.ConnectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
@@ -166,29 +161,11 @@ namespace Azure.DataGateway.Service.Services
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
             GenerateDatabaseObjectForEntities();
-            await PopulateTableDefinitionForEntities();
-            await PopulateStoredProcedureDefinitionForEntities();
+            await PopulateObjectDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();
             InitODataParser();
             timer.Stop();
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
-        }
-
-        /// <summary>
-        /// Populate the StoredProcedureDefinition field of each database object labeled as a stored procedure entity in config
-        /// </summary>
-        /// <returns></returns>
-        private async Task PopulateStoredProcedureDefinitionForEntities()
-        {
-            foreach ((string entityName, Entity procedureEntity) in _storedProcedureEntities)
-            {
-                await FillSchemaForStoredProcedureAsync(
-                    procedureEntity,
-                    GetSchemaName(entityName),
-                    GetDatabaseObjectName(entityName),
-                    GetStoredProcedureDefinition(entityName));
-
-            }
         }
 
         /// <summary>
@@ -585,17 +562,24 @@ namespace Azure.DataGateway.Service.Services
 
         /// <summary>
         /// Enrich the entities in the runtime config with the
-        /// table definition information needed by the runtime to serve requests.
-        /// Only does so for entities specified as tables or views in config
+        /// object definition information needed by the runtime to serve requests.
+        /// Populates table definition for entities specified as tables or views
+        /// Populates procedure definition for entities specified as stored procedures
         /// </summary>
-        private async Task PopulateTableDefinitionForEntities()
+        private async Task PopulateObjectDefinitionForEntities()
         {
-            foreach (string entityName
-                in EntityToDatabaseObject.Keys)
+            foreach ((string entityName, Entity procedureEntity) in _entities)
             {
-                // Only tables and views have their table definitions populated, not stored procedures
-                SourceType entitySourceType = _entities[entityName].GetSourceObject().Type;
-                if (entitySourceType is SourceType.Table || entitySourceType is SourceType.View)
+                SourceType entitySourceType = procedureEntity.GetSourceObject().Type;
+                if (entitySourceType is SourceType.StoredProcedure)
+                {
+                    await FillSchemaForStoredProcedureAsync(
+                        procedureEntity,
+                        GetSchemaName(entityName),
+                        GetDatabaseObjectName(entityName),
+                        GetStoredProcedureDefinition(entityName));
+                }
+                else
                 {
                     await PopulateTableDefinitionAsync(
                         entityName,
@@ -946,7 +930,7 @@ namespace Azure.DataGateway.Service.Services
             foreach ((_, DatabaseObject dbObject) in EntityToDatabaseObject)
             {
                 // Ensure we're only doing this on tables, not stored procedures which have no table definition
-                if (dbObject.ObjectType is SourceType.Table || dbObject.ObjectType is SourceType.View)
+                if (dbObject.ObjectType is not SourceType.StoredProcedure)
                 {
                     if (!sourceNameToTableDefinition.ContainsKey(dbObject.Name))
                     {

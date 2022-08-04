@@ -106,7 +106,6 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestBootstrapTests
                     context: null,
                     new List<string> { compositeDbViewquery },
                     new List<string[]> { customEntity });
-
                 // Perform a GET operation on the view to confirm that it is functional.
                 // Set up rest controller.
                 RestService _restService = new(_queryEngine,
@@ -116,7 +115,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestBootstrapTests
                     _authorizationService.Object,
                     _authorizationResolver,
                     _runtimeConfigProvider);
-                RestController _restController = new(_restService);
+                RestController _restController = new(_restService,
+                                                     _restControllerLogger);
 
                 // Query to validate the GET operation result.
                 string query = @"

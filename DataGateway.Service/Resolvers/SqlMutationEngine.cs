@@ -141,7 +141,7 @@ namespace Azure.DataGateway.Service.Resolvers
         {
             SqlExecuteStructure executeQueryStructure = new(context.EntityName, _sqlMetadataProvider, context.ResolvedParameters!);
             string queryText = _queryBuilder.Build(executeQueryStructure);
-            Console.WriteLine(queryText);
+            _logger.LogInformation(queryText);
 
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, executeQueryStructure.Parameters);
             Dictionary<string, object?>? resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);

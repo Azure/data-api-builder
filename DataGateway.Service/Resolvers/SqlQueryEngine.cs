@@ -297,7 +297,7 @@ namespace Azure.DataGateway.Service.Resolvers
         private async Task<JsonDocument> ExecuteAsync(SqlExecuteStructure structure)
         {
             string queryString = _queryBuilder.Build(structure);
-            Console.WriteLine(queryString);
+            _logger.LogInformation(queryString);
 
             using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
             Dictionary<string, object> resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
@@ -310,7 +310,7 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             else
             {
-                Console.WriteLine("Did not return enough rows.");
+                _logger.LogInformation("Did not return enough rows.");
             }
 
             return jsonDocument;

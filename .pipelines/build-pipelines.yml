@@ -64,13 +64,12 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: 'Creating Nuget Package'
   inputs:
-    command: custom
-    custom: pack
+    command: pack
     buildProperties: 'VersionSuffix="$(packVersionSuffix)"'
     versionSuffix: '$(packVersionSuffix)'
-    packagesToPack: '**/Hawaii.Cli.csproj'
+    projects: '**/Hawaii.Cli.csproj'
     arguments: '--configuration $(buildConfiguration) --version-suffix $(packVersionSuffix)'
-    packDestination: '$(Build.ArtifactStagingDirectory)'
+    packDirectory: '$(Build.ArtifactStagingDirectory)'
 
 # # TODO: to publish nuget package to nuget feed when releasing else
 # # publish to pipeline artifact.

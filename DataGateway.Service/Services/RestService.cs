@@ -80,58 +80,7 @@ namespace Azure.DataGateway.Service.Services
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
             if (dbObject.ObjectType is SourceType.StoredProcedure)
             {
-                switch (operationType)
-                {
-
-                    case Operation.Read:
-                        // Parameters passed in query string, request body is ignored for find requests
-                        context = new StoredProcedureRequestContext(
-                            entityName,
-                            dbo: dbObject,
-                            requestPayloadRoot: null,
-                            operationType);
-
-                        // Don't want to use RequestParser.ParseQueryString here since for all non-sp requests,
-                        // arbitrary keys shouldn't be allowed/recognized in the querystring.
-                        // So, for the time being, filter, select, etc. fields aren't populated for sp requests
-                        // So, $filter will be treated as any other parameter (inevitably will raise a Bad Request)
-                        if (!string.IsNullOrWhiteSpace(queryString))
-                        {
-                            context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
-                        }
-
-                        break;
-                    case Operation.Insert:
-                    case Operation.Delete:
-                    case Operation.Update:
-                    case Operation.UpdateIncremental:
-                    case Operation.Upsert:
-                    case Operation.UpsertIncremental:
-                        // Stored procedure call is semantically identical for all methods except Find, so we can
-                        // effectively reuse the ValidateInsertRequest - throws error if query string is nonempty
-                        // and parses the body into json
-                        JsonElement requestPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
-                        context = new StoredProcedureRequestContext(
-                            entityName,
-                            dbo: dbObject,
-                            requestPayloadRoot,
-                            operationType);
-                        break;
-                    default:
-                        throw new DataGatewayException(message: "This operation is not supported.",
-                                                       statusCode: HttpStatusCode.BadRequest,
-                                                       subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
-                }
-
-                // Throws bad request if primaryKeyRoute set
-                RequestValidator.ValidateStoredProcedureRequest(primaryKeyRoute);
-
-                // At this point, either query string or request body is populated with params, so resolve which will be passed
-                ((StoredProcedureRequestContext)context).PopulateResolvedParameters();
-
-                // Validate the request parameters
-                RequestValidator.ValidateStoredProcedureRequestContext(
-                    (StoredProcedureRequestContext)context, _sqlMetadataProvider);
+                
             }
             else
             {
@@ -230,6 +179,62 @@ namespace Azure.DataGateway.Service.Services
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             };
+        }
+
+        private void PopulateStoredProcedureContext(out RestRequestContext context)
+        {
+            switch (operationType)
+            {
+
+                case Operation.Read:
+                    // Parameters passed in query string, request body is ignored for find requests
+                    context = new StoredProcedureRequestContext(
+                        entityName,
+                        dbo: dbObject,
+                        requestPayloadRoot: null,
+                        operationType);
+
+                    // Don't want to use RequestParser.ParseQueryString here since for all non-sp requests,
+                    // arbitrary keys shouldn't be allowed/recognized in the querystring.
+                    // So, for the time being, filter, select, etc. fields aren't populated for sp requests
+                    // So, $filter will be treated as any other parameter (inevitably will raise a Bad Request)
+                    if (!string.IsNullOrWhiteSpace(queryString))
+                    {
+                        context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
+                    }
+
+                    break;
+                case Operation.Insert:
+                case Operation.Delete:
+                case Operation.Update:
+                case Operation.UpdateIncremental:
+                case Operation.Upsert:
+                case Operation.UpsertIncremental:
+                    // Stored procedure call is semantically identical for all methods except Find, so we can
+                    // effectively reuse the ValidateInsertRequest - throws error if query string is nonempty
+                    // and parses the body into json
+                    JsonElement requestPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
+                    context = new StoredProcedureRequestContext(
+                        entityName,
+                        dbo: dbObject,
+                        requestPayloadRoot,
+                        operationType);
+                    break;
+                default:
+                    throw new DataGatewayException(message: "This operation is not supported.",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+            }
+
+            // Throws bad request if primaryKeyRoute set
+            RequestValidator.ValidateStoredProcedureRequest(primaryKeyRoute);
+
+            // At this point, either query string or request body is populated with params, so resolve which will be passed
+            ((StoredProcedureRequestContext)context).PopulateResolvedParameters();
+
+            // Validate the request parameters
+            RequestValidator.ValidateStoredProcedureRequestContext(
+                (StoredProcedureRequestContext)context, _sqlMetadataProvider);
         }
 
         /// <summary>

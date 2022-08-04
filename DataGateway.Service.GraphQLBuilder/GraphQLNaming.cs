@@ -41,7 +41,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 
         /// <summary>
         /// Checks whether name has invalid characters at the start of the name provided.
-        /// - GraphQL specification requires that a name start with an upper or lowercase letter.
+        /// - GraphQL specification requires that a name does not contain anything other than
+        /// upper or lowercase letters or numbers.
         /// </summary>
         /// <param name="name">Name to be checked.</param>
         /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
@@ -74,14 +75,19 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
         /// <returns></returns>
         public static string FormatNameForObject(string name, Entity configEntity)
         {
+            // Determine whether runtime config defines specific singular and/or plural
+            // GraphQL entity names.
+            // If singular name is not defined, used the top-level defined entity name.
             if (configEntity.GraphQL is SingularPlural namingRules)
             {
                 name = string.IsNullOrEmpty(namingRules.Singular) ? name : namingRules.Singular;
             }
 
-            string[] nameSegments = SanitizeGraphQLName(name);
+            // Temp Removal, assume name is sanitized.
+            // string[] nameSegments = SanitizeGraphQLName(name);
 
-            return string.Join("", nameSegments.Select(n => $"{char.ToUpperInvariant(n[0])}{n[1..]}"));
+            //return string.Join(separator: "", nameSegments.Select(n => $"{char.ToUpperInvariant(n[0])}{n[1..]}"));
+            return name;
         }
 
         public static string FormatNameForObject(NameNode name, Entity configEntity)
@@ -89,6 +95,14 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             return FormatNameForObject(name.Value, configEntity);
         }
 
+        /// <summary>
+        /// Helper which
+        /// - Sanitizes the GraphQLName by removing invalid characters from "name."
+        /// - Capture nameSegments: substrings in "name" delimited by spaces.
+        /// - camelCase the sanitized name: lower case first string segment, followed by upper-case string segments.
+        /// </summary>
+        /// <param name="name">Name to sanitize and format for GraphQL schema usage.</param>
+        /// <returns>Sanitized and formatted name value.</returns>
         public static string FormatNameForField(string name)
         {
             string[] nameSegments = SanitizeGraphQLName(name);
@@ -96,16 +110,37 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             return string.Join("", nameSegments.Select((n, i) => $"{(i == 0 ? char.ToLowerInvariant(n[0]) : char.ToUpperInvariant(n[0]))}{n[1..]}"));
         }
 
+        /// <summary>
+        /// Helper which passes the HotChocolate schema object type of NameNode
+        /// to the FormatNameForField function to sanitize and format the name for GraphQL.
+        /// </summary>
+        /// <param name="name">HotChocolate schema object type NameNode</param>
+        /// <returns>Sanitized and formatted name value.</returns>
         public static string FormatNameForField(NameNode name)
         {
             return FormatNameForField(name.Value);
         }
 
+        /// <summary>
+        /// Helper to pluralize the value of a NameNode HotChocolate schema object
+        /// </summary>
+        /// <param name="name">HotChocolate schema object type NameNode</param>
+        /// <param name="configEntity">Entity definition from runtime configuration.</param>
+        /// <returns></returns>
         public static NameNode Pluralize(NameNode name, Entity configEntity)
         {
             return Pluralize(name.Value, configEntity);
         }
 
+        /// <summary>
+        /// Helper to pluralize the passed in string with the plural name defined
+        /// for the entity in the runtime configuration.
+        /// If the plural name is not defined, use the singularName.Pluralize() value
+        /// and if that does not exist, use the top-level entity name value, pluralized.
+        /// </summary>
+        /// <param name="name">string representing a name to pluralize</param>
+        /// <param name="configEntity">Entity definition from runtime configuration.</param>
+        /// <returns></returns>
         public static NameNode Pluralize(string name, Entity configEntity)
         {
             if (configEntity.GraphQL is SingularPlural namingRules)

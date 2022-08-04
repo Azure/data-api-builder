@@ -52,9 +52,9 @@ namespace Azure.DataGateway.Service.Resolvers
                             subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
                 }
-                // Fill with default value from runtime config
                 else
-                {   
+                {
+                    // Fill with default value from runtime config
                     if (paramDefinition.HasConfigDefault)
                     {
                         string parameterizedName = MakeParamWithValue(paramDefinition.ConfigDefaultValue);

@@ -16,11 +16,6 @@
     <SelfContained>false</SelfContained>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' OR '$(RuntimeIdentifier)' == 'win-x86'">
-    <PublishReadyToRun>false</PublishReadyToRun>
-    <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="$(CommandLineParserVersion)" />
     <PackageReference Include="Humanizer.Core" Version="$(HumanizerVersion)" />

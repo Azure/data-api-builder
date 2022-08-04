@@ -219,14 +219,12 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
             // Verify that read only role has permission for read and nothing else.
-            //
             Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, Operation.Read));
             Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, Operation.Update));
             Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, Operation.Create));
             Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_ONLY_ROLE, Operation.Delete));
 
             // Verify that read only role has permission for read/update and nothing else.
-            //
             Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, Operation.Read));
             Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, Operation.Update));
             Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, READ_AND_UPDATE_ROLE, Operation.Create));
@@ -275,7 +273,6 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 }
                 else
                 {
-
                     // Check that no other action is defined for the authenticated role to ensure
                     // the authenticated role's permissions match that of the anonymous role's permissions.
                     Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
@@ -285,24 +282,33 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 }
             }
 
-            // Anonymous role's permissions are mocked for authenticated role only.
+            // Anonymous role's permissions are copied over for authenticated role only.
             // Assert by checking for an arbitrary role.
             Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE, Operation.Create));
 
             // Assert that the create operation has both anonymous, authenticated roles.
             List<string> expectedRolesForCreate = new() { AuthorizationResolver.ROLE_AUTHENTICATED, AuthorizationResolver.ROLE_ANONYMOUS };
-            IEnumerable<string> actualRolesForCreate = IAuthorizationResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, Operation.Create, authZResolver.EntityPermissionsMap);
+            IEnumerable<string> actualRolesForCreate = IAuthorizationResolver.GetRolesForAction(
+                AuthorizationHelpers.TEST_ENTITY,
+                Operation.Create,
+                authZResolver.EntityPermissionsMap);
             CollectionAssert.AreEquivalent(expectedRolesForCreate, actualRolesForCreate.ToList());
 
             // Assert that the col1 field with create action has both anonymous, authenticated roles.
-            List<string> expectedRolesForCreateCol1 = new() { AuthorizationResolver.ROLE_ANONYMOUS, AuthorizationResolver.ROLE_AUTHENTICATED };
-            IEnumerable<string> actualRolesForCreateCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", Operation.Create);
+            List<string> expectedRolesForCreateCol1 = new() {
+                AuthorizationResolver.ROLE_ANONYMOUS,
+                AuthorizationResolver.ROLE_AUTHENTICATED };
+            IEnumerable<string> actualRolesForCreateCol1 = authZResolver.GetRolesForField(
+                AuthorizationHelpers.TEST_ENTITY,
+                "col1", Operation.Create);
             CollectionAssert.AreEquivalent(expectedRolesForCreateCol1, actualRolesForCreateCol1.ToList());
 
             // Assert that the col1 field with read action has no role.
             List<string> expectedRolesForReadCol1 = new();
-            IEnumerable<string> actualRolesForReadCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", Operation.Read);
+            IEnumerable<string> actualRolesForReadCol1 = authZResolver.GetRolesForField(
+                AuthorizationHelpers.TEST_ENTITY,
+                "col1", Operation.Read);
             CollectionAssert.AreEquivalent(expectedRolesForReadCol1, actualRolesForReadCol1.ToList());
         }
 
@@ -326,17 +332,23 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Create action should not be defined for authenticated role,
             // because neither authenticated nor anonymous role is defined.
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, AuthorizationResolver.ROLE_AUTHENTICATED, Operation.Create));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationResolver.ROLE_AUTHENTICATED, Operation.Create));
 
             // Assert that the create operation has only test_role.
             List<string> expectedRolesForCreate = new() { AuthorizationHelpers.TEST_ROLE };
-            IEnumerable<string> actualRolesForCreate = IAuthorizationResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, Operation.Create, authZResolver.EntityPermissionsMap);
+            IEnumerable<string> actualRolesForCreate = IAuthorizationResolver.GetRolesForAction(
+                AuthorizationHelpers.TEST_ENTITY,
+                Operation.Create,
+                authZResolver.EntityPermissionsMap);
             CollectionAssert.AreEquivalent(expectedRolesForCreate, actualRolesForCreate.ToList());
 
             // Since neither anonymous nor authenticated role is defined for the entity,
             // create action would only have the test_role.
             List<string> expectedRolesForCreateCol1 = new() { AuthorizationHelpers.TEST_ROLE };
-            IEnumerable<string> actualRolesForCreateCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", Operation.Create);
+            IEnumerable<string> actualRolesForCreateCol1 = authZResolver.GetRolesForField(
+                AuthorizationHelpers.TEST_ENTITY,
+                "col1", Operation.Create);
             CollectionAssert.AreEquivalent(expectedRolesForCreateCol1, actualRolesForCreateCol1.ToList());
         }
 
@@ -404,24 +416,37 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 AuthorizationResolver.ROLE_AUTHENTICATED, Operation.Delete));
 
             // Assert that the read operation has both anonymous and authenticated role.
-            List<string> expectedRolesForRead = new() { AuthorizationResolver.ROLE_ANONYMOUS,
+            List<string> expectedRolesForRead = new() {
+                AuthorizationResolver.ROLE_ANONYMOUS,
                 AuthorizationResolver.ROLE_AUTHENTICATED };
-            IEnumerable<string> actualRolesForRead = IAuthorizationResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, Operation.Read, authZResolver.EntityPermissionsMap);
+            IEnumerable<string> actualRolesForRead = IAuthorizationResolver.GetRolesForAction(
+                AuthorizationHelpers.TEST_ENTITY,
+                Operation.Read,
+                authZResolver.EntityPermissionsMap);
             CollectionAssert.AreEquivalent(expectedRolesForRead, actualRolesForRead.ToList());
 
             // Assert that the update operation has only anonymous role.
             List<string> expectedRolesForUpdate = new() { AuthorizationResolver.ROLE_ANONYMOUS };
-            IEnumerable<string> actualRolesForUpdate = IAuthorizationResolver.GetRolesForAction(AuthorizationHelpers.TEST_ENTITY, Operation.Update, authZResolver.EntityPermissionsMap);
+            IEnumerable<string> actualRolesForUpdate = IAuthorizationResolver.GetRolesForAction(
+                AuthorizationHelpers.TEST_ENTITY,
+                Operation.Update,
+                authZResolver.EntityPermissionsMap);
             CollectionAssert.AreEquivalent(expectedRolesForUpdate, actualRolesForUpdate.ToList());
 
             // Assert that the col1 field with read action has both anonymous and authenticated roles.
-            List<string> expectedRolesForReadCol1 = new() { AuthorizationResolver.ROLE_ANONYMOUS, AuthorizationResolver.ROLE_AUTHENTICATED };
-            IEnumerable<string> actualRolesForReadCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", Operation.Read);
+            List<string> expectedRolesForReadCol1 = new() {
+                AuthorizationResolver.ROLE_ANONYMOUS,
+                AuthorizationResolver.ROLE_AUTHENTICATED };
+            IEnumerable<string> actualRolesForReadCol1 = authZResolver.GetRolesForField(
+                AuthorizationHelpers.TEST_ENTITY,
+                "col1", Operation.Read);
             CollectionAssert.AreEquivalent(expectedRolesForReadCol1, actualRolesForReadCol1.ToList());
 
             // Assert that the col1 field with update action has only anonymous roles.
             List<string> expectedRolesForUpdateCol1 = new() { AuthorizationResolver.ROLE_ANONYMOUS };
-            IEnumerable<string> actualRolesForUpdateCol1 = authZResolver.GetRolesForField(AuthorizationHelpers.TEST_ENTITY, "col1", Operation.Update);
+            IEnumerable<string> actualRolesForUpdateCol1 = authZResolver.GetRolesForField(
+                AuthorizationHelpers.TEST_ENTITY,
+                "col1", Operation.Update);
             CollectionAssert.AreEquivalent(expectedRolesForUpdateCol1, actualRolesForUpdateCol1.ToList());
         }
         #endregion

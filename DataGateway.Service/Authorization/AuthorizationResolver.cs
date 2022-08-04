@@ -310,8 +310,8 @@ namespace Azure.DataGateway.Service.Authorization
                         if (ROLE_ANONYMOUS.Equals(role))
                         {
                             // Saving the allowed columns for anonymous role in case we need to mock the
-                            // allowed columns for authenticated role. This optimireduces the time complexity
-                            // for mocking.
+                            // allowed columns for authenticated role. This reduces the time complexity
+                            // for copying over permissions to authenticated role from anonymous role.
                             allowedColumnsForAnonymousRole = allowedColumns;
                         }
                     }
@@ -321,14 +321,14 @@ namespace Azure.DataGateway.Service.Authorization
 
                 // Check if anonymous role is defined but authenticated is not. If that is the case,
                 // then the authenticated role derives permissions that are atleast equal to anonymous role.
-                if (entityToRoleMap.RoleToActionMap.ContainsKey(ROLE_ANONYMOUS) &&
+                if (entityToRoleMap.RoleToActionMap.TryGetValue(ROLE_ANONYMOUS, out RoleMetadata? anonyMousRoleToActionMap) &&
                     !entityToRoleMap.RoleToActionMap.ContainsKey(ROLE_AUTHENTICATED))
                 {
                     // Using assignment operator overrides the existing value for the key /
                     // adds a new entry for (key,value) pair if absent, to the map.
-                    entityToRoleMap.RoleToActionMap[ROLE_AUTHENTICATED] = entityToRoleMap.RoleToActionMap[ROLE_ANONYMOUS];
+                    entityToRoleMap.RoleToActionMap[ROLE_AUTHENTICATED] = anonyMousRoleToActionMap;
 
-                    // Mock ActionToRolesMap for authenticated role.
+                    // Copy over ActionToRolesMap for authenticated role from anonymous role.
                     Dictionary<Operation, ActionMetadata> allowedActionMap =
                         entityToRoleMap.RoleToActionMap[ROLE_ANONYMOUS].ActionToColumnMap;
                     foreach (Operation operation in allowedActionMap.Keys)
@@ -336,7 +336,7 @@ namespace Azure.DataGateway.Service.Authorization
                         entityToRoleMap.ActionToRolesMap[operation].Add(ROLE_AUTHENTICATED);
                     }
 
-                    // Mock FieldToRolesMap for authenticated role.
+                    // Copy over FieldToRolesMap for authenticated role from anonymous role.
                     foreach (string allowedColumnInAnonymousRole in allowedColumnsForAnonymousRole)
                     {
                         Dictionary<Operation, List<string>> allowedOperationsForField =

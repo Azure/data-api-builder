@@ -137,7 +137,7 @@ jobs:
   variables:
     NugetRelease: false
 
-  condition: eq( $[NugetRelease], true)
+  condition: eq( $[variables.NugetRelease], true)
 
   steps:
   - script: echo $(variables.NugetRelease)

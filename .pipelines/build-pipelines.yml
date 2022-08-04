@@ -108,7 +108,7 @@ jobs:
   variables:
     NugetRelease: false # change it to true when releasing the nuget package to feed.
 
-  condition: and( eq(variables['System.PullRequest.SourceBranch'], 'main'), eq(variables.NugetRelease, true))
+  condition: and(succeeded('Build'), eq(variables['System.PullRequest.SourceBranch'], 'main'), eq(variables.NugetRelease, true))
 
   steps:
   - task: DotNetCoreCLI@2

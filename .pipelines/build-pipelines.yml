@@ -135,8 +135,10 @@ jobs:
   variables:
     NugetRelease: false
 
+  condition: eq( $(NugetRelease), true)
+
   steps:
-  - script: echo variables['build.sourceBranch']
+  - script: echo $(NugetRelease)
   # - task: UseDotNet@2
   #   displayName: Setup .NET SDK v6.0.x
   #   inputs:

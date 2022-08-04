@@ -43,11 +43,12 @@ namespace Azure.DataGateway.Service.Resolvers
                             GetParamAsProcedureParameterType(requestParamValue.ToString()!, paramKey));
                         ProcedureParameters.Add(paramKey, $"@{parameterizedName}");
                     }
-                    catch (ArgumentException ex)
+                    catch (ArgumentException)
                     {
                         // In the case GetParamAsProcedureParameterType fails to parse as SystemType from database metadata
+                        // Keep message being returned to the client more generalized to not expose schema info
                         throw new DataGatewayException(
-                            message: ex.Message,
+                            message: $"Invalid value supplied for field: {paramKey}",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
                     }
@@ -91,7 +92,7 @@ namespace Azure.DataGateway.Service.Resolvers
                     e is OverflowException)
                 {
                     throw new ArgumentException($@"Parameter ""{param}"" cannot be resolved as stored procedure parameter ""{procParamName}"" " +
-                        $@"with type ""{systemType.Name}"".");
+                        $@"with type ""{systemType.Name}"".", innerException: e);
                 }
 
                 throw;

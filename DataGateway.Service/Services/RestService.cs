@@ -80,7 +80,13 @@ namespace Azure.DataGateway.Service.Services
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
             if (dbObject.ObjectType is SourceType.StoredProcedure)
             {
-                
+                PopulateStoredProcedureContext(operationType,
+                    dbObject,
+                    entityName,
+                    queryString,
+                    primaryKeyRoute,
+                    requestBody,
+                    out context);
             }
             else
             {
@@ -181,7 +187,16 @@ namespace Azure.DataGateway.Service.Services
             };
         }
 
-        private void PopulateStoredProcedureContext(out RestRequestContext context)
+        /// <summary>
+        /// Helper method to populate the context in case the database object for this request is a stored procedure
+        /// </summary>
+        private void PopulateStoredProcedureContext(Operation operationType,
+            DatabaseObject dbObject,
+            string entityName,
+            string queryString,
+            string? primaryKeyRoute,
+            string requestBody,
+            out RestRequestContext context)
         {
             switch (operationType)
             {

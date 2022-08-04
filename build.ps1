@@ -1,5 +1,5 @@
 param (
-    [Parameter (Mandatory=$true)][string] $BuildConfiguration,
+    [Parameter (Mandatory=$true)][string] $BuildConfiguration
 )
 
 $BuildRoot = $PSScriptRoot

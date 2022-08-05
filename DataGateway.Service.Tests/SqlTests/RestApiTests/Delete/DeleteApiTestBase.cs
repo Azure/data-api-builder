@@ -162,6 +162,29 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                 );
         }
 
+        /// <summary>
+        /// DeleteWithSqlInjectionTest attempts to inject a SQL statement
+        /// through the primary key route of a delete operation.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task DeleteWithSqlInjectionTest()
+        {//expected status code 400
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1/OR 1=1/*",
+                    queryString: string.Empty,
+                    entity: _integrationEntityName,
+                    sqlQuery: string.Empty,
+                    controller: _restController,
+                    operationType: Operation.Delete,
+                    requestBody: string.Empty,
+                    exception: true,
+                    expectedErrorMessage: "Primary key column(s) provided do not match DB schema.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
         #endregion
     }
 }

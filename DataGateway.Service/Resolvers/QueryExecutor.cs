@@ -5,24 +5,29 @@ using System.Data.Common;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataGateway.Service.Resolvers
 {
     /// <summary>
     /// Encapsulates query execution apis.
     /// </summary>
-    public class QueryExecutor<ConnectionT> : IQueryExecutor
-        where ConnectionT : DbConnection, new()
+    public class QueryExecutor<TConnection> : IQueryExecutor
+        where TConnection : DbConnection, new()
     {
         private readonly string _connectionString;
         private readonly DbExceptionParser _dbExceptionParser;
+        private readonly ILogger<QueryExecutor<TConnection>> _logger;
 
-        public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider, DbExceptionParser dbExceptionParser)
+        public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider,
+                             DbExceptionParser dbExceptionParser,
+                             ILogger<QueryExecutor<TConnection>> logger)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
             _connectionString = runtimeConfig.ConnectionString;
             _dbExceptionParser = dbExceptionParser;
+            _logger = logger;
         }
 
         /// <summary>
@@ -33,7 +38,7 @@ namespace Azure.DataGateway.Service.Resolvers
         /// <returns>DbDataReader object for reading the result set.</returns>
         public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
         {
-            ConnectionT conn = new()
+            TConnection conn = new()
             {
                 ConnectionString = _connectionString
             };
@@ -58,7 +63,8 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             catch (DbException e)
             {
-                Console.Error.WriteLine(e);
+                _logger.LogError(e.Message);
+                _logger.LogError(e.StackTrace);
                 throw _dbExceptionParser.Parse(e);
             }
         }
@@ -72,7 +78,8 @@ namespace Azure.DataGateway.Service.Resolvers
             }
             catch (DbException e)
             {
-                Console.Error.WriteLine(e);
+                _logger.LogError(e.Message);
+                _logger.LogError(e.StackTrace);
                 throw _dbExceptionParser.Parse(e);
             }
         }

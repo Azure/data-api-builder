@@ -14,7 +14,7 @@ variables:
   solution: '**/*.sln'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
-  nugetRelease: true # change it to true, when releasing the nuget to feed
+  nugetRelease: false # change it to true, when releasing the nuget to feed
   ${{ if eq(variables.nugetRelease, true) }}:
     nugetVersionTag: ''
   ${{ else }}:
@@ -68,7 +68,7 @@ steps:
 # This task will publish nuget package with build number to pipeline artifact
 - task: PublishPipelineArtifact@1
   condition: eq(variables.NugetRelease, false)
-  displayName: 'Publish nuget package for the current build'
+  displayName: 'Publish nuget to build Artifact'
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)/nupkg'
     artifactName: 'DAB_nuget_package'
@@ -81,7 +81,7 @@ steps:
   condition: eq(variables.NugetRelease, true)
 
 - task: NuGetCommand@2
-  displayName: 'NuGet push'
+  displayName: 'Publish Nuget to Internal Feed'
   condition: eq(variables.NugetRelease, true)
   inputs:
     command: 'push'

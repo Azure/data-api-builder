@@ -6,139 +6,118 @@
 trigger:
 - main
 
-jobs:
-- job: Build
-  pool:
-    vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
 
-  variables:
-    solution: '**/*.sln'
-    buildPlatform: 'Any CPU'
-    buildConfiguration: 'Release'
-    nugetRelease: false
-    ${{ if eq(variables.nugetRelease, true) }}:
-      nugetVersionTag: ''
-    ${{ else }}:
-      nugetVersionTag: $(Build.BuildId)
+pool:
+  vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
 
-  steps:
-  - task: UseDotNet@2
-    displayName: Setup .NET SDK v6.0.x
-    inputs:
-      packageType: sdk
-      version: 6.0.x
-      installationPath: $(Agent.ToolsDirectory)/dotnet
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+  nugetRelease: false # change it to true, when releasing the nuget to feed
+  ${{ if eq(variables.nugetRelease, true) }}:
+    nugetVersionTag: ''
+  ${{ else }}:
+    nugetVersionTag: $(Build.BuildId)
 
-  - task: NuGetToolInstaller@1
+steps:
+- task: UseDotNet@2
+  displayName: Setup .NET SDK v6.0.x
+  inputs:
+    packageType: sdk
+    version: 6.0.x
+    installationPath: $(Agent.ToolsDirectory)/dotnet
 
-  - task: NuGetCommand@2
-    inputs:
-      restoreSolution: '$(solution)'
+- task: NuGetToolInstaller@1
 
-  - task: DotNetCoreCLI@2
-    displayName: Check formatting
-    inputs:
-      command: custom
-      custom: format
-      projects: '$(solution)'
-      arguments: '--verify-no-changes'
+- task: NuGetCommand@2
+  inputs:
+    restoreSolution: '$(solution)'
 
-  - task: DotNetCoreCLI@2
-    displayName: Build
-    inputs:
-      command: build
-      projects: '**/*.csproj'
-      arguments: '--configuration $(buildConfiguration)' # Update this to match your need
+- task: DotNetCoreCLI@2
+  displayName: Check formatting
+  inputs:
+    command: custom
+    custom: format
+    projects: '$(solution)'
+    arguments: '--verify-no-changes'
 
-  - task: DotNetCoreCLI@2
-    displayName: "Run Unit Tests"
-    inputs:
-      command: test
-      projects: '**/*Tests*.csproj'
-      arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+- task: DotNetCoreCLI@2
+  displayName: Build
+  inputs:
+    command: build
+    projects: '**/*.csproj'
+    arguments: '--configuration $(buildConfiguration)' # Update this to match your need
 
-  - task: DotNetCoreCLI@2
-    displayName: 'Creating Nuget Package'
-    inputs:
-      command: pack
-      buildProperties: 'VersionSuffix="$(nugetVersionTag)"'
-      verbosityPack: 'minimal'
-      packagesToPack: '**/Hawaii.Cli.csproj'
-      packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
+- task: DotNetCoreCLI@2
+  displayName: "Run Unit Tests"
+  inputs:
+    command: test
+    projects: '**/*Tests*.csproj'
+    arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
-  - task: PublishPipelineArtifact@1
-    displayName: 'Publish nuget package for the current build'
-    inputs:
-      targetPath: '$(Build.ArtifactStagingDirectory)/nupkg'
-      artifactName: 'DAB_nuget_package'
-      artifactType: 'pipeline'
+- task: DotNetCoreCLI@2
+  displayName: 'Creating Nuget Package'
+  inputs:
+    command: pack
+    buildProperties: 'VersionSuffix="$(nugetVersionTag)"'
+    verbosityPack: 'minimal'
+    packagesToPack: '**/Hawaii.Cli.csproj'
+    packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
 
-  - task: NuGetAuthenticate@0
-    condition: eq(variables.NugetRelease, true)
-    displayName: 'NuGet Authenticate'
+# This task will publish nuget package with build number to pipeline artifact
+- task: PublishPipelineArtifact@1
+  condition: eq(variables.NugetRelease, false)
+  displayName: 'Publish nuget package for the current build'
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)/nupkg'
+    artifactName: 'DAB_nuget_package'
+    artifactType: 'pipeline'
 
-  - task: PublishCodeCoverageResults@1
-    displayName: 'Publish code coverage'
-    inputs:
-      codeCoverageTool: Cobertura
-      summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+# This task will authenticate and publish the NuGet Package to internal feed
+# To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.
+- task: NuGetAuthenticate@0
+  displayName: 'NuGet Authenticate'
+  condition: eq(variables.NugetRelease, true)
 
-  # This task gets the current date and saves it to a variable so the docker task can use the build's
-  # date and time as a tag.
-  - task: PowerShell@2
-    displayName: "Get date for Docker image Tag"
-    inputs:
-      targetType: 'inline'
-      script: |
-        Write-Host "Setting up the date and time as a build variable for the Docker tag"
-        $date=$(Get-Date -format yyyyMMdd-HHmmss)
-        Write-Host "##vso[task.setvariable variable=BuildDate]$date"
+- task: NuGetCommand@2
+  displayName: 'NuGet push'
+  condition: eq(variables.NugetRelease, true)
+  inputs:
+    command: 'push'
+    feedsToUse: 'select'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: 'internal'
+    vstsFeed: CosmosDB/Hawaii_Packages
+    publishVstsFeed: CosmosDB/Hawaii_Packages
+    versioningScheme: 'off'
+    allowPackageConflicts: false
 
-  # Build a docker image and push it to the container registry.
-  - task: Docker@2
-    displayName: "Build and push docker image to Azure Container Registry"
-    inputs:
-      containerRegistry: 'CosmosDB GraphQL/Hawaii'
-      repository: 'hawaii/$(Build.SourceBranch)'
-      command: 'buildAndPush'
-      Dockerfile: '**/Dockerfile'
-      tags: |
-        $(BuildDate)-$(Build.SourceVersion)
-        latest
+- task: PublishCodeCoverageResults@1
+  displayName: 'Publish code coverage'
+  inputs:
+    codeCoverageTool: Cobertura
+    summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
-- job: Release_Nuget
-  displayName: Release Nuget Package to Nuget Feed
-  dependsOn: Build
+# This task gets the current date and saves it to a variable so the docker task can use the build's
+# date and time as a tag.
+- task: PowerShell@2
+  displayName: "Get date for Docker image Tag"
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host "Setting up the date and time as a build variable for the Docker tag"
+      $date=$(Get-Date -format yyyyMMdd-HHmmss)
+      Write-Host "##vso[task.setvariable variable=BuildDate]$date"
 
-  pool:
-    vmImage: 'ubuntu-latest'
-
-  variables:
-    NugetRelease: false # change it to true when releasing the nuget package to feed.
-
-  condition: and(succeeded('Build'), eq(variables['System.PullRequest.SourceBranch'], 'main'), eq(variables.NugetRelease, true))
-
-  steps:
-  - task: DotNetCoreCLI@2
-    displayName: 'Creating Nuget Package for Release'
-    inputs:
-      command: pack
-      verbosityPack: 'minimal'
-      packagesToPack: '**/Hawaii.Cli.csproj'
-      packDirectory: '$(Build.ArtifactStagingDirectory)'
-
-  # This task will publish the NuGet Package
-  # To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.
-  - task: NuGetAuthenticate@0
-    displayName: 'NuGet Authenticate'
-  - task: NuGetCommand@2
-    displayName: 'NuGet push'
-    inputs:
-      command: 'push'
-      feedsToUse: 'select'
-      packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
-      nuGetFeedType: 'internal'
-      vstsFeed: CosmosDB/Hawaii_Packages
-      publishVstsFeed: CosmosDB/Hawaii_Packages
-      versioningScheme: 'off'
-      allowPackageConflicts: false
+# Build a docker image and push it to the container registry.
+- task: Docker@2
+  displayName: "Build and push docker image to Azure Container Registry"
+  inputs:
+    containerRegistry: 'CosmosDB GraphQL/Hawaii'
+    repository: 'hawaii/$(Build.SourceBranch)'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: |
+      $(BuildDate)-$(Build.SourceVersion)
+      latest

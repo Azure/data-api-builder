@@ -49,7 +49,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
         /// <returns>True if the provided name violates requirements.</returns>
         public static bool ViolatesNamePrefixRequirements(string name)
         {
-            return !_graphQLNameStart.Match(name).Success; 
+            return !_graphQLNameStart.Match(name).Success;
         }
 
         /// <summary>

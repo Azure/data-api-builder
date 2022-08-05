@@ -24,7 +24,7 @@ cd ./hawaii-engine/samples/getting-started
 
 ## Create the configuration file
 
-The Data API builder for Azure Databases engine needs a configuration file to know to which database it has to connect to, and what are the entities that have to be exposed, and their properties.
+The Data API builder for Azure Databases engine needs a [configuration file](../configuration-file.md) to know to which database it has to connect to, and what are the entities that have to be exposed, and their properties.
 
 Creating a configuration file is simple and you can use the Data API builder CLI to make it even simpler. In this tutorial the CLI will not be used so that you can get the chance to get familar with the configuration file, as it is a key part of Data API builder for Azure Databases.
 

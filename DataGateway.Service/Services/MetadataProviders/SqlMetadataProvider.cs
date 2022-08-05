@@ -216,28 +216,18 @@ namespace Azure.DataGateway.Service.Services
                 );
             }
 
-            // Loop through parameters specified in config, throw error if not found in schema or type mismatch,
+            // Loop through parameters specified in config, throw error if not found in schema
             // else set runtime config defined default values.
+            // Note: we defer type checking of parameters specified in config until request time
             Dictionary<string, object>? configParameters = procedureEntity.Parameters;
             if (configParameters is not null)
             {
-                foreach ((string configParamKey, object? configParamValue) in configParameters)
+                foreach ((string configParamKey, object configParamValue) in configParameters)
                 {
-                    Type? configParamValueType = configParamValue is null || ((JsonElement)configParamValue).ValueKind is JsonValueKind.Null ? null : ((JsonElement)configParamValue).GetType();
                     if (!storedProcedureDefinition.Parameters.TryGetValue(configParamKey, out ParameterDefinition? parameterDefinition))
                     {
                         throw new DataGatewayException(
                             message: $"Could not find parameter \"{configParamKey}\" specified in config for procedure \"{schemaName}.{storedProcedureName}\"",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
-                    }
-                    // Deserialization labels all integers as Int64, no need to type mismatch on initialization
-                    else if (configParamValueType is not null && parameterDefinition.SystemType != configParamValueType
-                        && !(configParamValueType == typeof(long) && (parameterDefinition.SystemType == typeof(int) || parameterDefinition.SystemType == typeof(short))))
-                    {
-                        throw new DataGatewayException(
-                            message: $"Type mismatch between parameters specified in config and those found in schema for stored procedure \"{schemaName}.{storedProcedureName}\": " +
-                            $"expected {parameterDefinition.SystemType}, got {configParamValueType} for param \"{configParamKey}\"",
                             statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
                     }

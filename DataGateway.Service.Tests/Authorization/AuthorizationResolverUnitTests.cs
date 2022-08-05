@@ -714,7 +714,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             foreach (Operation action in Action.ValidPermissionActions)
             {
                 Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY,
-                    AuthorizationResolver.ROLE_ANONYMOUS, action, new List<string>(columnsToCheck)));
+                    AuthorizationResolver.ROLE_AUTHENTICATED, action, new List<string>(columnsToCheck)));
             }
         }
         #endregion

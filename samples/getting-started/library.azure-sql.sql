@@ -5,7 +5,7 @@ drop sequence if exists dbo.globalId;
 go
 
 create sequence dbo.globalId
-as int 
+as int
 start with 1000000
 increment by 1
 go
@@ -30,7 +30,7 @@ create table dbo.books_authors
 (
     author_id int not null foreign key references dbo.authors(id),
     book_id int not null foreign key references dbo.books(id),
-    primary key (        
+    primary key (
         author_id,
         book_id
     )
@@ -40,13 +40,13 @@ go
 create nonclustered index ixncu1 on dbo.books_authors(book_id, author_id)
 go
 
-insert into dbo.authors values  
+insert into dbo.authors values
     (1, 'Isaac', null, 'Asimov'),
     (2, 'Robert', 'A.', 'Heinlein'),
     (3, 'Robert', null, 'Silvenberg')
 go
 
-insert into dbo.books values  
+insert into dbo.books values
     (1000, 'Foundation'),
     (1001, 'Foundation and Empire'),
     (1002, 'Second Foundation'),
@@ -73,3 +73,4 @@ insert into dbo.books_authors values
     (3, 1008),
     (3, 1009),
     (3, 1010)
+go

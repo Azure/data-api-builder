@@ -201,6 +201,7 @@ namespace Azure.DataGateway.Service
                         graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
                     })
                     .AddAuthorization()
+                    .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
                     .AddErrorFilter(error =>
                     {
                         if (error.Exception is not null)

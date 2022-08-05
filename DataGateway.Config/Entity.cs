@@ -87,8 +87,8 @@ namespace Azure.DataGateway.Config
 
             JsonElement sourceJson = (JsonElement)Source;
 
-            // In the case of a simple, string source, we assume the source type is a table
-            // Parameters and key fields are left null
+            // In the case of a simple, string source, we assume the source type is a table; parameters and key fields left null
+            // Note: engine supports views backing entities labeled as Tables, as long as their primary key can be inferred
             if (sourceJson.ValueKind is JsonValueKind.String)
             {
                 ObjectType = SourceType.Table;
@@ -122,17 +122,19 @@ namespace Azure.DataGateway.Config
 
         /// <summary>
         /// Tries to convert the given string sourceType into one of the supported SourceType enums
-        /// Throws an exception if not an exact, case-sensitive match
+        /// Throws an exception if not a case-insensitive match
         /// </summary>
         private static SourceType ConvertSourceType(string? sourceType)
         {
-            return sourceType switch
-            {
-                "table" => SourceType.Table,
-                "view" => SourceType.View,
-                "stored-procedure" => SourceType.StoredProcedure,
-                _ => throw new JsonException(message: "Source type must be one of: [table, view, stored-procedure]")
-            };
+            // If sourceType is not explicitly specified, we assume it is a Table
+            return sourceType is null ? SourceType.Table
+                : sourceType.ToLowerInvariant() switch
+                {
+                    "table" => SourceType.Table,
+                    "view" => SourceType.View,
+                    "stored-procedure" => SourceType.StoredProcedure,
+                    _ => throw new JsonException(message: "Source type must be one of: [table, view, stored-procedure]")
+                };
         }
 
         /// <summary>

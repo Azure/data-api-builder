@@ -203,28 +203,6 @@ public class EndToEndTests
         Assert.AreEqual("{\"id\":\"identity\",\"name\":\"Company Name\"}", JsonSerializer.Serialize(entity.Mappings));
     }
 
-    /// <summary>
-    /// Test to start the engine
-    /// </summary>
-    [TestMethod("Validates that the engine is started.")]
-    public async Task TestStartEngine()
-    {
-        TryStartEngineForTest(new string[] { "start" });
-        string url = "https://localhost:5001/";
-        WebRequest request = WebRequest.Create(url);
-        request.Method = "GET";
-        WebResponse response = await request.GetResponseAsync();
-        Assert.AreEqual(((System.Net.HttpWebResponse)response).StatusCode, HttpStatusCode.OK);
-    }
-
-    private static async Task TryStartEngineForTest(string[] args)
-    {
-        await Task.Run(async () =>
-        {
-            Program.Main(args);
-        });
-    }
-
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)
     {
         string jsonString;

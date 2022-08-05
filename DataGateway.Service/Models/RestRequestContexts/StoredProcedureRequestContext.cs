@@ -42,16 +42,9 @@ namespace Azure.DataGateway.Service.Models
         {
             if (OperationType is Operation.Read)
             {
-                if (ParsedQueryString is not null)
-                {
-                    // Query string may have malformed/null keys, if so just ignore them
-                    ResolvedParameters = ParsedQueryString.Cast<string>()
-                        .Where(k => k is not null).ToDictionary(k => k, k => (object?)ParsedQueryString[k]);
-                }
-                else
-                {
-                    ResolvedParameters = new();
-                }
+                // Query string may have malformed/null keys, if so just ignore them
+                ResolvedParameters = ParsedQueryString.Cast<string>()
+                    .Where(k => k is not null).ToDictionary(k => k, k => (object?)ParsedQueryString[k]);
             }
             else
             {

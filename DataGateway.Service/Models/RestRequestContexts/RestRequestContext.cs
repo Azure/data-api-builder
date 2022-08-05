@@ -71,7 +71,7 @@ namespace Azure.DataGateway.Service.Models
         /// <summary>
         /// NVC stores the query string parsed into a NameValueCollection.
         /// </summary>
-        public NameValueCollection? ParsedQueryString { get; set; } = new();
+        public NameValueCollection ParsedQueryString { get; set; } = new();
 
         /// <summary>
         /// String holds information needed for pagination.

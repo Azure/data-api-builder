@@ -16,7 +16,7 @@ jobs:
     buildPlatform: 'Any CPU'
     buildConfiguration: 'Release'
     nugetRelease: false
-    ${{ if variables.nugetRelease }}:
+    ${{ if eq(variables.nugetRelease, true) }}:
       nugetVersionTag: ''
     ${{ else }}:
       nugetVersionTag: $(Build.BuildId)

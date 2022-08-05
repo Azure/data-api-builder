@@ -212,7 +212,7 @@ namespace Azure.DataGateway.Service.Services
             foreach (DataRow row in parameterMetadata.Rows)
             {
                 // Add to parameters dictionary without the leading @ sign
-                storedProcedureDefinition.Parameters.Add(((string)row["PARAMETER_NAME"])[1..],
+                storedProcedureDefinition.Parameters.TryAdd(((string)row["PARAMETER_NAME"])[1..],
                     new()
                     {
                         SystemType = SqlToCLRType((string)row["DATA_TYPE"]),

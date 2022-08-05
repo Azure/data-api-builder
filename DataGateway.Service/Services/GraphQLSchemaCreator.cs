@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text.Json;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
@@ -131,9 +132,8 @@ namespace Azure.DataGateway.Service.Services
             // First pass - build up the object and input types for all the entities
             foreach ((string entityName, Entity entity) in entities)
             {
-                // GraphQL flag is ignored - tracked by #628
                 if (entity.ObjectType is SourceType.StoredProcedure
-                    || entity.GraphQL is not null && entity.GraphQL is bool graphql && graphql == false)
+                    || entity.GraphQL is not null && ((JsonElement)entity.GraphQL).ValueKind is JsonValueKind.False)
                 {
                     continue;
                 }

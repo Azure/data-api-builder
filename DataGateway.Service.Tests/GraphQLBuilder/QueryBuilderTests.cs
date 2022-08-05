@@ -352,7 +352,7 @@ type Table @model(name: ""table"") {
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             Assert.IsNotNull(query);
-            
+
             // Two queries - 1) Query for an item using PK 2) Query for all items should be created.
             // Check to validate the count of queries created.
             Assert.AreEqual(2, query.Fields.Count);

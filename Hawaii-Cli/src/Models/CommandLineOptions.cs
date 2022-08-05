@@ -233,17 +233,12 @@ namespace Hawaii.Cli.Models
     public class StartOptions
     {
         public StartOptions(
-            string project,
             string config)
         {
-            this.Project = project;
             this.Config = config;
         }
 
-        [Option("project", Required = true, HelpText = "project name")]
-        public string Project { get; }
-
-        [Option("config", Required = true, HelpText = "Path to config file.")]
+        [Option("config", Required = false, HelpText = "Path to config file.")]
         public string Config { get; }
     }
 }

@@ -41,8 +41,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 
         /// <summary>
         /// Checks whether name has invalid characters at the start of the name provided.
-        /// - GraphQL specification requires that a name does not contain anything other than
-        /// upper or lowercase letters or numbers.
+        /// - GraphQL specification requires that a name start with an upper or lowercase letter.
         /// </summary>
         /// <param name="name">Name to be checked.</param>
         /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
@@ -54,7 +53,8 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 
         /// <summary>
         /// Checks whether name has invalid characters.
-        /// - GraphQL specification requires that a name start with an upper or lowercase letter.
+        /// - GraphQL specification requires that a name name does not contain anything other than
+        /// upper or lowercase letters or numbers.
         /// </summary>
         /// <param name="name">Name to be checked.</param>
         /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
@@ -153,7 +153,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
                 name = string.IsNullOrEmpty(namingRules.Singular) ? name : namingRules.Singular;
             }
 
-            return new NameNode(FormatNameForField(name).Pluralize());
+            return new NameNode(name.Pluralize());
         }
 
         public static string ObjectTypeToEntityName(ObjectTypeDefinitionNode node)

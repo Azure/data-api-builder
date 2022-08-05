@@ -29,10 +29,6 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
 
             _databaseType = _runtimeConfig.DatabaseType;
             _entities = _runtimeConfig.Entities;
-            foreach (Entity entity in _entities.Values)
-            {
-                entity.TryPopulateSourceFields();
-            }
 
             CosmosDbOptions? cosmosDb = _runtimeConfig.CosmosDb;
 
@@ -52,7 +48,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         {
             Entity entity = _entities[entityName];
 
-            string entitySource = entity.SourceName;
+            string entitySource = entity.GetSourceName();
 
             return entitySource switch
             {
@@ -77,7 +73,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         {
             Entity entity = _entities[entityName];
 
-            string entitySource = entity.SourceName;
+            string entitySource = entity.GetSourceName();
 
             if (string.IsNullOrEmpty(entitySource))
             {

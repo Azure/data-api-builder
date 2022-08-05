@@ -41,13 +41,36 @@ namespace Azure.DataGateway.Config
         public SourceType ObjectType { get; private set; } = new();
 
         [JsonIgnore]
-        public string SourceName { get; private set; } = String.Empty;
+        public string SourceName { get; private set; } = string.Empty;
 
         [JsonIgnore]
         public Dictionary<string, object>? Parameters { get; private set; }
 
         [JsonIgnore]
         public Array? KeyFields { get; private set; }
+
+        /// <summary>
+        /// Gets the name of the underlying source database object.
+        /// Prefer accessing SourceName itself if TryPopulateSourceFields has been called
+        /// </summary>
+        public string GetSourceName()
+        {
+            if (Source is null)
+            {
+                return string.Empty;
+            }
+
+            if (((JsonElement)Source).ValueKind is JsonValueKind.String)
+            {
+                return JsonSerializer.Deserialize<string>((JsonElement)Source)!;
+            }
+            else
+            {
+                DatabaseObjectSource objectSource
+                    = JsonSerializer.Deserialize<DatabaseObjectSource>((JsonElement)Source)!;
+                return objectSource.Name;
+            }
+        }
 
         /// <summary>
         /// After the Entity has been deserialized, populate the source-related fields

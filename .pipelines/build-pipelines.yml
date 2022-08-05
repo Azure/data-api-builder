@@ -73,6 +73,10 @@ jobs:
       artifactName: 'DAB_nuget_package'
       artifactType: 'pipeline'
 
+  - task: NuGetAuthenticate@0
+    condition: eq(variables.NugetRelease, true)
+    displayName: 'NuGet Authenticate'
+
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish code coverage'
     inputs:

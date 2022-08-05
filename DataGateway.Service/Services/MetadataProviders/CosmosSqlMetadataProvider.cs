@@ -29,6 +29,10 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
 
             _databaseType = _runtimeConfig.DatabaseType;
             _entities = _runtimeConfig.Entities;
+            foreach (Entity entity in _entities.Values)
+            {
+                entity.TryPopulateSourceFields();
+            }
 
             CosmosDbOptions? cosmosDb = _runtimeConfig.CosmosDb;
 

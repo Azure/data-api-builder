@@ -5,7 +5,6 @@ using System.Data.Common;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
@@ -66,6 +65,11 @@ namespace Azure.DataGateway.Service.Services
 
             _databaseType = runtimeConfig.DatabaseType;
             _entities = runtimeConfig.Entities;
+            foreach (Entity entity in _entities.Values)
+            {
+                entity.TryPopulateSourceFields();
+            }
+
             ConnectionString = runtimeConfig.ConnectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;

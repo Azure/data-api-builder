@@ -132,7 +132,7 @@ namespace Azure.DataGateway.Service.Services
             foreach ((string entityName, Entity entity) in entities)
             {
                 // GraphQL flag is ignored - tracked by #628
-                if (entity.GetSourceObject().Type is SourceType.StoredProcedure
+                if (entity.ObjectType is SourceType.StoredProcedure
                     || entity.GraphQL is not null && entity.GraphQL is bool graphql && graphql == false)
                 {
                     continue;

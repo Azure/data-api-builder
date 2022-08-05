@@ -48,7 +48,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         {
             Entity entity = _entities[entityName];
 
-            string entitySource = entity.GetSourceName();
+            string entitySource = entity.SourceName;
 
             return entitySource switch
             {
@@ -73,7 +73,7 @@ namespace Azure.DataGateway.Service.Services.MetadataProviders
         {
             Entity entity = _entities[entityName];
 
-            string entitySource = entity.GetSourceName();
+            string entitySource = entity.SourceName;
 
             if (string.IsNullOrEmpty(entitySource))
             {

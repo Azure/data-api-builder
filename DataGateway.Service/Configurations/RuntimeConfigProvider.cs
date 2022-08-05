@@ -125,6 +125,11 @@ namespace Azure.DataGateway.Service.Configurations
                     out runtimeConfig))
             {
                 runtimeConfig!.DetermineGlobalSettings();
+                foreach (Entity entity in runtimeConfig!.Entities.Values)
+                {
+                    entity.TryPopulateSourceFields();
+                }
+
                 if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
                 {
                     runtimeConfig!.ConnectionString = configPath.CONNSTRING;

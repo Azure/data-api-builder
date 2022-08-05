@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
@@ -12,7 +13,6 @@ using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Parsers;
 using Azure.DataGateway.Service.Resolvers;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataGateway.Service.Services
 {
@@ -218,12 +218,12 @@ namespace Azure.DataGateway.Service.Services
 
             // Loop through parameters specified in config, throw error if not found in schema or type mismatch,
             // else set runtime config defined default values.
-            Dictionary<string, JValue>? configParameters = procedureEntity.GetSourceObject().Parameters;
+            Dictionary<string, object>? configParameters = procedureEntity.Parameters;
             if (configParameters is not null)
             {
-                foreach ((string configParamKey, JValue configParamValue) in configParameters)
+                foreach ((string configParamKey, object? configParamValue) in configParameters)
                 {
-                    Type? configParamValueType = configParamValue.Type is JTokenType.Null ? null : configParamValue.Value!.GetType();
+                    Type? configParamValueType = configParamValue is null || ((JsonElement)configParamValue).ValueKind is JsonValueKind.Null ? null : ((JsonElement)configParamValue).GetType();
                     if (!storedProcedureDefinition.Parameters.TryGetValue(configParamKey, out ParameterDefinition? parameterDefinition))
                     {
                         throw new DataGatewayException(
@@ -244,7 +244,7 @@ namespace Azure.DataGateway.Service.Services
                     else
                     {
                         parameterDefinition.HasConfigDefault = true;
-                        parameterDefinition.ConfigDefaultValue = configParamValue.Value;
+                        parameterDefinition.ConfigDefaultValue = configParamValue is null ? null : configParamValue.ToString();
                     }
                 }
             }
@@ -322,17 +322,17 @@ namespace Azure.DataGateway.Service.Services
                 if (!EntityToDatabaseObject.ContainsKey(entityName))
                 {
                     // Reuse the same Database object for multiple entities if they share the same source.
-                    if (!sourceObjects.TryGetValue(entity.GetSourceName(), out DatabaseObject? sourceObject))
+                    if (!sourceObjects.TryGetValue(entity.SourceName, out DatabaseObject? sourceObject))
                     {
                         // parse source name into a tuple of (schemaName, databaseObjectName)
-                        (schemaName, dbObjectName) = ParseSchemaAndDbObjectName(entity.GetSourceName())!;
+                        (schemaName, dbObjectName) = ParseSchemaAndDbObjectName(entity.SourceName)!;
 
                         // if specified as stored procedure in config, initialize DatabaseObject with StoredProcedureDefinition, else with TableDefinition
                         sourceObject = new()
                         {
                             SchemaName = schemaName,
                             Name = dbObjectName,
-                            ObjectType = entity.GetSourceObject().Type
+                            ObjectType = entity.ObjectType
                         };
                         if (sourceObject.ObjectType is SourceType.StoredProcedure)
                         {
@@ -343,7 +343,7 @@ namespace Azure.DataGateway.Service.Services
                             sourceObject.TableDefinition = new();
                         }
 
-                        sourceObjects.Add(entity.GetSourceName(), sourceObject);
+                        sourceObjects.Add(entity.SourceName, sourceObject);
                     }
 
                     EntityToDatabaseObject.Add(entityName, sourceObject);
@@ -394,7 +394,7 @@ namespace Azure.DataGateway.Service.Services
                     throw new InvalidOperationException($"Target Entity {targetEntityName} should be one of the exposed entities.");
                 }
 
-                (targetSchemaName, targetDbObjectName) = ParseSchemaAndDbObjectName(targetEntity.GetSourceName())!;
+                (targetSchemaName, targetDbObjectName) = ParseSchemaAndDbObjectName(targetEntity.SourceName)!;
                 DatabaseObject targetDbObject = new(targetSchemaName, targetDbObjectName);
                 // If a linking object is specified,
                 // give that higher preference and add two foreign keys for this targetEntity.
@@ -570,7 +570,7 @@ namespace Azure.DataGateway.Service.Services
         {
             foreach ((string entityName, Entity procedureEntity) in _entities)
             {
-                SourceType entitySourceType = procedureEntity.GetSourceObject().Type;
+                SourceType entitySourceType = procedureEntity.ObjectType;
                 if (entitySourceType is SourceType.StoredProcedure)
                 {
                     await FillSchemaForStoredProcedureAsync(
@@ -609,7 +609,7 @@ namespace Azure.DataGateway.Service.Services
             foreach (string entityName in _entities.Keys)
             {
                 // Ensure we don't attempt for stored procedures, which have no TableDefinition, Columns, Keys, etc.
-                if (_entities[entityName].GetSourceObject().Type is not SourceType.StoredProcedure)
+                if (_entities[entityName].ObjectType is not SourceType.StoredProcedure)
                 {
                     Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
                     EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();

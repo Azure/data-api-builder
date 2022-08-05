@@ -123,7 +123,7 @@ type Foo @model {
         {
             string gql =
                 @"
-type Foo @model {
+type foo @model {
     id: ID!
 }
                 ";
@@ -131,13 +131,13 @@ type Foo @model {
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                    new string[] { "Foo" },
+                    new string[] { "foo" },
                     new Operation[] { Operation.Read },
                     roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
                 DatabaseType.cosmos,
-                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                new Dictionary<string, Entity> { { "foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: entityPermissionsMap
                 );
@@ -173,7 +173,7 @@ type Foo @model {
                 );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            string returnTypeName = query.Fields.First(f => f.Name.Value == $"foos").Type.NamedType().Name.Value;
+            string returnTypeName = query.Fields.First(f => f.Name.Value == $"Foos").Type.NamedType().Name.Value;
             ObjectTypeDefinitionNode returnType = queryRoot.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>().First(d => d.Name.Value == returnTypeName);
             Assert.AreEqual(3, returnType.Fields.Count);
             Assert.AreEqual("items", returnType.Fields[0].Name.Value);

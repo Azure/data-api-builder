@@ -5,6 +5,7 @@ using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Tests.Authorization;
 using Azure.DataGateway.Service.Tests.Configuration;
+using Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataGateway.Service.Tests.UnitTests
@@ -193,6 +194,55 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
                 $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+        }
+
+        /// <summary>
+        /// Test that entity names from config that are invalid GraphQL names
+        /// fail runtime config validation.
+        /// </summary>
+        /// <param name="entityNameFromConfig"></param>
+        [DataTestMethod]
+        [DataRow("@entityname", DisplayName = "Invalid start character @")]
+        [DataRow("_entityname", DisplayName = "Invalid start character _")]
+        [DataRow("#entityname", DisplayName = "Invalid start character #")]
+        [DataRow("5Entityname", DisplayName = "Invalid start character 5")]
+        [DataRow("E.ntityName", DisplayName = "Invalid body character .")]
+        [DataRow("Entity^Name", DisplayName = "Invalid body character ^")]
+        [DataRow("Entity&Name", DisplayName = "Invalid body character &")]
+
+        public void InvalidGraphQLTypeNamesFailValidation(string entityNameFromConfig)
+        {
+            Dictionary<string, Entity> entityCollection = new();
+            entityCollection.Add(entityNameFromConfig, SchemaConverterTests.GenerateEmptyEntity());
+
+            Assert.ThrowsException<DataGatewayException>(
+                action: () => RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection),
+                message: $"Entity name \"{entityNameFromConfig}\" incorrectly passed validation.");
+        }
+
+        /// <summary>
+        /// Test that entity names from config that are valid GraphQL names
+        /// pass runtime config validation.
+        /// </summary>
+        /// <param name="entityNameFromConfig"></param>
+        [DataTestMethod]
+        [DataRow("entityname", DisplayName = "Valid lower case letter as first character")]
+        [DataRow("Entityname", DisplayName = "Valid upper case letter as first character")]
+        [DataRow("Entity name", DisplayName = "Valid space in body")]
+        [DataRow("Entity_name", DisplayName = "Valid _ in body")]
+        public void ValidGraphQLTypeNamesPassValidation(string entityNameFromConfig)
+        {
+            Dictionary<string, Entity> entityCollection = new();
+            entityCollection.Add(entityNameFromConfig, SchemaConverterTests.GenerateEmptyEntity());
+
+            try
+            {
+                RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection);
+            }
+            catch (DataGatewayException dge)
+            {
+                Assert.Fail(message: $"Validation failure with error message: {dge.Message}.");
+            }
         }
     }
 }

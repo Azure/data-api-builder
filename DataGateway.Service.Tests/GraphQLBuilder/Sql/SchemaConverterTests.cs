@@ -28,14 +28,8 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         const string REFD_COLNAME = "fk_col";
 
         [DataTestMethod]
-        [DataRow("test", "Test")]
+        [DataRow("test", "test")]
         [DataRow("Test", "Test")]
-        [DataRow("With Space", "WithSpace")]
-        [DataRow("with space", "WithSpace")]
-        [DataRow("@test", "Test")]
-        [DataRow("_test", "Test")]
-        [DataRow("#test", "Test")]
-        [DataRow("T.est", "Test")]
         [DataRow("T_est", "T_est")]
         [DataRow("Test1", "Test1")]
         public void EntityNameBecomesObjectName(string entityName, string expected)
@@ -308,10 +302,23 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             Assert.AreEqual(2, od.Fields.Count);
         }
 
+        /// <summary>
+        /// Tests Object Type definition using config defined entity name is handled properly
+        /// by schema converter:
+        /// - entityName is not singularized, even if plural.
+        /// - uses singular name if present and not null/empty.
+        /// - Name is not formatted differently from config -> name is not converted to pascal/camel case.
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <param name="singular"></param>
+        /// <param name="expected"></param>
         [DataTestMethod]
-        [DataRow("entityName", "overrideName", "OverrideName")]
-        [DataRow("entityName", null, "EntityName")]
-        [DataRow("entityName", "", "EntityName")]
+        [DataRow("entityName", "overrideName", "overrideName", DisplayName = "Singular name overrides top-level entity name")]
+        [DataRow("my entity", "", "my entity", DisplayName = "Top-level entity name with space is not reformatted.")]
+        [DataRow("entityName", null, "entityName", DisplayName = "Null singular name defers to top-level entity name")]
+        [DataRow("entityName", "", "entityName", DisplayName = "Empty singular name defers to top-level entity name")]
+        [DataRow("entities", null, "entities", DisplayName = "Plural top-level entity name and null singular name not singularized")]
+        [DataRow("entities", "", "entities", DisplayName = "Plural top-level entity name and empty singular name not singularized")]
         public void SingularNamingRulesDeterminedByRuntimeConfig(string entityName, string singular, string expected)
         {
             TableDefinition table = new();
@@ -638,7 +645,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
             return fieldToRolesMap;
         }
 
-        private static Entity GenerateEmptyEntity()
+        public static Entity GenerateEmptyEntity()
         {
             return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
         }

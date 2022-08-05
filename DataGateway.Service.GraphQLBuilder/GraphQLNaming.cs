@@ -9,6 +9,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
     public static class GraphQLNaming
     {
         // Name must start with an upper or lowercase letter
+        // Matches to this regular expression are names with valid prefix.
         private static readonly Regex _graphQLNameStart = new("^[a-zA-Z].*");
 
         // Regex to match invalid GraphQL characters.

@@ -15,6 +15,11 @@ jobs:
     solution: '**/*.sln'
     buildPlatform: 'Any CPU'
     buildConfiguration: 'Release'
+    nugetRelease: false
+    ${{ if nugetRelease }}:
+      nugetVersionTag: ''
+    ${{ else }}:
+      nugetVersionTag: $(Build.BuildId)
 
   steps:
   - task: UseDotNet@2
@@ -56,7 +61,7 @@ jobs:
     displayName: 'Creating Nuget Package'
     inputs:
       command: pack
-      buildProperties: 'VersionSuffix="$(Build.BuildId)"'
+      buildProperties: 'VersionSuffix="$(nugetVersionTag)"'
       verbosityPack: 'minimal'
       packagesToPack: '**/Hawaii.Cli.csproj'
       packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'

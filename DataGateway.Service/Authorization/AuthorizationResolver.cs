@@ -311,7 +311,7 @@ namespace Azure.DataGateway.Service.Authorization
                             roleToAction.ActionToColumnMap[actionOp] = actionToColumn;
                         }
 
-                        if (ROLE_ANONYMOUS.Equals(role))
+                        if (ROLE_ANONYMOUS.Equals(role, StringComparison.OrdinalIgnoreCase))
                         {
                             // Saving the allowed columns for anonymous role in case we need to copy the
                             // allowed columns for authenticated role. This reduces the time complexity

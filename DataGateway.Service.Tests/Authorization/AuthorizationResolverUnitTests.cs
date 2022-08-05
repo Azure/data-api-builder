@@ -246,6 +246,30 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             CollectionAssert.AreEquivalent(expectedRolesForUpdate, actualRolesForUpdate.ToList());
         }
 
+        /// <summary>
+        /// Test to validate the AreRoleAndActionDefinedForEntity method for the case insensitivity of roleName.
+        /// For eg. The role Writer is equivalent to wrIter, wRITer, WRITER etc.
+        /// </summary>
+        /// <param name="configRole"></param>
+        /// <param name="action"></param>
+        /// <param name="roleName"></param>
+        [DataTestMethod]
+        [DataRow("Writer", Operation.Create, "wRiTeR")]
+        [DataRow("Reader", Operation.Create, "READER")]
+        [DataRow("Writer", Operation.Create, "WrIter")]
+        public void AreRoleAndActionDefinedForEntityTestForDifferentlyCasedRole(
+            string configRole,
+            Operation action,
+            string roleName
+            )
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(AuthorizationHelpers.TEST_ENTITY, configRole, action);
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            // Assert that the roleName is case insensitive.
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, roleName, action));
+        }
+
         #endregion
 
         #region Column Tests
@@ -481,6 +505,53 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             Assert.AreEqual(expected,
                 authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE, Operation.Create, new List<string>(columnsToCheck)));
+        }
+
+        /// <summary>
+        /// Test to validate the AreColumnsAllowedForAction method for case insensitivity of roleName.
+        /// For eg. The role CREATOR is equivalent to creator, cReAtOR etc.
+        /// </summary>
+        /// <param name="operation">The operation configured on the entity.</param>
+        /// <param name="configRole">The role configured on the entity.</param>
+        /// <param name="columnsToInclude">Columns accessible for the given role and operation.</param>
+        /// <param name="columnsToExclude">Columns unaccessible for the given role and operation.</param>
+        /// <param name="roleName">The roleName to be tested, differs in casing with configRole.</param>
+        /// <param name="columnsToCheck">Columns to be checked for access.</param>
+        /// <param name="expected">Expected booolean result for the relevant method call.</param>
+        [DataTestMethod]
+        [DataRow(Operation.All, "Writer", new string[] { "col1" }, new string[] { "col2" }, "WRITER",
+            new string[] { "col1", "col2" }, false, DisplayName = "Case insensitive role writer")]
+        [DataRow(Operation.Read, "Reader", new string[] { "col1", "col3", "col4" }, new string[] { "col3" }, "reADeR",
+            new string[] { "col1", "col3" }, false, DisplayName = "Case insensitive role reader")]
+        [DataRow(Operation.Create, "Creator", new string[] { "col1", "col2" }, new string[] { "col3", "col4" }, "CREator",
+            new string[] { "col1", "col2" }, true, DisplayName = "Case insensitive role creator")]
+        public void AreColumnsAllowedForActionWithRoleWithDifferentCasing(
+            Operation operation,
+            string configRole,
+            string[] columnsToInclude,
+            string[] columnsToExclude,
+            string roleName,
+            string[] columnsToCheck,
+            bool expected)
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                configRole,
+                operation,
+                includedCols: new(columnsToInclude),
+                excludedCols: new(columnsToExclude)
+                );
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            List<Operation> operations = AuthorizationResolver.GetAllActions(operation).ToList();
+
+            foreach (Operation op in operations)
+            {
+                // All calls should return true as long as column names are valid.
+                Assert.AreEqual(expected,
+                    authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY,
+                    roleName, op, new List<string>(columnsToCheck)));
+            }
         }
 
         #endregion

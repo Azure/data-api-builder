@@ -117,9 +117,9 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                     INullableTypeNode targetField = relationship.Cardinality switch
                     {
                         Cardinality.One =>
-                            new NamedTypeNode(targetEntityName),
+                            new NamedTypeNode(FormatNameForObject(targetEntityName, referencedEntity)),
                         Cardinality.Many =>
-                            new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(targetEntityName)),
+                            new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(FormatNameForObject(targetEntityName, referencedEntity))),
                         _ =>
                             throw new DataGatewayException(
                                 message: "Specified cardinality isn't supported",
@@ -153,9 +153,12 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                 objectTypeDirectives.Add(authorizeDirective!);
             }
 
+            // Top-level object type definition name should be singular.
+            // The singularPlural.Singular value is used, and if not configured,
+            // the top-level entity name value is used. No pluralization occurs.
             return new ObjectTypeDefinitionNode(
                 location: null,
-                name: new(value: entityName),
+                name: new(value: FormatNameForObject(entityName, configEntity)),
                 description: null,
                 objectTypeDirectives,
                 new List<NamedTypeNode>(),

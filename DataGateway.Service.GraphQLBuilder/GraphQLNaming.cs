@@ -38,10 +38,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
 
         public static string FormatNameForObject(string name, Entity configEntity)
         {
-            if (configEntity.GraphQL is SingularPlural namingRules)
-            {
-                name = string.IsNullOrEmpty(namingRules.Singular) ? name : namingRules.Singular;
-            }
+            name = TryGetDefinedSingularName(name, configEntity);
 
             string[] nameSegments = SanitizeGraphQLName(name);
 
@@ -100,11 +97,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
         /// <param name="name">Entity's name</param>
         /// <param name="configEntity">Entity object constructed using definitions from the config. </param>
         /// <returns>Entity name to be used for creating queries and mutations in the schema.</returns>
-        public static string TryGetDefinedSingularName(NameNode name, Entity configEntity)
+        public static string TryGetDefinedSingularName(string name, Entity configEntity)
         {
-
             return (configEntity.GraphQL is SingularPlural singularPlural
-                    && !string.IsNullOrEmpty(singularPlural.Singular)) ? singularPlural.Singular : name.Value;
+                    && !string.IsNullOrEmpty(singularPlural.Singular)) ? singularPlural.Singular : name;
         }
 
     }

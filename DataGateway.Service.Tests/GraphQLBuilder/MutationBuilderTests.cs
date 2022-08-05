@@ -936,31 +936,19 @@ type Foo @model {{
         /// <param name="entityName">Name of the entity</param>
         /// <param name="singularName">Singular name provided by the user</param>
         /// <param name="pluralName">Plural name provided by the user</param>
-        /// <param name="databaseType">Database type. Will be one of cosmos, mssql, mysql, postgresql</param>
         /// <param name="expectedName"> Expected name of the entity in the mutation. Used to construct the exact expected mutation names.</param>
         [DataTestMethod]
-        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", null, null, DatabaseType.cosmos, "People")]
-        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", null, null, DatabaseType.mssql, "People")]
-        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", null, null, DatabaseType.mysql, "People")]
-        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", null, null, DatabaseType.postgresql, "People")]
-        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "Person", "People", DatabaseType.cosmos, "Person")]
-        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "Person", "People", DatabaseType.mssql, "Person")]
-        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "Person", "People", DatabaseType.mysql, "Person")]
-        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "Person", "People", DatabaseType.postgresql, "Person")]
-        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", null, null, DatabaseType.cosmos, "Person")]
-        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", null, null, DatabaseType.mssql, "Person")]
-        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", null, null, DatabaseType.mysql, "Person")]
-        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", null, null, DatabaseType.postgresql, "Person")]
-        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", "Person", "People", DatabaseType.cosmos, "Person")]
-        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", "Person", "People", DatabaseType.mssql, "Person")]
-        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", "Person", "People", DatabaseType.mysql, "Person")]
-        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", "Person", "People", DatabaseType.postgresql, "Person")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", null, null, "People")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "Person", "People", "Person")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "Person", "", "Person")]
+        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "", "People", "People")]
+        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", null, null, "Person")]
+        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", "Person", "People", "Person")]
         public void ValidateMutationsAreCreatedWithRightName(
             string gql,
             string entityName,
             string singularName,
             string pluralName,
-            DatabaseType databaseType,
             string expectedName
             )
         {
@@ -976,7 +964,7 @@ type Foo @model {{
 
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                databaseType,
+                DatabaseType.cosmos,
                 new Dictionary<string, Entity> { { entityName, entity } },
                 entityPermissionsMap: entityPermissionsMap
                 );

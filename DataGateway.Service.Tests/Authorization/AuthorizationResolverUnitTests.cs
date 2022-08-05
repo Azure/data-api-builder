@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -255,7 +256,7 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// <param name="roleName"></param>
         [DataTestMethod]
         [DataRow("Writer", Operation.Create, "wRiTeR")]
-        [DataRow("Reader", Operation.Create, "READER")]
+        [DataRow("Reader", Operation.Read, "READER")]
         [DataRow("Writer", Operation.Create, "WrIter")]
         public void AreRoleAndActionDefinedForEntityTestForDifferentlyCasedRole(
             string configRole,
@@ -268,6 +269,45 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             // Assert that the roleName is case insensitive.
             Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, roleName, action));
+        }
+
+        /// <summary>
+        /// Test to validate the AreRoleAndActionDefinedForEntity method for the case insensitivity of actionName.
+        /// For eg. The action Create is equivalent to create, CREATE, crEatE etc.
+        /// The actionName should be valid CRUD operation name. Although other operations present
+        /// in the Operation enum would also pass this test, but such configs will fail in the
+        /// RuntimeConfigValidation stage.
+        /// </summary>
+        /// <param name="configRole">The role configured on the entity.</param>
+        /// <param name="configuredOperation">The operation configured on the entity for the configRole.</param>
+        /// <param name="operationName">Differently cased string representation of configuredOperation.</param>
+        /// <param name="expected">Expected boolean result from the relevant method call.</param>
+        [DataTestMethod]
+        [DataRow("Writer", Operation.Create, "CREATE", true,
+            DisplayName = "create action configured and tested on entity")]
+        [DataRow("Reader", Operation.Read, "rEad", true,
+            DisplayName = "read action configured and tested on entity")]
+        [DataRow("Writer", Operation.Update, "UPDate", true,
+            DisplayName = "update action configured and tested on entity")]
+        [DataRow("Reader", Operation.Delete, "rEAD", false,
+            DisplayName = "delete action configured/ read tested on entity")]
+        public void AreRoleAndActionDefinedForEntityTestForValidDifferentlyCasedAction(
+            string configRole,
+            Operation configuredOperation,
+            string operationName,
+            bool expected
+            )
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                configRole,
+                configuredOperation);
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+            Operation operationToCheck = Enum.Parse<Operation>(operationName, ignoreCase: true);
+
+            // Assert that the actionName is case insensitive and allow only configured operation.
+            Assert.AreEqual(expected,
+                authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, configRole, operationToCheck));
         }
 
         #endregion
@@ -519,8 +559,8 @@ namespace Azure.DataGateway.Service.Tests.Authorization
         /// <param name="columnsToCheck">Columns to be checked for access.</param>
         /// <param name="expected">Expected booolean result for the relevant method call.</param>
         [DataTestMethod]
-        [DataRow(Operation.All, "Writer", new string[] { "col1" }, new string[] { "col2" }, "WRITER",
-            new string[] { "col1", "col2" }, false, DisplayName = "Case insensitive role writer")]
+        [DataRow(Operation.All, "Writer", new string[] { "col1", "col2" }, new string[] { "col3" }, "WRITER",
+            new string[] { "col1", "col2" }, true, DisplayName = "Case insensitive role writer")]
         [DataRow(Operation.Read, "Reader", new string[] { "col1", "col3", "col4" }, new string[] { "col3" }, "reADeR",
             new string[] { "col1", "col3" }, false, DisplayName = "Case insensitive role reader")]
         [DataRow(Operation.Create, "Creator", new string[] { "col1", "col2" }, new string[] { "col3", "col4" }, "CREator",
@@ -552,6 +592,49 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                     authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY,
                     roleName, op, new List<string>(columnsToCheck)));
             }
+        }
+
+        /// <summary>
+        /// Test to validate the AreColumnsAllowedForAction method for case insensitivity of operationName.
+        /// For eg. The action Read is equivalent to READ, rEad etc.
+        /// </summary>
+        /// <param name="operation">The operation configured on the entity.</param>
+        /// <param name="configRole">The role configured on the entity.</param>
+        /// <param name="columnsToInclude">Columns accessible for the given role and operation.</param>
+        /// <param name="columnsToExclude">Columns unaccessible for the given role and operation.</param>
+        /// <param name="roleName">The roleName to be tested, differs in casing with configRole.</param>
+        /// <param name="columnsToCheck">Columns to be checked for access.</param>
+        /// <param name="expected">Expected booolean result for the relevant method call.</param>
+        [DataTestMethod]
+        [DataRow(Operation.Create, "CREATE", "Writer", new string[] { "col1", "col2" }, new string[] { "col3" },
+            new string[] { "col1", "col2" }, true, DisplayName = "Case insensitive action create")]
+        [DataRow(Operation.Read, "reAd", "Reader", new string[] { "col1", "col3", "col4" }, new string[] { "col3" },
+            new string[] { "col1", "col3" }, false, DisplayName = "Case insensitive action read")]
+        [DataRow(Operation.Delete, "DelETE", "Creator", new string[] { "col1", "col2" }, new string[] { "col3", "col4" },
+            new string[] { "col1", "col2" }, true, DisplayName = "Case insensitive action delete")]
+        public void AreColumnsAllowedForActionWithOperationWithDifferentCasing(
+            Operation configuredOperation,
+            string operationName,
+            string configRole,
+            string[] columnsToInclude,
+            string[] columnsToExclude,
+            string[] columnsToCheck,
+            bool expected)
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                AuthorizationHelpers.TEST_ENTITY,
+                configRole,
+                configuredOperation,
+                includedCols: new(columnsToInclude),
+                excludedCols: new(columnsToExclude)
+                );
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+            Operation operationToCheck = Enum.Parse<Operation>(operationName, ignoreCase: true);
+
+            // All calls should return true as long as column names are valid.
+            Assert.AreEqual(expected,
+                authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY,
+                configRole, operationToCheck, new List<string>(columnsToCheck)));
         }
 
         #endregion

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Azure.DataApiBuilder.Service.Tests": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "HAWAII_CONNSTRING": "Server=anidatagateway.database.windows.net;Persist Security Info=False;Database=LoyaltySample;User ID=anmunde;Password=DataApiBuilder84#;MultipleActiveResultSets=False;Connection Timeout=5;"
+      }
+    }
+  }
+}

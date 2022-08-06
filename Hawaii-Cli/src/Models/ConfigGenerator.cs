@@ -1,8 +1,8 @@
 using System.Collections;
 using System.Text.Json;
-using Azure.DataGateway.Config;
+using Azure.DataApiBuilder.Config;
 using static Hawaii.Cli.Models.Utils;
-using Action = Azure.DataGateway.Config.Action;
+using Action = Azure.DataApiBuilder.Config.Action;
 
 namespace Hawaii.Cli.Models
 {

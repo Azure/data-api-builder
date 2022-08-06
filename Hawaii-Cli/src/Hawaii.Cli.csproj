@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\DataGateway.Config\Azure.DataGateway.Config.csproj" />
+    <ProjectReference Include="..\..\DataApiBuilder.Config\Azure.DataApiBuilder.Config.csproj" />
   </ItemGroup>
 
 </Project>

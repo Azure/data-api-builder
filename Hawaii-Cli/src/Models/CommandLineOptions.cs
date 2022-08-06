@@ -1,4 +1,4 @@
-using Azure.DataGateway.Config;
+using Azure.DataApiBuilder.Config;
 using CommandLine;
 
 namespace Hawaii.Cli.Models

@@ -2,9 +2,9 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
-using Azure.DataGateway.Config;
+using Azure.DataApiBuilder.Config;
 using Humanizer;
-using Action = Azure.DataGateway.Config.Action;
+using Action = Azure.DataApiBuilder.Config.Action;
 
 /// <summary>
 /// Contains the methods for transforming objects, serialization options.

@@ -342,7 +342,9 @@ namespace Azure.DataGateway.Service.Authorization
         /// <param name="entityToRoleMap">The EntityMetadata for the entity for which we want to copy permissions
         /// from anonymous to authenticated role.</param>
         /// <param name="allowedColumnsForAnonymousRole">List of allowed columns for anonymous role.</param>
-        private static void CopyOverPermissionsFromAnonymousToAuthenticatedRole(EntityMetadata entityToRoleMap, HashSet<string> allowedColumnsForAnonymousRole)
+        private static void CopyOverPermissionsFromAnonymousToAuthenticatedRole(
+            EntityMetadata entityToRoleMap,
+            HashSet<string> allowedColumnsForAnonymousRole)
         {
             // Using assignment operator overrides the existing value for the key /
             // adds a new entry for (key,value) pair if absent, to the map.

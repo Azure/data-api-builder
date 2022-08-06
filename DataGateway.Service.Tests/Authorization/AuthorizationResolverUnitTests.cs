@@ -263,22 +263,30 @@ namespace Azure.DataGateway.Service.Tests.Authorization
                 if (action is Operation.Create)
                 {
                     // Create action should be defined for anonymous role.
-                    Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
-                        AuthorizationResolver.ROLE_ANONYMOUS, action));
+                    Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(
+                        AuthorizationHelpers.TEST_ENTITY,
+                        AuthorizationResolver.ROLE_ANONYMOUS,
+                        action));
 
                     // Create action should be defined for authenticated role as well,
                     // because it is defined for anonymous role.
-                    Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
-                        AuthorizationResolver.ROLE_AUTHENTICATED, action));
+                    Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(
+                        AuthorizationHelpers.TEST_ENTITY,
+                        AuthorizationResolver.ROLE_AUTHENTICATED,
+                        action));
                 }
                 else
                 {
                     // Check that no other action is defined for the authenticated role to ensure
                     // the authenticated role's permissions match that of the anonymous role's permissions.
-                    Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
-                        AuthorizationResolver.ROLE_AUTHENTICATED, action));
-                    Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
-                        AuthorizationResolver.ROLE_ANONYMOUS, action));
+                    Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(
+                        AuthorizationHelpers.TEST_ENTITY,
+                        AuthorizationResolver.ROLE_AUTHENTICATED,
+                        action));
+                    Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(
+                        AuthorizationHelpers.TEST_ENTITY,
+                        AuthorizationResolver.ROLE_ANONYMOUS,
+                        action));
                 }
             }
 
@@ -327,13 +335,17 @@ namespace Azure.DataGateway.Service.Tests.Authorization
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
             // Create action should be defined for test role.
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE, Operation.Create));
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                Operation.Create));
 
             // Create action should not be defined for authenticated role,
             // because neither authenticated nor anonymous role is defined.
-            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationResolver.ROLE_AUTHENTICATED, Operation.Create));
+            Assert.IsFalse(authZResolver.AreRoleAndActionDefinedForEntity(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationResolver.ROLE_AUTHENTICATED,
+                Operation.Create));
 
             // Assert that the create operation has only test_role.
             List<string> expectedRolesForCreate = new() { AuthorizationHelpers.TEST_ROLE };
@@ -713,8 +725,11 @@ namespace Azure.DataGateway.Service.Tests.Authorization
 
             foreach (Operation action in Action.ValidPermissionActions)
             {
-                Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(AuthorizationHelpers.TEST_ENTITY,
-                    AuthorizationResolver.ROLE_AUTHENTICATED, action, new List<string>(columnsToCheck)));
+                Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForAction(
+                    AuthorizationHelpers.TEST_ENTITY,
+                    AuthorizationResolver.ROLE_AUTHENTICATED,
+                    action,
+                    new List<string>(columnsToCheck)));
             }
         }
         #endregion

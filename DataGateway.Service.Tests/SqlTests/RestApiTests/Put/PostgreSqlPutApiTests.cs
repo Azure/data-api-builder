@@ -217,7 +217,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Put
                 _authorizationService.Object,
                 _authorizationResolver,
                 _runtimeConfigProvider);
-            _restController = new RestController(_restService);
+            _restController = new RestController(_restService,
+                                                 _restControllerLogger);
         }
 
         #endregion

@@ -34,10 +34,6 @@
     <ProjectReference Include="..\DataApiBuilder.Service\Azure.DataApiBuilder.Service.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
-
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 
 </Project>

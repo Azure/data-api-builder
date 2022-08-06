@@ -819,7 +819,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
         public override Task FindStoredProcedureWithNonexistentParameter()
         {
             throw new NotImplementedException();
-        }   
+        }
 
     }
 }

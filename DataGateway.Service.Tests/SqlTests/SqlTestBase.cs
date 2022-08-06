@@ -391,7 +391,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests
                     using JsonDocument sqlResult = JsonDocument.Parse(resultArray.ToJsonString());
                     result = sqlResult.RootElement.ToString();
                 }
-                
+
             }
 
             return result;

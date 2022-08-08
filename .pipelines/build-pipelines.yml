@@ -63,10 +63,8 @@ steps:
     packagesToPack: '**/Hawaii.Cli.csproj'
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
     nobuild: true
-    versioningScheme: ByPrereleaseNumber
-    majorVersion: '0'
-    minorVersion: '0'
-    patchVersion: '4'
+    versioningScheme: byEnvVar
+    versionEnvVar: '0.0.4'
     buildProperties: 'VersionSuffix="$(nugetVersionTag)"'
     verbosityPack: 'minimal'
 

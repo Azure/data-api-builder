@@ -17,7 +17,7 @@ variables:
   nugetVersion: '0.0.4'
   nugetRelease: false # change it to true, when releasing the nuget to feed
   ${{ if eq(variables.nugetRelease, true) }}:
-    nugetVersionTag: ''
+    nugetVersionTag: nugetVersion + ''
   ${{ else }}:
     nugetVersionTag: $(Build.BuildId)
 

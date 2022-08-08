@@ -50,7 +50,7 @@ jobs:
     inputs:
       command: custom
       custom: 'tool install'
-      arguements: '-g --add-source ./nupkg hawaii-cli'
+      arguements: '-g --add-source ./nupkg hawaii.cli'
       workingDirectory: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
 
   - bash: |
@@ -149,7 +149,7 @@ jobs:
     inputs:
       command: custom
       custom: 'tool install'
-      arguements: '-g --add-source ./nupkg hawaii-cli'
+      arguements: '-g --add-source ./nupkg hawaii.cli'
       workingDirectory: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
   
   - script: cmd < $(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/MsSql_Commands.txt

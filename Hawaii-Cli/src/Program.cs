@@ -1,5 +1,6 @@
 using CommandLine;
 using Hawaii.Cli.Models;
+using Azure.DataGateway.Config;
 
 namespace Hawaii.Cli
 {
@@ -63,7 +64,7 @@ namespace Hawaii.Cli
                     // if the user provides the config file, then it takes precedence
                     if (!string.IsNullOrEmpty(options.Config))
                     {
-                        args = new string[] { "--ConfigFileName", options.Config };
+                        args = new string[] { "--" + nameof(RuntimeConfigPath.ConfigFileName), options.Config };
                     }
 
                     bool isSuccess = Azure.DataGateway.Service.Program.StartEngine(args);

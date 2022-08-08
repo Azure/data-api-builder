@@ -203,6 +203,25 @@ public class EndToEndTests
         Assert.AreEqual("{\"id\":\"identity\",\"name\":\"Company Name\"}", JsonSerializer.Serialize(entity.Mappings));
     }
 
+    /// <summary>
+    /// Test to verify the engine gets started using start command
+    /// </summary>
+    [TestMethod]
+    public void TestStartEngine()
+    {
+        Thread th = new Thread(StartEngineThread);
+        th.Start();
+        Thread.Sleep(2000);
+        Console.WriteLine("engine started");
+        Assert.IsTrue(th.IsAlive);
+    }
+
+    private void StartEngineThread()
+    {
+        string[] startArgs = { "start", "--config", "hawaii-config.json"};
+        Program.Main(startArgs);
+    }
+
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)
     {
         string jsonString;

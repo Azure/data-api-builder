@@ -39,19 +39,21 @@ jobs:
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu SQL Server Image Docker
 
-  -task: DotNetCoreCLI@2
+  - task: DotNetCoreCLI@2
     displayName: Pack the CLI tool
-    command: pack
-    projects: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
+    inputs:
+      command: pack
+      projects: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
 
-  -task: DotNetCoreCLI@2
+  - task: DotNetCoreCLI@2
     displayName: Install the CLI tool
-    command: custom
-    custom: 'tool install -g'
-    arguements: '--add-source ./nupkg hawaii-cli'
-    workingDirectory: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
+    inputs:
+      command: custom
+      custom: 'tool install -g'
+      arguements: '--add-source ./nupkg hawaii-cli'
+      workingDirectory: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
 
-  -bash: |
+  - bash: |
       .$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/MsSql_Commands.txt
     workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles'
     failOnStderr: true
@@ -136,19 +138,21 @@ jobs:
         SqlLocalDb.exe start MSSQLLocalDB
         SqlLocalDb.exe info "MSSQLLocalDB"
 
-  -task: DotNetCoreCLI@2
+  - task: DotNetCoreCLI@2
     displayName: Pack the CLI tool
-    command: pack
-    projects: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
+    inputs:
+      command: pack
+      projects: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
 
-  -task: DotNetCoreCLI@2
+  - task: DotNetCoreCLI@2
     displayName: Install the CLI tool
-    command: custom
-    custom: 'tool install -g'
-    arguements: '--add-source ./nupkg hawaii-cli'
-    workingDirectory: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
+    inputs:
+      command: custom
+      custom: 'tool install -g'
+      arguements: '--add-source ./nupkg hawaii-cli'
+      workingDirectory: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
   
-  -script: cmd < $(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/MsSql_Commands.txt
+  - script: cmd < $(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/MsSql_Commands.txt
     workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles'
     failOnStderr: true
 

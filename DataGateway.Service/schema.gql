@@ -1,21 +1,13 @@
-type Character @model {
+type Author @model {
     id : ID,
-    name : String,
-    type: String,
-    homePlanet: Int,
-    primaryFunction: String
+    first_name : String,
+    middle_name: String,
+    last_name: String,
+    books: [String]
 }
 
-type Planet @model {
+type Book @model {
     id : ID,
-    name : String,
-    character: Character,
-    age : Int,
-    dimension : String,
-    stars: [Star]
-}
-
-type Star @model {
-    id : ID,
-    name : String
+    title : String,
+    authors: [Author]
 }

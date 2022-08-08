@@ -79,7 +79,3 @@ hawaii update user --name todo-005 --relationship owns --target.entity todo --ca
 hawaii update todo --name todo-005 --relationship owner --target.entity user --cardinality one --relationship.fields "owner_id:id"
 
 ```
-
-## Contributing
-
-Please read through the [contributing guidelines](./CONTRIBUTING.md)

@@ -2,11 +2,10 @@
   "$schema": "../schemas/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "cosmos",
-    "connection-string": "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
+    "connection-string": "AccountEndpoint=https://dab-cosmos-demo.documents.azure.com:443/;AccountKey=zikw2Tnc1OKUROROaquZ1RwuWUzO2Bjlfd9b7RMMVTpJ3WZuiDroGNUiwOo0snA35tchpiSt5aisnNygQbcLFw==;"
   },
   "cosmos": {
-    "database": "graphqldb",
-    "container": "planet",
+    "database": "PlaygroundDB",
     "schema": "schema.gql"
   },
   "runtime": {
@@ -30,43 +29,24 @@
     }
   },
   "entities": {
-    "Planet": {
-      "source": "graphqldb.planet",
+    "Author": {
+      "source": "PlaygroundDB.authors",
       "rest": false,
       "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
           "actions": [ "create", "read", "update", "delete" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [ "create", "read", "update", "delete" ]
         }
       ]
     },
-    "Character": {
-      "source": "graphqldb.character",
-      "rest": false,
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "authenticated",
-          "actions": [ "create", "read", "update", "delete" ]
-        }
-      ]
-    },
-    "Star": {
-      "source": "graphqldb.star",
+    "Book": {
+      "source": "PlaygroundDB.books",
       "rest": false,
       "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "create", "read", "update", "delete" ]
-        },
-        {
-          "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
       ]

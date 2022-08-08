@@ -19,7 +19,7 @@ variables:
   ${{ if eq(variables.nugetRelease, true) }}:
     nugetVersionTag: nugetVersion
   ${{ else }}:
-    nugetVersionTag: 'nugetVersion-$(Build.BuildId)'
+    nugetVersionTag: '$(nugetVersion)-$(Build.BuildId)'
 
 steps:
 - task: UseDotNet@2
@@ -65,7 +65,7 @@ steps:
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
     nobuild: true
     versioningScheme: byEnvVar
-    versionEnvVar: nugetVersion
+    versionEnvVar: nugetVersionTag
     buildProperties: 'VersionSuffix="$(nugetVersionTag)"'
     verbosityPack: 'minimal'
 

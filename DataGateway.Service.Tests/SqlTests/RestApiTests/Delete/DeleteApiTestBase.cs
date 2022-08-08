@@ -167,11 +167,19 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         /// through the primary key route of a delete operation.
         /// </summary>
         /// <returns></returns>
-        [TestMethod]
-        public async Task DeleteWithSqlInjectionTest()
+        [DataTestMethod]
+        [DataRow("/UNION SELECT * FROM books/*",
+            "Primary key column(s) provided do not match DB schema.")]
+        [DataRow("/OR 1=1/*",
+            "Primary key column(s) provided do not match DB schema.")]
+        [DataRow("; SELECT * FROM information_schema.tables/*",
+            "Support for url template with implicit primary key field names is not yet added.")]
+        [DataRow("/value; DROP TABLE authors;",
+            "Support for url template with implicit primary key field names is not yet added.")]
+        public async Task DeleteWithSqlInjectionTest(string sqlInjection, string message)
         {//expected status code 400
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/1/OR 1=1/*",
+                    primaryKeyRoute: $"id/1{sqlInjection}",
                     queryString: string.Empty,
                     entity: _integrationEntityName,
                     sqlQuery: string.Empty,
@@ -179,7 +187,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
                     exception: true,
-                    expectedErrorMessage: "Primary key column(s) provided do not match DB schema.",
+                    expectedErrorMessage: message,
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
                 );

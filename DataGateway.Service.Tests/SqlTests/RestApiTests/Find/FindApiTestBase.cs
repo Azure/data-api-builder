@@ -1370,6 +1370,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
         [DataRow("id; SELECT * FROM information_schema.tables/*")]
         [DataRow("; SELECT * FROM v$version/*")]
         [DataRow("id; SELECT * FROM v$version/*")]
+        [DataRow("id; DROP TABLE books;/*")]
         public async Task FindByIdTestWithSlashStarSqlInjectionInPKRoute(string sqlInjection)
         {
             await SetupAndRunRestApiTest(
@@ -1397,6 +1398,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
         [DataRow("id; SELECT * FROM information_schema.tables--")]
         [DataRow("; SELECT * FROM v$version--")]
         [DataRow("id; SELECT * FROM v$version--")]
+        [DataRow("id; DROP TABLE books;--")]
         public async Task FindByIdTestWithDoubleDashSqlInjectionInPKRoute(string sqlInjection)
         {
             await SetupAndRunRestApiTest(
@@ -1432,6 +1434,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
         [DataRow("; SELECT * FROM v$version--")]
         [DataRow("id; SELECT * FROM v$version/*")]
         [DataRow("id; SELECT * FROM v$version--")]
+        [DataRow("id; DROP TABLE books;")]
         public async Task FindByIdTestWithSqlInjectionInQueryString(string sqlInjection)
         {
             await SetupAndRunRestApiTest(
@@ -1467,6 +1470,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
         [DataRow("; SELECT * FROM v$version--")]
         [DataRow("id; SELECT * FROM v$version/*")]
         [DataRow("id; SELECT * FROM v$version--")]
+        [DataRow("id; DROP TABLE books;")]
         public async Task FindManyTestWithSqlInjectionInQueryString(string sqlInjection)
         {
             await SetupAndRunRestApiTest(

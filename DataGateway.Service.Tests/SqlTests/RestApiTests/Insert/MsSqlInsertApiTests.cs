@@ -110,6 +110,17 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Insert
                 $"AND [title] = 'value; SELECT * FROM v$version--' " +
                 $"AND [publisher_id] = 1234 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertSqlInjectionQuery4",
+                // This query is the query for the result we get back from the database
+                // after the insert operation. Not the query that we generate to perform
+                // the insertion.
+                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
+                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } " +
+                $"AND [title] = 'id; DROP TABLE books;' " +
+                $"AND [publisher_id] = 1234 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
         #region Test Fixture Setup

@@ -231,6 +231,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Put
                         AND publisher_id = 1234
                     ) AS subq
                 "
+            },
+            {
+                "UpdateSqlInjectionQuery4",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = 'value; DROP TABLE authors;'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
             }
         };
 

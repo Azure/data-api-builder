@@ -129,6 +129,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Insert
                         AND title = 'value; SELECT * FROM v$version--'
                     ) AS subq
                 "
+            },
+            {
+                "InsertSqlInjectionQuery4",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                        AND title = 'id; DROP TABLE books;'
+                    ) AS subq
+                "
             }
         };
 

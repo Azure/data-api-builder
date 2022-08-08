@@ -152,6 +152,13 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Put
                 $"WHERE id = 7 AND [title] = 'value; SELECT * FROM v$version--' " +
                 $"AND [publisher_id] = 1234" +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "UpdateSqlInjectionQuery4",
+                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
+                $"WHERE id = 7 AND [title] = 'value; DROP TABLE authors;' " +
+                $"AND [publisher_id] = 1234" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
         #region Test Fixture Setup

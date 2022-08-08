@@ -133,6 +133,18 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Insert
                     ) AS subq
                 "
             },
+            {
+                "InsertSqlInjectionQuery4",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                        AND title = 'id; DROP TABLE books;'
+                    ) AS subq
+                "
+            }
         };
 
         #region Test Fixture Setup

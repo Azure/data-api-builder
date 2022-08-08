@@ -374,6 +374,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Put
         [DataRow(" UNION SELECT * FROM books/*", "UpdateSqlInjectionQuery1")]
         [DataRow("; SELECT * FROM information_schema.tables/*", "UpdateSqlInjectionQuery2")]
         [DataRow("value; SELECT * FROM v$version--", "UpdateSqlInjectionQuery3")]
+        [DataRow("value; DROP TABLE authors;", "UpdateSqlInjectionQuery4")]
         public virtual async Task PutOne_Update_SqlInjection_Test(string sqlInjection, string query)
         {
             string requestBody = @"

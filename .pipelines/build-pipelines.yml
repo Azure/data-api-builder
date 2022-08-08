@@ -14,7 +14,7 @@ variables:
   solution: '**/*.sln'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
-  nugetVersion: '0.0.4'
+  nugetVersion: '0.0.4' # update the version for new release
   nugetRelease: false # change it to true, when releasing the nuget to feed
   ${{ if eq(variables.nugetRelease, true) }}:
     nugetVersionTag: nugetVersion

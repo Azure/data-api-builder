@@ -39,6 +39,23 @@ jobs:
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu Postgres Image Docker
 
+  -task: DotNetCoreCLI@2
+    displayName: Pack the CLI tool
+    command: pack
+    projects: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
+
+  -task: DotNetCoreCLI@2
+    displayName: Install the CLI tool
+    command: custom
+    custom: 'tool install -g'
+    arguements: '--add-source ./nupkg hawaii-cli'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
+
+  -bash: |
+      .$(System.DefaultWorkingDirectory)/DataGateway.Service/PostrgreSql_Commands.txt
+    workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/'
+    failOnStderr: true
+
   - task: FileTransform@1
     displayName: 'Generate hawaii-config.PostgreSql.json'
     inputs:

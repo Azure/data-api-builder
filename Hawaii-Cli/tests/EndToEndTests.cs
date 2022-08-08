@@ -209,7 +209,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestStartEngine()
     {
-        Thread th = new Thread(StartEngineThread);
+        Thread th = new(StartEngineThread);
         th.Start();
         Thread.Sleep(2000);
         Console.WriteLine("engine started");
@@ -218,7 +218,7 @@ public class EndToEndTests
 
     private void StartEngineThread()
     {
-        string[] startArgs = { "start", "--config", "hawaii-config.json"};
+        string[] startArgs = { "start", "--config", "hawaii-config.json" };
         Program.Main(startArgs);
     }
 

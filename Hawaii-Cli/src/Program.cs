@@ -1,6 +1,6 @@
+using Azure.DataGateway.Config;
 using CommandLine;
 using Hawaii.Cli.Models;
-using Azure.DataGateway.Config;
 
 namespace Hawaii.Cli
 {

@@ -52,8 +52,8 @@ jobs:
     workingDirectory: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
 
   -bash: |
-      .$(System.DefaultWorkingDirectory)/DataGateway.Service/MsSql_Commands.txt
-    workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/'
+      .$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/MsSql_Commands.txt
+    workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles'
     failOnStderr: true
 
   - task: FileTransform@1
@@ -148,8 +148,8 @@ jobs:
     arguements: '--add-source ./nupkg hawaii-cli'
     workingDirectory: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
   
-  -script: cmd < $(System.DefaultWorkingDirectory)/DataGateway.Service/MySql_Commands.txt
-    workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/'
+  -script: cmd < $(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/MsSql_Commands.txt
+    workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles'
     failOnStderr: true
 
   - task: FileTransform@1

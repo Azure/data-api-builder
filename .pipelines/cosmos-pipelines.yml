@@ -43,13 +43,13 @@ steps:
   custom: 'tool install -g'
   arguements: '--add-source ./nupkg hawaii-cli'
   workingDirectory: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
--script: cmd < $(System.DefaultWorkingDirectory)/DataGateway.Service/MySql_Commands.txt
+-script: cmd < $(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/CosmosDB_Commands.txt
     workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/'
     failOnStderr: true
     condition: eq( variables['Agent.OS'], 'Windows' )
 -bash: |
-      .$(System.DefaultWorkingDirectory)/DataGateway.Service/PostrgreSql_Commands.txt
-    workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/'
+      .$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/CosmosDB_Commands.txt
+    workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles'
     failOnStderr: true
     condition: in( variables['Agent.OS'], 'Linux', 'macOs' )
 - task: FileTransform@1

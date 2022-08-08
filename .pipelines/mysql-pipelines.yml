@@ -56,8 +56,8 @@ jobs:
     workingDirectory: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
 
   -bash: |
-      .$(System.DefaultWorkingDirectory)/DataGateway.Service/MySql_Commands.txt
-    workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/'
+      .$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/MySql_Commands.txt
+    workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles'
     failOnStderr: true
 
   - task: FileTransform@1

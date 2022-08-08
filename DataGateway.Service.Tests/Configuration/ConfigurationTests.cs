@@ -369,7 +369,7 @@ namespace Azure.DataGateway.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
-        [TestMethod("Validates the runtime configuration file.")]
+        [TestMethod("Validates the runtime configuration file."), TestCategory(TestCategory.MSSQL)]
         public void TestConfigIsValid()
         {
             RuntimeConfigPath configPath =

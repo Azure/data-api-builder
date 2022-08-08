@@ -65,7 +65,7 @@ steps:
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
     nobuild: true
     versioningScheme: byEnvVar
-    versionEnvVar: variables.nugetVersion
+    versionEnvVar: nugetVersion
     buildProperties: 'VersionSuffix="$(nugetVersionTag)"'
     verbosityPack: 'minimal'
 

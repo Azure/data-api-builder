@@ -4,9 +4,19 @@ Welcome to this getting started tutorial that will guide you to have Data API bu
 
 ## Prerequisites
 
-As the Data API builder for Azure Databases generate REST and GraphQL endpoints for database objects, you need to have a database ready to be used. You can choose either a relational or non-relational database.
+### .NET 6.0
+Make sure you have .NET 6.0 SDK installed on your machine: https://dotnet.microsoft.com/en-us/download/dotnet/6.0.
 
-Please note that familiarity with Git commands and concept is assumed throughout all the tutorial.
+### Azure Database
+
+As the Data API builder for Azure Databases generate REST and GraphQL endpoints for database objects, you need to have a database ready to be used. You can choose either a relational or non-relational database. The getting started guide document the process to have Data API builder set up for:
+- Azure SQL Database
+- Azure Cosmos DB
+
+### Git
+
+Please note that familiarity with Git commands, tools and concept is assumed throughout all the tutorial.
+
 
 ## Clone the Data API builder for Azure Databases engine
 

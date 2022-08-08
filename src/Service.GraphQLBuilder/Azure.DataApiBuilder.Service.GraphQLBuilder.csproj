@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DataApiBuilder.Auth\Azure.DataApiBuilder.Auth.csproj" />
-    <ProjectReference Include="..\DataApiBuilder.Config\Azure.DataApiBuilder.Config.csproj" />
+    <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" />
+    <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
   </ItemGroup>
 
   <ItemGroup>

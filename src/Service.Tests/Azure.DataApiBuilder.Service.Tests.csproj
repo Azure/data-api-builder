@@ -29,9 +29,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DataApiBuilder.Auth\Azure.DataApiBuilder.Auth.csproj" />
-    <ProjectReference Include="..\DataApiBuilder.Config\Azure.DataApiBuilder.Config.csproj" />
-    <ProjectReference Include="..\DataApiBuilder.Service\Azure.DataApiBuilder.Service.csproj" />
+    <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" />
+    <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
+    <ProjectReference Include="..\Service\Azure.DataApiBuilder.Service.csproj" />
   </ItemGroup>
 
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>

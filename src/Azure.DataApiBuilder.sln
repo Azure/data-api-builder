@@ -2,30 +2,30 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32405.409
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Service", "DataApiBuilder.Service\Azure.DataApiBuilder.Service.csproj", "{208FC26C-A21C-4C96-98EE-F10FDAEAC508}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Service", "Service\Azure.DataApiBuilder.Service.csproj", "{208FC26C-A21C-4C96-98EE-F10FDAEAC508}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Service.Tests", "DataApiBuilder.Service.Tests\Azure.DataApiBuilder.Service.Tests.csproj", "{4E50C9B0-818E-4041-B18B-5BB17E4D409F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Service.Tests", "Service.Tests\Azure.DataApiBuilder.Service.Tests.csproj", "{4E50C9B0-818E-4041-B18B-5BB17E4D409F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9C661-D8FD-469A-9372-284387C4BEFC}"
 	ProjectSection(SolutionItems) = preProject
-		DataApiBuilder.Service\hawaii-config.Cosmos.json = DataApiBuilder.Service\hawaii-config.Cosmos.json
-		DataApiBuilder.Service\hawaii-config.Cosmos.overrides.example.json = DataApiBuilder.Service\hawaii-config.Cosmos.overrides.example.json
-		DataApiBuilder.Service\hawaii-config.json = DataApiBuilder.Service\hawaii-config.json
-		DataApiBuilder.Service\hawaii-config.MsSql.json = DataApiBuilder.Service\hawaii-config.MsSql.json
-		DataApiBuilder.Service\hawaii-config.MsSql.overrides.example.json = DataApiBuilder.Service\hawaii-config.MsSql.overrides.example.json
-		DataApiBuilder.Service\hawaii-config.MySql.json = DataApiBuilder.Service\hawaii-config.MySql.json
-		DataApiBuilder.Service\hawaii-config.MySql.overrides.example.json = DataApiBuilder.Service\hawaii-config.MySql.overrides.example.json
-		DataApiBuilder.Service\hawaii-config.PostgreSql.json = DataApiBuilder.Service\hawaii-config.PostgreSql.json
-		DataApiBuilder.Service\hawaii-config.PostgreSql.overrides.example.json = DataApiBuilder.Service\hawaii-config.PostgreSql.overrides.example.json
+		Service\hawaii-config.Cosmos.json = Service\hawaii-config.Cosmos.json
+		Service\hawaii-config.Cosmos.overrides.example.json = Service\hawaii-config.Cosmos.overrides.example.json
+		Service\hawaii-config.json = Service\hawaii-config.json
+		Service\hawaii-config.MsSql.json = Service\hawaii-config.MsSql.json
+		Service\hawaii-config.MsSql.overrides.example.json = Service\hawaii-config.MsSql.overrides.example.json
+		Service\hawaii-config.MySql.json = Service\hawaii-config.MySql.json
+		Service\hawaii-config.MySql.overrides.example.json = Service\hawaii-config.MySql.overrides.example.json
+		Service\hawaii-config.PostgreSql.json = Service\hawaii-config.PostgreSql.json
+		Service\hawaii-config.PostgreSql.overrides.example.json = Service\hawaii-config.PostgreSql.overrides.example.json
 		schemas\hawaii.draft-01.schema.json = schemas\hawaii.draft-01.schema.json
-		DataApiBuilder.Service\schema.gql = DataApiBuilder.Service\schema.gql
+		Service\schema.gql = Service\schema.gql
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Config", "DataApiBuilder.Config\Azure.DataApiBuilder.Config.csproj", "{F55CC05C-EA9A-4B50-93A8-79294482FD7F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Config", "Config\Azure.DataApiBuilder.Config.csproj", "{F55CC05C-EA9A-4B50-93A8-79294482FD7F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Service.GraphQLBuilder", "DataApiBuilder.Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj", "{E0B51C8F-493D-4C69-8B27-C114D3874176}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Service.GraphQLBuilder", "Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj", "{E0B51C8F-493D-4C69-8B27-C114D3874176}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Auth", "DataApiBuilder.Auth\Azure.DataApiBuilder.Auth.csproj", "{249FF898-AD6E-46F2-B441-F6926BCD5179}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Auth", "Auth\Azure.DataApiBuilder.Auth.csproj", "{249FF898-AD6E-46F2-B441-F6926BCD5179}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hawaii.Cli", "Hawaii-Cli\src\Hawaii.Cli.csproj", "{55528027-AC5E-4B3A-901A-BAE649C44C07}"
 EndProject

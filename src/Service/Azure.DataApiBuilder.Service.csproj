@@ -86,8 +86,8 @@
     <ProjectCapability Include="CSharp;Managed;ClassDesigner" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DataApiBuilder.Auth\Azure.DataApiBuilder.Auth.csproj" />
-    <ProjectReference Include="..\DataApiBuilder.Config\Azure.DataApiBuilder.Config.csproj" />
-    <ProjectReference Include="..\DataApiBuilder.Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
+    <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" />
+    <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
+    <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
   </ItemGroup>
 </Project>

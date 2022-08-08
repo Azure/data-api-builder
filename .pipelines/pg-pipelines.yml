@@ -51,7 +51,7 @@ jobs:
     inputs:
       command: custom
       custom: tool install
-      arguments: '-g --add-source $(Build.ArtifactStagingDirectory) hawaii.cli'
+      arguments: '-g --add-source $(Build.ArtifactStagingDirectory)/nupkg hawaii.cli'
       
   - bash: |
       .$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/PostrgreSql_Commands.txt

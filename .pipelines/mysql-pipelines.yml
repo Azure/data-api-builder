@@ -53,8 +53,8 @@ jobs:
     displayName: Install the CLI tool
     inputs:
       command: custom
-      custom: 'tool install -g'
-      arguements: '--add-source ./nupkg hawaii-cli'
+      custom: 'tool install'
+      arguements: '-g --add-source ./nupkg hawaii-cli'
       workingDirectory: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
 
   - bash: |

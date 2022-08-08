@@ -28,6 +28,8 @@ namespace Azure.DataApiBuilder.Service.Authorization
         public const string CLAIM_PREFIX = "@claims.";
         public const string FIELD_PREFIX = "@item.";
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
+        public const string ROLE_ANONYMOUS = "anonymous";
+        public const string ROLE_AUTHENTICATED = "authenticated";
         private const string SHORT_CLAIM_TYPE_NAME = "http://schemas.xmlsoap.org/ws/2005/05/identity/claimproperties/ShortTypeName";
 
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
@@ -203,6 +205,10 @@ namespace Azure.DataApiBuilder.Service.Authorization
             {
                 EntityMetadata entityToRoleMap = new();
 
+                // Store the allowedColumns for anonymous role.
+                // In case the authenticated role is not defined on the entity,
+                // this will help in copying over permissions from anonymous role to authenticated role.
+                HashSet<string> allowedColumnsForAnonymousRole = new();
                 foreach (PermissionSetting permission in entity.Permissions)
                 {
                     string role = permission.Role;
@@ -304,12 +310,66 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
                             roleToAction.ActionToColumnMap[actionOp] = actionToColumn;
                         }
+
+                        if (ROLE_ANONYMOUS.Equals(role, StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Saving the allowed columns for anonymous role in case we need to copy the
+                            // allowed columns for authenticated role. This reduces the time complexity
+                            // for copying over permissions to authenticated role from anonymous role.
+                            allowedColumnsForAnonymousRole = allowedColumns;
+                        }
                     }
 
                     entityToRoleMap.RoleToActionMap[role] = roleToAction;
                 }
 
+                // Check if anonymous role is defined but authenticated is not. If that is the case,
+                // then the authenticated role derives permissions that are atleast equal to anonymous role.
+                if (entityToRoleMap.RoleToActionMap.ContainsKey(ROLE_ANONYMOUS) &&
+                    !entityToRoleMap.RoleToActionMap.ContainsKey(ROLE_AUTHENTICATED))
+                {
+                    CopyOverPermissionsFromAnonymousToAuthenticatedRole(entityToRoleMap, allowedColumnsForAnonymousRole);
+                }
+
                 EntityPermissionsMap[entityName] = entityToRoleMap;
+            }
+        }
+
+        /// <summary>
+        /// Helper method to copy over permissions from anonymous role to authenticated role in the case
+        /// when anonymous role is defined for an entity in the config but authenticated role is not.
+        /// </summary>
+        /// <param name="entityToRoleMap">The EntityMetadata for the entity for which we want to copy permissions
+        /// from anonymous to authenticated role.</param>
+        /// <param name="allowedColumnsForAnonymousRole">List of allowed columns for anonymous role.</param>
+        private static void CopyOverPermissionsFromAnonymousToAuthenticatedRole(
+            EntityMetadata entityToRoleMap,
+            HashSet<string> allowedColumnsForAnonymousRole)
+        {
+            // Using assignment operator overrides the existing value for the key /
+            // adds a new entry for (key,value) pair if absent, to the map.
+            entityToRoleMap.RoleToActionMap[ROLE_AUTHENTICATED] = entityToRoleMap.RoleToActionMap[ROLE_ANONYMOUS];
+
+            // Copy over ActionToRolesMap for authenticated role from anonymous role.
+            Dictionary<Operation, ActionMetadata> allowedActionMap =
+                entityToRoleMap.RoleToActionMap[ROLE_ANONYMOUS].ActionToColumnMap;
+            foreach (Operation operation in allowedActionMap.Keys)
+            {
+                entityToRoleMap.ActionToRolesMap[operation].Add(ROLE_AUTHENTICATED);
+            }
+
+            // Copy over FieldToRolesMap for authenticated role from anonymous role.
+            foreach (string allowedColumnInAnonymousRole in allowedColumnsForAnonymousRole)
+            {
+                Dictionary<Operation, List<string>> allowedOperationsForField =
+                    entityToRoleMap.FieldToRolesMap[allowedColumnInAnonymousRole];
+                foreach (Operation operation in allowedOperationsForField.Keys)
+                {
+                    if (allowedOperationsForField[operation].Contains(ROLE_ANONYMOUS))
+                    {
+                        allowedOperationsForField[operation].Add(ROLE_AUTHENTICATED);
+                    }
+                }
             }
         }
 

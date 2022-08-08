@@ -54,9 +54,8 @@ jobs:
     inputs:
       command: custom
       custom: 'tool install'
-      arguements: '-g --add-source ./nupkg hawaii.cli'
-      workingDirectory: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
-
+      arguements: '-g --add-source $(System.DefaultWorkingDirectory)/Hawaii-Cli/src/nupkg hawaii.cli'
+    
   - bash: |
       .$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/MySql_Commands.txt
     workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles'

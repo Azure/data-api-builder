@@ -60,10 +60,16 @@ steps:
   displayName: 'Creating Nuget Package'
   inputs:
     command: pack
-    buildProperties: 'VersionSuffix="$(nugetVersionTag)"'
-    verbosityPack: 'minimal'
     packagesToPack: '**/Hawaii.Cli.csproj'
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
+    nobuild: true
+    versioningScheme: ByPrereleaseNumber
+    majorVersion: '0'
+    minorVersion: '0'
+    patchVersion: '4'
+    buildProperties: 'VersionSuffix="$(nugetVersionTag)"'
+    verbosityPack: 'minimal'
+
 
 # This task will publish nuget package with build number to pipeline artifact
 - task: PublishPipelineArtifact@1

@@ -26,8 +26,8 @@ hawaii-config.*.json
 *.code-workspace
 
 # include some basic vscode config files
-!/DataApiBuilder.Service/.vscode/launch.json
-!/DataApiBuilder.Service/.vscode/tasks.json
+!/src/Service/.vscode/launch.json
+!/src/Service/.vscode/tasks.json
 
 .fake
 .ionide

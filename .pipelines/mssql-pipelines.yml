@@ -43,14 +43,15 @@ jobs:
     displayName: Pack the CLI tool
     inputs:
       command: pack
-      projects: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
+      packagesToPack: '**/Hawaii.Cli.csproj' 
+      packDirectory: '$(Build.ArtifactStagingDirectory)'
 
   - task: DotNetCoreCLI@2
     displayName: Install the CLI tool
     inputs:
       command: custom
       custom: 'tool install'
-      arguements: '-g --add-source $(System.DefaultWorkingDirectory)/Hawaii-Cli/src/nupkg hawaii.cli'
+      arguements: '-g --add-source $(Build.ArtifactStagingDirectory) hawaii.cli'
 
   - bash: |
       .$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/MsSql_Commands.txt
@@ -62,7 +63,7 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'DataGateway.Service/hawaii-config.MsSql.json'
+      targetFiles: 'DataGateway.Service/ConfigFiles/hawaii-config.MsSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build
@@ -141,14 +142,15 @@ jobs:
     displayName: Pack the CLI tool
     inputs:
       command: pack
-      projects: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
+      packagesToPack: '**/Hawaii.Cli.csproj' 
+      packDirectory: '$(Build.ArtifactStagingDirectory)'
 
   - task: DotNetCoreCLI@2
     displayName: Install the CLI tool
     inputs:
       command: custom
       custom: 'tool install'
-      arguements: '-g --add-source $(System.DefaultWorkingDirectory)/Hawaii-Cli/src/nupkg hawaii.cli'
+      arguements: '-g --add-source $(Build.ArtifactStagingDirectory) hawaii.cli'
       
   - script: cmd < $(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/MsSql_Commands.txt
     workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles'
@@ -159,7 +161,7 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'DataGateway.Service/hawaii-config.MsSql.json'
+      targetFiles: 'DataGateway.Service/ConfigFiles/hawaii-config.MsSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build

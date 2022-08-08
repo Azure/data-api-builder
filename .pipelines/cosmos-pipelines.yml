@@ -37,20 +37,21 @@ steps:
   displayName: Pack the CLI tool
   inputs:
     command: pack
-    projects: '$(System.DefaultWorkingDirectory)/Hawaii-Cli/src'
+    packagesToPack: '**/Hawaii.Cli.csproj' 
+    packDirectory: '$(Build.ArtifactStagingDirectory)'
 - task: DotNetCoreCLI@2
   displayName: Install the CLI tool
   inputs:
     command: custom
     custom: 'tool install'
-    arguements: '-g --add-source $(System.DefaultWorkingDirectory)/Hawaii-Cli/src/nupkg hawaii.cli'
-- script: cmd < $(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/CosmosDB_Commands.txt
+    arguements: '-g --add-source $(Build.ArtifactStagingDirectory) hawaii.cli'
+- script: cmd < DataGateway.Service/ConfigFiles/CosmosDB_Commands.txt
   workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/'
   failOnStderr: true
   condition: eq( variables['Agent.OS'], 'Windows' )
 - bash: |
-      .$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/CosmosDB_Commands.txt
-  workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles'
+      .**/CosmosDB_Commands.txt
+  workingDirectory: './DataGateway.Service/ConfigFiles'
   failOnStderr: true
   condition: in( variables['Agent.OS'], 'Linux', 'macOs' )
 - task: FileTransform@1
@@ -58,7 +59,7 @@ steps:
   inputs:
     folderPath: '$(System.DefaultWorkingDirectory)'
     fileType: 'json'
-    targetFiles: 'DataGateway.Service/hawaii-config.Cosmos.json'
+    targetFiles: 'DataGateway.Service/ConfigFiles/hawaii-config.Cosmos.json'
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:

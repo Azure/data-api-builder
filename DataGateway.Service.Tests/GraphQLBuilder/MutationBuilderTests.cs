@@ -938,12 +938,12 @@ type Foo @model {{
         /// <param name="pluralName">Plural name provided by the user</param>
         /// <param name="expectedName"> Expected name of the entity in the mutation. Used to construct the exact expected mutation names.</param>
         [DataTestMethod]
-        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", null, null, "People")]
-        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "Person", "People", "Person")]
-        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "Person", "", "Person")]
-        [DataRow(GraphQLTestHelpers.PEOPLEGQL, "People", "", "People", "People")]
-        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", null, null, "Person")]
-        [DataRow(GraphQLTestHelpers.PERSONGQL, "Person", "Person", "People", "Person")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", null, null, "People")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "People", "Person")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "", "Person")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "", "People", "People")]
+        [DataRow(GraphQLTestHelpers.PERSON_GQL, "Person", null, null, "Person")]
+        [DataRow(GraphQLTestHelpers.PERSON_GQL, "Person", "Person", "People", "Person")]
         public void ValidateMutationsAreCreatedWithRightName(
             string gql,
             string entityName,

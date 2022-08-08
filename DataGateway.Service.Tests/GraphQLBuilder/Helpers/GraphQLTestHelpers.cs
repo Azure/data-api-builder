@@ -11,28 +11,28 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Helpers
 {
     public static class GraphQLTestHelpers
     {
-        public const string BOOKGQL =
+        public const string BOOK_GQL =
                     @"
                     type Book @model {
                         book_id: Int! @primaryKey
                     }
                     ";
 
-        public const string BOOKSGQL =
+        public const string BOOKS_GQL =
                     @"
                     type Books @model {
                         book_id: Int! @primaryKey
                     }
                     ";
 
-        public const string PERSONGQL =
+        public const string PERSON_GQL =
                     @"
                     type Person @model {
                         person_id: Int! @primaryKey
                     }
                     ";
 
-        public const string PEOPLEGQL =
+        public const string PEOPLE_GQL =
                     @"
                     type People @model {
                         people_id: Int! @primaryKey

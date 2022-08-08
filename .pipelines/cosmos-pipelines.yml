@@ -44,7 +44,7 @@ steps:
   inputs:
     command: custom
     custom: 'tool install'
-    arguements: '-g --add-source $(Build.ArtifactStagingDirectory) hawaii.cli'
+    arguments: '-g --add-source $(Build.ArtifactStagingDirectory) hawaii.cli'
 - script: cmd < DataGateway.Service/ConfigFiles/CosmosDB_Commands.txt
   workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/'
   failOnStderr: true

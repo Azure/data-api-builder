@@ -55,7 +55,7 @@ jobs:
     inputs:
       command: custom
       custom: 'tool install'
-      arguements: '-g --add-source $(Build.ArtifactStagingDirectory) hawaii.cli'
+      arguments: '-g --add-source $(Build.ArtifactStagingDirectory) hawaii.cli'
     
   - bash: |
       .$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/MySql_Commands.txt

@@ -1,6 +1,4 @@
-using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
@@ -128,15 +126,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             return false;
         }
 
-    /// <summary>
-    /// Helper which
-    /// - Sanitizes the GraphQL field name by removing invalid characters from "name."
-    /// - Capture nameSegments: substrings in "name" delimited by spaces.
-    /// - camelCase the sanitized name: lower case first string segment, followed by upper-case string segments.
-    /// </summary>
-    /// <param name="name">Name to sanitize and format for GraphQL schema usage.</param>
-    /// <returns>Sanitized and formatted field name value.</returns>
-    public static string FormatNameForField(string name)
+        /// <summary>
+        /// Helper which
+        /// - Sanitizes the GraphQL field name by removing invalid characters from "name."
+        /// - Capture nameSegments: substrings in "name" delimited by spaces.
+        /// - camelCase the sanitized name: lower case first string segment, followed by upper-case string segments.
+        /// </summary>
+        /// <param name="name">Name to sanitize and format for GraphQL schema usage.</param>
+        /// <returns>Sanitized and formatted field name value.</returns>
+        public static string FormatNameForField(string name)
         {
             string[] nameSegments = SanitizeGraphQLName(name);
 

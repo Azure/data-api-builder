@@ -122,7 +122,7 @@ namespace Azure.DataApiBuilder.Config
         {
             if (RuntimeSettings is not null)
             {
-                foreach(Entity entity in Entities.Values)
+                foreach (Entity entity in Entities.Values)
                 {
                     entity.ProcessGraphQLNamingConfig();
                 }

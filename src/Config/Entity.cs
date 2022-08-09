@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Config
                 {
                     GraphQL = JsonSerializer.Deserialize<bool>(configElement)!;
                 }
-                else if(configElement.ValueKind is JsonValueKind.Object)
+                else if (configElement.ValueKind is JsonValueKind.Object)
                 {
                     JsonElement nameTypeSettings = configElement.GetProperty("type");
                     object nameConfiguration;

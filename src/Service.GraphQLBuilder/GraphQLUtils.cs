@@ -1,10 +1,9 @@
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 using HotChocolate.Language;
 using HotChocolate.Types;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
-using Humanizer.Configuration;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder

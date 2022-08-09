@@ -13,12 +13,11 @@ variables:
   solution: '**/*.sln'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
-  nugetVersion: '0.0.4' # update the version for new release
+  major: 0
+  minor: 0
+  patch: $[counter(variables['minor'], 0)] #this will reset when we bump minor
+  nugetVersion: '$(major).$(minor).$(patch)-$(Build.BuildId)'
   publishNugetToFeed: $(isNugetRelease)
-  ${{ if eq( variables.publishNugetToFeed, 'false') }}:
-    nugetVersionTag: '$(nugetVersion)'
-  ${{ else }}:
-    nugetVersionTag: '$(nugetVersion)-$(Build.BuildId)'
 
 steps:
 - task: UseDotNet@2
@@ -64,13 +63,11 @@ steps:
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
     nobuild: true
     versioningScheme: byEnvVar
-    versionEnvVar: nugetVersionTag
-    buildProperties: 'VersionSuffix="$(nugetVersionTag)"'
+    versionEnvVar: nugetVersion
     verbosityPack: 'minimal'
 
 # This task will publish nuget package with build number to pipeline artifact
 - task: PublishPipelineArtifact@1
-  condition: eq(variables.publishNugetToFeed, 'false')
   displayName: 'Publish nuget to build Artifact'
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)/nupkg'
@@ -81,7 +78,7 @@ steps:
 # To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.
 - task: NuGetAuthenticate@0
   displayName: 'NuGet Authenticate'
-  condition: eq(variables.publishNugetToFeed, 'true')
+  condition: eq( $(isNugetRelease), 'true')
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Internal Feed'

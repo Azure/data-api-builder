@@ -16,7 +16,7 @@ variables:
   nugetVersion: '0.0.4' # update the version for new release
   isNugetReleaseX: $(isNugetRelease)
   ${{ if eq( variables.isNugetReleaseX, 'true') }}:
-    nugetVersionTag: nugetVersion
+    nugetVersionTag: $(nugetVersion)
   ${{ else }}:
     nugetVersionTag: '$(nugetVersion)-$(Build.BuildId)'
 

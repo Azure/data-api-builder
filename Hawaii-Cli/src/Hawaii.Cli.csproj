@@ -13,7 +13,7 @@
     
     <BaseOutputPath>..\..\out\cli</BaseOutputPath>
     
-    <SelfContained>false</SelfContained>
+    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>

@@ -5,7 +5,7 @@
     <Configurations>Debug;Release;Docker</Configurations>
     <OutputPath>$(BaseOutputPath)\engine</OutputPath>
 
-    <SelfContained>false</SelfContained>
+    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>

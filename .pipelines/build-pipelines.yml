@@ -71,7 +71,7 @@ steps:
   displayName: 'Publish nuget to build Artifact'
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)/nupkg'
-    artifactName: 'DAB_nuget_package'
+    artifactName: 'DataApiBuilder'
     artifactType: 'pipeline'
 
 # This task will authenticate and publish the NuGet Package to internal feed
@@ -88,8 +88,8 @@ steps:
     feedsToUse: 'select'
     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
     nuGetFeedType: 'internal'
-    vstsFeed: CosmosDB/Hawaii_Packages
-    publishVstsFeed: CosmosDB/Hawaii_Packages
+    vstsFeed: CosmosDB/DataApiBuilder
+    publishVstsFeed: CosmosDB/DataApiBuilder
     versioningScheme: 'off'
     allowPackageConflicts: false
 

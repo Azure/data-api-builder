@@ -367,7 +367,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Put
 
         /// <summary>
         /// We try to Sql Inject through the body of an update operation.
-        /// If the insertion happens successfully we know the sql injection
+        /// If the update happens successfully we know the sql injection
         /// failed.
         /// </summary>
         [DataTestMethod]

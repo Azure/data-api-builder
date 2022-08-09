@@ -1,12 +1,16 @@
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Auth;
@@ -14,18 +18,18 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Controllers;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
@@ -149,7 +153,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     {
                         services.AddHttpContextAccessor();
                         services.AddSingleton(_runtimeConfigProvider);
-                        services.AddSingleton(_queryEngine);
+                        services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
+                        {
+                            return new SqlQueryEngine(
+                                _queryExecutor,
+                                _queryBuilder,
+                                _sqlMetadataProvider,
+                                ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
+                                _authorizationResolver,
+                                _queryEngineLogger
+                                );
+                        });
                         services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
                         {
                             return new SqlMutationEngine(
@@ -395,7 +409,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="expectedSubStatusCode">enum represents the returned sub status code</param>
         /// <param name="expectedLocationHeader">The expected location header in the response (if any)</param>
         /// <returns></returns>
-        protected static async Task SetupAndRunRestApiTest(
+        /*protected static async Task SetupAndRunRestApiTest(
             string primaryKeyRoute,
             string queryString,
             string entity,
@@ -421,6 +435,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 headers,
                 requestBody
                 );
+
             string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
             if (expectedLocationHeader != null)
             {
@@ -482,6 +497,176 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 expectedLocationHeader,
                 !exception,
                 verifyNumRecords);
+        }*/
+
+        protected static async Task SetupAndRunRestApiTest(
+            string primaryKeyRoute,
+            string queryString,
+            string entity,
+            string sqlQuery,
+            RestController controller,
+            Operation operationType = Operation.Read,
+            string path = "api",
+            IHeaderDictionary headers = null,
+            string requestBody = null,
+            bool exception = false,
+            string expectedErrorMessage = "",
+            HttpStatusCode expectedStatusCode = HttpStatusCode.OK,
+            string expectedSubStatusCode = "BadRequest",
+            string expectedLocationHeader = null,
+            string expectedAfterQueryString = "",
+            bool paginated = false,
+            int verifyNumRecords = -1)
+        {
+            string restEndPoint = path + "/" + entity;
+
+            if (!string.IsNullOrEmpty(primaryKeyRoute))
+            {
+                restEndPoint = restEndPoint + "/" + primaryKeyRoute;
+            }
+
+            if (!string.IsNullOrEmpty(queryString))
+            {
+                restEndPoint = restEndPoint + queryString;
+            }
+
+            HttpMethod httpMethod = GetHttpMethodFromOperation(operationType);
+
+            //JsonContent payload = requestBody is null ? null : JsonContent.Create(requestBody);
+            HttpRequestMessage request = new(httpMethod, restEndPoint)
+            {
+                Content = JsonContent.Create(requestBody)
+            };
+
+            if (headers is not null)
+            {
+                foreach ((string key,StringValues value) in headers)
+                {
+                    request.Headers.Add(key, value.ToString());
+                }
+            }
+
+            HttpResponseMessage response = await HttpClient.SendAsync(request);
+
+            string responseBody = await response.Content.ReadAsStringAsync();
+
+            /*ConfigureRestController(
+                controller,
+                queryString,
+                operationType,
+                headers,
+                requestBody
+                );*/
+
+            //string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
+            /*if (expectedLocationHeader != null)
+            {
+                expectedLocationHeader =
+                    baseUrl
+                    + @"/" + expectedLocationHeader;
+            }*/
+
+            /*IActionResult actionResult = await SqlTestHelper.PerformApiTest(
+                        controller,
+                        path,
+                        entity,
+                        primaryKeyRoute,
+                        operationType);*/
+
+            // if an exception is expected we generate the correct error
+            // The expected result should be a Query that confirms the result state
+            // of the Operation performed for the test. However:
+            // Initial DELETE request results in 204 no content, no exception thrown.
+            // Subsequent DELETE requests result in 404, which result in an exception.
+            string expected;
+            if ((operationType is Operation.Delete ||
+                 operationType is Operation.Upsert ||
+                 operationType is Operation.UpsertIncremental ||
+                 operationType is Operation.Update ||
+                 operationType is Operation.UpdateIncremental)
+                 && response.StatusCode.Equals(HttpStatusCode.NoContent)
+                )
+            {
+                expected = string.Empty;
+            }
+            else
+            {
+                JsonSerializerOptions options = new()
+                {
+                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                };
+
+                if (exception)
+                {
+                    expected = JsonSerializer.Serialize(RestController.ErrorResponse(
+                        expectedSubStatusCode.ToString(),
+                        expectedErrorMessage,
+                        expectedStatusCode).Value,
+                        options);
+                }
+                else
+                {
+                    string baseUrl = HttpClient.BaseAddress.ToString() + path + "/" + entity;
+                    if (!string.IsNullOrEmpty(queryString))
+                    {
+                        baseUrl = baseUrl + "?" + HttpUtility.ParseQueryString(queryString).ToString();
+                    }
+
+                    string dbResult = await GetDatabaseResultAsync(sqlQuery);
+                    // For FIND requests, null result signifies an empty result set
+                    dbResult = (operationType is Operation.Read && dbResult is null) ? "[]" : dbResult;
+                    expected = $"{{\"value\":{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";
+                }
+            }
+
+            if (!exception)
+            {
+                Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expected, responseBody));
+                Assert.AreEqual(expectedStatusCode, response.StatusCode);
+                if (operationType == Operation.Insert)
+                {
+                    string responseUri = (response.Headers.GetValues("Location").ToList<string>())[0];
+                    string requestUri = request.RequestUri.OriginalString;
+                    string actualLocation = responseUri.Substring(
+                        responseUri.IndexOf(requestUri + "/") + requestUri.Length + 1);
+                    Assert.AreEqual(expectedLocationHeader, actualLocation);
+                }
+            }
+            else
+            {
+                responseBody = Regex.Replace(responseBody, @"\\u0022", @"\""");
+                responseBody = Regex.Unescape(responseBody);
+                Assert.AreEqual(expected, responseBody, ignoreCase: true);
+            }
+            /*SqlTestHelper.VerifyResult(
+                actionResult,
+                expected,
+                expectedStatusCode,
+                expectedLocationHeader,
+                !exception,
+                verifyNumRecords);*/
+        }
+
+        private static HttpMethod GetHttpMethodFromOperation(Operation operationType)
+        {
+            switch (operationType)
+            {
+                case Operation.Read:
+                    return HttpMethod.Get;
+                case Operation.Insert:
+                    return HttpMethod.Post;
+                case Operation.Delete:
+                    return HttpMethod.Delete;
+                case Operation.Upsert:
+                    return HttpMethod.Put;
+                case Operation.UpsertIncremental:
+                    return HttpMethod.Patch;
+                default:
+                    throw new DataApiBuilderException(
+                        message: "Operation not supported for the request.",
+                        statusCode: HttpStatusCode.NotImplemented,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+            }
         }
 
         /// <summary>

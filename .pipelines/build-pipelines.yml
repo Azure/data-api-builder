@@ -15,8 +15,8 @@ variables:
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
   nugetVersion: '0.0.4' # update the version for new release
-  nugetRelease: false # change it to true, when releasing the nuget to feed
-  ${{ if eq(variables.nugetRelease, true) }}:
+  isNugetRelease: false # change it to true, when releasing the nuget to feed
+  ${{ if eq(variables.isNugetRelease, true) }}:
     nugetVersionTag: nugetVersion
   ${{ else }}:
     nugetVersionTag: '$(nugetVersion)-$(Build.BuildId)'
@@ -72,7 +72,7 @@ steps:
 
 # This task will publish nuget package with build number to pipeline artifact
 - task: PublishPipelineArtifact@1
-  condition: eq(variables.nugetRelease, false)
+  condition: eq(variables.isNugetRelease, false)
   displayName: 'Publish nuget to build Artifact'
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)/nupkg'
@@ -83,11 +83,11 @@ steps:
 # To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.
 - task: NuGetAuthenticate@0
   displayName: 'NuGet Authenticate'
-  condition: eq(variables.nugetRelease, true)
+  condition: eq(variables.isNugetRelease, true)
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Internal Feed'
-  condition: eq(variables.nugetRelease, true)
+  condition: eq(variables.isNugetRelease, true)
   inputs:
     command: 'push'
     feedsToUse: 'select'

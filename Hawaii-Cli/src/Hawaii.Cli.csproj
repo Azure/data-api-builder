@@ -10,10 +10,10 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>hawaii</ToolCommandName>
     <PackageOutputPath>./nupkg</PackageOutputPath>
-    
+
     <BaseOutputPath>..\..\out\cli</BaseOutputPath>
-    
-    <SelfContained>true</SelfContained>
+
+    <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>

@@ -2,16 +2,19 @@
 BuildRoot=$(dirname "$0")
 BuildConfiguration=$1
 
+echo "BuildRoot: $BuildRoot"
+
 RIDs=("win-x64" "linux-x64" "osx-x64")
 
 for RID in ${RIDs[@]}; do
-    # Publish engine
-    cmd="dotnet publish --configuration $BuildConfiguration --output $BuildRoot/publish/$BuildConfiguration/$RID/engine --runtime $RID --no-self-contained $BuildRoot/DataGateway.Service/Azure.DataGateway.Service.csproj"
+    # Publish CLI
+    cmd="dotnet publish --no-restore --configuration $BuildConfiguration --output $BuildRoot/publish/$BuildConfiguration/$RID/cli --runtime $RID --self-contained true $BuildRoot/Hawaii-Cli/src/Hawaii.Cli.csproj"
     echo "Running: $cmd"
     eval $cmd
 
-    # Publish CLI
-    cmd="dotnet publish --configuration $BuildConfiguration --output $BuildRoot/publish/$BuildConfiguration/$RID/cli --runtime $RID --no-self-contained $BuildRoot/Hawaii-Cli/src/Hawaii.Cli.csproj"
+    pushd $BuildRoot/publish/$BuildConfiguration/$RID/cli
+    cmd="zip -q -r ../cli.zip *"
     echo "Running: $cmd"
     eval $cmd
+    popd
 done

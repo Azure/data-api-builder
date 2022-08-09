@@ -5,7 +5,7 @@
     <Configurations>Debug;Release;Docker</Configurations>
     <OutputPath>$(BaseOutputPath)\engine</OutputPath>
 
-    <SelfContained>true</SelfContained>
+    <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,11 +1,14 @@
+using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Text.Json;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Configurations;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.Tests.Authorization;
 using Azure.DataGateway.Service.Tests.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Action = Azure.DataGateway.Config.Action;
 
 namespace Azure.DataGateway.Service.Tests.UnitTests
 {
@@ -193,6 +196,87 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
                 $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataGatewayException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+        }
+
+        /// <summary>
+        /// Test to validate that differently cased actions specified in config are deserialised correctly,
+        /// and hence they pass config validation stage.
+        /// </summary>
+        /// <param name="operationName"></param>
+        [DataTestMethod]
+        [DataRow("CREATE", DisplayName = "valid operation name CREATE specified for action")]
+        [DataRow("rEAd", DisplayName = "valid operation name rEAd specified for action")]
+        [DataRow("UPDate", DisplayName = "valid operation name UPDate specified for action")]
+        [DataRow("DelETe", DisplayName = "valid operation name DelETe specified for action")]
+        public void TestDifferentCasedActionsInConfig(string operationName)
+        {
+            string actionJson = @"{
+                                        ""action"": " + $"\"{operationName}\""
+                                        +@",
+                                        ""policy"": {
+                                            ""database"": ""@claims.id eq @item.id""
+                                          },
+                                        ""fields"": {
+                                            ""include"": [""*""]
+                                          }
+                                  }";
+            Action actionForRole = JsonSerializer.Deserialize<Action>(actionJson);
+
+            PermissionSetting permissionForEntity = new(
+                role: AuthorizationHelpers.TEST_ROLE,
+                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+
+            Entity sampleEntity = new(
+                Source: AuthorizationHelpers.TEST_ENTITY,
+                Rest: null,
+                GraphQL: null,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+                );
+
+            Dictionary<string, Entity> entityMap = new();
+            entityMap.Add(AuthorizationHelpers.TEST_ENTITY, sampleEntity);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                MsSql: null,
+                CosmosDb: null,
+                PostgreSql: null,
+                MySql: null,
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                Entities: entityMap
+                );
+
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            configValidator.ValidatePermissionsInConfig(runtimeConfig);
+        }
+    }
+
+    public class OperationEnumJsonConverter2 : System.Text.Json.Serialization.JsonConverter<Operation>
+    {
+        // Creating another constant for "*" as we can't use the constant defined in
+        // AuthorizationResolver class because of circular dependency.
+        public static readonly string WILDCARD = "*";
+
+        /// <inheritdoc/>
+        public override Operation Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            string? action = reader.GetString();
+            if (WILDCARD.Equals(action))
+            {
+                return Operation.All;
+            }
+
+            return Enum.TryParse<Operation>(action, ignoreCase: true, out Operation operation) ? operation : Operation.None;
+        }
+
+        /// <inheritdoc/>
+        public override void Write(Utf8JsonWriter writer, Operation value, JsonSerializerOptions options)
+        {
+            string valueToWrite = value is Operation.All ? WILDCARD : value.ToString();
+            writer.WriteStringValue(valueToWrite);
         }
     }
 }

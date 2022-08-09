@@ -77,7 +77,7 @@ To update the existing entities, run the command below:
 ```dotnetcli
 # dab update todo --permission "authenticate:create" --fields.include "id,name,category"
 
-dab update <<entity>> -source <<new_source.DB>> --rest <<new_rest_route>> --graphql <<new_graphql_type>> --permissions <<rules:actions>> --fields.include <<fields to include>> --fields.exclude <<fields to exclude>>
+dab update <entity> --source <new_source_db> --rest <new_rest_route> --graphql <new_graphql_type> --permissions <rules:actions> --fields.include <fields to include> --fields.exclude <fields to exclude>
 ```
 
 ### Add mappings

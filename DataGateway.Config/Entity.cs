@@ -98,20 +98,7 @@ namespace Azure.DataGateway.Config
                     }
 
                     GraphQLEntitySettings graphQLEntitySettings = new(Type: nameConfiguration);
-                    //JsonSerializer.Deserialize<GraphQLEntitySettings>(configElement)!;
                     GraphQL = graphQLEntitySettings;
-/*
-                    if (graphQLEntitySettings is not null && graphQLEntitySettings.Type is JsonElement nameTypeSettings)
-                    {
-                        if (nameTypeSettings.ValueKind is JsonValueKind.String)
-                        {
-                            graphQLEntitySettings.Type. = JsonSerializer.Deserialize<string>(nameTypeSettings)!;
-                        }
-                        else if(nameTypeSettings.ValueKind is JsonValueKind.Object)
-                        {
-                            graphQLEntitySettings.Type = JsonSerializer.Deserialize<SingularPlural>(nameTypeSettings)!;
-                        }
-                    }*/
                 }
             }
             else
@@ -151,21 +138,17 @@ namespace Azure.DataGateway.Config
     /// that will be used for this entity.Can be a string or Singular-Plural type.
     /// If string, a default plural route will be added as per the rules at
     /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
-    public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type)
-    {
-/*        [property: JsonPropertyName("type")]
-        public object? Type { get; set; }*/
-    }
+    public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type);
 
-/// <summary>
-/// Defines a name or route as singular (required) or
-/// plural (optional).
-/// </summary>
-/// <param name="Singular">Singular form of the name.</param>
-/// <param name="Plural">Optional pluralized form of the name.
-/// If plural is not specified, a default plural name will be used as per the rules at
-/// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
-public record SingularPlural(
-        [property: JsonPropertyName("singular")] string Singular,
-        [property: JsonPropertyName("plural")] string Plural);
+    /// <summary>
+    /// Defines a name or route as singular (required) or
+    /// plural (optional).
+    /// </summary>
+    /// <param name="Singular">Singular form of the name.</param>
+    /// <param name="Plural">Optional pluralized form of the name.
+    /// If plural is not specified, a default plural name will be used as per the rules at
+    /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
+    public record SingularPlural(
+            [property: JsonPropertyName("singular")] string Singular,
+            [property: JsonPropertyName("plural")] string Plural);
 }

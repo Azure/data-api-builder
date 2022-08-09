@@ -126,7 +126,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                                 statusCode: HttpStatusCode.InternalServerError,
                                 subStatusCode: DataGatewayException.SubStatusCodes.GraphQLMapping),
                     };
-                    
+
                     FieldDefinitionNode relationshipField = new(
                         location: null,
                         new NameNode(FormatNameForField(relationshipName)),

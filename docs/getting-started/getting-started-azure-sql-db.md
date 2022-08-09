@@ -34,7 +34,7 @@ Once you have your connection string, add it to the configuration file you have 
 
 ## Create the database objects
 
-Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `libray.azure-sql.sql` script that you can use to create three tables, along with sample data:
+Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `libray.azure-sql.sql` script in the 'azure-sql-db' folder that you can use to create three tables, along with sample data:
 
 - `dbo.authors`: Table containing authors
 - `dbo.books`: Table containing books
@@ -44,7 +44,7 @@ Execute the script in the SQL Server or Azure SQL database you decided to use, s
 
 ## Add Book and Author entities
 
-We want to expose the `books` and the `authors` table so that they can be used via REST or GraphQL. For doing that, all we needed to is to add the related information to the `entities` section of the configuration file.
+We want to expose the `books` and the `authors` table so that they can be used via REST or GraphQL. For doing that, all we need to is to add the related information to the `entities` section of the configuration file.
 
 Start by adding the `author` entity:
 

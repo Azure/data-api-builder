@@ -40,15 +40,15 @@ and add the relevant database name in the Cosmos DB specific section of the conf
 Create the necessary database containers needed to represent Authors and Books.
 
 -   `authors`: Collection containing authors with 'id' as the partition key
--   `books`: Collection containing books with 'id'a as the partition key
+-   `books`: Collection containing books with 'id' as the partition key
 
 Read more about [choosing partition key](https://docs.microsoft.com/en-us/azure/cosmos-db/partitioning-overview#choose-partitionkey) and [data modelling](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/modeling-data)
 
-Once the containers are created, you can import the sample data to the by using the [Data Import Tool](https://docs.microsoft.com/en-us/azure/cosmos-db/import-data#JSON).
+Once the containers are created, you can import the sample data which are placed in the 'azure-cosmos-db' folder to the respective collections by using the [Data Import Tool](https://docs.microsoft.com/en-us/azure/cosmos-db/import-data#JSON).
 
 ## Add Book and Author entities
 
-We want to expose the books and the authors collections so that they can be used via Graphql. For doing that, all we needed is to add the related information to the entities section of the configuration file.
+We want to expose the books and the authors collections so that they can be used via GraphQL. For doing that, all we need is to add the related information to the entities section of the configuration file.
 
 > **NOTE**: REST operations are not supported for Cosmos DB via the
 > Data API Builder, You can use the existing [REST API](https://docs.microsoft.com/en-us/rest/api/cosmos-db/)
@@ -108,7 +108,7 @@ You can also add the `book` entity now, applying the same concepts you just lear
 
 We need to expose the books and the authors collections so that they can be used via Graphql. Cosmos DB, being schema agnostic, we need to provide the schema definition for the collections. These schema definitions need to be added in the `schema.gql` file.
 
-Start by adding the `author` nad `book` schema:
+Start by adding the `author` and `book` schema:
 
 ```json
 type Author @model {
@@ -126,7 +126,7 @@ type Book @model {
 }
 ```
 
-add the above schemas to the `samples/getting-started` schema.gql file.
+add the above schemas to the `samples/getting-started/azure-cosmos-db` schema.gql file.
 
 that's all is needed at the moment. Data API builder is ready to be run.
 
@@ -156,7 +156,7 @@ Now that Data API builder engine is running, you can use your favourite REST cli
 
 ### REST Endpoint
 
-Unlike other databases, Azure Cosmos DB does not have the support to generate REST endpoints as it already have an [REST API endpoint](https://docs.microsoft.com/en-us/rest/api/cosmos-db/) readily available.
+Unlike other databases, Data API Builder for Azure Cosmos DB does not have the support to generate REST endpoints as it already has a [REST API endpoint](https://docs.microsoft.com/en-us/rest/api/cosmos-db/) readily available.
  
 ### GraphQL endpoint
 
@@ -181,9 +181,9 @@ Use a GraphQL-capable REST client like Postman or Insomnia to query the database
 
 will return the first five books ordered by title in descending order.
 
-## Graphql operations on entities relationships
+## GraphQL operations on entities relationships
 
-Everything up and working, and now you probably want to take advantage as much as possible of GraphQL capabilities to handle complex request in just one request.Forr example you may want to get all the Books in your library along with the Authors they have written. In order to achieve that you need to let Data API Builder know that you want that relationship to be available to be used in queries. We have defined the 
+Everything up and working, and now you probably want to take advantage as much as possible of GraphQL capabilities to handle complex request in just one request.For example you may want to get all the Books in your library along with the Authors they have written. In order to achieve that you need to let Data API Builder know that you want that relationship to be available to be used in queries. We have defined the 
 data models in such a way that they can be queried at once.
 
 Using GraphQL you can now execute queries like:

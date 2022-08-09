@@ -198,16 +198,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test to validate that differently cased actions specified in config are deserialised correctly,
+        /// Test to validate that differently cased operation names specified in config are deserialised correctly,
         /// and hence they pass config validation stage.
         /// </summary>
-        /// <param name="operationName"></param>
+        /// <param name="operationName">Name of the operation configured.</param>
+        /// <param name="exceptionExpected">Boolean variable which indicates whether the relevant method call
+        /// is expected to return an exception.</param>
         [DataTestMethod]
-        [DataRow("CREATE", DisplayName = "valid operation name CREATE specified for action")]
-        [DataRow("rEAd", DisplayName = "valid operation name rEAd specified for action")]
-        [DataRow("UPDate", DisplayName = "valid operation name UPDate specified for action")]
-        [DataRow("DelETe", DisplayName = "valid operation name DelETe specified for action")]
-        public void TestDifferentCasedActionsInConfig(string operationName)
+        [DataRow("CREATE", false, DisplayName = "Valid operation name CREATE specified for action")]
+        [DataRow("rEAd", false, DisplayName = "Valid operation name rEAd specified for action")]
+        [DataRow("UPDate", false, DisplayName = "Valid operation name UPDate specified for action")]
+        [DataRow("DelETe", false, DisplayName = "Valid operation name DelETe specified for action")]
+        [DataRow("remove", true, DisplayName = "Invalid operation name remove specified for action")]
+        [DataRow("inseRt", true, DisplayName = "Invalid operation name inseRt specified for action")]
+        public void TestDifferentCasedOperationInConfig(string operationName, bool exceptionExpected)
         {
             string actionJson = @"{
                                         ""action"": " + $"\"{operationName}\"" + @",
@@ -218,7 +222,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                             ""include"": [""*""]
                                           }
                                   }";
-            Action actionForRole = JsonSerializer.Deserialize<Action>(actionJson);
+            object actionForRole = JsonSerializer.Deserialize<object>(actionJson);
 
             PermissionSetting permissionForEntity = new(
                 role: AuthorizationHelpers.TEST_ROLE,
@@ -248,7 +252,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 );
 
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
-            configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            if (!exceptionExpected)
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            }
+            else
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidatePermissionsInConfig(runtimeConfig));
+
+                // Assert that the exception returned is the one we expected.
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+                Assert.AreEqual($"action:{operationName} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
+                    $" role:{AuthorizationHelpers.TEST_ROLE} is not valid.",
+                    ex.Message);
+            }
         }
     }
 }

@@ -1,10 +1,10 @@
 # Getting started with Data API Builder (DAB) CLI
 
-Welcome to this getting started tutorial that will guide you to install and setup DAB CLI locally on your machine and then will guide you to generate and modify config file using this tool, which will be used for running Data API Builder.
+Welcome to this getting started tutorial that will guide you to install and setup DAB CLI tool locally on your machine and then will guide you to generate and modify config file using this tool, which will be used for running Data API Builder.
 
 ## Prerequisite
 
-This CLI tool is part of [.NET global tools](https://www.nuget.org/packages?packagetype=dotnettool). As a prerequisite to install and run this tool, you'll need to have [.NET 6 SDK](https://dotnet.microsoft.com/en-us/download) installed on your dev machine.
+This CLI tool is part of [.NET global tools](https://www.nuget.org/packages?packagetype=dotnettool). As a prerequisite to install and run this tool, you'll need to have [.NET SDK](https://dotnet.microsoft.com/en-us/download) >=6 installed on your DEV machine.
 
 ## Install the DAB CLI
 
@@ -48,14 +48,14 @@ To initialize the config file, use:
 dab init --name <filename> --database-type <db_type> --connection-string <connection_string>
 ```
 
-To validate, navigate to the path and you should see the `xxx-xxx.config` file generated there.
+To validate, navigate to your folder path (where you should be currently) and you should see the `xxx-xxx.config` file generated there.
 
 > [!NOTE]
-> While initializing, the CLI would create a file with the default name of `dab-config.json` if no config file name supplied.
+> While initializing, the CLI would create config file with the default name of `dab-config.json` if no config file name supplied.
 
 ## Add entities in config
 
-To add the entity in config file with REST route, GraphQL type and permissions, run the command as below:
+To add the entities in config file with REST route, GraphQL type and permissions, run the commands as below:
 ```dotnetcli
 # dab add todo --source s001.todo --rest todo --graphql todo --permission "anonymous:*"
 
@@ -72,12 +72,12 @@ dab add Book --source books --permissions "anonymous:read"
 
 ### Update entities in config
 
-To update the existing entities, run the command below:
+To update the existing entities, run the command as below:
 
 ```dotnetcli
 # dab update todo --permission "authenticate:create" --fields.include "id,name,category"
 
-dab update <entity> --source <new_source_db> --rest <new_rest_route> --graphql <new_graphql_type> --permissions <rules:actions> --fields.include <fields to include> --fields.exclude <fields to exclude>
+dab update <entity> --source <new_source_db> --rest <new_rest_route> --graphql <new_graphql_type> --permissions <rules:actions> --fields.include <fields_to_include> --fields.exclude <fields_to_exclude>
 ```
 
 ### Add mappings
@@ -109,4 +109,4 @@ dab start --config my-config.json
 ```
 
 > [!NOTE]
-> While starting Data API Builder, you will need to supply `--config` only if you are using the custom config file name, other than default `dab-config.json`, or if the config file exists on different file path.
+> While starting Data API Builder, you will need to supply `--config` only if you are using any custom config file name, other than default `dab-config.json`, or the config file exists on different file path.

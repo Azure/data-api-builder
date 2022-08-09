@@ -7,6 +7,7 @@ using Azure.DataGateway.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataGateway.Service.Controllers
 {
@@ -27,13 +28,15 @@ namespace Azure.DataGateway.Service.Controllers
         /// String representing the value associated with "code" for a server error
         /// </summary>
         public const string SERVER_ERROR = "While processing your request the server ran into an unexpected error.";
+        private readonly ILogger<RestController> _logger;
 
         /// <summary>
         /// Constructor.
         /// </summary>
-        public RestController(RestService restService)
+        public RestController(RestService restService, ILogger<RestController> logger)
         {
             _restService = restService;
+            _logger = logger;
         }
 
         /// <summary>
@@ -203,9 +206,9 @@ namespace Azure.DataGateway.Service.Controllers
             }
             catch (DataGatewayException ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine(ex.StackTrace);
-                if (ex.SubStatusCode == DataGatewayException.SubStatusCodes.AuthorizationCheckFailed)
+                _logger.LogError(ex.Message);
+                _logger.LogError(ex.StackTrace);
+                if (ex.SubStatusCode is DataGatewayException.SubStatusCodes.AuthorizationCheckFailed)
                 {
                     return new ForbidResult();
                 }
@@ -217,8 +220,8 @@ namespace Azure.DataGateway.Service.Controllers
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine(ex.StackTrace);
+                _logger.LogError(ex.Message);
+                _logger.LogError(ex.StackTrace);
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 return ErrorResponse(
                     DataGatewayException.SubStatusCodes.UnexpectedError.ToString(),

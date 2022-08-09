@@ -188,8 +188,8 @@ namespace Azure.DataApiBuilder.Service.Services
             if (!route.StartsWith(path))
             {
                 throw new DataApiBuilderException(message: $"Invalid Path for route: {route}.",
-                                               statusCode: HttpStatusCode.BadRequest,
-                                               subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                                                  statusCode: HttpStatusCode.BadRequest,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
             // entity name comes after the path, so get substring starting from

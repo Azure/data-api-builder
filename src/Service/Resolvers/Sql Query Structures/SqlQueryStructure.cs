@@ -309,7 +309,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 EntityName = modelName;
             }
-            
+
             DatabaseObject.SchemaName = sqlMetadataProvider.GetSchemaName(EntityName);
             DatabaseObject.Name = sqlMetadataProvider.GetDatabaseObjectName(EntityName);
             TableAlias = CreateTableAlias();

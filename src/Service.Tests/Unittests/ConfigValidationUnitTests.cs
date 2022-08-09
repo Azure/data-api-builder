@@ -7,7 +7,6 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Action = Azure.DataApiBuilder.Config.Action;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {

@@ -148,7 +148,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             {
                                 actionOp = Operation.All;
                             }
-                            else if(!Enum.TryParse<Operation>(actionName,ignoreCase: true, out actionOp) ||
+                            else if (!Enum.TryParse<Operation>(actionName, ignoreCase: true, out actionOp) ||
                                 !IsValidPermissionAction(actionOp))
                             {
                                 throw GetInvalidActionException(entityName, roleName, actionName);

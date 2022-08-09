@@ -14,13 +14,13 @@ C#
 ## Install
 If you have the .nuget package, run the below command to install directly:
 ```
-dotnet tool install -g --add-source ./ hawaii-cli --version <<version_number>>
+dotnet tool install -g --add-source ./ hawaii.cli --version <<version_number>>
 ```
 
 Else, you can go to the root directory of the project and create your own nuget package and then install:
 ```
 dotnet pack
-dotnet tool install -g --add-source ./nupkg hawaii-cli --version <<version_number>>
+dotnet tool install -g --add-source ./nupkg hawaii.cli --version <<version_number>>
 ```
 ### Mac Issue:
 Sometimes, On macOS when a .Net tool is installed globally, it will not be found in the PATH. It might give an error saying, **"hawaii not found"**.

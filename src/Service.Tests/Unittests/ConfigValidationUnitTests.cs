@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
@@ -211,8 +210,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void TestDifferentCasedActionsInConfig(string operationName)
         {
             string actionJson = @"{
-                                        ""action"": " + $"\"{operationName}\""
-                                        +@",
+                                        ""action"": " + $"\"{operationName}\"" + @",
                                         ""policy"": {
                                             ""database"": ""@claims.id eq @item.id""
                                           },

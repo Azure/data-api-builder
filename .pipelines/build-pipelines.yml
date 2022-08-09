@@ -14,7 +14,7 @@ variables:
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
   nugetVersion: '0.0.4' # update the version for new release
-  publishNugetToFeed: ${{ isNugetRelease }}
+  publishNugetToFeed: $(isNugetRelease)
   ${{ if eq( variables.publishNugetToFeed, 'false') }}:
     nugetVersionTag: '$(nugetVersion)'
   ${{ else }}:

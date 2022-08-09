@@ -5,6 +5,7 @@ using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 using Humanizer.Configuration;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 {

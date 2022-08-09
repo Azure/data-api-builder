@@ -5,6 +5,7 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
+using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
@@ -214,7 +215,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Dictionary<string, Entity> entityCollection = new();
             entityCollection.Add(entityNameFromConfig, SchemaConverterTests.GenerateEmptyEntity());
 
-            Assert.ThrowsException<DataGatewayException>(
+            Assert.ThrowsException<DataApiBuilderException>(
                 action: () => RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection),
                 message: $"Entity name \"{entityNameFromConfig}\" incorrectly passed validation.");
         }

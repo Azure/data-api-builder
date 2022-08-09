@@ -684,7 +684,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         public async Task TestPassingVariablesToAndField()
         {
             string graphQLQueryName = "books";
-            string gqlQuery = @"query($and: [BookFilterInput!])
+            string gqlQuery = @"query($and: [bookFilterInput!])
             {
                 books(" + QueryBuilder.FILTER_FIELD_NAME + @": {and: $and})
                 {

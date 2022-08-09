@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
 using Action = Azure.DataApiBuilder.Config.Action;
 
@@ -110,10 +111,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 if (GraphQLNaming.ViolatesNamePrefixRequirements(entityName) ||
                     GraphQLNaming.ViolatesNameRequirements(entityName))
                 {
-                    throw new DataGatewayException(
+                    throw new DataApiBuilderException(
                         message: $"Entity {entityName} contains characters disallowed by GraphQL.",
                         statusCode: System.Net.HttpStatusCode.InternalServerError,
-                        subStatusCode: DataGatewayException.SubStatusCodes.ConfigValidationError);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
             }
         }

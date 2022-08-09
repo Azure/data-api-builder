@@ -222,7 +222,8 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
 
         /// <summary>
         /// Test that entity names from config that are valid GraphQL names
-        /// pass runtime config validation.
+        /// pass runtime config validation. This test method fails if any
+        /// exceptions are thrown.
         /// </summary>
         /// <param name="entityNameFromConfig"></param>
         [DataTestMethod]
@@ -235,14 +236,7 @@ namespace Azure.DataGateway.Service.Tests.UnitTests
             Dictionary<string, Entity> entityCollection = new();
             entityCollection.Add(entityNameFromConfig, SchemaConverterTests.GenerateEmptyEntity());
 
-            try
-            {
-                RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection);
-            }
-            catch (DataGatewayException dge)
-            {
-                Assert.Fail(message: $"Validation failure with error message: {dge.Message}.");
-            }
+            RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection);
         }
     }
 }

@@ -1362,17 +1362,28 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
         /// Sql Injection in the primary key route.
         /// </summary>
         [DataTestMethod]
-        [DataRow(" WHERE 1=1/*")]
-        [DataRow("id WHERE 1=1/*")]
-        [DataRow(" UNION SELECT * FROM books/*")]
-        [DataRow("id UNION SELECT * FROM books/*")]
-        [DataRow("; SELECT * FROM information_schema.tables/*")]
-        [DataRow("id; SELECT * FROM information_schema.tables/*")]
-        [DataRow("; SELECT * FROM v$version/*")]
-        [DataRow("id; SELECT * FROM v$version/*")]
-        [DataRow("id; DROP TABLE books;/*")]
-        public async Task FindByIdTestWithSlashStarSqlInjectionInPKRoute(string sqlInjection)
+        [DataRow(" WHERE 1=1/*", true)]
+        [DataRow("id WHERE 1=1/*", true)]
+        [DataRow(" UNION SELECT * FROM books/*", true)]
+        [DataRow("id UNION SELECT * FROM books/*", true)]
+        [DataRow("; SELECT * FROM information_schema.tables/*", true)]
+        [DataRow("id; SELECT * FROM information_schema.tables/*", true)]
+        [DataRow("; SELECT * FROM v$version/*", true)]
+        [DataRow("id; SELECT * FROM v$version/*", true)]
+        [DataRow("id; DROP TABLE books;/*", true)]
+        [DataRow(" WHERE 1=1--", false)]
+        [DataRow("id WHERE 1=1--", false)]
+        [DataRow(" UNION SELECT * FROM books--", false)]
+        [DataRow("id UNION SELECT * FROM books--", false)]
+        [DataRow("; SELECT * FROM information_schema.tables--", false)]
+        [DataRow("id; SELECT * FROM information_schema.tables--", false)]
+        [DataRow("; SELECT * FROM v$version--", false)]
+        [DataRow("id; SELECT * FROM v$version--", false)]
+        [DataRow("id; DROP TABLE books;--", false)]
+        public async Task FindByIdTestWithSlashStarSqlInjectionInPKRoute(string sqlInjection, bool slashStar)
         {
+            string message = slashStar ? "Primary key column(s) provided do not match DB schema." :
+                "Support for url template with implicit primary key field names is not yet added.";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: $"id/5671/{sqlInjection}",
                 queryString: $"?$select=id",
@@ -1380,35 +1391,7 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: "Primary key column(s) provided do not match DB schema.",
-                expectedStatusCode: HttpStatusCode.BadRequest
-            );
-        }
-
-        /// <summary>
-        /// Tests the REST Api for FindById operation with attempts at
-        /// Sql Injection in the primary key route.
-        /// </summary>
-        [DataTestMethod]
-        [DataRow(" WHERE 1=1--")]
-        [DataRow("id WHERE 1=1--")]
-        [DataRow(" UNION SELECT * FROM books--")]
-        [DataRow("id UNION SELECT * FROM books--")]
-        [DataRow("; SELECT * FROM information_schema.tables--")]
-        [DataRow("id; SELECT * FROM information_schema.tables--")]
-        [DataRow("; SELECT * FROM v$version--")]
-        [DataRow("id; SELECT * FROM v$version--")]
-        [DataRow("id; DROP TABLE books;--")]
-        public async Task FindByIdTestWithDoubleDashSqlInjectionInPKRoute(string sqlInjection)
-        {
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: $"id/5671/{sqlInjection}",
-                queryString: $"?$select=id",
-                entity: _integrationEntityName,
-                sqlQuery: string.Empty,
-                controller: _restController,
-                exception: true,
-                expectedErrorMessage: "Support for url template with implicit primary key field names is not yet added.",
+                expectedErrorMessage: message,
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

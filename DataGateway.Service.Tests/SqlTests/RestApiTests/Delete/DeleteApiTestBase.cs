@@ -98,7 +98,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         /// <returns></returns>
         [TestMethod]
         public async Task DeleteNonExistentTest()
-        {//expected status code 404
+        {
+            //expected status code 404
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
                     queryString: string.Empty,
@@ -122,7 +123,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         /// <returns></returns>
         [TestMethod]
         public async Task DeleteWithInvalidPrimaryKeyTest()
-        {//expected status code 404
+        {
+            //expected status code 404
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "title/7",
                     queryString: string.Empty,
@@ -177,7 +179,8 @@ namespace Azure.DataGateway.Service.Tests.SqlTests.RestApiTests
         [DataRow("/value; DROP TABLE authors;",
             "Support for url template with implicit primary key field names is not yet added.")]
         public async Task DeleteWithSqlInjectionTest(string sqlInjection, string message)
-        {//expected status code 400
+        {
+            //expected status code 400
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: $"id/1{sqlInjection}",
                     queryString: string.Empty,

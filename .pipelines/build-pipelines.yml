@@ -78,7 +78,7 @@ steps:
 # To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.
 - task: NuGetAuthenticate@0
   displayName: 'NuGet Authenticate'
-  condition: eq( $(isNugetRelease), 'true')
+  condition: eq(variables.publishNugetToFeed, 'true')
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Internal Feed'

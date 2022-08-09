@@ -184,5 +184,25 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             modelName = null;
             return false;
         }
+
+        /// <summary>
+        /// UnderlyingGraphQLEntityType is the type main GraphQL type that is described by
+        /// this type. This strips all modifiers, such as List and Non-Null.
+        /// So the following GraphQL types would all have the underlyingType Book:
+        /// - Book
+        /// - [Book]
+        /// - Book!
+        /// - [Book]!
+        /// - [Book!]!
+        /// </summary>
+        public static ObjectType UnderlyingGraphQLEntityType(IType type)
+        {
+            if (type is ObjectType underlyingType)
+            {
+                return underlyingType;
+            }
+
+            return UnderlyingGraphQLEntityType(type.InnerType());
+        }
     }
 }

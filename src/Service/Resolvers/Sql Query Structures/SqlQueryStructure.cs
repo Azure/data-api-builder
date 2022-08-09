@@ -266,7 +266,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             AuthorizationResolver = authorizationResolver;
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
-            _underlyingFieldType = UnderlyingGraphQLEntityType(outputType);
+            _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
 
             // extract the query argument schemas before switching schemaField to point to *Connetion.items
             // since the pagination arguments are not placed on the items, but on the pagination query
@@ -288,7 +288,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 schemaField = ExtractItemsSchemaField(schemaField);
 
                 outputType = schemaField.Type;
-                _underlyingFieldType = UnderlyingGraphQLEntityType(outputType);
+                _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
 
                 // this is required to correctly keep track of which pagination metadata
                 // refers to what section of the json

@@ -498,6 +498,12 @@
     "Review": {
       "source": "reviews",
       "rest": true,
+      "graphql": {
+        "type": {
+          "singular": "review",
+          "plural": "reviews"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",

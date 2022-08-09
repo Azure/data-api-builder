@@ -14,7 +14,8 @@ variables:
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
   nugetVersion: '0.0.4' # update the version for new release
-  ${{ if eq( $[isNugetRelease], true) }}:
+  nugetReleaseNow: $(isNugetRelease)
+  ${{ if eq( variables.NugetReleaseNow, true) }}:
     nugetVersionTag: nugetVersion
   ${{ else }}:
     nugetVersionTag: '$(nugetVersion)-$(Build.BuildId)'

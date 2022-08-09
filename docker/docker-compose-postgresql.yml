@@ -5,5 +5,4 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - "./src/Service/hawaii-config.Cosmos.json:/App/hawaii-config.json"
-      - "./src/Service/schema.gql:/App/schema.gql"
+      - "../src/Service/hawaii-config.PostgreSql.json:/App/hawaii-config.json"

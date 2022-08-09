@@ -57,7 +57,7 @@ steps:
     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
 - task: ShellScript@2
-  displayName: "Package build output to mutliple platforms"
+  displayName: "Package build output to multiple platforms"
   inputs:
     scriptPath: publish.sh
     args: $(buildConfiguration)

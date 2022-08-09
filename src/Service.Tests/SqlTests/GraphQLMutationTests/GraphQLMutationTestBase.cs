@@ -20,10 +20,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task InsertMutation(string dbQuery)
         {
-            string graphQLMutationName = "createBook";
+            string graphQLMutationName = "createbook";
             string graphQLMutation = @"
                 mutation {
-                    createBook(item: { title: ""My New Book"", publisher_id: 1234 }) {
+                    createbook(item: { title: ""My New Book"", publisher_id: 1234 }) {
                         id
                         title
                     }
@@ -43,10 +43,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task InsertMutationWithVariables(string dbQuery)
         {
-            string graphQLMutationName = "createBook";
+            string graphQLMutationName = "createbook";
             string graphQLMutation = @"
                 mutation($title: String!, $publisher_id: Int!) {
-                    createBook(item: { title: $title, publisher_id: $publisher_id }) {
+                    createbook(item: { title: $title, publisher_id: $publisher_id }) {
                         id
                         title
                     }
@@ -66,10 +66,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task InsertMutationForConstantdefaultValue(string dbQuery)
         {
-            string graphQLMutationName = "createReview";
+            string graphQLMutationName = "createreview";
             string graphQLMutation = @"
                 mutation {
-                    createReview(item: { book_id: 1 }) {
+                    createreview(item: { book_id: 1 }) {
                         id
                         content
                     }
@@ -89,10 +89,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task UpdateMutation(string dbQuery)
         {
-            string graphQLMutationName = "updateBook";
+            string graphQLMutationName = "updatebook";
             string graphQLMutation = @"
                 mutation {
-                    updateBook(id: 1, item: { title: ""Even Better Title"", publisher_id: 2345} ) {
+                    updatebook(id: 1, item: { title: ""Even Better Title"", publisher_id: 2345} ) {
                         title
                         publisher_id
                     }
@@ -111,10 +111,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task DeleteMutation(string dbQueryForResult, string dbQueryToVerifyDeletion)
         {
-            string graphQLMutationName = "deleteBook";
+            string graphQLMutationName = "deletebook";
             string graphQLMutation = @"
                 mutation {
-                    deleteBook(id: 1) {
+                    deletebook(id: 1) {
                         title
                         publisher_id
                     }
@@ -161,10 +161,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task NestedQueryingInMutation(string dbQuery)
         {
-            string graphQLMutationName = "createBook";
+            string graphQLMutationName = "createbook";
             string graphQLMutation = @"
                 mutation {
-                    createBook(item: {title: ""My New Book"", publisher_id: 1234}) {
+                    createbook(item: {title: ""My New Book"", publisher_id: 1234}) {
                         id
                         title
                         publishers {
@@ -185,10 +185,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestExplicitNullInsert(string dbQuery)
         {
-            string graphQLMutationName = "createMagazine";
+            string graphQLMutationName = "createmagazine";
             string graphQLMutation = @"
                 mutation {
-                    createMagazine(item: { id: 800, title: ""New Magazine"", issue_number: null }) {
+                    createmagazine(item: { id: 800, title: ""New Magazine"", issue_number: null }) {
                         id
                         title
                         issue_number
@@ -207,10 +207,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestImplicitNullInsert(string dbQuery)
         {
-            string graphQLMutationName = "createMagazine";
+            string graphQLMutationName = "createmagazine";
             string graphQLMutation = @"
                 mutation {
-                    createMagazine(item: {id: 801, title: ""New Magazine 2""}) {
+                    createmagazine(item: {id: 801, title: ""New Magazine 2""}) {
                         id
                         title
                         issue_number
@@ -229,10 +229,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestUpdateColumnToNull(string dbQuery)
         {
-            string graphQLMutationName = "updateMagazine";
+            string graphQLMutationName = "updatemagazine";
             string graphQLMutation = @"
                 mutation {
-                    updateMagazine(id: 1, item: { issue_number: null} ) {
+                    updatemagazine(id: 1, item: { issue_number: null} ) {
                         id
                         issue_number
                     }
@@ -250,10 +250,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestMissingColumnNotUpdatedToNull(string dbQuery)
         {
-            string graphQLMutationName = "updateMagazine";
+            string graphQLMutationName = "updatemagazine";
             string graphQLMutation = @"
                 mutation {
-                    updateMagazine(id: 1, item: {id: 1, title: ""Newest Magazine""}) {
+                    updatemagazine(id: 1, item: {id: 1, title: ""Newest Magazine""}) {
                         id
                         title
                         issue_number
@@ -274,10 +274,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestAliasSupportForGraphQLMutationQueryFields(string dbQuery)
         {
-            string graphQLMutationName = "createBook";
+            string graphQLMutationName = "createbook";
             string graphQLMutation = @"
                 mutation {
-                    createBook(item: { title: ""My New Book"", publisher_id: 1234 }) {
+                    createbook(item: { title: ""My New Book"", publisher_id: 1234 }) {
                         book_id: id
                         book_title: title
                     }
@@ -300,10 +300,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task InsertWithInvalidForeignKey(string dbQuery, string errorMessage)
         {
-            string graphQLMutationName = "createBook";
+            string graphQLMutationName = "createbook";
             string graphQLMutation = @"
                 mutation {
-                    createBook(item: { title: ""My New Book"", publisher_id: -1}) {
+                    createbook(item: { title: ""My New Book"", publisher_id: -1}) {
                         id
                         title
                     }
@@ -329,10 +329,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task UpdateWithInvalidForeignKey(string dbQuery, string errorMessage)
         {
-            string graphQLMutationName = "updateBook";
+            string graphQLMutationName = "updatebook";
             string graphQLMutation = @"
                 mutation {
-                    updateBook(id: 1, item: {publisher_id: -1 }) {
+                    updatebook(id: 1, item: {publisher_id: -1 }) {
                         id
                         title
                     }
@@ -358,10 +358,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public virtual async Task UpdateWithNoNewValues()
         {
-            string graphQLMutationName = "updateBook";
+            string graphQLMutationName = "updatebook";
             string graphQLMutation = @"
                 mutation {
-                    updateBook(id: 1) {
+                    updatebook(id: 1) {
                         id
                         title
                     }
@@ -378,10 +378,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public virtual async Task UpdateWithInvalidIdentifier()
         {
-            string graphQLMutationName = "updateBook";
+            string graphQLMutationName = "updatebook";
             string graphQLMutation = @"
                 mutation {
-                    updateBook(id: -1, item: { title: ""Even Better Title"" }) {
+                    updatebook(id: -1, item: { title: ""Even Better Title"" }) {
                         id
                         title
                     }

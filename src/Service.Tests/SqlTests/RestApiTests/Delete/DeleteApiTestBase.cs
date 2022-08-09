@@ -192,7 +192,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     exception: true,
                     expectedErrorMessage: message,
                     expectedStatusCode: HttpStatusCode.BadRequest,
-                    expectedSubStatusCode: DataGatewayException.SubStatusCodes.BadRequest.ToString()
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }
 

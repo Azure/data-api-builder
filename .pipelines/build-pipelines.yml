@@ -6,7 +6,6 @@
 trigger:
 - main
 
-
 pool:
   vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
 
@@ -67,7 +66,6 @@ steps:
     versionEnvVar: nugetVersionTag
     buildProperties: 'VersionSuffix="$(nugetVersionTag)"'
     verbosityPack: 'minimal'
-
 
 # This task will publish nuget package with build number to pipeline artifact
 - task: PublishPipelineArtifact@1

@@ -323,7 +323,7 @@ namespace Azure.DataGateway.Service.Tests.GraphQLBuilder.Sql
         {
             TableDefinition table = new();
 
-            Entity configEntity = GenerateEmptyEntity() with { GraphQL = new SingularPlural(singular, null) };
+            Entity configEntity = GenerateEmptyEntity() with { GraphQL = new GraphQLEntitySettings(new SingularPlural(singular, null)) };
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
                 entityName,
                 table,

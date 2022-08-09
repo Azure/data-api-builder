@@ -1,3 +1,6 @@
+using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
@@ -79,10 +82,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             // Determine whether runtime config defines specific singular and/or plural
             // GraphQL entity names.
             // If singular name is not defined, used the top-level defined entity name.
-            if (configEntity.GraphQL is SingularPlural namingRules)
-            {
-                name = string.IsNullOrEmpty(namingRules.Singular) ? name : namingRules.Singular;
-            }
+            name = GetDefinedSingularName(name, configEntity);
 
             return name;
         }
@@ -92,15 +92,51 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
             return FormatNameForObject(name.Value, configEntity);
         }
 
+        public static string GetDefinedSingularName(string name, Entity configEntity)
+        {
+            if (TryGetSingularPluralConfiguration(configEntity, out SingularPlural? singularPluralConfig) &&
+                !string.IsNullOrEmpty(singularPluralConfig.Singular))
+            {
+                name = singularPluralConfig.Singular;
+            }
+
+            return name;
+        }
+
         /// <summary>
-        /// Helper which
-        /// - Sanitizes the GraphQL field name by removing invalid characters from "name."
-        /// - Capture nameSegments: substrings in "name" delimited by spaces.
-        /// - camelCase the sanitized name: lower case first string segment, followed by upper-case string segments.
+        /// Attempts to deserialize and get the SingularPlural GraphQL naming config
+        /// of an Entity from the Runtime Configuration.
         /// </summary>
-        /// <param name="name">Name to sanitize and format for GraphQL schema usage.</param>
-        /// <returns>Sanitized and formatted field name value.</returns>
-        public static string FormatNameForField(string name)
+        /// <param name="configEntity">Entity to fetch GraphQL naming, if set.</param>
+        /// <param name="singularPluralConfig">Entity's configured GraphQL singular/plural naming.</param>
+        /// <returns>True if configuration found, false otherwise.</returns>
+        public static bool TryGetSingularPluralConfiguration(Entity configEntity, [NotNullWhen(true)] out SingularPlural? singularPluralConfig)
+        {
+            if (configEntity.GraphQL is not null && configEntity.GraphQL is GraphQLEntitySettings graphQLEntitySettings)
+            {
+                if (graphQLEntitySettings is not null && graphQLEntitySettings.Type is SingularPlural singularPlural)
+                {
+                    if (singularPlural is not null)
+                    {
+                        singularPluralConfig = singularPlural;
+                        return true;
+                    }
+                }
+            }
+
+            singularPluralConfig = null;
+            return false;
+        }
+
+    /// <summary>
+    /// Helper which
+    /// - Sanitizes the GraphQL field name by removing invalid characters from "name."
+    /// - Capture nameSegments: substrings in "name" delimited by spaces.
+    /// - camelCase the sanitized name: lower case first string segment, followed by upper-case string segments.
+    /// </summary>
+    /// <param name="name">Name to sanitize and format for GraphQL schema usage.</param>
+    /// <returns>Sanitized and formatted field name value.</returns>
+    public static string FormatNameForField(string name)
         {
             string[] nameSegments = SanitizeGraphQLName(name);
 
@@ -140,14 +176,10 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
         /// <returns></returns>
         public static NameNode Pluralize(string name, Entity configEntity)
         {
-            if (configEntity.GraphQL is SingularPlural namingRules)
+            if (TryGetSingularPluralConfiguration(configEntity, out SingularPlural? namingRules) &&
+                !string.IsNullOrEmpty(namingRules.Plural))
             {
-                if (!string.IsNullOrEmpty(namingRules.Plural))
-                {
-                    return new NameNode(namingRules.Plural);
-                }
-
-                name = string.IsNullOrEmpty(namingRules.Singular) ? name : namingRules.Singular;
+                return new NameNode(namingRules.Plural);
             }
 
             return new NameNode(name.Pluralize());

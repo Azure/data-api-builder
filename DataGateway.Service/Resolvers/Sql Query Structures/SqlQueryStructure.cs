@@ -5,6 +5,7 @@ using System.Net;
 using Azure.DataGateway.Auth;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
+using Azure.DataGateway.Service.GraphQLBuilder;
 using Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataGateway.Service.GraphQLBuilder.Queries;
 using Azure.DataGateway.Service.Models;
@@ -303,6 +304,12 @@ namespace Azure.DataGateway.Service.Resolvers
             }
 
             EntityName = _underlyingFieldType.Name;
+
+            if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
+            {
+                EntityName = modelName;
+            }
+            
             DatabaseObject.SchemaName = sqlMetadataProvider.GetSchemaName(EntityName);
             DatabaseObject.Name = sqlMetadataProvider.GetDatabaseObjectName(EntityName);
             TableAlias = CreateTableAlias();

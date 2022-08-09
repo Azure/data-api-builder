@@ -116,6 +116,20 @@ namespace Azure.DataGateway.Config
         }
 
         /// <summary>
+        /// Deserialize GraphQL configuration on each entity.
+        /// </summary>
+        public void DetermineGraphQLEntityNames()
+        {
+            if (RuntimeSettings is not null)
+            {
+                foreach(Entity entity in Entities.Values)
+                {
+                    entity.ProcessGraphQLNamingConfig();
+                }
+            }
+        }
+
+        /// <summary>
         /// Try to deserialize the given json string into its object form.
         /// </summary>
         /// <typeparam name="T">The object type.</typeparam>

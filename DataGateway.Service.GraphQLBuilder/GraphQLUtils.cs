@@ -1,8 +1,10 @@
+using System.Diagnostics.CodeAnalysis;
 using Azure.DataGateway.Config;
 using Azure.DataGateway.Service.Exceptions;
 using Azure.DataGateway.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using HotChocolate.Types;
+using Humanizer.Configuration;
 using static Azure.DataGateway.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataGateway.Service.GraphQLBuilder
@@ -159,6 +161,28 @@ namespace Azure.DataGateway.Service.GraphQLBuilder
                 authorizeDirective = null;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Get the model name (EntityName) defined on the object type definition.
+        /// </summary>
+        /// <param name="fieldDirectives">Collection of directives on GraphQL field.</param>
+        /// <param name="modelName">Value of @model directive, if present.</param>
+        /// <returns></returns>
+        public static bool TryExtractGraphQLFieldModelName(IDirectiveCollection fieldDirectives, [NotNullWhen(true)] out string? modelName)
+        {
+            foreach (Directive dir in fieldDirectives)
+            {
+                if (dir.Name.Value == ModelDirectiveType.DirectiveName)
+                {
+                    ModelDirectiveType modelDirective = dir.ToObject<ModelDirectiveType>();
+                    modelName = modelDirective.Name.ToString();
+                    return true;
+                }
+            }
+
+            modelName = null;
+            return false;
         }
     }
 }

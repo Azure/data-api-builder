@@ -126,7 +126,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                                 statusCode: HttpStatusCode.InternalServerError,
                                 subStatusCode: DataGatewayException.SubStatusCodes.GraphQLMapping),
                     };
-
+                    
                     FieldDefinitionNode relationshipField = new(
                         location: null,
                         new NameNode(FormatNameForField(relationshipName)),
@@ -136,7 +136,7 @@ namespace Azure.DataGateway.Service.GraphQLBuilder.Sql
                         new NonNullTypeNode(targetField),
                         new List<DirectiveNode> {
                             new(RelationshipDirectiveType.DirectiveName,
-                                new ArgumentNode("target", targetEntityName),
+                                new ArgumentNode("target", FormatNameForObject(targetEntityName, referencedEntity)),
                                 new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
                         });
 

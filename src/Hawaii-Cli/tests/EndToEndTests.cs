@@ -224,14 +224,14 @@ public class EndToEndTests
 
         await StartProcess(process);
         string? output = process.StandardOutput.ReadToEnd();
-        process.WaitForExit(2000);
+        process.Kill();
         Console.WriteLine(output);
         Assert.IsTrue(output.Contains("Starting the runtime engine."));
     }
 
     private static async Task StartProcess(Process process)
     {
-        await Task.Run(() => { process.Start();});
+        await Task.Run(() => { process.Start(); });
     }
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)

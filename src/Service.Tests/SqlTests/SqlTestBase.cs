@@ -634,7 +634,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             }
             else
             {
-                responseBody = Regex.Replace(responseBody, @"\\u0022", @"\""");
+                responseBody = Regex.Replace(responseBody, @"\\u0022", @"\\""");
                 responseBody = Regex.Unescape(responseBody);
                 Assert.AreEqual(expected, responseBody, ignoreCase: true);
             }

@@ -80,7 +80,7 @@ To update entities already added to the config, run the following update command
 dab update <entity> --source <new_source_db> --rest <new_rest_route> --graphql <new_graphql_type> --permissions <rules:actions> --fields.include <fields_to_include> --fields.exclude <fields_to_exclude>
 ```
 
-### Add mappings
+### Add entity relationship mappings
 
 To add relationship mappings between entities, use command as below:
 

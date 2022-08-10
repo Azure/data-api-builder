@@ -97,7 +97,7 @@ To add policy details, run the following command:
 ```dotnetcli
 # dab update Book --permissions "anonymous:read" --fields.include "*" --policy-database "@claims.id eq @item.id"
 
-dab update <entity> --permission <roles> --fields.include <fields> --policy-database <policy_conditions>
+dab update <entity> --permissions <roles> --fields.include <fields> --policy-database <policy_conditions>
 ```
 
 ## Run the Data API Builder

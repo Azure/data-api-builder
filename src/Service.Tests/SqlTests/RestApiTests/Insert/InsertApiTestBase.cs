@@ -196,6 +196,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         [DataRow("; SELECT * FROM information_schema.tables/*", "InsertSqlInjectionQuery2")]
         [DataRow("value; SELECT * FROM v$version--", "InsertSqlInjectionQuery3")]
         [DataRow("id; DROP TABLE books;", "InsertSqlInjectionQuery4")]
+        [DataRow(" ' UNION SELECT * FROM books/*", "InsertSqlInjectionQuery5")]
         public virtual async Task InsertOneWithSqlInjectionTest(string sqlInjection, string query)
         {
             string requestBody = @"

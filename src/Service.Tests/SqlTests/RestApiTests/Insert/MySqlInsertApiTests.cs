@@ -144,6 +144,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         AND title = 'id; DROP TABLE books;'
                     ) AS subq
                 "
+            },
+            {
+                "InsertSqlInjectionQuery5",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                        AND title = ' '' UNION SELECT * FROM books/*'
+                    ) AS subq
+                "
             }
         };
 

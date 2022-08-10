@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -1380,7 +1381,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [DataRow("; SELECT * FROM v$version--", false)]
         [DataRow("id; SELECT * FROM v$version--", false)]
         [DataRow("id; DROP TABLE books;--", false)]
-        public async Task FindByIdTestWithSlashStarSqlInjectionInPKRoute(string sqlInjection, bool slashStar)
+        public async Task FindByIdTestWithSqlInjectionInPKRoute(string sqlInjection, bool slashStar)
         {
             string message = slashStar ? "Primary key column(s) provided do not match DB schema." :
                 "Support for url template with implicit primary key field names is not yet added.";

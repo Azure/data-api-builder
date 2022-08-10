@@ -17,7 +17,7 @@ The Data API Builder CLI (**DAB CLI** or `DAB`) is a command line tool that stre
 
 ## Components of the CLI
 
-The diagram explains the high-level architecture for the DAB CLI, identifying the key components and their relationships:
+The following diagram illustrates the high-level architecture of the DAB CLI, identifying the key components and their relationships:
 
 ::image::
 

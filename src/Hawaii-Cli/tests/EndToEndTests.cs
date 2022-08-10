@@ -206,28 +206,28 @@ public class EndToEndTests
     // <summary>
     // Test to verify the engine gets started using start command
     // </summary>
-    [TestMethod]
-    public void TestStartEngine()
-    {
-        Process process = new()
-        {
-            StartInfo =
-                {
-                    FileName = @"Hawaii.Cli",
-                    Arguments = "start",
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                }
-        };
+    // [TestMethod]
+    // public void TestStartEngine()
+    // {
+    //     Process process = new()
+    //     {
+    //         StartInfo =
+    //             {
+    //                 FileName = @"Hawaii.Cli",
+    //                 Arguments = "start",
+    //                 WindowStyle = ProcessWindowStyle.Hidden,
+    //                 UseShellExecute = false,
+    //                 RedirectStandardOutput = true,
+    //                 RedirectStandardError = true,
+    //             }
+    //     };
 
-        process.Start();
-        string? output = process.StandardOutput.ReadToEnd();
+    //     process.Start();
+    //     string? output = process.StandardOutput.ReadToEnd();
 
-        process.WaitForExit(2000);
-        Assert.IsTrue(output.Contains("Starting the runtime engine."));
-    }
+    //     process.WaitForExit(2000);
+    //     Assert.IsTrue(output.Contains("Starting the runtime engine."));
+    // }
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)
     {

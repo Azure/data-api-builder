@@ -225,8 +225,10 @@ public class EndToEndTests
         StartProcess(process);
 
         // to wait till the process starts
-        while(true) {
-            try {
+        while (true)
+        {
+            try
+            {
                 int id = process.Id;
                 break;
             }

@@ -48,12 +48,6 @@ steps:
     projects: '**/*.csproj'
     arguments: '--configuration $(buildConfiguration)' # Update this to match your need
 
-- task: CmdLine@2
-  inputs:
-    script: |
-      cd src/out/tests/Release/net6.0/
-      ls -a
-
 - task: DotNetCoreCLI@2
   displayName: "Run Unit Tests"
   inputs:

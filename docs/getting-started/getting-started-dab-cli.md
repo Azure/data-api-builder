@@ -53,7 +53,7 @@ To validate, navigate to your folder path (where you should be currently) and yo
 > [!NOTE]
 > While initializing, the CLI would create config file with the default name of `dab-config.json` if no config file name supplied.
 
-## Add entities in config
+## Add entities to config
 
 To add the entities in config file with REST route, GraphQL type and permissions, run the commands as below:
 ```dotnetcli

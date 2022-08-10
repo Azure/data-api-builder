@@ -198,7 +198,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Test to validate that differently cased operation names specified in config are deserialised correctly,
-        /// and hence they pass config validation stage.
+        /// and hence they pass config validation stage if they are allowed CRUD operation and fail otherwise.
         /// </summary>
         /// <param name="operationName">Name of the operation configured.</param>
         /// <param name="exceptionExpected">Boolean variable which indicates whether the relevant method call
@@ -210,7 +210,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("DelETe", false, DisplayName = "Valid operation name DelETe specified for action")]
         [DataRow("remove", true, DisplayName = "Invalid operation name remove specified for action")]
         [DataRow("inseRt", true, DisplayName = "Invalid operation name inseRt specified for action")]
-        public void TestDifferentCasedOperationInConfig(string operationName, bool exceptionExpected)
+        public void TestOperationValidityAndCasing(string operationName, bool exceptionExpected)
         {
             string actionJson = @"{
                                         ""action"": " + $"\"{operationName}\"" + @",

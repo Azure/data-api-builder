@@ -507,28 +507,29 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 "col1", Operation.Update);
             CollectionAssert.AreEquivalent(expectedRolesForUpdateCol1, actualRolesForUpdateCol1.ToList());
         }
+
         /// <summary>
         /// Test to validate the AreRoleAndActionDefinedForEntity method for the case insensitivity of roleName.
         /// For eg. The role Writer is equivalent to wrIter, wRITer, WRITER etc.
         /// </summary>
-        /// <param name="configRole"></param>
-        /// <param name="action"></param>
-        /// <param name="roleName"></param>
+        /// <param name="configRole">The role configured on the entity.</param>
+        /// <param name="action">The action configured for the configRole.</param>
+        /// <param name="roleNameToCheck">The roleName which is to be checked for the permission.</param>
         [DataTestMethod]
-        [DataRow("Writer", Operation.Create, "wRiTeR")]
-        [DataRow("Reader", Operation.Read, "READER")]
-        [DataRow("Writer", Operation.Create, "WrIter")]
+        [DataRow("Writer", Operation.Create, "wRiTeR", DisplayName = "role wRiTeR checked against Writer")]
+        [DataRow("Reader", Operation.Read, "READER", DisplayName = "role READER checked against Reader")]
+        [DataRow("Writer", Operation.Create, "WrIter", DisplayName = "role WrIter checked against Writer")]
         public void AreRoleAndActionDefinedForEntityTestForDifferentlyCasedRole(
             string configRole,
             Operation action,
-            string roleName
+            string roleNameToCheck
             )
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(AuthorizationHelpers.TEST_ENTITY, configRole, action);
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
             // Assert that the roleName is case insensitive.
-            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, roleName, action));
+            Assert.IsTrue(authZResolver.AreRoleAndActionDefinedForEntity(AuthorizationHelpers.TEST_ENTITY, roleNameToCheck, action));
         }
         #endregion
 
@@ -880,6 +881,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                     new List<string>(columnsToCheck)));
             }
         }
+
         /// <summary>
         /// Test to validate the AreColumnsAllowedForAction method for case insensitivity of roleName.
         /// For eg. The role CREATOR is equivalent to creator, cReAtOR etc.

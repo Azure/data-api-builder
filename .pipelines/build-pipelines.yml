@@ -98,6 +98,18 @@ steps:
     codeCoverageTool: Cobertura
     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
+- task: ShellScript@2
+  displayName: "Package build output to multiple platforms"
+  inputs:
+    scriptPath: publish.sh
+    args: $(buildConfiguration)
+
+# this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
+- task: PublishPipelineArtifact@1
+  displayName: "Upload build artifacts"
+  inputs:
+    targetPath: '$(Build.SourcesDirectory)/publish' 
+
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.
 - task: PowerShell@2

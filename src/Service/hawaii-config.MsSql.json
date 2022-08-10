@@ -524,6 +524,12 @@
     "WebsiteUser": {
       "source": "website_users",
       "rest": false,
+      "graphql": {
+        "type": {
+          "singular": "websiteUser",
+          "plural": "websiteUsers"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",

@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _entityWithCompositePrimaryKey = "Review";
         protected static readonly string _tableWithCompositePrimaryKey = "reviews";
         protected const int STARTING_ID_FOR_TEST_INSERTS = 5001;
-        protected static readonly string _integration_NonAutoGenPK_EntityName = "Magazine";
+        protected static readonly string _integration_NonAutoGenPK_EntityName = "magazine";
         protected static readonly string _integration_NonAutoGenPK_TableName = "magazines";
         protected static readonly string _integration_AutoGenNonPK_EntityName = "Comic";
         protected static readonly string _integration_AutoGenNonPK_TableName = "comics";

@@ -11,7 +11,7 @@ The Data API Builder CLI (**DAB CLI** or `DAB`) is a command line tool that stre
 - Initialize the configuration file for REST and GraphQL
 - Add new entities
 - Update entity details
-- Add/update entities relationships
+- Add/update entity relationships
 - Configure the roles and permissions
 - Run the Data API Builder engine
 

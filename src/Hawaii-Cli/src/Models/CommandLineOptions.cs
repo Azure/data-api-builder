@@ -238,7 +238,7 @@ namespace Hawaii.Cli.Models
             this.Config = config;
         }
 
-        [Option("config", Required = false, HelpText = "Path to config file.")]
+        [Option("config", Default = (string)RuntimeConfigPath.CONFIG_FILE, Required = false, HelpText = "Path to config file.")]
         public string Config { get; }
     }
 }

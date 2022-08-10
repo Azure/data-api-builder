@@ -22,6 +22,7 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool StartEngine(string[] args)
         {
+            Console.WriteLine("Starting the runtime engine.");
             try
             {
                 CreateHostBuilder(args).Build().Run();

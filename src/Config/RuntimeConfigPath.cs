@@ -16,6 +16,8 @@ namespace Azure.DataApiBuilder.Config
         public const string CONFIGFILE_NAME = "hawaii-config";
         public const string CONFIG_EXTENSION = ".json";
 
+        public const string CONFIG_FILE = $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
+
         public const string RUNTIME_ENVIRONMENT_VAR_NAME = "HAWAII_ENVIRONMENT";
         public const string ENVIRONMENT_PREFIX = "HAWAII_";
 

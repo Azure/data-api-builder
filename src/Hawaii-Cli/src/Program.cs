@@ -69,11 +69,7 @@ namespace Hawaii.Cli
 
                     bool isSuccess = Azure.DataApiBuilder.Service.Program.StartEngine(args);
 
-                    if (isSuccess)
-                    {
-                        Console.WriteLine("Engine Started.");
-                    }
-                    else
+                    if (!isSuccess)
                     {
                         Console.WriteLine("Engine Failed to start.");
                     }

@@ -206,50 +206,28 @@ public class EndToEndTests
     /// <summary>
     /// Test to verify the engine gets started using start command
     /// </summary>
-    // [TestMethod]
-    // public void TestStartEngine()
-    // {
-    //     Process process = new Process
-    //             {
-    //                 StartInfo =
-    //                     {
-    //                         FileName = @"Hawaii.Cli.exe",
-    //                         Arguments = "start --config hawaii-config.json",
-    //                         WindowStyle = ProcessWindowStyle.Hidden,
-    //                         UseShellExecute = false,
-    //                         RedirectStandardOutput = true,
-    //                         RedirectStandardError = true,
-    //                     }
-    //             };
+    [TestMethod]
+    public void TestStartEngine()
+    {
+        Process process = new Process
+        {
+            StartInfo =
+                {
+                    FileName = @"Hawaii.Cli.exe",
+                    Arguments = "start",
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                }
+        };
 
-    //             string stdoutText = string.Empty;
-    //             string stderrText = string.Empty;
+        process.Start();
+        var output = process.StandardOutput.ReadToEnd();
 
-    //             process.OutputDataReceived += new DataReceivedEventHandler(
-    //                 (s, e) =>
-    //                 {
-    //                     stdoutText += e.Data;
-    //                 });
-
-    //             process.ErrorDataReceived += new DataReceivedEventHandler(
-    //                 (s, e) =>
-    //                 {
-    //                     stderrText += e.Data;
-    //                 });
-
-    //             process.Start();
-
-    //             // process.BeginOutputReadLine();
-    //             // process.BeginErrorReadLine();
-    //             var output = process.StandardOutput.ReadToEnd();
-    //             var err = process.StandardError.ReadToEnd();
-
-    //             // process.WaitForExit();
-    //             process.Kill();
-
-    //             Console.WriteLine(output+err);
-    //             Assert.IsTrue(output.Contains("Successfully completed runtime initialization."));
-    // }
+        process.WaitForExit();
+        Assert.IsTrue(output.Contains("Starting the runtime engine."));
+    }
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)
     {

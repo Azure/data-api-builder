@@ -182,6 +182,12 @@
     },
     "Book": {
       "source": "books",
+      "graphql": {
+        "type": {
+          "singular": "book",
+          "plural": "books"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",

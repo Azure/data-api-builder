@@ -7,8 +7,6 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests
 {
@@ -56,10 +54,7 @@ namespace Azure.DataApiBuilder.Service.Tests
             HttpResponseMessage response = await client.SendAsync(request);
             string body = await response.Content.ReadAsStringAsync();
 
-            JObject responseBodyJson = JObject.Parse(body);
-            string responseBodyString = JsonConvert.SerializeObject(responseBodyJson);
-
-            JsonElement graphQLResult = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(responseBodyString);
+            JsonElement graphQLResult = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(body);
 
             if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
             {

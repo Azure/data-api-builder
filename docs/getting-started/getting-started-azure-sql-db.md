@@ -44,7 +44,7 @@ Execute the script in the SQL Server or Azure SQL database you decided to use, s
 
 ## Add Book and Author entities
 
-We want to expose the `books` and the `authors` table so that they can be used via REST or GraphQL. For doing that, all we need to is to add the related information to the `entities` section of the configuration file.
+We want to expose the `books` and the `authors` table so that they can be used via REST or GraphQL. For doing that, all we need is to add the related information to the `entities` section of the configuration file.
 
 Start by adding the `author` entity:
 
@@ -99,7 +99,7 @@ that's all is needed at the moment. Data API builder is ready to be run.
 
 ## Start Data API builder for Azure SQL Database
 
-From the `samples/getting-started` folder, start Data API builder engine (use):
+From the `samples/getting-started` folder, start Data API Builder engine :
 
 ```
 ./run-dab.cmd library.config.json

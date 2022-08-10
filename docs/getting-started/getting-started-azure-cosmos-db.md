@@ -2,7 +2,7 @@
 
 Make sure you have read the [Getting Started](getting-started.md) document.
 
-As mentioned before, this tutorial assumes that you have already a Cosmos DB SQL API database that can used as playground.
+This tutorial assumes that you have already a [Cosmos DB SQL API database account](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/create-cosmosdb-resources-portal#create-an-azure-cosmos-db-account) that can used as playground.
 
 ## Get the Cosmos DB Account connection string
 
@@ -15,7 +15,7 @@ You can also use Azure Cosmos DB emulator connection string if you are testing l
 The connection string looks like,
 
 ```
-AccountEndpoint=AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;
+AccountEndpoint=AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;
 ```
 
 Once you have the connection string, add it to the configuration file you have created before. It will look like the following if you are using Azure Cosmos DB:
@@ -23,7 +23,7 @@ Once you have the connection string, add it to the configuration file you have c
 ```json
 "data-source": {
     "database-type": "cosmos",
-    "connection-string": "AccountEndpoint=yourEndpoint;AccountKey=yourkey"
+    "connection-string": "AccountEndpoint=yourEndpoint;AccountKey=REPLACEME"
 }
 ```
 
@@ -110,7 +110,7 @@ We need to expose the books and the authors collections so that they can be used
 
 Start by adding the `author` and `book` schema:
 
-```json
+```graphql
 type Author @model {
     id : ID,
     first_name : String,
@@ -126,9 +126,9 @@ type Book @model {
 }
 ```
 
-add the above schemas to the `samples/getting-started/azure-cosmos-db` schema.gql file.
+Add the above schemas to the `samples/getting-started/azure-cosmos-db` schema.gql file.
 
-that's all is needed at the moment. Data API builder is ready to be run.
+That's all you need at the moment. Data API builder is ready to be run.
 
 > **BEST PRACTICE**: It is recommeneded to use the *singular* form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a *list* of entity items will be returned. More on this behaviour in the [GraphQL documentation](./../graphql.md).
 
@@ -152,11 +152,11 @@ The Data API builder engine is running and is ready to accept requests.
 
 ## Query the endpoints
 
-Now that Data API builder engine is running, you can use your favourite REST client (Postman,Insomnia etc) to query the GraphQL endpoints.
+Now that the Data API builder engine is running, you can use your favourite REST client (Postman, Insomnia, etc.) to query the GraphQL endpoints.
 
 ### REST Endpoint
 
-Unlike other databases, Data API Builder for Azure Cosmos DB does not have the support to generate REST endpoints as it already has a [REST API endpoint](https://docs.microsoft.com/en-us/rest/api/cosmos-db/) readily available.
+Unlike other databases, Data API Builder for Azure Cosmos DB does not support generating REST endpoints because there is already a[REST API endpoint](https://docs.microsoft.com/en-us/rest/api/cosmos-db/) capability built-in to the Azure Cosmos DB service.
  
 ### GraphQL endpoint
 
@@ -166,7 +166,7 @@ GraphQL endpoint is available at
 /graphql
 ```
 
-Use a GraphQL-capable REST client like Postman or Insomnia to query the database using full GraphQL introspection capabilities, to get intellisense and validation. For example:
+Use a GraphQL-capable REST client like Postman or Insomnia to query the database using full GraphQL introspection capabilities and to get IntelliSense and validation. For example:
 
 ```graphql
 {
@@ -206,7 +206,7 @@ Using GraphQL you can now execute queries like:
 }
 
 ```
-This query will return List of books and it's Authors.
+This query will return List of books and its Authors.
 
 Congratulations, you have just created a fully working backend to support your modern applications!
 

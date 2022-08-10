@@ -59,7 +59,7 @@ steps:
   displayName: 'Creating Nuget Package'
   inputs:
     command: pack
-    packagesToPack: '**/Hawaii.Cli.csproj'
+    packagesToPack: '**/Cli.csproj'
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
     nobuild: true
     versioningScheme: byEnvVar

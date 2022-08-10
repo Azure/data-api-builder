@@ -223,19 +223,19 @@ public class EndToEndTests
         };
 
         StartProcess(process);
-
+        string? output = String.Empty;
         // to wait till the process starts
         while (true)
         {
             try
             {
                 int id = process.Id;
+                output = process.StandardOutput.ReadLine();
                 break;
             }
             catch (InvalidOperationException) { }
         }
 
-        string? output = process.StandardOutput.ReadLine();
         process.Kill();
         Assert.IsTrue(output.Contains("Starting the runtime engine."));
     }

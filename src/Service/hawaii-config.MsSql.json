@@ -188,7 +188,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "create", "read", "update"]
+          "actions": [ "create", "read", "update", "delete" ]
         },
         {
           "role": "authenticated",

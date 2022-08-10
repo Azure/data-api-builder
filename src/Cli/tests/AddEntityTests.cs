@@ -1,5 +1,3 @@
-using Cli;
-
 namespace Cli.Tests
 {
     /// <summary>

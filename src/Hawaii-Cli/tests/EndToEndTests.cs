@@ -242,7 +242,7 @@ public class EndToEndTests
 
     private static async void StartProcess(Process process)
     {
-        await Task.Run(() => { process.Start(); });
+        Task.Run(() => { process.Start(); });
     }
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)

@@ -307,12 +307,13 @@ type Table @model(name: ""table"") {
         /// <param name="expectedQueryNameForList"> Expected name for the query to fetch all items </param>
         /// <param name="expectedNameInDescription">Expected name in the description for both the queries</param>
         [DataTestMethod]
-        [DataRow(GraphQLTestHelpers.BOOK_GQL, "Book", null, null, "book_by_pk", "books", "Book")]
+        [DataRow(GraphQLTestHelpers.BOOK_GQL, "Book", null, null, "Book_by_pk", "Books", "Book")]
         [DataRow(GraphQLTestHelpers.BOOK_GQL, "Book", "book", "books", "book_by_pk", "books", "book")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", null, null, "books_by_pk", "books", "Books")]
+        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", null, null, "Books_by_pk", "Books", "Books")]
         [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "books", "book_by_pk", "books", "book")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "", "book_by_pk", "books", "book")]
-        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "People", "person_by_pk", "people", "Person")]
+        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "Book", "Books", "Book_by_pk", "Books", "Book")]
+        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "", "book_by_pk", "Books", "book")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "People", "Person_by_pk", "People", "Person")]
         public void ValidateQueriesAreCreatedWithRightName(
             string gql,
             string entityName,

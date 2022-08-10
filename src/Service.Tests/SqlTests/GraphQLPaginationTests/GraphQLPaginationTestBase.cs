@@ -597,7 +597,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         {
             string graphQLQueryName = "Stocks";
             string graphQLQuery = @"{
-                stocks(first: 2 orderBy: {pieceid: DESC}) {
+                Stocks(first: 2 orderBy: {pieceid: DESC}) {
                     items {
                         pieceid
                         categoryid

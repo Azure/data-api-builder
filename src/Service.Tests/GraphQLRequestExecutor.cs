@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -48,13 +47,10 @@ namespace Azure.DataApiBuilder.Service.Tests
                 request.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader);
             }
 
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
             HttpResponseMessage response = await client.SendAsync(request);
             string body = await response.Content.ReadAsStringAsync();
 
-            JsonElement graphQLResult = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(body);
+            JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
 
             if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
             {

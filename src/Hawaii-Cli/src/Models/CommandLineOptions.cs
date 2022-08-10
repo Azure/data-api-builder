@@ -232,8 +232,7 @@ namespace Hawaii.Cli.Models
     [Verb("start", isDefault: false, HelpText = "Start Hawaii Engine", Hidden = false)]
     public class StartOptions
     {
-        public StartOptions(
-            string config)
+        public StartOptions(string config)
         {
             this.Config = config;
         }

@@ -577,6 +577,5 @@ namespace Hawaii.Cli.Models
                                     updatedLinkingSourceFields,
                                     updatedLinkingTargetFields);
         }
-
     }
 }

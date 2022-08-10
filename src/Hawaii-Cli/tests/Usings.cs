@@ -1,5 +1,5 @@
-global using System.Text.Json;
 global using System.Diagnostics;
+global using System.Text.Json;
 global using Azure.DataApiBuilder.Config;
 global using Hawaii.Cli.Models;
 global using Microsoft.VisualStudio.TestTools.UnitTesting;

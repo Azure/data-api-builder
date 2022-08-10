@@ -209,7 +209,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestStartEngine()
     {
-        Process process = new Process
+        Process process = new()
         {
             StartInfo =
                 {
@@ -223,7 +223,7 @@ public class EndToEndTests
         };
 
         process.Start();
-        var output = process.StandardOutput.ReadToEnd();
+        string? output = process.StandardOutput.ReadToEnd();
 
         process.WaitForExit();
         Assert.IsTrue(output.Contains("Starting the runtime engine."));

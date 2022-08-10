@@ -82,7 +82,7 @@ dab update <entity> --source <new_source_db> --rest <new_rest_route> --graphql <
 
 ### Add entity relationship mappings
 
-To add relationship mappings between entities, use command as below:
+To add relationship mappings between entities, use the following command:
 
 ```dotnetcli
 # dab update Book --map "id:id,title:title"

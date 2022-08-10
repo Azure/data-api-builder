@@ -15,7 +15,7 @@ The Data API Builder CLI (**DAB CLI** or `DAB`) is a command line tool that stre
 - Configure roles and their permissions
 - Run the Data API Builder engine
 
-## Components of CLI
+## Components of the CLI
 
 The diagram explains the high-level architecture for the DAB CLI, identifying the key components and their relationships:
 

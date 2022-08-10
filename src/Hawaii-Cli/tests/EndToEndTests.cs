@@ -225,7 +225,7 @@ public class EndToEndTests
         process.Start();
         string? output = process.StandardOutput.ReadToEnd();
 
-        process.WaitForExit();
+        process.Kill();
         Assert.IsTrue(output.Contains("Starting the runtime engine."));
     }
 

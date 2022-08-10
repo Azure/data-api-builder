@@ -6,7 +6,6 @@
     <RootNamespace>Cli</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <VersionPrefix>0.0.4</VersionPrefix>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>dab</ToolCommandName>
     <PackageOutputPath>./nupkg</PackageOutputPath>

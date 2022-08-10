@@ -90,7 +90,7 @@ To add relationship mappings between entities, use command as below:
 dab update <entity> --map <fields>
 ```
 
-### Add policy details
+### Add database policies to role permissions
 
 To add policy details, run the following command:
 

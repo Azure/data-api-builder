@@ -92,7 +92,7 @@ dab update <entity> --map <fields>
 
 ### Add policy details
 
-To add policy details, run the command as below:
+To add policy details, run the following command:
 
 ```dotnetcli
 # dab update Book --permissions "anonymous:read" --fields.include "*" --policy-database "@claims.id eq @item.id"

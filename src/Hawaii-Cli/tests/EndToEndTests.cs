@@ -213,7 +213,7 @@ public class EndToEndTests
         {
             StartInfo =
                 {
-                    FileName = @"Hawaii.Cli.exe",
+                    FileName = @"Hawaii.Cli",
                     Arguments = "start",
                     WindowStyle = ProcessWindowStyle.Hidden,
                     UseShellExecute = false,

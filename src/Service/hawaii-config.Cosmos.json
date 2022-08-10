@@ -35,8 +35,8 @@
       "rest": false,
       "graphql": {
         "type": {
-          "singular": "planet",
-          "plural": "planets"
+          "singular": "Planetrock",
+          "plural": "Planetrocks"
         }
       },
       "permissions": [
@@ -55,8 +55,8 @@
       "rest": false,
       "graphql": {
         "type": {
-          "singular": "character",
-          "plural": "characters"
+          "singular": "Character",
+          "plural": "Characters"
         }
       },
       "permissions": [
@@ -71,8 +71,8 @@
       "rest": false,
       "graphql": {
         "type": {
-          "singular": "star",
-          "plural": "stars"
+          "singular": "Star",
+          "plural": "Stars"
         }
       },
       "permissions": [

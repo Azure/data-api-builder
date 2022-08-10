@@ -1,6 +1,6 @@
 # About DAB CLI
 
-The Data API Builder CLI (**DAB CLI** or `DAB`) is a command line tool that streamlines local development experience for applications using Data API Builder.
+The Data API Builder CLI (**DAB CLI** or `DAB`) is a command line tool that streamlines the local development experience for applications using Data API Builder.
 
 - Find it on GitHub: [dab-cli](https://github.com/Azure/hawaii-cli/)
 - Getting started: [Getting started](./getting-started-dab-cli.md)

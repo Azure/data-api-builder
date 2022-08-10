@@ -207,7 +207,7 @@ public class EndToEndTests
     // Test to verify the engine gets started using start command
     // </summary>
     [TestMethod]
-    public async Task TestStartEngine()
+    public void TestStartEngine()
     {
         Process process = new()
         {
@@ -222,14 +222,16 @@ public class EndToEndTests
                 }
         };
 
-        await StartProcess(process);
-        string? output = process.StandardOutput.ReadToEnd();
+        StartProcess(process);
+        Thread.Sleep(2000);
+        Console.WriteLine(process.StartTime);
+        string? output = process.StandardOutput.ReadLine();
         process.Kill();
         Console.WriteLine(output);
         Assert.IsTrue(output.Contains("Starting the runtime engine."));
     }
 
-    private static async Task StartProcess(Process process)
+    private static async void StartProcess(Process process)
     {
         await Task.Run(() => { process.Start(); });
     }

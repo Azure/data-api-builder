@@ -8,7 +8,7 @@ This CLI tool is part of [.NET global tools](https://www.nuget.org/packages?pack
 
 ## Install the DAB CLI
 
-You can install the DAB CLI using the [.NET tool](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools).
+You can install the DAB CLI using [.NET tools](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools).
 
 - Download the package: [dab-cli.0.0.5.nupkg](https://github.com/Azure/hawaii-cli/tags) file.
 - Navigate to the folder where the package file is downloaded.

@@ -23,4 +23,8 @@
     <ProjectReference Include="..\..\Config\Azure.DataApiBuilder.Config.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Models\" />
+  </ItemGroup>
+
 </Project>

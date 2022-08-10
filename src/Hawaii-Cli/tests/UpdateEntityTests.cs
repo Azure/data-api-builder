@@ -1,4 +1,6 @@
-namespace Hawaii.Cli.Tests
+using Cli;
+
+namespace Cli.Tests
 {
     /// <summary>
     /// Tests for Updating Entity.

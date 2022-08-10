@@ -57,7 +57,7 @@ To validate, navigate to your folder path (where you should be currently) and yo
 
 To add the entities to the config file with the REST route, GraphQL type and permissions defined, run the following commands:
 ```dotnetcli
-# dab add todo --source s001.todo --rest todo --graphql todo --permission "anonymous:*"
+# dab add todo --source s001.todo --rest todo --graphql todo --permissions "anonymous:*"
 
 dab add <entity> -source <source_db> --rest <rest_route> --graphql <graphql_type> --permissions <roles:actions>
 ```

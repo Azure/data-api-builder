@@ -83,7 +83,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         {
             return new Entity(Source: "foo",
                               Rest: null,
-                              GraphQL: new SingularPlural(singularNameForEntity, pluralNameForEntity),
+                              GraphQL: new GraphQLEntitySettings(new SingularPlural(singularNameForEntity, pluralNameForEntity)),
                               Permissions: Array.Empty<PermissionSetting>(),
                               Relationships: new(),
                               Mappings: new());

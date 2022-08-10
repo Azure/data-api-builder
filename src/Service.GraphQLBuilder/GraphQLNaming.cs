@@ -158,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <param name="name">HotChocolate schema object type NameNode</param>
         /// <param name="configEntity">Entity definition from runtime configuration.</param>
         /// <returns></returns>
-        public static NameNode Pluralize(NameNode name, Entity configEntity)
+        public static string Pluralize(NameNode name, Entity configEntity)
         {
             return Pluralize(name.Value, configEntity);
         }
@@ -172,15 +172,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <param name="name">string representing a name to pluralize</param>
         /// <param name="configEntity">Entity definition from runtime configuration.</param>
         /// <returns></returns>
-        public static NameNode Pluralize(string name, Entity configEntity)
+        public static string Pluralize(string name, Entity configEntity)
         {
             if (TryGetSingularPluralConfiguration(configEntity, out SingularPlural? namingRules) &&
                 !string.IsNullOrEmpty(namingRules.Plural))
             {
-                return new NameNode(namingRules.Plural);
+                return namingRules.Plural;
             }
 
-            return new NameNode(name.Pluralize());
+            return name.Pluralize(inputIsKnownToBeSingular: false);
         }
 
         public static string ObjectTypeToEntityName(ObjectTypeDefinitionNode node)

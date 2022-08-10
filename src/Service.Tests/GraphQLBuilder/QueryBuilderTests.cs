@@ -173,7 +173,7 @@ type Foo @model {
                 );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            string returnTypeName = query.Fields.First(f => f.Name.Value == $"Foos").Type.NamedType().Name.Value;
+            string returnTypeName = query.Fields.First(f => f.Name.Value == $"foos").Type.NamedType().Name.Value;
             ObjectTypeDefinitionNode returnType = queryRoot.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>().First(d => d.Name.Value == returnTypeName);
             Assert.AreEqual(3, returnType.Fields.Count);
             Assert.AreEqual("items", returnType.Fields[0].Name.Value);
@@ -312,8 +312,7 @@ type Table @model(name: ""table"") {
         [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", null, null, "books_by_pk", "books", "Books")]
         [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "books", "book_by_pk", "books", "book")]
         [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "", "book_by_pk", "books", "book")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "", "books", "books_by_pk", "books", "Books")]
-        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "People", "person_by_pk", "People", "Person")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "People", "person_by_pk", "people", "Person")]
         public void ValidateQueriesAreCreatedWithRightName(
             string gql,
             string entityName,

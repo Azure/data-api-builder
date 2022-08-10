@@ -37,7 +37,7 @@ dab --version
 
 ## Generate the config file
 
-This CLI tool will generate a config file for you, then you can build your config by adding required entities, relationships, role, and permissions etc.
+This CLI tool will generate a DAB engine config file for you, then you can build your config by adding required entities, relationships, roles, and permissions etc.
 
 To initialize the config file, use:
 

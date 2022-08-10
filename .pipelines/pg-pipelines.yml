@@ -44,7 +44,7 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'DataGateway.Service/hawaii-config.PostgreSql.json'
+      targetFiles: 'src/Service/hawaii-config.PostgreSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build

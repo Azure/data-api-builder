@@ -5,4 +5,4 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - "./DataGateway.Service/hawaii-config.MySql.json:/App/hawaii-config.json"
+      - "./src/Service/hawaii-config.MySql.json:/App/hawaii-config.json"

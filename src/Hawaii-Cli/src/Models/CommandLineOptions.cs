@@ -229,7 +229,7 @@ namespace Hawaii.Cli.Models
     /// <summary>
     /// Start command options
     /// </summary>
-    [Verb("start", isDefault: false, HelpText = "Start Hawaii Engine", Hidden = false)]
+    [Verb("start", isDefault: false, HelpText = "Start Data Api Builder Engine", Hidden = false)]
     public class StartOptions
     {
         public StartOptions(string config)

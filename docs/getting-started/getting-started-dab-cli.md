@@ -72,7 +72,7 @@ dab add Book --source books --permissions "anonymous:read"
 
 ### Update entities in config
 
-To update the existing entities, run the command as below:
+To update entities already added to the config, run the following update command:
 
 ```dotnetcli
 # dab update todo --permission "authenticate:create" --fields.include "id,name,category"

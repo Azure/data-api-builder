@@ -206,8 +206,8 @@ public class EndToEndTests
     // <summary>
     // Test to verify the engine gets started using start command
     // </summary>
-    [TestMethod]
-    public async Task TestStartEngine()
+    // [TestMethod]
+    public static async Task TestStartEngine()
     {
         Process process = new()
         {

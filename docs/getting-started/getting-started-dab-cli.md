@@ -62,7 +62,7 @@ To add the entities to the config file with the REST route, GraphQL type and per
 dab add <entity> -source <source_db> --rest <rest_route> --graphql <graphql_type> --permissions <roles:actions>
 ```
 
-You can also run the multiple commands in a batch to perform multiple actions. For example, to add entities for `Publisher`, `Stock` and `Book` you can run the command as below:
+You can also run multiple commands in a single batch to perform multiple actions. For example, to add entities for `Publisher`, `Stock` and `Book` you can run the following commands:
 
 ```dotnetcli
 dab add Publisher --source publishers --permissions "anonymous:read"

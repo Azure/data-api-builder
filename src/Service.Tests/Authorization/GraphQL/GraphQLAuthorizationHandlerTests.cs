@@ -39,9 +39,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         [DataRow(true, "authorizationHandlerTester", false, "", DisplayName = "Authenticated access to field with @authorize directive, valid clientRoleHeader")]
         public async Task FieldAuthorizationProcessing(bool isAuthenticated, string clientRoleHeader, bool errorExpected, string expectedErrorMessageFragment)
         {
-            string graphQLQueryName = "Journal_by_pk";
+            string graphQLQueryName = "journal_by_pk";
             string graphQLQuery = @"{
-                Journal_by_pk(id: 1) {
+                journal_by_pk(id: 1) {
                     id,
                     journalname 
                 }
@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
                     message: "The current user is not authorized to access this resource.",
-                    path: @"[""Journal_by_pk""]"
+                    path: @"[""journal_by_pk""]"
                 );
             }
             else

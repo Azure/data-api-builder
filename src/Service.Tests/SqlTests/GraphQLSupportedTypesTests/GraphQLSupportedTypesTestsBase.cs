@@ -68,8 +68,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             }
 
             string field = $"{type.ToLowerInvariant()}_types";
-            string graphQLQueryName = "SupportedType_by_pk";
-            string gqlQuery = "{ SupportedType_by_pk(id: " + id + ") { " + field + " } }";
+            string graphQLQueryName = "supportedType_by_pk";
+            string gqlQuery = "{ supportedType_by_pk(id: " + id + ") { " + field + " } }";
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id);
 

@@ -223,7 +223,7 @@ public class EndToEndTests
         };
 
         StartProcess(process);
-        string? output = String.Empty;
+        string? output;
         // to wait till the process starts
         while (true)
         {
@@ -242,7 +242,7 @@ public class EndToEndTests
 
     private static async void StartProcess(Process process)
     {
-        Task.Run(() => { process.Start(); });
+        await Task.Run(() => { process.Start(); });
     }
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)

@@ -1,4 +1,4 @@
-using Azure.DataGateway.Config;
+using Azure.DataApiBuilder.Config;
 using CommandLine;
 using Hawaii.Cli.Models;
 
@@ -67,7 +67,7 @@ namespace Hawaii.Cli
                         args = new string[] { "--" + nameof(RuntimeConfigPath.ConfigFileName), options.Config };
                     }
 
-                    bool isSuccess = Azure.DataGateway.Service.Program.StartEngine(args);
+                    bool isSuccess = Azure.DataApiBuilder.Service.Program.StartEngine(args);
 
                     if (isSuccess)
                     {

@@ -206,19 +206,50 @@ public class EndToEndTests
     /// <summary>
     /// Test to verify the engine gets started using start command
     /// </summary>
-    [TestMethod]
-    public void TestStartEngine()
-    {
-        Thread th = new(StartEngineThread);
-        th.Start();
-        Assert.IsTrue(th.IsAlive);
-    }
+    // [TestMethod]
+    // public void TestStartEngine()
+    // {
+    //     Process process = new Process
+    //             {
+    //                 StartInfo =
+    //                     {
+    //                         FileName = @"Hawaii.Cli.exe",
+    //                         Arguments = "start --config hawaii-config.json",
+    //                         WindowStyle = ProcessWindowStyle.Hidden,
+    //                         UseShellExecute = false,
+    //                         RedirectStandardOutput = true,
+    //                         RedirectStandardError = true,
+    //                     }
+    //             };
 
-    private void StartEngineThread()
-    {
-        string[] startArgs = { "start", "--config", "hawaii-config.json" };
-        Program.Main(startArgs);
-    }
+    //             string stdoutText = string.Empty;
+    //             string stderrText = string.Empty;
+
+    //             process.OutputDataReceived += new DataReceivedEventHandler(
+    //                 (s, e) =>
+    //                 {
+    //                     stdoutText += e.Data;
+    //                 });
+
+    //             process.ErrorDataReceived += new DataReceivedEventHandler(
+    //                 (s, e) =>
+    //                 {
+    //                     stderrText += e.Data;
+    //                 });
+
+    //             process.Start();
+
+    //             // process.BeginOutputReadLine();
+    //             // process.BeginErrorReadLine();
+    //             var output = process.StandardOutput.ReadToEnd();
+    //             var err = process.StandardError.ReadToEnd();
+
+    //             // process.WaitForExit();
+    //             process.Kill();
+
+    //             Console.WriteLine(output+err);
+    //             Assert.IsTrue(output.Contains("Successfully completed runtime initialization."));
+    // }
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)
     {

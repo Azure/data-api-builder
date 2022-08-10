@@ -21,7 +21,7 @@ The following diagram illustrates the high-level architecture of the DAB CLI, id
 
 ::image::
 
-## Contributing to CLI
+## Contributing to the CLI
 
 Your feedback and contributions are key to its success.
 

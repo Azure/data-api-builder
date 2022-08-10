@@ -55,7 +55,7 @@ In the `data-source` section you have to specify the database type and the conne
 
 `database-type` can be any of the following:
 - `mssql`: for Azure SQL DB, Azure SQL MI or SQL Server
-- `cosmos`: for Azure Cosmos DB
+- `cosmos`: for Azure Cosmos DB (SQL API)
 - `postgresql`: for PostgreSQL
 - `mariadb`: for MariaDB
 - `mysql`: for MySQL

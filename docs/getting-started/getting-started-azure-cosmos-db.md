@@ -181,9 +181,9 @@ Use a GraphQL-capable REST client like Postman or Insomnia to query the database
 
 will return the first five books ordered by title in descending order.
 
-## GraphQL operations on entities relationships
+## GraphQL operations on entity relationships
 
-Everything up and working, and now you probably want to take advantage as much as possible of GraphQL capabilities to handle complex request in just one request.For example you may want to get all the Books in your library along with the Authors they have written. In order to achieve that you need to let Data API Builder know that you want that relationship to be available to be used in queries. We have defined the 
+With your GraphQL endpoint operational, you probably want to take advantage  of GraphQL's ability to handle complex requests.For example, you may want to get all the Books in your library along with the Authors they have written. In order to achieve that, you need to let Data API Builder know that you want that relationship to be available to be used in queries. We have defined the 
 data models in such a way that they can be queried at once.
 
 Using GraphQL you can now execute queries like:
@@ -209,11 +209,4 @@ Using GraphQL you can now execute queries like:
 This query will return List of books and its Authors.
 
 Congratulations, you have just created a fully working backend to support your modern applications!
-
-## Deploy on Azure
-
-
-
-## Conclusion
-
 

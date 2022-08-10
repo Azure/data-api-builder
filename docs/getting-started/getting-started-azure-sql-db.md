@@ -44,7 +44,7 @@ Execute the script in the SQL Server or Azure SQL database you decided to use, s
 
 ## Add Book and Author entities
 
-We want to expose the `books` and the `authors` table so that they can be used via REST or GraphQL. For doing that, all we need is to add the related information to the `entities` section of the configuration file.
+Now, you'll want to expose the `books` and the `authors` table as REST or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.
 
 Start by adding the `author` entity:
 

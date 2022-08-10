@@ -43,6 +43,12 @@ steps:
     projects: '**/*.csproj'
     arguments: '--configuration $(buildConfiguration)' # Update this to match your need
 
+- task: PowerShell@2
+  displayName: "checking out files"
+  inputs:
+    script: |
+      ls -a
+
 - task: DotNetCoreCLI@2
   displayName: "Run Unit Tests"
   inputs:

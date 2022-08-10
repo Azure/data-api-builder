@@ -630,6 +630,12 @@
     "Fungus": {
       "source": "fungi",
       "rest": true,
+      "graphql": {
+        "type": {
+          "singular": "fungus",
+          "plural": "fungi"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",

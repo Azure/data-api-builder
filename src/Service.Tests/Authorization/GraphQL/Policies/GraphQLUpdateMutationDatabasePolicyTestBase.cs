@@ -23,9 +23,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         [TestMethod]
         public async Task UpdateMutation_Success_Policy(string dbQuery, string roleName, bool isAuthenticated)
         {
-            string graphQLMutationName = "updateBook";
+            string graphQLMutationName = "updatebook";
             string graphQLMutation = @"mutation {
-                updateBook(
+                updatebook(
                     id: 9
                     item: {
                         title: ""UpdatedBookTitle"",

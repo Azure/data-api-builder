@@ -20,9 +20,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         [TestMethod]
         public async Task DeleteMutation_Policy(string dbQuery)
         {
-            string graphQLMutationName = "deleteBook";
+            string graphQLMutationName = "deletebook";
             string graphQLMutation = @"mutation {
-                deleteBook(id: 9)
+                deletebook(id: 9)
                 {
                     title,
                     publisher_id

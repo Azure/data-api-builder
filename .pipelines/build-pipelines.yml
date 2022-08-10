@@ -45,7 +45,9 @@ steps:
 
 - task: CmdLine@2
   inputs:
-    script: 'ls -a' 
+    script: |
+    cd src/out/tests/Release/net6.0/
+    ls -a
 
 - task: DotNetCoreCLI@2
   displayName: "Run Unit Tests"

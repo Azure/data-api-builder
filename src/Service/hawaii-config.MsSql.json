@@ -630,6 +630,10 @@
       "rest": true,
       "permissions": [
         {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }

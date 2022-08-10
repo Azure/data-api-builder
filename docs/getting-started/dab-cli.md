@@ -12,7 +12,7 @@ The Data API Builder CLI (**DAB CLI** or `DAB`) is a command line tool that stre
 - Add new entities
 - Update entity details
 - Add/update entity relationships
-- Configure the roles and permissions
+- Configure roles and their permissions
 - Run the Data API Builder engine
 
 ## Components of CLI

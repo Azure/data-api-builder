@@ -19,18 +19,14 @@ variables:
   # The counter is reset when the minor version is updated.
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']) , 0)]
   publishNugetToFeed: $(isNugetRelease)
-  # If this is a release, do not append the build number at the end as it will 
-  # generate the prerelease nuget version.
-  # ${{ if eq(variables['Build.SourceBranchName'], 'dev/jarupatj/version') }}:
-  #     dabVersion: '$(major).$(minor).$(patch)'
-  # ${{ else }}:
-  #     dabVersion: '$(major).$(minor).$(patch)-$(Build.BuildId)'
 
 steps:
+# If this is a release, do not append the build number at the end as it will 
+# generate the prerelease nuget version.
+# We cannot set this in variables section above because $(isNugetRelease) 
+# is not available at pipeline compilation time.
 - bash: |
     echo ISNUGETRELEASE = $ISNUGETRELEASE
-    echo publishNugetToFeed = $publishNugetToFeed
-    echo version = $(major).$(minor).$(patch)
     if [ "$ISNUGETRELEASE" = "true" ]
     then
       dabVersion=$(major).$(minor).$(patch)
@@ -39,117 +35,109 @@ steps:
     fi
     echo dabVersion = $dabVersion
     echo "##vso[task.setvariable variable=dabVersion]$dabVersion"
-  displayName: Set dab version value
+  displayName: Set dab version
 
-- script: |
-    echo "dabVersion is $(dabVersion)"
-    echo "publishNugetToFeed is $(publishNugetToFeed)"
-    echo "isNugetRelease is ${{ variables['publishNugetToFeed'] }}"
-    echo "isNugetRelease is ${{ variables.publishNugetToFeed }}"
-    echo "isNugetRelease is $(variables.publishNugetToFeed)"
-    echo "dabVersion ${{variables.dabVersion}}"
+- task: UseDotNet@2
+  displayName: Setup .NET SDK v6.0.x
+  inputs:
+    packageType: sdk
+    version: 6.0.x
+    installationPath: $(Agent.ToolsDirectory)/dotnet
 
-# - task: UseDotNet@2
-#   displayName: Setup .NET SDK v6.0.x
-#   inputs:
-#     packageType: sdk
-#     version: 6.0.x
-#     installationPath: $(Agent.ToolsDirectory)/dotnet
+- task: NuGetToolInstaller@1
 
-# - task: NuGetToolInstaller@1
+- task: NuGetCommand@2
+  inputs:
+    restoreSolution: '$(solution)'
 
-# - task: NuGetCommand@2
-#   inputs:
-#     restoreSolution: '$(solution)'
+- task: DotNetCoreCLI@2
+  displayName: Check formatting
+  inputs:
+    command: custom
+    custom: format
+    projects: '$(solution)'
+    arguments: '--verify-no-changes'
 
-# - task: DotNetCoreCLI@2
-#   displayName: Check formatting
-#   inputs:
-#     command: custom
-#     custom: format
-#     projects: '$(solution)'
-#     arguments: '--verify-no-changes'
+- task: DotNetCoreCLI@2
+  displayName: Build
+  inputs:
+    command: build
+    projects: '**/*.csproj'
+    arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion)' # Update this to match your need
 
-# - task: DotNetCoreCLI@2
-#   displayName: Build
-#   inputs:
-#     command: build
-#     projects: '**/*.csproj'
-#     arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion)' # Update this to match your need
+- task: DotNetCoreCLI@2
+  displayName: "Run Unit Tests"
+  inputs:
+    command: test
+    projects: '**/*Tests*.csproj'
+    arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
-# - task: DotNetCoreCLI@2
-#   displayName: "Run Unit Tests"
-#   inputs:
-#     command: test
-#     projects: '**/*Tests*.csproj'
-#     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+- task: DotNetCoreCLI@2
+  displayName: 'Creating Nuget Package'
+  inputs:
+    command: pack
+    packagesToPack: '**/Cli.csproj'
+    packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
+    nobuild: true
+    versioningScheme: byEnvVar
+    versionEnvVar: dabVersion
+    verbosityPack: 'minimal'
 
-# - task: DotNetCoreCLI@2
-#   displayName: 'Creating Nuget Package'
-#   inputs:
-#     command: pack
-#     packagesToPack: '**/Cli.csproj'
-#     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
-#     nobuild: true
-#     versioningScheme: byEnvVar
-#     versionEnvVar: dabVersion
-#     verbosityPack: 'minimal'
+# This task will authenticate and publish the NuGet Package to internal feed
+# To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.
+- task: NuGetAuthenticate@0
+  displayName: 'NuGet Authenticate'
+  condition: eq(variables.publishNugetToFeed, 'true')
 
-# # This task will authenticate and publish the NuGet Package to internal feed
-# # To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.
-# - task: NuGetAuthenticate@0
-#   displayName: 'NuGet Authenticate'
-#   condition: eq(variables.publishNugetToFeed, 'true')
+- task: NuGetCommand@2
+  displayName: 'Publish Nuget to Internal Feed'
+  condition: eq(variables.publishNugetToFeed, 'true')
+  inputs:
+    command: 'push'
+    feedsToUse: 'select'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: 'internal'
+    publishVstsFeed: CosmosDB/DataApiBuilder
+    versioningScheme: 'off'
+    allowPackageConflicts: false
 
-# - task: NuGetCommand@2
-#   displayName: 'Publish Nuget to Internal Feed'
-#   condition: eq(variables.publishNugetToFeed, 'true')
-#   inputs:
-#     command: 'push'
-#     feedsToUse: 'select'
-#     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
-#     nuGetFeedType: 'internal'
-#     publishVstsFeed: CosmosDB/DataApiBuilder
-#     versioningScheme: 'off'
-#     allowPackageConflicts: false
+- task: PublishCodeCoverageResults@1
+  displayName: 'Publish code coverage'
+  inputs:
+    codeCoverageTool: Cobertura
+    summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
-# - task: PublishCodeCoverageResults@1
-#   displayName: 'Publish code coverage'
-#   inputs:
-#     codeCoverageTool: Cobertura
-#     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+- task: ShellScript@2
+  displayName: "Package DAB to multiple platforms"
+  inputs:
+    scriptPath: publish.sh
+    args: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion)
 
-# - task: ShellScript@2
-#   displayName: "Package DAB to multiple platforms"
-#   inputs:
-#     scriptPath: publish.sh
-#     args: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion)
+# this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
+- task: PublishPipelineArtifact@1
+  displayName: "Upload build artifacts"
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)' 
 
-# # this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
-# - task: PublishPipelineArtifact@1
-#   displayName: "Upload build artifacts"
-#   inputs:
-#     targetPath: '$(Build.ArtifactStagingDirectory)' 
+# This task gets the current date and saves it to a variable so the docker task can use the build's
+# date and time as a tag.
+- task: PowerShell@2
+  displayName: "Get date for Docker image Tag"
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host "Setting up the date and time as a build variable for the Docker tag"
+      $date=$(Get-Date -format yyyyMMdd-HHmmss)
+      Write-Host "##vso[task.setvariable variable=BuildDate]$date"
 
-# # This task gets the current date and saves it to a variable so the docker task can use the build's
-# # date and time as a tag.
-# - task: PowerShell@2
-#   displayName: "Get date for Docker image Tag"
-#   inputs:
-#     targetType: 'inline'
-#     script: |
-#       Write-Host "Setting up the date and time as a build variable for the Docker tag"
-#       $date=$(Get-Date -format yyyyMMdd-HHmmss)
-#       Write-Host "##vso[task.setvariable variable=BuildDate]$date"
-
-# # Build a docker image and push it to the container registry.
-# - task: Docker@2
-#   displayName: "Build and push docker image to Azure Container Registry"
-#   inputs:
-#     containerRegistry: 'CosmosDB GraphQL/Hawaii'
-#     repository: 'hawaii/$(Build.SourceBranch)'
-#     command: 'buildAndPush'
-#     Dockerfile: '**/Dockerfile'
-#     tags: |
-#       $(BuildDate)-$(Build.SourceVersion)
-#       latest
+# Build a docker image and push it to the container registry.
+- task: Docker@2
+  displayName: "Build and push docker image to Azure Container Registry"
+  inputs:
+    containerRegistry: 'CosmosDB GraphQL/Hawaii'
+    repository: 'hawaii/$(Build.SourceBranch)'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: |
+      $(BuildDate)-$(Build.SourceVersion)
+      latest

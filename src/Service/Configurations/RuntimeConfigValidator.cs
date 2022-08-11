@@ -155,7 +155,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                     if (graphQLEntitySettings.Type is SingularPlural singularPlural)
                     {
-                        if( string.IsNullOrWhiteSpace(singularPlural.Singular))
+                        if (string.IsNullOrWhiteSpace(singularPlural.Singular))
                         {
                             throw new DataApiBuilderException(
                                     message: $"Entity {entityName} has an invalid singular name for GraphQL",
@@ -163,7 +163,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
 
-                        if( GraphQLNaming.ViolatesNameRequirements(singularPlural.Singular)
+                        if (GraphQLNaming.ViolatesNameRequirements(singularPlural.Singular)
                             || GraphQLNaming.ViolatesNamePrefixRequirements(singularPlural.Singular))
                         {
                             throw new DataApiBuilderException(
@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                  );
                         }
 
-                        if(!string.IsNullOrWhiteSpace(singularPlural.Plural) &&
+                        if (!string.IsNullOrWhiteSpace(singularPlural.Plural) &&
                             (GraphQLNaming.ViolatesNameRequirements(singularPlural.Plural)
                             || GraphQLNaming.ViolatesNamePrefixRequirements(singularPlural.Plural)))
                         {

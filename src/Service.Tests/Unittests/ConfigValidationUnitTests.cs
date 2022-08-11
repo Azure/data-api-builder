@@ -288,8 +288,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("@book", true, DisplayName = "InValid Singular Name - Starts with @")]
         [DataRow("_book", true, DisplayName = "Invalid Singular Name - Starts with _")]
         [DataRow("bo&ok", true, DisplayName = "Invalid Singular Name - Contains &")]
-        [DataRow("b!ook",  true, DisplayName = "Invalid Singular Name - Contains !")]
-        [DataRow("b ook",  true, DisplayName = "Invalid Singular Name - Contains space")]
+        [DataRow("b!ook", true, DisplayName = "Invalid Singular Name - Contains !")]
+        [DataRow("b ook", true, DisplayName = "Invalid Singular Name - Contains space")]
         public void ValidateSingularNameInGraphQLEntitySettings(string singularName, bool isExceptionExpected)
         {
             Dictionary<string, Entity> entityCollection = new();
@@ -323,8 +323,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("@book", true, DisplayName = "InValid Plural Name - Starts with @")]
         [DataRow("_book", true, DisplayName = "Invalid Plural Name - Starts with _")]
         [DataRow("bo&ok", true, DisplayName = "Invalid Plural Name - Contains &")]
-        [DataRow("b!ook",  true, DisplayName = "Invalid Plural Name - Contains !")]
-        [DataRow("b ook",  true, DisplayName = "Invalid Plural Name - Contains space")]
+        [DataRow("b!ook", true, DisplayName = "Invalid Plural Name - Contains !")]
+        [DataRow("b ook", true, DisplayName = "Invalid Plural Name - Contains space")]
         public void ValidatePluralNameInGraphQLEntitySettings(string pluralName, bool isExceptionExpected)
         {
             Dictionary<string, Entity> entityCollection = new();

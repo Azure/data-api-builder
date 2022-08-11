@@ -117,9 +117,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     INullableTypeNode targetField = relationship.Cardinality switch
                     {
                         Cardinality.One =>
-                            new NamedTypeNode(FormatNameForObject(targetEntityName, referencedEntity)),
+                            new NamedTypeNode(GetDefinedSingularName(targetEntityName, referencedEntity)),
                         Cardinality.Many =>
-                            new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(FormatNameForObject(targetEntityName, referencedEntity))),
+                            new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(GetDefinedSingularName(targetEntityName, referencedEntity))),
                         _ =>
                             throw new DataApiBuilderException(
                                 message: "Specified cardinality isn't supported",
@@ -136,7 +136,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         new NonNullTypeNode(targetField),
                         new List<DirectiveNode> {
                             new(RelationshipDirectiveType.DirectiveName,
-                                new ArgumentNode("target", FormatNameForObject(targetEntityName, referencedEntity)),
+                                new ArgumentNode("target", GetDefinedSingularName(targetEntityName, referencedEntity)),
                                 new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
                         });
 
@@ -158,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             // the top-level entity name value is used. No pluralization occurs.
             return new ObjectTypeDefinitionNode(
                 location: null,
-                name: new(value: FormatNameForObject(entityName, configEntity)),
+                name: new(value: GetDefinedSingularName(entityName, configEntity)),
                 description: null,
                 objectTypeDirectives,
                 new List<NamedTypeNode>(),

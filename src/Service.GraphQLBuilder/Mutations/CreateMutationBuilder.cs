@@ -257,7 +257,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             return new(
                 location: null,
-                new NameNode($"create{FormatNameForObject(name, entity)}"),
+                new NameNode($"create{GetDefinedSingularName(name.Value, entity)}"),
                 new StringValueNode($"Creates a new {name}"),
                 new List<InputValueDefinitionNode> {
                 new InputValueDefinitionNode(

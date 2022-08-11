@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             return new(
                 null,
-                new NameNode($"delete{FormatNameForObject(name, configEntity)}"),
+                new NameNode($"delete{GetDefinedSingularName(name.Value, configEntity)}"),
                 new StringValueNode($"Delete a {name}"),
                 inputValues,
                 new NamedTypeNode(name),

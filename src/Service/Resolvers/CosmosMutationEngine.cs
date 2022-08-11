@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Models;
@@ -66,14 +67,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return response.Resource;
         }
 
-        private static async Task<ItemResponse<JObject>> HandleDeleteAsync(IDictionary<string, object> queryArgs, Container container)
+        private static async Task<ItemResponse<JObject>> HandleDeleteAsync(IDictionary<string, object?> queryArgs, Container container)
         {
             string? partitionKey = null;
             string? id = null;
 
             if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj))
             {
-                id = idObj.ToString();
+                id = idObj?.ToString();
             }
 
             if (string.IsNullOrEmpty(id))
@@ -83,7 +84,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj))
             {
-                partitionKey = partitionKeyObj.ToString();
+                partitionKey = partitionKeyObj?.ToString();
             }
 
             if (string.IsNullOrEmpty(partitionKey))
@@ -94,9 +95,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return await container.DeleteItemAsync<JObject>(id, new PartitionKey(partitionKey));
         }
 
-        private static async Task<ItemResponse<JObject>> HandleCreateAsync(IDictionary<string, object> queryArgs, Container container)
+        private static async Task<ItemResponse<JObject>> HandleCreateAsync(IDictionary<string, object?> queryArgs, Container container)
         {
-            object item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+            object? item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
 
             JObject? input;
             // Variables were provided to the mutation
@@ -110,17 +111,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 input = (JObject?)ParseInlineInputItem(item);
             }
 
+            if (input is null)
+            {
+                throw new NullReferenceException("Failed to parse the input item for the request");
+            }
+
             return await container.CreateItemAsync(input);
         }
 
-        private static async Task<ItemResponse<JObject>> HandleUpdateAsync(IDictionary<string, object> queryArgs, Container container)
+        private static async Task<ItemResponse<JObject>> HandleUpdateAsync(IDictionary<string, object?> queryArgs, Container container)
         {
             string? partitionKey = null;
             string? id = null;
 
             if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj))
             {
-                id = idObj.ToString();
+                id = idObj?.ToString();
             }
 
             if (string.IsNullOrEmpty(id))
@@ -130,7 +136,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj))
             {
-                partitionKey = partitionKeyObj.ToString();
+                partitionKey = partitionKeyObj?.ToString();
             }
 
             if (string.IsNullOrEmpty(partitionKey))
@@ -138,7 +144,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new InvalidDataException("Partition Key field is mandatory");
             }
 
-            object item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+            object? item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
 
             JObject? input;
             // Variables were provided to the mutation
@@ -152,7 +158,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 input = (JObject?)ParseInlineInputItem(item);
             }
 
-            return await container.ReplaceItemAsync<JObject>(input, id, new PartitionKey(partitionKey), new ItemRequestOptions());
+            if (input is null)
+            {
+                throw new NullReferenceException("Failed to parse the input item for the request");
+            }
+
+            if (!input.ContainsKey(GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME))
+            {
+                input.Add(GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME, id);
+            }
+
+            return await container.ReplaceItemAsync(input, id, new PartitionKey(partitionKey), new ItemRequestOptions());
         }
 
         /// <summary>

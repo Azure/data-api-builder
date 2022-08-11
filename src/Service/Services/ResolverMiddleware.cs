@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Resolvers;
+using HotChocolate;
 using HotChocolate.Execution;
+using HotChocolate.Execution.Processing;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
@@ -60,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
             {
-                IDictionary<string, object?> parameters = GetParametersFromContext(context);
+                IDictionary<string, object?> parameters = GetArgumentsWithVariableValues(context);
 
                 Tuple<JsonDocument, IMetadata> result = await _mutationEngine.ExecuteAsync(context, parameters);
                 context.Result = result.Item1;
@@ -68,7 +71,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
             else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
-                IDictionary<string, object?> parameters = GetParametersFromContext(context);
+                IDictionary<string, object?> parameters = GetArgumentsWithVariableValues(context);
 
                 if (context.Selection.Type.IsListType())
                 {
@@ -284,12 +287,36 @@ namespace Azure.DataApiBuilder.Service.Services
 
         public static InputObjectType InputObjectTypeFromIInputField(IInputField field)
         {
-            return (InputObjectType)(InnerMostType(field.Type));
+            return (InputObjectType)InnerMostType(field.Type);
         }
 
-        protected static IDictionary<string, object?> GetParametersFromContext(IMiddlewareContext context)
+        private static IDictionary<string, object?> GetArgumentsWithVariableValues(IMiddlewareContext context)
         {
-            return GetParametersFromSchemaAndQueryFields(context.Selection.Field, context.Selection.SyntaxNode, context.Variables);
+            IArgumentMap args = ((ISelection)context.Selection).Arguments;
+
+            if (!args.TryCoerceArguments(context, out IReadOnlyDictionary<NameString, ArgumentValue>? coercedArgs))
+            {
+                throw new InvalidOperationException("Unable to parse the variables into arguments for the current request");
+            }
+
+            return coercedArgs.ToDictionary(item => item.Key.Value, item => ExtractRawValue(item.Value.ValueLiteral));
+        }
+
+        private static object? ExtractRawValue(IValueNode? value)
+        {
+            return value switch
+            {
+                null => null,
+                NullValueNode => null,
+                IntValueNode i => i.ToInt32(),
+                StringValueNode s => s.Value,
+                BooleanValueNode b => b.Value,
+                FloatValueNode f => f.Value,
+                EnumValueNode e => e.Value,
+                ListValueNode list => list.Items.Select(ExtractRawValue).ToList(),
+                ObjectValueNode obj => obj.Fields.ToDictionary(field => field.Name.Value, field => ExtractRawValue(field.Value)),
+                _ => value
+            };
         }
 
         /// <summary>

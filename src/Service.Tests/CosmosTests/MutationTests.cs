@@ -137,7 +137,7 @@ mutation {{
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new(), failOnError: false);
             string errorMessage = response[0].GetProperty("message").ToString();
             Assert.IsTrue(errorMessage.Contains("The argument `item` is required."), $"The actual error is {errorMessage}");
         }
@@ -154,7 +154,7 @@ mutation {{
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new(), failOnError: false);
             Assert.IsTrue(response[0].GetProperty("message").ToString().Contains("The input content is invalid because the required properties - 'id; ' - are missing"));
         }
 
@@ -235,8 +235,65 @@ mutation {{
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", mutation, variables: new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", mutation, variables: new(), failOnError: false);
             Assert.AreEqual("The argument `_partitionKeyValue` is required.", response[0].GetProperty("message").ToString());
+        }
+
+        [TestMethod]
+        public async Task CanUpdateItemWithInlineVariables()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            var input = new
+            {
+                id,
+                name = "test_name"
+            };
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
+
+            const string newName = "new_name";
+            string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!, $name: String) {
+    updatePlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: { name: $name }) {
+        id
+        name
+     }
+}";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "name", newName } });
+
+            // Validate results
+            Assert.AreEqual(newName, response.GetProperty("name").GetString());
+            Assert.AreNotEqual(input.name, response.GetProperty("name").GetString());
+        }
+
+        [TestMethod]
+        public async Task CreateThenReadReturnsExpectedData()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            string name = "test_name";
+
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", @"
+mutation ($id: ID, $name: String!, $stars: [CreateStarInput]) {
+    createPlanet (item: { id: $id, name: $name, stars: $stars }) {
+        id
+        name
+    }
+}", new() { { "id", id }, { "name", name }, { "stars", new[] { new { id = "TestStar" } } } });
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", @"
+query getPlanet($id: ID, $partitionKeyValue: String) {
+    planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) {
+        id
+        name
+    }
+}
+", new() { { "id", id }, { "partitionKeyValue", id } });
+
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+            Assert.AreEqual(name, response.GetProperty("name").GetString());
         }
 
         /// <summary>

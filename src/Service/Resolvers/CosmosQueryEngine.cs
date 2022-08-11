@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
@@ -59,9 +60,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
             (string idValue, string partitionKeyValue) = await GetIdAndPartitionKey(parameters, container, structure);
 
-            foreach (KeyValuePair<string, object> parameterEntry in structure.Parameters)
+            foreach ((string key, object value) in structure.Parameters)
             {
-                querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
+                _ = querySpec.WithParameter("@" + key, value);
             }
 
             if (!string.IsNullOrEmpty(partitionKeyValue))
@@ -71,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (structure.IsPaginated)
             {
-                queryRequestOptions.MaxItemCount = (int?)structure.MaxItemCount;
+                queryRequestOptions.MaxItemCount = structure.MaxItemCount;
                 requestContinuation = Base64Decode(structure.Continuation);
             }
 
@@ -235,19 +236,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string? partitionKeyValue = null, idValue = null;
             string partitionKeyPath = await GetPartitionKeyPath(container);
 
-            foreach (KeyValuePair<string, object?> parameterEntry in parameters)
+            foreach ((string key, object? value) in parameters)
             {
                 // id and filter args can't exist at the same time
-                if (parameterEntry.Key == QueryBuilder.ID_FIELD_NAME)
+                if (key == QueryBuilder.ID_FIELD_NAME)
                 {
                     // Set id value if id is passed in as an argument
-                    idValue = parameterEntry.Value?.ToString();
+                    idValue = value?.ToString();
                 }
-                else if (parameterEntry.Key == QueryBuilder.FILTER_FIELD_NAME)
+                else if (key == QueryBuilder.FILTER_FIELD_NAME)
                 {
                     // Mapping partitionKey and id value from filter object if filter keyword exists in args
-                    partitionKeyValue = GetPartitionKeyValue(partitionKeyPath, parameterEntry.Value);
-                    idValue = GetIdValue(parameterEntry.Value);
+                    partitionKeyValue = GetPartitionKeyValue(partitionKeyPath, value);
+                    idValue = GetIdValue(value);
                 }
             }
 
@@ -278,21 +279,21 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             string currentEntity = (partitionKeyPath.Split("/").Length > 1) ? partitionKeyPath.Split("/")[1] : string.Empty;
 
-            foreach (ObjectFieldNode item in (IList<ObjectFieldNode>)parameter)
+            foreach ((string name, object? value) in (IDictionary<string, object?>)parameter)
             {
                 if (partitionKeyPath == string.Empty
-                    && string.Equals(item.Name.Value, "eq", StringComparison.OrdinalIgnoreCase))
+                    && string.Equals(name, "eq", StringComparison.OrdinalIgnoreCase))
                 {
-                    return item.Value.Value?.ToString();
+                    return value?.ToString();
                 }
 
                 if (partitionKeyPath != string.Empty
-                    && string.Equals(item.Name.Value, currentEntity, StringComparison.OrdinalIgnoreCase))
+                    && string.Equals(name, currentEntity, StringComparison.OrdinalIgnoreCase))
                 {
                     // Recursion to mapping next inner object
                     int index = partitionKeyPath.IndexOf(currentEntity);
                     string newPartitionKeyPath = partitionKeyPath.Substring(index + currentEntity.Length);
-                    return GetPartitionKeyValue(newPartitionKeyPath, item.Value.Value);
+                    return GetPartitionKeyValue(newPartitionKeyPath, value);
                 }
             }
 
@@ -310,12 +311,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             if (parameter != null)
             {
-                foreach (ObjectFieldNode item in (IList<ObjectFieldNode>)parameter)
+                foreach ((string key, object? value) in (IDictionary<string, object?>)parameter)
                 {
-                    if (string.Equals(item.Name.Value, "id", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(key, GraphQLUtils.DEFAULT_PRIMARY_KEY_NAME, StringComparison.OrdinalIgnoreCase))
                     {
-                        IList<ObjectFieldNode> idValueObj = (IList<ObjectFieldNode>)item.Value.Value;
-                        return idValueObj.FirstOrDefault(x => x.Name.Value == "eq")?.Value.Value.ToString();
+                        return value switch
+                        {
+                            null => null,
+                            IDictionary<string, object?> nested => nested.FirstOrDefault(x => x.Key == "eq").Value?.ToString(),
+                            _ => value.ToString()
+                        };
                     }
                 }
             }
@@ -323,7 +328,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return null;
         }
 
-        private static string Base64Encode(string plainText)
+        private static string? Base64Encode(string plainText)
         {
             if (plainText == default)
             {
@@ -334,7 +339,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return Convert.ToBase64String(plainTextBytes);
         }
 
-        private static string Base64Decode(string base64EncodedData)
+        private static string? Base64Decode(string base64EncodedData)
         {
             if (base64EncodedData == default)
             {

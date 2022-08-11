@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -100,16 +101,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 queryParams.Remove(QueryBuilder.PARTITION_KEY_FIELD_NAME);
             }
 
-            if (queryParams.ContainsKey("orderBy"))
+            if (queryParams.ContainsKey(QueryBuilder.ORDER_BY_FIELD_NAME))
             {
-                object? orderByObject = queryParams["orderBy"];
+                object? orderByObject = queryParams[QueryBuilder.ORDER_BY_FIELD_NAME];
 
                 if (orderByObject != null)
                 {
-                    OrderByColumns = ProcessGraphQLOrderByArg((List<ObjectFieldNode>)orderByObject);
+                    OrderByColumns = ProcessGraphQLOrderByArg((IDictionary<string, object?>)orderByObject);
                 }
 
-                queryParams.Remove("orderBy");
+                queryParams.Remove(QueryBuilder.ORDER_BY_FIELD_NAME);
             }
 
             if (queryParams.ContainsKey(QueryBuilder.FILTER_FIELD_NAME))
@@ -118,10 +119,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (filterObject != null)
                 {
-                    List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-                    Predicates.Add(GQLFilterParser.Parse(
-                        _context,
-                        filterArgumentSchema: selection.Field.Arguments[QueryBuilder.FILTER_FIELD_NAME],
+                    IDictionary<string, object?> filterFields = (IDictionary<string, object?>)filterObject;
+                    Predicates.Add(GraphQLFilterParsers.Parse(
                         fields: filterFields,
                         schemaName: string.Empty,
                         tableName: _containerAlias,
@@ -147,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Create a list of orderBy columns from the orderBy argument
         /// passed to the gql query
         /// </summary>
-        private List<OrderByColumn> ProcessGraphQLOrderByArg(List<ObjectFieldNode> orderByFields)
+        private List<OrderByColumn> ProcessGraphQLOrderByArg(IDictionary<string, object?> orderByFields)
         {
             // Create list of primary key columns
             // we always have the primary keys in
@@ -155,25 +154,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // of tie breaking and pagination
             List<OrderByColumn> orderByColumnsList = new();
 
-            foreach (ObjectFieldNode field in orderByFields)
+            foreach ((string fieldName, object? value) in orderByFields)
             {
-                if (field.Value is NullValueNode)
+                if (value is null)
                 {
                     continue;
                 }
 
-                string fieldName = field.Name.ToString();
-
-                EnumValueNode enumValue = (EnumValueNode)field.Value;
-
-                if (enumValue.Value == $"{OrderBy.DESC}")
-                {
-                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName, direction: OrderBy.DESC));
-                }
-                else
-                {
-                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName));
-                }
+                OrderBy direction = Enum.Parse<OrderBy>((string)value);
+                orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName, direction: direction));
             }
 
             return orderByColumnsList;

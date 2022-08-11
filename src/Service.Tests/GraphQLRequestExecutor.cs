@@ -1,11 +1,14 @@
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests
 {
@@ -18,7 +21,8 @@ namespace Azure.DataApiBuilder.Service.Tests
             string query,
             Dictionary<string, object> variables = null,
             string authToken = null,
-            string clientRoleHeader = null)
+            string clientRoleHeader = null,
+            bool failOnError = true)
         {
             object payload = variables == null ?
                 new { query } :
@@ -54,6 +58,11 @@ namespace Azure.DataApiBuilder.Service.Tests
 
             if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
             {
+                if (failOnError)
+                {
+                    throw new AssertFailedException($"Errors were in the response.{Environment.NewLine}{JsonSerializer.Serialize(errors, new JsonSerializerOptions { WriteIndented = true }).ToString()}");
+                }
+
                 // to validate expected errors and error message
                 return errors;
             }

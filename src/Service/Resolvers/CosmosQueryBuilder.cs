@@ -108,7 +108,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             string predicateString;
-            if (Build(predicate.Right).Equals(GQLFilterParser.NullStringValue))
+            if (Build(predicate.Right).Equals(GraphQLFilterParsers.NullStringValue))
             {
                 predicateString = $" {Build(predicate.Op)} IS_NULL({Build(predicate.Left)})";
             }

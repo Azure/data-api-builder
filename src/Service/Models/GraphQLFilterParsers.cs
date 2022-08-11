@@ -1,17 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
-using HotChocolate.Resolvers;
-using HotChocolate.Types;
 
 namespace Azure.DataApiBuilder.Service.Models
 {
     /// <summary>
-    /// Contains methods to parse a GQL filter parameter
+    /// Contains methods to parse a GraphQL filter parameter
     /// </summary>
-    public static class GQLFilterParser
+    public static class GraphQLFilterParsers
     {
         public static readonly string NullStringValue = "NULL";
 
@@ -25,31 +23,20 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <param name="table">The table underlying the *FilterInput being processed</param>
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
         public static Predicate Parse(
-            IMiddlewareContext ctx,
-            IInputField filterArgumentSchema,
-            List<ObjectFieldNode> fields,
+            IDictionary<string, object?> fields,
             string schemaName,
             string tableName,
             string tableAlias,
             TableDefinition table,
             Func<object, string> processLiterals)
         {
-            InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
-
             List<PredicateOperand> predicates = new();
-            foreach (ObjectFieldNode field in fields)
+            foreach ((string name, object? fieldValue) in fields)
             {
-                object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
-                    value: field.Value,
-                    argumentSchema: filterArgumentObject.Fields[field.Name.Value],
-                    variables: ctx.Variables);
-
                 if (fieldValue is null)
                 {
                     continue;
                 }
-
-                string name = field.Name.ToString();
 
                 bool fieldIsAnd = string.Equals(name, $"{PredicateOperation.AND}", StringComparison.OrdinalIgnoreCase);
                 bool fieldIsOr = string.Equals(name, $"{PredicateOperation.OR}", StringComparison.OrdinalIgnoreCase);
@@ -58,11 +45,8 @@ namespace Azure.DataApiBuilder.Service.Models
                 {
                     PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
 
-                    List<IValueNode> otherPredicates = (List<IValueNode>)fieldValue;
+                    IEnumerable<object> otherPredicates = (IEnumerable<object>)fieldValue;
                     predicates.Push(new PredicateOperand(ParseAndOr(
-                        ctx,
-                        argumentSchema: filterArgumentObject.Fields[name],
-                        filterArgumentSchema: filterArgumentSchema,
                         otherPredicates,
                         schemaName,
                         tableName,
@@ -73,10 +57,8 @@ namespace Azure.DataApiBuilder.Service.Models
                 }
                 else
                 {
-                    List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
+                    IDictionary<string, object?> subfields = (IDictionary<string, object?>)fieldValue;
                     predicates.Push(new PredicateOperand(ParseScalarType(
-                        ctx,
-                        argumentSchema: filterArgumentObject.Fields[name],
                         name,
                         subfields,
                         schemaName,
@@ -102,10 +84,8 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <param name="tableAlias">The alias of the table underlying the *FilterInput being processed</param>
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
         private static Predicate ParseScalarType(
-            IMiddlewareContext ctx,
-            IInputField argumentSchema,
             string name,
-            List<ObjectFieldNode> fields,
+            IDictionary<string, object?> fields,
             string schemaName,
             string tableName,
             string tableAlias,
@@ -113,7 +93,7 @@ namespace Azure.DataApiBuilder.Service.Models
         {
             Column column = new(schemaName, tableName, columnName: name, tableAlias);
 
-            return FieldFilterParser.Parse(ctx, argumentSchema, column, fields, processLiterals);
+            return FieldFilterParser.Parse(column, fields, processLiterals);
         }
 
         /// <summary>
@@ -135,10 +115,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <param name="op">The operation (and or or)</param>
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
         private static Predicate ParseAndOr(
-            IMiddlewareContext ctx,
-            IInputField argumentSchema,
-            IInputField filterArgumentSchema,
-            List<IValueNode> fields,
+            IEnumerable<object> fields,
             string schemaName,
             string tableName,
             string tableAlias,
@@ -146,28 +123,15 @@ namespace Azure.DataApiBuilder.Service.Models
             PredicateOperation op,
             Func<object, string> processLiterals)
         {
-            if (fields.Count == 0)
+            if (!fields.Any())
             {
                 return Predicate.MakeFalsePredicate();
             }
 
-            List<PredicateOperand> operands = new();
-            foreach (IValueNode field in fields)
-            {
-                object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
-                    value: field,
-                    argumentSchema: argumentSchema,
-                    ctx.Variables);
-
-                if (fieldValue is null)
-                {
-                    continue;
-                }
-
-                List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
-                operands.Add(new PredicateOperand(Parse(ctx, filterArgumentSchema, subfields, schemaName, tableName, tableAlias, table, processLiterals)));
-            }
-
+            List<PredicateOperand> operands = new(
+                fields.Cast<IDictionary<string, object?>>()
+                .Select(field => new PredicateOperand(Parse(field, schemaName, tableName, tableAlias, table, processLiterals)))
+            );
             return MakeChainPredicate(operands, op);
         }
 
@@ -200,109 +164,6 @@ namespace Azure.DataApiBuilder.Service.Models
                 new PredicateOperand(MakeChainPredicate(operands, op, pos + 1, false)),
                 addParenthesis: addParenthesis && operands.Count > 1
             );
-        }
-    }
-
-    public static class FieldFilterParser
-    {
-        /// <summary>
-        /// Parse a scalar field into a predicate
-        /// </summary>
-        /// <param name="ctx">The GraphQL context, used to get the query variables</param>
-        /// <param name="argumentSchema">An IInputField object which describes the schema of the scalar input argument (e.g. IntFilterInput)</param>
-        /// <param name="column">The table column targeted by the field</param>
-        /// <param name="fields">The subfields of the scalar field</param>
-        /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
-        public static Predicate Parse(
-            IMiddlewareContext ctx,
-            IInputField argumentSchema,
-            Column column,
-            List<ObjectFieldNode> fields,
-            Func<object, string> processLiterals)
-        {
-            List<PredicateOperand> predicates = new();
-
-            InputObjectType argumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(argumentSchema);
-            foreach (ObjectFieldNode field in fields)
-            {
-                string name = field.Name.ToString();
-                object? value = ResolverMiddleware.ExtractValueFromIValueNode(
-                    value: field.Value,
-                    argumentSchema: argumentObject.Fields[field.Name.Value],
-                    variables: ctx.Variables);
-
-                bool processLiteral = true;
-
-                if (value is null)
-                {
-                    continue;
-                }
-
-                PredicateOperation op;
-                switch (name)
-                {
-                    case "eq":
-                        op = PredicateOperation.Equal;
-                        break;
-                    case "neq":
-                        op = PredicateOperation.NotEqual;
-                        break;
-                    case "lt":
-                        op = PredicateOperation.LessThan;
-                        break;
-                    case "gt":
-                        op = PredicateOperation.GreaterThan;
-                        break;
-                    case "lte":
-                        op = PredicateOperation.LessThanOrEqual;
-                        break;
-                    case "gte":
-                        op = PredicateOperation.GreaterThanOrEqual;
-                        break;
-                    case "contains":
-                        op = PredicateOperation.LIKE;
-                        value = $"%{EscapeLikeString((string)value)}%";
-                        break;
-                    case "notContains":
-                        op = PredicateOperation.NOT_LIKE;
-                        value = $"%{EscapeLikeString((string)value)}%";
-                        break;
-                    case "startsWith":
-                        op = PredicateOperation.LIKE;
-                        value = $"{EscapeLikeString((string)value)}%";
-                        break;
-                    case "endsWith":
-                        op = PredicateOperation.LIKE;
-                        value = $"%{EscapeLikeString((string)value)}";
-                        break;
-                    case "isNull":
-                        processLiteral = false;
-                        bool isNull = (bool)value;
-                        op = isNull ? PredicateOperation.IS : PredicateOperation.IS_NOT;
-                        value = GQLFilterParser.NullStringValue;
-                        break;
-                    default:
-                        throw new NotSupportedException($"Operation {name} on int type not supported.");
-                }
-
-                predicates.Push(new PredicateOperand(new Predicate(
-                    new PredicateOperand(column),
-                    op,
-                    new PredicateOperand(processLiteral ? $"@{processLiterals(value)}" : value.ToString()))
-                ));
-            }
-
-            return GQLFilterParser.MakeChainPredicate(predicates, PredicateOperation.AND);
-        }
-
-        private static string EscapeLikeString(string input)
-        {
-            input = input.Replace(@"\", @"\\");
-            input = input.Replace(@"%", @"\%");
-            input = input.Replace(@"[", @"\[");
-            input = input.Replace(@"]", @"\]");
-            input = input.Replace(@"_", @"\_");
-            return input;
         }
     }
 }

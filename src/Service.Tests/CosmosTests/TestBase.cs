@@ -125,10 +125,11 @@ type Star @model {
         /// <param name="query"> The GraphQL query/mutation</param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns></returns>
-        internal static Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null)
+        internal static Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null, bool failOnError = true)
         {
             RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
-            return GraphQLRequestExecutor.PostGraphQLRequestAsync(_client, configProvider, queryName, query, variables);
+            return GraphQLRequestExecutor.PostGraphQLRequestAsync(_client, configProvider, queryName, query, variables, failOnError: failOnError);
+
         }
 
         internal static async Task<JsonDocument> ExecuteCosmosRequestAsync(string query, int pagesize, string continuationToken, string containerName)

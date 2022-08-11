@@ -364,15 +364,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (filterObject != null)
                 {
-                    List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-                    Predicates.Add(GQLFilterParser.Parse(_ctx,
-                                                         filterArgumentSchema: queryArgumentSchemas[QueryBuilder.FILTER_FIELD_NAME],
-                                                         fields: filterFields,
-                                                         schemaName: DatabaseObject.SchemaName,
-                                                         tableName: DatabaseObject.Name,
-                                                         tableAlias: TableAlias,
-                                                         table: GetUnderlyingTableDefinition(),
-                                                         processLiterals: MakeParamWithValue));
+                    IDictionary<string, object?> filterFields = (IDictionary<string, object?>)filterObject;
+                    Predicates.Add(GraphQLFilterParsers.Parse(
+                        fields: filterFields,
+                        schemaName: DatabaseObject.SchemaName,
+                        tableName: DatabaseObject.Name,
+                        tableAlias: TableAlias,
+                        table: GetUnderlyingTableDefinition(),
+                        processLiterals: MakeParamWithValue));
                 }
             }
 
@@ -500,7 +499,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             try
             {
                 string parameterName;
-                if (value != null)
+                if (value is not null)
                 {
                     parameterName = MakeParamWithValue(
                         GetParamAsColumnSystemType(value.ToString()!, backingColumn));

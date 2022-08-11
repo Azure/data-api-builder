@@ -135,7 +135,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     {
                         ValidateNameRequirements(graphQLName);
                     }
-                    else if(graphQLSettings.Type is SingularPlural singularPluralSettings)
+                    else if (graphQLSettings.Type is SingularPlural singularPluralSettings)
                     {
                         ValidateNameRequirements(singularPluralSettings.Singular);
 

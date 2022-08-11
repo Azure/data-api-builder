@@ -16,7 +16,7 @@ You can install the DAB CLI using [.NET tools](https://docs.microsoft.com/en-us/
 To install this tool globally, use:
 
 ```dotnetcli
-dotnet tool install -g --add-source ./ dab-cli --version <version_number>
+dotnet tool install -g --add-source ./ dab --version <version_number>
 ```
 
 ### Update the package version

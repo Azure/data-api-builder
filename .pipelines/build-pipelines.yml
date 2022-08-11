@@ -28,11 +28,13 @@ variables:
 
 steps:
 - bash: |
-    if ($ISNUGETRELEASE -eq 'true') {
+    echo $ISNUGETRELEASE
+    if [ "$ISNUGETRELEASE" = "true" ]
+    then
       dabVersion = $MAJOR.$MINOR.$PATCH
-    } else {
+    else
       dabVersion = $MAJOR.$MINOR.$PATCH-$BUILD_BUILDID
-    }
+    fi
     echo $dabVersion
     echo "##vso[task.setvariable dabVersion=one]$dabVersion"
   displayName: Set dab version value

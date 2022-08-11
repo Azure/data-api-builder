@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
-using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
 using static Cli.Utils;
 using Action = Azure.DataApiBuilder.Config.Action;
 

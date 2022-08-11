@@ -32,7 +32,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             DatabaseType databaseType,
             IDictionary<string, Entity> entities)
         {
-            Entity entity = entities[ObjectTypeToEntityName(objectTypeDefinitionNode)];
             NameNode inputName = GenerateInputTypeName(name.Value);
 
             if (inputs.ContainsKey(inputName))
@@ -62,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         }
                     }
 
-                    return GenerateSimpleInputType(name, f, entity);
+                    return GenerateSimpleInputType(name, f);
                 });
 
             InputObjectTypeDefinitionNode input =
@@ -115,7 +114,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             return true;
         }
 
-        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, Entity entity)
+        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f)
         {
             IValueNode? defaultValue = null;
 

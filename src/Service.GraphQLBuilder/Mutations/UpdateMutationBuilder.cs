@@ -49,7 +49,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             IDictionary<string, Entity> entities,
             DatabaseType databaseType)
         {
-            Entity entity = entities[ObjectTypeToEntityName(objectTypeDefinitionNode)];
             NameNode inputName = GenerateInputTypeName(name.Value);
 
             if (inputs.ContainsKey(inputName))
@@ -72,7 +71,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         }
                     }
 
-                    return GenerateSimpleInputType(name, f, entity, databaseType);
+                    return GenerateSimpleInputType(name, f, databaseType);
                 });
 
             InputObjectTypeDefinitionNode input =
@@ -88,12 +87,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             return input;
         }
 
-        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, Entity entity, DatabaseType databaseType)
+        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, DatabaseType databaseType)
         {
             return new(
                 location: null,
                 f.Name,
-                new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value, entity)}"),
+                new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
                 /// There is a different between Cosmos and relational databases on generating required simple field types for update mutations.
                 /// Cosmos is calling replace item whereas for sql is doing incremental update.
                 /// That's why sql allows nullable update input fields even for non-nullable simple fields. 
@@ -113,8 +112,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             DatabaseType databaseType)
         {
             InputObjectTypeDefinitionNode node;
-            Entity entity = entities[typeName];
-            NameNode inputTypeName = GenerateInputTypeName(typeName, entity);
+            NameNode inputTypeName = GenerateInputTypeName(typeName);
 
             if (!inputs.ContainsKey(inputTypeName))
             {

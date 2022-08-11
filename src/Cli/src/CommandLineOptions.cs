@@ -13,7 +13,7 @@ namespace Cli
             Config = config;
         }
 
-        [Option("config", Required = false, HelpText = "Path to config file. " +
+        [Option('c', "config", Required = false, HelpText = "Path to config file. " +
             "Defaults to 'dab-config.json' unless 'dab-config.DAB_ENVIRONMENT.json' exists," +
             " where DAB_ENVIRONMENT is an environment variable.")]
         public string? Config { get; }

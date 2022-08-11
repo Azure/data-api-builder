@@ -96,6 +96,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             ValidateAuthenticationConfig();
             ValidateEntityNamesInConfig(runtimeConfig.Entities);
+            ValdiateGraphQLSettingsForEntitiesInConfig(runtimeConfig.Entities);
         }
 
         /// <summary>
@@ -117,6 +118,48 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
             }
+        }
+
+        /// <summary>
+        /// Validates that when GraphQL is an object, either a valid type string or singular name is defined
+        /// Empty string or whitespaces are considered to be invalid. 
+        /// </summary>
+        /// <param name="entityCollection">Dictionary of entities with their names defined in the config</param>
+        /// <exception cref="DataApiBuilderException"> </exception>
+        public static void ValdiateGraphQLSettingsForEntitiesInConfig(Dictionary<string, Entity> entityCollection)
+        {
+            foreach (KeyValuePair<string, Entity> entityEntry in entityCollection)
+            {
+                string entityName = entityEntry.Key;
+                Entity entity = entityEntry.Value;
+
+                if (entity.GraphQL is null || entity.GraphQL is bool)
+                {
+                    continue;
+                }
+
+                if (entity.GraphQL is GraphQLEntitySettings graphQLEntitySettings && graphQLEntitySettings is not null)
+                {
+                    if (graphQLEntitySettings.Type is string type && string.IsNullOrWhiteSpace(type))
+                    {
+                        throw new DataApiBuilderException(
+                                message: $"Entity {entityName} has an invalid string for GraphQL",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    }
+
+                    if (graphQLEntitySettings.Type is SingularPlural singularPlural && string.IsNullOrWhiteSpace(singularPlural.Singular))
+                    {
+                        throw new DataApiBuilderException(
+                                message: $"Entity {entityName} has an invalid singular name for GraphQL",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    }
+
+                }
+
+            }
+            
         }
 
         private void ValidateAuthenticationConfig()

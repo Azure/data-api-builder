@@ -75,7 +75,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         }
 
         /// <summary>
-        /// Creates an entity with the defined singular and plural entity names.
+        /// Creates an entity with a SingularPlural GraphQL type.
         /// </summary>
         /// <param name="singularNameForEntity"> Singular name defined by user in the config.</param>
         /// <param name="pluralNameForEntity"> Plural name defined by user in the config.</param>
@@ -84,6 +84,21 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
             return new Entity(Source: "foo",
                               Rest: null,
                               GraphQL: new GraphQLEntitySettings(new SingularPlural(singularNameForEntity, pluralNameForEntity)),
+                              Permissions: Array.Empty<PermissionSetting>(),
+                              Relationships: new(),
+                              Mappings: new());
+        }
+
+        /// <summary>
+        /// Creates an entity with a string GraphQL type.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public static Entity GenerateEntityWithStringType(string type)
+        {
+            return new Entity(Source: "foo",
+                              Rest: null,
+                              GraphQL: new GraphQLEntitySettings(type),
                               Permissions: Array.Empty<PermissionSetting>(),
                               Relationships: new(),
                               Mappings: new());

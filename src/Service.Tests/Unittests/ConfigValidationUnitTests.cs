@@ -5,6 +5,7 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
+using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -238,5 +239,73 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection);
         }
+
+        [DataTestMethod]
+        [DataRow("book", "books", false, DisplayName = "Valid GraphQL Settings - Singular and Plural specified")]
+        [DataRow("book", null, false, DisplayName = "Valid GraphQL Settings - Singular specified")]
+        [DataRow(null, null, true, DisplayName = "Invalid GraphQL Settings - Both not specified")]
+        [DataRow(null, "books", true, DisplayName = "Invalid GraphQL Settings - Singular not specified")]
+        [DataRow(" ", "books", true, DisplayName = "Invalid GraphQL Settings - Singular just contains whitespaces")]
+        [DataRow("", "books", true, DisplayName = "Invalid GraphQL Settings - Singular is an empty string")]
+        public void ValidateSingularPluralGraphQLSettingsInEntity(
+                string singularName,
+                string pluralName,
+                bool isExceptionExpected)
+        {
+            Dictionary<string, Entity> entityCollection = new();
+            entityCollection.Add("book", GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, pluralName));
+            if (isExceptionExpected)
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                    () => RuntimeConfigValidator.ValdiateGraphQLSettingsForEntitiesInConfig(entityCollection));
+                Assert.AreEqual($"Entity book has an invalid singular name for GraphQL", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                try
+                {
+                    RuntimeConfigValidator.ValdiateGraphQLSettingsForEntitiesInConfig(entityCollection);
+                    
+                } catch (System.Exception ex) {
+                    Assert.Fail("Exception thrown for a valid SingularPlural GraphQL type");
+                }
+
+            }
+
+        }
+
+        [DataTestMethod]
+        [DataRow("books", false,DisplayName = "Valid GraphQL Type ")]
+        [DataRow("", true, DisplayName = "Invalid GraphQL Type - Empty String")]
+        [DataRow("  ", true, DisplayName = "Invalid GraphQL Type - Just Whitespaces")]
+        public void ValidateStringGraphQLSettingsInEntity(string type, bool isExceptionExpected)
+        {
+            Dictionary<string, Entity> entityCollection = new();
+            entityCollection.Add("book", GraphQLTestHelpers.GenerateEntityWithStringType(type));
+            if (isExceptionExpected)
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                    () => RuntimeConfigValidator.ValdiateGraphQLSettingsForEntitiesInConfig(entityCollection));
+                Assert.AreEqual($"Entity book has an invalid string for GraphQL", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                try
+                {
+                    RuntimeConfigValidator.ValdiateGraphQLSettingsForEntitiesInConfig(entityCollection);
+                }
+                catch (System.Exception ex)
+                {
+                    Assert.Fail("Exception thrown for a valid string GraphQL type");
+                }
+
+            }
+
+        }
+
     }
 }

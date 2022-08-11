@@ -297,6 +297,7 @@ type Table @model(name: ""table"") {
         /// When singular and plural names are specified by the user, these names will be used for generating the
         /// queries and mutations in the schema.
         /// When singular and plural names are not provided, the queries and mutations will be generated with the entity's name.
+        /// Further, the queries and descriptions will get generated with the same case as defined by the user.
         /// This test validates that this naming convention is followed for the queries when the schema is generated.
         /// </summary>
         /// <param name="gql">Type definition for the entity</param>

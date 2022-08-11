@@ -153,7 +153,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             DatabaseType databaseType,
             IDictionary<string, Entity> entities)
         {
-            InputObjectTypeDefinitionNode node;         
+            InputObjectTypeDefinitionNode node;
             NameNode inputTypeName = GenerateInputTypeName(typeName);
             if (!inputs.ContainsKey(inputTypeName))
             {

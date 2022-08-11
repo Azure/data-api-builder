@@ -1,4 +1,4 @@
-namespace Hawaii.Cli.Tests;
+namespace Cli.Tests;
 
 /// <summary>
 /// End To End Tests for CLI.

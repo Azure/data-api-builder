@@ -6,32 +6,6 @@ namespace Cli.Tests
     [TestClass]
     public class UtilsTests
     {
-        public TestContext TestContext { get; set; }
-
-        /// <summary>
-        /// Setup up temporary test files and environment variables for current test session.
-        /// </summary>
-        [TestInitialize]
-        public void Setup()
-        {
-            if (!File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))
-            {
-                File.Create($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}");
-            }
-
-            if (!File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
-            {
-                File.Create($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");
-            }
-
-            if (!File.Exists("my-config.json"))
-            {
-                File.Create("my-config.json");
-            }
-
-            TestContext.Properties.Add(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME));
-        }
-
         /// <summary>
         /// Test to check if it successfully creates the rest object
         /// which can be either a boolean value
@@ -117,19 +91,25 @@ namespace Cli.Tests
         [DataRow("Test", "my-config.json", "my-config.json", DisplayName = "user provided the config file and environment variable was set.")]
         [DataRow("Test", null, $"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}", DisplayName = "config not provided, but environment variable was set.")]
         [DataRow("", null, $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}", DisplayName = "neither config was provided, nor environment variable was set.")]
-        public void TestConfigSelectionBasedOnCliPrecedence(string? environmentValue, string? userProvidedConfigFile, string? expectedRuntimeConfigFile)
+        public void TestConfigSelectionBasedOnCliPrecedence(
+            string? environmentValue,
+            string? userProvidedConfigFile,
+            string expectedRuntimeConfigFile)
         {
-            Environment.SetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
-            string? actualRuntimeConfigFile;
-            Assert.IsTrue(TryGetConfigFileBasedOnCliPrecedence(userProvidedConfigFile, out actualRuntimeConfigFile));
+            if (!File.Exists(expectedRuntimeConfigFile))
+            {
+                File.Create(expectedRuntimeConfigFile);
+            }
+
+            string? envValueBeforeTest = Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME);
+            Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
+            Assert.IsTrue(TryGetConfigFileBasedOnCliPrecedence(userProvidedConfigFile, out string actualRuntimeConfigFile));
             Assert.AreEqual(expectedRuntimeConfigFile, actualRuntimeConfigFile);
+            Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, envValueBeforeTest);
         }
 
-        /// <summary>
-        /// Clean up temporary test files and reset environment variables
-        /// </summary>
-        [TestCleanup]
-        public void Cleanup()
+        [ClassCleanup]
+        public static void Cleanup()
         {
             if (File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))
             {
@@ -145,8 +125,6 @@ namespace Cli.Tests
             {
                 File.Delete("my-config.json");
             }
-
-            Environment.SetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME]);
         }
     }
 }

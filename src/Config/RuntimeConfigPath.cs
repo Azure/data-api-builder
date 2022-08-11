@@ -200,41 +200,24 @@ namespace Azure.DataApiBuilder.Config
         /// <returns></returns>
         private static string GetFileName(string? environmentValue, bool considerOverrides)
         {
-            if (!string.IsNullOrEmpty(environmentValue))
-            {
-                Console.WriteLine($"value of {RUNTIME_ENVIRONMENT_VAR_NAME} found.");
-            }
-
             string configFileName =
                 !string.IsNullOrEmpty(environmentValue)
                 ? $"{CONFIGFILE_NAME}.{environmentValue}"
                 : $"{CONFIGFILE_NAME}";
+            string configFileNameWithExtension = $"{configFileName}{CONFIG_EXTENSION}";
             string overriddenConfigFileNameWithExtension = GetOverriddenName(configFileName);
+
             if (considerOverrides && DoesFileExistInCurrentDirectory(overriddenConfigFileNameWithExtension))
             {
-                Console.WriteLine($"using config file:{overriddenConfigFileNameWithExtension}.");
                 return overriddenConfigFileNameWithExtension;
             }
-            else
-            {
-                if (considerOverrides)
-                {
-                    Console.WriteLine($"config file:{overriddenConfigFileNameWithExtension} is not present.");
-                }
 
-                Console.WriteLine($"checking if {configFileName}{CONFIG_EXTENSION} exists.");
+            if (DoesFileExistInCurrentDirectory(configFileNameWithExtension))
+            {
+                return configFileNameWithExtension;
             }
 
-            if (DoesFileExistInCurrentDirectory($"{configFileName}{CONFIG_EXTENSION}"))
-            {
-                Console.WriteLine($"using config file:{configFileName}{CONFIG_EXTENSION}.");
-                return $"{configFileName}{CONFIG_EXTENSION}";
-            }
-            else
-            {
-                Console.WriteLine($"config file:{configFileName}{CONFIG_EXTENSION} is not present.");
-                return string.Empty;
-            }
+            return string.Empty;
         }
 
         private static string GetOverriddenName(string fileName)
@@ -245,7 +228,16 @@ namespace Azure.DataApiBuilder.Config
         private static bool DoesFileExistInCurrentDirectory(string fileName)
         {
             string currentDir = Directory.GetCurrentDirectory();
-            return File.Exists(Path.Combine(currentDir, fileName));
+            if (File.Exists(Path.Combine(currentDir, fileName)))
+            {
+                Console.WriteLine($"Using config file: {fileName}.");
+                return true;
+            }
+            else
+            {
+                Console.WriteLine($"Config file: {fileName} does not exist.");
+                return false;
+            }
         }
     }
 }

@@ -36,33 +36,28 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const string MYSQL_ENVIRONMENT = TestCategory.MYSQL;
         private const string POSTGRESQL_ENVIRONMENT = TestCategory.POSTGRESQL;
 
-        public TestContext TestContext { get; set; }
-
-        [TestInitialize]
-        public void Setup()
+        [ClassCleanup]
+        public static void Cleanup()
         {
-            if (!File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
+            if (File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
             {
-                File.Create($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");
+                File.Delete($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}"))
+            if (File.Exists($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}"))
             {
-                File.Create($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}");
+                File.Delete($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}"))
+            if (File.Exists($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}"))
             {
-                File.Create($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}");
+                File.Delete($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}"))
+            if (File.Exists($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}"))
             {
-                File.Create($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}");
+                File.Delete($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}");
             }
-
-            TestContext.Properties.Add(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME));
-            TestContext.Properties.Add(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME));
         }
 
         [DataTestMethod]
@@ -437,43 +432,24 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataTestMethod]
         [DataRow("HostTest", "Test", false, $"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}", DisplayName = "hosting and dab environment set, without considering overrides.")]
         [DataRow("HostTest", "", false, $"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}", DisplayName = "only hosting environment set, without considering overrides.")]
-        [DataRow("", "Test", false, $"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}", DisplayName = "only dab environment set, without considering overrides.")]
-        [DataRow("", "Test", true, $"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}", DisplayName = "only dab environment set, considering overrides.")]
-        [DataRow("HostTest", "", true, $"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}", DisplayName = "only hosting environment set, considering overrides.")]
-        public void TestConfigSelectionBasedOnCliPrecedence(string hostingEnvironmentValue, string environmentValue, bool considerOverrides, string expectedRuntimeConfigFile)
+        [DataRow("", "Test1", false, $"{CONFIGFILE_NAME}.Test1{CONFIG_EXTENSION}", DisplayName = "only dab environment set, without considering overrides.")]
+        [DataRow("", "Test2", true, $"{CONFIGFILE_NAME}.Test2.overrides{CONFIG_EXTENSION}", DisplayName = "only dab environment set, considering overrides.")]
+        [DataRow("HostTest1", "", true, $"{CONFIGFILE_NAME}.HostTest1.overrides{CONFIG_EXTENSION}", DisplayName = "only hosting environment set, considering overrides.")]
+        public void TestGetConfigFileNameForEnvironment(
+            string hostingEnvironmentValue,
+            string environmentValue,
+            bool considerOverrides,
+            string expectedRuntimeConfigFile)
         {
-            Environment.SetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
-            string actualRuntimeConfigFile = RuntimeConfigPath.GetFileNameForEnvironment(hostingEnvironmentValue, considerOverrides);
+            if (!File.Exists(expectedRuntimeConfigFile))
+            {
+                File.Create(expectedRuntimeConfigFile);
+            }
+
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, hostingEnvironmentValue);
+            Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
+            string actualRuntimeConfigFile = GetFileNameForEnvironment(hostingEnvironmentValue, considerOverrides);
             Assert.AreEqual(expectedRuntimeConfigFile, actualRuntimeConfigFile);
-        }
-
-        [TestCleanup]
-        public void Cleanup()
-        {
-            if (File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
-            {
-                File.Delete($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");
-            }
-
-            if (File.Exists($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}"))
-            {
-                File.Delete($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}");
-            }
-
-            if (File.Exists($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}"))
-            {
-                File.Delete($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}");
-            }
-
-            if (File.Exists($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}"))
-            {
-                File.Delete($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}");
-            }
-
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[ASP_NET_CORE_ENVIRONMENT_VAR_NAME]);
-            Environment.SetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME]);
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "");
-            Environment.SetEnvironmentVariable($"{RuntimeConfigPath.ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)}", "");
         }
 
         private static ConfigurationPostParameters GetCosmosConfigurationParameters()

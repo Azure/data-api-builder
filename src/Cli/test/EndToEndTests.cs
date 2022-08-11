@@ -233,7 +233,10 @@ public class EndToEndTests
                 output = process.StandardOutput.ReadLine();
                 break;
             }
-            catch (InvalidOperationException) { }
+            catch (InvalidOperationException)
+            {
+                Assert.IsFalse(process.HasExited);
+            }
         }
 
         process.Kill();

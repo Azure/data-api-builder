@@ -447,15 +447,18 @@ namespace Cli
         }
 
         /// <summary>
-        /// this method will try to find the config file based on the precedence.
+        /// This method will try to find the config file based on the precedence.
         /// if config file provided by user, it will return that.
         /// Else it will check the DAB_ENVIRONMENT variable.
         /// In case the environment variable is not set it will check for default config.
         /// If none of the file exists it will return false. Else true with output in runtimeConfigFile.
+        /// In case of false, the runtimeConfigFile will be set to string.Empty.
         /// </summary>
-        public static bool TryGetConfigFileBasedOnCliPrecedence(string? userProvidedConfigFile, out string? runtimeConfigFile)
+        public static bool TryGetConfigFileBasedOnCliPrecedence(
+            string? userProvidedConfigFile,
+            out string runtimeConfigFile)
         {
-            if (!string.IsNullOrEmpty(userProvidedConfigFile))
+            if (!string.IsNullOrEmpty(userProvidedConfigFile) && File.Exists(userProvidedConfigFile))
             {
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
                 runtimeConfigFile = userProvidedConfigFile;
@@ -463,7 +466,7 @@ namespace Cli
             }
             else
             {
-                Console.WriteLine("Config not provided. Trying to get default config based on Environment.");
+                Console.WriteLine("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = true;
                 runtimeConfigFile = RuntimeConfigPath.GetFileNameForEnvironment(
                         hostingEnvironmentName: null,
@@ -473,12 +476,7 @@ namespace Cli
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
             }
 
-            if (string.IsNullOrEmpty(runtimeConfigFile))
-            {
-                return false;
-            }
-
-            return true;
+            return !string.IsNullOrEmpty(runtimeConfigFile);
         }
 
         /// <summary>

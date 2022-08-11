@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Extensions.Logging;
+using Humanizer;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -163,7 +164,29 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private void GenerateRouteToEntityMap()
         {
-            throw new NotImplementedException();
+            foreach (string entityName in _entities.Keys)
+            {
+                Entity entity = _entities[entityName];
+                string pluralizedRoute = pluralizeEntityRoute(entity);
+                EntityRouteToEntityName[pluralizedRoute] = entityName;
+            }
+        }
+
+        private string pluralizeEntityRoute(Entity entity)
+        {
+            if (entity.Rest is null || entity.Rest is bool)
+            {
+                return entity.GetSourceName();
+            }
+
+            SingularPlural restRoute = (SingularPlural)entity.Rest;
+            if (!string.IsNullOrWhiteSpace(restRoute.Plural))
+            {
+                return restRoute.Plural;
+            }
+
+            return Pluralize(restRoute.Singular);
+            
         }
 
         /// <summary>

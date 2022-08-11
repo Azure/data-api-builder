@@ -21,11 +21,10 @@ variables:
   publishNugetToFeed: $(isNugetRelease)
   # If this is a release, do not append the build number at the end as it will 
   # generate the prerelease nuget version.
-  - name: dabVersion
-    ${{ if eq(variables['publishNugetToFeed'], 'true') }}:
-    value: '$(major).$(minor).$(patch)'
-    ${{ else }}:
-    value: '$(major).$(minor).$(patch)-$(Build.BuildId)'
+  ${{ if eq(variables['Build.SourceBranchName'], 'dev/jarupatj/version') }}:
+      dabVersion: '$(major).$(minor).$(patch)'
+  ${{ else }}:
+      dabVersion: '$(major).$(minor).$(patch)-$(Build.BuildId)'
 
 steps:
 

@@ -28,15 +28,17 @@ variables:
 
 steps:
 - bash: |
-    echo $ISNUGETRELEASE
+    echo ISNUGETRELEASE = $ISNUGETRELEASE
+    echo publishNugetToFeed = $publishNugetToFeed
+    echo version = $MAJOR.$MINOR.$PATCH
     if [ "$ISNUGETRELEASE" = "true" ]
     then
       dabVersion = $MAJOR.$MINOR.$PATCH
     else
       dabVersion = $MAJOR.$MINOR.$PATCH-$BUILD_BUILDID
     fi
-    echo $dabVersion
-    echo "##vso[task.setvariable dabVersion=one]$dabVersion"
+    echo dabVersion = $dabVersion
+    echo "##vso[task.setvariable variable=dabVersion]$dabVersion"
   displayName: Set dab version value
 
 - script: |

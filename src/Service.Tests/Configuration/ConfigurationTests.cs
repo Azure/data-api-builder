@@ -41,11 +41,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestInitialize]
         public void Setup()
         {
-            if (!File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))
-            {
-                File.Create($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}");
-            }
-
             if (!File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
             {
                 File.Create($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");

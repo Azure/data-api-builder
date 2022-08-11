@@ -21,8 +21,7 @@ variables:
   publishNugetToFeed: $(isNugetRelease)
   # If this is a release, do not append the build number at the end as it will 
   # generate the prerelease nuget version.
-  # ${{ if eq(variables['publishNugetToFeed'], 'true') }}:
-  ${{ if eq(variables.publishNugetToFeed, 'true') }}:
+  ${{ if eq(variables['isNugetRelease'], 'true') }}:
       dabVersion: '$(major).$(minor).$(patch)'
   ${{ else }}:
       dabVersion: '$(major).$(minor).$(patch)-$(Build.BuildId)'
@@ -32,7 +31,9 @@ steps:
 - script: |
     echo "dabVersion is $(dabVersion)"
     echo "publishNugetToFeed is $(publishNugetToFeed)"
-    echo "publishNugetToFeed is variables['publishNugetToFeed']"
+    echo "isNugetRelease is ${{ variables['isNugetRelease'] }}"
+    echo "isNugetRelease is ${{ variables.isNugetRelease }}"
+    echo "isNugetRelease is $(variables.isNugetRelease)"
     echo "dabVersion ${{variables.dabVersion}}"
 
 # - task: UseDotNet@2

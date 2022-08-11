@@ -468,6 +468,9 @@ namespace Cli
                 runtimeConfigFile = RuntimeConfigPath.GetFileNameForEnvironment(
                         hostingEnvironmentName: null,
                         considerOverrides: false);
+
+                // so that the check doesn't run again when starting engine
+                RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
             }
 
             if (string.IsNullOrEmpty(runtimeConfigFile))

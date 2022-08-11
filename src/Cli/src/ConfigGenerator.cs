@@ -605,14 +605,14 @@ namespace Cli
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options)
         {
-            string runtimeConfigFile;
+            string? runtimeConfigFile;
             if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out runtimeConfigFile))
             {
                 return false;
             }
 
             /// This will start the runtime engine with project name and config file.
-            string[] args = new string[] { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile };
+            string[] args = new string[] { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile! };
             return Azure.DataApiBuilder.Service.Program.StartEngine(args);
         }
     }

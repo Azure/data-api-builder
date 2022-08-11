@@ -214,7 +214,7 @@ public class EndToEndTests
             StartInfo =
                 {
                     FileName = @"./Hawaii.Cli",
-                    Arguments = "start",
+                    Arguments = $"start --config {RuntimeConfigPath.DefaultName}",
                     WindowStyle = ProcessWindowStyle.Hidden,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -231,14 +231,20 @@ public class EndToEndTests
             {
                 int id = process.Id;
                 output = process.StandardOutput.ReadLine();
+                if (string.IsNullOrEmpty(output))
+                {
+                    throw new Exception();
+                }
+
                 break;
             }
-            catch (InvalidOperationException) { }
+            catch (Exception) { }
         }
 
         process.Kill();
+        Console.WriteLine(output);
         Assert.IsNotNull(output);
-        Assert.IsTrue(output.Contains("Starting the runtime engine."));
+        Assert.IsTrue(output.Contains("Starting the runtime engine..."));
     }
 
     private static async void StartProcess(Process process)

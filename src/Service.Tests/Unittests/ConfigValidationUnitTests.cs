@@ -216,7 +216,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void InvalidGraphQLTypeNamesFailValidation(string entityNameFromConfig)
         {
             Dictionary<string, Entity> entityCollection = new();
-            entityCollection.Add(entityNameFromConfig, SchemaConverterTests.GenerateEmptyEntity());
+            Entity entity = SchemaConverterTests.GenerateEmptyEntity();
+            entity.GraphQL = true;
+
+            entityCollection.Add(entityNameFromConfig, entity);
 
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
                 action: () => RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection),

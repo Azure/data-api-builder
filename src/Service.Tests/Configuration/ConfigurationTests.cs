@@ -40,12 +40,36 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestInitialize]
         public void Setup()
         {
-            if (!File.Exists("dab-config.json")) File.Create("dab-config.json");
-            if (!File.Exists("dab-config.Test.json")) File.Create("dab-config.Test.json");
-            if (!File.Exists("dab-config.HostTest.json")) File.Create("dab-config.HostTest.json");
-            if (!File.Exists("dab-config.overrides.json")) File.Create("dab-config.overrides.json");
-            if (!File.Exists("dab-config.Test.overrides.json")) File.Create("dab-config.Test.overrides.json");
-            if (!File.Exists("dab-config.HostTest.overrides.json")) File.Create("dab-config.HostTest.overrides.json");
+            if (!File.Exists("dab-config.json"))
+            {
+                File.Create("dab-config.json");
+            }
+
+            if (!File.Exists("dab-config.Test.json"))
+            {
+                File.Create("dab-config.Test.json");
+            }
+
+            if (!File.Exists("dab-config.HostTest.json"))
+            {
+                File.Create("dab-config.HostTest.json");
+            }
+
+            if (!File.Exists("dab-config.overrides.json"))
+            {
+                File.Create("dab-config.overrides.json");
+            }
+
+            if (!File.Exists("dab-config.Test.overrides.json"))
+            {
+                File.Create("dab-config.Test.overrides.json");
+            }
+
+            if (!File.Exists("dab-config.HostTest.overrides.json"))
+            {
+                File.Create("dab-config.HostTest.overrides.json");
+            }
+
             TestContext.Properties.Add(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME));
             TestContext.Properties.Add(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME));
         }
@@ -436,12 +460,36 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestCleanup]
         public void Cleanup()
         {
-            if (!File.Exists("dab-config.json")) File.Delete("dab-config.json");
-            if (!File.Exists("dab-config.Test.json")) File.Delete("dab-config.Test.json");
-            if (!File.Exists("dab-config.HostTest.json")) File.Delete("dab-config.HostTest.json");
-            if (!File.Exists("dab-config.overrides.json")) File.Delete("dab-config.overrides.json");
-            if (!File.Exists("dab-config.Test.overrides.json")) File.Delete("dab-config.Test.overrides.json");
-            if (!File.Exists("dab-config.HostTest.overrides.json")) File.Delete("dab-config.HostTest.overrides.json");
+            if (!File.Exists("dab-config.json"))
+            {
+                File.Delete("dab-config.json");
+            }
+
+            if (!File.Exists("dab-config.Test.json"))
+            {
+                File.Delete("dab-config.Test.json");
+            }
+
+            if (!File.Exists("dab-config.HostTest.json"))
+            {
+                File.Delete("dab-config.HostTest.json");
+            }
+
+            if (!File.Exists("dab-config.overrides.json"))
+            {
+                File.Delete("dab-config.overrides.json");
+            }
+
+            if (!File.Exists("dab-config.Test.overrides.json"))
+            {
+                File.Delete("dab-config.Test.overrides.json");
+            }
+
+            if (!File.Exists("dab-config.HostTest.overrides.json"))
+            {
+                File.Delete("dab-config.HostTest.overrides.json");
+            }
+
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[ASP_NET_CORE_ENVIRONMENT_VAR_NAME]);
             Environment.SetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME]);
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "");

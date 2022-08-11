@@ -14,9 +14,21 @@ namespace Cli.Tests
         [TestInitialize]
         public void Setup()
         {
-            if (!File.Exists("dab-config.json")) File.Create("dab-config.json");
-            if (!File.Exists("dab-config.Test.json")) File.Create("dab-config.Test.json");
-            if (!File.Exists("my-config.json")) File.Create("my-config.json");
+            if (!File.Exists("dab-config.json"))
+            {
+                File.Create("dab-config.json");
+            }
+
+            if (!File.Exists("dab-config.Test.json"))
+            {
+                File.Create("dab-config.Test.json");
+            }
+
+            if (!File.Exists("my-config.json"))
+            {
+                File.Create("my-config.json");
+            }
+
             TestContext.Properties.Add(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME));
         }
 
@@ -119,9 +131,21 @@ namespace Cli.Tests
         [TestCleanup]
         public void Cleanup()
         {
-            if (!File.Exists("dab-config.json")) File.Delete("dab-config.json");
-            if (!File.Exists("dab-config.Test.json")) File.Delete("dab-config.Test.json");
-            if (!File.Exists("my-config.json")) File.Delete("my-config.json");
+            if (!File.Exists("dab-config.json"))
+            {
+                File.Delete("dab-config.json");
+            }
+
+            if (!File.Exists("dab-config.Test.json"))
+            {
+                File.Delete("dab-config.Test.json");
+            }
+
+            if (!File.Exists("my-config.json"))
+            {
+                File.Delete("my-config.json");
+            }
+
             Environment.SetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME]);
         }
     }

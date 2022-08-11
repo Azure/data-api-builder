@@ -25,7 +25,7 @@ namespace Cli
                 return false;
             }
 
-            string userProvidedConfigFile = string.IsNullOrEmpty(options.Name)? string.Empty : $"{options.Name}{CONFIG_EXTENSION}";
+            string userProvidedConfigFile = string.IsNullOrEmpty(options.Name) ? string.Empty : $"{options.Name}{CONFIG_EXTENSION}";
             string? runtimeConfigFile;
             if (!TryGetConfigFileBasedOnCliPrecedence(userProvidedConfigFile, out runtimeConfigFile))
             {
@@ -113,7 +113,7 @@ namespace Cli
         /// </summary>
         public static bool TryAddEntityToConfigWithOptions(AddOptions options)
         {
-            string userProvidedConfigFile = string.IsNullOrEmpty(options.Name)? string.Empty : $"{options.Name}{CONFIG_EXTENSION}";
+            string userProvidedConfigFile = string.IsNullOrEmpty(options.Name) ? string.Empty : $"{options.Name}{CONFIG_EXTENSION}";
             string runtimeConfigFile;
             if (!TryGetConfigFileBasedOnCliPrecedence(userProvidedConfigFile, out runtimeConfigFile))
             {
@@ -239,7 +239,7 @@ namespace Cli
         /// </summary>
         public static bool TryUpdateEntityWithOptions(UpdateOptions options)
         {
-            string userProvidedConfigFile = string.IsNullOrEmpty(options.Name)? string.Empty : $"{options.Name}{CONFIG_EXTENSION}";
+            string userProvidedConfigFile = string.IsNullOrEmpty(options.Name) ? string.Empty : $"{options.Name}{CONFIG_EXTENSION}";
             string runtimeConfigFile;
             if (!TryGetConfigFileBasedOnCliPrecedence(userProvidedConfigFile, out runtimeConfigFile))
             {

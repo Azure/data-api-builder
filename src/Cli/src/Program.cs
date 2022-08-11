@@ -1,4 +1,3 @@
-using Azure.DataApiBuilder.Config;
 using CommandLine;
 
 namespace Cli

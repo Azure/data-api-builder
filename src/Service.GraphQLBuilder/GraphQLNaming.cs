@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         // Letters, numbers and _ are only valid in names, so strip all that aren't.
         // Although we'll leave whitespace in so that downstream consumers can still
         // enforce their casing requirements
-        private static readonly Regex _graphQLValidSymbols = new("[^a-zA-Z0-9_\\s]");
+        private static readonly Regex _graphQLValidSymbols = new("[^a-zA-Z0-9_]");
 
         /// <summary>
         /// Enforces the GraphQL naming restrictions on <paramref name="name"/>.

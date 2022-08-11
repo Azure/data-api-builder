@@ -114,7 +114,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 {
                     throw new DataApiBuilderException(
                         message: $"Entity {entityName} contains characters disallowed by GraphQL.",
-                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
             }

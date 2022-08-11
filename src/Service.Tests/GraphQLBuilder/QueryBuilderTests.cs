@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             string gql =
                 @"
-type Foo @model {
+type Foo @model(name:""Foo"") {
     id: ID!
 }
                 ";
@@ -82,7 +82,7 @@ type Foo @model {
         {
             string gql =
                 @"
-type Foo @model {
+type Foo @model(name:""Foo"") {
     id: ID!
 }
                 ";
@@ -123,7 +123,7 @@ type Foo @model {
         {
             string gql =
                 @"
-type foo @model {
+type foo @model(name:""foo"") {
     id: ID!
 }
                 ";
@@ -157,7 +157,7 @@ type foo @model {
         {
             string gql =
                 @"
-type Foo @model {
+type Foo @model(name:""Foo"") {
     id: ID!
 }
                 ";
@@ -189,7 +189,7 @@ type Foo @model {
         {
             string gql =
                 @"
-type Foo @model {
+type Foo @model(name:""Foo"") {
     foo_id: Int! @primaryKey(databaseType: ""bigint"")
 }
 ";
@@ -214,7 +214,7 @@ type Foo @model {
         {
             string gql =
                 @"
-type Foo @model {
+type Foo @model(name:""Foo"") {
     foo_id: Int!
 }
 ";

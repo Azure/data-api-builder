@@ -200,6 +200,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// Test that entity names from config that are invalid GraphQL names
         /// fail runtime config validation.
+        /// Asserts that an exception is thrown, and with that exception object,
+        /// validates the exception's status and substatus codes.
         /// </summary>
         /// <param name="entityNameFromConfig"></param>
         [DataTestMethod]
@@ -210,15 +212,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("E.ntityName", DisplayName = "Invalid body character .")]
         [DataRow("Entity^Name", DisplayName = "Invalid body character ^")]
         [DataRow("Entity&Name", DisplayName = "Invalid body character &")]
+        [DataRow("Entity name", DisplayName = "Invalid body character whitespace")]
 
         public void InvalidGraphQLTypeNamesFailValidation(string entityNameFromConfig)
         {
             Dictionary<string, Entity> entityCollection = new();
             entityCollection.Add(entityNameFromConfig, SchemaConverterTests.GenerateEmptyEntity());
 
-            Assert.ThrowsException<DataApiBuilderException>(
+            DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
                 action: () => RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection),
                 message: $"Entity name \"{entityNameFromConfig}\" incorrectly passed validation.");
+
+            Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+            Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
         }
 
         /// <summary>
@@ -230,7 +236,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataTestMethod]
         [DataRow("entityname", DisplayName = "Valid lower case letter as first character")]
         [DataRow("Entityname", DisplayName = "Valid upper case letter as first character")]
-        [DataRow("Entity name", DisplayName = "Valid space in body")]
         [DataRow("Entity_name", DisplayName = "Valid _ in body")]
         public void ValidGraphQLTypeNamesPassValidation(string entityNameFromConfig)
         {

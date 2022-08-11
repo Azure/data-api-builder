@@ -308,13 +308,18 @@ type Table @model(name: ""table"") {
         /// <param name="expectedQueryNameForList"> Expected name for the query to fetch all items </param>
         /// <param name="expectedNameInDescription">Expected name in the description for both the queries</param>
         [DataTestMethod]
-        [DataRow(GraphQLTestHelpers.BOOK_GQL, "Book", null, null, "Book_by_pk", "Books", "Book")]
-        [DataRow(GraphQLTestHelpers.BOOK_GQL, "Book", "book", "books", "book_by_pk", "books", "book")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", null, null, "Books_by_pk", "Books", "Books")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "books", "book_by_pk", "books", "book")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "Book", "Books", "Book_by_pk", "Books", "Book")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "", "book_by_pk", "Books", "book")]
-        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "People", "Person_by_pk", "People", "Person")]
+        [DataRow(GraphQLTestHelpers.BOOK_GQL, "Book", null, null, "Book_by_pk", "Books", "Book",
+            DisplayName = "Query name and description validation for singular entity name with singular plural not defined")]
+        [DataRow(GraphQLTestHelpers.BOOK_GQL, "Book", "book", "books", "book_by_pk", "books", "book",
+            DisplayName = "Query name and description validation for singular entity name with singular plural defined")]
+        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", null, null, "Books_by_pk", "Books", "Books",
+            DisplayName = "Query name and description validation for plural entity name with singular plural not defined")]
+        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "books", "book_by_pk", "books", "book",
+            DisplayName = "Query name and description validation for plural entity name with singular plural defined")]
+        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "", "book_by_pk", "Books", "book",
+            DisplayName = "Query name and description validations for plural entity name with singular defined")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "People", "Person_by_pk", "People", "Person",
+            DisplayName = "Query name and description validation for indirect plural entity name with singular and plural name defined")]
         public void ValidateQueriesAreCreatedWithRightName(
             string gql,
             string entityName,

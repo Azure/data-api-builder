@@ -938,12 +938,16 @@ type Foo @model(name:""Foo"") {{
         /// <param name="pluralName">Plural name provided by the user</param>
         /// <param name="expectedName"> Expected name of the entity in the mutation. Used to construct the exact expected mutation names.</param>
         [DataTestMethod]
-        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", null, null, "People")]
-        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "People", "Person")]
-        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "", "Person")]
-        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "", "People", "People")]
-        [DataRow(GraphQLTestHelpers.PERSON_GQL, "Person", null, null, "Person")]
-        [DataRow(GraphQLTestHelpers.PERSON_GQL, "Person", "Person", "People", "Person")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", null, null, "People",
+            DisplayName = "Mutation name and description validation for singular entity name with singular plural not defined")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "People", "Person",
+            DisplayName = "Mutaiton name and description validation for plural entity name with singular plural defined")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "", "Person",
+            DisplayName = "Mutation name and description validation for plural entity name with singular defined")]
+        [DataRow(GraphQLTestHelpers.PERSON_GQL, "Person", null, null, "Person",
+            DisplayName = "Mutation name and description validation for singular entity name with singular plural not defined")]
+        [DataRow(GraphQLTestHelpers.PERSON_GQL, "Person", "Person", "People", "Person",
+            DisplayName = "Mutation name and description validation for singular entity name with singular plural defined")]
         public void ValidateMutationsAreCreatedWithRightName(
             string gql,
             string entityName,

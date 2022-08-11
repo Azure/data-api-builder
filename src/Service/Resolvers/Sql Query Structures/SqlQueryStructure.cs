@@ -175,7 +175,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // to only Find, we populate the TableAlias in this constructor where we know we have a Find operation.
             OrderByColumns = context.OrderByClauseInUrl is not null ?
                 GetOrderByBackingColumns(context.OrderByClauseInUrl) :
-                GetOrderByBackingColumns(PrimaryKeyAsOrderByColumns());
+                PrimaryKeyAsOrderByColumns();
             foreach (OrderByColumn column in OrderByColumns)
             {
                 if (string.IsNullOrEmpty(column.TableAlias))

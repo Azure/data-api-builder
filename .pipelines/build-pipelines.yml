@@ -107,7 +107,7 @@ steps:
 - task: PublishPipelineArtifact@1
   displayName: "Upload build artifacts"
   inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)/publish' 
+    targetPath: '$(Build.ArtifactStagingDirectory)' 
 
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.

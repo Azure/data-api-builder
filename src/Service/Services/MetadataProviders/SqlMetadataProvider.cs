@@ -167,12 +167,12 @@ namespace Azure.DataApiBuilder.Service.Services
             foreach (string entityName in _entities.Keys)
             {
                 Entity entity = _entities[entityName];
-                string pluralizedRoute = pluralizeEntityRoute(entity);
+                string pluralizedRoute = SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT>.PluralizeEntityRoute(entity);
                 EntityRouteToEntityName[pluralizedRoute] = entityName;
             }
         }
 
-        private string pluralizeEntityRoute(Entity entity)
+        private static string PluralizeEntityRoute(Entity entity)
         {
             if (entity.Rest is null || entity.Rest is bool)
             {
@@ -185,7 +185,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 return restRoute.Plural;
             }
 
-            return Pluralize(restRoute.Singular);
+            return restRoute.Singular.Pluralize();
             
         }
 

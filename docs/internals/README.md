@@ -234,8 +234,8 @@ HTTP requests must have the `Authorization` HTTP header set with the value `Bear
 
     a. Command Line Argument e.g. `--ConfigFileName=custom-config.json`
 
-    b. Value of `HAWAII_ENVIRONMENT` suffixed to dab-config.
-    e.g. setting `HAWAII_ENVIRONMENT=Development` will prompt the runtime to look for `dab-config.Development.json`
+    b. Value of `DAB_ENVIRONMENT` suffixed to dab-config.
+    e.g. setting `DAB_ENVIRONMENT=Development` will prompt the runtime to look for `dab-config.Development.json`
 
     c. Value of `ASPNETCORE_ENVIRONMENT` suffixed to dab-config.
     e.g. setting `ASPNETCORE_ENVIRONMENT=MsSql` will prompt the runtime to look for `dab-config.MsSql.json`
@@ -244,12 +244,12 @@ HTTP requests must have the `Authorization` HTTP header set with the value `Bear
 
 3. For any of the configuration file names determined for the environment, if there is another file with the `.overrides` suffix in the current directory, that overridden file name will instead be picked up.
 e.g. if both `dab-config.json` and `dab-config.overrides.json` are present, precedence will be given to `dab-config.overrides.json` - however, the runtime will still follow the above rules of precedence.
-e.g. When HAWAII_ENVIRONMENT is set as `Development` and if all three config files exist- `dab-config.Development.json`, `dab-config.json`, `dab-config.overrides.json`- the runtime will pick `dab-config.Development.json`.
+e.g. When DAB_ENVIRONMENT is set as `Development` and if all three config files exist- `dab-config.Development.json`, `dab-config.json`, `dab-config.overrides.json`- the runtime will pick `dab-config.Development.json`.
 
 #### Command Line
 
 1. Based on your preferred mode of specifying the configuration file name, there are different ways to launch the runtime.
-2. Set the `HAWAII_ENVIRONMENT` or `ASPNETCORE_ENVIRONMENT`, typically using their value to be database type `MsSql`, `PostgreSql`,`Cosmos`, or `MySql`.
+2. Set the `DAB_ENVIRONMENT` or `ASPNETCORE_ENVIRONMENT`, typically using their value to be database type `MsSql`, `PostgreSql`,`Cosmos`, or `MySql`.
 
     Example: `ASPNETCORE_ENVIRONMENT=PostgreSql`
 

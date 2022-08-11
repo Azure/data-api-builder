@@ -131,7 +131,7 @@ namespace Azure.DataApiBuilder.Config
 
         /// <summary>
         /// Precedence of environments is
-        /// 1) Value of HAWAII_ENVIRONMENT.
+        /// 1) Value of DAB_ENVIRONMENT.
         /// 2) Value of ASPNETCORE_ENVIRONMENT.
         /// 3) Default config file name.
         /// In each case, overidden file name takes precedence.

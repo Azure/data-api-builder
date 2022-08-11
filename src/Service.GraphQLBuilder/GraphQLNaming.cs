@@ -13,11 +13,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         // Matches to this regular expression are names with valid prefix.
         private static readonly Regex _graphQLNameStart = new("^[a-zA-Z].*");
 
-        // Regex to match invalid GraphQL characters.
+        // Regex used to identify strings that do not have the defined GraphQL characters.
         // Letters, numbers and _ are only valid in names, so strip all that aren't.
         // Although we'll leave whitespace in so that downstream consumers can still
         // enforce their casing requirements
-        private static readonly Regex _graphQLInvalidSymbols = new("[^a-zA-Z0-9_\\s]");
+        private static readonly Regex _graphQLValidSymbols = new("[^a-zA-Z0-9_\\s]");
 
         /// <summary>
         /// Enforces the GraphQL naming restrictions on <paramref name="name"/>.
@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 name = name[1..];
             }
 
-            name = _graphQLInvalidSymbols.Replace(name, "");
+            name = _graphQLValidSymbols.Replace(name, "");
 
             string[] nameSegments = name.Split(' ');
             return nameSegments;
@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
         /// <summary>
         /// Checks whether name has invalid characters.
-        /// - GraphQL specification requires that a name name does not contain anything other than
+        /// - GraphQL specification requires that a name does not contain anything other than
         /// upper or lowercase letters or numbers.
         /// </summary>
         /// <param name="name">Name to be checked.</param>
@@ -63,31 +63,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <returns>True if the provided name violates requirements.</returns>
         public static bool ViolatesNameRequirements(string name)
         {
-            return _graphQLInvalidSymbols.Match(name).Success;
-        }
-
-        /// <summary>
-        /// Formats the name argument into a GraphQL allowed string by:
-        /// - Singularizes name
-        /// - Removing disallowed characters
-        /// - Capitalizing the first character of each space separated segment of the string
-        /// </summary>
-        /// <param name="name">Entity name to format.</param>
-        /// <param name="configEntity">Contain GraphQL configuration metadata for the entity.</param>
-        /// <returns></returns>
-        public static string FormatNameForObject(string name, Entity configEntity)
-        {
-            // Determine whether runtime config defines specific singular and/or plural
-            // GraphQL entity names.
-            // If singular name is not defined, used the top-level defined entity name.
-            name = GetDefinedSingularName(name, configEntity);
-
-            return name;
-        }
-
-        public static string FormatNameForObject(NameNode name, Entity configEntity)
-        {
-            return FormatNameForObject(name.Value, configEntity);
+            return _graphQLValidSymbols.Match(name).Success;
         }
 
         public static string GetDefinedSingularName(string name, Entity configEntity)
@@ -127,32 +103,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Helper which
-        /// - Sanitizes the GraphQL field name by removing invalid characters from "name."
-        /// - Capture nameSegments: substrings in "name" delimited by spaces.
-        /// - camelCase the sanitized name: lower case first string segment, followed by upper-case string segments.
-        /// </summary>
-        /// <param name="name">Name to sanitize and format for GraphQL schema usage.</param>
-        /// <returns>Sanitized and formatted field name value.</returns>
-        public static string FormatNameForField(string name)
-        {
-            string[] nameSegments = SanitizeGraphQLName(name);
-
-            return string.Join("", nameSegments.Select((n, i) => $"{(i == 0 ? char.ToLowerInvariant(n[0]) : char.ToUpperInvariant(n[0]))}{n[1..]}"));
-        }
-
-        /// <summary>
-        /// Helper which passes the HotChocolate schema object type of NameNode
-        /// to the FormatNameForField function to sanitize and format the field name for GraphQL.
-        /// </summary>
-        /// <param name="name">HotChocolate schema object type NameNode</param>
-        /// <returns>Sanitized and formatted field name value.</returns>
-        public static string FormatNameForField(NameNode name)
-        {
-            return FormatNameForField(name.Value);
-        }
-
-        /// <summary>
         /// Helper to pluralize the value of a NameNode HotChocolate schema object
         /// </summary>
         /// <param name="name">HotChocolate schema object type NameNode</param>
@@ -183,6 +133,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             return name.Pluralize(inputIsKnownToBeSingular: false);
         }
 
+        /// <summary>
+        /// Given an object type definition i.e. type EntityName @model(name:TopLevelEntityName)
+        /// Get the value assigned to the model directive which is the top-level entity name.
+        /// If no model directive exists, the name set on the object type definition is returned.
+        /// </summary>
+        /// <param name="node">Object type definition</param>
+        /// <returns>string representing the top-level entity name defined in runtime configuration.</returns>
         public static string ObjectTypeToEntityName(ObjectTypeDefinitionNode node)
         {
             DirectiveNode modelDirective = node.Directives.First(d => d.Name.Value == ModelDirectiveType.DirectiveName);

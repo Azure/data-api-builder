@@ -48,17 +48,19 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Assert.AreEqual(expected, od.Name.Value);
         }
 
+        /// <summary>
+        /// Validates that schema generation does not modify names.
+        /// </summary>
+        /// <param name="columnName"></param>
+        /// <param name="expected"></param>
         [DataTestMethod]
         [DataRow("test", "test")]
-        [DataRow("Test", "test")]
-        [DataRow("With Space", "withSpace")]
-        [DataRow("with space", "withSpace")]
-        [DataRow("@test", "test")]
-        [DataRow("_test", "test")]
-        [DataRow("#test", "test")]
-        [DataRow("T.est", "test")]
-        [DataRow("T_est", "t_est")]
-        [DataRow("Test1", "test1")]
+        [DataRow("Test", "Test")]
+        [DataRow("With Space", "With Space")]
+        [DataRow("with space", "with space")]
+        [DataRow("@test", "@test")]
+        [DataRow("_test", "_test")]
+        [DataRow("#test", "#test")]
         public void ColumnNameBecomesFieldName(string columnName, string expected)
         {
             TableDefinition table = new();

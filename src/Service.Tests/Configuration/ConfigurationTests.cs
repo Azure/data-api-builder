@@ -40,6 +40,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestInitialize]
         public void Setup()
         {
+            if (!File.Exists("dab-config.json")) File.Create("dab-config.json");
+            if (!File.Exists("dab-config.Test.json")) File.Create("dab-config.Test.json");
+            if (!File.Exists("dab-config.HostTest.json")) File.Create("dab-config.HostTest.json");
+            if (!File.Exists("dab-config.overrides.json")) File.Create("dab-config.overrides.json");
+            if (!File.Exists("dab-config.Test.overrides.json")) File.Create("dab-config.Test.overrides.json");
+            if (!File.Exists("dab-config.HostTest.overrides.json")) File.Create("dab-config.HostTest.overrides.json");
             TestContext.Properties.Add(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME));
             TestContext.Properties.Add(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME));
         }
@@ -410,9 +416,32 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
+        /// <summary>
+        /// Test to verify the precedence logic for config file based on Environment variables.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("HostTest", "Test", false, "dab-config.Test.json", DisplayName = "hosting and dab environment set, without considering overrides.")]
+        [DataRow("HostTest", "", false, "dab-config.HostTest.json", DisplayName = "only hosting environment set, without considering overrides.")]
+        [DataRow("", "Test", false, "dab-config.Test.json", DisplayName = "only dab environment set, without considering overrides.")]
+        [DataRow("", "Test", true, "dab-config.Test.overrides.json", DisplayName = "only dab environment set, considering overrides.")]
+        [DataRow("HostTest", "", true, "dab-config.HostTest.overrides.json", DisplayName = "only hosting environment set, considering overrides.")]
+        [DataRow("", "", true, "dab-config.overrides.json", DisplayName = "neither hosting nor dab environment set, and considering overrides.")]
+        public void TestConfigSelectionBasedOnCliPrecedence(string hostingEnvironmentValue, string environmentValue, bool considerOverrides, string expectedRuntimeConfigFile)
+        {
+            Environment.SetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
+            string actualRuntimeConfigFile = RuntimeConfigPath.GetFileNameForEnvironment(hostingEnvironmentValue, considerOverrides);
+            Assert.AreEqual(expectedRuntimeConfigFile, actualRuntimeConfigFile);
+        }
+
         [TestCleanup]
         public void Cleanup()
         {
+            if (!File.Exists("dab-config.json")) File.Delete("dab-config.json");
+            if (!File.Exists("dab-config.Test.json")) File.Delete("dab-config.Test.json");
+            if (!File.Exists("dab-config.HostTest.json")) File.Delete("dab-config.HostTest.json");
+            if (!File.Exists("dab-config.overrides.json")) File.Delete("dab-config.overrides.json");
+            if (!File.Exists("dab-config.Test.overrides.json")) File.Delete("dab-config.Test.overrides.json");
+            if (!File.Exists("dab-config.HostTest.overrides.json")) File.Delete("dab-config.HostTest.overrides.json");
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[ASP_NET_CORE_ENVIRONMENT_VAR_NAME]);
             Environment.SetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME]);
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "");

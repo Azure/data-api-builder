@@ -1,4 +1,4 @@
-namespace Hawaii.Cli.Tests
+namespace Cli.Tests
 {
     /// <summary>
     /// Tests for Utils methods.
@@ -6,6 +6,20 @@ namespace Hawaii.Cli.Tests
     [TestClass]
     public class UtilsTests
     {
+        public TestContext TestContext { get; set; }
+
+        /// <summary>
+        /// Setup up temporary test files and environment variables for current test session.
+        /// </summary>
+        [TestInitialize]
+        public void Setup()
+        {
+            if (!File.Exists("dab-config.json")) File.Create("dab-config.json");
+            if (!File.Exists("dab-config.Test.json")) File.Create("dab-config.Test.json");
+            if (!File.Exists("my-config.json")) File.Create("my-config.json");
+            TestContext.Properties.Add(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME));
+        }
+
         /// <summary>
         /// Test to check if it successfully creates the rest object
         /// which can be either a boolean value
@@ -81,6 +95,34 @@ namespace Hawaii.Cli.Tests
             // Invalid graphql string
             graphQlDetails = GetGraphQLDetails("book:plural_books:ads");
             Assert.IsNull(graphQlDetails);
+        }
+
+        /// <summary>
+        /// Test to check the precedence logic for config file in CLI
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("", "my-config.json", "my-config.json", DisplayName = "user provided the config file and environment variable was not set.")]
+        [DataRow("Test", "my-config.json", "my-config.json", DisplayName = "user provided the config file and environment variable was set.")]
+        [DataRow("Test", null, "dab-config.Test.json", DisplayName = "config not provided, but environment variable was set.")]
+        [DataRow("", null, "dab-config.json", DisplayName = "neither config was provided, nor environment variable was set.")]
+        public void TestConfigSelectionBasedOnCliPrecedence(string? environmentValue, string? userProvidedConfigFile, string? expectedRuntimeConfigFile)
+        {
+            Environment.SetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
+            string? actualRuntimeConfigFile;
+            Assert.IsTrue(TryGetConfigFileBasedOnCliPrecedence(userProvidedConfigFile, out actualRuntimeConfigFile));
+            Assert.AreEqual(expectedRuntimeConfigFile, actualRuntimeConfigFile);
+        }
+
+        /// <summary>
+        /// Clean up temporary test files and reset environment variables
+        /// </summary>
+        [TestCleanup]
+        public void Cleanup()
+        {
+            if (!File.Exists("dab-config.json")) File.Delete("dab-config.json");
+            if (!File.Exists("dab-config.Test.json")) File.Delete("dab-config.Test.json");
+            if (!File.Exists("my-config.json")) File.Delete("my-config.json");
+            Environment.SetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME]);
         }
     }
 }

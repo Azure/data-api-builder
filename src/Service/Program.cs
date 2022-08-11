@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool StartEngine(string[] args)
         {
-            Console.WriteLine("Starting the runtime engine.");
+            Console.WriteLine("Starting the runtime engine...");
             try
             {
                 CreateHostBuilder(args).Build().Run();
@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Service
             string[] args)
         {
             string configFileName
-                = RuntimeConfigPath.GetFileNameForEnvironment(env.EnvironmentName);
+                = RuntimeConfigPath.GetFileNameForEnvironment(env.EnvironmentName, considerOverrides: true);
             Dictionary<string, string> configFileNameMap = new()
             {
                 {

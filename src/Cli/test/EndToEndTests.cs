@@ -1,4 +1,4 @@
-namespace Hawaii.Cli.Tests;
+namespace Cli.Tests;
 
 /// <summary>
 /// End To End Tests for CLI.
@@ -237,6 +237,7 @@ public class EndToEndTests
         }
 
         process.Kill();
+        Assert.IsNotNull(output);
         Assert.IsTrue(output.Contains("Starting the runtime engine."));
     }
 

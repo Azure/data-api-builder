@@ -1,8 +1,7 @@
 using Azure.DataApiBuilder.Config;
 using CommandLine;
-using Hawaii.Cli.Models;
 
-namespace Hawaii.Cli
+namespace Cli
 {
     /// <summary>
     /// Main class for CLI
@@ -58,10 +57,7 @@ namespace Hawaii.Cli
                 })
                 .WithParsed<StartOptions>(options =>
                 {
-                    /// This will start the runtime engine with project name and config file.
-                    string[] args = new string[] { "--" + nameof(RuntimeConfigPath.ConfigFileName), options.Config };
-
-                    bool isSuccess = Azure.DataApiBuilder.Service.Program.StartEngine(args);
+                    bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(options);
 
                     if (!isSuccess)
                     {

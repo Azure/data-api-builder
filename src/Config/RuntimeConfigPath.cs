@@ -13,13 +13,11 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     public class RuntimeConfigPath
     {
-        public const string CONFIGFILE_NAME = "hawaii-config";
+        public const string CONFIGFILE_NAME = "dab-config";
         public const string CONFIG_EXTENSION = ".json";
 
-        public const string CONFIG_FILE = $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
-
-        public const string RUNTIME_ENVIRONMENT_VAR_NAME = "HAWAII_ENVIRONMENT";
-        public const string ENVIRONMENT_PREFIX = "HAWAII_";
+        public const string RUNTIME_ENVIRONMENT_VAR_NAME = "DAB_ENVIRONMENT";
+        public const string ENVIRONMENT_PREFIX = "DAB_";
 
         public string? ConfigFileName { get; set; }
 
@@ -142,8 +140,9 @@ namespace Azure.DataApiBuilder.Config
         /// If no file exists, this will return an empty string.
         /// </summary>
         /// <param name="hostingEnvironmentName">Value of ASPNETCORE_ENVIRONMENT variable</param>
+        /// <param name="considerOverrides">whether to look for overrides file or not.</param>
         /// <returns></returns>
-        public static string GetFileNameForEnvironment(string? hostingEnvironmentName)
+        public static string GetFileNameForEnvironment(string? hostingEnvironmentName, bool considerOverrides)
         {
             string configFileNameWithExtension = string.Empty;
             string?[] environmentPrecedence = new[]
@@ -166,7 +165,7 @@ namespace Azure.DataApiBuilder.Config
                     || index == environmentPrecedence.Length - 1)
                 {
                     configFileNameWithExtension =
-                        GetFileNameConsideringOverrides(environmentPrecedence[index]);
+                        GetFileName(environmentPrecedence[index], considerOverrides);
                 }
             }
 
@@ -189,24 +188,43 @@ namespace Azure.DataApiBuilder.Config
         /// </summary>
         /// <param name="environmentValue">Name of the environment to
         /// generate the config file name for.</param>
+        /// <param name="considerOverrides">whether to look for overrides file or not.</param>
         /// <returns></returns>
-        private static string GetFileNameConsideringOverrides(string? environmentValue)
+        private static string GetFileName(string? environmentValue, bool considerOverrides)
         {
+            if (!string.IsNullOrEmpty(environmentValue))
+            {
+                Console.WriteLine($"value of {RUNTIME_ENVIRONMENT_VAR_NAME} found.");
+            }
+
             string configFileName =
                 !string.IsNullOrEmpty(environmentValue)
                 ? $"{CONFIGFILE_NAME}.{environmentValue}"
                 : $"{CONFIGFILE_NAME}";
             string overriddenConfigFileNameWithExtension = GetOverriddenName(configFileName);
-            if (DoesFileExistInCurrentDirectory(overriddenConfigFileNameWithExtension))
+            if (considerOverrides && DoesFileExistInCurrentDirectory(overriddenConfigFileNameWithExtension))
             {
+                Console.WriteLine($"using config file:{overriddenConfigFileNameWithExtension}.");
                 return overriddenConfigFileNameWithExtension;
             }
-            else if (DoesFileExistInCurrentDirectory($"{configFileName}{CONFIG_EXTENSION}"))
+            else
             {
+                if (considerOverrides)
+                {
+                    Console.WriteLine($"config file:{overriddenConfigFileNameWithExtension} is not present.");
+                }
+
+                Console.WriteLine($"checking if {configFileName}{CONFIG_EXTENSION} exists.");
+            }
+
+            if (DoesFileExistInCurrentDirectory($"{configFileName}{CONFIG_EXTENSION}"))
+            {
+                Console.WriteLine($"using config file:{configFileName}{CONFIG_EXTENSION}.");
                 return $"{configFileName}{CONFIG_EXTENSION}";
             }
             else
             {
+                Console.WriteLine($"config file:{configFileName}{CONFIG_EXTENSION} is not present.");
                 return string.Empty;
             }
         }

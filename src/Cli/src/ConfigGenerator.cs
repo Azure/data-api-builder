@@ -1,10 +1,11 @@
 using System.Collections;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
-using static Hawaii.Cli.Models.Utils;
+using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
+using static Cli.Utils;
 using Action = Azure.DataApiBuilder.Config.Action;
 
-namespace Hawaii.Cli.Models
+namespace Cli
 {
     /// <summary>
     /// Contains the methods for Initializing the config file and Adding/Updating Entities.
@@ -24,9 +25,19 @@ namespace Hawaii.Cli.Models
                 return false;
             }
 
-            string file = $"{options.Name}.json";
+            string userProvidedConfigFile = string.IsNullOrEmpty(options.Name)? string.Empty : $"{options.Name}{CONFIG_EXTENSION}";
+            string? runtimeConfigFile;
+            if (!TryGetConfigFileBasedOnCliPrecedence(userProvidedConfigFile, out runtimeConfigFile))
+            {
+                return false;
+            }
 
-            return WriteJsonContentToFile(file, runtimeConfigJson);
+            if (string.IsNullOrEmpty(runtimeConfigFile))
+            {
+                return false;
+            }
+
+            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
         }
 
         /// <summary>
@@ -102,12 +113,17 @@ namespace Hawaii.Cli.Models
         /// </summary>
         public static bool TryAddEntityToConfigWithOptions(AddOptions options)
         {
-            string file = $"{options.Name}.json";
+            string userProvidedConfigFile = string.IsNullOrEmpty(options.Name)? string.Empty : $"{options.Name}{CONFIG_EXTENSION}";
+            string runtimeConfigFile;
+            if (!TryGetConfigFileBasedOnCliPrecedence(userProvidedConfigFile, out runtimeConfigFile))
+            {
+                return false;
+            }
 
             string runtimeConfigJson;
-            if (!TryReadRuntimeConfig(file, out runtimeConfigJson))
+            if (!TryReadRuntimeConfig(runtimeConfigFile, out runtimeConfigJson))
             {
-                Console.Error.Write($"Failed to read the config file: {file}.");
+                Console.Error.Write($"Failed to read the config file: {runtimeConfigFile}.");
                 return false;
             }
 
@@ -117,7 +133,7 @@ namespace Hawaii.Cli.Models
                 return false;
             }
 
-            return WriteJsonContentToFile(file, runtimeConfigJson);
+            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
         }
 
         /// <summary>
@@ -223,12 +239,17 @@ namespace Hawaii.Cli.Models
         /// </summary>
         public static bool TryUpdateEntityWithOptions(UpdateOptions options)
         {
-            string file = $"{options.Name}.json";
+            string userProvidedConfigFile = string.IsNullOrEmpty(options.Name)? string.Empty : $"{options.Name}{CONFIG_EXTENSION}";
+            string runtimeConfigFile;
+            if (!TryGetConfigFileBasedOnCliPrecedence(userProvidedConfigFile, out runtimeConfigFile))
+            {
+                return false;
+            }
 
             string runtimeConfigJson;
-            if (!TryReadRuntimeConfig(file, out runtimeConfigJson))
+            if (!TryReadRuntimeConfig(runtimeConfigFile, out runtimeConfigJson))
             {
-                Console.Error.Write($"Failed to read the config file: {file}.");
+                Console.Error.Write($"Failed to read the config file: {runtimeConfigFile}.");
                 return false;
             }
 
@@ -238,7 +259,7 @@ namespace Hawaii.Cli.Models
                 return false;
             }
 
-            return WriteJsonContentToFile(file, runtimeConfigJson);
+            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
         }
 
         /// <summary>
@@ -300,8 +321,8 @@ namespace Hawaii.Cli.Models
             else
             {
 
-                if ((options.FieldsToInclude is not null && options.FieldsToInclude.Any())
-                    || (options.FieldsToExclude is not null && options.FieldsToExclude.Any()))
+                if (options.FieldsToInclude is not null && options.FieldsToInclude.Any()
+                    || options.FieldsToExclude is not null && options.FieldsToExclude.Any())
                 {
                     Console.WriteLine($"--permissions is mandatory with --fields.include and --fields.exclude.");
                     return false;
@@ -550,8 +571,8 @@ namespace Hawaii.Cli.Models
         {
             string[]? updatedSourceFields = null;
             string[]? updatedTargetFields = null;
-            string[]? updatedLinkingSourceFields = (options.LinkingSourceFields is null || !options.LinkingSourceFields.Any()) ? null : options.LinkingSourceFields.ToArray();
-            string[]? updatedLinkingTargetFields = (options.LinkingTargetFields is null || !options.LinkingTargetFields.Any()) ? null : options.LinkingTargetFields.ToArray();
+            string[]? updatedLinkingSourceFields = options.LinkingSourceFields is null || !options.LinkingSourceFields.Any() ? null : options.LinkingSourceFields.ToArray();
+            string[]? updatedLinkingTargetFields = options.LinkingTargetFields is null || !options.LinkingTargetFields.Any() ? null : options.LinkingTargetFields.ToArray();
 
             Cardinality updatedCardinality = Enum.Parse<Cardinality>(options.Cardinality!, ignoreCase: true);
 
@@ -576,6 +597,23 @@ namespace Hawaii.Cli.Models
                                     options.LinkingObject,
                                     updatedLinkingSourceFields,
                                     updatedLinkingTargetFields);
+        }
+
+        /// <summary>
+        /// This method will try starting the engine.
+        /// it will use the config provided by the user, else will look for the default config.
+        /// </summary>
+        public static bool TryStartEngineWithOptions(StartOptions options)
+        {
+            string runtimeConfigFile;
+            if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out runtimeConfigFile))
+            {
+                return false;
+            }
+
+            /// This will start the runtime engine with project name and config file.
+            string[] args = new string[] { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile };
+            return Azure.DataApiBuilder.Service.Program.StartEngine(args);
         }
     }
 }

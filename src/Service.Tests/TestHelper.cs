@@ -20,7 +20,9 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <returns></returns>
         public static RuntimeConfigPath GetRuntimeConfigPath(string environment)
         {
-            string configFileName = RuntimeConfigPath.GetFileNameForEnvironment(environment);
+            string configFileName = RuntimeConfigPath.GetFileNameForEnvironment(
+                                                        hostingEnvironmentName: environment,
+                                                        considerOverrides: true);
 
             Dictionary<string, string> configFileNameMap = new()
             {

@@ -9,7 +9,7 @@ using Action = Azure.DataApiBuilder.Config.Action;
 /// <summary>
 /// Contains the methods for transforming objects, serialization options.
 /// </summary>
-namespace Hawaii.Cli.Models
+namespace Cli
 {
     public class Utils
     {
@@ -186,7 +186,7 @@ namespace Hawaii.Cli.Models
                 }
                 else
                 {
-                    Action ac = JsonSerializer.Deserialize<Action>(actionJson, GetSerializationOptions())!;
+                    Action ac = actionJson.Deserialize<Action>(GetSerializationOptions())!;
 
                     if (ac.Name is Operation.All)
                     {
@@ -334,10 +334,10 @@ namespace Hawaii.Cli.Models
         /// </summary>
         public static Field? GetFieldsForAction(IEnumerable<string>? fieldsToInclude, IEnumerable<string>? fieldsToExclude)
         {
-            if ((fieldsToInclude is not null && fieldsToInclude.Any()) || (fieldsToExclude is not null && fieldsToExclude.Any()))
+            if (fieldsToInclude is not null && fieldsToInclude.Any() || fieldsToExclude is not null && fieldsToExclude.Any())
             {
-                HashSet<string>? fieldsToIncludeSet = (fieldsToInclude is not null && fieldsToInclude.Any()) ? new HashSet<string>(fieldsToInclude) : null;
-                HashSet<string>? fieldsToExcludeSet = (fieldsToExclude is not null && fieldsToExclude.Any()) ? new HashSet<string>(fieldsToExclude) : null;
+                HashSet<string>? fieldsToIncludeSet = fieldsToInclude is not null && fieldsToInclude.Any() ? new HashSet<string>(fieldsToInclude) : null;
+                HashSet<string>? fieldsToExcludeSet = fieldsToExclude is not null && fieldsToExclude.Any() ? new HashSet<string>(fieldsToExclude) : null;
                 return new Field(fieldsToIncludeSet, fieldsToExcludeSet);
             }
 
@@ -443,6 +443,36 @@ namespace Hawaii.Cli.Models
 
             role = permissions.ElementAt(0);
             actions = permissions.ElementAt(1);
+            return true;
+        }
+
+        /// <summary>
+        /// this method will try to find the config file based on the precedence.
+        /// if config file provided by user, it will return that.
+        /// Else it will check the DAB_ENVIRONMENT variable.
+        /// In case the environment variable is not set it will check for default config.
+        /// If none of the file exists it will return false. Else true with output in runtimeConfigFile.
+        /// </summary>
+        public static bool TryGetConfigFileBasedOnCliPrecedence(string? userProvidedConfigFile, out string? runtimeConfigFile)
+        {
+            if (!string.IsNullOrEmpty(userProvidedConfigFile))
+            {
+                runtimeConfigFile = userProvidedConfigFile;
+                return true;
+            }
+            else
+            {
+                Console.WriteLine("Config not provided. Trying to get default config based on Environment.");
+                runtimeConfigFile = RuntimeConfigPath.GetFileNameForEnvironment(
+                        hostingEnvironmentName: null,
+                        considerOverrides: false);
+            }
+
+            if (string.IsNullOrEmpty(runtimeConfigFile))
+            {
+                return false;
+            }
+
             return true;
         }
 

@@ -1382,10 +1382,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [DataRow("id; DROP TABLE books;--", false)]
         public async Task FindByIdTestWithSqlInjectionInPKRoute(string sqlInjection, bool slashStar)
         {
-            string message = slashStar ? "Primary key column(s) provided do not match DB schema." :
-                "Support for url template with implicit primary key field names is not yet added.";
+            string message = slashStar ? "Support for url template with implicit primary key field names is not yet added." :
+                $"Parameter \"{sqlInjection}\" cannot be resolved as column \"id\" with type \"Int32\".";
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: $"id/5671/{sqlInjection}",
+                primaryKeyRoute: $"id/{sqlInjection}",
                 queryString: $"?$select=id",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,

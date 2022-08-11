@@ -140,7 +140,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                 if (entity.GraphQL is GraphQLEntitySettings graphQLEntitySettings)
                 {
-                    if (graphQLEntitySettings.Type is string type && string.IsNullOrWhiteSpace(type))
+                    if (graphQLEntitySettings.Type is string type
+                        && (string.IsNullOrWhiteSpace(type)
+                            || GraphQLNaming.ViolatesNameRequirements(type)
+                            || GraphQLNaming.ViolatesNamePrefixRequirements(type)
+                           )
+                        )
                     {
                         throw new DataApiBuilderException(
                                 message: $"Entity {entityName} has an invalid string for GraphQL",
@@ -148,18 +153,40 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                     }
 
-                    if (graphQLEntitySettings.Type is SingularPlural singularPlural && string.IsNullOrWhiteSpace(singularPlural.Singular))
+                    if (graphQLEntitySettings.Type is SingularPlural singularPlural)
                     {
-                        throw new DataApiBuilderException(
-                                message: $"Entity {entityName} has an invalid singular name for GraphQL",
+                        if( string.IsNullOrWhiteSpace(singularPlural.Singular))
+                        {
+                            throw new DataApiBuilderException(
+                                    message: $"Entity {entityName} has an invalid singular name for GraphQL",
+                                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        }
+
+                        if( GraphQLNaming.ViolatesNameRequirements(singularPlural.Singular)
+                            || GraphQLNaming.ViolatesNamePrefixRequirements(singularPlural.Singular))
+                        {
+                            throw new DataApiBuilderException(
+                                 message: $"{entityName}'s singular definition contains characters disallowed by GraphQL.",
+                                 statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                                 );
+                        }
+
+                        if(!string.IsNullOrWhiteSpace(singularPlural.Plural) &&
+                            (GraphQLNaming.ViolatesNameRequirements(singularPlural.Plural)
+                            || GraphQLNaming.ViolatesNamePrefixRequirements(singularPlural.Plural)))
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"{entityName}'s plural definition contains characters disallowed by GraphQL.",
                                 statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                                );
+                        }
+
                     }
-
                 }
-
             }
-
         }
 
         private void ValidateAuthenticationConfig()

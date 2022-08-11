@@ -164,18 +164,21 @@ namespace Azure.DataApiBuilder.Service.Parsers
                                                                        DataApiBuilderException.SubStatusCodes.BadRequest);
 
                 string backingColumnName;
+                string exposedName;
                 if (expression.Kind is QueryNodeKind.SingleValuePropertyAccess)
                 {
                     // if name is in SingleValuePropertyAccess node it matches our model and we will
                     // always be able to get backing column successfully
-                    sqlMetadataProvider.TryGetBackingColumn(context.EntityName, ((SingleValuePropertyAccessNode)expression).Property.Name, out backingColumnName!);
+                    exposedName = ((SingleValuePropertyAccessNode)expression).Property.Name;
+                    sqlMetadataProvider.TryGetBackingColumn(context.EntityName, exposedName, out backingColumnName!);
                 }
                 else if (expression.Kind is QueryNodeKind.Constant &&
                         ((ConstantNode)expression).Value is not null)
                 {
                     // since this comes from constant node, it was not checked against our model
                     // so this may return false in which case we throw for a bad request
-                    if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, ((ConstantNode)expression).Value.ToString()!, out backingColumnName!))
+                    exposedName = ((ConstantNode)expression).Value.ToString()!;
+                    if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, exposedName, out backingColumnName!))
                     {
                         throw new DataApiBuilderException(
                             message: $"Invalid orderby column requested: {((ConstantNode)expression).Value.ToString()!}.",
@@ -185,16 +188,17 @@ namespace Azure.DataApiBuilder.Service.Parsers
                 }
                 else
                 {
-                    throw new DataApiBuilderException(message: "OrderBy property is not supported.",
-                                                   HttpStatusCode.BadRequest,
-                                                   DataApiBuilderException.SubStatusCodes.BadRequest);
+                    throw new DataApiBuilderException(
+                        message: "OrderBy property is not supported.",
+                        HttpStatusCode.BadRequest,
+                        DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
                 // Sorting order is stored in node.Direction as OrderByDirection Enum
                 // We convert to an Enum of our own that matches the SQL text we want
                 OrderBy direction = GetDirection(node.Direction);
                 // Add OrderByColumn and remove any matching columns from our primary key set
-                orderByList.Add(new OrderByColumn(schemaName, tableName, backingColumnName, direction: direction));
+                orderByList.Add(new OrderByColumn(schemaName, tableName, exposedName, direction: direction));
                 remainingKeys.Remove(backingColumnName);
                 node = node.ThenBy;
             }
@@ -206,7 +210,8 @@ namespace Azure.DataApiBuilder.Service.Parsers
             {
                 if (remainingKeys.Contains(column))
                 {
-                    orderByList.Add(new OrderByColumn(schemaName, tableName, column));
+                    sqlMetadataProvider.TryGetBackingColumn(context.EntityName, column, out string? exposedName);
+                    orderByList.Add(new OrderByColumn(schemaName, tableName, exposedName!));
                 }
             }
 

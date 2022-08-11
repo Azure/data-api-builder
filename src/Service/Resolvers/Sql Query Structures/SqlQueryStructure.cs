@@ -173,7 +173,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // context.OrderByColumnsInUrl will lack TableAlias because it is created in RequestParser
             // which may be called for any type of operation. To avoid coupling the OrderByClauseInUrl
             // to only Find, we populate the TableAlias in this constructor where we know we have a Find operation.
-            OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsOrderByColumns();
+            OrderByColumns = context.OrderByClauseInUrl is not null ?
+                GetOrderByBackingColumns(context.OrderByClauseInUrl) :
+                GetOrderByBackingColumns(PrimaryKeyAsOrderByColumns());
             foreach (OrderByColumn column in OrderByColumns)
             {
                 if (string.IsNullOrEmpty(column.TableAlias))
@@ -231,6 +233,24 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
+        /// The OrderByClauseInUrl uses exposed names since it comes from
+        /// the request. Here we convert this to used backing column for
+        /// the actual query we will generate.
+        /// </summary>
+        /// <param name="orderByClauseInUrl">OrderByColumns with exposed names.</param>
+        /// <returns></returns>
+        private List<OrderByColumn> GetOrderByBackingColumns(List<OrderByColumn> orderByClauseInUrl)
+        {
+            foreach (OrderByColumn column in orderByClauseInUrl)
+            {
+                SqlMetadataProvider.TryGetBackingColumn(EntityName, column.ColumnName!, out string? backingColumn);
+                column.ColumnName = backingColumn!;
+            }
+
+            return orderByClauseInUrl;
+        }
+
+        /// <summary>
         /// Use the mapping of exposed names to
         /// backing columns to add column with
         /// the correct name and label.
@@ -244,6 +264,28 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 sqlMetadataProvider.TryGetBackingColumn(EntityName, exposedFieldName, out string? backingColumn);
                 AddColumn(backingColumn!, exposedFieldName);
             }
+        }
+
+        /// <summary>
+        /// Exposes the primary key of the underlying table of the structure
+        /// as a list of OrderByColumn
+        /// </summary>
+        public List<OrderByColumn> PrimaryKeyAsOrderByColumns()
+        {
+            if (_primaryKeyAsOrderByColumns == null)
+            {
+                _primaryKeyAsOrderByColumns = new();
+
+                foreach (string column in PrimaryKey())
+                {
+                    _primaryKeyAsOrderByColumns.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
+                                                                      tableName: DatabaseObject.Name,
+                                                                      columnName: column,
+                                                                      tableAlias: TableAlias));
+                }
+            }
+
+            return _primaryKeyAsOrderByColumns;
         }
 
         /// <summary>
@@ -842,28 +884,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return orderByColumnsList;
-        }
-
-        /// <summary>
-        /// Exposes the primary key of the underlying table of the structure
-        /// as a list of OrderByColumn
-        /// </summary>
-        public List<OrderByColumn> PrimaryKeyAsOrderByColumns()
-        {
-            if (_primaryKeyAsOrderByColumns == null)
-            {
-                _primaryKeyAsOrderByColumns = new();
-
-                foreach (string column in PrimaryKey())
-                {
-                    _primaryKeyAsOrderByColumns.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
-                                                                      tableName: DatabaseObject.Name,
-                                                                      columnName: column,
-                                                                      tableAlias: TableAlias));
-                }
-            }
-
-            return _primaryKeyAsOrderByColumns;
         }
 
         /// <summary>

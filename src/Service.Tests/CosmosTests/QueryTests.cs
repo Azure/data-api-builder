@@ -155,7 +155,7 @@ query {{
             {
                 string planetConnectionQueryStringFormat = @$"
 query {{
-    Planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")},
+    planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")},
     {QueryBuilder.FILTER_FIELD_NAME}: {{ id: {{eq: ""{id}""}} }}) {{
         items {{
             id
@@ -186,7 +186,7 @@ query {{
             string id = _idList[0];
             string query = @$"
 query {{
-    Planet_by_pk (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
+    planet_by_pk (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
         id
         name
         character {{

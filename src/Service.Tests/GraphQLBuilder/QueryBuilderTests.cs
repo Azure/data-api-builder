@@ -68,9 +68,9 @@ type Foo @model(name:""Foo"") {
                 );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"Foo_by_pk"));
+            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"foo_by_pk"));
             FieldDefinitionNode pkField =
-                query.Fields.Where(f => f.Name.Value == $"Foo_by_pk").First();
+                query.Fields.Where(f => f.Name.Value == $"foo_by_pk").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
                 actual: pkField.Directives.Count);
         }
@@ -98,7 +98,7 @@ type Foo @model(name:""Foo"") {
                 );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"Foo_by_pk");
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
             IReadOnlyList<InputValueDefinitionNode> args = field.Arguments;
 
             Assert.AreEqual(2, args.Count);
@@ -173,7 +173,7 @@ type Foo @model(name:""Foo"") {
                 );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            string returnTypeName = query.Fields.First(f => f.Name.Value == $"Foos").Type.NamedType().Name.Value;
+            string returnTypeName = query.Fields.First(f => f.Name.Value == $"foos").Type.NamedType().Name.Value;
             ObjectTypeDefinitionNode returnType = queryRoot.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>().First(d => d.Name.Value == returnTypeName);
             Assert.AreEqual(3, returnType.Fields.Count);
             Assert.AreEqual("items", returnType.Fields[0].Name.Value);
@@ -205,7 +205,7 @@ type Foo @model(name:""Foo"") {
                 );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"Foo_by_pk");
+            FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
             Assert.AreEqual("foo_id", byIdQuery.Arguments[0].Name.Value);
         }
 
@@ -230,7 +230,7 @@ type Foo @model(name:""Foo"") {
                             );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"Foo_by_pk");
+            FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
             Assert.AreEqual("id", byIdQuery.Arguments[0].Name.Value);
             Assert.AreEqual("_partitionKeyValue", byIdQuery.Arguments[1].Name.Value);
         }

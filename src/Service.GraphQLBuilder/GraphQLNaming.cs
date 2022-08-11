@@ -127,33 +127,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Helper which
-        /// - Sanitizes the GraphQL field name by removing invalid characters from "name."
-        /// - Capture nameSegments: substrings in "name" delimited by spaces.
-        /// - camelCase the sanitized name: lower case first string segment, followed by upper-case string segments.
-        /// </summary>
-        /// <param name="name">Name to sanitize and format for GraphQL schema usage.</param>
-        /// <returns>Sanitized and formatted field name value.</returns>
-        public static string FormatNameForField(string name)
-        {
-            string[] nameSegments = SanitizeGraphQLName(name);
-
-            //return string.Join("", nameSegments.Select((n, i) => $"{(i == 0 ? char.ToLowerInvariant(n[0]) : char.ToUpperInvariant(n[0]))}{n[1..]}"));
-            return nameSegments[0];
-        }
-
-        /// <summary>
-        /// Helper which passes the HotChocolate schema object type of NameNode
-        /// to the FormatNameForField function to sanitize and format the field name for GraphQL.
-        /// </summary>
-        /// <param name="name">HotChocolate schema object type NameNode</param>
-        /// <returns>Sanitized and formatted field name value.</returns>
-        public static string FormatNameForField(NameNode name)
-        {
-            return FormatNameForField(name.Value);
-        }
-
-        /// <summary>
         /// Helper to pluralize the value of a NameNode HotChocolate schema object
         /// </summary>
         /// <param name="name">HotChocolate schema object type NameNode</param>

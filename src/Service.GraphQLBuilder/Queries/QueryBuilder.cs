@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 
             return new(
                 location: null,
-                new NameNode($"{FormatNameForField(name)}_by_pk"),
+                new NameNode($"{name}_by_pk"),
                 new StringValueNode($"Get a {name} from the database by its ID/primary key"),
                 inputValues,
                 new NamedTypeNode(name),

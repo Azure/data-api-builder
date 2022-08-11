@@ -46,10 +46,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             NameNode name,
             IEnumerable<HotChocolate.Language.IHasName> definitions,
-            Entity entity,
+            IDictionary<string, Entity> entities,
             DatabaseType databaseType)
         {
-            NameNode inputName = GenerateInputTypeName(name.Value, entity);
+            Entity entity = entities[ObjectTypeToEntityName(objectTypeDefinitionNode)];
+            NameNode inputName = GenerateInputTypeName(name.Value);
 
             if (inputs.ContainsKey(inputName))
             {
@@ -67,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         HotChocolate.Language.IHasName def = definitions.First(d => d.Name.Value == typeName);
                         if (def is ObjectTypeDefinitionNode otdn)
                         {
-                            return GetComplexInputType(inputs, definitions, f, typeName, otdn, entity, databaseType);
+                            return GetComplexInputType(inputs, definitions, f, typeName, otdn, entities, databaseType);
                         }
                     }
 
@@ -108,14 +109,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             FieldDefinitionNode f,
             string typeName,
             ObjectTypeDefinitionNode otdn,
-            Entity entity,
+            IDictionary<string, Entity> entities,
             DatabaseType databaseType)
         {
             InputObjectTypeDefinitionNode node;
+            Entity entity = entities[typeName];
             NameNode inputTypeName = GenerateInputTypeName(typeName, entity);
+
             if (!inputs.ContainsKey(inputTypeName))
             {
-                node = GenerateUpdateInputType(inputs, otdn, f.Type.NamedType().Name, definitions, entity, databaseType);
+                node = GenerateUpdateInputType(inputs, otdn, f.Type.NamedType().Name, definitions, entities, databaseType);
             }
             else
             {
@@ -162,9 +165,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 : new ListTypeNode(type);
         }
 
-        private static NameNode GenerateInputTypeName(string typeName, Entity entity)
+        /// <summary>
+        /// Generates a string of the form "Update{EntityName}Input"
+        /// </summary>
+        /// <param name="typeName">Name of the entity</param>
+        /// <returns>InputTypeName</returns>
+        private static NameNode GenerateInputTypeName(string typeName)
         {
-            return new($"{Operation.Update}{FormatNameForObject(typeName, entity)}Input");
+            return new($"{Operation.Update}{typeName}Input");
         }
 
         /// <summary>
@@ -182,11 +190,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             DocumentNode root,
-            Entity entity,
+            IDictionary<string, Entity> entities,
+            string dbEntityName,
             DatabaseType databaseType,
             IEnumerable<string>? rolesAllowedForMutation = null)
         {
-            InputObjectTypeDefinitionNode input = GenerateUpdateInputType(inputs, objectTypeDefinitionNode, name, root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(), entity, databaseType);
+            InputObjectTypeDefinitionNode input = GenerateUpdateInputType(
+                inputs,
+                objectTypeDefinitionNode,
+                name,
+                root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),
+                entities,
+                databaseType);
+
             List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode, databaseType);
             string description;
             if (idFields.Count() > 1)
@@ -230,7 +246,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             return new(
                 location: null,
-                new NameNode($"update{FormatNameForObject(name, entity)}"),
+                new NameNode($"update{FormatNameForObject(name, entities[dbEntityName])}"),
                 new StringValueNode($"Updates a {name}"),
                 inputValues,
                 new NamedTypeNode(name),

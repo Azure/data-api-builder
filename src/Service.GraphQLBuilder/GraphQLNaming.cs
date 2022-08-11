@@ -66,9 +66,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             return _graphQLValidSymbols.Match(name).Success;
         }
 
+        /// <summary>
+        /// Attempts to deserialize and get the SingularPlural GraphQL naming config
+        /// of an Entity from the Runtime Configuration.
+        /// </summary>
         public static string GetDefinedSingularName(string name, Entity configEntity)
         {
-            if (TryGetSingularPluralConfiguration(configEntity, out SingularPlural? singularPluralConfig) &&
+            if (TryGetConfiguredGraphQLName(configEntity, out string? graphQLName) &&
+                !string.IsNullOrEmpty(graphQLName))
+            {
+                name = graphQLName;
+            }
+            else if (TryGetSingularPluralConfiguration(configEntity, out SingularPlural? singularPluralConfig) &&
                 !string.IsNullOrEmpty(singularPluralConfig.Singular))
             {
                 name = singularPluralConfig.Singular;
@@ -99,6 +108,21 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             }
 
             singularPluralConfig = null;
+            return false;
+        }
+
+        public static bool TryGetConfiguredGraphQLName(Entity configEntity, [NotNullWhen(true)] out string? graphQLName)
+        {
+            if (configEntity.GraphQL is not null && configEntity.GraphQL is GraphQLEntitySettings graphQLEntitySettings)
+            {
+                if (graphQLEntitySettings is not null && graphQLEntitySettings.Type is string typeEntityName)
+                {
+                    graphQLName = typeEntityName;
+                    return true;
+                }
+            }
+
+            graphQLName = null;
             return false;
         }
 
@@ -143,7 +167,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <returns></returns>
         public static NameNode Pluralize(string name, Entity configEntity)
         {
-            if (TryGetSingularPluralConfiguration(configEntity, out SingularPlural? namingRules) &&
+            if (TryGetConfiguredGraphQLName(configEntity, out string? graphQLName) &&
+                !string.IsNullOrEmpty(graphQLName))
+            {
+                return new NameNode(graphQLName.Pluralize());
+            }
+            else if (TryGetSingularPluralConfiguration(configEntity, out SingularPlural? namingRules) &&
                 !string.IsNullOrEmpty(namingRules.Plural))
             {
                 return new NameNode(namingRules.Plural);

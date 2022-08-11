@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Config
                 return;
             }
 
-            if (GraphQL is not null && GraphQL is JsonElement configElement)
+            if (GraphQL is JsonElement configElement)
             {
                 if (configElement.ValueKind is JsonValueKind.True || configElement.ValueKind is JsonValueKind.False)
                 {

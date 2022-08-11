@@ -57,7 +57,6 @@
     <Watch Remove="hawaii-config.Mssql.json" />
     <Watch Remove="hawaii-config.MsSql.overrides.example.json" />
     <Watch Remove="hawaii-config.MsSql.overrides.json" />
-    <Watch Remove="hawaii-config.MsSql.overrides_DAVIDE.json" />
     <Watch Remove="hawaii-config.Mysql.json" />
     <Watch Remove="hawaii-config.MySql.overrides.example.json" />
     <Watch Remove="hawaii-config.Postgresql.json" />

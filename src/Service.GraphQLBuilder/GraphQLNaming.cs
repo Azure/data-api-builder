@@ -138,7 +138,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         {
             string[] nameSegments = SanitizeGraphQLName(name);
 
-            return string.Join("", nameSegments.Select((n, i) => $"{(i == 0 ? char.ToLowerInvariant(n[0]) : char.ToUpperInvariant(n[0]))}{n[1..]}"));
+            //return string.Join("", nameSegments.Select((n, i) => $"{(i == 0 ? char.ToLowerInvariant(n[0]) : char.ToUpperInvariant(n[0]))}{n[1..]}"));
+            return nameSegments[0];
         }
 
         /// <summary>
@@ -183,11 +184,20 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             return new NameNode(name.Pluralize());
         }
 
+        /// <summary>
+        /// Given an object type definition i.e. type EntityName @model(name:TopLevelEntityName)
+        /// Get the value assigned to the model directive which is the top-level entity name.
+        /// If no model directive exists, the name set on the object type definition is returned.
+        /// </summary>
+        /// <param name="node">Object type definition</param>
+        /// <returns>string representing the top-level entity name defined in runtime configuration.</returns>
         public static string ObjectTypeToEntityName(ObjectTypeDefinitionNode node)
         {
             DirectiveNode modelDirective = node.Directives.First(d => d.Name.Value == ModelDirectiveType.DirectiveName);
 
             return modelDirective.Arguments.Count == 1 ? (string)(modelDirective.Arguments[0].Value.Value ?? node.Name.Value) : node.Name.Value;
         }
+
+        //public static string GetModelDirectiveValue()
     }
 }

@@ -18,14 +18,14 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         public static readonly string PlanetByPKQuery = @"
 query ($id: ID, $partitionKeyValue: String) {
-    planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) {
+    Planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) {
         id
         name
     }
 }";
         public static readonly string PlanetsQuery = @"
 query ($first: Int!, $after: String) {
-    planets (first: $first, after: $after) {
+    Planets (first: $first, after: $after) {
         items {
             id
             name
@@ -36,7 +36,7 @@ query ($first: Int!, $after: String) {
 }";
         public static readonly string PlanetsWithOrderBy = @"
 query{
-    planets (first: 10, after: null, orderBy: {id: ASC, name: null }) {
+    Planets (first: 10, after: null, orderBy: {id: ASC, name: null }) {
         items {
             id
             name
@@ -64,7 +64,7 @@ query{
         {
             // Run query
             string id = _idList[0];
-            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", PlanetByPKQuery, new() { { "id", id }, { "partitionKeyValue", id } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("Planet_by_pk", PlanetByPKQuery, new() { { "id", id }, { "partitionKeyValue", id } });
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -80,7 +80,7 @@ query{
 
             do
             {
-                JsonElement page = await ExecuteGraphQLRequestAsync("planets",
+                JsonElement page = await ExecuteGraphQLRequestAsync("Planets",
                     PlanetsQuery, new() { { "first", pagesize }, { "after", afterToken } });
                 JsonElement after = page.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME);
                 afterToken = after.ToString();
@@ -98,12 +98,12 @@ query{
             string id = _idList[0];
             string query = @$"
 query {{
-    planet_by_pk (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
+    Planet_by_pk (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
         id
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", query);
+            JsonElement response = await ExecuteGraphQLRequestAsync("Planet_by_pk", query);
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -122,7 +122,7 @@ query {{
             {
                 string planetConnectionQueryStringFormat = @$"
 query {{
-    planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")}) {{
+    Planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")}) {{
         items {{
             id
             name
@@ -131,7 +131,7 @@ query {{
         hasNextPage
     }}
 }}";
-                JsonElement page = await ExecuteGraphQLRequestAsync("planets", planetConnectionQueryStringFormat, variables: new());
+                JsonElement page = await ExecuteGraphQLRequestAsync("Planets", planetConnectionQueryStringFormat, variables: new());
                 JsonElement after = page.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME);
                 afterToken = after.ToString();
                 totalElementsFromPaginatedQuery += page.GetProperty(QueryBuilder.PAGINATION_FIELD_NAME).GetArrayLength();
@@ -155,7 +155,7 @@ query {{
             {
                 string planetConnectionQueryStringFormat = @$"
 query {{
-    planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")},
+    Planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")},
     {QueryBuilder.FILTER_FIELD_NAME}: {{ id: {{eq: ""{id}""}} }}) {{
         items {{
             id
@@ -165,7 +165,7 @@ query {{
         hasNextPage
     }}
 }}";
-                JsonElement page = await ExecuteGraphQLRequestAsync("planets", planetConnectionQueryStringFormat, variables: new());
+                JsonElement page = await ExecuteGraphQLRequestAsync("Planets", planetConnectionQueryStringFormat, variables: new());
                 JsonElement after = page.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME);
                 afterToken = after.ToString();
                 totalElementsFromPaginatedQuery += page.GetProperty(QueryBuilder.PAGINATION_FIELD_NAME).GetArrayLength();
@@ -186,7 +186,7 @@ query {{
             string id = _idList[0];
             string query = @$"
 query {{
-    planet_by_pk (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
+    Planet_by_pk (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
         id
         name
         character {{
@@ -195,7 +195,7 @@ query {{
         }}
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", query);
+            JsonElement response = await ExecuteGraphQLRequestAsync("Planet_by_pk", query);
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -204,7 +204,7 @@ query {{
         [TestMethod]
         public async Task GetWithOrderBy()
         {
-            JsonElement response = await ExecuteGraphQLRequestAsync("planets", PlanetsWithOrderBy);
+            JsonElement response = await ExecuteGraphQLRequestAsync("Planets", PlanetsWithOrderBy);
 
             int i = 0;
             // Check order matches

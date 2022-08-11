@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
     {
         private static readonly string _containerName = Guid.NewGuid().ToString();
         private static int _pageSize = 10;
-        private static readonly string _graphQLQueryName = "planets";
+        private static readonly string _graphQLQueryName = "Planets";
 
         [ClassInitialize]
         public static void TestFixtureSetup(TestContext context)
@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestStringFiltersEq()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
                 @" : {name: {eq: ""Endor""}})
                 {
                     items {
@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
 
             string gqlQuery = @"{
-                planets(first: 10," + QueryBuilder.FILTER_FIELD_NAME +
+                Planets(first: 10," + QueryBuilder.FILTER_FIELD_NAME +
                 @" : {name: {neq: ""Endor""}})
                 {
                     items {
@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestStringFiltersStartsWith()
         {
             string gqlQuery = @"{
-                planets(first: 10," + QueryBuilder.FILTER_FIELD_NAME +
+                Planets(first: 10," + QueryBuilder.FILTER_FIELD_NAME +
                 @" : {name: {startsWith: ""En""}})
                 {
                     items {
@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestStringFiltersEndsWith()
         {
             string gqlQuery = @"{
-                planets(first: 10," + QueryBuilder.FILTER_FIELD_NAME +
+                Planets(first: 10," + QueryBuilder.FILTER_FIELD_NAME +
                 @" : {name: {endsWith: ""h""}})
                 {
                     items {
@@ -136,7 +136,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestStringFiltersContains()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
                 @" : {name: {contains: ""pi""}})
                 {
                     items {
@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestStringFiltersNotContains()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
                 @" : {name: {notContains: ""pi""}})
                 {
                     items {
@@ -180,7 +180,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestStringFiltersContainsWithSpecialChars()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name: {contains: ""%""}})
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name: {contains: ""%""}})
                 {
                     items {
                         name
@@ -200,7 +200,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestIntFiltersEq()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {eq: 4}})
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {eq: 4}})
                 {
                     items {
                         age
@@ -219,7 +219,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestIntFiltersNeq()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {neq: 4}})
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {neq: 4}})
                 {
                     items {
                         age
@@ -238,7 +238,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestIntFiltersGtLt()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {gt: 2 lt: 5}})
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {gt: 2 lt: 5}})
                 {
                     items {
                         age
@@ -257,7 +257,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestIntFiltersGteLte()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {gte: 2 lte: 5}})
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {gte: 2 lte: 5}})
                 {
                     items {
                         age
@@ -284,7 +284,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestCreatingParenthesis1()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {
                                     name: {contains: ""En""}
                                     or: [
                                         {age:{gt: 2 lt: 4}},
@@ -320,7 +320,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestCreatingParenthesis2()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {
                                     or: [
                                         {age: {gt: 2} and: [{age: {lt: 4}}]},
                                         {age: {gte: 2} name: {contains: ""En""}}
@@ -351,7 +351,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestComplicatedFilter()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {
                                     age: {gte: 1}
                                     name: {notContains: ""En""}
                                     and: [
@@ -390,9 +390,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestMethod]
         public async Task TestOnlyEmptyAnd()
         {
-            string graphQLQueryName = "planets";
+            string graphQLQueryName = "Planets";
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {and: []})
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {and: []})
                 {
                     items {
                         id
@@ -410,9 +410,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestMethod]
         public async Task TestOnlyEmptyOr()
         {
-            string graphQLQueryName = "planets";
+            string graphQLQueryName = "Planets";
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {or: []})
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {or: []})
                 {
                     items {
                         id
@@ -431,7 +431,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestGetNullIntFields()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {isNull: false}})
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {isNull: false}})
                 {
                     items {
                         name
@@ -451,7 +451,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestGetNonNullIntFields()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {isNull: true}})
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {isNull: true}})
                 {
                     items {
                         name
@@ -471,7 +471,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestGetNullStringFields()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name: {isNull: true}})
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name: {isNull: true}})
                 {
                     items {
                         name
@@ -491,7 +491,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestGetNonNullStringFields()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name: {isNull: false}})
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name: {isNull: false}})
                 {
                     items {
                         name
@@ -513,7 +513,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestExplicitNullFieldsAreIgnored()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {gte:2 lte: null}
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {gte:2 lte: null}
                                                            name: null
                                                            or: null })
                 {
@@ -535,7 +535,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestInputObjectWithOnlyNullFieldsEvaluatesToFalse()
         {
             string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {lte: null}})
+                Planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {age: {lte: null}})
                 {
                     items {
                         name

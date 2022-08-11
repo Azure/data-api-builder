@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
                         FieldDefinitionNode field = new(
                             location: null,
-                            new(FormatNameForField(columnName)),
+                            new(columnName),
                             description: null,
                             new List<InputValueDefinitionNode>(),
                             column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
@@ -129,7 +129,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
                     FieldDefinitionNode relationshipField = new(
                         location: null,
-                        new NameNode(FormatNameForField(relationshipName)),
+                        new NameNode(relationshipName),
                         description: null,
                         new List<InputValueDefinitionNode>(),
                         // TODO: Check for whether it should be a nullable relationship based on the relationship fields

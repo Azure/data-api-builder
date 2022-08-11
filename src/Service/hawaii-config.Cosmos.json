@@ -35,8 +35,8 @@
       "rest": false,
       "graphql": {
         "type": {
-          "singular": "Planetrock",
-          "plural": "Planetrocks"
+          "singular": "Planet",
+          "plural": "Planets"
         }
       },
       "permissions": [

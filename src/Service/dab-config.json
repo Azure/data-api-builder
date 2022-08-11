@@ -1,8 +1,8 @@
 {
-  "$schema": "../schemas/hawaii.draft-01.schema.json",
+  "$schema": "../schemas/dab.draft-01.schema.json",
   "data-source": {
-    "database-type": "postgresql",
-    "connection-string": "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME"
+    "database-type": "mssql",
+    "connection-string": ""
   },
   "runtime": {
     "rest": {
@@ -54,7 +54,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update" ]
         },
         {
           "role": "authenticated",
@@ -128,7 +128,8 @@
                 "database": "@claims.id eq @item.id"
               },
               "fields": {
-                "include": [ "*" ]
+                "include": [ "*" ],
+                "exclude": [ "id" ]
               }
             }
           ]
@@ -226,8 +227,8 @@
         }
       ]
     },
-    "stocks_price": {
-      "source": "stocks_price",
+    "SupportedType": {
+      "source": "type_table",
       "rest": false,
       "permissions": [
         {
@@ -240,8 +241,8 @@
         }
       ]
     },
-    "SupportedType": {
-      "source": "type_table",
+    "stocks_price": {
+      "source": "stocks_price",
       "rest": false,
       "permissions": [
         {
@@ -311,10 +312,65 @@
       "rest": true,
       "permissions": [
         {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
       ]
+    },
+    "books_view_all": {
+      "source": "books_view_all",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "stocks_view_selected": {
+      "source": "stocks_view_selected",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "books_publishers_view_composite": {
+      "source": "books_publishers_view_composite",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+      }
     }
   }
 }

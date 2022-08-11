@@ -8,16 +8,16 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Servic
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9C661-D8FD-469A-9372-284387C4BEFC}"
 	ProjectSection(SolutionItems) = preProject
-		Service\hawaii-config.Cosmos.json = Service\hawaii-config.Cosmos.json
-		Service\hawaii-config.Cosmos.overrides.example.json = Service\hawaii-config.Cosmos.overrides.example.json
-		Service\hawaii-config.json = Service\hawaii-config.json
-		Service\hawaii-config.MsSql.json = Service\hawaii-config.MsSql.json
-		Service\hawaii-config.MsSql.overrides.example.json = Service\hawaii-config.MsSql.overrides.example.json
-		Service\hawaii-config.MySql.json = Service\hawaii-config.MySql.json
-		Service\hawaii-config.MySql.overrides.example.json = Service\hawaii-config.MySql.overrides.example.json
-		Service\hawaii-config.PostgreSql.json = Service\hawaii-config.PostgreSql.json
-		Service\hawaii-config.PostgreSql.overrides.example.json = Service\hawaii-config.PostgreSql.overrides.example.json
-		schemas\hawaii.draft-01.schema.json = schemas\hawaii.draft-01.schema.json
+		Service\dab-config.Cosmos.json = Service\dab-config.Cosmos.json
+		Service\dab-config.Cosmos.overrides.example.json = Service\dab-config.Cosmos.overrides.example.json
+		Service\dab-config.json = Service\dab-config.json
+		Service\dab-config.MsSql.json = Service\dab-config.MsSql.json
+		Service\dab-config.MsSql.overrides.example.json = Service\dab-config.MsSql.overrides.example.json
+		Service\dab-config.MySql.json = Service\dab-config.MySql.json
+		Service\dab-config.MySql.overrides.example.json = Service\dab-config.MySql.overrides.example.json
+		Service\dab-config.PostgreSql.json = Service\dab-config.PostgreSql.json
+		Service\dab-config.PostgreSql.overrides.example.json = Service\dab-config.PostgreSql.overrides.example.json
+		schemas\dab.draft-01.schema.json = schemas\dab.draft-01.schema.json
 		Service\schema.gql = Service\schema.gql
 	EndProjectSection
 EndProject

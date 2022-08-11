@@ -1,6 +1,7 @@
 <Project>
  <PropertyGroup>
    <Nullable>enable</Nullable>
+   <BaseOutputPath>..\out</BaseOutputPath>
  </PropertyGroup>
 
  <!-- Dependency versions -->

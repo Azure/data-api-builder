@@ -95,12 +95,18 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
 
             ValidateAuthenticationConfig();
-            ValidateEntityNamesInConfig(runtimeConfig.Entities);
+
+            if (runtimeConfig.GraphQLGlobalSettings.Enabled)
+            {
+                ValidateEntityNamesInConfig(runtimeConfig.Entities);
+            }
         }
 
         /// <summary>
         /// Check whether the entity name defined in runtime config only contains
         /// characters allowed for GraphQL names.
+        /// Does not perform validation for entities which do not
+        /// have GraphQL configuration: when entity.GraphQL == false or null.
         /// </summary>
         /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
         /// <param name="runtimeConfig"></param>
@@ -108,6 +114,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             foreach (string entityName in entityCollection.Keys)
             {
+                Entity entity = entityCollection[entityName];
+
+                if (entity.GraphQL is null ||
+                    (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
+                {
+                    continue;
+                }
+
                 if (GraphQLNaming.ViolatesNamePrefixRequirements(entityName) ||
                     GraphQLNaming.ViolatesNameRequirements(entityName))
                 {

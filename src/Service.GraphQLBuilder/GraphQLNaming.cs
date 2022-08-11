@@ -146,7 +146,5 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
             return modelDirective.Arguments.Count == 1 ? (string)(modelDirective.Arguments[0].Value.Value ?? node.Name.Value) : node.Name.Value;
         }
-
-        //public static string GetModelDirectiveValue()
     }
 }

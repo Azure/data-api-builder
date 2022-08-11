@@ -136,7 +136,7 @@ namespace Azure.DataApiBuilder.Config
         /// 3) Default config file name.
         /// In each case, overidden file name takes precedence.
         /// The first file name that exists in current directory is returned.
-        /// The fall back options are hawaii-config.overrides.json/hawaii-config.json
+        /// The fall back options are dab-config.overrides.json/dab-config.json
         /// If no file exists, this will return an empty string.
         /// </summary>
         /// <param name="hostingEnvironmentName">Value of ASPNETCORE_ENVIRONMENT variable</param>

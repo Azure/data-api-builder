@@ -47,6 +47,8 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
 
+        private Dictionary<string, string> EntityToPluralizedRouteMap { get; } = new();
+
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
         /// </summary>

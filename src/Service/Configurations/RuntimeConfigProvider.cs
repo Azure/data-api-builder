@@ -125,6 +125,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     out runtimeConfig))
             {
                 runtimeConfig!.DetermineGlobalSettings();
+                //runtimeConfig!.DeterminePluralizedRoutes();
                 if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
                 {
                     runtimeConfig!.ConnectionString = configPath.CONNSTRING;

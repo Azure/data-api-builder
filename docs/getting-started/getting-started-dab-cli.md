@@ -24,7 +24,7 @@ dotnet tool install -g --add-source ./ dab-cli --version <version_number>
 If you already have an older version of DAB CLI installed, update the tool using:
 
 ```dotnetcli
-dotnet tool update -g --add-source ./ dab-cli --version <version_number>
+dotnet tool update -g --add-source ./ dab --version <version_number>
 ```
 
 ### Validate the Install

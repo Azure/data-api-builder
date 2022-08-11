@@ -1,10 +1,10 @@
 using System.Collections;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
-using static Hawaii.Cli.Models.Utils;
+using static Cli.Utils;
 using Action = Azure.DataApiBuilder.Config.Action;
 
-namespace Hawaii.Cli.Models
+namespace Cli
 {
     /// <summary>
     /// Contains the methods for Initializing the config file and Adding/Updating Entities.
@@ -300,8 +300,8 @@ namespace Hawaii.Cli.Models
             else
             {
 
-                if ((options.FieldsToInclude is not null && options.FieldsToInclude.Any())
-                    || (options.FieldsToExclude is not null && options.FieldsToExclude.Any()))
+                if (options.FieldsToInclude is not null && options.FieldsToInclude.Any()
+                    || options.FieldsToExclude is not null && options.FieldsToExclude.Any())
                 {
                     Console.WriteLine($"--permissions is mandatory with --fields.include and --fields.exclude.");
                     return false;
@@ -550,8 +550,8 @@ namespace Hawaii.Cli.Models
         {
             string[]? updatedSourceFields = null;
             string[]? updatedTargetFields = null;
-            string[]? updatedLinkingSourceFields = (options.LinkingSourceFields is null || !options.LinkingSourceFields.Any()) ? null : options.LinkingSourceFields.ToArray();
-            string[]? updatedLinkingTargetFields = (options.LinkingTargetFields is null || !options.LinkingTargetFields.Any()) ? null : options.LinkingTargetFields.ToArray();
+            string[]? updatedLinkingSourceFields = options.LinkingSourceFields is null || !options.LinkingSourceFields.Any() ? null : options.LinkingSourceFields.ToArray();
+            string[]? updatedLinkingTargetFields = options.LinkingTargetFields is null || !options.LinkingTargetFields.Any() ? null : options.LinkingTargetFields.ToArray();
 
             Cardinality updatedCardinality = Enum.Parse<Cardinality>(options.Cardinality!, ignoreCase: true);
 

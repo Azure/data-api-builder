@@ -234,11 +234,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// The OrderByClauseInUrl uses exposed names since it comes from
-        /// the request. Here we convert this to used backing column for
+        /// the request. Here we convert this to use backing column for
         /// the actual query we will generate.
         /// </summary>
         /// <param name="orderByClauseInUrl">OrderByColumns with exposed names.</param>
-        /// <returns></returns>
+        /// <returns>OrderByColumns with backing column names.</returns>
         private List<OrderByColumn> GetOrderByBackingColumns(List<OrderByColumn> orderByClauseInUrl)
         {
             foreach (OrderByColumn column in orderByClauseInUrl)

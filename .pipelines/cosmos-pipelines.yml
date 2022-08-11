@@ -23,6 +23,9 @@ variables:
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
 steps:
+- task: NuGetAuthenticate@0
+  displayName: 'NuGet Authenticate'
+  
 - task: UseDotNet@2
   displayName: Setup .NET SDK v6.0.x
   inputs:

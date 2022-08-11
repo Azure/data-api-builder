@@ -11,6 +11,9 @@ jobs:
     vmImage: '${{ parameters.VmImage }}'
 
   steps:
+  - task: NuGetAuthenticate@0
+    displayName: 'NuGet Authenticate'
+
   - checkout: self  # self represents the repo where the initial Pipelines YAML file was found
     clean: true  # if true, execute `execute git clean -ffdx && git reset --hard HEAD` before fetching
 

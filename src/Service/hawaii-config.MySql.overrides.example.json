@@ -2,7 +2,7 @@
   "$schema": "../schemas/hawaii.draft-01.schema.json",
   "data-source": {
     "database-type": "mysql",
-    "connection-string": "server=localhost;database=datagatewaytest;Allow User Variables=true;uid=root;pwd=REPLACEME"
+    "connection-string": "server=localhost;database=datagatewaytest;Allow User Variables=true;uid=root;pwd=mysecretpassword"
   },
   "runtime": {
     "rest": {

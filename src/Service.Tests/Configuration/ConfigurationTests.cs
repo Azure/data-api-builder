@@ -462,32 +462,32 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestCleanup]
         public void Cleanup()
         {
-            if (!File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))
+            if (File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))
             {
                 File.Delete($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
+            if (File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
             {
                 File.Delete($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}"))
+            if (File.Exists($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}"))
             {
                 File.Delete($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists($"{CONFIGFILE_NAME}.overrides{CONFIG_EXTENSION}"))
+            if (File.Exists($"{CONFIGFILE_NAME}.overrides{CONFIG_EXTENSION}"))
             {
                 File.Delete($"{CONFIGFILE_NAME}.overrides{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}"))
+            if (File.Exists($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}"))
             {
                 File.Delete($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}"))
+            if (File.Exists($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}"))
             {
                 File.Delete($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}");
             }

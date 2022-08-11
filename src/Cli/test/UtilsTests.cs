@@ -131,17 +131,17 @@ namespace Cli.Tests
         [TestCleanup]
         public void Cleanup()
         {
-            if (!File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))
+            if (File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))
             {
                 File.Delete($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
+            if (File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
             {
                 File.Delete($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists("my-config.json"))
+            if (File.Exists("my-config.json"))
             {
                 File.Delete("my-config.json");
             }

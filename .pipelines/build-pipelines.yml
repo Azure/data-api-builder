@@ -20,6 +20,9 @@ variables:
   publishNugetToFeed: $(isNugetRelease)
 
 steps:
+- task: NuGetAuthenticate@0
+  displayName: 'NuGet Authenticate'
+  
 - task: UseDotNet@2
   displayName: Setup .NET SDK v6.0.x
   inputs:
@@ -73,12 +76,6 @@ steps:
     targetPath: '$(Build.ArtifactStagingDirectory)/nupkg'
     artifactName: 'DataApiBuilder'
     artifactType: 'pipeline'
-
-# This task will authenticate and publish the NuGet Package to internal feed
-# To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.
-- task: NuGetAuthenticate@0
-  displayName: 'NuGet Authenticate'
-  condition: eq(variables.publishNugetToFeed, 'true')
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Internal Feed'

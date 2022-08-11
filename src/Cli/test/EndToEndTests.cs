@@ -213,7 +213,7 @@ public class EndToEndTests
         {
             StartInfo =
                 {
-                    FileName = @"./Hawaii.Cli",
+                    FileName = @"./dab",
                     Arguments = $"start --config {RuntimeConfigPath.DefaultName}",
                     WindowStyle = ProcessWindowStyle.Hidden,
                     UseShellExecute = false,
@@ -231,14 +231,9 @@ public class EndToEndTests
             {
                 int id = process.Id;
                 output = process.StandardOutput.ReadLine();
-                if (string.IsNullOrEmpty(output))
-                {
-                    throw new Exception();
-                }
-
                 break;
             }
-            catch (Exception) { }
+            catch (InvalidOperationException) { }
         }
 
         process.Kill();

@@ -116,20 +116,47 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 Entity entity = entityCollection[entityName];
 
-                if (entity.GraphQL is null ||
-                    (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
+                if (entity.GraphQL is null)
                 {
                     continue;
                 }
-
-                if (GraphQLNaming.ViolatesNamePrefixRequirements(entityName) ||
-                    GraphQLNaming.ViolatesNameRequirements(entityName))
+                else if (entity.GraphQL is bool graphQLEnabled)
                 {
-                    throw new DataApiBuilderException(
-                        message: $"Entity {entityName} contains characters disallowed by GraphQL.",
-                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    if (!graphQLEnabled)
+                    {
+                        continue;
+                    }
+
+                    ValidateNameRequirements(entityName);
                 }
+                else if (entity.GraphQL is GraphQLEntitySettings graphQLSettings)
+                {
+                    if (graphQLSettings.Type is string graphQLName)
+                    {
+                        ValidateNameRequirements(graphQLName);
+                    }
+                    else if(graphQLSettings.Type is SingularPlural singularPluralSettings)
+                    {
+                        ValidateNameRequirements(singularPluralSettings.Singular);
+
+                        if (singularPluralSettings.Plural is not null)
+                        {
+                            ValidateNameRequirements(singularPluralSettings.Plural);
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void ValidateNameRequirements(string entityName)
+        {
+            if (GraphQLNaming.ViolatesNamePrefixRequirements(entityName) ||
+                GraphQLNaming.ViolatesNameRequirements(entityName))
+            {
+                throw new DataApiBuilderException(
+                    message: $"Entity {entityName} contains characters disallowed by GraphQL.",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
         }
 

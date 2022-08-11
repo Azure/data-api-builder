@@ -13,11 +13,11 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     public class RuntimeConfigPath
     {
-        public const string CONFIGFILE_NAME = "hawaii-config";
+        public const string CONFIGFILE_NAME = "dab-config";
         public const string CONFIG_EXTENSION = ".json";
 
-        public const string RUNTIME_ENVIRONMENT_VAR_NAME = "HAWAII_ENVIRONMENT";
-        public const string ENVIRONMENT_PREFIX = "HAWAII_";
+        public const string RUNTIME_ENVIRONMENT_VAR_NAME = "DAB_ENVIRONMENT";
+        public const string ENVIRONMENT_PREFIX = "DAB_";
 
         public string? ConfigFileName { get; set; }
 
@@ -133,12 +133,12 @@ namespace Azure.DataApiBuilder.Config
 
         /// <summary>
         /// Precedence of environments is
-        /// 1) Value of HAWAII_ENVIRONMENT.
+        /// 1) Value of DAB_ENVIRONMENT.
         /// 2) Value of ASPNETCORE_ENVIRONMENT.
         /// 3) Default config file name.
         /// In each case, overidden file name takes precedence.
         /// The first file name that exists in current directory is returned.
-        /// The fall back options are hawaii-config.overrides.json/hawaii-config.json
+        /// The fall back options are dab-config.overrides.json/dab-config.json
         /// If no file exists, this will return an empty string.
         /// </summary>
         /// <param name="hostingEnvironmentName">Value of ASPNETCORE_ENVIRONMENT variable</param>

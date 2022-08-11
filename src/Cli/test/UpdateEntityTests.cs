@@ -859,7 +859,7 @@ namespace Cli.Tests
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
-                map: new string[] { "id:Identity", "config:Company Name" },
+                map: new string[] { "id:Identity", "name:Company Name" },
                 config: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
@@ -985,7 +985,7 @@ namespace Cli.Tests
                 linkingSourceFields: new string[] { },
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
-                map: new string[] { "config:Company Name", "addr:Company Address", "number:Contact Details" },
+                map: new string[] { "name:Company Name", "addr:Company Address", "number:Contact Details" },
                 config: "outputfile");
 
             string runtimeConfig = GetConfigWithMappings();
@@ -1226,7 +1226,7 @@ namespace Cli.Tests
         {
             return @"
                         {
-                        ""$schema"": ""hawaii.draft-01.schema.json"",
+                        ""$schema"": ""dab.draft-01.schema.json"",
                         ""data-source"": {
                             ""database-type"": ""mssql"",
                             ""connection-string"": ""testconnectionstring""

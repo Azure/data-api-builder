@@ -155,7 +155,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
             // Top-level object type definition name should be singular.
             // The singularPlural.Singular value is used, and if not configured,
-            // the top-level entity name value is used. No pluralization occurs.
+            // the top-level entity name value is used. No singularization occurs
+            // if the top-level entity name is already plural.
             return new ObjectTypeDefinitionNode(
                 location: null,
                 name: new(value: GetDefinedSingularName(entityName, configEntity)),

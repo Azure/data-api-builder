@@ -23,6 +23,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
 using Npgsql;
+using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
@@ -40,34 +41,34 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestInitialize]
         public void Setup()
         {
-            if (!File.Exists("dab-config.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))
             {
-                File.Create("dab-config.json");
+                File.Create($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists("dab-config.Test.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
             {
-                File.Create("dab-config.Test.json");
+                File.Create($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists("dab-config.HostTest.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}"))
             {
-                File.Create("dab-config.HostTest.json");
+                File.Create($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists("dab-config.overrides.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}.overrides{CONFIG_EXTENSION}"))
             {
-                File.Create("dab-config.overrides.json");
+                File.Create($"{CONFIGFILE_NAME}.overrides{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists("dab-config.Test.overrides.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}"))
             {
-                File.Create("dab-config.Test.overrides.json");
+                File.Create($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists("dab-config.HostTest.overrides.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}"))
             {
-                File.Create("dab-config.HostTest.overrides.json");
+                File.Create($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}");
             }
 
             TestContext.Properties.Add(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME));
@@ -444,12 +445,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// Test to verify the precedence logic for config file based on Environment variables.
         /// </summary>
         [DataTestMethod]
-        [DataRow("HostTest", "Test", false, "dab-config.Test.json", DisplayName = "hosting and dab environment set, without considering overrides.")]
-        [DataRow("HostTest", "", false, "dab-config.HostTest.json", DisplayName = "only hosting environment set, without considering overrides.")]
-        [DataRow("", "Test", false, "dab-config.Test.json", DisplayName = "only dab environment set, without considering overrides.")]
-        [DataRow("", "Test", true, "dab-config.Test.overrides.json", DisplayName = "only dab environment set, considering overrides.")]
-        [DataRow("HostTest", "", true, "dab-config.HostTest.overrides.json", DisplayName = "only hosting environment set, considering overrides.")]
-        [DataRow("", "", true, "dab-config.overrides.json", DisplayName = "neither hosting nor dab environment set, and considering overrides.")]
+        [DataRow("HostTest", "Test", false, $"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}", DisplayName = "hosting and dab environment set, without considering overrides.")]
+        [DataRow("HostTest", "", false, $"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}", DisplayName = "only hosting environment set, without considering overrides.")]
+        [DataRow("", "Test", false, $"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}", DisplayName = "only dab environment set, without considering overrides.")]
+        [DataRow("", "Test", true, $"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}", DisplayName = "only dab environment set, considering overrides.")]
+        [DataRow("HostTest", "", true, $"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}", DisplayName = "only hosting environment set, considering overrides.")]
+        [DataRow("", "", true, $"{CONFIGFILE_NAME}.overrides{CONFIG_EXTENSION}", DisplayName = "neither hosting nor dab environment set, and considering overrides.")]
+        [DataRow("", "", false, $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}", DisplayName = "neither hosting nor dab environment set, without considering overrides.")]
         public void TestConfigSelectionBasedOnCliPrecedence(string hostingEnvironmentValue, string environmentValue, bool considerOverrides, string expectedRuntimeConfigFile)
         {
             Environment.SetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
@@ -460,34 +462,34 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestCleanup]
         public void Cleanup()
         {
-            if (!File.Exists("dab-config.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))
             {
-                File.Delete("dab-config.json");
+                File.Delete($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists("dab-config.Test.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
             {
-                File.Delete("dab-config.Test.json");
+                File.Delete($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists("dab-config.HostTest.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}"))
             {
-                File.Delete("dab-config.HostTest.json");
+                File.Delete($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists("dab-config.overrides.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}.overrides{CONFIG_EXTENSION}"))
             {
-                File.Delete("dab-config.overrides.json");
+                File.Delete($"{CONFIGFILE_NAME}.overrides{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists("dab-config.Test.overrides.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}"))
             {
-                File.Delete("dab-config.Test.overrides.json");
+                File.Delete($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists("dab-config.HostTest.overrides.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}"))
             {
-                File.Delete("dab-config.HostTest.overrides.json");
+                File.Delete($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}");
             }
 
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[ASP_NET_CORE_ENVIRONMENT_VAR_NAME]);

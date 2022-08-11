@@ -2,6 +2,7 @@ global using System.Diagnostics;
 global using System.Text.Json;
 global using Azure.DataApiBuilder.Config;
 global using Microsoft.VisualStudio.TestTools.UnitTesting;
+global using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
 global using Newtonsoft.Json.Linq;
 global using static Cli.ConfigGenerator;
 global using static Cli.Tests.TestHelper;

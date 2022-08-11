@@ -14,14 +14,14 @@ namespace Cli.Tests
         [TestInitialize]
         public void Setup()
         {
-            if (!File.Exists("dab-config.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))
             {
-                File.Create("dab-config.json");
+                File.Create($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists("dab-config.Test.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
             {
-                File.Create("dab-config.Test.json");
+                File.Create($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");
             }
 
             if (!File.Exists("my-config.json"))
@@ -115,8 +115,8 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow("", "my-config.json", "my-config.json", DisplayName = "user provided the config file and environment variable was not set.")]
         [DataRow("Test", "my-config.json", "my-config.json", DisplayName = "user provided the config file and environment variable was set.")]
-        [DataRow("Test", null, "dab-config.Test.json", DisplayName = "config not provided, but environment variable was set.")]
-        [DataRow("", null, "dab-config.json", DisplayName = "neither config was provided, nor environment variable was set.")]
+        [DataRow("Test", null, $"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}", DisplayName = "config not provided, but environment variable was set.")]
+        [DataRow("", null, $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}", DisplayName = "neither config was provided, nor environment variable was set.")]
         public void TestConfigSelectionBasedOnCliPrecedence(string? environmentValue, string? userProvidedConfigFile, string? expectedRuntimeConfigFile)
         {
             Environment.SetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
@@ -131,14 +131,14 @@ namespace Cli.Tests
         [TestCleanup]
         public void Cleanup()
         {
-            if (!File.Exists("dab-config.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))
             {
-                File.Delete("dab-config.json");
+                File.Delete($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists("dab-config.Test.json"))
+            if (!File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
             {
-                File.Delete("dab-config.Test.json");
+                File.Delete($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");
             }
 
             if (!File.Exists("my-config.json"))

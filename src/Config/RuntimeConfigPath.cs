@@ -13,11 +13,11 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     public class RuntimeConfigPath
     {
-        public const string CONFIGFILE_NAME = "hawaii-config";
+        public const string CONFIGFILE_NAME = "dab-config";
         public const string CONFIG_EXTENSION = ".json";
 
-        public const string RUNTIME_ENVIRONMENT_VAR_NAME = "HAWAII_ENVIRONMENT";
-        public const string ENVIRONMENT_PREFIX = "HAWAII_";
+        public const string RUNTIME_ENVIRONMENT_VAR_NAME = "DAB_ENVIRONMENT";
+        public const string ENVIRONMENT_PREFIX = "DAB_";
 
         public string? ConfigFileName { get; set; }
 

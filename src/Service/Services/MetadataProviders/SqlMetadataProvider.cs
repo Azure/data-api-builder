@@ -47,6 +47,8 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
 
+        private Dictionary<string, string> EntityRouteToEntityName { get; } = new();
+
         private Dictionary<string, string> EntityToPluralizedRouteMap { get; } = new();
 
         /// <summary>
@@ -153,9 +155,15 @@ namespace Azure.DataApiBuilder.Service.Services
             GenerateDatabaseObjectForEntities();
             await PopulateTableDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();
+            GenerateRouteToEntityMap();
             InitODataParser();
             timer.Stop();
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
+        }
+
+        private void GenerateRouteToEntityMap()
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>

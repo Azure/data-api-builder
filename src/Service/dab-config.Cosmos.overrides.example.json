@@ -1,0 +1,52 @@
+{
+  "$schema": "../schemas/hawaii.draft-01.schema.json",
+  "data-source": {
+    "database-type": "cosmos",
+    "connection-string": "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
+  },
+  "cosmos": {
+    "database": "graphqldb",
+    "container": "planet",
+    "schema": "schema.gql"
+  },
+  "runtime": {
+    "rest": {
+      "enabled": false
+    },
+    "graphql": {
+      "enabled": true,
+      "path": "/graphql",
+      "allow-introspection": true
+    },
+    "host": {
+      "mode": "development",
+      "cors": {
+        "origins": [ "http://localhost:3000" ],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "StaticWebApps"
+      }
+    }
+  },
+  "entities": {
+    "Planet": {
+      "source": "planet",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        }
+      ]
+    },
+    "Character": {
+      "source": "planet",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        }
+      ]
+    }
+  }
+}

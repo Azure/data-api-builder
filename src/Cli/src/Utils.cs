@@ -457,12 +457,14 @@ namespace Cli
         {
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
+                RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;
             }
             else
             {
                 Console.WriteLine("Config not provided. Trying to get default config based on Environment.");
+                RuntimeConfigPath.CheckPrecedenceForConfigInEngine = true;
                 runtimeConfigFile = RuntimeConfigPath.GetFileNameForEnvironment(
                         hostingEnvironmentName: null,
                         considerOverrides: false);

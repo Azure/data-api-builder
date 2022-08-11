@@ -23,6 +23,8 @@ namespace Azure.DataApiBuilder.Config
 
         public string? CONNSTRING { get; set; }
 
+        public static bool CheckPrecedenceForConfigInEngine = true;
+
         /// <summary>
         /// Parse Json and replace @env('ENVIRONMENT_VARIABLE_NAME') with
         /// the environment variable's value that corresponds to ENVIRONMENT_VARIABLE_NAME.
@@ -144,6 +146,12 @@ namespace Azure.DataApiBuilder.Config
         /// <returns></returns>
         public static string GetFileNameForEnvironment(string? hostingEnvironmentName, bool considerOverrides)
         {
+            // if precedence check is done in cli, no need to do it again after starting the engine.
+            if (!CheckPrecedenceForConfigInEngine)
+            {
+                return string.Empty;
+            }
+
             string configFileNameWithExtension = string.Empty;
             string?[] environmentPrecedence = new[]
             {

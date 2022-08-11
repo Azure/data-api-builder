@@ -138,7 +138,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     continue;
                 }
 
-                if (entity.GraphQL is GraphQLEntitySettings graphQLEntitySettings && graphQLEntitySettings is not null)
+                if (entity.GraphQL is GraphQLEntitySettings graphQLEntitySettings)
                 {
                     if (graphQLEntitySettings.Type is string type && string.IsNullOrWhiteSpace(type))
                     {

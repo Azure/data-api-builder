@@ -56,11 +56,6 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataTestMethod]
         [DataRow("test", "test")]
         [DataRow("Test", "Test")]
-        [DataRow("With Space", "With Space")]
-        [DataRow("with space", "with space")]
-        [DataRow("@test", "@test")]
-        [DataRow("_test", "_test")]
-        [DataRow("#test", "#test")]
         public void ColumnNameBecomesFieldName(string columnName, string expected)
         {
             TableDefinition table = new();

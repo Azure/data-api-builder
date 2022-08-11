@@ -56,11 +56,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 File.Create($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}");
             }
 
-            if (!File.Exists($"{CONFIGFILE_NAME}.overrides{CONFIG_EXTENSION}"))
-            {
-                File.Create($"{CONFIGFILE_NAME}.overrides{CONFIG_EXTENSION}");
-            }
-
             if (!File.Exists($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}"))
             {
                 File.Create($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}");
@@ -450,8 +445,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataRow("", "Test", false, $"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}", DisplayName = "only dab environment set, without considering overrides.")]
         [DataRow("", "Test", true, $"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}", DisplayName = "only dab environment set, considering overrides.")]
         [DataRow("HostTest", "", true, $"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}", DisplayName = "only hosting environment set, considering overrides.")]
-        [DataRow("", "", true, $"{CONFIGFILE_NAME}.overrides{CONFIG_EXTENSION}", DisplayName = "neither hosting nor dab environment set, and considering overrides.")]
-        [DataRow("", "", false, $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}", DisplayName = "neither hosting nor dab environment set, without considering overrides.")]
         public void TestConfigSelectionBasedOnCliPrecedence(string hostingEnvironmentValue, string environmentValue, bool considerOverrides, string expectedRuntimeConfigFile)
         {
             Environment.SetEnvironmentVariable(RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
@@ -462,11 +455,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestCleanup]
         public void Cleanup()
         {
-            if (File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))
-            {
-                File.Delete($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}");
-            }
-
             if (File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
             {
                 File.Delete($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");
@@ -475,11 +463,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             if (File.Exists($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}"))
             {
                 File.Delete($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}");
-            }
-
-            if (File.Exists($"{CONFIGFILE_NAME}.overrides{CONFIG_EXTENSION}"))
-            {
-                File.Delete($"{CONFIGFILE_NAME}.overrides{CONFIG_EXTENSION}");
             }
 
             if (File.Exists($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}"))

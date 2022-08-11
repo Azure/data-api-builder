@@ -267,8 +267,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 try
                 {
                     RuntimeConfigValidator.ValdiateGraphQLSettingsForEntitiesInConfig(entityCollection);
-                    
-                } catch (System.Exception ex) {
+
+                }
+                catch (System.Exception ex)
+                {
                     Assert.Fail("Exception thrown for a valid SingularPlural GraphQL type");
                 }
 
@@ -277,7 +279,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow("books", false,DisplayName = "Valid GraphQL Type ")]
+        [DataRow("books", false, DisplayName = "Valid GraphQL Type ")]
         [DataRow("", true, DisplayName = "Invalid GraphQL Type - Empty String")]
         [DataRow("  ", true, DisplayName = "Invalid GraphQL Type - Just Whitespaces")]
         public void ValidateStringGraphQLSettingsInEntity(string type, bool isExceptionExpected)

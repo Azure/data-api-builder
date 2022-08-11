@@ -14,14 +14,14 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         private static readonly string _containerName = Guid.NewGuid().ToString();
         private static readonly string _createPlanetMutation = @"
                                                 mutation ($item: CreatePlanetInput!) {
-                                                    createPlanetrock (item: $item) {
+                                                    createPlanet (item: $item) {
                                                         id
                                                         name
                                                     }
                                                 }";
         private static readonly string _deletePlanetMutation = @"
                                                 mutation ($id: ID!, $partitionKeyValue: String!) {
-                                                    deletePlanetrock (id: $id, _partitionKeyValue: $partitionKeyValue) {
+                                                    deletePlanet (id: $id, _partitionKeyValue: $partitionKeyValue) {
                                                         id
                                                         name
                                                     }
@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 name = "test_name",
                 stars = new[] { new { id = "TestStar" } }
             };
-            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanetrock", _createPlanetMutation, new() { { "item", input } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -69,10 +69,10 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 id,
                 name = "test_name"
             };
-            _ = await ExecuteGraphQLRequestAsync("createPlanetrock", _createPlanetMutation, new() { { "item", input } });
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
 
             // Run mutation delete item;
-            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanetrock", _deletePlanetMutation, new() { { "id", id }, { "partitionKeyValue", id } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", _deletePlanetMutation, new() { { "id", id }, { "partitionKeyValue", id } });
 
             // Validate results
             Assert.IsNull(response.GetString());
@@ -86,12 +86,12 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             const string name = "test_name";
             string mutation = $@"
 mutation {{
-    createPlanetrock (item: {{ id: ""{id}"", name: ""{name}"", stars: [{{ id: ""{id}"" }}] }}) {{
+    createPlanet (item: {{ id: ""{id}"", name: ""{name}"", stars: [{{ id: ""{id}"" }}] }}) {{
         id
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanetrock", mutation, variables: new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -105,22 +105,22 @@ mutation {{
             const string name = "test_name";
             string mutation = $@"
 mutation {{
-    createPlanetrock (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+    createPlanet (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
         id
         name
     }}
 }}";
-            _ = await ExecuteGraphQLRequestAsync("createPlanetrock", mutation, variables: new());
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
 
             // Run mutation delete item;
             string deleteMutation = $@"
 mutation {{
-    deletePlanetrock (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
+    deletePlanet (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
         id
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanetrock", deleteMutation, variables: new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", deleteMutation, variables: new());
 
             // Validate results
             Assert.IsNull(response.GetString());
@@ -132,12 +132,12 @@ mutation {{
             // Run mutation Add planet without any input
             string mutation = $@"
 mutation {{
-    createPlanetrock {{
+    createPlanet {{
         id
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanetrock", mutation, variables: new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
             string errorMessage = response[0].GetProperty("message").ToString();
             Assert.IsTrue(errorMessage.Contains("The argument `item` is required."), $"The actual error is {errorMessage}");
         }
@@ -149,12 +149,12 @@ mutation {{
             const string name = "test_name";
             string mutation = $@"
 mutation {{
-    createPlanetrock (item: {{ name: ""{name}"" }}) {{
+    createPlanet (item: {{ name: ""{name}"" }}) {{
         id
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanetrock", mutation, variables: new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
             Assert.IsTrue(response[0].GetProperty("message").ToString().Contains("The input content is invalid because the required properties - 'id; ' - are missing"));
         }
 
@@ -166,23 +166,23 @@ mutation {{
             const string name = "test_name";
             string mutation = $@"
 mutation {{
-    createPlanetrock (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+    createPlanet (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
         id
         name
     }}
 }}";
-            _ = await ExecuteGraphQLRequestAsync("createPlanetrock", mutation, variables: new());
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
 
             const string newName = "new_name";
             mutation = $@"
 mutation {{
-    updatePlanetrock (id: ""{id}"", _partitionKeyValue: ""{id}"", item: {{ id: ""{id}"", name: ""{newName}"", stars: [{{ id: ""{id}"" }}] }}) {{
+    updatePlanet (id: ""{id}"", _partitionKeyValue: ""{id}"", item: {{ id: ""{id}"", name: ""{newName}"", stars: [{{ id: ""{id}"" }}] }}) {{
         id
         name
     }}
 }}";
 
-            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanetrock", mutation, variables: new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new());
 
             // Validate results
             Assert.AreEqual(newName, response.GetProperty("name").GetString());
@@ -199,12 +199,12 @@ mutation {{
                 id,
                 name = "test_name"
             };
-            _ = await ExecuteGraphQLRequestAsync("createPlanetrock", _createPlanetMutation, new() { { "item", input } });
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
 
             const string newName = "new_name";
             string mutation = @"
 mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetInput!) {
-    updatePlanetrock (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+    updatePlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
         id
         name
      }
@@ -216,7 +216,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetInput!) {
                 stars = new[] { new { id = "TestStar" } }
             };
 
-            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanetrock", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
 
             // Validate results
             Assert.AreEqual(newName, response.GetProperty("name").GetString());
@@ -230,12 +230,12 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetInput!) {
             string id = Guid.NewGuid().ToString();
             string mutation = $@"
 mutation {{
-    deletePlanetrock (id: ""{id}"") {{
+    deletePlanet (id: ""{id}"") {{
         id
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanetrock", mutation, variables: new());
+            JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", mutation, variables: new());
             Assert.AreEqual("The argument `_partitionKeyValue` is required.", response[0].GetProperty("message").ToString());
         }
 

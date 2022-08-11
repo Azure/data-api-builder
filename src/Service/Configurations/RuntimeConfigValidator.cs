@@ -159,7 +159,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 }
 
             }
-            
+
         }
 
         private void ValidateAuthenticationConfig()

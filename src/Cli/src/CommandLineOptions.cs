@@ -8,13 +8,15 @@ namespace Cli
     /// </summary>
     public class Options
     {
-        public Options(string name)
+        public Options(string config)
         {
-            Name = name;
+            Config = config;
         }
 
-        [Option('n', "name", Required = false, HelpText = "Config file name")]
-        public string Name { get; }
+        [Option("config", Required = false, HelpText = "Path to config file. " +
+            "Defaults to 'dab-config.json' unless 'dab-config.DAB_ENVIRONMENT.json' exists," +
+            " where DAB_ENVIRONMENT is an environment variable.")]
+        public string Config { get; }
     }
 
     /// <summary>
@@ -31,8 +33,8 @@ namespace Cli
             string? graphQLSchemaPath,
             HostModeType hostMode,
             IEnumerable<string>? corsOrigin,
-            string name)
-            : base(name)
+            string config)
+            : base(config)
         {
             DatabaseType = databaseType;
             ConnectionString = connectionString;
@@ -78,8 +80,8 @@ namespace Cli
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string name)
-            : base(name)
+            string config)
+            : base(config)
         {
             Entity = entity;
             RestRoute = restRoute;
@@ -90,7 +92,7 @@ namespace Cli
             PolicyDatabase = policyDatabase;
         }
 
-        [Value(0, MetaName = "Entity", Required = true, HelpText = "Name of the entity.")]
+        [Value(0, MetaName = "Entity", Required = true, HelpText = "Config of the entity.")]
         public string Entity { get; }
 
         [Option("rest", Required = false, HelpText = "Route for rest api.")]
@@ -128,7 +130,7 @@ namespace Cli
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string name)
+            string config)
             : base(entity,
                   restRoute,
                   graphQLType,
@@ -136,13 +138,13 @@ namespace Cli
                   fieldsToExclude,
                   policyRequest,
                   policyDatabase,
-                  name)
+                  config)
         {
             Source = source;
             Permissions = permissions;
         }
 
-        [Option('s', "source", Required = true, HelpText = "Name of the source database object.")]
+        [Option('s', "source", Required = true, HelpText = "Config of the source database object.")]
         public string Source { get; }
 
         [Option("permissions", Required = true, Separator = ':', HelpText = "Permissions required to access the source table or container.")]
@@ -173,7 +175,7 @@ namespace Cli
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string name)
+            string config)
             : base(entity,
                   restRoute,
                   graphQLType,
@@ -181,7 +183,7 @@ namespace Cli
                   fieldsToExclude,
                   policyRequest,
                   policyDatabase,
-                  name)
+                  config)
         {
             Source = source;
             Permissions = permissions;
@@ -195,7 +197,7 @@ namespace Cli
             Map = map;
         }
 
-        [Option('s', "source", Required = false, HelpText = "Name of the source table or container.")]
+        [Option('s', "source", Required = false, HelpText = "Config of the source table or container.")]
         public string? Source { get; }
 
         [Option("permissions", Required = false, Separator = ':', HelpText = "Permissions required to access the source table or container.")]
@@ -230,14 +232,9 @@ namespace Cli
     /// Start command options
     /// </summary>
     [Verb("start", isDefault: false, HelpText = "Start Data Api Builder Engine", Hidden = false)]
-    public class StartOptions
+    public class StartOptions : Options
     {
         public StartOptions(string config)
-        {
-            Config = config;
-        }
-
-        [Option("config", Required = false, HelpText = "Path to config file.")]
-        public string Config { get; }
+            :base(config) { }
     }
 }

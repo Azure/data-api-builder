@@ -18,14 +18,13 @@ namespace Cli
         /// </summary>
         public static bool TryGenerateConfig(InitOptions options)
         {
-            string runtimeConfigJson;
-            if (!TryCreateRuntimeConfig(options, out runtimeConfigJson))
+            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
             {
                 Console.Error.Write($"Failed to create the runtime config file.");
                 return false;
             }
 
-            string userProvidedConfigFile = string.IsNullOrEmpty(options.Name) ? string.Empty : $"{options.Name}{CONFIG_EXTENSION}";
+            string userProvidedConfigFile = string.IsNullOrEmpty(options.Config) ? string.Empty : $"{options.Config}{CONFIG_EXTENSION}";
             string? runtimeConfigFile;
             if (!TryGetConfigFileBasedOnCliPrecedence(userProvidedConfigFile, out runtimeConfigFile))
             {
@@ -113,7 +112,7 @@ namespace Cli
         /// </summary>
         public static bool TryAddEntityToConfigWithOptions(AddOptions options)
         {
-            string userProvidedConfigFile = string.IsNullOrEmpty(options.Name) ? string.Empty : $"{options.Name}{CONFIG_EXTENSION}";
+            string userProvidedConfigFile = string.IsNullOrEmpty(options.Config) ? string.Empty : $"{options.Config}{CONFIG_EXTENSION}";
             string runtimeConfigFile;
             if (!TryGetConfigFileBasedOnCliPrecedence(userProvidedConfigFile, out runtimeConfigFile))
             {
@@ -239,7 +238,7 @@ namespace Cli
         /// </summary>
         public static bool TryUpdateEntityWithOptions(UpdateOptions options)
         {
-            string userProvidedConfigFile = string.IsNullOrEmpty(options.Name) ? string.Empty : $"{options.Name}{CONFIG_EXTENSION}";
+            string userProvidedConfigFile = string.IsNullOrEmpty(options.Config) ? string.Empty : $"{options.Config}{CONFIG_EXTENSION}";
             string runtimeConfigFile;
             if (!TryGetConfigFileBasedOnCliPrecedence(userProvidedConfigFile, out runtimeConfigFile))
             {

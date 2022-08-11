@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/hawaii.draft-01.schema.json",
+  "$schema": "../schemas/dab.draft-01.schema.json",
   "data-source": {
     "database-type": "postgresql",
     "connection-string": "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME"

@@ -17,7 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9
 		Service\dab-config.MySql.overrides.example.json = Service\dab-config.MySql.overrides.example.json
 		Service\dab-config.PostgreSql.json = Service\dab-config.PostgreSql.json
 		Service\dab-config.PostgreSql.overrides.example.json = Service\dab-config.PostgreSql.overrides.example.json
-		schemas\hawaii.draft-01.schema.json = schemas\hawaii.draft-01.schema.json
+		schemas\dab.draft-01.schema.json = schemas\dab.draft-01.schema.json
 		Service\schema.gql = Service\schema.gql
 	EndProjectSection
 EndProject

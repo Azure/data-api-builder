@@ -208,9 +208,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         if (((JsonElement)action!).ValueKind is JsonValueKind.String)
                         {
                             string actionName = action.ToString()!;
-                            actionOp = AuthorizationResolver.WILDCARD.Equals(actionName) ? Operation.All : Enum.Parse<Operation>(actionName, ignoreCase: true);
-
-                            if (!IsValidPermissionAction(actionOp))
+                            if (AuthorizationResolver.WILDCARD.Equals(actionName))
+                            {
+                                actionOp = Operation.All;
+                            }
+                            else if (!Enum.TryParse<Operation>(actionName, ignoreCase: true, out actionOp) ||
+                                !IsValidPermissionAction(actionOp))
                             {
                                 throw GetInvalidActionException(entityName, roleName, actionName);
                             }

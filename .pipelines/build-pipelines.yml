@@ -143,4 +143,7 @@ steps:
     repository: 'hawaii/$(Build.SourceBranch)'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
-    tags: $(releaseName)
+    tags: |
+      $(BuildDate)-$(Build.SourceVersion)
+      $(releaseName)
+      $(nugetVersion)

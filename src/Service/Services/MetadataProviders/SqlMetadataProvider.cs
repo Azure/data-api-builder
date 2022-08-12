@@ -5,15 +5,15 @@ using System.Data.Common;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
-using Microsoft.Extensions.Logging;
 using Humanizer;
-using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -199,7 +199,7 @@ namespace Azure.DataApiBuilder.Service.Services
             JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true };
             RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)entity.Rest, options)!;
             SingularPlural restRoute = JsonSerializer.Deserialize<SingularPlural>((JsonElement)rest.Route, options)!;
-            // user plural if provided
+            // use plural if provided
             if (!string.IsNullOrWhiteSpace(restRoute.Plural))
             {
                 return restRoute.Plural;
@@ -207,7 +207,6 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // otherwise we pluralize the singular form
             return restRoute.Singular.Pluralize();
-            
         }
 
         /// <summary>

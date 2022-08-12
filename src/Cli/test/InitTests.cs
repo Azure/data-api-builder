@@ -115,11 +115,11 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Verify that if either database or schema file is null or empty, we will get error.
+        /// Verify that if either database is null or empty, we will get error.
         /// </summary>
         [DataRow(null, "testcontainer", "", false, DisplayName = "Both database and schema are either null or empty.")]
-        [DataRow(null, "testcontainer", "testschema", false, DisplayName = "database is null .")]
-        [DataRow("testDatabase", "testcontainer", "", true, DisplayName = "Schema is empty.")]
+        [DataRow("", "testcontainer", "testschema", false, DisplayName = "database is empty.")]
+        [DataRow("testDatabase", "testcontainer", "", true, DisplayName = "database is valid string, Schema is null.")]
         [DataTestMethod]
         public void VerifyRequiredOptionsForCosmosDatabase(
             string? cosmosDatabase,

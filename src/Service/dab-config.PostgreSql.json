@@ -162,7 +162,7 @@
       "rest": {
         "route": {
           "singular": "asset",
-          "pularal": "commodities"
+          "plural": "commodities"
         }
       },
       "graphql": true,

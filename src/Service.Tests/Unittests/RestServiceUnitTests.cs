@@ -139,8 +139,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromRoute(It.IsAny<string>(), out outParam)).Returns(true);
             Dictionary<string, string> _routeToEntityMock = new() { { entityName, entityName } };
             sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromRoute(It.IsAny<string>(), out outParam))
-                              .Callback(new metaDataCallback((string entityRoute, out string entity) => _ = _routeToEntityMock.TryGetValue(entityRoute, out entity)))
-                              .Returns((string entityRoute, out string entity) => _routeToEntityMock.TryGetValue(entityRoute, out entity));
+                               .Callback(new metaDataCallback((string entityRoute, out string entity) => _ = _routeToEntityMock.TryGetValue(entityRoute, out entity)))
+                               .Returns((string entityRoute, out string entity) => _routeToEntityMock.TryGetValue(entityRoute, out entity));
             Mock<IAuthorizationService> authorizationService = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             DefaultHttpContext context = new();

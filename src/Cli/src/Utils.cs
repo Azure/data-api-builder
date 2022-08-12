@@ -448,10 +448,10 @@ namespace Cli
 
         /// <summary>
         /// This method will try to find the config file based on the precedence.
-        /// if config file provided by user, it will return that.
+        /// if the config file is provided by user, it will return that.
         /// Else it will check the DAB_ENVIRONMENT variable.
         /// In case the environment variable is not set it will check for default config.
-        /// If none of the file exists it will return false. Else true with output in runtimeConfigFile.
+        /// If none of the files exists it will return false. Else true with output in runtimeConfigFile.
         /// In case of false, the runtimeConfigFile will be set to string.Empty.
         /// </summary>
         public static bool TryGetConfigFileBasedOnCliPrecedence(

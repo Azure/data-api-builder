@@ -16,7 +16,7 @@ az acr login --name hawaiiacr
 
 2. Update the configuration files for your environment:
 
-Update `hawaii-config.json` (and `schema.gql` if using cosmos).
+Update `dab-config.json` (and `schema.gql` if using cosmos).
 
 3. Choose a `docker-compose-*.yml` file based on your environment (cosmos, sql, postgres)
 
@@ -24,7 +24,7 @@ Update `hawaii-config.json` (and `schema.gql` if using cosmos).
         To find a different tag, find the CI run that was automatically triggered after your checkin, view more details on azure pipelines, then click `Job`.
         In the logs of `Build and push docker image` stage, search for `docker push` to find the tag that was pushed.
 
-    3.2. If you are not using the configuration from the repo, update the path to your config/schema to point to your files and map them to `/App/hawaii-config.json` and for cosmos - `/App/schema.gql` as well.
+    3.2. If you are not using the configuration from the repo, update the path to your config/schema to point to your files and map them to `/App/dab-config.json` and for cosmos - `/App/schema.gql` as well.
 
     3.3. Run docker compose up to start the container:
 

@@ -2,7 +2,7 @@
 
 Welcome to this getting started tutorial that will guide you to have Data API builder for Azure Databases running locally on your machine as a first step, and then will guide you to deploy Data API builder for Azure Databases in an Azure Container Instance, so that at the end of the tutorial you'll have full knowledge of what's needed to run Data API builder for Azure Databases both on-prem and in Azure.
 
-## Pre-Requisite
+## Prerequisites
 
 ### .NET 6.0
 Make sure you have .NET 6.0 SDK installed on your machine: https://dotnet.microsoft.com/en-us/download/dotnet/6.0.
@@ -65,7 +65,7 @@ In the `data-source` section you have to specify the database type and the conne
 
 `database-type` can be any of the following:
 - `mssql`: for Azure SQL DB, Azure SQL MI or SQL Server
-- `cosmos`: for Azure Cosmos DB
+- `cosmos`: for Azure Cosmos DB (SQL API)
 - `postgresql`: for PostgreSQL
 - `mariadb`: for MariaDB
 - `mysql`: for MySQL

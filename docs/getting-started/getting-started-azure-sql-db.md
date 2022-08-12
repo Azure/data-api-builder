@@ -34,7 +34,7 @@ Once you have your connection string, add it to the configuration file you have 
 
 ## Create the database objects
 
-Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `libray.azure-sql.sql` script that you can use to create three tables, along with sample data:
+Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `libray.azure-sql.sql` script in the 'azure-sql-db' folder that you can use to create three tables, along with sample data:
 
 - `dbo.authors`: Table containing authors
 - `dbo.books`: Table containing books
@@ -44,7 +44,7 @@ Execute the script in the SQL Server or Azure SQL database you decided to use, s
 
 ## Add Book and Author entities
 
-We want to expose the `books` and the `authors` table so that they can be used via REST or GraphQL. For doing that, all is needed is adding the related information to the `entities` section of the configuration file.
+Now, you'll want to expose the `books` and the `authors` table as REST or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.
 
 Start by adding the `author` entity:
 
@@ -99,7 +99,7 @@ that's all is needed at the moment. Data API builder is ready to be run.
 
 ## Start Data API builder for Azure SQL Database
 
-From the `sample` folder, where you should be already, start Data API builder engine (use):
+From the `samples/getting-started` folder, start Data API Builder engine :
 
 ```
 ./run-dab.cmd library.config.json

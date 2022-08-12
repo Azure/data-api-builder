@@ -1,0 +1,23 @@
+<Project>
+ <PropertyGroup>
+   <Nullable>enable</Nullable>
+   <BaseOutputPath>..\out</BaseOutputPath>
+ </PropertyGroup>
+
+ <!-- Dependency versions -->
+ <PropertyGroup>
+    <HotChocolateVersion>12.8.2</HotChocolateVersion>
+    <CosmosVersion>3.18.0</CosmosVersion>
+    <SqlVersion>3.0.0</SqlVersion>
+    <ConfigVersion>6.0.0-preview.3.21201.4</ConfigVersion>
+    <PostgresVersion>5.0.10</PostgresVersion>
+    <ODataVersion>7.9.0</ODataVersion>
+    <MySQLVersion>2.1.5</MySQLVersion>
+    <NetCoreAutorizationVersion>3.1.4</NetCoreAutorizationVersion>
+    <HumanizerVersion>2.14.1</HumanizerVersion>
+    <SystemIOAbstractionsVersion>17.0.4</SystemIOAbstractionsVersion>
+    <NewtonsoftJsonVersion>13.0.1</NewtonsoftJsonVersion>
+    <StyleCopAnalyzerVersion>1.1.118</StyleCopAnalyzerVersion>
+    <CommandLineParserVersion>2.9.1</CommandLineParserVersion>
+ </PropertyGroup>
+</Project>

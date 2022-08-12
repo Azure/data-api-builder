@@ -5,4 +5,4 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - "./DataGateway.Service/hawaii-config.PostgreSql.json:/App/hawaii-config.json"
+      - "./src/Service/dab-config.PostgreSql.json:/App/dab-config.json"

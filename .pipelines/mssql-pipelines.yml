@@ -40,11 +40,11 @@ jobs:
     displayName: Get and Start Ubuntu SQL Server Image Docker
 
   - task: FileTransform@1
-    displayName: 'Generate hawaii-config.MsSql.json'
+    displayName: 'Generate dab-config.MsSql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'DataGateway.Service/hawaii-config.MsSql.json'
+      targetFiles: 'src/Service/dab-config.MsSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build
@@ -120,11 +120,11 @@ jobs:
         SqlLocalDb.exe info "MSSQLLocalDB"
 
   - task: FileTransform@1
-    displayName: 'Generate hawaii-config.MsSql.json'
+    displayName: 'Generate dab-config.MsSql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'DataGateway.Service/hawaii-config.MsSql.json'
+      targetFiles: 'src/Service/dab-config.MsSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build

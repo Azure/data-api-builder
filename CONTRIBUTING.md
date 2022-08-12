@@ -30,13 +30,13 @@ if [ "\$(get_files)" = '' ]; then
 fi
 
 get_files |
-    xargs dotnet format Azure.DataGateway.Service.sln \\
+    xargs dotnet format src/Azure.DataApiBuilder.Service.sln \\
         --check \\
         --fix-whitespace --fix-style warn --fix-analyzers warn \\
         --include \\
     || {
         get_files |
-            xargs dotnet format Azure.DataGateway.Service.sln \\
+            xargs dotnet format src/Azure.DataApiBuilder.Service.sln \\
                 --fix-whitespace --fix-style warn --fix-analyzers warn \\
                 --include
         exit 1
@@ -94,14 +94,14 @@ tests locally can be useful to debug a failure.
 The only thing that should different between CI and your own machine is how you
 connect to the database that's used for the tests. You should create a custom
 overrides file with your connection string:
-- `hawaii-config.MsSql.overrides.json` for SQL Server
-- `hawaii-config.PostgreSql.overrides.json` for Postgres
-- `hawaii-config.MySql.overrides.json` for MySql
+- `dab-config.MsSql.overrides.json` for SQL Server
+- `dab-config.PostgreSql.overrides.json` for Postgres
+- `dab-config.MySql.overrides.json` for MySql
 
 There's a template for these files called:
-- `hawaii-config.MsSql.overrides.example.json` for SQL Server
-- `hawaii-config.PostgreSql.overrides.example.json` for Postgres
-- `hawaii-config.PostgreSql.overrides.example.json` for MySql
+- `dab-config.MsSql.overrides.example.json` for SQL Server
+- `dab-config.PostgreSql.overrides.example.json` for Postgres
+- `dab-config.PostgreSql.overrides.example.json` for MySql
 
 If you copy those files to the path without `example` in it and change the
 places where it says `REPLACEME` then you should be able to run the tests

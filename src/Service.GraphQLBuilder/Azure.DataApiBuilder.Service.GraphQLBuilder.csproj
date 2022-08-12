@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputPath>$(BaseOutputPath)\engine</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" />
+    <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="HotChocolate" Version="$(HotChocolateVersion)" />
+    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="$(HotChocolateVersion)" />
+    <PackageReference Include="Humanizer" Version="$(HumanizerVersion)" />
+    <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
+    <PackageReference Include="StyleCop.Analyzers" Version="$(StyleCopAnalyzerVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

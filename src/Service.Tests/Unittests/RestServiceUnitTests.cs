@@ -184,6 +184,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         /// This delegate is for the callback used
         /// with the mocked SqlMetadataProvider.
         /// </summary>
+        /// <param name="entityRoute">The entity route.</param>
         /// <param name="entity">Name of entity.</param>
         delegate void metaDataCallback(string entityRoute, out string entity);
         #endregion

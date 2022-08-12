@@ -5,7 +5,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:6.0 as build
 
 WORKDIR /src
-COPY ["../", "./"]
+COPY ["..", "."]
 RUN dotnet build "./src/Service/Azure.DataApiBuilder.Service.csproj" -c Docker -o /out -r linux-x64
 
 FROM mcr.microsoft.com/dotnet/aspnet:6.0 as runtime

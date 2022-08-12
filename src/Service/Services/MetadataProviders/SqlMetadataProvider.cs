@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -143,7 +144,7 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        public virtual bool TryGetEntityNameFromRoute(string entityRouteName, out string? entityName)
+        public virtual bool TryGetEntityNameFromRoute(string entityRouteName, [NotNullWhen(true)]out string? entityName)
         {
             return EntityRouteToEntityName.TryGetValue(entityRouteName, out entityName);
         }
@@ -161,7 +162,7 @@ namespace Azure.DataApiBuilder.Service.Services
             GenerateDatabaseObjectForEntities();
             await PopulateTableDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();
-            GenerateRouteToEntityMap();
+            GenerateRestRouteToEntityMap();
             InitODataParser();
             timer.Stop();
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
@@ -171,7 +172,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Generates the map used to find a given entity based
         /// on the request route that will be used for that entity.
         /// </summary>
-        private void GenerateRouteToEntityMap()
+        private void GenerateRestRouteToEntityMap()
         {
             foreach (string entityName in _entities.Keys)
             {
@@ -191,13 +192,18 @@ namespace Azure.DataApiBuilder.Service.Services
             // if entity.Rest is null or a bool we just use source name
             if (entity.Rest is null || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.True or JsonValueKind.False)
             {
-                return entityName;
+                return entityName.Pluralize();
             }
 
             // otherwise we have to convert each part of the Rest property we want into correct objects
             // they are json element so this means deserializing at each step with case insensitivity
-            JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true };
+            JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
             RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)entity.Rest, options)!;
+            if (rest.Route is string)
+            {
+                return ((string)rest.Route).Pluralize();
+            }
+
             SingularPlural restRoute = JsonSerializer.Deserialize<SingularPlural>((JsonElement)rest.Route, options)!;
             // Plural takes precedence, otherwise we pluralize singular before returning
             return !string.IsNullOrWhiteSpace(restRoute.Plural) ? restRoute.Plural : restRoute.Singular.Pluralize();

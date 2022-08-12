@@ -176,7 +176,9 @@ namespace Azure.DataApiBuilder.Service.Services
         /// the given REST path, we throw an exception. We then
         /// return the entity name via a lookup using the string
         /// up until the next '/' if one exists, and the primary
-        /// key as the substring following the '/'.
+        /// key as the substring following the '/'. For example
+        /// a request route shoud be of the form
+        /// /{path}/{EntityRoute}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
         /// </summary>
         /// <param name="route">String containing path + entity route
         /// (and optionally primary key).</param>
@@ -188,9 +190,10 @@ namespace Azure.DataApiBuilder.Service.Services
             string path = _runtimeConfigProvider.RestPath.TrimStart('/');
             if (!route.StartsWith(path))
             {
-                throw new DataApiBuilderException(message: $"Invalid Path for route: {route}.",
-                                                  statusCode: HttpStatusCode.BadRequest,
-                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                throw new DataApiBuilderException(
+                    message: $"Invalid Path for route: {route}.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
             // entity route comes after the path, so get substring starting from
@@ -203,16 +206,18 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 // primary key route is what follows the first '/', we trim this and any
                 // additional '/'
-                primaryKeyRoute = routeAfterPath.Substring(routeAfterPath.IndexOf('/')).TrimStart('/');
+                int indexOfSlash = routeAfterPath.IndexOf('/');
+                primaryKeyRoute = routeAfterPath.Substring(indexOfSlash).TrimStart('/');
                 // save entity route as string up until first '/'
                 // use entity route to get correct entity name if one exists
                 // if no valid entity related to the provided entity route, throw exception
-                string entityRouteName = routeAfterPath[..routeAfterPath.IndexOf('/')];
+                string entityRouteName = routeAfterPath[..indexOfSlash];
                 if (!_sqlMetadataProvider.TryGetEntityNameFromRoute(entityRouteName, out entityName))
                 {
-                    throw new DataApiBuilderException(message: $"Invalid Entity route: {entityRouteName}.",
-                                                      statusCode: HttpStatusCode.NotFound,
-                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                    throw new DataApiBuilderException(
+                        message: $"Invalid Entity route: {entityRouteName}.",
+                        statusCode: HttpStatusCode.NotFound,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
                 }
             }
             else
@@ -220,9 +225,10 @@ namespace Azure.DataApiBuilder.Service.Services
                 // if no valid entity related to the provided entity route, throw exception
                 if (!_sqlMetadataProvider.TryGetEntityNameFromRoute(routeAfterPath, out entityName))
                 {
-                    throw new DataApiBuilderException(message: $"Invalid Entity route: {routeAfterPath}.",
-                                                      statusCode: HttpStatusCode.NotFound,
-                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                    throw new DataApiBuilderException(
+                        message: $"Invalid Entity route: {routeAfterPath}.",
+                        statusCode: HttpStatusCode.NotFound,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
                 }
             }
 

@@ -29,7 +29,7 @@ Update `dab-config.json` (and `schema.gql` if using cosmos).
     3.3. Run docker compose up to start the container:
 
 ```bash
-docker compose -f "./docker-compose.yml" up
+docker compose -f "../../docker/docker-compose.yml" up
 ```
 
 4. Your container should be accessible at `http://localhost:5000`. 
@@ -54,7 +54,7 @@ N.B. Ensure you have docker running, with Linux containers chosen.
 2. Run docker build. If you are on Windows, you need to do this in a WSL terminal.
 
 ```bash
-docker build -t hawaii:<yourTag> -f Dockerfile .
+docker build -t hawaii:<yourTag> -f ../../docker/Dockerfile .
 ```
 
 3. To run a container with the image you created, follow the instructions above (Running docker container from ACR (Prebuilt image)). Make sure to replace the image in the docker-compose file with the one you built. You can skip the login step.

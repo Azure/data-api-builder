@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     if (rolesAllowedForRead.Count() > 0)
                     {
                         queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity, rolesAllowedForRead));
-                        queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, rolesAllowedForRead));
+                        queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, entity, rolesAllowedForRead));
                     }
                 }
             }
@@ -70,7 +70,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             return new(definitionNodes);
         }
 
-        public static FieldDefinitionNode GenerateByPKQuery(ObjectTypeDefinitionNode objectTypeDefinitionNode, NameNode name, DatabaseType databaseType, IEnumerable<string>? rolesAllowedForRead = null)
+        public static FieldDefinitionNode GenerateByPKQuery(
+            ObjectTypeDefinitionNode objectTypeDefinitionNode,
+            NameNode name,
+            DatabaseType databaseType,
+            Entity entity,
+            IEnumerable<string>? rolesAllowedForRead = null)
         {
             IEnumerable<FieldDefinitionNode> primaryKeyFields =
             FindPrimaryKeyFields(objectTypeDefinitionNode, databaseType);
@@ -95,10 +100,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new List<DirectiveNode>()));
             }
 
+            string singularName = GetDefinedSingularName(name.Value, entity);
             return new(
                 location: null,
-                new NameNode($"{FormatNameForField(name)}_by_pk"),
-                new StringValueNode($"Get a {name} from the database by its ID/primary key"),
+                new NameNode($"{FormatNameForField(singularName)}_by_pk"),
+                new StringValueNode($"Get a {singularName} from the database by its ID/primary key"),
                 inputValues,
                 new NamedTypeNode(name),
                 fieldDefinitionNodeDirectives
@@ -141,8 +147,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             //    books(first: Int, after: String, filter: BooksFilterInput, orderBy: BooksOrderByInput): BooksConnection!
             return new(
                 location: null,
-                new NameNode(FormatNameForField(Pluralize(name, entity))),
-                new StringValueNode($"Get a list of all the {name} items from the database"),
+                new NameNode(FormatNameForField(Pluralize(name, entity).Value)),
+                new StringValueNode($"Get a list of all the {GetDefinedSingularName(name.Value, entity)} items from the database"),
                 QueryArgumentsForField(filterInputName, orderByInputName),
                 new NonNullTypeNode(new NamedTypeNode(returnType.Name)),
                 fieldDefinitionNodeDirectives

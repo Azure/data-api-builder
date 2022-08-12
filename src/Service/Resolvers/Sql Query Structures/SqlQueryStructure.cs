@@ -270,7 +270,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Exposes the primary key of the underlying table of the structure
         /// as a list of OrderByColumn
         /// </summary>
-        public List<OrderByColumn> PrimaryKeyAsOrderByColumns()
+        private List<OrderByColumn> PrimaryKeyAsOrderByColumns()
         {
             if (_primaryKeyAsOrderByColumns == null)
             {

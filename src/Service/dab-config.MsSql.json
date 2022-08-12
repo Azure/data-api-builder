@@ -2,7 +2,7 @@
   "$schema": "../schemas/dab.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;MultipleActiveResultSets=False;Connection Timeout=5;"
+    "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests"
   },
   "mssql": {
     "set-session-context": false

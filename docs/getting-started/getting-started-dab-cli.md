@@ -6,9 +6,9 @@ Welcome to this getting started tutorial that will guide you to install and setu
 
 This CLI tool is part of [.NET global tools](https://www.nuget.org/packages?packagetype=dotnettool). As a prerequisite to install and run this tool, you'll need to have [.NET SDK](https://dotnet.microsoft.com/en-us/download) >=6 installed on your development machine.
 
-## Install the DAB CLI
+## Install the `dab` CLI
 
-You can install the DAB CLI using [.NET tools](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools).
+You can install the `dab` CLI using [.NET tools](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools).
 
 - Download the latest version of the package: [dab.<version_number>.nupkg](https://msdata.visualstudio.com/CosmosDB/_artifacts/feed/DataApiBuilder)
 - Navigate to the folder where the package file is downloaded.
@@ -41,7 +41,7 @@ Installing the package will make the `dab` command available on your development
 
 ## Generate the config file
 
-This CLI tool will generate a DAB engine config file for you, then you can build your config by adding required entities, relationships, roles, and permissions etc.
+This CLI tool will generate a `dab` engine config file for you, then you can build your config by adding required entities, relationships, roles, and permissions etc.
 
 To initialize the config file, use the init command. For example, the following sample command
 generates a config file for SQL DB with CORS settings:

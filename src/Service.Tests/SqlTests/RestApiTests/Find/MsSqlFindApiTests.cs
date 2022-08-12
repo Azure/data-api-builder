@@ -254,6 +254,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc",
+                $"SELECT [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
+                $"ORDER BY species " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithQueryStringSpaceInNamesOrderByAsc",
                 $"SELECT * FROM { _integrationTableHasColumnWithSpace } " +
                 $"ORDER BY [ID Number] " +

@@ -534,6 +534,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation for all records.
+        /// order by title in ascending order.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=FancyName",
+                entity: _integrationMappingDifferentEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation for all records
         /// when there is a space in the column name.
         /// order by "ID Number" in ascending order.
@@ -1353,6 +1369,117 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 controller: _restController,
                 exception: true,
                 expectedErrorMessage: "Invalid field to be returned requested: species",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for FindById operation with attempts at
+        /// Sql Injection in the primary key route.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(" WHERE 1=1/*", true)]
+        [DataRow("id WHERE 1=1/*", true)]
+        [DataRow(" UNION SELECT * FROM books/*", true)]
+        [DataRow("id UNION SELECT * FROM books/*", true)]
+        [DataRow("; SELECT * FROM information_schema.tables/*", true)]
+        [DataRow("id; SELECT * FROM information_schema.tables/*", true)]
+        [DataRow("; SELECT * FROM v$version/*", true)]
+        [DataRow("id; SELECT * FROM v$version/*", true)]
+        [DataRow("id; DROP TABLE books;/*", true)]
+        [DataRow(" WHERE 1=1--", false)]
+        [DataRow("id WHERE 1=1--", false)]
+        [DataRow(" UNION SELECT * FROM books--", false)]
+        [DataRow("id UNION SELECT * FROM books--", false)]
+        [DataRow("; SELECT * FROM information_schema.tables--", false)]
+        [DataRow("id; SELECT * FROM information_schema.tables--", false)]
+        [DataRow("; SELECT * FROM v$version--", false)]
+        [DataRow("id; SELECT * FROM v$version--", false)]
+        [DataRow("id; DROP TABLE books;--", false)]
+        public async Task FindByIdTestWithSqlInjectionInPKRoute(string sqlInjection, bool slashStar)
+        {
+            string message = slashStar ? "Support for url template with implicit primary key field names is not yet added." :
+                $"Parameter \"{sqlInjection}\" cannot be resolved as column \"id\" with type \"Int32\".";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: $"id/{sqlInjection}",
+                queryString: $"?$select=id",
+                entity: _integrationEntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: message,
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for FindById operation with attempts at
+        /// Sql Injection in the query string.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(" WHERE 1=1/*")]
+        [DataRow(" WHERE 1=1--")]
+        [DataRow("id WHERE 1=1/*")]
+        [DataRow("id WHERE 1=1--")]
+        [DataRow(" UNION SELECT * FROM books/*")]
+        [DataRow(" UNION SELECT * FROM books--")]
+        [DataRow("id UNION SELECT * FROM books/*")]
+        [DataRow("id UNION SELECT * FROM books--")]
+        [DataRow("; SELECT * FROM information_schema.tables/*")]
+        [DataRow("; SELECT * FROM information_schema.tables--")]
+        [DataRow("id; SELECT * FROM information_schema.tables/*")]
+        [DataRow("id; SELECT * FROM information_schema.tables--")]
+        [DataRow("; SELECT * FROM v$version/*")]
+        [DataRow("; SELECT * FROM v$version--")]
+        [DataRow("id; SELECT * FROM v$version/*")]
+        [DataRow("id; SELECT * FROM v$version--")]
+        [DataRow("id; DROP TABLE books;")]
+        public async Task FindByIdTestWithSqlInjectionInQueryString(string sqlInjection)
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/5671",
+                queryString: $"?$select={sqlInjection}",
+                entity: _integrationEntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: $"Invalid field to be returned requested: {sqlInjection}",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with attempts at
+        /// Sql Injection in the query string.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(" WHERE 1=1/*")]
+        [DataRow(" WHERE 1=1--")]
+        [DataRow("id WHERE 1=1/*")]
+        [DataRow("id WHERE 1=1--")]
+        [DataRow(" UNION SELECT * FROM books/*")]
+        [DataRow(" UNION SELECT * FROM books--")]
+        [DataRow("id UNION SELECT * FROM books/*")]
+        [DataRow("id UNION SELECT * FROM books--")]
+        [DataRow("; SELECT * FROM information_schema.tables/*")]
+        [DataRow("; SELECT * FROM information_schema.tables--")]
+        [DataRow("id; SELECT * FROM information_schema.tables/*")]
+        [DataRow("id; SELECT * FROM information_schema.tables--")]
+        [DataRow("; SELECT * FROM v$version/*")]
+        [DataRow("; SELECT * FROM v$version--")]
+        [DataRow("id; SELECT * FROM v$version/*")]
+        [DataRow("id; SELECT * FROM v$version--")]
+        [DataRow("id; DROP TABLE books;")]
+        public async Task FindManyTestWithSqlInjectionInQueryString(string sqlInjection)
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: $"?$select={sqlInjection}",
+                entity: _integrationEntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: $"Invalid field to be returned requested: {sqlInjection}",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

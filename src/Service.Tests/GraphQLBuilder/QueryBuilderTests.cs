@@ -68,9 +68,9 @@ type Foo @model(name:""Foo"") {
                 );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"Foo_by_pk"));
+            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"foo_by_pk"));
             FieldDefinitionNode pkField =
-                query.Fields.Where(f => f.Name.Value == $"Foo_by_pk").First();
+                query.Fields.Where(f => f.Name.Value == $"foo_by_pk").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
                 actual: pkField.Directives.Count);
         }
@@ -98,7 +98,7 @@ type Foo @model(name:""Foo"") {
                 );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"Foo_by_pk");
+            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
             IReadOnlyList<InputValueDefinitionNode> args = field.Arguments;
 
             Assert.AreEqual(2, args.Count);
@@ -173,7 +173,7 @@ type Foo @model(name:""Foo"") {
                 );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            string returnTypeName = query.Fields.First(f => f.Name.Value == $"Foos").Type.NamedType().Name.Value;
+            string returnTypeName = query.Fields.First(f => f.Name.Value == $"foos").Type.NamedType().Name.Value;
             ObjectTypeDefinitionNode returnType = queryRoot.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>().First(d => d.Name.Value == returnTypeName);
             Assert.AreEqual(3, returnType.Fields.Count);
             Assert.AreEqual("items", returnType.Fields[0].Name.Value);
@@ -205,7 +205,7 @@ type Foo @model(name:""Foo"") {
                 );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"Foo_by_pk");
+            FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
             Assert.AreEqual("foo_id", byIdQuery.Arguments[0].Name.Value);
         }
 
@@ -230,7 +230,7 @@ type Foo @model(name:""Foo"") {
                             );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"Foo_by_pk");
+            FieldDefinitionNode byIdQuery = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
             Assert.AreEqual("id", byIdQuery.Arguments[0].Name.Value);
             Assert.AreEqual("_partitionKeyValue", byIdQuery.Arguments[1].Name.Value);
         }
@@ -308,17 +308,17 @@ type Table @model(name: ""table"") {
         /// <param name="expectedQueryNameForList"> Expected name for the query to fetch all items </param>
         /// <param name="expectedNameInDescription">Expected name in the description for both the queries</param>
         [DataTestMethod]
-        [DataRow(GraphQLTestHelpers.BOOK_GQL, "Book", null, null, "Book_by_pk", "Books", "Book",
+        [DataRow(GraphQLTestHelpers.BOOK_GQL, "Book", null, null, "book_by_pk", "books", "Book",
             DisplayName = "Query name and description validation for singular entity name with singular plural not defined")]
         [DataRow(GraphQLTestHelpers.BOOK_GQL, "Book", "book", "books", "book_by_pk", "books", "book",
             DisplayName = "Query name and description validation for singular entity name with singular plural defined")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", null, null, "Books_by_pk", "Books", "Books",
+        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", null, null, "books_by_pk", "books", "Books",
             DisplayName = "Query name and description validation for plural entity name with singular plural not defined")]
         [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "books", "book_by_pk", "books", "book",
             DisplayName = "Query name and description validation for plural entity name with singular plural defined")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "", "book_by_pk", "Books", "book",
+        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "", "book_by_pk", "books", "book",
             DisplayName = "Query name and description validations for plural entity name with singular defined")]
-        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "People", "Person_by_pk", "People", "Person",
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "People", "person_by_pk", "people", "Person",
             DisplayName = "Query name and description validation for indirect plural entity name with singular and plural name defined")]
         public void ValidateQueriesAreCreatedWithRightName(
             string gql,

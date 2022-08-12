@@ -595,9 +595,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         [TestMethod]
         public async Task TestPaginationWithOrderByWithPartialPk()
         {
-            string graphQLQueryName = "Stocks";
+            string graphQLQueryName = "stocks";
             string graphQLQuery = @"{
-                Stocks(first: 2 orderBy: {pieceid: DESC}) {
+                stocks(first: 2 orderBy: {pieceid: DESC}) {
                     items {
                         pieceid
                         categoryid

@@ -103,6 +103,55 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
+        /// Check whether the entity name, graphql type and singular, plural names
+        /// defined in runtime config only contains characters allowed for GraphQL names.
+        /// 
+        /// Does not perform validation for entities which do not
+        /// have GraphQL configuration: when entity.GraphQL == false or null.
+        /// </summary>
+        /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
+        /// <param name="entityCollection"> Dictionary to get lookup entity settings for an entity.</param>
+        public static void ValidateEntityNamesInConfig(Dictionary<string, Entity> entityCollection)
+        {
+            foreach (string entityName in entityCollection.Keys)
+            {
+                Entity entity = entityCollection[entityName];
+
+                if (entity.GraphQL is null)
+                {
+                    continue;
+                }
+                else if (entity.GraphQL is bool graphQLEnabled)
+                {
+                    if (!graphQLEnabled)
+                    {
+                        continue;
+                    }
+
+                    ValidateNameRequirements(entityName);
+                }
+                else if (entity.GraphQL is GraphQLEntitySettings graphQLSettings)
+                {
+                    ValidateNameRequirements(entityName);
+
+                    if (graphQLSettings.Type is string graphQLName)
+                    {
+                        ValidateNameRequirements(graphQLName);
+                    }
+                    else if (graphQLSettings.Type is SingularPlural singularPluralSettings)
+                    {
+                        ValidateNameRequirements(singularPluralSettings.Singular);
+
+                        if (singularPluralSettings.Plural is not null)
+                        {
+                            ValidateNameRequirements(singularPluralSettings.Plural);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Validates that when GraphQL is an object, either a valid type string or singular name is defined
         /// Empty string or whitespaces are considered to be invalid. 
         /// </summary>
@@ -172,55 +221,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
         }
 
-        /// <summary>
-        /// Check whether the entity name defined in runtime config only contains
-        /// characters allowed for GraphQL names.
-        /// Does not perform validation for entities which do not
-        /// have GraphQL configuration: when entity.GraphQL == false or null.
-        /// </summary>
-        /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
-        /// <param name="runtimeConfig"></param>
-        public static void ValidateEntityNamesInConfig(Dictionary<string, Entity> entityCollection)
-        {
-            foreach (string entityName in entityCollection.Keys)
-            {
-                Entity entity = entityCollection[entityName];
-
-                if (entity.GraphQL is null)
-                {
-                    continue;
-                }
-                else if (entity.GraphQL is bool graphQLEnabled)
-                {
-                    if (!graphQLEnabled)
-                    {
-                        continue;
-                    }
-
-                    ValidateNameRequirements(entityName);
-                }
-                else if (entity.GraphQL is GraphQLEntitySettings graphQLSettings)
-                {
-                    if (graphQLSettings.Type is string graphQLName)
-                    {
-                        ValidateNameRequirements(graphQLName);
-                    }
-                    else if (graphQLSettings.Type is SingularPlural singularPluralSettings)
-                    {
-                        ValidateNameRequirements(singularPluralSettings.Singular);
-
-                        if (singularPluralSettings.Plural is not null)
-                        {
-                            ValidateNameRequirements(singularPluralSettings.Plural);
-                        }
-                    }
-                }
-            }
-        }
-
         private static void ValidateNameRequirements(string entityName)
         {
-            if (GraphQLNaming.ViolatesNamePrefixRequirements(entityName) ||
+            if (string.IsNullOrWhiteSpace(entityName) ||
+                GraphQLNaming.ViolatesNamePrefixRequirements(entityName) ||
                 GraphQLNaming.ViolatesNameRequirements(entityName))
             {
                 throw new DataApiBuilderException(

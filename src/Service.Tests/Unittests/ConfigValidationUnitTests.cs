@@ -198,54 +198,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
-        /// <summary>
-        /// Test that entity names from config that are invalid GraphQL names
-        /// fail runtime config validation.
-        /// Asserts that an exception is thrown, and with that exception object,
-        /// validates the exception's status and substatus codes.
-        /// </summary>
-        /// <param name="entityNameFromConfig"></param>
-        [DataTestMethod]
-        [DataRow("@entityname", DisplayName = "Invalid start character @")]
-        [DataRow("_entityname", DisplayName = "Invalid start character _")]
-        [DataRow("#entityname", DisplayName = "Invalid start character #")]
-        [DataRow("5Entityname", DisplayName = "Invalid start character 5")]
-        [DataRow("E.ntityName", DisplayName = "Invalid body character .")]
-        [DataRow("Entity^Name", DisplayName = "Invalid body character ^")]
-        [DataRow("Entity&Name", DisplayName = "Invalid body character &")]
-        [DataRow("Entity name", DisplayName = "Invalid body character whitespace")]
-
-        public void InvalidGraphQLTypeNamesFailValidation(string entityNameFromConfig)
-        {
-            Dictionary<string, Entity> entityCollection = new();
-            entityCollection.Add(entityNameFromConfig, SchemaConverterTests.GenerateEmptyEntity());
-
-            DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                action: () => RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection),
-                message: $"Entity name \"{entityNameFromConfig}\" incorrectly passed validation.");
-
-            Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
-            Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
-        }
-
-        /// <summary>
-        /// Test that entity names from config that are valid GraphQL names
-        /// pass runtime config validation. This test method fails if any
-        /// exceptions are thrown.
-        /// </summary>
-        /// <param name="entityNameFromConfig"></param>
-        [DataTestMethod]
-        [DataRow("entityname", DisplayName = "Valid lower case letter as first character")]
-        [DataRow("Entityname", DisplayName = "Valid upper case letter as first character")]
-        [DataRow("Entity_name", DisplayName = "Valid _ in body")]
-        public void ValidGraphQLTypeNamesPassValidation(string entityNameFromConfig)
-        {
-            Dictionary<string, Entity> entityCollection = new();
-            entityCollection.Add(entityNameFromConfig, SchemaConverterTests.GenerateEmptyEntity());
-
-            RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection);
-        }
-
         [DataTestMethod]
         [DataRow("book", "books", false, DisplayName = "Valid GraphQL Settings - Singular and Plural specified")]
         [DataRow("book", null, false, DisplayName = "Valid GraphQL Settings - Singular specified")]
@@ -514,8 +466,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (expectsException)
             {
                 DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection),
-                    message: $"Entity name \"{entityNameFromConfig}\" incorrectly passed validation.");
+                    action: () => RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection));
 
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);

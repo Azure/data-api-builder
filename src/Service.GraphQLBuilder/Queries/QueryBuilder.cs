@@ -100,10 +100,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new List<DirectiveNode>()));
             }
 
+            string singularName = GetDefinedSingularName(name.Value, entity);
             return new(
                 location: null,
-                new NameNode($"{GetDefinedSingularName(name.Value, entity)}_by_pk"),
-                new StringValueNode($"Get a {GetDefinedSingularName(name.Value, entity)} from the database by its ID/primary key"),
+                new NameNode($"{FormatNameForField(singularName)}_by_pk"),
+                new StringValueNode($"Get a {singularName} from the database by its ID/primary key"),
                 inputValues,
                 new NamedTypeNode(name),
                 fieldDefinitionNodeDirectives
@@ -146,7 +147,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             //    books(first: Int, after: String, filter: BooksFilterInput, orderBy: BooksOrderByInput): BooksConnection!
             return new(
                 location: null,
-                new NameNode(FormatNameForField(Pluralize(name, entity).Value.ToString())),
+                new NameNode(FormatNameForField(Pluralize(name, entity).Value)),
                 new StringValueNode($"Get a list of all the {GetDefinedSingularName(name.Value, entity)} items from the database"),
                 QueryArgumentsForField(filterInputName, orderByInputName),
                 new NonNullTypeNode(new NamedTypeNode(returnType.Name)),

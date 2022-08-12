@@ -4,7 +4,7 @@ Welcome to this getting started tutorial that will guide you to install and setu
 
 ## Prerequisite
 
-This CLI tool is part of [.NET global tools](https://www.nuget.org/packages?packagetype=dotnettool). As a prerequisite to install and run this tool, you'll need to have [.NET SDK](https://dotnet.microsoft.com/en-us/download) >=6 installed on your DEV machine.
+This CLI tool is part of [.NET global tools](https://www.nuget.org/packages?packagetype=dotnettool). As a prerequisite to install and run this tool, you'll need to have [.NET SDK](https://dotnet.microsoft.com/en-us/download) >=6 installed on your development machine.
 
 ## Install the DAB CLI
 
@@ -18,6 +18,10 @@ To install this tool globally, use:
 ```dotnetcli
 dotnet tool install -g --add-source ./ dab --version <version_number>
 ```
+
+> [!NOTE]
+> If you are running on Linux or MacOS, you will need to add .NET global tools (`dab`) to your path as well, once installed run:
+> `export PATH=$PATH:~/.dotnet/tools`
 
 ### Update the package version
 
@@ -45,7 +49,7 @@ To initialize the config file, use:
 #For example, sample command to generate config file for SQL DB with CORS settings:
 # dab init --config dab-config.json --database-type mssql --connection-string "HOST=XXX" --host-mode Development --cors-origin "http://localhost:3000"
 
-dab init --config <filename> --database-type <db_type> --connection-string <connection_string>
+dab init --config <filename> --database-type <mssql|cosmos|postgresql|mysql> --connection-string <connection_string>
 ```
 
 To validate, navigate to your folder path (where you should be currently) and you should see the config file generated there with given file name, e.g. `xxx-xxx.json`.
@@ -71,7 +75,7 @@ dab add book --source dbo.books --permissions "anonymous:read"
 
 ### Update entities in config
 
-To update entities already added to the config, run the following update command:
+To update entities which are already added to the config, run the following update command:
 
 ```dotnetcli
 # dab update book --permissions "authenticate:create" --fields.include "id,title"

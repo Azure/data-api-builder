@@ -92,7 +92,7 @@ namespace Cli
             PolicyDatabase = policyDatabase;
         }
 
-        [Value(0, MetaName = "Entity", Required = true, HelpText = "Config of the entity.")]
+        [Value(0, MetaName = "Entity", Required = true, HelpText = "Name of the entity.")]
         public string Entity { get; }
 
         [Option("rest", Required = false, HelpText = "Route for rest api.")]

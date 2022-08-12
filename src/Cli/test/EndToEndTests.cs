@@ -9,7 +9,7 @@ public class EndToEndTests
     /// <summary>
     /// Initializing config for cosmos DB.
     /// </summary>
-    private static string _testRuntimeConfig = "dab-config-test.json";
+    private static string _testRuntimeConfig = "dab-config-test";
     [TestMethod]
     public void TestInitForCosmosDB()
     {

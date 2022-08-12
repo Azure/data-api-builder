@@ -458,7 +458,7 @@ namespace Cli
             string? userProvidedConfigFile,
             out string runtimeConfigFile)
         {
-            if (!string.IsNullOrEmpty(userProvidedConfigFile) && File.Exists(userProvidedConfigFile))
+            if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
                 runtimeConfigFile = userProvidedConfigFile;

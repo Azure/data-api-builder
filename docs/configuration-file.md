@@ -219,6 +219,8 @@ The `source` property tells Data API builder what is the underlying database obj
 }
 ```
 
+> **IMPORTANT**: A table must have a primary key and that primary key must be created on a single column
+
 View are supported and when exposing a view it is required to specify which fields will be used as primary keys:
 
 ```json

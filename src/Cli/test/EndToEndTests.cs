@@ -222,32 +222,16 @@ public class EndToEndTests
                 }
         };
 
-        StartProcess(process);
-        string? output;
-        // to wait till the process starts
-        while (true)
-        {
-            try
-            {
-                int id = process.Id;
-                output = process.StandardOutput.ReadLine();
-                break;
-            }
-            catch (InvalidOperationException)
-            {
-                Assert.IsFalse(process.HasExited);
-            }
-        }
+        // Asserting that a new process has been started and no existing process is reused.
+        Assert.IsTrue(process.Start());
 
+        // The new process should not be exited after triggering the start command.
+        Assert.IsFalse(process.HasExited);
+        string? output = process.StandardOutput.ReadLine();
         process.Kill();
         Console.WriteLine(output);
         Assert.IsNotNull(output);
         Assert.IsTrue(output.Contains("Starting the runtime engine..."));
-    }
-
-    private static async void StartProcess(Process process)
-    {
-        await Task.Run(() => { process.Start(); });
     }
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)

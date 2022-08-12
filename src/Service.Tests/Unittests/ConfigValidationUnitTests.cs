@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Net;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -194,6 +195,79 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+        }
+
+        /// <summary>
+        /// Test to validate that differently cased operation names specified in config are deserialised correctly,
+        /// and hence they pass config validation stage if they are allowed CRUD operation and fail otherwise.
+        /// </summary>
+        /// <param name="operationName">Name of the operation configured.</param>
+        /// <param name="exceptionExpected">Boolean variable which indicates whether the relevant method call
+        /// is expected to return an exception.</param>
+        [DataTestMethod]
+        [DataRow("CREATE", false, DisplayName = "Valid operation name CREATE specified for action")]
+        [DataRow("rEAd", false, DisplayName = "Valid operation name rEAd specified for action")]
+        [DataRow("UPDate", false, DisplayName = "Valid operation name UPDate specified for action")]
+        [DataRow("DelETe", false, DisplayName = "Valid operation name DelETe specified for action")]
+        [DataRow("remove", true, DisplayName = "Invalid operation name remove specified for action")]
+        [DataRow("inseRt", true, DisplayName = "Invalid operation name inseRt specified for action")]
+        public void TestOperationValidityAndCasing(string operationName, bool exceptionExpected)
+        {
+            string actionJson = @"{
+                                        ""action"": " + $"\"{operationName}\"" + @",
+                                        ""policy"": {
+                                            ""database"": ""@claims.id eq @item.id""
+                                          },
+                                        ""fields"": {
+                                            ""include"": [""*""]
+                                          }
+                                  }";
+            object actionForRole = JsonSerializer.Deserialize<object>(actionJson);
+
+            PermissionSetting permissionForEntity = new(
+                role: AuthorizationHelpers.TEST_ROLE,
+                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+
+            Entity sampleEntity = new(
+                Source: AuthorizationHelpers.TEST_ENTITY,
+                Rest: null,
+                GraphQL: null,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+                );
+
+            Dictionary<string, Entity> entityMap = new();
+            entityMap.Add(AuthorizationHelpers.TEST_ENTITY, sampleEntity);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                MsSql: null,
+                CosmosDb: null,
+                PostgreSql: null,
+                MySql: null,
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                Entities: entityMap
+                );
+
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            if (!exceptionExpected)
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            }
+            else
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidatePermissionsInConfig(runtimeConfig));
+
+                // Assert that the exception returned is the one we expected.
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+                Assert.AreEqual($"action:{operationName} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
+                    $" role:{AuthorizationHelpers.TEST_ROLE} is not valid.",
+                    ex.Message);
+            }
         }
 
         /// <summary>

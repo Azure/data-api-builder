@@ -45,11 +45,11 @@ __EOF__
 chmod +x .git/hooks/pre-commit
 ```
 
-## DAB-Cli
+## dab
 1. To update the CLI tool trigger name from DAB to any other, goto csProj file and update the ToolCommandName :
 ```
 <PackAsTool>true</PackAsTool>
-<ToolCommandName>DAB</ToolCommandName>
+<ToolCommandName>dab</ToolCommandName>
 <PackageOutputPath>./nupkg</PackageOutputPath>
 ```
 

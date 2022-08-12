@@ -1,8 +1,11 @@
 {
-  "$schema": "../schemas/hawaii.draft-01.schema.json",
+  "$schema": "../schemas/dab.draft-01.schema.json",
   "data-source": {
-    "database-type": "postgresql",
+    "database-type": "mssql",
     "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests"
+  },
+  "mssql": {
+    "set-session-context": false
   },
   "runtime": {
     "rest": {
@@ -170,18 +173,16 @@
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
-      ],
-      "relationships": {
-        "comics": {
-          "cardinality": "many",
-          "target.entity": "Comic",
-          "source.fields": [ "categoryName" ],
-          "target.fields": [ "categoryName" ]
-        }
-      }
+      ]
     },
     "Book": {
       "source": "books",
+      "graphql": {
+        "type": {
+          "singular": "book",
+          "plural": "books"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -382,36 +383,6 @@
               }
             }
           ]
-        },
-        {
-          "role": "policy_tester_update_noread",
-          "actions": [
-            "create",
-            {
-              "action": "update",
-              "fields": {
-                "include": [ "*" ]
-              },
-              "policy": {
-                "database": "@item.id eq 9"
-              }
-            },
-            {
-              "action": "read",
-              "fields": {
-                "exclude": [ "*" ]
-              }
-            },
-            {
-              "action": "delete",
-              "fields": {
-                "include": [ "*" ]
-              },
-              "policy": {
-                "database": "@item.id eq 9"
-              }
-            }
-          ]
         }
       ],
       "relationships": {
@@ -498,6 +469,12 @@
     "Review": {
       "source": "reviews",
       "rest": true,
+      "graphql": {
+        "type": {
+          "singular": "review",
+          "plural": "reviews"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -547,20 +524,12 @@
     "WebsiteUser": {
       "source": "website_users",
       "rest": false,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "create", "read", "update", "delete" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [ "create", "read", "update", "delete" ]
+      "graphql": {
+        "type": {
+          "singular": "websiteUser",
+          "plural": "websiteUsers"
         }
-      ]
-    },
-    "stocks_price": {
-      "source": "stocks_price",
-      "rest": false,
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -574,6 +543,20 @@
     },
     "SupportedType": {
       "source": "type_table",
+      "rest": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
+    },
+    "stocks_price": {
+      "source": "stocks_price",
       "rest": false,
       "permissions": [
         {
@@ -624,6 +607,12 @@
     "Fungus": {
       "source": "fungi",
       "rest": true,
+      "graphql": {
+        "type": {
+          "singular": "fungus",
+          "plural": "fungi"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -748,6 +737,57 @@
           "actions": [ "read" ]
         }
       ]
+    },
+    "books_view_all": {
+      "source": "books_view_all",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "stocks_view_selected": {
+      "source": "stocks_view_selected",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "books_publishers_view_composite": {
+      "source": "books_publishers_view_composite",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+      }
     },
     "ArtOfWar": {
       "source": "aow",

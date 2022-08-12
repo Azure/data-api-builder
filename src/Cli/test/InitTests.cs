@@ -1,4 +1,4 @@
-namespace Hawaii.Cli.Tests
+namespace Cli.Tests
 {
     /// <summary>
     /// Test for config file initialization.
@@ -21,11 +21,11 @@ namespace Hawaii.Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                name: "outputfile");
+                config: "outputfile");
 
             string expectedRuntimeConfig =
             @"{
-  ""$schema"": ""hawaii.draft-01.schema.json"",
+  ""$schema"": ""dab.draft-01.schema.json"",
   ""data-source"": {
     ""database-type"": ""mssql"",
     ""connection-string"": ""testconnectionstring""
@@ -74,10 +74,10 @@ namespace Hawaii.Cli.Tests
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                name: "outputfile");
+                config: "outputfile");
 
             string expectedRuntimeConfig = @"{
-  ""$schema"": ""hawaii.draft-01.schema.json"",
+  ""$schema"": ""dab.draft-01.schema.json"",
   ""data-source"": {
     ""database-type"": ""cosmos"",
     ""connection-string"": ""testconnectionstring""
@@ -130,7 +130,7 @@ namespace Hawaii.Cli.Tests
                 graphQLSchemaPath: string.Empty,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                name: "outputfile");
+                config: "outputfile");
 
             Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));
 
@@ -144,7 +144,7 @@ namespace Hawaii.Cli.Tests
                 graphQLSchemaPath: "testschema",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                name: "outputfile");
+                config: "outputfile");
 
             Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));
 
@@ -158,7 +158,7 @@ namespace Hawaii.Cli.Tests
                 graphQLSchemaPath: string.Empty,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                name: "outputfile");
+                config: "outputfile");
 
             Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }

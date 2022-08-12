@@ -1,4 +1,4 @@
-namespace Hawaii.Cli.Tests
+namespace Cli.Tests
 {
     /// <summary>
     /// Tests for Utils methods.
@@ -81,6 +81,50 @@ namespace Hawaii.Cli.Tests
             // Invalid graphql string
             graphQlDetails = GetGraphQLDetails("book:plural_books:ads");
             Assert.IsNull(graphQlDetails);
+        }
+
+        /// <summary>
+        /// Test to check the precedence logic for config file in CLI
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("", "my-config.json", "my-config.json", DisplayName = "user provided the config file and environment variable was not set.")]
+        [DataRow("Test", "my-config.json", "my-config.json", DisplayName = "user provided the config file and environment variable was set.")]
+        [DataRow("Test", null, $"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}", DisplayName = "config not provided, but environment variable was set.")]
+        [DataRow("", null, $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}", DisplayName = "neither config was provided, nor environment variable was set.")]
+        public void TestConfigSelectionBasedOnCliPrecedence(
+            string? environmentValue,
+            string? userProvidedConfigFile,
+            string expectedRuntimeConfigFile)
+        {
+            if (!File.Exists(expectedRuntimeConfigFile))
+            {
+                File.Create(expectedRuntimeConfigFile);
+            }
+
+            string? envValueBeforeTest = Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME);
+            Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
+            Assert.IsTrue(TryGetConfigFileBasedOnCliPrecedence(userProvidedConfigFile, out string actualRuntimeConfigFile));
+            Assert.AreEqual(expectedRuntimeConfigFile, actualRuntimeConfigFile);
+            Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, envValueBeforeTest);
+        }
+
+        [ClassCleanup]
+        public static void Cleanup()
+        {
+            if (File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))
+            {
+                File.Delete($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}");
+            }
+
+            if (File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
+            {
+                File.Delete($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");
+            }
+
+            if (File.Exists("my-config.json"))
+            {
+                File.Delete("my-config.json");
+            }
         }
     }
 }

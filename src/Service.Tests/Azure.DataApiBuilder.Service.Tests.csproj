@@ -2,10 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-
     <IsPackable>false</IsPackable>
-
     <Nullable>disable</Nullable>
+    <OutputPath>$(BaseOutputPath)\tests</OutputPath>
   </PropertyGroup>
 
   <ItemGroup>

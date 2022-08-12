@@ -1,4 +1,4 @@
-namespace Hawaii.Cli.Tests
+namespace Cli.Tests
 {
     public static class TestHelper
     {
@@ -22,7 +22,7 @@ namespace Hawaii.Cli.Tests
         public static string GetInitialConfiguration
         {
             get { return @"{
-            ""$schema"": ""hawaii.draft-01.schema.json"",
+            ""$schema"": ""dab.draft-01.schema.json"",
             ""data-source"": {
               ""database-type"": ""mssql"",
               ""connection-string"": ""testconnectionstring""
@@ -248,7 +248,7 @@ namespace Hawaii.Cli.Tests
             {
                 return @"
                 {
-              ""$schema"": ""hawaii.draft-01.schema.json"",
+              ""$schema"": ""dab.draft-01.schema.json"",
               ""data-source"": {
                 ""database-type"": ""mssql"",
                 ""connection-string"": ""localhost:5000""

@@ -1,20 +1,22 @@
 using Azure.DataApiBuilder.Config;
 using CommandLine;
 
-namespace Hawaii.Cli.Models
+namespace Cli
 {
     /// <summary>
     /// Common options for all the commands
     /// </summary>
     public class Options
     {
-        public Options(string name)
+        public Options(string config)
         {
-            this.Name = name;
+            Config = config;
         }
 
-        [Option('n', "name", Default = (string)RuntimeConfigPath.CONFIGFILE_NAME, Required = false, HelpText = "Config file name")]
-        public string Name { get; }
+        [Option('c', "config", Required = false, HelpText = "Path to config file. " +
+            "Defaults to 'dab-config.json' unless 'dab-config.<DAB_ENVIRONMENT>.json' exists," +
+            " where DAB_ENVIRONMENT is an environment variable.")]
+        public string? Config { get; }
     }
 
     /// <summary>
@@ -31,16 +33,16 @@ namespace Hawaii.Cli.Models
             string? graphQLSchemaPath,
             HostModeType hostMode,
             IEnumerable<string>? corsOrigin,
-            string name)
-            : base(name)
+            string config)
+            : base(config)
         {
-            this.DatabaseType = databaseType;
-            this.ConnectionString = connectionString;
-            this.CosmosDatabase = cosmosDatabase;
-            this.CosmosContainer = cosmosContainer;
-            this.GraphQLSchemaPath = graphQLSchemaPath;
-            this.HostMode = hostMode;
-            this.CorsOrigin = corsOrigin;
+            DatabaseType = databaseType;
+            ConnectionString = connectionString;
+            CosmosDatabase = cosmosDatabase;
+            CosmosContainer = cosmosContainer;
+            GraphQLSchemaPath = graphQLSchemaPath;
+            HostMode = hostMode;
+            CorsOrigin = corsOrigin;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmos, mysql, postgresql")]
@@ -78,16 +80,16 @@ namespace Hawaii.Cli.Models
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string name)
-            : base(name)
+            string config)
+            : base(config)
         {
-            this.Entity = entity;
-            this.RestRoute = restRoute;
-            this.GraphQLType = graphQLType;
-            this.FieldsToInclude = fieldsToInclude;
-            this.FieldsToExclude = fieldsToExclude;
-            this.PolicyRequest = policyRequest;
-            this.PolicyDatabase = policyDatabase;
+            Entity = entity;
+            RestRoute = restRoute;
+            GraphQLType = graphQLType;
+            FieldsToInclude = fieldsToInclude;
+            FieldsToExclude = fieldsToExclude;
+            PolicyRequest = policyRequest;
+            PolicyDatabase = policyDatabase;
         }
 
         [Value(0, MetaName = "Entity", Required = true, HelpText = "Name of the entity.")]
@@ -128,7 +130,7 @@ namespace Hawaii.Cli.Models
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string name)
+            string config)
             : base(entity,
                   restRoute,
                   graphQLType,
@@ -136,10 +138,10 @@ namespace Hawaii.Cli.Models
                   fieldsToExclude,
                   policyRequest,
                   policyDatabase,
-                  name)
+                  config)
         {
-            this.Source = source;
-            this.Permissions = permissions;
+            Source = source;
+            Permissions = permissions;
         }
 
         [Option('s', "source", Required = true, HelpText = "Name of the source database object.")]
@@ -173,7 +175,7 @@ namespace Hawaii.Cli.Models
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string name)
+            string config)
             : base(entity,
                   restRoute,
                   graphQLType,
@@ -181,18 +183,18 @@ namespace Hawaii.Cli.Models
                   fieldsToExclude,
                   policyRequest,
                   policyDatabase,
-                  name)
+                  config)
         {
-            this.Source = source;
-            this.Permissions = permissions;
-            this.Relationship = relationship;
-            this.Cardinality = cardinality;
-            this.TargetEntity = targetEntity;
-            this.LinkingObject = linkingObject;
-            this.LinkingSourceFields = linkingSourceFields;
-            this.LinkingTargetFields = linkingTargetFields;
-            this.RelationshipFields = relationshipFields;
-            this.Map = map;
+            Source = source;
+            Permissions = permissions;
+            Relationship = relationship;
+            Cardinality = cardinality;
+            TargetEntity = targetEntity;
+            LinkingObject = linkingObject;
+            LinkingSourceFields = linkingSourceFields;
+            LinkingTargetFields = linkingTargetFields;
+            RelationshipFields = relationshipFields;
+            Map = map;
         }
 
         [Option('s', "source", Required = false, HelpText = "Name of the source table or container.")]
@@ -224,5 +226,15 @@ namespace Hawaii.Cli.Models
 
         [Option('m', "map", Separator = ',', Required = false, HelpText = "Specify mappings between database fields and GraphQL and REST fields. format: --map \"backendName1:exposedName1,backendName2:exposedName2,...\".")]
         public IEnumerable<string>? Map { get; }
+    }
+
+    /// <summary>
+    /// Start command options
+    /// </summary>
+    [Verb("start", isDefault: false, HelpText = "Start Data Api Builder Engine", Hidden = false)]
+    public class StartOptions : Options
+    {
+        public StartOptions(string config)
+            : base(config) { }
     }
 }

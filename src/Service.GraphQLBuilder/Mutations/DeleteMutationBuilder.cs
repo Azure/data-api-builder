@@ -16,7 +16,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="configEntity">Entity definition</param>
         /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
         /// <returns>A GraphQL field definition named <c>delete*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
-        public static FieldDefinitionNode Build(NameNode name, ObjectTypeDefinitionNode objectTypeDefinitionNode, Entity configEntity, DatabaseType databaseType, IEnumerable<string>? rolesAllowedForMutation = null)
+        public static FieldDefinitionNode Build(
+            NameNode name,
+            ObjectTypeDefinitionNode objectTypeDefinitionNode,
+            Entity configEntity,
+            DatabaseType databaseType,
+            IEnumerable<string>? rolesAllowedForMutation = null)
         {
             List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode, databaseType);
             string description;
@@ -53,10 +58,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             return new(
                 null,
-                new NameNode($"delete{FormatNameForObject(name, configEntity)}"),
+                new NameNode($"delete{GetDefinedSingularName(name.Value, configEntity)}"),
                 new StringValueNode($"Delete a {name}"),
                 inputValues,
-                new NamedTypeNode(FormatNameForObject(name, configEntity)),
+                new NamedTypeNode(name),
                 fieldDefinitionNodeDirectives
             );
         }

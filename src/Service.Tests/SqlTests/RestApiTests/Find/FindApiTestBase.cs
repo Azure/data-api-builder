@@ -1387,7 +1387,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: $"id/{sqlInjection}",
                 queryString: $"?$select=id",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
@@ -1423,7 +1423,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/5671",
                 queryString: $"?$select={sqlInjection}",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
@@ -1459,7 +1459,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$select={sqlInjection}",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,

@@ -386,7 +386,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/7",
                     queryString: null,
-                    entity: _integrationEntityName,
+                    entityNameOrRoute: _integrationEntityName,
                     sqlQuery: GetQuery(query),
                     controller: _restController,
                     operationType: Operation.Upsert,

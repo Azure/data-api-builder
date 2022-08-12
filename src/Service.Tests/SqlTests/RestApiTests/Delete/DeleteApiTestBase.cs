@@ -184,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: $"id/1{sqlInjection}",
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrRoute: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Delete,

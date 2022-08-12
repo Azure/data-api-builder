@@ -87,7 +87,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 graphQLMutation,
                 graphQLMutationName,
                 isAuthenticated: isAuthenticated,
-                clientRoleHeader: roleName);
+                clientRoleHeader: roleName,
+                failOnError: false);
 
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 result.ToString(),

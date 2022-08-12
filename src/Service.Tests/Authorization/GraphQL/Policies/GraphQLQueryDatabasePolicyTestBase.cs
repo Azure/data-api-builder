@@ -86,7 +86,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 graphQLQuery,
                 graphQLQueryName,
                 isAuthenticated: true,
-                clientRoleHeader: "policy_tester_02");
+                clientRoleHeader: "policy_tester_02",
+                failOnError: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 actual.ToString(),
                 message: "Cannot return null for non-nullable field.",
@@ -191,7 +192,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 graphQLQuery,
                 graphQLQueryName,
                 isAuthenticated: true,
-                clientRoleHeader: roleName);
+                clientRoleHeader: roleName,
+                failOnError: false);
 
             if (expectError)
             {

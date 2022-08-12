@@ -23,12 +23,12 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         {
             EntityMetadata entityMetadata = new()
             {
-                ActionToRolesMap = new Dictionary<Operation, List<string>>()
+                OperationToRolesMap = new Dictionary<Operation, List<string>>()
             };
 
             foreach (Operation action in actions)
             {
-                entityMetadata.ActionToRolesMap.Add(action, roles.ToList());
+                entityMetadata.OperationToRolesMap.Add(action, roles.ToList());
             }
 
             Dictionary<string, EntityMetadata> entityPermissionsMap = new();

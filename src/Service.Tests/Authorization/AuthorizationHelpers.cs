@@ -47,14 +47,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// </summary>
         /// <param name="entityName"></param>
         /// <param name="roleName"></param>
-        /// <param name="action"></param>
+        /// <param name="operation"></param>
         /// <param name="includedCols"></param>
         /// <param name="excludedCols"></param>
         /// <returns></returns>
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
             string roleName = "Reader",
-            Operation action = Operation.Create,
+            Operation operation = Operation.Create,
             HashSet<string>? includedCols = null,
             HashSet<string>? excludedCols = null,
             string? databasePolicy = null,
@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Policy policy = new(requestPolicy, databasePolicy);
 
             Action actionForRole = new(
-                Name: action,
+                Name: operation,
                 Fields: fieldsForRole,
                 Policy: policy);
 

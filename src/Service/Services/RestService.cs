@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.Services
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
-            await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleActionPermissionsRequirement());
+            await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleOperationPermissionsRequirement());
 
             QueryString? query = GetHttpContext().Request.QueryString;
             string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();

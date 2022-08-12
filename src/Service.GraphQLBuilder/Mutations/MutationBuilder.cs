@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             List<FieldDefinitionNode> mutationFields
             )
         {
-            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, action: action, entityPermissionsMap);
+            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForAction(dbEntityName, operation: action, entityPermissionsMap);
             if (rolesAllowedForMutation.Count() > 0)
             {
                 switch (action)

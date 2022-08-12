@@ -470,10 +470,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             switch (mutationOperation)
             {
                 case Operation.UpdateGraphQL:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: Operation.Update, inputArgumentKeys);
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: Operation.Update, inputArgumentKeys);
                     break;
                 case Operation.Create:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName: role, action: Operation.Create, inputArgumentKeys);
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: Operation.Create, inputArgumentKeys);
                     break;
                 case Operation.Delete:
                     // Delete operations are not checked for authorization on field level,

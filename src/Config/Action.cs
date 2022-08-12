@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Config
         [property: JsonPropertyName("fields")]
         Field? Fields)
     {
-        // Set of allowed actions for a request.
+        // Set of allowed operations for a request.
         public static readonly HashSet<Operation> ValidPermissionActions = new() { Operation.Create, Operation.Read, Operation.Update, Operation.Delete };
     }
 

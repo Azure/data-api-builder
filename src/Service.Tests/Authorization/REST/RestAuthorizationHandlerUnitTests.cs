@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             HttpContext httpContext = CreateHttpContext(httpMethod: httpMethod, clientRole: "admin");
 
             bool authorizationResult = await IsAuthorizationSuccessfulAsync(
-                requirement: new EntityRoleActionPermissionsRequirement(),
+                requirement: new EntityRoleOperationPermissionsRequirement(),
                 resource: AuthorizationHelpers.TEST_ENTITY,
                 resolver: authorizationResolver,
                 httpContext: httpContext);
@@ -98,7 +98,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             Assert.AreEqual(expected: string.Empty, actual: authorizationResolver.TryProcessDBPolicy(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: "admin",
-                action: RestService.HttpVerbToActions(httpVerbName: httpMethod),
+                operation: RestService.HttpVerbToActions(httpVerbName: httpMethod),
                 httpContext: httpContext)
             );
         }
@@ -143,22 +143,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             bool isValidDeleteRoleAction)
         {
             Mock<IAuthorizationResolver> authorizationResolver = new();
-            authorizationResolver.Setup(x => x.AreRoleAndActionDefinedForEntity(
+            authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 Operation.Create
                 )).Returns(isValidCreateRoleAction);
-            authorizationResolver.Setup(x => x.AreRoleAndActionDefinedForEntity(
+            authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 Operation.Read
                 )).Returns(isValidReadRoleAction);
-            authorizationResolver.Setup(x => x.AreRoleAndActionDefinedForEntity(
+            authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 Operation.Update
                 )).Returns(isValidUpdateRoleAction);
-            authorizationResolver.Setup(x => x.AreRoleAndActionDefinedForEntity(
+            authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 Operation.Delete
@@ -167,7 +167,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             HttpContext httpContext = CreateHttpContext(httpMethod);
 
             bool actualAuthorizationResult = await IsAuthorizationSuccessfulAsync(
-                requirement: new EntityRoleActionPermissionsRequirement(),
+                requirement: new EntityRoleOperationPermissionsRequirement(),
                 resource: AuthorizationHelpers.TEST_ENTITY,
                 resolver: authorizationResolver.Object,
                 httpContext: httpContext);
@@ -186,7 +186,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             HttpContext httpContext = CreateHttpContext();
 
             bool actualAuthorizationResult = await IsAuthorizationSuccessfulAsync(
-                requirement: new EntityRoleActionPermissionsRequirement(),
+                requirement: new EntityRoleOperationPermissionsRequirement(),
                 resource: null,
                 resolver: authorizationResolver.Object,
                 httpContext: httpContext
@@ -198,7 +198,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             try
             {
                 actualAuthorizationResult = await IsAuthorizationSuccessfulAsync(
-                    requirement: new EntityRoleActionPermissionsRequirement(),
+                    requirement: new EntityRoleOperationPermissionsRequirement(),
                     resource: new object(),
                     resolver: authorizationResolver.Object,
                     httpContext: httpContext
@@ -246,7 +246,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
 
             // Creates Mock AuthorizationResolver to return a preset result based on [TestMethod] input.
             Mock<IAuthorizationResolver> authorizationResolver = new();
-            authorizationResolver.Setup(x => x.AreColumnsAllowedForAction(
+            authorizationResolver.Setup(x => x.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 Operation.Read,
@@ -356,7 +356,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: "admin",
-                action: Operation.All);
+                operation: Operation.All);
 
             // Override the action to be a list of string for wildcard instead of a list of object created by InitRuntimeConfig()
             //

@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     context.Succeed(requirement);
                 }
             }
-            else if (requirement is EntityRoleActionPermissionsRequirement)
+            else if (requirement is EntityRoleOperationPermissionsRequirement)
             {
                 if (context.Resource is not null)
                 {
@@ -101,7 +101,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
                     foreach (Operation action in actions)
                     {
-                        bool isAuthorized = _authorizationResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, action);
+                        bool isAuthorized = _authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, roleName, action);
                         if (!isAuthorized)
                         {
                             context.Fail();
@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         // i.e. columnsToCheck = convertExposedNamesToBackingColumns()
 
                         // Authorize field names present in a request.
-                        if (columnsToCheck.Count() > 0 && _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName, action, columnsToCheck))
+                        if (columnsToCheck.Count() > 0 && _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName, action, columnsToCheck))
                         {
                             // Find operations with no column filter in the query string will have FieldsToBeReturned == 0.
                             // Then, the "allowed columns" resolved, will be set on FieldsToBeReturned.

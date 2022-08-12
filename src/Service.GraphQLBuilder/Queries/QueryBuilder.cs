@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     ObjectTypeDefinitionNode returnType = GenerateReturnType(name);
                     returnTypes.Add(returnType);
 
-                    IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForAction(entityName, action: Operation.Read, entityPermissionsMap);
+                    IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForAction(entityName, operation: Operation.Read, entityPermissionsMap);
 
                     if (rolesAllowedForRead.Count() > 0)
                     {

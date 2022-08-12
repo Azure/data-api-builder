@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Auth
         /// Since the roleNames are case insensitive, we use IEqualityComparer for ignoring
         /// the case.
         /// </summary>
-        public Dictionary<string, RoleMetadata> RoleToActionMap { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, RoleMetadata> RoleToOperationMap { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Field to action to role mapping.
@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Auth
         /// defining config permissions for the action.
         /// i.e. Read action is permitted in {Role1, Role2, ..., RoleN}
         /// </summary>
-        public Dictionary<Operation, List<string>> ActionToRolesMap { get; set; } = new();
+        public Dictionary<Operation, List<string>> OperationToRolesMap { get; set; } = new();
     }
 
     /// <summary>
@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Auth
         /// <summary>
         /// Given the key (action) returns the associated ActionMetadata object.
         /// </summary>
-        public Dictionary<Operation, ActionMetadata> ActionToColumnMap { get; set; } = new();
+        public Dictionary<Operation, OperationMetadata> OperationToColumnMap { get; set; } = new();
     }
 
     /// <summary>
@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Auth
     /// An action lists both columns that are included and/or exluded
     /// for that action.
     /// </summary>
-    public class ActionMetadata
+    public class OperationMetadata
     {
         public string? DatabasePolicy { get; set; }
         public HashSet<string> Included { get; set; } = new();

@@ -146,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
                 foreach (string column in tableDefinition.Columns.Keys)
                 {
-                    IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, action: Operation.Read);
+                    IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Operation.Read);
                     if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
                     {
                         throw new DataApiBuilderException(

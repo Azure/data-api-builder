@@ -460,7 +460,7 @@ namespace Cli
         {
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
-                /// The existence of user provided config is not checked here.
+                /// The existence of user provided config file is not checked here.
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;
@@ -468,12 +468,14 @@ namespace Cli
             else
             {
                 Console.WriteLine("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
+                /// Need to reset to true explicitly so any that any reinvocations of this function
+                /// get simulated as being called for the first time specifically useful for tests.
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = true;
                 runtimeConfigFile = RuntimeConfigPath.GetFileNameForEnvironment(
                         hostingEnvironmentName: null,
                         considerOverrides: false);
 
-                // so that the check doesn't run again when starting engine
+                /// so that the check doesn't run again when starting engine
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
             }
 

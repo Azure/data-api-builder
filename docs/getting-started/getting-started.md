@@ -38,7 +38,7 @@ The Data API builder for Azure Databases engine needs a [configuration file](../
 
 Creating a configuration file is simple and you can use the Data API builder CLI to make it even simpler. In this tutorial the CLI will not be used so that you can get the chance to get familar with the configuration file, as it is a key part of Data API builder for Azure Databases.
 
-Create a copy of the `basic-empty.config.json.sample` file and rename it `library.config.json`
+Create a copy of the `basic-empty-dab-config.json` file and rename it `library-dab-config.json`
 
 The content of the file is the following:
 

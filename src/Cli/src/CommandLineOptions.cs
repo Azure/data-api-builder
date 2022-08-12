@@ -8,13 +8,15 @@ namespace Cli
     /// </summary>
     public class Options
     {
-        public Options(string name)
+        public Options(string config)
         {
-            Name = name;
+            Config = config;
         }
 
-        [Option('n', "name", Default = RuntimeConfigPath.CONFIGFILE_NAME, Required = false, HelpText = "Config file name")]
-        public string Name { get; }
+        [Option('c', "config", Required = false, HelpText = "Path to config file. " +
+            "Defaults to 'dab-config.json' unless 'dab-config.<DAB_ENVIRONMENT>.json' exists," +
+            " where DAB_ENVIRONMENT is an environment variable.")]
+        public string? Config { get; }
     }
 
     /// <summary>
@@ -31,8 +33,8 @@ namespace Cli
             string? graphQLSchemaPath,
             HostModeType hostMode,
             IEnumerable<string>? corsOrigin,
-            string name)
-            : base(name)
+            string config)
+            : base(config)
         {
             DatabaseType = databaseType;
             ConnectionString = connectionString;
@@ -78,8 +80,8 @@ namespace Cli
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string name)
-            : base(name)
+            string config)
+            : base(config)
         {
             Entity = entity;
             RestRoute = restRoute;
@@ -128,7 +130,7 @@ namespace Cli
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string name)
+            string config)
             : base(entity,
                   restRoute,
                   graphQLType,
@@ -136,7 +138,7 @@ namespace Cli
                   fieldsToExclude,
                   policyRequest,
                   policyDatabase,
-                  name)
+                  config)
         {
             Source = source;
             Permissions = permissions;
@@ -173,7 +175,7 @@ namespace Cli
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string name)
+            string config)
             : base(entity,
                   restRoute,
                   graphQLType,
@@ -181,7 +183,7 @@ namespace Cli
                   fieldsToExclude,
                   policyRequest,
                   policyDatabase,
-                  name)
+                  config)
         {
             Source = source;
             Permissions = permissions;
@@ -224,5 +226,15 @@ namespace Cli
 
         [Option('m', "map", Separator = ',', Required = false, HelpText = "Specify mappings between database fields and GraphQL and REST fields. format: --map \"backendName1:exposedName1,backendName2:exposedName2,...\".")]
         public IEnumerable<string>? Map { get; }
+    }
+
+    /// <summary>
+    /// Start command options
+    /// </summary>
+    [Verb("start", isDefault: false, HelpText = "Start Data Api Builder Engine", Hidden = false)]
+    public class StartOptions : Options
+    {
+        public StartOptions(string config)
+            : base(config) { }
     }
 }

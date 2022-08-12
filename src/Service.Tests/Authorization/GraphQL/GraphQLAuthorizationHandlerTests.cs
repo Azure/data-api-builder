@@ -53,7 +53,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 queryName: graphQLQueryName,
                 isAuthenticated: isAuthenticated,
                 variables: null,
-                clientRoleHeader: clientRoleHeader);
+                clientRoleHeader: clientRoleHeader,
+                failOnError: false);
 
             if (!string.IsNullOrWhiteSpace(expectedErrorMessageFragment))
             {

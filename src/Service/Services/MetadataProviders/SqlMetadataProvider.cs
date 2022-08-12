@@ -176,7 +176,7 @@ namespace Azure.DataApiBuilder.Service.Services
             foreach (string entityName in _entities.Keys)
             {
                 Entity entity = _entities[entityName];
-                string pluralizedRoute = PluralizeEntityRoute(entity);
+                string pluralizedRoute = PluralizeEntityRoute(entity, entityName);
                 EntityRouteToEntityName[pluralizedRoute] = entityName;
             }
         }
@@ -186,12 +186,12 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="entity">Entity to pluralize the route of.</param>
         /// <returns>pluralized route for the given Entity.</returns>
-        private static string PluralizeEntityRoute(Entity entity)
+        private static string PluralizeEntityRoute(Entity entity, string entityName)
         {
             // if entity.Rest is null or a bool we just use source name
             if (entity.Rest is null || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.True or JsonValueKind.False)
             {
-                return entity.GetSourceName();
+                return entityName;
             }
 
             // otherwise we have to convert each part of the Rest property we want into correct objects

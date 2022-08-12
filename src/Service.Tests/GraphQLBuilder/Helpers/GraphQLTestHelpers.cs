@@ -13,28 +13,28 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
     {
         public const string BOOK_GQL =
                     @"
-                    type Book @model {
+                    type Book @model(name:""Book"") {
                         book_id: Int! @primaryKey
                     }
                     ";
 
         public const string BOOKS_GQL =
                     @"
-                    type Books @model {
+                    type Books @model(name:""Books"") {
                         book_id: Int! @primaryKey
                     }
                     ";
 
         public const string PERSON_GQL =
                     @"
-                    type Person @model {
+                    type Person @model(name:""Person"") {
                         person_id: Int! @primaryKey
                     }
                     ";
 
         public const string PEOPLE_GQL =
                     @"
-                    type People @model {
+                    type People @model(name:""People"") {
                         people_id: Int! @primaryKey
                     }
                     ";

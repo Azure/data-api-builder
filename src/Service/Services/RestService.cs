@@ -211,8 +211,8 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (!_sqlMetadataProvider.TryGetEntityNameFromRoute(entityRouteName, out entityName))
                 {
                     throw new DataApiBuilderException(message: $"Invalid Entity route: {entityRouteName}.",
-                                                      statusCode: HttpStatusCode.BadRequest,
-                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                                                      statusCode: HttpStatusCode.NotFound,
+                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
                 }
             }
             else
@@ -221,8 +221,8 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (!_sqlMetadataProvider.TryGetEntityNameFromRoute(routeAfterPath, out entityName))
                 {
                     throw new DataApiBuilderException(message: $"Invalid Entity route: {routeAfterPath}.",
-                                                      statusCode: HttpStatusCode.BadRequest,
-                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                                                      statusCode: HttpStatusCode.NotFound,
+                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
                 }
             }
 

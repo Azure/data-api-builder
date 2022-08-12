@@ -26,7 +26,6 @@ namespace Azure.DataApiBuilder.Config
         object Source,
         [property: JsonPropertyName("rest")]
         object? Rest,
-        [property: JsonPropertyName("graphql")]
         object? GraphQL,
         [property: JsonPropertyName("permissions")]
         PermissionSetting[] Permissions,
@@ -36,6 +35,9 @@ namespace Azure.DataApiBuilder.Config
         Dictionary<string, string>? Mappings)
     {
         public const string JSON_PROPERTY_NAME = "entities";
+
+        [property: JsonPropertyName("graphql")]
+        public object? GraphQL { get; set; } = GraphQL;
 
         /// <summary>
         /// Gets the name of the underlying source database object.
@@ -56,6 +58,52 @@ namespace Azure.DataApiBuilder.Config
                 DatabaseObjectSource objectSource
                     = JsonSerializer.Deserialize<DatabaseObjectSource>((JsonElement)Source)!;
                 return objectSource.Name;
+            }
+        }
+
+        /// <summary>
+        /// Processes per entity GraphQL Naming Settings
+        /// Top Level: true | false
+        /// Alternatives: string, SingularPlural object
+        /// </summary>
+        public void ProcessGraphQLNamingConfig()
+        {
+            if (GraphQL is null)
+            {
+                return;
+            }
+
+            if (GraphQL is JsonElement configElement)
+            {
+                if (configElement.ValueKind is JsonValueKind.True || configElement.ValueKind is JsonValueKind.False)
+                {
+                    GraphQL = JsonSerializer.Deserialize<bool>(configElement)!;
+                }
+                else if (configElement.ValueKind is JsonValueKind.Object)
+                {
+                    JsonElement nameTypeSettings = configElement.GetProperty("type");
+                    object nameConfiguration;
+
+                    if (nameTypeSettings.ValueKind is JsonValueKind.String)
+                    {
+                        nameConfiguration = JsonSerializer.Deserialize<string>(nameTypeSettings)!;
+                    }
+                    else if (nameTypeSettings.ValueKind is JsonValueKind.Object)
+                    {
+                        nameConfiguration = JsonSerializer.Deserialize<SingularPlural>(nameTypeSettings)!;
+                    }
+                    else
+                    {
+                        throw new NotSupportedException("The runtime does not support this GraphQL settings type for an entity.");
+                    }
+
+                    GraphQLEntitySettings graphQLEntitySettings = new(Type: nameConfiguration);
+                    GraphQL = graphQLEntitySettings;
+                }
+            }
+            else
+            {
+                throw new NotSupportedException("The runtime does not support this GraphQL settings type for an entity.");
             }
         }
     }
@@ -90,7 +138,7 @@ namespace Azure.DataApiBuilder.Config
     /// that will be used for this entity.Can be a string or Singular-Plural type.
     /// If string, a default plural route will be added as per the rules at
     /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
-    public record GraphQLEntitySettings(object Type);
+    public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type);
 
     /// <summary>
     /// Defines a name or route as singular (required) or
@@ -100,5 +148,7 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="Plural">Optional pluralized form of the name.
     /// If plural is not specified, a default plural name will be used as per the rules at
     /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
-    public record SingularPlural(string Singular, string Plural);
+    public record SingularPlural(
+            [property: JsonPropertyName("singular")] string Singular,
+            [property: JsonPropertyName("plural")] string Plural);
 }

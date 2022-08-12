@@ -173,18 +173,16 @@
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
-      ],
-      "relationships": {
-        "comics": {
-          "cardinality": "many",
-          "target.entity": "Comic",
-          "source.fields": [ "categoryName" ],
-          "target.fields": [ "categoryName" ]
-        }
-      }
+      ]
     },
     "Book": {
       "source": "books",
+      "graphql": {
+        "type": {
+          "singular": "book",
+          "plural": "books"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -471,6 +469,12 @@
     "Review": {
       "source": "reviews",
       "rest": true,
+      "graphql": {
+        "type": {
+          "singular": "review",
+          "plural": "reviews"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -520,6 +524,12 @@
     "WebsiteUser": {
       "source": "website_users",
       "rest": false,
+      "graphql": {
+        "type": {
+          "singular": "websiteUser",
+          "plural": "websiteUsers"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -597,6 +607,12 @@
     "Fungus": {
       "source": "fungi",
       "rest": true,
+      "graphql": {
+        "type": {
+          "singular": "fungus",
+          "plural": "fungi"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",

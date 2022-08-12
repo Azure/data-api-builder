@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             string gql =
                 @"
-type Foo @model {
+type Foo @model(name:""Foo"") {
     id: ID!
 }
                 ";
@@ -82,7 +82,7 @@ type Foo @model {
         {
             string gql =
                 @"
-type Foo @model {
+type Foo @model(name:""Foo"") {
     id: ID!
 }
                 ";
@@ -123,7 +123,7 @@ type Foo @model {
         {
             string gql =
                 @"
-type Foo @model {
+type foo @model(name:""foo"") {
     id: ID!
 }
                 ";
@@ -131,13 +131,13 @@ type Foo @model {
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                    new string[] { "Foo" },
+                    new string[] { "foo" },
                     new Operation[] { Operation.Read },
                     roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
                 DatabaseType.cosmos,
-                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                new Dictionary<string, Entity> { { "foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: entityPermissionsMap
                 );
@@ -157,7 +157,7 @@ type Foo @model {
         {
             string gql =
                 @"
-type Foo @model {
+type Foo @model(name:""Foo"") {
     id: ID!
 }
                 ";
@@ -189,7 +189,7 @@ type Foo @model {
         {
             string gql =
                 @"
-type Foo @model {
+type Foo @model(name:""Foo"") {
     foo_id: Int! @primaryKey(databaseType: ""bigint"")
 }
 ";
@@ -214,7 +214,7 @@ type Foo @model {
         {
             string gql =
                 @"
-type Foo @model {
+type Foo @model(name:""Foo"") {
     foo_id: Int!
 }
 ";

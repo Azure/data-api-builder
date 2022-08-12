@@ -33,7 +33,12 @@
     "Planet": {
       "source": "graphqldb.planet",
       "rest": false,
-      "graphql": true,
+      "graphql": {
+        "type": {
+          "singular": "Planet",
+          "plural": "Planets"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -48,7 +53,12 @@
     "Character": {
       "source": "graphqldb.character",
       "rest": false,
-      "graphql": true,
+      "graphql": {
+        "type": {
+          "singular": "Character",
+          "plural": "Characters"
+        }
+      },
       "permissions": [
         {
           "role": "authenticated",
@@ -59,7 +69,12 @@
     "Star": {
       "source": "graphqldb.star",
       "rest": false,
-      "graphql": true,
+      "graphql": {
+        "type": {
+          "singular": "Star",
+          "plural": "Stars"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",

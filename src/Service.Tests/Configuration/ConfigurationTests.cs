@@ -387,10 +387,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// This function verifies the environment variable DAB_RUNTIME
+        /// This function verifies the environment variable DAB_ENVIRONMENT
         /// takes precendence than ASPNETCORE_ENVIRONMENT for the configuration file.
         /// </summary>
-        [TestMethod("Validates precedence is given to DAB_RUNTIME environment variable name.")]
+        [TestMethod("Validates precedence is given to DAB_ENVIRONMENT environment variable name.")]
         public void TestRuntimeEnvironmentVariable()
         {
             Environment.SetEnvironmentVariable(

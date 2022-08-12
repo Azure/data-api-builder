@@ -20,12 +20,12 @@ namespace Cli
                     bool isSuccess = ConfigGenerator.TryGenerateConfig(options);
                     if (isSuccess)
                     {
-                        Console.WriteLine($"Config generated with file name: {options.Config}, database type: {options.DatabaseType}, and connectionString: {options.ConnectionString}");
+                        Console.WriteLine($"Config generated with file name: {options.Config}, database type: {options.DatabaseType}");
                         Console.WriteLine($"SUGGESTION: Use 'hawaii add <options>' to add new entities in your config.");
                     }
                     else
                     {
-                        Console.WriteLine($"ERROR: Could not generate config with file name: {options.Config}, database type: {options.DatabaseType}, and connectionString: {options.ConnectionString}");
+                        Console.WriteLine($"ERROR: Could not generate config with file name: {options.Config}, database type: {options.DatabaseType}");
                     }
                 })
                 .WithParsed<AddOptions>(options =>

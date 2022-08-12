@@ -159,7 +159,12 @@
     },
     "Stock": {
       "source": "stocks",
-      "rest": true,
+      "rest": {
+        "route": {
+          "singular": "asset",
+          "plural": "commodities"
+        }
+      },
       "graphql": true,
       "permissions": [
         {
@@ -616,7 +621,11 @@
     },
     "Shrub": {
       "source": "trees",
-      "rest": true,
+      "rest": {
+        "route": {
+          "singular": "plant"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",

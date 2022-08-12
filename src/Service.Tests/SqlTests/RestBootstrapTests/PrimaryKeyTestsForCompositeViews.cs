@@ -132,7 +132,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestBootstrapTests
                 await SetupAndRunRestApiTest(
                     primaryKeyRoute: "book_id/1/author_id/123",
                     queryString: string.Empty,
-                    entity: _compositeViewName,
+                    entityNameOrRoute: _compositeViewName,
                     sqlQuery: query,
                     controller: _restController
                 );

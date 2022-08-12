@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/7",
                     queryString: null,
-                    entity: _integrationEntityName,
+                    entityNameOrRoute: _integrationEntityName,
                     sqlQuery: GetQuery(nameof(PutOne_Update_Test)),
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _entityWithCompositePrimaryKey,
+                entityNameOrRoute: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery("PutOne_Update_Default_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: GetQuery("PutOne_Update_CompositeNonAutoGenPK_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: GetQuery("PutOne_Update_NullOutMissingField_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -113,7 +113,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: GetQuery("PutOne_Update_Empty_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1",
                     queryString: null,
-                    entity: _integrationEntityName,
+                    entityNameOrRoute: _integrationEntityName,
                     sqlQuery: GetQuery(nameof(PutOne_Update_IfMatchHeaders_Test)),
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -171,7 +171,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entity: _integration_NonAutoGenPK_EntityName,
+                    entityNameOrRoute: _integration_NonAutoGenPK_EntityName,
                     sqlQuery: GetQuery(nameof(PutOne_Insert_Test)),
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -193,7 +193,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _integration_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _integration_NonAutoGenPK_EntityName,
                 sqlQuery: GetQuery("PutOne_Insert_Nullable_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -216,7 +216,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _integration_AutoGenNonPK_EntityName,
+                entityNameOrRoute: _integration_AutoGenNonPK_EntityName,
                 sqlQuery: GetQuery("PutOne_Insert_AutoGenNonPK_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -236,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: GetQuery("PutOne_Insert_CompositeNonAutoGenPK_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -254,7 +254,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: GetQuery("PutOne_Insert_Default_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -274,7 +274,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: GetQuery("PutOne_Insert_Empty_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -305,7 +305,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entity: _Composite_NonAutoGenPK_EntityName,
+                    entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                     sqlQuery: GetQuery("PutOne_Insert_Nulled_Test"),
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -327,7 +327,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: expectedLocationHeader,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: GetQuery("PutOne_Update_Nulled_Test"),
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -356,7 +356,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "treeId/1",
                     queryString: null,
-                    entity: _integrationMappingEntity,
+                    entityNameOrRoute: _integrationMappingEntity,
                     sqlQuery: GetQuery(nameof(PutOne_Update_With_Mapping_Test)),
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -386,7 +386,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/7",
                     queryString: null,
-                    entity: _integrationEntityName,
+                    entityNameOrRoute: _integrationEntityName,
                     sqlQuery: GetQuery(query),
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -412,7 +412,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -438,7 +438,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -467,7 +467,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/7",
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrRoute: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -498,7 +498,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrRoute: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -521,7 +521,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: $"id/{STARTING_ID_FOR_TEST_INSERTS + 1}/book_id/1",
                     queryString: string.Empty,
-                    entity: _entityWithCompositePrimaryKey,
+                    entityNameOrRoute: _entityWithCompositePrimaryKey,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -550,7 +550,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrRoute: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -569,7 +569,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "categoryid/1/pieceid/1",
                     queryString: string.Empty,
-                    entity: _Composite_NonAutoGenPK_EntityName,
+                    entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -597,7 +597,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: $"/id/{STARTING_ID_FOR_TEST_INSERTS}",
                 queryString: null,
-                entity: _integration_AutoGenNonPK_EntityName,
+                entityNameOrRoute: _integration_AutoGenNonPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -627,7 +627,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/18",
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrRoute: _integrationEntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -659,7 +659,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: string.Empty,
                     queryString: null,
-                    entity: _integration_NonAutoGenPK_EntityName,
+                    entityNameOrRoute: _integration_NonAutoGenPK_EntityName,
                     sqlQuery: string.Empty,
                     controller: _restController,
                     operationType: Operation.Upsert,
@@ -690,7 +690,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/2/pieceid/1",
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Upsert,
@@ -711,7 +711,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/3/pieceid/1",
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Upsert,

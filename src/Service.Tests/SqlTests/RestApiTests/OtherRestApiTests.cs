@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=id,content",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,

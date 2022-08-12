@@ -11,9 +11,11 @@ namespace Azure.DataApiBuilder.Auth
     {
         /// <summary>
         /// Given the key (roleName) returns the associated RoleMetadata object.
-        /// To retrieve all roles associated with an entity -> RoleToActionMap.Keys()
+        /// To retrieve all roles associated with an entity -> RoleToActionMap.Keys().
+        /// Since the roleNames are case insensitive, we use IEqualityComparer for ignoring
+        /// the case.
         /// </summary>
-        public Dictionary<string, RoleMetadata> RoleToActionMap { get; set; } = new();
+        public Dictionary<string, RoleMetadata> RoleToActionMap { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Field to action to role mapping.

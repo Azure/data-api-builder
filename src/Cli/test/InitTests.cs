@@ -115,12 +115,13 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Verify that if either database is null or empty, we will get error.
+        /// Verify that if either database or graphQLSchema is null or empty, we will get error.
         /// </summary>
         [DataRow(null, "testcontainer", "", false, DisplayName = "Both database and schema are either null or empty.")]
         [DataRow("", "testcontainer", "testschema", false, DisplayName = "database is empty.")]
-        [DataRow("testDatabase", "testcontainer", "", true, DisplayName = "database is valid string, Schema is null.")]
-        [DataRow("testDatabase", null, "", true, DisplayName = "database is valid string, container and Schema is null/empty.")]
+        [DataRow("testDatabase", "testcontainer", "", false, DisplayName = "database is provided, Schema is null.")]
+        [DataRow("testDatabase", null, "", false, DisplayName = "database is provided, container and Schema is null/empty.")]
+        [DataRow("testDatabase", null, "testSchema", true, DisplayName = "database and schema provided, container is null/empty.")]
         [DataTestMethod]
         public void VerifyRequiredOptionsForCosmosDatabase(
             string? cosmosDatabase,

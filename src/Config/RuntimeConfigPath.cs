@@ -23,6 +23,8 @@ namespace Azure.DataApiBuilder.Config
 
         public string? CONNSTRING { get; set; }
 
+        public static bool CheckPrecedenceForConfigInEngine = true;
+
         /// <summary>
         /// Parse Json and replace @env('ENVIRONMENT_VARIABLE_NAME') with
         /// the environment variable's value that corresponds to ENVIRONMENT_VARIABLE_NAME.
@@ -140,9 +142,16 @@ namespace Azure.DataApiBuilder.Config
         /// If no file exists, this will return an empty string.
         /// </summary>
         /// <param name="hostingEnvironmentName">Value of ASPNETCORE_ENVIRONMENT variable</param>
+        /// <param name="considerOverrides">whether to look for overrides file or not.</param>
         /// <returns></returns>
-        public static string GetFileNameForEnvironment(string? hostingEnvironmentName)
+        public static string GetFileNameForEnvironment(string? hostingEnvironmentName, bool considerOverrides)
         {
+            // if precedence check is done in cli, no need to do it again after starting the engine.
+            if (!CheckPrecedenceForConfigInEngine)
+            {
+                return string.Empty;
+            }
+
             string configFileNameWithExtension = string.Empty;
             string?[] environmentPrecedence = new[]
             {
@@ -164,7 +173,7 @@ namespace Azure.DataApiBuilder.Config
                     || index == environmentPrecedence.Length - 1)
                 {
                     configFileNameWithExtension =
-                        GetFileNameConsideringOverrides(environmentPrecedence[index]);
+                        GetFileName(environmentPrecedence[index], considerOverrides);
                 }
             }
 
@@ -187,26 +196,28 @@ namespace Azure.DataApiBuilder.Config
         /// </summary>
         /// <param name="environmentValue">Name of the environment to
         /// generate the config file name for.</param>
+        /// <param name="considerOverrides">whether to look for overrides file or not.</param>
         /// <returns></returns>
-        private static string GetFileNameConsideringOverrides(string? environmentValue)
+        private static string GetFileName(string? environmentValue, bool considerOverrides)
         {
             string configFileName =
                 !string.IsNullOrEmpty(environmentValue)
                 ? $"{CONFIGFILE_NAME}.{environmentValue}"
                 : $"{CONFIGFILE_NAME}";
+            string configFileNameWithExtension = $"{configFileName}{CONFIG_EXTENSION}";
             string overriddenConfigFileNameWithExtension = GetOverriddenName(configFileName);
-            if (DoesFileExistInCurrentDirectory(overriddenConfigFileNameWithExtension))
+
+            if (considerOverrides && DoesFileExistInCurrentDirectory(overriddenConfigFileNameWithExtension))
             {
                 return overriddenConfigFileNameWithExtension;
             }
-            else if (DoesFileExistInCurrentDirectory($"{configFileName}{CONFIG_EXTENSION}"))
+
+            if (DoesFileExistInCurrentDirectory(configFileNameWithExtension))
             {
-                return $"{configFileName}{CONFIG_EXTENSION}";
+                return configFileNameWithExtension;
             }
-            else
-            {
-                return string.Empty;
-            }
+
+            return string.Empty;
         }
 
         private static string GetOverriddenName(string fileName)
@@ -217,7 +228,16 @@ namespace Azure.DataApiBuilder.Config
         private static bool DoesFileExistInCurrentDirectory(string fileName)
         {
             string currentDir = Directory.GetCurrentDirectory();
-            return File.Exists(Path.Combine(currentDir, fileName));
+            if (File.Exists(Path.Combine(currentDir, fileName)))
+            {
+                Console.WriteLine($"Using config file: {fileName}.");
+                return true;
+            }
+            else
+            {
+                Console.WriteLine($"Config file: {fileName} does not exist.");
+                return false;
+            }
         }
     }
 }

@@ -144,7 +144,7 @@ namespace Cli
             Permissions = permissions;
         }
 
-        [Option('s', "source", Required = true, HelpText = "Config of the source database object.")]
+        [Option('s', "source", Required = true, HelpText = "Name of the source database object.")]
         public string Source { get; }
 
         [Option("permissions", Required = true, Separator = ':', HelpText = "Permissions required to access the source table or container.")]
@@ -197,7 +197,7 @@ namespace Cli
             Map = map;
         }
 
-        [Option('s', "source", Required = false, HelpText = "Config of the source table or container.")]
+        [Option('s', "source", Required = false, HelpText = "Name of the source table or container.")]
         public string? Source { get; }
 
         [Option("permissions", Required = false, Separator = ':', HelpText = "Permissions required to access the source table or container.")]

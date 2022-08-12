@@ -460,6 +460,7 @@ namespace Cli
         {
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
+                /// The existence of user provided config is not checked here.
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;

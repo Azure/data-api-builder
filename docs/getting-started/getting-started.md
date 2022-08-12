@@ -28,7 +28,7 @@ git clone https://github.com/azure/data-api-builder
 then move into the folder where the Data API builder for Azure Databases engine has been cloned and then move into the `samples/getting-started` folder, for example:
 
 ```
-cd ./hawaii-engine/samples/getting-started
+cd ./samples/getting-started
 ```
 
 ## Create the configuration file

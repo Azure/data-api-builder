@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
-  "$id": "urn:hawaii:config:schema:draft-01",
-  "title": "Hawaii",
-  "description": "Schema for Hawaii engine",
+  "$id": "urn:dab:config:schema:draft-01",
+  "title": "Data API Builder",
+  "description": "Schema for Data API Builder engine",
   "type": "object",
   "properties": {
     "data-source": {
@@ -16,7 +16,6 @@
             "mssql",
             "postgresql",
             "mysql",
-            "mariadb",
             "cosmos"
           ]
         },
@@ -30,9 +29,9 @@
         "connection-string"
       ]
     },
-    "mssql": {
+    "cosmos": {
       "type": "object",
-      "description": "Azure SQL and SQL Server related settings",
+      "description": "Azure CosmosDb related settings",
       "properties": {
         "set-session-context": {
           "type": "boolean",
@@ -49,10 +48,6 @@
           "type": "object",
           "description": "Global REST endpoint configuration",
           "properties": {
-            "enabled": {
-              "default": true,
-              "type": "boolean"
-            },
             "path": {
               "default": "/api",
               "type": "string"

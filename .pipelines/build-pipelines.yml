@@ -124,6 +124,7 @@ steps:
 # Build a docker image and push it to the container registry.
 - task: Docker@2
   displayName: "Build and push docker image to Azure Container Registry"
+  condition: eq(variables.publishNugetToFeed, 'false')
   inputs:
     containerRegistry: 'CosmosDB GraphQL/Hawaii'
     repository: 'hawaii/$(Build.SourceBranch)'
@@ -132,3 +133,14 @@ steps:
     tags: |
       $(BuildDate)-$(Build.SourceVersion)
       latest
+
+# Build a docker image and push it to the container registry.
+- task: Docker@2
+  displayName: "Build and push docker image to Azure Container Registry"
+  condition: eq(variables.publishNugetToFeed, 'true')
+  inputs:
+    containerRegistry: 'CosmosDB GraphQL/Hawaii'
+    repository: 'hawaii/$(Build.SourceBranch)'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: $(releaseName)

@@ -1135,7 +1135,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"{_nonExistentEntityName} is not a valid entity.",
+                expectedErrorMessage: $"Invalid Entity route: {_nonExistentEntityName}.",
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
             );
@@ -1151,7 +1151,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: string.Empty,
                 controller: _restController,
                 exception: true,
-                expectedErrorMessage: $"{integrationEntityNameIncorrectCase} is not a valid entity.",
+                expectedErrorMessage: $"Invalid Entity route: {integrationEntityNameIncorrectCase}.",
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
             );

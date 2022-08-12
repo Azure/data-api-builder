@@ -10,5 +10,5 @@
   - [Running using a container](./running-using-a-container.md)
 - [REST features](./rest.md)
 - [GraphQL features](./graphql.md)
-
+- [Known Issues and Limitations](/docs/known-issues.md)
 

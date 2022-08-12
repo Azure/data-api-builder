@@ -212,8 +212,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// <returns></returns>
         public override string GetUniqueDbErrorMessage()
         {
-            return "Cannot insert the value NULL into column 'piecesRequired', " +
-                   "table 'master.dbo.stocks'; column does not allow nulls. UPDATE fails.";
+            return $"Cannot insert the value NULL into column 'piecesRequired', " +
+                   $"table '{DatabaseName}.dbo.stocks'; column does not allow nulls. UPDATE fails.";
         }
 
         #endregion

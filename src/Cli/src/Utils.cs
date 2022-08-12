@@ -447,6 +447,42 @@ namespace Cli
         }
 
         /// <summary>
+        /// This method will try to find the config file based on the precedence.
+        /// if the config file is provided by user, it will return that.
+        /// Else it will check the DAB_ENVIRONMENT variable.
+        /// In case the environment variable is not set it will check for default config.
+        /// If none of the files exists it will return false. Else true with output in runtimeConfigFile.
+        /// In case of false, the runtimeConfigFile will be set to string.Empty.
+        /// </summary>
+        public static bool TryGetConfigFileBasedOnCliPrecedence(
+            string? userProvidedConfigFile,
+            out string runtimeConfigFile)
+        {
+            if (!string.IsNullOrEmpty(userProvidedConfigFile))
+            {
+                /// The existence of user provided config file is not checked here.
+                RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
+                runtimeConfigFile = userProvidedConfigFile;
+                return true;
+            }
+            else
+            {
+                Console.WriteLine("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
+                /// Need to reset to true explicitly so any that any reinvocations of this function
+                /// get simulated as being called for the first time specifically useful for tests.
+                RuntimeConfigPath.CheckPrecedenceForConfigInEngine = true;
+                runtimeConfigFile = RuntimeConfigPath.GetFileNameForEnvironment(
+                        hostingEnvironmentName: null,
+                        considerOverrides: false);
+
+                /// so that the check doesn't run again when starting engine
+                RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
+            }
+
+            return !string.IsNullOrEmpty(runtimeConfigFile);
+        }
+
+        /// <summary>
         /// this method will write all the json string in the given file.
         /// </summary>
         public static bool WriteJsonContentToFile(string file, string jsonContent)

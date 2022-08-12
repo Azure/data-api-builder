@@ -173,7 +173,7 @@ namespace Cli
                         if (op is Operation.All)
                         {
                             // Expand wildcard to all valid actions
-                            foreach (Operation validOp in Action.ValidPermissionActions)
+                            foreach (Operation validOp in Action.ValidPermissionOperations)
                             {
                                 result.Add(validOp, new Action(validOp, null, null));
                             }
@@ -191,7 +191,7 @@ namespace Cli
                     if (ac.Name is Operation.All)
                     {
                         // Expand wildcard to all valid actions
-                        foreach (Operation validOp in Action.ValidPermissionActions)
+                        foreach (Operation validOp in Action.ValidPermissionOperations)
                         {
                             result.Add(validOp, new Action(validOp, Policy: ac.Policy, Fields: ac.Fields));
                         }
@@ -399,7 +399,7 @@ namespace Cli
                     {
                         containsWildcardAction = true;
                     }
-                    else if (!Action.ValidPermissionActions.Contains(op))
+                    else if (!Action.ValidPermissionOperations.Contains(op))
                     {
                         Console.Error.WriteLine("Invalid actions found in --permissions");
                         return false;

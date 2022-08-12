@@ -468,7 +468,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <returns>Boolean value indicating whether the action is valid or not.</returns>
         public static bool IsValidPermissionAction(Operation action)
         {
-            return action is Operation.All || Action.ValidPermissionActions.Contains(action);
+            return action is Operation.All || Action.ValidPermissionOperations.Contains(action);
         }
     }
 }

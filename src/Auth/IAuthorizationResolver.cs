@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Auth
         /// </summary>
         /// <param name="entityName">Entity from request.</param>
         /// <param name="roleName">Role defined in client role header.</param>
-        /// <param name="operation">Action type: Create, Read, Update, Delete.</param>
+        /// <param name="operation">Operation type: Create, Read, Update, Delete.</param>
         /// <param name="httpContext">Contains token claims of the authenticated user used in policy evaluation.</param>
         /// <returns>Returns the parsed policy, if successfully processed, or an exception otherwise.</returns>
         public string TryProcessDBPolicy(string entityName, string roleName, Operation operation, HttpContext httpContext);
@@ -88,9 +88,9 @@ namespace Azure.DataApiBuilder.Auth
         /// i.e. list of roles which allow the operation 'Read' on entityName.
         /// </summary>
         /// <param name="entityName">Entity to lookup permissions</param>
-        /// <param name="operation">Action to lookup applicable roles</param>
+        /// <param name="operation">Operation to lookup applicable roles</param>
         /// <returns>Collection of roles. Empty list if entityPermissionsMap is null.</returns>
-        public static IEnumerable<string> GetRolesForAction(
+        public static IEnumerable<string> GetRolesForOperation(
             string entityName,
             Operation operation,
             Dictionary<string, EntityMetadata>? entityPermissionsMap)

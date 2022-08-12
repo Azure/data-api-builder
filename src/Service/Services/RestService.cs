@@ -133,8 +133,8 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             string role = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-            Operation action = HttpVerbToActions(GetHttpContext().Request.Method);
-            string dbPolicy = _authorizationResolver.TryProcessDBPolicy(entityName, role, action, GetHttpContext());
+            Operation operation = HttpVerbToOperations(GetHttpContext().Request.Method);
+            string dbPolicy = _authorizationResolver.TryProcessDBPolicy(entityName, role, operation, GetHttpContext());
             if (!string.IsNullOrEmpty(dbPolicy))
             {
                 // Since dbPolicy is nothing but filters to be added by virtue of database policy, we prefix it with
@@ -258,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="httpVerb"></param>
         /// <returns>The CRUD operation for the given httpverb.</returns>
-        public static Operation HttpVerbToActions(string httpVerbName)
+        public static Operation HttpVerbToOperations(string httpVerbName)
         {
             switch (httpVerbName)
             {

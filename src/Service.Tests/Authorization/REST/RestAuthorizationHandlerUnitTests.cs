@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         }
 
         /// <summary>
-        /// Tests that a user role with actions specified as ["*"] will be authorized for all http methods
+        /// Tests that a user role with operations specified as ["*"] will be authorized for all http methods
         /// </summary>
         /// <param name="httpMethod"> the http method that we are checking if the client is authorized to use </param>
         [DataTestMethod]
@@ -64,9 +64,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         [DataRow(HttpConstants.PATCH)]
         [DataRow(HttpConstants.DELETE)]
         [TestMethod]
-        public async Task TestWildcardResolvesAsAllActions(string httpMethod)
+        public async Task TestWildcardResolvesAsAllOperations(string httpMethod)
         {
-            AuthorizationResolver authorizationResolver = SetupAuthResolverWithWildcardActions();
+            AuthorizationResolver authorizationResolver = SetupAuthResolverWithWildcardOperation();
             HttpContext httpContext = CreateHttpContext(httpMethod: httpMethod, clientRole: "admin");
 
             bool authorizationResult = await IsAuthorizationSuccessfulAsync(
@@ -79,8 +79,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         }
 
         /// <summary>
-        /// Ensure that passing a wildcard action does not break policy parsing
-        /// (ensure we bypass dictionary lookup ActionToColumnMap[action] for the passed in CRUD action)
+        /// Ensure that passing a wildcard operation does not break policy parsing
+        /// (ensure we bypass dictionary lookup OperationToColumnMap[operation] for the passed in CRUD operation)
         /// Expect an empty string to be returned as the policy associated with a wildcard
         /// </summary>
         [DataTestMethod]
@@ -92,29 +92,29 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         [TestMethod]
         public void TestWildcardPolicyResolvesToEmpty(string httpMethod)
         {
-            AuthorizationResolver authorizationResolver = SetupAuthResolverWithWildcardActions();
+            AuthorizationResolver authorizationResolver = SetupAuthResolverWithWildcardOperation();
             HttpContext httpContext = CreateHttpContext(httpMethod: httpMethod, clientRole: "admin");
 
             Assert.AreEqual(expected: string.Empty, actual: authorizationResolver.TryProcessDBPolicy(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: "admin",
-                operation: RestService.HttpVerbToActions(httpVerbName: httpMethod),
+                operation: RestService.HttpVerbToOperations(httpVerbName: httpMethod),
                 httpContext: httpContext)
             );
         }
 
         /// <summary>
-        /// Calls the AuthorizationResolver to evaluate whether a role and action are allowed.
-        ///     (1) HttpMethod resolves to one or two CRUD Actions, requirement fails when >0 Actions fails the AuthorizationResolver call.
+        /// Calls the AuthorizationResolver to evaluate whether a role and operation are allowed.
+        ///     (1) HttpMethod resolves to one or two CRUD operations, requirement fails when >0 operations fails the AuthorizationResolver call.
         ///         i.e. PUT resolves to Create and Update
         ///         i.e. GET resolves to Read
         /// </summary>
-        /// <param name="httpMethod">Action type of request</param>
+        /// <param name="httpMethod">Operation type of request</param>
         /// <param name="expectedAuthorizationResult">Whether authorization is expected to succeed.</param>
-        /// <param name="isValidCreateRoleAction">Whether Role/Action pair is allowed for Read authorization config.</param>
-        /// <param name="isValidReadRoleAction">Whether Role/Action pair is allowed per authorization config.</param>
-        /// <param name="isValidUpdateRoleAction">Whether Role/Action pair is allowed per authorization config.</param>
-        /// <param name="isValidDeleteRoleAction">Whether Role/Action pair is allowed per authorization config.</param>
+        /// <param name="isValidCreateRoleOperation">Whether Role/Operation pair is allowed for Read authorization config.</param>
+        /// <param name="isValidReadRoleOperation">Whether Role/Operation pair is allowed per authorization config.</param>
+        /// <param name="isValidUpdateRoleOperation">Whether Role/Operation pair is allowed per authorization config.</param>
+        /// <param name="isValidDeleteRoleOperation">Whether Role/Operation pair is allowed per authorization config.</param>
         /// <returns></returns>
         [DataTestMethod]
         // Positive Tests
@@ -134,35 +134,35 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         [DataRow(HttpConstants.GET, false, false, false, false, false, DisplayName = "GET Operation with create permissions")]
         [DataRow(HttpConstants.POST, false, false, false, false, false, DisplayName = "POST Operation with update permissions")]
         [TestMethod]
-        public async Task EntityRoleActionPermissionsRequirementTest(
+        public async Task EntityRoleOperationPermissionsRequirementTest(
             string httpMethod,
             bool expectedAuthorizationResult,
-            bool isValidCreateRoleAction,
-            bool isValidReadRoleAction,
-            bool isValidUpdateRoleAction,
-            bool isValidDeleteRoleAction)
+            bool isValidCreateRoleOperation,
+            bool isValidReadRoleOperation,
+            bool isValidUpdateRoleOperation,
+            bool isValidDeleteRoleOperation)
         {
             Mock<IAuthorizationResolver> authorizationResolver = new();
             authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 Operation.Create
-                )).Returns(isValidCreateRoleAction);
+                )).Returns(isValidCreateRoleOperation);
             authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 Operation.Read
-                )).Returns(isValidReadRoleAction);
+                )).Returns(isValidReadRoleOperation);
             authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 Operation.Update
-                )).Returns(isValidUpdateRoleAction);
+                )).Returns(isValidUpdateRoleOperation);
             authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 Operation.Delete
-                )).Returns(isValidDeleteRoleAction);
+                )).Returns(isValidDeleteRoleOperation);
 
             HttpContext httpContext = CreateHttpContext(httpMethod);
 
@@ -176,11 +176,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         }
 
         /// <summary>
-        /// Validates that authorizing the EntityRoleActionPermissionsRequirement,
+        /// Validates that authorizing the EntityRoleOperationPermissionsRequirement,
         /// any resource that does not cast to DatabaseObject results in an exception.
         /// </summary>
         [TestMethod]
-        public async Task EntityRoleActionResourceTest()
+        public async Task EntityRoleOperationResourceTest()
         {
             Mock<IAuthorizationResolver> authorizationResolver = new();
             HttpContext httpContext = CreateHttpContext();
@@ -347,18 +347,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         }
 
         /// <summary>
-        /// Sets up an authorization resolver with a config that specifies the wildcard ("*") as the test entity's actions.
-        /// Explicitly use this instead of AuthorizationHelpers.InitRuntimeConfig() because we want to create actions as
+        /// Sets up an authorization resolver with a config that specifies the wildcard ("*") as the test entity's operations.
+        /// Explicitly use this instead of AuthorizationHelpers.InitRuntimeConfig() because we want to create operations as
         /// array of string instead of array of object.
         /// </summary>
-        private static AuthorizationResolver SetupAuthResolverWithWildcardActions()
+        private static AuthorizationResolver SetupAuthResolverWithWildcardOperation()
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: "admin",
                 operation: Operation.All);
 
-            // Override the action to be a list of string for wildcard instead of a list of object created by InitRuntimeConfig()
+            // Override the operation to be a list of string for wildcard instead of a list of object created by InitRuntimeConfig()
             //
             runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY].Permissions[0].Actions = new object[] { JsonSerializer.SerializeToElement(AuthorizationResolver.WILDCARD) };
 

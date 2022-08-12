@@ -92,24 +92,24 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         #region Role and Operation on Entity Tests
 
         /// <summary>
-        /// Tests the AreRoleAndActionDefinedForEntity stage of authorization.
-        /// Request Action is defined for role -> VALID
-        /// Request Action not defined for role (role has 0 defined operations)
+        /// Tests the AreRoleAndOperationDefinedForEntity stage of authorization.
+        /// Request operation is defined for role -> VALID
+        /// Request operation not defined for role (role has 0 defined operations)
         ///     Ensures method short ciruits in circumstances role is not defined -> INVALID
-        /// Request Action does not match an operation defined for role (role has >=1 defined operation) -> INVALID
+        /// Request operation does not match an operation defined for role (role has >=1 defined operation) -> INVALID
         /// </summary>
         [DataTestMethod]
         [DataRow("Writer", Operation.Create, "Writer", Operation.Create, true)]
         [DataRow("Reader", Operation.Create, "Reader", Operation.None, false)]
         [DataRow("Writer", Operation.Create, "Writer", Operation.Update, false)]
-        public void AreRoleAndActionDefinedForEntityTest(
+        public void AreRoleAndOperationDefinedForEntityTest(
             string configRole,
-            Operation configAction,
+            Operation configOperation,
             string roleName,
             Operation operation,
             bool expected)
         {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(AuthorizationHelpers.TEST_ENTITY, configRole, configAction);
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(AuthorizationHelpers.TEST_ENTITY, configRole, configOperation);
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
             // Mock Request Values
@@ -121,7 +121,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// Verifies that internal data structure are created correctly.
         /// </summary>
         [TestMethod("Wildcard operation is expanded to all valid operation")]
-        public void TestWildcardAction()
+        public void TestWildcardOperation()
         {
             List<string> expectedRoles = new() { AuthorizationHelpers.TEST_ROLE };
 
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 Operation.All));
 
             // All the wildcard operation should be expand to explicit operations.
-            foreach (Operation operation in Action.ValidPermissionActions)
+            foreach (Operation operation in Action.ValidPermissionOperations)
             {
                 Assert.IsTrue(authZResolver.AreRoleAndOperationDefinedForEntity(
                     AuthorizationHelpers.TEST_ENTITY,
@@ -154,11 +154,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
                 CollectionAssert.AreEquivalent(expectedRoles, actualRolesForCol1.ToList());
 
-                IEnumerable<string> actualRolesForAction = IAuthorizationResolver.GetRolesForAction(
+                IEnumerable<string> actualRolesForOperation = IAuthorizationResolver.GetRolesForOperation(
                     AuthorizationHelpers.TEST_ENTITY,
                     operation,
                     authZResolver.EntityPermissionsMap);
-                CollectionAssert.AreEquivalent(expectedRoles, actualRolesForAction.ToList());
+                CollectionAssert.AreEquivalent(expectedRoles, actualRolesForOperation.ToList());
             }
 
             // Validate that the authorization check fails because the operations are invalid.
@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// readAndUpdateRole - read and update permission for col1 and no policy.
         /// </summary>
         [TestMethod]
-        public void TestRoleAndActionCombination()
+        public void TestRoleAndOperationCombination()
         {
             const string READ_ONLY_ROLE = "readOnlyRole";
             const string READ_AND_UPDATE_ROLE = "readAndUpdateRole";
@@ -275,12 +275,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 Operation.Update);
             CollectionAssert.AreEquivalent(expectedRolesForUpdate, actualUpdateRolesForCol1.ToList());
 
-            IEnumerable<string> actualRolesForRead = IAuthorizationResolver.GetRolesForAction(
+            IEnumerable<string> actualRolesForRead = IAuthorizationResolver.GetRolesForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 Operation.Read,
                 authZResolver.EntityPermissionsMap);
             CollectionAssert.AreEquivalent(expectedRolesForRead, actualRolesForRead.ToList());
-            IEnumerable<string> actualRolesForUpdate = IAuthorizationResolver.GetRolesForAction(
+            IEnumerable<string> actualRolesForUpdate = IAuthorizationResolver.GetRolesForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 Operation.Update,
                 authZResolver.EntityPermissionsMap);
@@ -301,7 +301,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            foreach (Operation operation in Action.ValidPermissionActions)
+            foreach (Operation operation in Action.ValidPermissionOperations)
             {
                 if (operation is Operation.Create)
                 {
@@ -340,7 +340,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             // Assert that the create operation has both anonymous, authenticated roles.
             List<string> expectedRolesForCreate = new() { AuthorizationResolver.ROLE_AUTHENTICATED, AuthorizationResolver.ROLE_ANONYMOUS };
-            IEnumerable<string> actualRolesForCreate = IAuthorizationResolver.GetRolesForAction(
+            IEnumerable<string> actualRolesForCreate = IAuthorizationResolver.GetRolesForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 Operation.Create,
                 authZResolver.EntityPermissionsMap);
@@ -392,7 +392,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             // Assert that the Create operation has only test_role.
             List<string> expectedRolesForCreate = new() { AuthorizationHelpers.TEST_ROLE };
-            IEnumerable<string> actualRolesForCreate = IAuthorizationResolver.GetRolesForAction(
+            IEnumerable<string> actualRolesForCreate = IAuthorizationResolver.GetRolesForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 Operation.Create,
                 authZResolver.EntityPermissionsMap);
@@ -474,7 +474,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             List<string> expectedRolesForRead = new() {
                 AuthorizationResolver.ROLE_ANONYMOUS,
                 AuthorizationResolver.ROLE_AUTHENTICATED };
-            IEnumerable<string> actualRolesForRead = IAuthorizationResolver.GetRolesForAction(
+            IEnumerable<string> actualRolesForRead = IAuthorizationResolver.GetRolesForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 Operation.Read,
                 authZResolver.EntityPermissionsMap);
@@ -482,7 +482,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             // Assert that the update operation has only anonymous role.
             List<string> expectedRolesForUpdate = new() { AuthorizationResolver.ROLE_ANONYMOUS };
-            IEnumerable<string> actualRolesForUpdate = IAuthorizationResolver.GetRolesForAction(
+            IEnumerable<string> actualRolesForUpdate = IAuthorizationResolver.GetRolesForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 Operation.Update,
                 authZResolver.EntityPermissionsMap);
@@ -506,7 +506,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// Test to validate the AreRoleAndActionDefinedForEntity method for the case insensitivity of roleName.
+        /// Test to validate the AreRoleAndOperationDefinedForEntity method for the case insensitivity of roleName.
         /// For eg. The role Writer is equivalent to wrIter, wRITer, WRITER etc.
         /// </summary>
         /// <param name="configRole">The role configured on the entity.</param>
@@ -516,7 +516,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         [DataRow("Writer", Operation.Create, "wRiTeR", DisplayName = "role wRiTeR checked against Writer")]
         [DataRow("Reader", Operation.Read, "READER", DisplayName = "role READER checked against Reader")]
         [DataRow("Writer", Operation.Create, "WrIter", DisplayName = "role WrIter checked against Writer")]
-        public void AreRoleAndActionDefinedForEntityTestForDifferentlyCasedRole(
+        public void AreRoleAndOperationDefinedForEntityTestForDifferentlyCasedRole(
             string configRole,
             Operation operation,
             string roleNameToCheck
@@ -533,7 +533,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         #region Column Tests
 
         /// <summary>
-        /// Tests the authorization stage: Columns defined for Action
+        /// Tests the authorization stage: Columns defined for operation
         /// Columns are allowed for role
         /// Columns are not allowed for role
         /// Wildcard included and/or excluded columns handling
@@ -783,7 +783,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// Similarly if the column is in accessible, then we should not have access.
         /// </summary>
         [TestMethod("Explicit include and exclude columns with wildcard operation")]
-        public void CheckIncludeAndExcludeColumnForWildcardAction()
+        public void CheckIncludeAndExcludeColumnForWildcardOperation()
         {
             HashSet<string> includeColumns = new() { "col1", "col2" };
             HashSet<string> excludeColumns = new() { "col3" };
@@ -798,7 +798,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            foreach (Operation operation in Action.ValidPermissionActions)
+            foreach (Operation operation in Action.ValidPermissionOperations)
             {
                 // Validate that the authorization check passes for valid CRUD operations
                 // because columns are accessbile or inaccessible.
@@ -824,7 +824,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         [DataRow(true, "col1", "col2", DisplayName = "Accessible fields col1,col2")]
         [DataRow(true, "col3", "col4", DisplayName = "Accessible fields col3,col4")]
         [DataRow(false, "col5", DisplayName = "Inaccessible field col5")]
-        public void AreColumnsAllowedForActionWithMissingFieldProperty(bool expected, params string[] columnsToCheck)
+        public void AreColumnsAllowedForOperationWithMissingFieldProperty(bool expected, params string[] columnsToCheck)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
@@ -869,7 +869,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            foreach (Operation operation in Action.ValidPermissionActions)
+            foreach (Operation operation in Action.ValidPermissionOperations)
             {
                 Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForOperation(
                     AuthorizationHelpers.TEST_ENTITY,
@@ -880,7 +880,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// Test to validate the AreColumnsAllowedForAction method for case insensitivity of roleName.
+        /// Test to validate the AreColumnsAllowedForOperation method for case insensitivity of roleName.
         /// For eg. The role CREATOR is equivalent to creator, cReAtOR etc.
         /// </summary>
         /// <param name="operation">The operation configured on the entity.</param>
@@ -897,7 +897,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             new string[] { "col1", "col3" }, false, DisplayName = "Case insensitive role reader")]
         [DataRow(Operation.Create, "Creator", new string[] { "col1", "col2" }, new string[] { "col3", "col4" }, "CREator",
             new string[] { "col1", "col2" }, true, DisplayName = "Case insensitive role creator")]
-        public void AreColumnsAllowedForActionWithRoleWithDifferentCasing(
+        public void AreColumnsAllowedForOperationWithRoleWithDifferentCasing(
             Operation operation,
             string configRole,
             string[] columnsToInclude,
@@ -915,7 +915,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            List<Operation> operations = AuthorizationResolver.GetAllActions(operation).ToList();
+            List<Operation> operations = AuthorizationResolver.GetAllOperations(operation).ToList();
 
             foreach (Operation testOperation in operations)
             {
@@ -1078,7 +1078,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
         // Indirectly tests the AuthorizationResolver private method:
         // GetDBPolicyForRequest(string entityName, string roleName, string operation)
-        // by calling public method TryProcessDBPolicy(TEST_ENTITY, clientRole, requestAction, context.Object)
+        // by calling public method TryProcessDBPolicy(TEST_ENTITY, clientRole, requestOperation, context.Object)
         // The result of executing that method will determine whether execution behaves as expected.
         // When string.Empty is returned,
         // then no policy is found for the provided entity, role, and operation combination, therefore,
@@ -1098,15 +1098,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         public void GetDBPolicyTest(
             string clientRole,
             string configuredRole,
-            Operation requestAction,
-            Operation configuredAction,
+            Operation requestOperation,
+            Operation configuredOperation,
             string policy,
             bool expectPolicy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 TEST_ENTITY,
                 configuredRole,
-                configuredAction,
+                configuredOperation,
                 databasePolicy: policy
                 );
 
@@ -1121,7 +1121,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(clientRole);
 
-            string parsedPolicy = authZResolver.TryProcessDBPolicy(TEST_ENTITY, clientRole, requestAction, context.Object);
+            string parsedPolicy = authZResolver.TryProcessDBPolicy(TEST_ENTITY, clientRole, requestOperation, context.Object);
             string errorMessage = "TryProcessDBPolicy returned unexpected value.";
             if (expectPolicy)
             {

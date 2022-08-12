@@ -292,7 +292,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         // so that it doesn't need to be evaluated per request.
                         PopulateAllowedExposedColumns(operationToColumn.AllowedExposedColumns, entityName, allowedColumns);
 
-                        IEnumerable<Operation> operations = GetAllActions(operation);
+                        IEnumerable<Operation> operations = GetAllOperations(operation);
                         foreach (Operation opElement in operations)
                         {
                             // Try to add the opElement to the map if not present.
@@ -304,7 +304,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
                             foreach (string allowedColumn in allowedColumns)
                             {
-                                entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateActionToRoleMap());
+                                entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateOperationToRoleMap());
                                 entityToRoleMap.FieldToRolesMap[allowedColumn][opElement].Add(role);
                             }
 
@@ -350,10 +350,10 @@ namespace Azure.DataApiBuilder.Service.Authorization
             // adds a new entry for (key,value) pair if absent, to the map.
             entityToRoleMap.RoleToOperationMap[ROLE_AUTHENTICATED] = entityToRoleMap.RoleToOperationMap[ROLE_ANONYMOUS];
 
-            // Copy over ActionToRolesMap for authenticated role from anonymous role.
-            Dictionary<Operation, OperationMetadata> allowedActionMap =
+            // Copy over OperationToRolesMap for authenticated role from anonymous role.
+            Dictionary<Operation, OperationMetadata> allowedOperationMap =
                 entityToRoleMap.RoleToOperationMap[ROLE_ANONYMOUS].OperationToColumnMap;
-            foreach (Operation operation in allowedActionMap.Keys)
+            foreach (Operation operation in allowedOperationMap.Keys)
             {
                 entityToRoleMap.OperationToRolesMap[operation].Add(ROLE_AUTHENTICATED);
             }
@@ -379,9 +379,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// </summary>
         /// <param name="operation">operation type.</param>
         /// <returns>IEnumerable of all available operations.</returns>
-        public static IEnumerable<Operation> GetAllActions(Operation operation)
+        public static IEnumerable<Operation> GetAllOperations(Operation operation)
         {
-            return operation is Operation.All ? Action.ValidPermissionActions : new List<Operation> { operation };
+            return operation is Operation.All ? Action.ValidPermissionOperations : new List<Operation> { operation };
         }
 
         /// <summary>
@@ -583,7 +583,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <param name="entityName">Entity to lookup permissions</param>
         /// <param name="operation">Operation to lookup applicable roles</param>
         /// <returns>Collection of roles.</returns>
-        public IEnumerable<string> GetRolesForAction(string entityName, Operation operation)
+        public IEnumerable<string> GetRolesForOperation(string entityName, Operation operation)
         {
             if (EntityPermissionsMap[entityName].OperationToRolesMap.TryGetValue(operation, out List<string>? roleList) && roleList is not null)
             {
@@ -624,12 +624,12 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
         /// <summary>
         /// Creates new key value map of
-        /// Key: ActionType
+        /// Key: operationType
         /// Value: Collection of role names.
         /// There are only four possible operations
         /// </summary>
         /// <returns></returns>
-        private static Dictionary<Operation, List<string>> CreateActionToRoleMap()
+        private static Dictionary<Operation, List<string>> CreateOperationToRoleMap()
         {
             return new Dictionary<Operation, List<string>>()
             {

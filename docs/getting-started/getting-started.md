@@ -17,13 +17,12 @@ As the Data API builder for Azure Databases generate REST and GraphQL endpoints 
 
 Please note that familiarity with Git commands, tools and concept is assumed throughout all the tutorial.
 
-
 ## Clone the Data API builder for Azure Databases engine
 
 Clone the repository locally:
 
 ```
-git clone https://github.com/Azure/hawaii-engine.git
+git clone https://github.com/azure/data-api-builder
 ```
 
 then move into the folder where the Data API builder for Azure Databases engine has been cloned and then move into the `samples/getting-started` folder, for example:

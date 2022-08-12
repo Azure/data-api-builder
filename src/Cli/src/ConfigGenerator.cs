@@ -24,7 +24,7 @@ namespace Cli
 
             if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
             {
-                return false;
+                runtimeConfigFile = RuntimeConfigPath.DefaultName;
             }
 
             return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);

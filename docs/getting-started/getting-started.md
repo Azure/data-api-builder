@@ -92,5 +92,5 @@ Both the business entities need a modern endpoint, REST and/or GraphQL, to allow
 Depending if you want to use Azure SQL Database or Cosmos DB, continue to the appropriate link:
 
 - [Getting Started with Data API builder for Azure SQL DB](./getting-started-azure-sql-db.md)
-- [Getting Started Data API builder for with Azure Cosmos DB](./getting-started-azure-cosmos-db.md)
+- [Getting Started with Data API builder for with Azure Cosmos DB](./getting-started-azure-cosmos-db.md)
 

@@ -13,7 +13,6 @@ using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Extensions.Logging;
 using Humanizer;
-using Newtonsoft.Json;
 using System.Text.Json;
 
 namespace Azure.DataApiBuilder.Service.Services
@@ -200,8 +199,8 @@ namespace Azure.DataApiBuilder.Service.Services
             // otherwise we have to convert each part of the Rest property we want into correct objects
             // they are json element so this means deserializing at each step with case insensitivity
             JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true };
-            RestEntitySettings rest = System.Text.Json.JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)entity.Rest, options)!;
-            SingularPlural restRoute = System.Text.Json.JsonSerializer.Deserialize<SingularPlural>((JsonElement)rest.Route, options)!;
+            RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)entity.Rest, options)!;
+            SingularPlural restRoute = JsonSerializer.Deserialize<SingularPlural>((JsonElement)rest.Route, options)!;
             // user plural if provided
             if (!string.IsNullOrWhiteSpace(restRoute.Plural))
             {

@@ -5,6 +5,7 @@ using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Models;
@@ -307,7 +308,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             AuthorizationResolver = authorizationResolver;
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
-            _underlyingFieldType = UnderlyingGraphQLEntityType(outputType);
+            _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
 
             // extract the query argument schemas before switching schemaField to point to *Connetion.items
             // since the pagination arguments are not placed on the items, but on the pagination query
@@ -329,7 +330,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 schemaField = ExtractItemsSchemaField(schemaField);
 
                 outputType = schemaField.Type;
-                _underlyingFieldType = UnderlyingGraphQLEntityType(outputType);
+                _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
 
                 // this is required to correctly keep track of which pagination metadata
                 // refers to what section of the json
@@ -345,6 +346,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             EntityName = _underlyingFieldType.Name;
+
+            if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
+            {
+                EntityName = modelName;
+            }
+
             DatabaseObject.SchemaName = sqlMetadataProvider.GetSchemaName(EntityName);
             DatabaseObject.Name = sqlMetadataProvider.GetDatabaseObjectName(EntityName);
             TableAlias = CreateTableAlias();

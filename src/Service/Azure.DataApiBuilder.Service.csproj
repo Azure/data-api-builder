@@ -35,7 +35,7 @@
     <Content Include="MySqlBooks.sql">
         <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
-    <Content Update="hawaii-config*.json">
+    <Content Update="dab-config*.json">
       <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
     <Content Update="appsettings*.json">
@@ -56,7 +56,6 @@
     <Watch Remove="dab-config.json" />
     <Watch Remove="dab-config.Mssql.json" />
     <Watch Remove="dab-config.MsSql.overrides.example.json" />
-    <Watch Remove="dab-config.MsSql.overrides.json" />
     <Watch Remove="dab-config.Mysql.json" />
     <Watch Remove="dab-config.MySql.overrides.example.json" />
     <Watch Remove="dab-config.Postgresql.json" />

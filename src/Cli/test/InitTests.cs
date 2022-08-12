@@ -21,11 +21,11 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                name: "outputfile");
+                config: "outputfile");
 
             string expectedRuntimeConfig =
             @"{
-  ""$schema"": ""hawaii.draft-01.schema.json"",
+  ""$schema"": ""dab.draft-01.schema.json"",
   ""data-source"": {
     ""database-type"": ""mssql"",
     ""connection-string"": ""testconnectionstring""
@@ -74,10 +74,10 @@ namespace Cli.Tests
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                name: "outputfile");
+                config: "outputfile");
 
             string expectedRuntimeConfig = @"{
-  ""$schema"": ""hawaii.draft-01.schema.json"",
+  ""$schema"": ""dab.draft-01.schema.json"",
   ""data-source"": {
     ""database-type"": ""cosmos"",
     ""connection-string"": ""testconnectionstring""
@@ -115,52 +115,32 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Verify that if either database or schema file is null or empty, we will get error.
+        /// Verify that if either database or graphQLSchema is null or empty, we will get error.
         /// </summary>
-        [TestMethod]
-        public void VerifyRequiredOptionsForCosmosDatabase()
+        [DataRow(null, "testcontainer", "", false, DisplayName = "Both database and schema are either null or empty.")]
+        [DataRow("", "testcontainer", "testschema", false, DisplayName = "database is empty.")]
+        [DataRow("testDatabase", "testcontainer", "", false, DisplayName = "database is provided, Schema is null.")]
+        [DataRow("testDatabase", null, "", false, DisplayName = "database is provided, container and Schema is null/empty.")]
+        [DataRow("testDatabase", null, "testSchema", true, DisplayName = "database and schema provided, container is null/empty.")]
+        [DataTestMethod]
+        public void VerifyRequiredOptionsForCosmosDatabase(
+            string? cosmosDatabase,
+            string? cosmosContainer,
+            string? graphQLSchema,
+            bool expectedResult
+        )
         {
-            // Both database and schema are either null or empty.
-            //
             InitOptions options = new(
                 databaseType: DatabaseType.cosmos,
                 connectionString: "testconnectionstring",
-                cosmosDatabase: null,
-                cosmosContainer: "testcontainer",
-                graphQLSchemaPath: string.Empty,
+                cosmosDatabase: cosmosDatabase,
+                cosmosContainer: cosmosContainer,
+                graphQLSchemaPath: graphQLSchema,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                name: "outputfile");
+                config: "outputfile");
 
-            Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));
-
-            // Database field is empty.
-            //
-            options = new(
-                databaseType: DatabaseType.cosmos,
-                connectionString: "testconnectionstring",
-                cosmosDatabase: null,
-                cosmosContainer: "testcontainer",
-                graphQLSchemaPath: "testschema",
-                hostMode: HostModeType.Production,
-                corsOrigin: null,
-                name: "outputfile");
-
-            Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));
-
-            // Schema field is empty.
-            //
-            options = new(
-                databaseType: DatabaseType.cosmos,
-                connectionString: "testconnectionstring",
-                cosmosDatabase: "testdatabase",
-                cosmosContainer: "testcontainer",
-                graphQLSchemaPath: string.Empty,
-                hostMode: HostModeType.Production,
-                corsOrigin: null,
-                name: "outputfile");
-
-            Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));
+            Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }
 
         /// <summary>

@@ -14,14 +14,24 @@ namespace Azure.DataApiBuilder.Service
     {
         public static void Main(string[] args)
         {
+            if (!StartEngine(args))
+            {
+                Environment.ExitCode = -1;
+            }
+        }
+
+        public static bool StartEngine(string[] args)
+        {
+            Console.WriteLine("Starting the runtime engine...");
             try
             {
                 CreateHostBuilder(args).Build().Run();
+                return true;
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Unable to launch the runtime due to: {ex}");
-                Environment.ExitCode = -1;
+                return false;
             }
         }
 
@@ -75,7 +85,7 @@ namespace Azure.DataApiBuilder.Service
             string[] args)
         {
             string configFileName
-                = RuntimeConfigPath.GetFileNameForEnvironment(env.EnvironmentName);
+                = RuntimeConfigPath.GetFileNameForEnvironment(env.EnvironmentName, considerOverrides: true);
             Dictionary<string, string> configFileNameMap = new()
             {
                 {

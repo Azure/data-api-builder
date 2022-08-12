@@ -460,6 +460,7 @@ namespace Cli
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
                 /// The existence of user provided config file is not checked here.
+                Console.WriteLine($"Using config file: {userProvidedConfigFile}");
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;

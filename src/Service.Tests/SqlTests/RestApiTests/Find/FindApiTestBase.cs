@@ -535,7 +535,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
 
         /// <summary>
         /// Tests the REST Api for Find operation for all records.
-        /// order by title in ascending order.
+        /// Uses entity with mapped columns, and order by title in ascending order.
         /// </summary>
         [TestMethod]
         public async Task FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc()

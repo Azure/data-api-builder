@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             string gql =
     $@"
-type Foo @model {{
+type Foo @model(name:""Foo"") {{
     id: {fieldType}!
 }}
                 ";
@@ -38,12 +38,12 @@ type Foo @model {{
         {
             string gql =
     @"
-type Book @model {
+type Book @model(name:""Book"") {
     id: Int!
     publisher: Publisher! @relationship(target: ""Publisher"", cardinality: ""One"")
 }
 
-type Publisher @model {
+type Publisher @model(name:""Publisher"") {
     id: Int!
     books(first: Int, after: String, " + QueryBuilder.FILTER_FIELD_NAME +
     @": PublisherFilterInput): PublisherConnection @relationship(target: ""Book"", cardinality: ""Many"")

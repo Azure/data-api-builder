@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Models;
@@ -44,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private void Init(IDictionary<string, object> queryParams)
         {
             IFieldSelection selection = _context.Selection;
-            ObjectType underlyingType = UnderlyingGraphQLEntityType(selection.Field.Type);
+            ObjectType underlyingType = GraphQLUtils.UnderlyingGraphQLEntityType(selection.Field.Type);
 
             IsPaginated = QueryBuilder.IsPaginationType(underlyingType);
             OrderByColumns = new();
@@ -61,7 +62,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                                                                                        label: x.GetNodes().First().ToString())));
                 }
 
-                ObjectType realType = UnderlyingGraphQLEntityType(underlyingType.Fields[QueryBuilder.PAGINATION_FIELD_NAME].Type);
+                ObjectType realType = GraphQLUtils.UnderlyingGraphQLEntityType(underlyingType.Fields[QueryBuilder.PAGINATION_FIELD_NAME].Type);
                 string entityName = realType.Name;
 
                 Database = _metadataProvider.GetSchemaName(entityName);

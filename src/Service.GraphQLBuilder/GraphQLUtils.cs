@@ -174,8 +174,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             {
                 if (dir.Name.Value == ModelDirectiveType.DirectiveName)
                 {
-                    ModelDirectiveType modelDirective = dir.ToObject<ModelDirectiveType>();
-                    modelName = modelDirective.Name.ToString();
+                    dir.ToObject<ModelDirectiveType>();
+                    modelName = dir.GetArgument<string>(ModelDirectiveType.ModelNameArgument).ToString();
+
+                    if (modelName is null)
+                    {
+                        return false;
+                    }
+
                     return true;
                 }
             }

@@ -4,9 +4,8 @@
 # Version values referenced from https://hub.docker.com/_/microsoft-dotnet-aspnet
 FROM mcr.microsoft.com/dotnet/sdk:6.0 as build
 
-WORKDIR /src
+WORKDIR ../src
 COPY [".", "./"]
-RUN cd ..
 RUN ls -a
 RUN dotnet build "./Service/Azure.DataApiBuilder.Service.csproj" -c Docker -o /out -r linux-x64
 

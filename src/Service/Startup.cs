@@ -186,13 +186,15 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
 
-            AddGraphQL(services);
+            AddGraphQL(services, runtimeConfigurationProvider);
 
             services.AddControllers();
         }
 
-        private void AddGraphQL(IServiceCollection services)
+        private void AddGraphQL(IServiceCollection services, RuntimeConfigProvider configProvider)
         {
+            RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+
             services.AddGraphQLServer()
                     .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                     .ConfigureSchema((serviceProvider, schemaBuilder) =>
@@ -200,6 +202,7 @@ namespace Azure.DataApiBuilder.Service
                         GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
                         graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
                     })
+                    .AllowIntrospection(runtimeConfig.GraphQLGlobalSettings.AllowIntrospection)
                     .AddAuthorization()
                     .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
                     .AddErrorFilter(error =>

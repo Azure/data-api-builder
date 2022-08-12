@@ -495,7 +495,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
                   FROM (
                       SELECT *
-                      FROM " + _integrationMappingEntity + @"
+                      FROM " + _integrationMappingTable + @"
                       ORDER BY species
                       LIMIT 100
                   ) AS subq"

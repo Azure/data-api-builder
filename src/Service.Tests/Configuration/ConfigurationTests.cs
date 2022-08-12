@@ -387,10 +387,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// This function verifies the environment variable HAWAII_RUNTIME
+        /// This function verifies the environment variable DAB_ENVIRONMENT
         /// takes precendence than ASPNETCORE_ENVIRONMENT for the configuration file.
         /// </summary>
-        [TestMethod("Validates precedence is given to HAWAII_RUNTIME environment variable name.")]
+        [TestMethod("Validates precedence is given to DAB_ENVIRONMENT environment variable name.")]
         public void TestRuntimeEnvironmentVariable()
         {
             Environment.SetEnvironmentVariable(
@@ -425,7 +425,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         // since without this env var, it would be available - guaranteeing this env variable
         // has highest precedence irrespective of what the connection string is in the config file.
         /// </summary>
-        [TestMethod("Validates that environment variable HAWAII_CONNSTRING has highest precedence.")]
+        [TestMethod("Validates that environment variable DAB_CONNSTRING has highest precedence.")]
         public void TestConnectionStringEnvVarHasHighestPrecedence()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);

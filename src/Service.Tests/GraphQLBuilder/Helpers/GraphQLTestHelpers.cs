@@ -11,6 +11,34 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
 {
     public static class GraphQLTestHelpers
     {
+        public const string BOOK_GQL =
+                    @"
+                    type Book @model(name:""Book"") {
+                        book_id: Int! @primaryKey
+                    }
+                    ";
+
+        public const string BOOKS_GQL =
+                    @"
+                    type Books @model(name:""Books"") {
+                        book_id: Int! @primaryKey
+                    }
+                    ";
+
+        public const string PERSON_GQL =
+                    @"
+                    type Person @model(name:""Person"") {
+                        person_id: Int! @primaryKey
+                    }
+                    ";
+
+        public const string PEOPLE_GQL =
+                    @"
+                    type People @model(name:""People"") {
+                        people_id: Int! @primaryKey
+                    }
+                    ";
+
         /// <summary>
         /// Mock the entityPermissionsMap which resolves which roles need to be included
         /// in an authorize directive used on a GraphQL object type definition.
@@ -44,6 +72,36 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         public static Entity GenerateEmptyEntity()
         {
             return new Entity("foo", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
+        }
+
+        /// <summary>
+        /// Creates an entity with a SingularPlural GraphQL type.
+        /// </summary>
+        /// <param name="singularNameForEntity"> Singular name defined by user in the config.</param>
+        /// <param name="pluralNameForEntity"> Plural name defined by user in the config.</param>
+        public static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity)
+        {
+            return new Entity(Source: "foo",
+                              Rest: null,
+                              GraphQL: new GraphQLEntitySettings(new SingularPlural(singularNameForEntity, pluralNameForEntity)),
+                              Permissions: Array.Empty<PermissionSetting>(),
+                              Relationships: new(),
+                              Mappings: new());
+        }
+
+        /// <summary>
+        /// Creates an entity with a string GraphQL type.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public static Entity GenerateEntityWithStringType(string type)
+        {
+            return new Entity(Source: "foo",
+                              Rest: null,
+                              GraphQL: new GraphQLEntitySettings(type),
+                              Permissions: Array.Empty<PermissionSetting>(),
+                              Relationships: new(),
+                              Mappings: new());
         }
 
         /// <summary>

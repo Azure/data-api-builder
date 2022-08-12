@@ -90,7 +90,7 @@ namespace Cli.Tests
                                 {
                                     ""action"": ""Delete"",
                                     ""policy"": {
-                                        ""request"": ""@claims.name eq 'hawaii'"",
+                                        ""request"": ""@claims.name eq 'dab'"",
                                         ""database"": ""@claims.id eq @item.id""
                                     }
                                 }
@@ -142,7 +142,7 @@ namespace Cli.Tests
                                 {
                                     ""action"": ""Delete"",
                                     ""policy"": {
-                                        ""request"": ""@claims.name eq 'hawaii'"",
+                                        ""request"": ""@claims.name eq 'dab'"",
                                         ""database"": ""@claims.id eq @item.id""
                                     },
                                     ""fields"": {
@@ -172,7 +172,7 @@ namespace Cli.Tests
                                 {
                                     ""action"": ""Delete"",
                                     ""policy"": {
-                                        ""request"": ""@claims.name eq 'hawaii'"",
+                                        ""request"": ""@claims.name eq 'dab'"",
                                         ""database"": ""@claims.id eq @item.id""
                                     },
                                     ""fields"": {
@@ -203,7 +203,7 @@ namespace Cli.Tests
                                 {
                                     ""action"": ""Delete"",
                                     ""policy"": {
-                                        ""request"": ""@claims.name eq 'hawaii'"",
+                                        ""request"": ""@claims.name eq 'dab'"",
                                         ""database"": ""@claims.id eq @item.id""
                                     }
                                 }

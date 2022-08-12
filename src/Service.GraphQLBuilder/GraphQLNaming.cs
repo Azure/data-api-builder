@@ -140,11 +140,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             return string.Join("", nameSegments.Select((n, i) => $"{(i == 0 ? char.ToLowerInvariant(n[0]) : char.ToUpperInvariant(n[0]))}{n[1..]}"));
         }
 
-        public static string FormatNameForField(NameNode name)
-        {
-            return FormatNameForField(name.Value);
-        }
-
         /// <summary>
         /// Helper to pluralize the value of a NameNode HotChocolate schema object
         /// </summary>
@@ -178,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 return new NameNode(namingRules.Plural);
             }
 
-            return new NameNode(name.Pluralize());
+            return new NameNode(name.Pluralize(inputIsKnownToBeSingular: false));
         }
 
         /// <summary>

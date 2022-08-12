@@ -228,8 +228,9 @@ public class EndToEndTests
         // The new process should not be exited after triggering the start command.
         Assert.IsFalse(process.HasExited);
         string? output = process.StandardOutput.ReadLine();
+        Assert.IsTrue(output.Contains($"Using config file: {RuntimeConfigPath.DefaultName}"));
+        output = process.StandardOutput.ReadLine();
         process.Kill();
-        Console.WriteLine(output);
         Assert.IsNotNull(output);
         Assert.IsTrue(output.Contains("Starting the runtime engine..."));
     }

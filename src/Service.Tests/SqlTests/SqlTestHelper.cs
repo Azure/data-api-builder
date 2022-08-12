@@ -87,37 +87,37 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// operation type passed for the given primaryKeyRoute (if any).
         /// </summary>
         /// <param name="controller">The REST controller with the request context.</param>
-        /// <param name="entityName">The entity name.</param>
+        /// <param name="entityNameOrRoute">The entity name/route.</param>
         /// <param name="primaryKeyRoute">The primary key portion of the route.</param>
         /// <param name="operationType">The operation type to be tested.</param>
         public static async Task<IActionResult> PerformApiTest(
             RestController controller,
             string path,
-            string entityName,
+            string entityNameOrRoute,
             string primaryKeyRoute,
             Operation operationType = Operation.Read)
 
         {
             IActionResult actionResult;
-            string pathAndEntityName = $"{path}/{entityName}";
+            string pathAndEntityNameOrRoute = $"{path}/{entityNameOrRoute}";
             switch (operationType)
             {
                 case Operation.Read:
-                    actionResult = await controller.Find($"{pathAndEntityName}/{primaryKeyRoute}");
+                    actionResult = await controller.Find($"{pathAndEntityNameOrRoute}/{primaryKeyRoute}");
                     break;
                 case Operation.Insert:
-                    actionResult = await controller.Insert($"{pathAndEntityName}");
+                    actionResult = await controller.Insert($"{pathAndEntityNameOrRoute}");
                     break;
                 case Operation.Delete:
-                    actionResult = await controller.Delete($"{pathAndEntityName}/{primaryKeyRoute}");
+                    actionResult = await controller.Delete($"{pathAndEntityNameOrRoute}/{primaryKeyRoute}");
                     break;
                 case Operation.Update:
                 case Operation.Upsert:
-                    actionResult = await controller.Upsert($"{pathAndEntityName}/{primaryKeyRoute}");
+                    actionResult = await controller.Upsert($"{pathAndEntityNameOrRoute}/{primaryKeyRoute}");
                     break;
                 case Operation.UpdateIncremental:
                 case Operation.UpsertIncremental:
-                    actionResult = await controller.UpsertIncremental($"{pathAndEntityName}/{primaryKeyRoute}");
+                    actionResult = await controller.UpsertIncremental($"{pathAndEntityNameOrRoute}/{primaryKeyRoute}");
                     break;
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");

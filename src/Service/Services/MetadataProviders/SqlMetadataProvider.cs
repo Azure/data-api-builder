@@ -199,9 +199,9 @@ namespace Azure.DataApiBuilder.Service.Services
             // they are json element so this means deserializing at each step with case insensitivity
             JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
             RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)entity.Rest, options)!;
-            if (rest.Route is string)
+            if (((JsonElement)rest.Route).ValueKind is JsonValueKind.String)
             {
-                return ((string)rest.Route).Pluralize();
+                return JsonSerializer.Deserialize<string>((JsonElement)rest.Route, options).Pluralize()!;
             }
 
             SingularPlural restRoute = JsonSerializer.Deserialize<SingularPlural>((JsonElement)rest.Route, options)!;

@@ -192,7 +192,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // if entity.Rest is null or a bool we just use source name
             if (entity.Rest is null || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.True or JsonValueKind.False)
             {
-                return entityName.Pluralize();
+                return entityName;
             }
 
             // otherwise we have to convert each part of the Rest property we want into correct objects

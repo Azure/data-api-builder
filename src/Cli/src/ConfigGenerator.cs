@@ -25,6 +25,7 @@ namespace Cli
             if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
             {
                 runtimeConfigFile = RuntimeConfigPath.DefaultName;
+                Console.WriteLine($"Creating a new config file :{runtimeConfigFile}");
             }
 
             return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);

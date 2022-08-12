@@ -625,7 +625,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 Assert.AreEqual(expectedStatusCode, response.StatusCode);
                 if (operationType == Operation.Insert)
                 {
-                    string responseUri = (response.Headers.GetValues("Location").ToList<string>())[0];
+                    string responseUri = (response.Headers.Location.OriginalString);
                     string requestUri = request.RequestUri.OriginalString;
                     string actualLocation = responseUri.Substring(
                         responseUri.IndexOf(requestUri + "/") + requestUri.Length + 1);

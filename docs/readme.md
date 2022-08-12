@@ -3,9 +3,11 @@
 ## Table of content
 
 - [Getting started](./getting-started/getting-started.md)
-- [Configuration file](./configuration.md)
+- [Configuration file](./configuration-file.md)
 - [Command Line Interface](./cli.md)
-- [Running Data API builder for Azure Database](./engine.md)
+- Running Data API builder for Azure Database
+  - [Running from source code](./running-from-source-code.md)
+  - [Running using a container](./running-using-a-container.md)
 - [REST features](./rest.md)
 - [GraphQL features](./graphql.md)
 

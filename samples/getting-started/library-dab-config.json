@@ -1,0 +1,50 @@
+{
+  "$schema": "../../schemas/hawaii.draft-01.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "Server=dmmssqlsrv.database.windows.net;Database=lab;User ID=dab_user;Password=931sAC1_AZ34erfr!;TrustServerCertificate=true"
+  },
+  "runtime": {
+    "host": {
+      "mode": "development"
+    }
+  },
+  "entities": {
+    "Author": {
+      "source": "dab.authors",
+      "permissions": [
+        {
+          "actions": [
+            "*"
+          ],
+          "role": "anonymous"
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "target.entity": "Book",
+          "linking.object": "dab.books_authors"
+        }
+      }
+    },
+    "Book": {
+      "source": "dab.books",
+      "permissions": [
+        {
+          "actions": [
+            "*"
+          ],
+          "role": "anonymous"
+        }
+      ],
+      "relationships": {
+        "authors": {
+          "cardinality": "many",
+          "target.entity": "Author",
+          "linking.object": "dab.books_authors"
+        }
+      }
+    }
+  }
+}

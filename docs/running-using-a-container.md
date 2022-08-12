@@ -1,4 +1,4 @@
-# Running Data API Builder for Azure Databases in a Container
+# Running Data API Builder for Azure Databases using a container
 
 Login in into the `hawaiicr` Azure Container Registry:
 

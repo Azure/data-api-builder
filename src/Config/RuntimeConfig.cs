@@ -115,22 +115,6 @@ namespace Azure.DataApiBuilder.Config
             }
         }
 
-        //public void DeterminePluralizedRoutes()
-        //{
-        //    foreach (string entityName in Entities.Keys)
-        //    {
-        //        Entity entity = Entities[entityName];
-        //        string pluralizedRoute;
-        //        if (entity.Rest is bool)
-        //        {
-        //            pluralizedRoute = entityName;
-        //            continue;
-        //        }
-
-        //        if ()
-        //    }
-        //}
-
         /// <summary>
         /// Try to deserialize the given json string into its object form.
         /// </summary>

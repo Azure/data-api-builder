@@ -35,8 +35,6 @@ namespace Azure.DataApiBuilder.Config
         [property: JsonPropertyName("mappings")]
         Dictionary<string, string>? Mappings)
     {
-        //[JsonIgnore]
-        //string _pluralizedRoute;
         public const string JSON_PROPERTY_NAME = "entities";
 
         /// <summary>

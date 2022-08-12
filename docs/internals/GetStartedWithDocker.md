@@ -16,7 +16,7 @@ az acr login --name hawaiiacr
 
 2. Update the configuration files for your environment:
 
-Update `hawaii-config.json` (and `schema.gql` if using cosmos).
+Update `dab-config.json` (and `schema.gql` if using cosmos).
 
 3. Choose a `docker-compose-*.yml` file based on your environment (cosmos, sql, postgres)
 
@@ -24,12 +24,12 @@ Update `hawaii-config.json` (and `schema.gql` if using cosmos).
         To find a different tag, find the CI run that was automatically triggered after your checkin, view more details on azure pipelines, then click `Job`.
         In the logs of `Build and push docker image` stage, search for `docker push` to find the tag that was pushed.
 
-    3.2. If you are not using the configuration from the repo, update the path to your config/schema to point to your files and map them to `/App/hawaii-config.json` and for cosmos - `/App/schema.gql` as well.
+    3.2. If you are not using the configuration from the repo, update the path to your config/schema to point to your files and map them to `/App/dab-config.json` and for cosmos - `/App/schema.gql` as well.
 
     3.3. Run docker compose up to start the container:
 
 ```bash
-docker compose -f "./docker-compose.yml" up
+docker compose -f "../../docker/docker-compose.yml" up
 ```
 
 4. Your container should be accessible at `http://localhost:5000`. 
@@ -54,7 +54,7 @@ N.B. Ensure you have docker running, with Linux containers chosen.
 2. Run docker build. If you are on Windows, you need to do this in a WSL terminal.
 
 ```bash
-docker build -t hawaii:<yourTag> -f Dockerfile .
+docker build -t hawaii:<yourTag> -f ../../docker/Dockerfile .
 ```
 
 3. To run a container with the image you created, follow the instructions above (Running docker container from ACR (Prebuilt image)). Make sure to replace the image in the docker-compose file with the one you built. You can skip the login step.

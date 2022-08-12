@@ -16,7 +16,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="configEntity">Entity definition</param>
         /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
         /// <returns>A GraphQL field definition named <c>delete*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
-        public static FieldDefinitionNode Build(NameNode name, ObjectTypeDefinitionNode objectTypeDefinitionNode, Entity configEntity, DatabaseType databaseType, IEnumerable<string>? rolesAllowedForMutation = null)
+        public static FieldDefinitionNode Build(
+            NameNode name,
+            ObjectTypeDefinitionNode objectTypeDefinitionNode,
+            Entity configEntity,
+            DatabaseType databaseType,
+            IEnumerable<string>? rolesAllowedForMutation = null)
         {
             List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode, databaseType);
             string description;
@@ -51,12 +56,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
 
+            string singularName = GetDefinedSingularName(name.Value, configEntity);
             return new(
                 null,
-                new NameNode($"delete{FormatNameForObject(name, configEntity)}"),
-                new StringValueNode($"Delete a {name}"),
+                new NameNode($"delete{singularName}"),
+                new StringValueNode($"Delete a {singularName}"),
                 inputValues,
-                new NamedTypeNode(FormatNameForObject(name, configEntity)),
+                new NamedTypeNode(name),
                 fieldDefinitionNodeDirectives
             );
         }

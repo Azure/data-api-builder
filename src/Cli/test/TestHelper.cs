@@ -22,7 +22,7 @@ namespace Cli.Tests
         public static string GetInitialConfiguration
         {
             get { return @"{
-            ""$schema"": ""hawaii.draft-01.schema.json"",
+            ""$schema"": ""dab.draft-01.schema.json"",
             ""data-source"": {
               ""database-type"": ""mssql"",
               ""connection-string"": ""testconnectionstring""
@@ -90,7 +90,7 @@ namespace Cli.Tests
                                 {
                                     ""action"": ""Delete"",
                                     ""policy"": {
-                                        ""request"": ""@claims.name eq 'hawaii'"",
+                                        ""request"": ""@claims.name eq 'dab'"",
                                         ""database"": ""@claims.id eq @item.id""
                                     }
                                 }
@@ -142,7 +142,7 @@ namespace Cli.Tests
                                 {
                                     ""action"": ""Delete"",
                                     ""policy"": {
-                                        ""request"": ""@claims.name eq 'hawaii'"",
+                                        ""request"": ""@claims.name eq 'dab'"",
                                         ""database"": ""@claims.id eq @item.id""
                                     },
                                     ""fields"": {
@@ -172,7 +172,7 @@ namespace Cli.Tests
                                 {
                                     ""action"": ""Delete"",
                                     ""policy"": {
-                                        ""request"": ""@claims.name eq 'hawaii'"",
+                                        ""request"": ""@claims.name eq 'dab'"",
                                         ""database"": ""@claims.id eq @item.id""
                                     },
                                     ""fields"": {
@@ -203,7 +203,7 @@ namespace Cli.Tests
                                 {
                                     ""action"": ""Delete"",
                                     ""policy"": {
-                                        ""request"": ""@claims.name eq 'hawaii'"",
+                                        ""request"": ""@claims.name eq 'dab'"",
                                         ""database"": ""@claims.id eq @item.id""
                                     }
                                 }
@@ -248,7 +248,7 @@ namespace Cli.Tests
             {
                 return @"
                 {
-              ""$schema"": ""hawaii.draft-01.schema.json"",
+              ""$schema"": ""dab.draft-01.schema.json"",
               ""data-source"": {
                 ""database-type"": ""mssql"",
                 ""connection-string"": ""localhost:5000""

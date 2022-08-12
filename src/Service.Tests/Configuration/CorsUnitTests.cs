@@ -32,7 +32,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// Verify correct deserialization of Cors record
-        /// This function will attempt to read hawaii-config.json (must be present)
+        /// This function will attempt to read dab-config.json (must be present)
         /// </summary>
         [TestMethod]
         public void TestCorsConfigReadCorrectly()

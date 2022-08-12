@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Config\Azure.DataApiBuilder.Config.csproj" />
+    <ProjectReference Include="..\..\Service\Azure.DataApiBuilder.Service.csproj" />
   </ItemGroup>
 
 </Project>

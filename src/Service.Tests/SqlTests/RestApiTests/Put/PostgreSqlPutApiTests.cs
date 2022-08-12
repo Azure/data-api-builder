@@ -195,6 +195,54 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 4
                     ) AS subq
                 "
+            },
+            {
+                "UpdateSqlInjectionQuery1",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = ' UNION SELECT * FROM books/*'
+                            AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "UpdateSqlInjectionQuery2",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = '; SELECT * FROM information_schema.tables/*'
+                            AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "UpdateSqlInjectionQuery3",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = 'value; SELECT * FROM v$version--'
+                            AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "UpdateSqlInjectionQuery4",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = 'value; DROP TABLE authors;'
+                            AND publisher_id = 1234
+                    ) AS subq
+                "
             }
         };
 

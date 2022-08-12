@@ -210,7 +210,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
             {
                 if (remainingKeys.Contains(column))
                 {
-                    sqlMetadataProvider.TryGetBackingColumn(context.EntityName, column, out string? exposedName);
+                    sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, column, out string? exposedName);
                     orderByList.Add(new OrderByColumn(schemaName, tableName, exposedName!));
                 }
             }

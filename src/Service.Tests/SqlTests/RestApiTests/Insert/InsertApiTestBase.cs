@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(InsertOneTest)),
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: GetQuery("InsertOneInCompositeNonAutoGenPKTest"),
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _integrationUniqueCharactersEntity,
+                entityNameOrRoute: _integrationUniqueCharactersEntity,
                 sqlQuery: GetQuery(nameof(InsertOneUniqueCharactersTest)),
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -105,7 +105,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _integrationMappingEntity,
+                entityNameOrRoute: _integrationMappingEntity,
                 sqlQuery: GetQuery(nameof(InsertOneWithMappingTest)),
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -132,7 +132,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _entityWithCompositePrimaryKey,
+                entityNameOrRoute: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(InsertOneInCompositeKeyTableTest)),
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -150,7 +150,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _entityWithCompositePrimaryKey,
+                entityNameOrRoute: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery("InsertOneInDefaultTestTable"),
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -176,7 +176,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: GetQuery("InsertOneWithNullFieldValue"),
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -201,7 +201,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?/id/5001",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -227,7 +227,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -254,7 +254,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -278,7 +278,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -304,7 +304,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -330,7 +330,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integration_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _integration_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -358,7 +358,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integration_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _integration_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -378,7 +378,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -405,7 +405,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -427,7 +427,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrRoute: _Composite_NonAutoGenPK_EntityRoute,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,
@@ -459,7 +459,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationBrokenMappingEntity,
+                entityNameOrRoute: _integrationBrokenMappingEntity,
                 sqlQuery: string.Empty,
                 controller: _restController,
                 operationType: Operation.Insert,

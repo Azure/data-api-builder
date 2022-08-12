@@ -384,7 +384,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// </summary>
         /// <param name="primaryKeyRoute">string represents the primary key route</param>
         /// <param name="queryString">string represents the query string provided in URL</param>
-        /// <param name="entity">string represents the name of the entity</param>
+        /// <param name="entityNameOrRoute">string represents the name/route of the entity</param>
         /// <param name="sqlQuery">string represents the query to be executed</param>
         /// <param name="controller">string represents the rest controller</param>
         /// <param name="operationType">The operation type to be tested.</param>
@@ -398,7 +398,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static async Task SetupAndRunRestApiTest(
             string primaryKeyRoute,
             string queryString,
-            string entity,
+            string entityNameOrRoute,
             string sqlQuery,
             RestController controller,
             Operation operationType = Operation.Read,
@@ -432,7 +432,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             IActionResult actionResult = await SqlTestHelper.PerformApiTest(
                         controller,
                         path,
-                        entity,
+                        entityNameOrRoute,
                         primaryKeyRoute,
                         operationType);
 

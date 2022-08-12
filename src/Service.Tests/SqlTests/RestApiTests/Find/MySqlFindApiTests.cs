@@ -490,6 +490,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
+                "FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationMappingEntity + @"
+                      ORDER BY species
+                      LIMIT 100
+                  ) AS subq"
+            },
+            {
                 "FindTestWithQueryStringSpaceInNamesOrderByAsc",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('ID Number', `ID Number`, 'First Name', `First Name`, 'Last Name', `Last Name`)) AS data

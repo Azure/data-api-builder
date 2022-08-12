@@ -45,11 +45,11 @@ __EOF__
 chmod +x .git/hooks/pre-commit
 ```
 
-## Hawaii-Cli
-1. To update the CLI tool trigger name from hawaii to any other, goto csProj file and update the ToolCommandName :
+## DAB-Cli
+1. To update the CLI tool trigger name from DAB to any other, goto csProj file and update the ToolCommandName :
 ```
 <PackAsTool>true</PackAsTool>
-<ToolCommandName>hawaii</ToolCommandName>
+<ToolCommandName>DAB</ToolCommandName>
 <PackageOutputPath>./nupkg</PackageOutputPath>
 ```
 
@@ -60,7 +60,7 @@ dotnet pack
 
 3. Install the tool
 ```
-dotnet tool install --global --add-source ./nupkg hawaii-cli
+dotnet tool install --global --add-source ./nupkg dab
 ```
 
 4. After making new changes. Do the below steps
@@ -77,7 +77,7 @@ dotnet tool install --global --add-source ./nupkg hawaii-cli
 	```
 	c) update the installed tool:
 	```
-	dotnet tool update -g --add-source ./nupkg hawaii-cli --version 2.0.0
+	dotnet tool update -g --add-source ./nupkg dab --version 2.0.0
 	```
 
 ## Share the changes

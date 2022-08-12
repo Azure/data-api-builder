@@ -240,18 +240,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 // An inline argument was set
                 // TODO: This assumes the input was NOT nullable.
-                if (item is List<ObjectFieldNode> mutationInputRaw)
+                if (item is IDictionary<string, object?> mutationInputRaw)
                 {
-                    return mutationInputRaw.Select(node => node.Name.Value).ToList();
+                    return mutationInputRaw.Select(node => node.Key).ToList();
                 }
                 else
                 {
-                    errMsg = $"Unexpected {fieldName} argument format.";
+                    errMsg = $"Unexpected `{fieldName}` argument format.";
                 }
             }
             else
             {
-                errMsg = $"Expected {fieldName} argument in mutation arguments.";
+                errMsg = $"Expected `{fieldName}` argument in mutation arguments.";
             }
 
             // should not happen due to gql schema validation
@@ -272,7 +272,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="mutationParameters">a dictionary of mutation parameters</param>
         /// <exception cref="InvalidDataException"></exception>
         internal static IDictionary<string, object?> GQLMutArgumentToDictParams(
-            IMiddlewareContext context,
             string fieldName,
             IDictionary<string, object?> mutationParameters)
         {
@@ -280,23 +279,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (mutationParameters.TryGetValue(fieldName, out object? item))
             {
-                IObjectField fieldSchema = context.Selection.Field;
-                IInputField itemsArgumentSchema = fieldSchema.Arguments[fieldName];
-                InputObjectType itemsArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(itemsArgumentSchema);
-
                 Dictionary<string, object?> mutationInput;
                 // An inline argument was set
                 // TODO: This assumes the input was NOT nullable.
-                if (item is List<ObjectFieldNode> mutationInputRaw)
+                if (item is IDictionary<string, object?> mutationInputRaw)
                 {
                     mutationInput = new Dictionary<string, object?>();
-                    foreach (ObjectFieldNode node in mutationInputRaw)
+                    foreach ((string key, object? value) in mutationInputRaw)
                     {
-                        string nodeName = node.Name.Value;
-                        mutationInput.Add(nodeName, ResolverMiddleware.ExtractValueFromIValueNode(
-                            value: node.Value,
-                            argumentSchema: itemsArgumentObject.Fields[nodeName],
-                            variables: context.Variables));
+                        mutationInput.Add(key, value);
                     }
 
                     return mutationInput;

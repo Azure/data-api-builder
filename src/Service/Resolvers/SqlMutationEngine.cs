@@ -294,14 +294,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;
                 case Operation.UpdateGraphQL:
-                    if (context is null)
-                    {
-                        throw new ArgumentNullException("Context should not be null for a GraphQL operation.");
-                    }
-
                     SqlUpdateStructure updateGraphQLStructure =
                         new(
-                        context,
                         entityName,
                         _sqlMetadataProvider,
                         parameters);

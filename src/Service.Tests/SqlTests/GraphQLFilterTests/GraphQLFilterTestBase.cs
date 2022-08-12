@@ -734,7 +734,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             string graphQLQueryName,
             bool isAuthenticated,
             Dictionary<string, object> variables = null,
-            string clientRoleHeader = null)
+            string clientRoleHeader = null,
+            bool failOnError = true)
         {
             JsonElement dataResult = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: isAuthenticated, variables);
 

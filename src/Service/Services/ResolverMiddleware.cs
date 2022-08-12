@@ -14,6 +14,7 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.Extensions.Primitives;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
@@ -195,6 +196,11 @@ namespace Azure.DataApiBuilder.Service.Services
             if (value is NullValueNode)
             {
                 return null;
+            }
+
+            if (value is ObjectValueNode obj)
+            {
+                return obj.Fields.ToDictionary(field => field.Name.Value, field => ExtractValueFromIValueNode(field.Value, argumentSchema, variables));
             }
 
             return argumentSchema.Type.TypeName().Value switch

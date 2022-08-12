@@ -561,7 +561,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string queryName,
             bool isAuthenticated,
             Dictionary<string, object> variables = null,
-            string clientRoleHeader = null)
+            string clientRoleHeader = null,
+            bool failOnError = true)
         {
             RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
             return await GraphQLRequestExecutor.PostGraphQLRequestAsync(
@@ -571,7 +572,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 query,
                 variables,
                 isAuthenticated ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader) : null,
-                clientRoleHeader: clientRoleHeader
+                clientRoleHeader: clientRoleHeader,
+                failOnError: failOnError
             );
         }
     }

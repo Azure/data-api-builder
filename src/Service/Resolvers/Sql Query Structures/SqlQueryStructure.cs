@@ -380,9 +380,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 object? orderByObject = queryParams[QueryBuilder.ORDER_BY_FIELD_NAME];
 
-                if (orderByObject != null)
+                if (orderByObject is not null)
                 {
-                    OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject, queryArgumentSchemas[QueryBuilder.ORDER_BY_FIELD_NAME]);
+                    OrderByColumns = ProcessGraphQLOrderByArg((IDictionary<string, object?>)orderByObject, queryArgumentSchemas[QueryBuilder.ORDER_BY_FIELD_NAME]);
                 }
             }
 
@@ -780,12 +780,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Create a list of orderBy columns from the orderBy argument
         /// passed to the gql query
         /// </summary>
-        private List<OrderByColumn> ProcessGqlOrderByArg(List<ObjectFieldNode> orderByFields, IInputField orderByArgumentSchema)
+        private List<OrderByColumn> ProcessGraphQLOrderByArg(IDictionary<string, object?> orderByFields, IInputField orderByArgumentSchema)
         {
             if (_ctx is null)
             {
-                throw new ArgumentNullException("IMiddlewareContext should be intiliazed before " +
-                                                "trying to parse the orderBy argument.");
+                throw new ArgumentNullException("IMiddlewareContext should be intiliazed before trying to parse the orderBy argument.");
             }
 
             // Create list of primary key columns
@@ -796,40 +795,29 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             List<string> remainingPkCols = new(PrimaryKey());
 
-            InputObjectType orderByArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(orderByArgumentSchema);
-            foreach (ObjectFieldNode field in orderByFields)
+            //InputObjectType orderByArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(orderByArgumentSchema);
+            foreach ((string fieldName, object? fieldValue) in orderByFields)
             {
-                object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
-                    value: field.Value,
-                    argumentSchema: orderByArgumentObject.Fields[field.Name.Value],
-                    variables: _ctx.Variables);
+                //object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+                //    value: field.Value,
+                //    argumentSchema: orderByArgumentObject.Fields[field.Name.Value],
+                //    variables: _ctx.Variables);
 
                 if (fieldValue is null)
                 {
                     continue;
                 }
 
-                string fieldName = field.Name.ToString();
-
                 // remove pk column from list if it was specified as a
                 // field in orderBy
                 remainingPkCols.Remove(fieldName);
 
-                if (fieldValue.ToString() == $"{OrderBy.DESC}")
-                {
-                    orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
-                                                             tableName: DatabaseObject.Name,
-                                                             columnName: fieldName,
-                                                             tableAlias: TableAlias,
-                                                             direction: OrderBy.DESC));
-                }
-                else
-                {
-                    orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
-                                                             tableName: DatabaseObject.Name,
-                                                             columnName: fieldName,
-                                                             tableAlias: TableAlias));
-                }
+                OrderBy direction = Enum.Parse<OrderBy>((string)fieldValue);
+                orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
+                                                         tableName: DatabaseObject.Name,
+                                                         columnName: fieldName,
+                                                         tableAlias: TableAlias,
+                                                         direction: direction));
             }
 
             foreach (string colName in remainingPkCols)

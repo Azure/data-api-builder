@@ -51,8 +51,6 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private Dictionary<string, string> EntityRouteToEntityName { get; } = new();
 
-        private Dictionary<string, string> EntityToPluralizedRouteMap { get; } = new();
-
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
         /// </summary>

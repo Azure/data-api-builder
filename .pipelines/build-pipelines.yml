@@ -147,4 +147,3 @@ steps:
       $(BuildDate)-$(Build.SourceVersion)
       $(releaseName)
       $(nugetVersion)
-      

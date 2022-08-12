@@ -21,7 +21,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                name: "outputfile");
+                config: "outputfile");
 
             string expectedRuntimeConfig =
             @"{
@@ -74,7 +74,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                name: "outputfile");
+                config: "outputfile");
 
             string expectedRuntimeConfig = @"{
   ""$schema"": ""dab.draft-01.schema.json"",
@@ -130,7 +130,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: string.Empty,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                name: "outputfile");
+                config: "outputfile");
 
             Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));
 
@@ -144,7 +144,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: "testschema",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                name: "outputfile");
+                config: "outputfile");
 
             Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));
 
@@ -158,7 +158,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: string.Empty,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                name: "outputfile");
+                config: "outputfile");
 
             Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }

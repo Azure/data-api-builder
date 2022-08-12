@@ -2,7 +2,7 @@
 
 Make sure you have read the [Getting Started](getting-started.md) document.
 
-This tutorial assumes that you have already a [Cosmos DB SQL API database account](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/create-cosmosdb-resources-portal#create-an-azure-cosmos-db-account) that can used as playground.
+This tutorial assumes that you have already a [Cosmos DB SQL API database account](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/create-cosmosdb-resources-portal#create-an-azure-cosmos-db-account) that can be used as a playground.
 
 ## Get the Cosmos DB Account connection string
 

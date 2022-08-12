@@ -26,4 +26,4 @@ The following diagram illustrates the high-level architecture of the DAB CLI, id
 
 Your feedback and contributions are key to its success.
 
-[Build from Source](../../src/Cli/CONTRIBUTING.md)
+[Build from Source](../../CONTRIBUTING.md)

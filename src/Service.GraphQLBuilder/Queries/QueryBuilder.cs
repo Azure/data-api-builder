@@ -146,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             //    books(first: Int, after: String, filter: BooksFilterInput, orderBy: BooksOrderByInput): BooksConnection!
             return new(
                 location: null,
-                new NameNode(Pluralize(name, entity)),
+                new NameNode(FormatNameForField(Pluralize(name, entity).Value.ToString())),
                 new StringValueNode($"Get a list of all the {GetDefinedSingularName(name.Value, entity)} items from the database"),
                 QueryArgumentsForField(filterInputName, orderByInputName),
                 new NonNullTypeNode(new NamedTypeNode(returnType.Name)),

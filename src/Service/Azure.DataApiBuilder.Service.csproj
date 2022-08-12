@@ -35,7 +35,7 @@
     <Content Include="MySqlBooks.sql">
         <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
-    <Content Update="hawaii-config*.json">
+    <Content Update="dab-config*.json">
       <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
     <Content Update="appsettings*.json">
@@ -51,17 +51,15 @@
 
 
   <ItemGroup>
-    <Watch Remove="hawaii-config.Cosmos.json" />
-    <Watch Remove="hawaii-config.Cosmos.overrides.example.json" />
-    <Watch Remove="hawaii-config.json" />
-    <Watch Remove="hawaii-config.Mssql.json" />
-    <Watch Remove="hawaii-config.MsSql.overrides.example.json" />
-    <Watch Remove="hawaii-config.MsSql.overrides.json" />
-    <Watch Remove="hawaii-config.MsSql.overrides_DAVIDE.json" />
-    <Watch Remove="hawaii-config.Mysql.json" />
-    <Watch Remove="hawaii-config.MySql.overrides.example.json" />
-    <Watch Remove="hawaii-config.Postgresql.json" />
-    <Watch Remove="hawaii-config.PostgreSql.overrides.example.json" />
+    <Watch Remove="dab-config.Cosmos.json" />
+    <Watch Remove="dab-config.Cosmos.overrides.example.json" />
+    <Watch Remove="dab-config.json" />
+    <Watch Remove="dab-config.Mssql.json" />
+    <Watch Remove="dab-config.MsSql.overrides.example.json" />
+    <Watch Remove="dab-config.Mysql.json" />
+    <Watch Remove="dab-config.MySql.overrides.example.json" />
+    <Watch Remove="dab-config.Postgresql.json" />
+    <Watch Remove="dab-config.PostgreSql.overrides.example.json" />
   </ItemGroup>
 
 

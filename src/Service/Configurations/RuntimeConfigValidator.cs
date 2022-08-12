@@ -131,7 +131,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 }
                 else if (entity.GraphQL is GraphQLEntitySettings graphQLSettings)
                 {
-                    ValidateNameRequirements(entityName);
                     if (graphQLSettings.Type is string graphQLName)
                     {
                         ValidateNameRequirements(graphQLName);

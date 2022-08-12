@@ -962,7 +962,7 @@ type Foo @model(name:""Foo"") {{
                     new Operation[] { Operation.Create, Operation.Update, Operation.Delete },
                     new string[] { "anonymous", "authenticated" });
 
-            Entity entity = (singularName is not null && pluralName is not null)
+            Entity entity = (singularName is not null)
                                 ? GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, pluralName)
                                 : GraphQLTestHelpers.GenerateEmptyEntity();
 
@@ -1001,7 +1001,6 @@ type Foo @model(name:""Foo"") {{
             Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedDeleteMutationName));
             FieldDefinitionNode deleteMutation = mutation.Fields.First(f => f.Name.Value == expectedDeleteMutationName);
             Assert.AreEqual(expectedDeleteMutationDescription, deleteMutation.Description.Value);
-
         }
     }
 }

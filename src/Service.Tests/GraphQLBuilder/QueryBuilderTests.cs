@@ -337,7 +337,7 @@ type Table @model(name: ""table"") {
                     new Operation[] { Operation.Read },
                     new string[] { "anonymous", "authenticated" });
 
-            Entity entity = (singularName is not null && pluralName is not null)
+            Entity entity = (singularName is not null)
                                 ? GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, pluralName)
                                 : GraphQLTestHelpers.GenerateEmptyEntity();
 

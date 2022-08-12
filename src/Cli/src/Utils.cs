@@ -358,7 +358,6 @@ namespace Cli
             {
                 Console.WriteLine($"ERROR: Couldn't find config  file: {file}.");
                 Console.WriteLine($"Please run: dab init <options> to create a new config file.");
-
                 return false;
             }
 

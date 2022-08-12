@@ -1,8 +1,8 @@
 {
-  "$schema": "../schemas/hawaii.draft-01.schema.json",
+  "$schema": "../schemas/dab.draft-01.schema.json",
   "data-source": {
-    "database-type": "mysql",
-    "connection-string": "server=localhost;database=datagatewaytest;Allow User Variables=true;uid=root;pwd=REPLACEME"
+    "database-type": "postgresql",
+    "connection-string": "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME"
   },
   "runtime": {
     "rest": {
@@ -226,8 +226,8 @@
         }
       ]
     },
-    "SupportedType": {
-      "source": "type_table",
+    "stocks_price": {
+      "source": "stocks_price",
       "rest": false,
       "permissions": [
         {
@@ -240,8 +240,8 @@
         }
       ]
     },
-    "stocks_price": {
-      "source": "stocks_price",
+    "SupportedType": {
+      "source": "type_table",
       "rest": false,
       "permissions": [
         {
@@ -315,57 +315,6 @@
           "actions": [ "create", "read", "update", "delete" ]
         }
       ]
-    },
-    "books_view_all": {
-      "source": "books_view_all",
-      "rest": true,
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [ "create", "read", "update", "delete" ]
-        }
-      ],
-      "relationships": {
-      }
-    },
-    "stocks_view_selected": {
-      "source": "stocks_view_selected",
-      "rest": true,
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [ "create", "read", "update", "delete" ]
-        }
-      ],
-      "relationships": {
-      }
-    },
-    "books_publishers_view_composite": {
-      "source": "books_publishers_view_composite",
-      "rest": true,
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [ "create", "read", "update", "delete" ]
-        }
-      ],
-      "relationships": {
-      }
     }
   }
 }

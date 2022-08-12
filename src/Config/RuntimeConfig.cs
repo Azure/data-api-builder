@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Config
         Dictionary<string, Entity> Entities)
     {
         public const string SCHEMA_PROPERTY_NAME = "$schema";
-        public const string SCHEMA = "hawaii.draft-01.schema.json";
+        public const string SCHEMA = "dab.draft-01.schema.json";
 
         // use camel case
         // convert Enum to strings
@@ -112,6 +112,17 @@ namespace Azure.DataApiBuilder.Config
                                 " support this global settings type.");
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Deserialize GraphQL configuration on each entity.
+        /// </summary>
+        public void DetermineGraphQLEntityNames()
+        {
+            foreach (Entity entity in Entities.Values)
+            {
+                entity.ProcessGraphQLNamingConfig();
             }
         }
 

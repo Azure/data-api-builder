@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using System.Net;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
+using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
@@ -193,6 +195,143 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+        }
+
+        /// <summary>
+        /// Test to validate that differently cased operation names specified in config are deserialised correctly,
+        /// and hence they pass config validation stage if they are allowed CRUD operation and fail otherwise.
+        /// </summary>
+        /// <param name="operationName">Name of the operation configured.</param>
+        /// <param name="exceptionExpected">Boolean variable which indicates whether the relevant method call
+        /// is expected to return an exception.</param>
+        [DataTestMethod]
+        [DataRow("CREATE", false, DisplayName = "Valid operation name CREATE specified for action")]
+        [DataRow("rEAd", false, DisplayName = "Valid operation name rEAd specified for action")]
+        [DataRow("UPDate", false, DisplayName = "Valid operation name UPDate specified for action")]
+        [DataRow("DelETe", false, DisplayName = "Valid operation name DelETe specified for action")]
+        [DataRow("remove", true, DisplayName = "Invalid operation name remove specified for action")]
+        [DataRow("inseRt", true, DisplayName = "Invalid operation name inseRt specified for action")]
+        public void TestOperationValidityAndCasing(string operationName, bool exceptionExpected)
+        {
+            string actionJson = @"{
+                                        ""action"": " + $"\"{operationName}\"" + @",
+                                        ""policy"": {
+                                            ""database"": ""@claims.id eq @item.id""
+                                          },
+                                        ""fields"": {
+                                            ""include"": [""*""]
+                                          }
+                                  }";
+            object actionForRole = JsonSerializer.Deserialize<object>(actionJson);
+
+            PermissionSetting permissionForEntity = new(
+                role: AuthorizationHelpers.TEST_ROLE,
+                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+
+            Entity sampleEntity = new(
+                Source: AuthorizationHelpers.TEST_ENTITY,
+                Rest: null,
+                GraphQL: null,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+                );
+
+            Dictionary<string, Entity> entityMap = new();
+            entityMap.Add(AuthorizationHelpers.TEST_ENTITY, sampleEntity);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                MsSql: null,
+                CosmosDb: null,
+                PostgreSql: null,
+                MySql: null,
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                Entities: entityMap
+                );
+
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            if (!exceptionExpected)
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            }
+            else
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidatePermissionsInConfig(runtimeConfig));
+
+                // Assert that the exception returned is the one we expected.
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+                Assert.AreEqual($"action:{operationName} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
+                    $" role:{AuthorizationHelpers.TEST_ROLE} is not valid.",
+                    ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Test that entity names from config successfully pass or fail validation.
+        /// When a failure is expected: Asserts that an exception is thrown, and with that exception object,
+        /// validates the exception's status and substatus codes.
+        /// </summary>
+        /// <param name="entityNameFromConfig"></param>
+        [DataTestMethod]
+        [DataRow("entityname", false, DisplayName = "Valid lower case letter as first character")]
+        [DataRow("Entityname", false, DisplayName = "Valid upper case letter as first character")]
+        [DataRow("Entity_name", false, DisplayName = "Valid _ in body")]
+        [DataRow("@entityname", true, DisplayName = "Invalid start character @")]
+        [DataRow("_entityname", true, DisplayName = "Invalid start character _")]
+        [DataRow("#entityname", true, DisplayName = "Invalid start character #")]
+        [DataRow("5Entityname", true, DisplayName = "Invalid start character 5")]
+        [DataRow("E.ntityName", true, DisplayName = "Invalid body character .")]
+        [DataRow("Entity^Name", true, DisplayName = "Invalid body character ^")]
+        [DataRow("Entity&Name", true, DisplayName = "Invalid body character &")]
+        [DataRow("Entity name", true, DisplayName = "Invalid body character whitespace")]
+        public void ValidateGraphQLTypeNamesFromConfig(string entityNameFromConfig, bool expectsException)
+        {
+            Dictionary<string, Entity> entityCollection = new();
+
+            // Sets only the top level name and enables GraphQL for entity
+            Entity entity = SchemaConverterTests.GenerateEmptyEntity();
+            entity.GraphQL = true;
+            entityCollection.Add(entityNameFromConfig, entity);
+
+            // Sets the top level name to an arbitrary value since it is not used in this check
+            // and enables GraphQL for entity by setting the GraphQLSettings.Type to a string.
+            entity = SchemaConverterTests.GenerateEmptyEntity();
+            entity.GraphQL = new GraphQLEntitySettings(Type: entityNameFromConfig);
+            entityCollection.Add("EntityA", entity);
+
+            // Sets the top level name to an arbitrary value since it is not used in this check
+            // and enables GraphQL for entity by setting the GraphQLSettings.Type to
+            // a SingularPlural object where only Singular is defined.
+            entity = SchemaConverterTests.GenerateEmptyEntity();
+            SingularPlural singularPlural = new(Singular: entityNameFromConfig, Plural: null);
+            entity.GraphQL = new GraphQLEntitySettings(Type: singularPlural);
+            entityCollection.Add("EntityB", entity);
+
+            // Sets the top level name to an arbitrary value since it is not used in this check
+            // and enables GraphQL for entity by setting the GraphQLSettings.Type to
+            // a SingularPlural object where both Singular and Plural are defined.
+            entity = SchemaConverterTests.GenerateEmptyEntity();
+            singularPlural = new(Singular: entityNameFromConfig, Plural: entityNameFromConfig);
+            entity.GraphQL = new GraphQLEntitySettings(Type: singularPlural);
+            entityCollection.Add("EntityC", entity);
+
+            if (expectsException)
+            {
+                DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
+                    action: () => RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection),
+                    message: $"Entity name \"{entityNameFromConfig}\" incorrectly passed validation.");
+
+                Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+            }
+            else
+            {
+                RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection);
+            }
         }
     }
 }

@@ -1117,6 +1117,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Tests the REST Api for FindById operation with a query string
+        /// having invalid field names.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithInvalidRoute()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrRoute: _nonExistentStocksEntityRouteName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: $"Invalid Entity route: {_nonExistentStocksEntityRouteName}.",
+                expectedStatusCode: HttpStatusCode.NotFound,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+            );
+        }
+        
+
+        /// <summary>
         /// Tests the REST Api for Find operation on an entity that does not exist
         /// No sqlQuery provided as error should be thrown prior to database query
         /// Expects a 404 Not Found error

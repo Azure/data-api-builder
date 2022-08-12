@@ -1,4 +1,4 @@
-namespace Hawaii.Cli.Tests
+namespace Cli.Tests
 {
     /// <summary>
     /// Tests for Adding new Entity.
@@ -26,7 +26,7 @@ namespace Hawaii.Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                name: "outputfile");
+                config: "outputfile");
 
             string initialConfiguration = GetInitialConfiguration;
             string expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
@@ -49,7 +49,7 @@ namespace Hawaii.Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                name: "outputfile");
+                config: "outputfile");
 
             string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
             string configurationWithOneEntity = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
@@ -74,7 +74,7 @@ namespace Hawaii.Cli.Tests
                 fieldsToExclude: null,
                 policyRequest: null,
                 policyDatabase: null,
-                name: "outputfile");
+                config: "outputfile");
 
             string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
             Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref initialConfiguration));
@@ -97,7 +97,7 @@ namespace Hawaii.Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                name: "outputfile"
+                config: "outputfile"
             );
 
             string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
@@ -129,7 +129,7 @@ namespace Hawaii.Cli.Tests
                 fieldsToExclude: fieldsToExclude,
                 policyRequest: policyRequest,
                 policyDatabase: policyDatabase,
-                name: "outputfile"
+                config: "outputfile"
             );
 
             string? expectedConfiguration = null;
@@ -177,7 +177,7 @@ namespace Hawaii.Cli.Tests
                 fieldsToExclude: new string[] { "level" },
                 policyRequest: null,
                 policyDatabase: null,
-                name: "outputfile");
+                config: "outputfile");
 
             string runtimeConfig = GetInitialConfiguration;
 

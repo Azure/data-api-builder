@@ -8,16 +8,16 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Servic
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9C661-D8FD-469A-9372-284387C4BEFC}"
 	ProjectSection(SolutionItems) = preProject
-		Service\hawaii-config.Cosmos.json = Service\hawaii-config.Cosmos.json
-		Service\hawaii-config.Cosmos.overrides.example.json = Service\hawaii-config.Cosmos.overrides.example.json
-		Service\hawaii-config.json = Service\hawaii-config.json
-		Service\hawaii-config.MsSql.json = Service\hawaii-config.MsSql.json
-		Service\hawaii-config.MsSql.overrides.example.json = Service\hawaii-config.MsSql.overrides.example.json
-		Service\hawaii-config.MySql.json = Service\hawaii-config.MySql.json
-		Service\hawaii-config.MySql.overrides.example.json = Service\hawaii-config.MySql.overrides.example.json
-		Service\hawaii-config.PostgreSql.json = Service\hawaii-config.PostgreSql.json
-		Service\hawaii-config.PostgreSql.overrides.example.json = Service\hawaii-config.PostgreSql.overrides.example.json
-		schemas\hawaii.draft-01.schema.json = schemas\hawaii.draft-01.schema.json
+		Service\dab-config.Cosmos.json = Service\dab-config.Cosmos.json
+		Service\dab-config.Cosmos.overrides.example.json = Service\dab-config.Cosmos.overrides.example.json
+		Service\dab-config.json = Service\dab-config.json
+		Service\dab-config.MsSql.json = Service\dab-config.MsSql.json
+		Service\dab-config.MsSql.overrides.example.json = Service\dab-config.MsSql.overrides.example.json
+		Service\dab-config.MySql.json = Service\dab-config.MySql.json
+		Service\dab-config.MySql.overrides.example.json = Service\dab-config.MySql.overrides.example.json
+		Service\dab-config.PostgreSql.json = Service\dab-config.PostgreSql.json
+		Service\dab-config.PostgreSql.overrides.example.json = Service\dab-config.PostgreSql.overrides.example.json
+		schemas\dab.draft-01.schema.json = schemas\dab.draft-01.schema.json
 		Service\schema.gql = Service\schema.gql
 	EndProjectSection
 EndProject
@@ -27,9 +27,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Servic
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Auth", "Auth\Azure.DataApiBuilder.Auth.csproj", "{249FF898-AD6E-46F2-B441-F6926BCD5179}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hawaii.Cli", "Hawaii-Cli\src\Hawaii.Cli.csproj", "{55528027-AC5E-4B3A-901A-BAE649C44C07}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cli", "Cli\src\Cli.csproj", "{55528027-AC5E-4B3A-901A-BAE649C44C07}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hawaii.Cli.Tests", "Hawaii-Cli\tests\Hawaii.Cli.Tests.csproj", "{2D9D5A56-2025-43BA-97D6-47385C2890FE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cli.Tests", "Cli\test\Cli.Tests.csproj", "{2D9D5A56-2025-43BA-97D6-47385C2890FE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

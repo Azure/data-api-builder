@@ -313,7 +313,7 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 null => null,
                 NullValueNode => null,
-                IntValueNode i => i.ToInt32(),
+                IntValueNode i => i.Value,
                 StringValueNode s => s.Value,
                 BooleanValueNode b => b.Value,
                 FloatValueNode f => f.Value,

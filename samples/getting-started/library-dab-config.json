@@ -10,7 +10,7 @@
     }
   },
   "entities": {
-    "Author": {
+    "author": {
       "source": "dab.authors",
       "permissions": [
         {
@@ -23,12 +23,12 @@
       "relationships": {
         "books": {
           "cardinality": "many",
-          "target.entity": "Book",
+          "target.entity": "book",
           "linking.object": "dab.books_authors"
         }
       }
     },
-    "Book": {
+    "book": {
       "source": "dab.books",
       "permissions": [
         {
@@ -41,7 +41,7 @@
       "relationships": {
         "authors": {
           "cardinality": "many",
-          "target.entity": "Author",
+          "target.entity": "author",
           "linking.object": "dab.books_authors"
         }
       }

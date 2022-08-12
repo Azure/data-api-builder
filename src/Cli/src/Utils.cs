@@ -357,8 +357,7 @@ namespace Cli
             if (!File.Exists(file))
             {
                 Console.WriteLine($"ERROR: Couldn't find config  file: {file}.");
-                Console.WriteLine($"Please run: hawaii init <options> to create a new config file.");
-
+                Console.WriteLine($"Please run: dab init <options> to create a new config file.");
                 return false;
             }
 
@@ -461,6 +460,7 @@ namespace Cli
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
                 /// The existence of user provided config file is not checked here.
+                Console.WriteLine($"Using config file: {userProvidedConfigFile}");
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;

@@ -185,6 +185,39 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedLocationHeader: expectedLocationHeader
             );
         }
+
+        /// <summary>
+        /// We try to Sql Inject through the body of an insert operation.
+        /// If the insertion happens successfully we know the sql injection
+        /// failed.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(" UNION SELECT * FROM books/*", "InsertSqlInjectionQuery1")]
+        [DataRow("; SELECT * FROM information_schema.tables/*", "InsertSqlInjectionQuery2")]
+        [DataRow("value; SELECT * FROM v$version--", "InsertSqlInjectionQuery3")]
+        [DataRow("id; DROP TABLE books;", "InsertSqlInjectionQuery4")]
+        [DataRow(" ' UNION SELECT * FROM books/*", "InsertSqlInjectionQuery5")]
+        public virtual async Task InsertOneWithSqlInjectionTest(string sqlInjection, string query)
+        {
+            string requestBody = @"
+            {
+                ""title"": """ + sqlInjection + @""",
+                ""publisher_id"": 1234
+            }";
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationEntityName,
+                sqlQuery: GetQuery(query),
+                controller: _restController,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
         #endregion
 
         #region Negative Tests

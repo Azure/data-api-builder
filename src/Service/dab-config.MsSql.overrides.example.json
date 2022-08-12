@@ -1,8 +1,11 @@
 {
-  "$schema": "../schemas/hawaii.draft-01.schema.json",
+  "$schema": "../schemas/dab.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": ""
+    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;"
+  },
+  "mssql": {
+    "set-session-context": false
   },
   "runtime": {
     "rest": {
@@ -128,8 +131,7 @@
                 "database": "@claims.id eq @item.id"
               },
               "fields": {
-                "include": [ "*" ],
-                "exclude": [ "id" ]
+                "include": [ "*" ]
               }
             }
           ]
@@ -247,7 +249,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "create", "read", "update", "delete" ]
+          "actions": [ "read" ]
         },
         {
           "role": "authenticated",
@@ -311,10 +313,6 @@
       "source": "empty_table",
       "rest": true,
       "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "create", "read", "update", "delete" ]
-        },
         {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]

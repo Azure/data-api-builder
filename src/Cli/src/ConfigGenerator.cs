@@ -11,22 +11,23 @@ namespace Cli
     /// </summary>
     public class ConfigGenerator
     {
-
         /// <summary>
         /// This method will generate the initial config with databaseType and connection-string.
         /// </summary>
         public static bool TryGenerateConfig(InitOptions options)
         {
-            string runtimeConfigJson;
-            if (!TryCreateRuntimeConfig(options, out runtimeConfigJson))
+            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
             {
                 Console.Error.Write($"Failed to create the runtime config file.");
                 return false;
             }
 
-            string file = $"{options.Name}.json";
+            if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
 
-            return WriteJsonContentToFile(file, runtimeConfigJson);
+            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
         }
 
         /// <summary>
@@ -102,12 +103,14 @@ namespace Cli
         /// </summary>
         public static bool TryAddEntityToConfigWithOptions(AddOptions options)
         {
-            string file = $"{options.Name}.json";
-
-            string runtimeConfigJson;
-            if (!TryReadRuntimeConfig(file, out runtimeConfigJson))
+            if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
             {
-                Console.Error.Write($"Failed to read the config file: {file}.");
+                return false;
+            }
+
+            if (!TryReadRuntimeConfig(runtimeConfigFile, out string runtimeConfigJson))
+            {
+                Console.Error.Write($"Failed to read the config file: {runtimeConfigFile}.");
                 return false;
             }
 
@@ -117,7 +120,7 @@ namespace Cli
                 return false;
             }
 
-            return WriteJsonContentToFile(file, runtimeConfigJson);
+            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
         }
 
         /// <summary>
@@ -223,12 +226,14 @@ namespace Cli
         /// </summary>
         public static bool TryUpdateEntityWithOptions(UpdateOptions options)
         {
-            string file = $"{options.Name}.json";
-
-            string runtimeConfigJson;
-            if (!TryReadRuntimeConfig(file, out runtimeConfigJson))
+            if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
             {
-                Console.Error.Write($"Failed to read the config file: {file}.");
+                return false;
+            }
+
+            if (!TryReadRuntimeConfig(runtimeConfigFile, out string runtimeConfigJson))
+            {
+                Console.Error.Write($"Failed to read the config file: {runtimeConfigFile}.");
                 return false;
             }
 
@@ -238,7 +243,7 @@ namespace Cli
                 return false;
             }
 
-            return WriteJsonContentToFile(file, runtimeConfigJson);
+            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
         }
 
         /// <summary>
@@ -576,6 +581,23 @@ namespace Cli
                                     options.LinkingObject,
                                     updatedLinkingSourceFields,
                                     updatedLinkingTargetFields);
+        }
+
+        /// <summary>
+        /// This method will try starting the engine.
+        /// it will use the config provided by the user, else will look for the default config.
+        /// </summary>
+        public static bool TryStartEngineWithOptions(StartOptions options)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
+            {
+                Console.Error.WriteLine("Config not provided and default config file doesn't exist.");
+                return false;
+            }
+
+            /// This will start the runtime engine with project name and config file.
+            string[] args = new string[] { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile };
+            return Azure.DataApiBuilder.Service.Program.StartEngine(args);
         }
     }
 }

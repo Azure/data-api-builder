@@ -9,11 +9,11 @@ public class EndToEndTests
     /// <summary>
     /// Initializing config for cosmos DB.
     /// </summary>
-    private static string _testRuntimeConfig = "hawaii-config-test.json";
+    private static string _testRuntimeConfig = "dab-config-test";
     [TestMethod]
     public void TestInitForCosmosDB()
     {
-        string[] args = { "init", "-n", "hawaii-config-test", "--database-type", "cosmos",
+        string[] args = { "init", "-c", "dab-config-test", "--database-type", "cosmos",
                           "--connection-string", "localhost:5000", "--cosmos-database",
                           "graphqldb", "--cosmos-container", "planet", "--graphql-schema", "schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
@@ -46,7 +46,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestAddEntity()
     {
-        string[] initArgs = { "init", "-n", "hawaii-config-test", "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        string[] initArgs = { "init", "-c", "dab-config-test", "--database-type", "mssql", "--connection-string", "localhost:5000" };
         Program.Main(initArgs);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -54,7 +54,7 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
 
-        string[] addArgs = {"add", "todo", "-n", "hawaii-config-test", "--source", "s001.todo",
+        string[] addArgs = {"add", "todo", "-c", "dab-config-test", "--source", "s001.todo",
                             "--rest", "todo", "--graphql", "todo", "--permissions", "anonymous:*"};
         Program.Main(addArgs);
 
@@ -77,7 +77,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestAddEntityWithoutIEnumerables()
     {
-        string[] initArgs = { "init", "-n", "hawaii-config-test", "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        string[] initArgs = { "init", "-c", "dab-config-test", "--database-type", "mssql", "--connection-string", "localhost:5000" };
         Program.Main(initArgs);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -85,7 +85,7 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
 
-        string[] addArgs = { "add", "book", "-n", "hawaii-config-test", "--source", "s001.book", "--permissions", "anonymous:*" };
+        string[] addArgs = { "add", "book", "-c", "dab-config-test", "--source", "s001.book", "--permissions", "anonymous:*" };
         Program.Main(addArgs);
 
         runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -110,12 +110,12 @@ public class EndToEndTests
     [TestMethod]
     public void TestConfigGeneratedAfterAddingEntityWithoutIEnumerables()
     {
-        string[] initArgs = { "init", "-n", "hawaii-config-test", "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        string[] initArgs = { "init", "-c", "dab-config-test", "--database-type", "mssql", "--connection-string", "localhost:5000" };
         Program.Main(initArgs);
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
-        string[] addArgs = { "add", "book", "-n", "hawaii-config-test", "--source", "s001.book", "--permissions", "anonymous:*" };
+        string[] addArgs = { "add", "book", "-c", "dab-config-test", "--source", "s001.book", "--permissions", "anonymous:*" };
         Program.Main(addArgs);
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(GetCompleteConfigAfterAddingEntity), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
     }
@@ -127,7 +127,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestUpdateEntity()
     {
-        string[] initArgs = { "init", "-n", "hawaii-config-test", "--database-type",
+        string[] initArgs = { "init", "-c", "dab-config-test", "--database-type",
                               "mssql", "--connection-string", "localhost:5000" };
         Program.Main(initArgs);
 
@@ -136,7 +136,7 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
 
-        string[] addArgs = {"add", "todo", "-n", "hawaii-config-test",
+        string[] addArgs = {"add", "todo", "-c", "dab-config-test",
                             "--source", "s001.todo", "--rest", "todo",
                             "--graphql", "todo", "--permissions", "anonymous:*"};
         Program.Main(addArgs);
@@ -147,7 +147,7 @@ public class EndToEndTests
 
         // Adding another entity
         //
-        string[] addArgs_2 = {"add", "books", "-n", "hawaii-config-test",
+        string[] addArgs_2 = {"add", "books", "-c", "dab-config-test",
                             "--source", "s001.books", "--rest", "books",
                             "--graphql", "books", "--permissions", "anonymous:*"};
         Program.Main(addArgs_2);
@@ -156,7 +156,7 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(2, runtimeConfig.Entities.Count()); // 1 more entity added
 
-        string[] updateArgs = {"update", "todo", "-n", "hawaii-config-test",
+        string[] updateArgs = {"update", "todo", "-c", "dab-config-test",
                                 "--source", "s001.todos","--graphql", "true",
                                 "--permissions", "anonymous:create,delete",
                                 "--fields.include", "id,content", "--fields.exclude", "rating,level",
@@ -201,6 +201,37 @@ public class EndToEndTests
 
         Assert.IsNotNull(entity.Mappings);
         Assert.AreEqual("{\"id\":\"identity\",\"name\":\"Company Name\"}", JsonSerializer.Serialize(entity.Mappings));
+    }
+
+    // <summary>
+    // Test to verify the engine gets started using start command
+    // </summary>
+    [TestMethod]
+    public void TestStartEngine()
+    {
+        Process process = new()
+        {
+            StartInfo =
+                {
+                    FileName = @"./dab",
+                    Arguments = $"start --config {RuntimeConfigPath.DefaultName}",
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                }
+        };
+
+        // Asserting that a new process has been started and no existing process is reused.
+        Assert.IsTrue(process.Start());
+
+        // The new process should not be exited after triggering the start command.
+        Assert.IsFalse(process.HasExited);
+        string? output = process.StandardOutput.ReadLine();
+        process.Kill();
+        Console.WriteLine(output);
+        Assert.IsNotNull(output);
+        Assert.IsTrue(output.Contains("Starting the runtime engine..."));
     }
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)

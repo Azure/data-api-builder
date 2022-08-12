@@ -99,16 +99,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             object? item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
 
-            JObject? input;
+            JObject? input = null;
             // Variables were provided to the mutation
             if (item is Dictionary<string, object?>)
             {
                 input = (JObject?)ParseVariableInputItem(item);
-            }
-            else
-            {
-                // An inline argument was set
-                input = (JObject?)ParseInlineInputItem(item);
             }
 
             if (input is null)
@@ -146,16 +141,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             object? item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
 
-            JObject? input;
+            JObject? input = null;
             // Variables were provided to the mutation
             if (item is Dictionary<string, object?>)
             {
                 input = (JObject?)ParseVariableInputItem(item);
-            }
-            else
-            {
-                // An inline argument was set
-                input = (JObject?)ParseInlineInputItem(item);
             }
 
             if (input is null)
@@ -184,54 +174,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 foreach (string key in inputItem.Keys)
                 {
-                    if (inputItem.TryGetValue(key, out object? value) && value != null)
+                    if (inputItem.TryGetValue(key, out object? value) && value is not null)
                     {
                         createInput.Add(new JProperty(key, JToken.FromObject(inputItem.GetValueOrDefault(key)!)));
                     }
                 }
 
                 return createInput;
-            }
-
-            return item;
-        }
-
-        /// <summary>
-        /// The method is for parsing the mutation input object with nested inner objects when input is passing inline.
-        /// </summary>
-        /// <param name="item"> In the form of ObjectFieldNode, or List<ObjectFieldNode></param>
-        /// <returns>In the form of JObject</returns>
-        private static object? ParseInlineInputItem(object? item)
-        {
-            JObject? createInput = new();
-
-            if (item is ObjectFieldNode node)
-            {
-                createInput.Add(new JProperty(node.Name.Value, ParseInlineInputItem(node.Value.Value)));
-                return createInput;
-            }
-
-            if (item is List<ObjectFieldNode> nodeList)
-            {
-                foreach (ObjectFieldNode subfield in nodeList)
-                {
-                    createInput.Add(new JProperty(subfield.Name.Value, ParseInlineInputItem(subfield.Value.Value)));
-                }
-
-                return createInput;
-            }
-
-            // For nested array objects
-            if (item is List<IValueNode> nodeArray)
-            {
-                JArray jarrayObj = new();
-
-                foreach (IValueNode subfield in nodeArray)
-                {
-                    jarrayObj.Add(ParseInlineInputItem(subfield.Value));
-                }
-
-                return jarrayObj;
             }
 
             return item;

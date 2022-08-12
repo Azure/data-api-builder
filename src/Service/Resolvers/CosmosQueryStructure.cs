@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         public CosmosQueryStructure(
             IMiddlewareContext context,
-            IDictionary<string, object> parameters,
+            IDictionary<string, object?> parameters,
             ISqlMetadataProvider metadataProvider)
             : base()
         {
@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         [MemberNotNull(nameof(Container))]
         [MemberNotNull(nameof(Database))]
         [MemberNotNull(nameof(OrderByColumns))]
-        private void Init(IDictionary<string, object> queryParams)
+        private void Init(IDictionary<string, object?> queryParams)
         {
             IFieldSelection selection = _context.Selection;
             ObjectType underlyingType = UnderlyingGraphQLEntityType(selection.Field.Type);
@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 FieldNode? fieldNode = ExtractItemsQueryField(selection.SyntaxNode);
 
-                if (fieldNode != null)
+                if (fieldNode is not null)
                 {
                     Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: string.Empty,
                                                                                                        tableName: _containerAlias,
@@ -83,41 +83,33 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             // first and after will not be part of query parameters. They will be going into headers instead.
             // TODO: Revisit 'first' while adding support for TOP queries
-            if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
+            if (queryParams.TryGetValue(QueryBuilder.PAGE_START_ARGUMENT_NAME, out object? maxItemCount) && maxItemCount is not null)
             {
-                MaxItemCount = (int)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
+                MaxItemCount = (int)maxItemCount;
                 queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
             }
 
-            if (queryParams.ContainsKey(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME))
+            if (queryParams.TryGetValue(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME, out object? continuation) && continuation is not null)
             {
-                Continuation = (string)queryParams[QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME];
+                Continuation = (string)continuation;
                 queryParams.Remove(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME);
             }
 
-            if (queryParams.ContainsKey(QueryBuilder.PARTITION_KEY_FIELD_NAME))
+            if (queryParams.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? pk) && pk is not null)
             {
-                PartitionKeyValue = (string)queryParams[QueryBuilder.PARTITION_KEY_FIELD_NAME];
+                PartitionKeyValue = (string)pk;
                 queryParams.Remove(QueryBuilder.PARTITION_KEY_FIELD_NAME);
             }
 
-            if (queryParams.ContainsKey(QueryBuilder.ORDER_BY_FIELD_NAME))
+            if (queryParams.TryGetValue(QueryBuilder.ORDER_BY_FIELD_NAME, out object? orderBy) && orderBy is not null)
             {
-                object? orderByObject = queryParams[QueryBuilder.ORDER_BY_FIELD_NAME];
-
-                if (orderByObject != null)
-                {
-                    OrderByColumns = ProcessGraphQLOrderByArg((IDictionary<string, object?>)orderByObject);
-                }
-
+                OrderByColumns = ProcessGraphQLOrderByArg((IDictionary<string, object?>)orderBy);
                 queryParams.Remove(QueryBuilder.ORDER_BY_FIELD_NAME);
             }
 
-            if (queryParams.ContainsKey(QueryBuilder.FILTER_FIELD_NAME))
+            if (queryParams.TryGetValue(QueryBuilder.FILTER_FIELD_NAME, out object? filterObject))
             {
-                object? filterObject = queryParams[QueryBuilder.FILTER_FIELD_NAME];
-
-                if (filterObject != null)
+                if (filterObject is not null)
                 {
                     IDictionary<string, object?> filterFields = (IDictionary<string, object?>)filterObject;
                     Predicates.Add(GraphQLFilterParsers.Parse(
@@ -131,12 +123,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                foreach (KeyValuePair<string, object> parameter in queryParams)
+                foreach ((string key, object? value) in queryParams)
                 {
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(tableSchema: string.Empty, _containerAlias, parameter.Key)),
+                        new PredicateOperand(new Column(tableSchema: string.Empty, _containerAlias,key)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
+                        new PredicateOperand($"@{MakeParamWithValue(value)}")
                     ));
                 }
             }

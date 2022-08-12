@@ -1,15 +1,14 @@
-# nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
-using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Mvc;
@@ -18,18 +17,18 @@ using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
-    //<summary>
-    // CosmosQueryEngine to execute queries against CosmosDb.
-    //</summary>
+    /// <summary>
+    /// CosmosQueryEngine to execute queries against CosmosDb.
+    /// </summary>
     public class CosmosQueryEngine : IQueryEngine
     {
         private readonly CosmosClientProvider _clientProvider;
         private readonly ISqlMetadataProvider _metadataStoreProvider;
         private readonly CosmosQueryBuilder _queryBuilder;
 
-        // <summary>
-        // Constructor.
-        // </summary>
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public CosmosQueryEngine(
             CosmosClientProvider clientProvider,
             ISqlMetadataProvider metadataStoreProvider)
@@ -52,15 +51,20 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider);
 
-            string requestContinuation = null;
+            string? requestContinuation = null;
             string queryString = _queryBuilder.Build(structure);
             QueryDefinition querySpec = new(queryString);
             QueryRequestOptions queryRequestOptions = new();
 
-            Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
-            (string idValue, string partitionKeyValue) = await GetIdAndPartitionKey(parameters, container, structure);
+            if (_clientProvider.Client is null)
+            {
+                throw new DataApiBuilderException("Failed to initalize the Cosmos client", System.Net.HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
 
-            foreach ((string key, object value) in structure.Parameters)
+            Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
+            (string? idValue, string? partitionKeyValue) = await GetIdAndPartitionKey(parameters, container, structure);
+
+            foreach ((string key, object? value) in structure.Parameters)
             {
                 _ = querySpec.WithParameter("@" + key, value);
             }
@@ -100,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             jarray.Add(item);
                         }
 
-                        string responseContinuation = page.ContinuationToken;
+                        string? responseContinuation = page.ContinuationToken;
                         if (string.IsNullOrEmpty(responseContinuation))
                         {
                             responseContinuation = null;
@@ -108,7 +112,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                         JObject res = new(
                             new JProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, Base64Encode(responseContinuation)),
-                            new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, responseContinuation != null),
+                            new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, responseContinuation is not null),
                             new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, jarray));
 
                         // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
@@ -127,7 +131,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return new Tuple<JsonDocument, IMetadata>(null, null);
         }
 
-        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -209,7 +213,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(item.ToString()), null);
             }
-            catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            catch (CosmosException ex) when (ex.StatusCode is System.Net.HttpStatusCode.NotFound)
             {
                 return new Tuple<JsonDocument, IMetadata>(null, null);
             }
@@ -230,7 +234,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return partitionKeyPath;
         }
 
-#nullable enable
         private async Task<(string? idValue, string? partitionKeyValue)> GetIdAndPartitionKey(IDictionary<string, object?> parameters, Container container, CosmosQueryStructure structure)
         {
             string? partitionKeyValue = null, idValue = null;
@@ -239,12 +242,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             foreach ((string key, object? value) in parameters)
             {
                 // id and filter args can't exist at the same time
-                if (key == QueryBuilder.ID_FIELD_NAME)
+                if (key is QueryBuilder.ID_FIELD_NAME)
                 {
                     // Set id value if id is passed in as an argument
                     idValue = value?.ToString();
                 }
-                else if (key == QueryBuilder.FILTER_FIELD_NAME)
+                else if (key is QueryBuilder.FILTER_FIELD_NAME)
                 {
                     // Mapping partitionKey and id value from filter object if filter keyword exists in args
                     partitionKeyValue = GetPartitionKeyValue(partitionKeyPath, value);
@@ -269,7 +272,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="partitionKeyPath"></param>
         /// <param name="parameter"></param>
         /// <returns></returns>
-#nullable enable
         private string? GetPartitionKeyValue(string? partitionKeyPath, object? parameter)
         {
             if (parameter is null || partitionKeyPath is null)
@@ -305,11 +307,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="parameter"></param>
         /// <returns></returns>
-
-#nullable enable
         private static string? GetIdValue(object? parameter)
         {
-            if (parameter != null)
+            if (parameter is not null)
             {
                 foreach ((string key, object? value) in (IDictionary<string, object?>)parameter)
                 {
@@ -318,7 +318,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         return value switch
                         {
                             null => null,
-                            IDictionary<string, object?> nested => nested.FirstOrDefault(x => x.Key == "eq").Value?.ToString(),
+                            IDictionary<string, object?> nested => nested.FirstOrDefault(x => x.Key is "eq").Value?.ToString(),
                             _ => value.ToString()
                         };
                     }
@@ -328,9 +328,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return null;
         }
 
-        private static string? Base64Encode(string plainText)
+        private static string? Base64Encode(string? plainText)
         {
-            if (plainText == default)
+            if (plainText == default || plainText is null)
             {
                 return null;
             }
@@ -339,9 +339,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return Convert.ToBase64String(plainTextBytes);
         }
 
-        private static string? Base64Decode(string base64EncodedData)
+        private static string? Base64Decode(string? base64EncodedData)
         {
-            if (base64EncodedData == default)
+            if (base64EncodedData == default || base64EncodedData is null)
             {
                 return null;
             }

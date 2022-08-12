@@ -44,7 +44,7 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'DataGateway.Service/hawaii-config.MsSql.json'
+      targetFiles: 'src/Service/hawaii-config.MsSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build
@@ -124,7 +124,7 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'DataGateway.Service/hawaii-config.MsSql.json'
+      targetFiles: 'src/Service/hawaii-config.MsSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build

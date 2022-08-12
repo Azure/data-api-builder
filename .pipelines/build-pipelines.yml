@@ -13,6 +13,11 @@ variables:
   solution: '**/*.sln'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
+  major: 0
+  minor: 0
+  patch: $[counter(variables['minor'], 0)] #this will reset when we bump minor
+  nugetVersion: '$(major).$(minor).$(patch)-$(Build.BuildId)'
+  publishNugetToFeed: $(isNugetRelease)
 
 steps:
 - task: UseDotNet@2
@@ -50,12 +55,60 @@ steps:
     projects: '**/*Tests*.csproj'
     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
+- task: DotNetCoreCLI@2
+  displayName: 'Creating Nuget Package'
+  inputs:
+    command: pack
+    packagesToPack: '**/Cli.csproj'
+    packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
+    nobuild: true
+    versioningScheme: byEnvVar
+    versionEnvVar: nugetVersion
+    verbosityPack: 'minimal'
+
+# This task will publish nuget package with build number to pipeline artifact
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish nuget to build Artifact'
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)/nupkg'
+    artifactName: 'DataApiBuilder'
+    artifactType: 'pipeline'
+
+# This task will authenticate and publish the NuGet Package to internal feed
+# To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.
+- task: NuGetAuthenticate@0
+  displayName: 'NuGet Authenticate'
+  condition: eq(variables.publishNugetToFeed, 'true')
+
+- task: NuGetCommand@2
+  displayName: 'Publish Nuget to Internal Feed'
+  condition: eq(variables.publishNugetToFeed, 'true')
+  inputs:
+    command: 'push'
+    feedsToUse: 'select'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: 'internal'
+    publishVstsFeed: CosmosDB/DataApiBuilder
+    versioningScheme: 'off'
+    allowPackageConflicts: false
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'
   inputs:
     codeCoverageTool: Cobertura
     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+
+- task: ShellScript@2
+  displayName: "Package build output to multiple platforms"
+  inputs:
+    scriptPath: publish.sh
+    args: $(buildConfiguration)
+
+# this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
+- task: PublishPipelineArtifact@1
+  displayName: "Upload build artifacts"
+  inputs:
+    targetPath: '$(Build.SourcesDirectory)/publish' 
 
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.

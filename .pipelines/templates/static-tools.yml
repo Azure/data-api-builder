@@ -60,10 +60,10 @@ jobs:
     displayName: 'Vulnerability Assessment'
 
   - task: DotNetCoreCLI@2
-    displayName: Build Azure.DataGateway.Service.sln
+    displayName: Build Azure.DataApiBuilder.sln
     inputs:
       command: build
-      projects: 'Azure.DataGateway.Service.sln'
+      projects: 'src/Azure.DataApiBuilder.sln'
       configuration: '${{ parameters.BuildConfiguration }}'
       publishTestResults: true
 

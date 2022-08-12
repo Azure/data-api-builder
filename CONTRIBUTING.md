@@ -30,13 +30,13 @@ if [ "\$(get_files)" = '' ]; then
 fi
 
 get_files |
-    xargs dotnet format Azure.DataGateway.Service.sln \\
+    xargs dotnet format src/Azure.DataApiBuilder.Service.sln \\
         --check \\
         --fix-whitespace --fix-style warn --fix-analyzers warn \\
         --include \\
     || {
         get_files |
-            xargs dotnet format Azure.DataGateway.Service.sln \\
+            xargs dotnet format src/Azure.DataApiBuilder.Service.sln \\
                 --fix-whitespace --fix-style warn --fix-analyzers warn \\
                 --include
         exit 1

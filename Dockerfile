@@ -6,11 +6,11 @@ FROM mcr.microsoft.com/dotnet/sdk:6.0 as build
 
 WORKDIR /src
 COPY [".", "./"]
-RUN dotnet build "./DataGateway.Service/Azure.DataGateway.Service.csproj" -c Docker -o /out -r linux-x64
+RUN dotnet build "./src/Service/Azure.DataApiBuilder.Service.csproj" -c Docker -o /out -r linux-x64
 
 FROM mcr.microsoft.com/dotnet/aspnet:6.0 as runtime
 
 COPY --from=build /out /App
 WORKDIR /App
 ENV ASPNETCORE_URLS=http://+:5000
-ENTRYPOINT ["dotnet", "Azure.DataGateway.Service.dll"]
+ENTRYPOINT ["dotnet", "Azure.DataApiBuilder.Service.dll"]

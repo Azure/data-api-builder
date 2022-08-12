@@ -5,6 +5,8 @@
 **/coveragereport
 **/TestResults
 system-commandline-sentinel-files/
+out/
+publish/
 
 # only include appsettings for a few default environments
 appsettings.*.json
@@ -26,8 +28,8 @@ hawaii-config.*.json
 *.code-workspace
 
 # include some basic vscode config files
-!/Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/.vscode/launch.json
-!/Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/.vscode/tasks.json
+!/src/Service/.vscode/launch.json
+!/src/Service/.vscode/tasks.json
 
 .fake
 .ionide

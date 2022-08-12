@@ -6,6 +6,7 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
+using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -331,6 +332,48 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             else
             {
                 RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection);
+            }
+        }
+
+        /// <summary>
+        /// Validates that exception is thrown during startup when
+        /// entities with the same name but different casings are defined in the config.
+        /// </summary>
+        /// <param name="entityNames">List of entity names defined by the user</param>
+        /// <param name="isExceptionExpected">Flag to help with the exception validation</param>
+        [DataTestMethod]
+        [DataRow(new string[] { "Book", "Notebook", "Jorunal"}, false, DisplayName = "Valid list of entities")]
+        [DataRow(new string[] { "Book", "Notebook", "Jorunal", "book"}, true, DisplayName = "InValid list of entities - different case in first letter")]
+        [DataRow(new string[] { "Book", "Notebook", "Journal", "JournaL" }, true, DisplayName = "InValid list of entities - different case in last letter")]
+        [DataRow(new string[] { "Book", "Notebook", "Jorunal", "NoTEBooK" }, true, DisplayName = "InValid list of entities - different case in multiple letters")]
+        [DataRow(new string[] { "Book", "Notebook", "Jorunal", "BOOK" }, true, DisplayName = "InValid list of entities - different case in all the letters")]
+        public void ValidateEntitesWithSameNameButDifferentCasingsNotSupported(string[] entityNames, bool isExceptionExpected)
+        {
+            Dictionary<string, Entity> entityCollection = new();
+            foreach(string entityName in entityNames)
+            {
+                entityCollection.Add(entityName, GraphQLTestHelpers.GenerateEmptyEntity());
+            }
+
+            if(isExceptionExpected)
+            {
+                DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
+                    action: () => RuntimeConfigValidator.ValidateEntitiesWithDifferentCasings(entityCollection));
+
+                Assert.AreEqual(expected: $"Entities with the same name but a different casing found.", actual: dabException.Message);
+                Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+            }
+            else
+            {
+                try
+                {
+                    RuntimeConfigValidator.ValidateEntitiesWithDifferentCasings(entityCollection);
+                }
+                catch
+                {
+                    Assert.Fail("Unexpected Exception is being thrown.");
+                }
             }
         }
     }

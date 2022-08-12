@@ -100,6 +100,35 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
             }
+
+            ValidateEntitiesWithDifferentCasings(runtimeConfig.Entities);
+        }
+
+        /// <summary>
+        /// Check that same entity name with different case in one or more characters are not present.
+        /// </summary>
+        /// <param name="entityCollection"></param>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static void ValidateEntitiesWithDifferentCasings(Dictionary<string, Entity> entityCollection)
+        {
+            HashSet<string> entityNamesInLowerCase = new();
+            foreach(string entityName in entityCollection.Keys)
+            {
+                string entityNameInLowerCase = entityName.ToLowerInvariant();
+                
+                if(entityNamesInLowerCase.Contains(entityNameInLowerCase))
+                {
+                    throw new DataApiBuilderException(
+                    message: $"Entities with the same name but a different casing found.",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
+                else
+                {
+                    entityNamesInLowerCase.Add(entityNameInLowerCase);
+                }
+            }
+
         }
 
         /// <summary>

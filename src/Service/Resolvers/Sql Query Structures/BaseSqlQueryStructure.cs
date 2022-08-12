@@ -8,9 +8,6 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Services;
-using HotChocolate.Language;
-using HotChocolate.Resolvers;
-using HotChocolate.Types;
 using Microsoft.OData.UriParser;
 
 namespace Azure.DataApiBuilder.Service.Resolvers

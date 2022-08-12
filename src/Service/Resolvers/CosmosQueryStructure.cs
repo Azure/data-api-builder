@@ -126,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 foreach ((string key, object? value) in queryParams)
                 {
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(tableSchema: string.Empty, _containerAlias,key)),
+                        new PredicateOperand(new Column(tableSchema: string.Empty, _containerAlias, key)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"@{MakeParamWithValue(value)}")
                     ));

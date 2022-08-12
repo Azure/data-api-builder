@@ -98,7 +98,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         /// <returns></returns>
         [TestMethod]
         public async Task DeleteNonExistentTest()
-        {//expected status code 404
+        {
+            //expected status code 404
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
                     queryString: string.Empty,
@@ -122,7 +123,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         /// <returns></returns>
         [TestMethod]
         public async Task DeleteWithInvalidPrimaryKeyTest()
-        {//expected status code 404
+        {
+            //expected status code 404
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "title/7",
                     queryString: string.Empty,
@@ -157,6 +159,38 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     requestBody: string.Empty,
                     exception: true,
                     expectedErrorMessage: "Primary Key for DELETE requests is required.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
+        /// <summary>
+        /// DeleteWithSqlInjectionTest attempts to inject a SQL statement
+        /// through the primary key route of a delete operation.
+        /// </summary>
+        /// <returns></returns>
+        [DataTestMethod]
+        [DataRow("/UNION SELECT * FROM books/*",
+            "Primary key column(s) provided do not match DB schema.")]
+        [DataRow("/OR 1=1/*",
+            "Primary key column(s) provided do not match DB schema.")]
+        [DataRow("; SELECT * FROM information_schema.tables/*",
+            "Support for url template with implicit primary key field names is not yet added.")]
+        [DataRow("/value; DROP TABLE authors;",
+            "Support for url template with implicit primary key field names is not yet added.")]
+        public async Task DeleteWithSqlInjectionTest(string sqlInjection, string message)
+        {
+            //expected status code 400
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/1{sqlInjection}",
+                    queryString: string.Empty,
+                    entity: _integrationEntityName,
+                    sqlQuery: string.Empty,
+                    controller: _restController,
+                    operationType: Operation.Delete,
+                    requestBody: string.Empty,
+                    exception: true,
+                    expectedErrorMessage: message,
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );

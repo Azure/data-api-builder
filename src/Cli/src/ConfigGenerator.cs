@@ -58,9 +58,9 @@ namespace Cli
                     string? cosmosDatabase = options.CosmosDatabase;
                     string? cosmosContainer = options.CosmosContainer;
                     string? graphQLSchemaPath = options.GraphQLSchemaPath;
-                    if (string.IsNullOrEmpty(cosmosDatabase) || string.IsNullOrEmpty(graphQLSchemaPath))
+                    if (string.IsNullOrEmpty(cosmosDatabase))
                     {
-                        Console.WriteLine($"Please provide the mandatory options for CosmosDB: --cosmos-database, --graphql-schema");
+                        Console.WriteLine($"Please provide the mandatory options for CosmosDB: --cosmos-database");
                         return false;
                     }
 

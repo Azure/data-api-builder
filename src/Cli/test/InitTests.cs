@@ -117,50 +117,28 @@ namespace Cli.Tests
         /// <summary>
         /// Verify that if either database or schema file is null or empty, we will get error.
         /// </summary>
-        [TestMethod]
-        public void VerifyRequiredOptionsForCosmosDatabase()
+        [DataRow(null, "testcontainer", "", false, DisplayName = "Both database and schema are either null or empty.")]
+        [DataRow(null, "testcontainer", "testschema", false, DisplayName = "database is null .")]
+        [DataRow("testDatabase", "testcontainer", "", true, DisplayName = "Schema is empty.")]
+        [DataTestMethod]
+        public void VerifyRequiredOptionsForCosmosDatabase(
+            string? cosmosDatabase,
+            string? cosmosContainer,
+            string? graphQLSchema,
+            bool expectedResult
+        )
         {
-            // Both database and schema are either null or empty.
-            //
             InitOptions options = new(
                 databaseType: DatabaseType.cosmos,
                 connectionString: "testconnectionstring",
-                cosmosDatabase: null,
-                cosmosContainer: "testcontainer",
-                graphQLSchemaPath: string.Empty,
+                cosmosDatabase: cosmosDatabase,
+                cosmosContainer: cosmosContainer,
+                graphQLSchemaPath: graphQLSchema,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
                 config: "outputfile");
 
-            Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));
-
-            // Database field is empty.
-            //
-            options = new(
-                databaseType: DatabaseType.cosmos,
-                connectionString: "testconnectionstring",
-                cosmosDatabase: null,
-                cosmosContainer: "testcontainer",
-                graphQLSchemaPath: "testschema",
-                hostMode: HostModeType.Production,
-                corsOrigin: null,
-                config: "outputfile");
-
-            Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));
-
-            // Schema field is empty.
-            //
-            options = new(
-                databaseType: DatabaseType.cosmos,
-                connectionString: "testconnectionstring",
-                cosmosDatabase: "testdatabase",
-                cosmosContainer: "testcontainer",
-                graphQLSchemaPath: string.Empty,
-                hostMode: HostModeType.Production,
-                corsOrigin: null,
-                config: "outputfile");
-
-            Assert.IsFalse(ConfigGenerator.TryCreateRuntimeConfig(options, out _));
+            Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }
 
         /// <summary>

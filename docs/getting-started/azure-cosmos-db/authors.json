@@ -1,0 +1,39 @@
+[
+    {
+        "id": "1",
+        "first_name": "Isaac",
+        "middle_name": "",
+        "last_name": "Asimov",
+        "books": [
+            "1000",
+            "1001",
+            "1002",
+            "1003",
+            "1004",
+            "1005",
+            "1008"
+        ]
+    },
+    {
+        "id": "2",
+        "first_name": "Robert",
+        "middle_name": "A",
+        "last_name": "Heinlein",
+        "books": [
+            "1006",
+            "1007"
+        ]
+    },
+    {
+        "id": "3",
+        "first_name": "Robert",
+        "middle_name": "",
+        "last_name": "Silvenberg",
+        "books": [
+            "1008",
+            "1009",
+            "1010"
+        ]
+    }
+]
+

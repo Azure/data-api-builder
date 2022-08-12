@@ -136,7 +136,7 @@ steps:
   condition: eq(variables.publishNugetToFeed, 'false')
   inputs:
     containerRegistry: 'CosmosDB GraphQL/Hawaii'
-    repository: 'hawaii/$(Build.SourceBranch)'
+    repository: 'dab/$(Build.SourceBranch)'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
     tags: |

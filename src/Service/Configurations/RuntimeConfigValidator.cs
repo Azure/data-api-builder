@@ -95,22 +95,21 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
 
             ValidateAuthenticationConfig();
+
             if (runtimeConfig.GraphQLGlobalSettings.Enabled)
             {
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
-                ValidateGraphQLSettingsForEntitiesInConfig(runtimeConfig.Entities);
             }
         }
 
         /// <summary>
-        /// Check whether the entity name, graphql type and singular, plural names
-        /// defined in runtime config only contains characters allowed for GraphQL names.
-        /// 
+        /// Check whether the entity name defined in runtime config only contains
+        /// characters allowed for GraphQL names.
         /// Does not perform validation for entities which do not
         /// have GraphQL configuration: when entity.GraphQL == false or null.
         /// </summary>
         /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
-        /// <param name="entityCollection"> Dictionary to get lookup entity settings for an entity.</param>
+        /// <param name="runtimeConfig"></param>
         public static void ValidateEntityNamesInConfig(Dictionary<string, Entity> entityCollection)
         {
             foreach (string entityName in entityCollection.Keys)
@@ -133,7 +132,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 else if (entity.GraphQL is GraphQLEntitySettings graphQLSettings)
                 {
                     ValidateNameRequirements(entityName);
-
                     if (graphQLSettings.Type is string graphQLName)
                     {
                         ValidateNameRequirements(graphQLName);
@@ -151,80 +149,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
         }
 
-        /// <summary>
-        /// Validates that when GraphQL is an object, either a valid type string or singular name is defined
-        /// Empty string or whitespaces are considered to be invalid. 
-        /// </summary>
-        /// <param name="entityCollection">Dictionary of entities with their names defined in the config</param>
-        /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
-        /// <exception cref="DataApiBuilderException"> </exception>
-        public static void ValidateGraphQLSettingsForEntitiesInConfig(Dictionary<string, Entity> entityCollection)
-        {
-            foreach (KeyValuePair<string, Entity> entityEntry in entityCollection)
-            {
-                string entityName = entityEntry.Key;
-                Entity entity = entityEntry.Value;
-
-                if (entity.GraphQL is null || entity.GraphQL is bool)
-                {
-                    continue;
-                }
-
-                if (entity.GraphQL is GraphQLEntitySettings graphQLEntitySettings)
-                {
-                    if (graphQLEntitySettings.Type is string type
-                        && (string.IsNullOrWhiteSpace(type)
-                            || GraphQLNaming.ViolatesNameRequirements(type)
-                            || GraphQLNaming.ViolatesNamePrefixRequirements(type)
-                           )
-                        )
-                    {
-                        throw new DataApiBuilderException(
-                                message: $"Entity {entityName} has an invalid string for GraphQL",
-                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-                    }
-
-                    if (graphQLEntitySettings.Type is SingularPlural singularPlural)
-                    {
-                        if (string.IsNullOrWhiteSpace(singularPlural.Singular))
-                        {
-                            throw new DataApiBuilderException(
-                                    message: $"Entity {entityName} has an invalid singular name for GraphQL",
-                                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-                        }
-
-                        if (GraphQLNaming.ViolatesNameRequirements(singularPlural.Singular)
-                            || GraphQLNaming.ViolatesNamePrefixRequirements(singularPlural.Singular))
-                        {
-                            throw new DataApiBuilderException(
-                                 message: $"{entityName}'s singular definition contains characters disallowed by GraphQL.",
-                                 statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                                 );
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(singularPlural.Plural) &&
-                            (GraphQLNaming.ViolatesNameRequirements(singularPlural.Plural)
-                            || GraphQLNaming.ViolatesNamePrefixRequirements(singularPlural.Plural)))
-                        {
-                            throw new DataApiBuilderException(
-                                message: $"{entityName}'s plural definition contains characters disallowed by GraphQL.",
-                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                                );
-                        }
-
-                    }
-                }
-            }
-        }
-
         private static void ValidateNameRequirements(string entityName)
         {
-            if (string.IsNullOrWhiteSpace(entityName) ||
-                GraphQLNaming.ViolatesNamePrefixRequirements(entityName) ||
+            if (GraphQLNaming.ViolatesNamePrefixRequirements(entityName) ||
                 GraphQLNaming.ViolatesNameRequirements(entityName))
             {
                 throw new DataApiBuilderException(

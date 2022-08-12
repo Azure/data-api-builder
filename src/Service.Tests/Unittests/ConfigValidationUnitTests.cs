@@ -6,7 +6,6 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
-using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -198,149 +197,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
-        [DataTestMethod]
-        [DataRow("book", "books", false, DisplayName = "Valid GraphQL Settings - Singular and Plural specified")]
-        [DataRow("book", null, false, DisplayName = "Valid GraphQL Settings - Singular specified")]
-        [DataRow(null, null, true, DisplayName = "Invalid GraphQL Settings - Both not specified")]
-        [DataRow(null, "books", true, DisplayName = "Invalid GraphQL Settings - Singular not specified")]
-        [DataRow(" ", "books", true, DisplayName = "Invalid GraphQL Settings - Singular just contains whitespaces")]
-        [DataRow("", "books", true, DisplayName = "Invalid GraphQL Settings - Singular is an empty string")]
-        public void ValidateSingularPluralGraphQLSettingsInEntity(
-                string singularName,
-                string pluralName,
-                bool isExceptionExpected)
-        {
-            Dictionary<string, Entity> entityCollection = new();
-            entityCollection.Add("book", GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, pluralName));
-            if (isExceptionExpected)
-            {
-                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
-                    () => RuntimeConfigValidator.ValidateGraphQLSettingsForEntitiesInConfig(entityCollection));
-                Assert.AreEqual($"Entity book has an invalid singular name for GraphQL", ex.Message);
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-            }
-            else
-            {
-                try
-                {
-                    RuntimeConfigValidator.ValidateGraphQLSettingsForEntitiesInConfig(entityCollection);
-
-                }
-                catch (System.Exception ex)
-                {
-                    Assert.Fail("Exception thrown for a valid SingularPlural GraphQL type");
-                }
-
-            }
-
-        }
-
-        [DataTestMethod]
-        [DataRow("book", false, DisplayName = "Valid Singular Name")]
-        [DataRow("@book", true, DisplayName = "InValid Singular Name - Starts with @")]
-        [DataRow("_book", true, DisplayName = "Invalid Singular Name - Starts with _")]
-        [DataRow("bo&ok", true, DisplayName = "Invalid Singular Name - Contains &")]
-        [DataRow("b!ook", true, DisplayName = "Invalid Singular Name - Contains !")]
-        [DataRow("b ook", true, DisplayName = "Invalid Singular Name - Contains space")]
-        public void ValidateSingularNameInGraphQLEntitySettings(string singularName, bool isExceptionExpected)
-        {
-            Dictionary<string, Entity> entityCollection = new();
-            entityCollection.Add("book", GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, null));
-            if (isExceptionExpected)
-            {
-                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
-                    () => RuntimeConfigValidator.ValidateGraphQLSettingsForEntitiesInConfig(entityCollection));
-                Assert.AreEqual($"book's singular definition contains characters disallowed by GraphQL.", ex.Message);
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-            }
-            else
-            {
-                try
-                {
-                    RuntimeConfigValidator.ValidateGraphQLSettingsForEntitiesInConfig(entityCollection);
-
-                }
-                catch (System.Exception ex)
-                {
-                    Assert.Fail("Exception thrown for a valid SingularPlural GraphQL type");
-                }
-
-            }
-
-        }
-
-        [DataTestMethod]
-        [DataRow("book", false, DisplayName = "Valid Plural Name")]
-        [DataRow("@book", true, DisplayName = "InValid Plural Name - Starts with @")]
-        [DataRow("_book", true, DisplayName = "Invalid Plural Name - Starts with _")]
-        [DataRow("bo&ok", true, DisplayName = "Invalid Plural Name - Contains &")]
-        [DataRow("b!ook", true, DisplayName = "Invalid Plural Name - Contains !")]
-        [DataRow("b ook", true, DisplayName = "Invalid Plural Name - Contains space")]
-        public void ValidatePluralNameInGraphQLEntitySettings(string pluralName, bool isExceptionExpected)
-        {
-            Dictionary<string, Entity> entityCollection = new();
-            entityCollection.Add("book", GraphQLTestHelpers.GenerateEntityWithSingularPlural("book", pluralName));
-            if (isExceptionExpected)
-            {
-                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
-                    () => RuntimeConfigValidator.ValidateGraphQLSettingsForEntitiesInConfig(entityCollection));
-                Assert.AreEqual($"book's plural definition contains characters disallowed by GraphQL.", ex.Message);
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-            }
-            else
-            {
-                try
-                {
-                    RuntimeConfigValidator.ValidateGraphQLSettingsForEntitiesInConfig(entityCollection);
-
-                }
-                catch (System.Exception ex)
-                {
-                    Assert.Fail("Exception thrown for a valid SingularPlural GraphQL type");
-                }
-
-            }
-
-        }
-
-        [DataTestMethod]
-        [DataRow("books", false, DisplayName = "Valid GraphQL Type ")]
-        [DataRow("", true, DisplayName = "Invalid GraphQL Type - Empty String")]
-        [DataRow("  ", true, DisplayName = "Invalid GraphQL Type - Just Whitespaces")]
-        [DataRow("#book", true, DisplayName = "Invalid GraphQL Type - Starts with #")]
-        [DataRow("5book", true, DisplayName = "Invalid GraphQL Type - Starts with a number")]
-        [DataRow("book!", true, DisplayName = "Invalid GraphQL Type - Contains a !")]
-        [DataRow("bo ok", true, DisplayName = "Invalid GraphQL Type - Contains a space")]
-        public void ValidateStringGraphQLSettingsInEntity(string type, bool isExceptionExpected)
-        {
-            Dictionary<string, Entity> entityCollection = new();
-            entityCollection.Add("book", GraphQLTestHelpers.GenerateEntityWithStringType(type));
-            if (isExceptionExpected)
-            {
-                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
-                    () => RuntimeConfigValidator.ValidateGraphQLSettingsForEntitiesInConfig(entityCollection));
-                Assert.AreEqual($"Entity book has an invalid string for GraphQL", ex.Message);
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-            }
-            else
-            {
-                try
-                {
-                    RuntimeConfigValidator.ValidateGraphQLSettingsForEntitiesInConfig(entityCollection);
-                }
-                catch (System.Exception ex)
-                {
-                    Assert.Fail("Exception thrown for a valid string GraphQL type");
-                }
-
-            }
-
-        }
-
         /// <summary>
         /// Test to validate that differently cased operation names specified in config are deserialised correctly,
         /// and hence they pass config validation stage if they are allowed CRUD operation and fail otherwise.
@@ -466,7 +322,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (expectsException)
             {
                 DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection));
+                    action: () => RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection),
+                    message: $"Entity name \"{entityNameFromConfig}\" incorrectly passed validation.");
 
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);

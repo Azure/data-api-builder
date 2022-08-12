@@ -255,10 +255,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
 
+            string singularName = GetDefinedSingularName(name.Value, entity);
             return new(
                 location: null,
-                new NameNode($"create{GetDefinedSingularName(name.Value, entity)}"),
-                new StringValueNode($"Creates a new {GetDefinedSingularName(name.Value, entity)}"),
+                new NameNode($"create{singularName}"),
+                new StringValueNode($"Creates a new {singularName}"),
                 new List<InputValueDefinitionNode> {
                 new InputValueDefinitionNode(
                     location : null,

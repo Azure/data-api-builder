@@ -50,74 +50,74 @@ steps:
   inputs:
     restoreSolution: '$(solution)'
 
-- task: DotNetCoreCLI@2
-  displayName: Check formatting
-  inputs:
-    command: custom
-    custom: format
-    projects: '$(solution)'
-    arguments: '--verify-no-changes'
+# - task: DotNetCoreCLI@2
+#   displayName: Check formatting
+#   inputs:
+#     command: custom
+#     custom: format
+#     projects: '$(solution)'
+#     arguments: '--verify-no-changes'
 
-- task: DotNetCoreCLI@2
-  displayName: Build
-  inputs:
-    command: build
-    projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion)' # Update this to match your need
+# - task: DotNetCoreCLI@2
+#   displayName: Build
+#   inputs:
+#     command: build
+#     projects: '**/*.csproj'
+#     arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion)' # Update this to match your need
 
-- task: DotNetCoreCLI@2
-  displayName: "Run Unit Tests"
-  inputs:
-    command: test
-    projects: '**/*Tests*.csproj'
-    arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+# - task: DotNetCoreCLI@2
+#   displayName: "Run Unit Tests"
+#   inputs:
+#     command: test
+#     projects: '**/*Tests*.csproj'
+#     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
-- task: DotNetCoreCLI@2
-  displayName: 'Creating Nuget Package'
-  inputs:
-    command: pack
-    packagesToPack: '**/Cli.csproj'
-    packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
-    nobuild: true
-    versioningScheme: byEnvVar
-    versionEnvVar: dabVersion
-    verbosityPack: 'minimal'
+# - task: DotNetCoreCLI@2
+#   displayName: 'Creating Nuget Package'
+#   inputs:
+#     command: pack
+#     packagesToPack: '**/Cli.csproj'
+#     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
+#     nobuild: true
+#     versioningScheme: byEnvVar
+#     versionEnvVar: dabVersion
+#     verbosityPack: 'minimal'
 
-# This task will authenticate and publish the NuGet Package to internal feed
-# To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.
-- task: NuGetAuthenticate@0
-  displayName: 'NuGet Authenticate'
-  condition: eq(variables.publishNugetToFeed, 'true')
+# # This task will authenticate and publish the NuGet Package to internal feed
+# # To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.
+# - task: NuGetAuthenticate@0
+#   displayName: 'NuGet Authenticate'
+#   condition: eq(variables.publishNugetToFeed, 'true')
 
-- task: NuGetCommand@2
-  displayName: 'Publish Nuget to Internal Feed'
-  condition: eq(variables.publishNugetToFeed, 'true')
-  inputs:
-    command: 'push'
-    feedsToUse: 'select'
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
-    nuGetFeedType: 'internal'
-    publishVstsFeed: CosmosDB/DataApiBuilder
-    versioningScheme: 'off'
-    allowPackageConflicts: false
+# - task: NuGetCommand@2
+#   displayName: 'Publish Nuget to Internal Feed'
+#   condition: eq(variables.publishNugetToFeed, 'true')
+#   inputs:
+#     command: 'push'
+#     feedsToUse: 'select'
+#     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+#     nuGetFeedType: 'internal'
+#     publishVstsFeed: CosmosDB/DataApiBuilder
+#     versioningScheme: 'off'
+#     allowPackageConflicts: false
 
-- task: PublishCodeCoverageResults@1
-  displayName: 'Publish code coverage'
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+# - task: PublishCodeCoverageResults@1
+#   displayName: 'Publish code coverage'
+#   inputs:
+#     codeCoverageTool: Cobertura
+#     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
-- task: ShellScript@2
-  displayName: "Package DAB to multiple platforms"
-  inputs:
-    scriptPath: publish.sh
-    args: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion)
+# - task: ShellScript@2
+#   displayName: "Package DAB to multiple platforms"
+#   inputs:
+#     scriptPath: publish.sh
+#     args: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion)
 
-# this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
-- task: PublishPipelineArtifact@1
-  displayName: "Upload build artifacts"
-  inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)' 
+# # this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
+# - task: PublishPipelineArtifact@1
+#   displayName: "Upload build artifacts"
+#   inputs:
+#     targetPath: '$(Build.ArtifactStagingDirectory)' 
 
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.

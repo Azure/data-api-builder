@@ -36,6 +36,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const string MYSQL_ENVIRONMENT = TestCategory.MYSQL;
         private const string POSTGRESQL_ENVIRONMENT = TestCategory.POSTGRESQL;
 
+        public TestContext TestContext { get; set; }
+
+        [TestInitialize]
+        public void Setup()
+        {
+            TestContext.Properties.Add(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME));
+            TestContext.Properties.Add(RUNTIME_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME));
+        }
+
         [ClassCleanup]
         public static void Cleanup()
         {

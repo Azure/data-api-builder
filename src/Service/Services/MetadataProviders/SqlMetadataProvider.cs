@@ -176,7 +176,7 @@ namespace Azure.DataApiBuilder.Service.Services
             foreach (string entityName in _entities.Keys)
             {
                 Entity entity = _entities[entityName];
-                string pluralizedRoute = SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT>.PluralizeEntityRoute(entity);
+                string pluralizedRoute = PluralizeEntityRoute(entity);
                 EntityRouteToEntityName[pluralizedRoute] = entityName;
             }
         }

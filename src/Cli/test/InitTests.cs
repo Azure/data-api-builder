@@ -120,6 +120,7 @@ namespace Cli.Tests
         [DataRow(null, "testcontainer", "", false, DisplayName = "Both database and schema are either null or empty.")]
         [DataRow("", "testcontainer", "testschema", false, DisplayName = "database is empty.")]
         [DataRow("testDatabase", "testcontainer", "", true, DisplayName = "database is valid string, Schema is null.")]
+        [DataRow("testDatabase", null, "", true, DisplayName = "database is valid string, container and Schema is null/empty.")]
         [DataTestMethod]
         public void VerifyRequiredOptionsForCosmosDatabase(
             string? cosmosDatabase,

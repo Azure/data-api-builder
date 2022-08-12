@@ -161,5 +161,10 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
                 _partitionKeyPaths[$"{database}/{container}"] = partitionKeyPath;
             }
         }
+
+        public bool TryGetEntityNameFromRoute(string entityRouteName, out string? entityName)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -13,6 +13,8 @@ using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Extensions.Logging;
 using Humanizer;
+using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -144,6 +146,12 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
+        public bool TryGetEntityNameFromRoute(string entityRouteName, out string? entityName)
+        {
+            return EntityRouteToEntityName.TryGetValue(entityRouteName, out entityName);
+        }
+
+        /// <inheritdoc />
         public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntityNamesAndDbObjects()
         {
             return EntityToDatabaseObject.ToList();
@@ -162,6 +170,10 @@ namespace Azure.DataApiBuilder.Service.Services
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
         }
 
+        /// <summary>
+        /// Generates the map used to find a given entity based
+        /// on the request route that will be used for that entity.
+        /// </summary>
         private void GenerateRouteToEntityMap()
         {
             foreach (string entityName in _entities.Keys)
@@ -172,19 +184,31 @@ namespace Azure.DataApiBuilder.Service.Services
             }
         }
 
+        /// <summary>
+        /// Correctly pluralize the entity's route.
+        /// </summary>
+        /// <param name="entity">Entity to pluralize the route of.</param>
+        /// <returns>pluralized route for the given Entity.</returns>
         private static string PluralizeEntityRoute(Entity entity)
         {
-            if (entity.Rest is null || entity.Rest is bool)
+            // if entity.Rest is null or a bool we just use source name
+            if (entity.Rest is null || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.True or JsonValueKind.False)
             {
                 return entity.GetSourceName();
             }
 
-            SingularPlural restRoute = (SingularPlural)entity.Rest;
+            // otherwise we have to convert each part of the Rest property we want into correct objects
+            // they are json element so this means deserializing at each step with case insensitivity
+            JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true };
+            RestEntitySettings rest = System.Text.Json.JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)entity.Rest, options)!;
+            SingularPlural restRoute = System.Text.Json.JsonSerializer.Deserialize<SingularPlural>((JsonElement)rest.Route, options)!;
+            // user plural if provided
             if (!string.IsNullOrWhiteSpace(restRoute.Plural))
             {
                 return restRoute.Plural;
             }
 
+            // otherwise we pluralize the singular form
             return restRoute.Singular.Pluralize();
             
         }

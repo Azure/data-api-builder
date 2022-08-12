@@ -64,6 +64,15 @@ namespace Azure.DataApiBuilder.Service.Services
         bool TryGetBackingColumn(string entityName, string field, out string? name);
 
         /// <summary>
+        /// Try to obtain the name of the Entity that has the provided Route. If It
+        /// exists save in out param, and return true, otherwise return false.
+        /// </summary>
+        /// <param name="entityRouteName">Entity's route as seen in a request.</param>
+        /// <param name="entityName">Name of the associated entity.</param>
+        /// <returns>True if exists, otherwise false.</returns>
+        bool TryGetEntityNameFromRoute(string entityRouteName, out string? entityName);
+
+        /// <summary>
         /// Obtains the underlying database type.
         /// </summary>
         /// <returns></returns>

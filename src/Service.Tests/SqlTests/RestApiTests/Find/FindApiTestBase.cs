@@ -1135,7 +1135,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
             );
         }
-        
 
         /// <summary>
         /// Tests the REST Api for Find operation on an entity that does not exist

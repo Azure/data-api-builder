@@ -342,20 +342,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="entityNames">List of entity names defined by the user</param>
         /// <param name="isExceptionExpected">Flag to help with the exception validation</param>
         [DataTestMethod]
-        [DataRow(new string[] { "Book", "Notebook", "Jorunal"}, false, DisplayName = "Valid list of entities")]
-        [DataRow(new string[] { "Book", "Notebook", "Jorunal", "book"}, true, DisplayName = "InValid list of entities - different case in first letter")]
+        [DataRow(new string[] { "Book", "Notebook", "Jorunal" }, false, DisplayName = "Valid list of entities")]
+        [DataRow(new string[] { "Book", "Notebook", "Jorunal", "book" }, true, DisplayName = "InValid list of entities - different case in first letter")]
         [DataRow(new string[] { "Book", "Notebook", "Journal", "JournaL" }, true, DisplayName = "InValid list of entities - different case in last letter")]
         [DataRow(new string[] { "Book", "Notebook", "Jorunal", "NoTEBooK" }, true, DisplayName = "InValid list of entities - different case in multiple letters")]
         [DataRow(new string[] { "Book", "Notebook", "Jorunal", "BOOK" }, true, DisplayName = "InValid list of entities - different case in all the letters")]
         public void ValidateEntitesWithSameNameButDifferentCasingsNotSupported(string[] entityNames, bool isExceptionExpected)
         {
             Dictionary<string, Entity> entityCollection = new();
-            foreach(string entityName in entityNames)
+            foreach (string entityName in entityNames)
             {
                 entityCollection.Add(entityName, GraphQLTestHelpers.GenerateEmptyEntity());
             }
 
-            if(isExceptionExpected)
+            if (isExceptionExpected)
             {
                 DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
                     action: () => RuntimeConfigValidator.ValidateEntitiesWithDifferentCasings(entityCollection));

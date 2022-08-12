@@ -112,11 +112,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public static void ValidateEntitiesWithDifferentCasings(Dictionary<string, Entity> entityCollection)
         {
             HashSet<string> entityNamesInLowerCase = new();
-            foreach(string entityName in entityCollection.Keys)
+            foreach (string entityName in entityCollection.Keys)
             {
                 string entityNameInLowerCase = entityName.ToLowerInvariant();
-                
-                if(entityNamesInLowerCase.Contains(entityNameInLowerCase))
+
+                if (entityNamesInLowerCase.Contains(entityNameInLowerCase))
                 {
                     throw new DataApiBuilderException(
                     message: $"Entities with the same name but a different casing found.",

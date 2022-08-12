@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
   "$id": "urn:hawaii:config:schema:draft-01",
-  "title": "DAB",
-  "description": "Schema for DAB engine",
+  "title": "Hawaii",
+  "description": "Schema for Hawaii engine",
   "type": "object",
   "properties": {
     "data-source": {

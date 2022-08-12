@@ -1,6 +1,6 @@
 # Getting started with Data API Builder (DAB) CLI
 
-Welcome to this getting started tutorial that will guide you to install and setup DAB CLI tool locally on your machine and then will guide you to generate and modify config file using this tool, which will be used for running Data API Builder.
+Welcome to this getting started tutorial that will guide you to install and setup DAB CLI tool locally on your machine and then will guide you to generate and modify the config file using this tool, which will be used for running Data API Builder.
 
 ## Prerequisite
 
@@ -16,7 +16,7 @@ You can install the DAB CLI using [.NET tools](https://docs.microsoft.com/en-us/
 To install this tool globally, use:
 
 ```dotnetcli
-dotnet tool install -g --add-source ./ dab --version <version_number>
+# dotnet tool install -g --add-source ./ dab --version <version_number>
 ```
 
 > [!NOTE]
@@ -28,7 +28,7 @@ dotnet tool install -g --add-source ./ dab --version <version_number>
 If you already have an older version of DAB CLI installed, update the tool using:
 
 ```dotnetcli
-dotnet tool update -g --add-source ./ dab --version <version_number>
+# dotnet tool update -g --add-source ./ dab --version <version_number>
 ```
 
 ### Validate the Install
@@ -36,17 +36,17 @@ dotnet tool update -g --add-source ./ dab --version <version_number>
 Installing the package will make the `dab` command available on your development machine. To validate your installation, you can check the installed version with:
 
 ```dotnetcli
-dab --version
+# dab --version
 ```
 
 ## Generate the config file
 
 This CLI tool will generate a DAB engine config file for you, then you can build your config by adding required entities, relationships, roles, and permissions etc.
 
-To initialize the config file, use:
+To initialize the config file, use the init command. For example, the following sample command
+generates a config file for SQL DB with CORS settings:
 
 ```dotnetcli
-#For example, sample command to generate config file for SQL DB with CORS settings:
 # dab init --config dab-config.json --database-type mssql --connection-string "HOST=XXX" --host-mode Development --cors-origin "http://localhost:3000"
 
 dab init --config <filename> --database-type <mssql|cosmos|postgresql|mysql> --connection-string <connection_string>
@@ -59,7 +59,7 @@ To validate, navigate to your folder path (where you should be currently) and yo
 
 ## Add entities to config
 
-To add the entities to the config file with the REST route, GraphQL type and permissions defined, run the following commands:
+To add the entities to the config file with the REST route, GraphQL type and permissions defined, run the following add command:
 ```dotnetcli
 # dab add book --source dbo.books --rest book --graphql book --permissions "anonymous:*"
 
@@ -69,8 +69,8 @@ dab add <entity> --source <source_db> --rest <rest_route> --graphql <graphql_typ
 You can also run multiple commands in a single batch to perform multiple actions. For example, to add entities for `author` and `book` you can run the following commands:
 
 ```dotnetcli
-dab add author --source dbo.authors --permissions "anonymous:create,read,update"
-dab add book --source dbo.books --permissions "anonymous:read"
+# dab add author --source dbo.authors --permissions "anonymous:create,read,update"
+# dab add book --source dbo.books --permissions "anonymous:read"
 ```
 
 ### Update entities in config
@@ -108,7 +108,7 @@ dab update <entity> --permissions <roles> --fields.include <fields> --policy-dat
 To start the Data API Builder engine, use:
 
 ```dotnetcli
-dab start --config my-config.json
+# dab start --config my-config.json
 ```
 
 > [!NOTE]

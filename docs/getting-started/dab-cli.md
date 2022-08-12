@@ -1,12 +1,12 @@
-# About DAB CLI
+# About `dab` CLI
 
-The Data API Builder CLI (**DAB CLI** or `dab`) is a command line tool that streamlines the local development experience for applications using Data API Builder.
+The Data API Builder CLI (**dab CLI** or `dab`) is a command line tool that streamlines the local development experience for applications using Data API Builder.
 
-- Find the source code here: [dab-cli](../../src/Cli)
+- Find the source code here: [Cli](../../src/Cli)
 - Getting started: [Getting started](./getting-started-dab-cli.md)
 - Contribute: [Build from Source](../../src/Cli/CONTRIBUTING.md)
 
-## Key Features of DAB CLI
+## Key Features of `dab` CLI
 
 - Initialize the configuration file for REST and GraphQL endpoints
 - Add new entities
@@ -15,12 +15,6 @@ The Data API Builder CLI (**DAB CLI** or `dab`) is a command line tool that stre
 - Configure roles and their permissions
 - Configure cross-origin requests (CORS)
 - Run the Data API Builder engine
-
-## Components of the CLI
-
-The following diagram illustrates the high-level architecture of the DAB CLI, identifying the key components and their relationships:
-
-::image::
 
 ## Contributing to the CLI
 

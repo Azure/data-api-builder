@@ -1,6 +1,6 @@
 # Getting started with Data API Builder (DAB) CLI
 
-Welcome to this getting started tutorial that will guide you to install and setup DAB CLI tool locally on your machine and then will guide you to generate and modify the config file using this tool, which will be used for running Data API Builder.
+Welcome to this getting started tutorial that will guide you to install and setup `dab` CLI tool locally on your machine and then will guide you to generate and modify the config file using this tool, which will be used for running Data API Builder.
 
 ## Prerequisite
 

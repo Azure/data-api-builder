@@ -199,14 +199,8 @@ namespace Azure.DataApiBuilder.Service.Services
             JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true };
             RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)entity.Rest, options)!;
             SingularPlural restRoute = JsonSerializer.Deserialize<SingularPlural>((JsonElement)rest.Route, options)!;
-            // use plural if provided
-            if (!string.IsNullOrWhiteSpace(restRoute.Plural))
-            {
-                return restRoute.Plural;
-            }
-
-            // otherwise we pluralize the singular form
-            return restRoute.Singular.Pluralize();
+            // Plural takes precedence, otherwise we pluralize singular before returning
+            return !string.IsNullOrWhiteSpace(restRoute.Plural) ? restRoute.Plural : restRoute.Singular.Pluralize();
         }
 
         /// <summary>

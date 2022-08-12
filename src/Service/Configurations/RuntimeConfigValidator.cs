@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
 using Action = Azure.DataApiBuilder.Config.Action;
 
@@ -94,6 +95,69 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
 
             ValidateAuthenticationConfig();
+
+            if (runtimeConfig.GraphQLGlobalSettings.Enabled)
+            {
+                ValidateEntityNamesInConfig(runtimeConfig.Entities);
+            }
+        }
+
+        /// <summary>
+        /// Check whether the entity name defined in runtime config only contains
+        /// characters allowed for GraphQL names.
+        /// Does not perform validation for entities which do not
+        /// have GraphQL configuration: when entity.GraphQL == false or null.
+        /// </summary>
+        /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
+        /// <param name="runtimeConfig"></param>
+        public static void ValidateEntityNamesInConfig(Dictionary<string, Entity> entityCollection)
+        {
+            foreach (string entityName in entityCollection.Keys)
+            {
+                Entity entity = entityCollection[entityName];
+
+                if (entity.GraphQL is null)
+                {
+                    continue;
+                }
+                else if (entity.GraphQL is bool graphQLEnabled)
+                {
+                    if (!graphQLEnabled)
+                    {
+                        continue;
+                    }
+
+                    ValidateNameRequirements(entityName);
+                }
+                else if (entity.GraphQL is GraphQLEntitySettings graphQLSettings)
+                {
+                    if (graphQLSettings.Type is string graphQLName)
+                    {
+                        ValidateNameRequirements(graphQLName);
+                    }
+                    else if (graphQLSettings.Type is SingularPlural singularPluralSettings)
+                    {
+                        ValidateNameRequirements(singularPluralSettings.Singular);
+
+                        if (singularPluralSettings.Plural is not null)
+                        {
+                            ValidateNameRequirements(singularPluralSettings.Plural);
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void ValidateNameRequirements(string entityName)
+        {
+            if (GraphQLNaming.ViolatesNamePrefixRequirements(entityName) ||
+                GraphQLNaming.ViolatesNameRequirements(entityName))
+            {
+                throw new DataApiBuilderException(
+                    message: $"Entity {entityName} contains characters disallowed by GraphQL.",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
         }
 
         private void ValidateAuthenticationConfig()

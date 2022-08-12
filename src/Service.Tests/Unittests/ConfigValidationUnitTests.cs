@@ -6,6 +6,7 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
+using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
@@ -266,6 +267,70 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.AreEqual($"action:{operationName} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
                     $" role:{AuthorizationHelpers.TEST_ROLE} is not valid.",
                     ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Test that entity names from config successfully pass or fail validation.
+        /// When a failure is expected: Asserts that an exception is thrown, and with that exception object,
+        /// validates the exception's status and substatus codes.
+        /// </summary>
+        /// <param name="entityNameFromConfig"></param>
+        [DataTestMethod]
+        [DataRow("entityname", false, DisplayName = "Valid lower case letter as first character")]
+        [DataRow("Entityname", false, DisplayName = "Valid upper case letter as first character")]
+        [DataRow("Entity_name", false, DisplayName = "Valid _ in body")]
+        [DataRow("@entityname", true, DisplayName = "Invalid start character @")]
+        [DataRow("_entityname", true, DisplayName = "Invalid start character _")]
+        [DataRow("#entityname", true, DisplayName = "Invalid start character #")]
+        [DataRow("5Entityname", true, DisplayName = "Invalid start character 5")]
+        [DataRow("E.ntityName", true, DisplayName = "Invalid body character .")]
+        [DataRow("Entity^Name", true, DisplayName = "Invalid body character ^")]
+        [DataRow("Entity&Name", true, DisplayName = "Invalid body character &")]
+        [DataRow("Entity name", true, DisplayName = "Invalid body character whitespace")]
+        public void ValidateGraphQLTypeNamesFromConfig(string entityNameFromConfig, bool expectsException)
+        {
+            Dictionary<string, Entity> entityCollection = new();
+
+            // Sets only the top level name and enables GraphQL for entity
+            Entity entity = SchemaConverterTests.GenerateEmptyEntity();
+            entity.GraphQL = true;
+            entityCollection.Add(entityNameFromConfig, entity);
+
+            // Sets the top level name to an arbitrary value since it is not used in this check
+            // and enables GraphQL for entity by setting the GraphQLSettings.Type to a string.
+            entity = SchemaConverterTests.GenerateEmptyEntity();
+            entity.GraphQL = new GraphQLEntitySettings(Type: entityNameFromConfig);
+            entityCollection.Add("EntityA", entity);
+
+            // Sets the top level name to an arbitrary value since it is not used in this check
+            // and enables GraphQL for entity by setting the GraphQLSettings.Type to
+            // a SingularPlural object where only Singular is defined.
+            entity = SchemaConverterTests.GenerateEmptyEntity();
+            SingularPlural singularPlural = new(Singular: entityNameFromConfig, Plural: null);
+            entity.GraphQL = new GraphQLEntitySettings(Type: singularPlural);
+            entityCollection.Add("EntityB", entity);
+
+            // Sets the top level name to an arbitrary value since it is not used in this check
+            // and enables GraphQL for entity by setting the GraphQLSettings.Type to
+            // a SingularPlural object where both Singular and Plural are defined.
+            entity = SchemaConverterTests.GenerateEmptyEntity();
+            singularPlural = new(Singular: entityNameFromConfig, Plural: entityNameFromConfig);
+            entity.GraphQL = new GraphQLEntitySettings(Type: singularPlural);
+            entityCollection.Add("EntityC", entity);
+
+            if (expectsException)
+            {
+                DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
+                    action: () => RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection),
+                    message: $"Entity name \"{entityNameFromConfig}\" incorrectly passed validation.");
+
+                Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+            }
+            else
+            {
+                RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection);
             }
         }
     }

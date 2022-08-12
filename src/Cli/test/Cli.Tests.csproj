@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\Hawaii.Cli.csproj" />
+    <ProjectReference Include="..\src\Cli.csproj" />
     <PackageReference Include="coverlet.msbuild" Version="3.1.2" />
   </ItemGroup>
 

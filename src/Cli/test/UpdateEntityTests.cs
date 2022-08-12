@@ -1,4 +1,4 @@
-namespace Hawaii.Cli.Tests
+namespace Cli.Tests
 {
     /// <summary>
     /// Tests for Updating Entity.
@@ -1226,7 +1226,7 @@ namespace Hawaii.Cli.Tests
         {
             return @"
                         {
-                        ""$schema"": ""hawaii.draft-01.schema.json"",
+                        ""$schema"": ""dab.draft-01.schema.json"",
                         ""data-source"": {
                             ""database-type"": ""mssql"",
                             ""connection-string"": ""testconnectionstring""

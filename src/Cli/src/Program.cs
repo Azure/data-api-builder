@@ -1,7 +1,6 @@
 using CommandLine;
-using Hawaii.Cli.Models;
 
-namespace Hawaii.Cli
+namespace Cli
 {
     /// <summary>
     /// Main class for CLI

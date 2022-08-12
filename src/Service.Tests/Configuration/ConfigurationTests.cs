@@ -69,6 +69,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
+        [TestCleanup]
+        public void CleanupAfterEachTest()
+        {
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[ASP_NET_CORE_ENVIRONMENT_VAR_NAME]);
+            Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[RUNTIME_ENVIRONMENT_VAR_NAME]);
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "");
+            Environment.SetEnvironmentVariable($"{ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)}", "");
+        }
+
         [DataTestMethod]
         [DataRow(new string[] { }, DisplayName = "No config returns 503 - config file flag absent")]
         [DataRow(new string[] { "--ConfigFileName=" }, DisplayName = "No config returns 503 - empty config file option")]

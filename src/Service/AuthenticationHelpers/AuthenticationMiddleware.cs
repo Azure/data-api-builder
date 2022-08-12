@@ -46,8 +46,8 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             httpContext.User = authNResult.Principal!;
 
             string clientRoleHeader = authNResult.Succeeded
-                ? AuthorizationType.Authenticated.ToString().ToLower()
-                : AuthorizationType.Anonymous.ToString().ToLower();
+                ? AuthorizationType.Authenticated.ToString()
+                : AuthorizationType.Anonymous.ToString();
 
             // If authN result succeeded, the client role header i.e.
             // X-MS-API-ROLE is set to authenticated (if not already present)

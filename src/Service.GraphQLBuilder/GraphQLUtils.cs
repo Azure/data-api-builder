@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
@@ -159,6 +160,49 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 authorizeDirective = null;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Get the model name (EntityName) defined on the object type definition.
+        /// </summary>
+        /// <param name="fieldDirectives">Collection of directives on GraphQL field.</param>
+        /// <param name="modelName">Value of @model directive, if present.</param>
+        /// <returns></returns>
+        public static bool TryExtractGraphQLFieldModelName(IDirectiveCollection fieldDirectives, [NotNullWhen(true)] out string? modelName)
+        {
+            foreach (Directive dir in fieldDirectives)
+            {
+                if (dir.Name.Value == ModelDirectiveType.DirectiveName)
+                {
+                    dir.ToObject<ModelDirectiveType>();
+                    modelName = dir.GetArgument<string>(ModelDirectiveType.ModelNameArgument).ToString();
+
+                    return modelName is not null;
+                }
+            }
+
+            modelName = null;
+            return false;
+        }
+
+        /// <summary>
+        /// UnderlyingGraphQLEntityType is the main GraphQL type that is described by
+        /// this type. This strips all modifiers, such as List and Non-Null.
+        /// So the following GraphQL types would all have the underlyingType Book:
+        /// - Book
+        /// - [Book]
+        /// - Book!
+        /// - [Book]!
+        /// - [Book!]!
+        /// </summary>
+        public static ObjectType UnderlyingGraphQLEntityType(IType type)
+        {
+            if (type is ObjectType underlyingType)
+            {
+                return underlyingType;
+            }
+
+            return UnderlyingGraphQLEntityType(type.InnerType());
         }
     }
 }

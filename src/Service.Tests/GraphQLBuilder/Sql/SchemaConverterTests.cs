@@ -28,14 +28,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         const string REFD_COLNAME = "fk_col";
 
         [DataTestMethod]
-        [DataRow("test", "Test")]
+        [DataRow("test", "test")]
         [DataRow("Test", "Test")]
-        [DataRow("With Space", "WithSpace")]
-        [DataRow("with space", "WithSpace")]
-        [DataRow("@test", "Test")]
-        [DataRow("_test", "Test")]
-        [DataRow("#test", "Test")]
-        [DataRow("T.est", "Test")]
         [DataRow("T_est", "T_est")]
         [DataRow("Test1", "Test1")]
         public void EntityNameBecomesObjectName(string entityName, string expected)
@@ -54,17 +48,14 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Assert.AreEqual(expected, od.Name.Value);
         }
 
+        /// <summary>
+        /// Validates that schema generation does not modify names.
+        /// </summary>
+        /// <param name="columnName"></param>
+        /// <param name="expected"></param>
         [DataTestMethod]
         [DataRow("test", "test")]
-        [DataRow("Test", "test")]
-        [DataRow("With Space", "withSpace")]
-        [DataRow("with space", "withSpace")]
-        [DataRow("@test", "test")]
-        [DataRow("_test", "test")]
-        [DataRow("#test", "test")]
-        [DataRow("T.est", "test")]
-        [DataRow("T_est", "t_est")]
-        [DataRow("Test1", "test1")]
+        [DataRow("Test", "Test")]
         public void ColumnNameBecomesFieldName(string columnName, string expected)
         {
             TableDefinition table = new();
@@ -308,15 +299,28 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Assert.AreEqual(2, od.Fields.Count);
         }
 
+        /// <summary>
+        /// Tests Object Type definition using config defined entity name is handled properly
+        /// by schema converter:
+        /// - entityName is not singularized, even if plural.
+        /// - uses singular name if present and not null/empty.
+        /// - Name is not formatted differently from config -> name is not converted to pascal/camel case.
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <param name="singular"></param>
+        /// <param name="expected"></param>
         [DataTestMethod]
-        [DataRow("entityName", "overrideName", "OverrideName")]
-        [DataRow("entityName", null, "EntityName")]
-        [DataRow("entityName", "", "EntityName")]
+        [DataRow("entityName", "overrideName", "overrideName", DisplayName = "Singular name overrides top-level entity name")]
+        [DataRow("my entity", "", "my entity", DisplayName = "Top-level entity name with space is not reformatted.")]
+        [DataRow("entityName", null, "entityName", DisplayName = "Null singular name defers to top-level entity name")]
+        [DataRow("entityName", "", "entityName", DisplayName = "Empty singular name defers to top-level entity name")]
+        [DataRow("entities", null, "entities", DisplayName = "Plural top-level entity name and null singular name not singularized")]
+        [DataRow("entities", "", "entities", DisplayName = "Plural top-level entity name and empty singular name not singularized")]
         public void SingularNamingRulesDeterminedByRuntimeConfig(string entityName, string singular, string expected)
         {
             TableDefinition table = new();
 
-            Entity configEntity = GenerateEmptyEntity() with { GraphQL = new SingularPlural(singular, null) };
+            Entity configEntity = GenerateEmptyEntity() with { GraphQL = new GraphQLEntitySettings(new SingularPlural(singular, null)) };
             ObjectTypeDefinitionNode od = SchemaConverter.FromTableDefinition(
                 entityName,
                 table,
@@ -638,7 +642,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             return fieldToRolesMap;
         }
 
-        private static Entity GenerateEmptyEntity()
+        public static Entity GenerateEmptyEntity()
         {
             return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
         }

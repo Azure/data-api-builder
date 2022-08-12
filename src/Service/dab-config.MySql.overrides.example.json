@@ -1,11 +1,8 @@
 {
-  "$schema": "../schemas/hawaii.draft-01.schema.json",
+  "$schema": "../schemas/dab.draft-01.schema.json",
   "data-source": {
-    "database-type": "mssql",
-    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;"
-  },
-  "mssql": {
-    "set-session-context": false
+    "database-type": "mysql",
+    "connection-string": "server=localhost;database=datagatewaytest;Allow User Variables=true;uid=root;pwd=REPLACEME"
   },
   "runtime": {
     "rest": {
@@ -57,7 +54,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "create", "read", "update" ]
+          "actions": [ "read" ]
         },
         {
           "role": "authenticated",
@@ -249,7 +246,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update", "delete" ]
         },
         {
           "role": "authenticated",

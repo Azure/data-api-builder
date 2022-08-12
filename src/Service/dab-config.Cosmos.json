@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/hawaii.draft-01.schema.json",
+  "$schema": "../schemas/dab.draft-01.schema.json",
   "data-source": {
     "database-type": "cosmos",
     "connection-string": "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
@@ -33,7 +33,12 @@
     "Planet": {
       "source": "graphqldb.planet",
       "rest": false,
-      "graphql": true,
+      "graphql": {
+        "type": {
+          "singular": "Planet",
+          "plural": "Planets"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -48,7 +53,12 @@
     "Character": {
       "source": "graphqldb.character",
       "rest": false,
-      "graphql": true,
+      "graphql": {
+        "type": {
+          "singular": "Character",
+          "plural": "Characters"
+        }
+      },
       "permissions": [
         {
           "role": "authenticated",
@@ -59,7 +69,12 @@
     "Star": {
       "source": "graphqldb.star",
       "rest": false,
-      "graphql": true,
+      "graphql": {
+        "type": {
+          "singular": "Star",
+          "plural": "Stars"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",

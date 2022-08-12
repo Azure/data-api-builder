@@ -1,4 +1,4 @@
-namespace Hawaii.Cli.Tests
+namespace Cli.Tests
 {
     /// <summary>
     /// Test for config file initialization.
@@ -25,7 +25,7 @@ namespace Hawaii.Cli.Tests
 
             string expectedRuntimeConfig =
             @"{
-  ""$schema"": ""hawaii.draft-01.schema.json"",
+  ""$schema"": ""dab.draft-01.schema.json"",
   ""data-source"": {
     ""database-type"": ""mssql"",
     ""connection-string"": ""testconnectionstring""
@@ -77,7 +77,7 @@ namespace Hawaii.Cli.Tests
                 name: "outputfile");
 
             string expectedRuntimeConfig = @"{
-  ""$schema"": ""hawaii.draft-01.schema.json"",
+  ""$schema"": ""dab.draft-01.schema.json"",
   ""data-source"": {
     ""database-type"": ""cosmos"",
     ""connection-string"": ""testconnectionstring""

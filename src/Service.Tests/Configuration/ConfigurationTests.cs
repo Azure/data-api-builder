@@ -235,7 +235,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// This function will attempt to read the hawaii-config.json
+        /// This function will attempt to read the dab-config.json
         /// file into the RuntimeConfig class. It verifies the deserialization succeeds.
         /// </summary>
         [TestMethod("Validates if deserialization of new runtime config format succeeds.")]
@@ -335,7 +335,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// This function verifies command line configuration provider takes higher
-        /// precendence than default configuration file hawaii-config.json
+        /// precendence than default configuration file dab-config.json
         /// </summary>
         [TestMethod("Validates command line configuration provider.")]
         public void TestCommandLineConfigurationProvider()

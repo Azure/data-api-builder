@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
     {
         internal const string DATABASE_NAME = "graphqldb";
         private const string GRAPHQL_SCHEMA = @"
-type Character @model {
+type Character @model(name:""Character"") {
     id : ID,
     name : String,
     type: String,
@@ -32,7 +32,7 @@ type Character @model {
     primaryFunction: String
 }
 
-type Planet @model {
+type Planet @model(name:""Planet"") {
     id : ID,
     name : String,
     character: Character,
@@ -41,7 +41,7 @@ type Planet @model {
     stars: [Star]
 }
 
-type Star @model {
+type Star @model(name:""Star"") {
     id : ID,
     name : String
 }";

@@ -87,11 +87,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Add magazines entity to the 
             if (TestCategory.MYSQL.Equals(DatabaseEngine))
             {
-                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "Magazine", "magazines");
+                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "magazine", "magazines");
             }
             else
             {
-                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "Magazine", "foo.magazines");
+                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "magazine", "foo.magazines");
             }
 
             // Add custom entities for the test, if any.

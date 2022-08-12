@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="name">Name of the GraphQL object type.</param>
         /// <param name="definitions">All named GraphQL items in the schema (objects, enums, scalars, etc.)</param>
         /// <param name="databaseType">Database type to generate input type for.</param>
-        /// <param name="entity">Runtime config information.</param>
+        /// <param name="entities">Runtime config information.</param>
         /// <returns>A GraphQL input type with all expected fields mapped as GraphQL inputs.</returns>
         private static InputObjectTypeDefinitionNode GenerateCreateInputType(
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
@@ -30,9 +30,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             NameNode name,
             IEnumerable<HotChocolate.Language.IHasName> definitions,
             DatabaseType databaseType,
-            Entity entity)
+            IDictionary<string, Entity> entities)
         {
-            NameNode inputName = GenerateInputTypeName(name.Value, entity);
+            NameNode inputName = GenerateInputTypeName(name.Value);
 
             if (inputs.ContainsKey(inputName))
             {
@@ -56,11 +56,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
                         if (def is ObjectTypeDefinitionNode otdn)
                         {
-                            return GetComplexInputType(inputs, definitions, f, typeName, otdn, databaseType, entity);
+                            //Get entity definition for this ObjectTypeDefinitionNode
+                            return GetComplexInputType(inputs, definitions, f, typeName, otdn, databaseType, entities);
                         }
                     }
 
-                    return GenerateSimpleInputType(name, f, entity);
+                    return GenerateSimpleInputType(name, f);
                 });
 
             InputObjectTypeDefinitionNode input =
@@ -113,7 +114,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             return true;
         }
 
-        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, Entity entity)
+        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f)
         {
             IValueNode? defaultValue = null;
 
@@ -125,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             return new(
                 location: null,
                 f.Name,
-                new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value, entity)}"),
+                new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
                 f.Type,
                 defaultValue,
                 new List<DirectiveNode>()
@@ -141,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="typeName">Name of the input type in the dictionary.</param>
         /// <param name="otdn">The GraphQL object type to create the input type for.</param>
         /// <param name="databaseType">Database type to generate the input type for.</param>
-        /// <param name="entity">Runtime configuration information for the current type.</param>
+        /// <param name="entities">Runtime configuration information for entities.</param>
         /// <returns>A GraphQL input type value.</returns>
         private static InputValueDefinitionNode GetComplexInputType(
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
@@ -150,13 +151,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             string typeName,
             ObjectTypeDefinitionNode otdn,
             DatabaseType databaseType,
-            Entity entity)
+            IDictionary<string, Entity> entities)
         {
             InputObjectTypeDefinitionNode node;
-            NameNode inputTypeName = GenerateInputTypeName(typeName, entity);
+            NameNode inputTypeName = GenerateInputTypeName(typeName);
             if (!inputs.ContainsKey(inputTypeName))
             {
-                node = GenerateCreateInputType(inputs, otdn, field.Type.NamedType().Name, definitions, databaseType, entity);
+                node = GenerateCreateInputType(inputs, otdn, field.Type.NamedType().Name, definitions, databaseType, entities);
             }
             else
             {
@@ -203,9 +204,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 : new ListTypeNode(type);
         }
 
-        private static NameNode GenerateInputTypeName(string typeName, Entity entity)
+        /// <summary>
+        /// Generates a string of the form "Create{EntityName}Input"
+        /// </summary>
+        /// <param name="typeName">Name of the entity</param>
+        /// <returns>InputTypeName</returns>
+        private static NameNode GenerateInputTypeName(string typeName)
         {
-            return new($"{Operation.Create}{FormatNameForObject(typeName, entity)}Input");
+            return new($"{Operation.Create}{typeName}Input");
         }
 
         /// <summary>
@@ -225,16 +231,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             DocumentNode root,
             DatabaseType databaseType,
-            Entity entity,
+            IDictionary<string, Entity> entities,
+            string dbEntityName,
             IEnumerable<string>? rolesAllowedForMutation = null)
         {
+            Entity entity = entities[dbEntityName];
+
             InputObjectTypeDefinitionNode input = GenerateCreateInputType(
                 inputs,
                 objectTypeDefinitionNode,
                 name,
                 root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),
                 databaseType,
-                entity);
+                entities);
 
             // Create authorize directive denoting allowed roles
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
@@ -248,7 +257,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             return new(
                 location: null,
-                new NameNode($"create{FormatNameForObject(name, entity)}"),
+                new NameNode($"create{GetDefinedSingularName(name.Value, entity)}"),
                 new StringValueNode($"Creates a new {name}"),
                 new List<InputValueDefinitionNode> {
                 new InputValueDefinitionNode(
@@ -259,7 +268,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     defaultValue: null,
                     new List<DirectiveNode>())
                 },
-                new NamedTypeNode(FormatNameForObject(name, entity)),
+                new NamedTypeNode(name),
                 fieldDefinitionNodeDirectives
             );
         }

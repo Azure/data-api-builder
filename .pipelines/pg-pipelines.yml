@@ -40,11 +40,11 @@ jobs:
     displayName: Get and Start Ubuntu Postgres Image Docker
 
   - task: FileTransform@1
-    displayName: 'Generate hawaii-config.PostgreSql.json'
+    displayName: 'Generate dab-config.PostgreSql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'src/Service/hawaii-config.PostgreSql.json'
+      targetFiles: 'src/Service/dab-config.PostgreSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build

@@ -180,7 +180,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             int index = 0;
             return
 @"{
-  ""$schema"": "".. /../project-hawaii/playground/hawaii.draft-01.schema.json"",
+  ""$schema"": "".. /../project-hawaii/playground/dab.draft-01.schema.json"",
   ""versioning"": {
     ""version"": 1.1,
     ""patch"": 1

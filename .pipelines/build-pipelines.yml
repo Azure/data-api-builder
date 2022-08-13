@@ -77,7 +77,7 @@ steps:
   inputs:
     command: custom
     custom: pack
-    arguments: '**/Cli.csproj -p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
+    arguments: '../src/Cli/src/Cli.csproj -p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
 
 # This task will authenticate and publish the NuGet Package to internal feed
 # To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.

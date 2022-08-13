@@ -72,15 +72,15 @@ steps:
     projects: '**/*Tests*.csproj'
     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
-- task: NuGetCommand@2
+- task: DotNetCoreCLI@2
   displayName: 'Creating Nuget Package'
   inputs:
     command: pack
     packagesToPack: '**/Cli.csproj'
-    packDestination: '$(Build.ArtifactStagingDirectory)/nupkg'
+    packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
     versioningScheme: byEnvVar
     versionEnvVar: dabVersion
-    verbosityPack: 'normal'
+    verbosityPack: 'minimal'
 
 # This task will authenticate and publish the NuGet Package to internal feed
 # To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.

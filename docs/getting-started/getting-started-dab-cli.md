@@ -71,7 +71,7 @@ dab add <entity> --source <source_db> --graphql <graphql_type> --permissions <ro
 To update entities which are already added to the config, run the following update command:
 
 ```dotnetcli
-# dab update book --permissions "authenticate:create" --fields.include "id,title"
+# dab update book --permissions "authenticate:create,update" --fields.include "id,title"
 
 dab update <entity> --source <new_source_db> --graphql <new_graphql_type> --permissions <rules:actions> --fields.include <fields_to_include> --fields.exclude <fields_to_exclude>
 ```
@@ -79,6 +79,11 @@ dab update <entity> --source <new_source_db> --graphql <new_graphql_type> --perm
 ### Add entity relationship mappings
 
 To add relationship mappings between entities, use the following command:
+Make sure both the source and target entities have already been added.
+
+```dotnetcli
+# dab add author --source dbo.authors --permissions "anonymous:create,read,update"
+```
 
 ```dotnetcli
 # dab update author --relationship books --target.entity book --cardinality many --linking.object dbo.books_authors
@@ -91,7 +96,7 @@ dab update <entity> --relationship <relationship_name> --target.entity <target_e
 To add policy details, run the following command:
 
 ```dotnetcli
-# dab update book --permissions "anonymous:read" --fields.include "*" --policy-database "@claims.id eq @item.id"
+# dab update book --permissions "authenticated:update" --fields.include "*" --policy-database "@claims.id eq @item.id"
 
 dab update <entity> --permissions <roles> --fields.include <fields> --policy-database <policy_conditions>
 ```
@@ -110,3 +115,11 @@ To start the Data API Builder engine, use:
 > DAB loads the config in the following order (if not supplied in command-line arguments):
 > - `dab-config.{DAB_ENVIRONMENT}.json` : For example, the `dab-config.Development.json` and `dab-config.Production.json` files. The environment version of the file is loaded based on the value set for `DAB_ENVIRONMENT` environment variable.
 > - `dab-config.json`
+
+## Uninstall the tool
+
+For some reason, if you need to uninstall `dab` cli, simply do:
+
+```dotnetcli
+dotnet tool uninstall -g dab
+```

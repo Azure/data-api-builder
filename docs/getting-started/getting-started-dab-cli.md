@@ -1,4 +1,4 @@
-# Getting started with Data API Builder (DAB) CLI
+# Getting started with Data API Builder (`dab`) CLI
 
 Welcome to this getting started tutorial that will guide you to install and setup `dab` CLI tool locally on your machine and then will guide you to generate and modify the config file using this tool, which will be used for running Data API Builder.
 
@@ -25,7 +25,7 @@ To install this tool globally, use:
 
 ### Update the package version
 
-If you already have an older version of DAB CLI installed, update the tool using:
+If you already have an older version of `dab` CLI installed, update the tool using:
 
 ```dotnetcli
 # dotnet tool update -g --add-source ./ dab --version <version_number>
@@ -59,7 +59,7 @@ To validate, navigate to your folder path (where you should be currently) and yo
 
 ## Add entities to config
 
-To add the entities to the config file with the REST route, GraphQL type and permissions defined, run the following add command:
+To add the entities to the config file with the GraphQL type and permissions defined, run the following add command:
 ```dotnetcli
 # dab add book --source dbo.books --rest book --graphql book --permissions "anonymous:*"
 

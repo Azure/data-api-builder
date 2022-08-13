@@ -1,0 +1,141 @@
+[
+    {
+        "id": "1000",
+        "title": "Foundation",
+        "authors": [
+            {
+                "id": "1",
+                "first_name": "Isaac",
+                "middle_name": "",
+                "last_name": "Asimov"
+            }
+        ]
+    },
+    {
+        "id": "1001",
+        "title": "Foundation and Empire",
+        "authors": [
+            {
+                "id": "1",
+                "first_name": "Isaac",
+                "middle_name": "",
+                "last_name": "Asimov"
+            }
+        ]
+    },
+    {
+        "id": "1002",
+        "title": "Second Foundation",
+        "authors": [
+            {
+                "id": "1",
+                "first_name": "Isaac",
+                "middle_name": "",
+                "last_name": "Asimov"
+            }
+        ]
+    },
+    {
+        "id": "1003",
+        "title": "Foundation's Edge",
+        "authors": [
+            {
+                "id": "1",
+                "first_name": "Isaac",
+                "middle_name": "",
+                "last_name": "Asimov"
+            }
+        ]
+    },
+    {
+        "id": "1004",
+        "title": "Foundation and Earth",
+        "authors": [
+            {
+                "id": "1",
+                "first_name": "Isaac",
+                "middle_name": "",
+                "last_name": "Asimov"
+            }
+        ]
+    },
+    {
+        "id": "1005",
+        "title": "Starship Troopers",
+        "authors": [
+            {
+                "id": "1",
+                "first_name": "Isaac",
+                "middle_name": "",
+                "last_name": "Asimov"
+            }
+        ]
+    },
+    {
+        "id": "1006",
+        "title": "Stranger in a Strange Land",
+        "authors": [
+            {
+                "id": "2",
+                "first_name": "Isaac",
+                "middle_name": "",
+                "last_name": "Asimov"
+            }
+        ]
+    },
+    {
+        "id": "1007",
+        "title": "Nightfall",
+        "authors": [
+            {
+                "id": "2",
+                "first_name": "Robert",
+                "middle_name": "A",
+                "last_name": "Heinlein"
+            }
+        ]
+    },
+    {
+        "id": "1008",
+        "title": "Nightwings",
+        "authors": [
+            {
+                "id": "1",
+                "first_name": "Isaac",
+                "middle_name": "",
+                "last_name": "Asimov"
+            },
+            {
+                "id": "3",
+                "first_name": "Robert",
+                "middle_name": "",
+                "last_name": "Silvenberg"
+            }
+        ]
+    },
+    {
+        "id": "1009",
+        "title": "Across a Billion Years",
+        "authors": [
+            {
+                "id": "3",
+                "first_name": "Robert",
+                "middle_name": "",
+                "last_name": "Silvenberg"
+            }
+        ]
+    },
+    {
+        "id": "1010",
+        "title": "Across a Billion Years",
+        "authors": [
+            {
+                "id": "3",
+                "first_name": "Robert",
+                "middle_name": "",
+                "last_name": "Silvenberg"
+            }
+        ]
+    }
+]
+

@@ -55,11 +55,11 @@ steps:
   failOnStderr: true
   condition: in( variables['Agent.OS'], 'Linux', 'macOs' )
 - task: FileTransform@1
-  displayName: 'Generate hawaii-config.Cosmos.json'
+  displayName: 'Generate dab-config.Cosmos.json'
   inputs:
     folderPath: '$(System.DefaultWorkingDirectory)'
     fileType: 'json'
-    targetFiles: 'DataGateway.Service/ConfigFiles/hawaii-config.Cosmos.json'
+    targetFiles: 'src/Service/dab-config.Cosmos.json'
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:

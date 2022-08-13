@@ -59,11 +59,11 @@ jobs:
     failOnStderr: true
 
   - task: FileTransform@1
-    displayName: 'Generate hawaii-config.PostgreSql.json'
+    displayName: 'Generate dab-config.PostgreSql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'DataGateway.Service/ConfigFiles/hawaii-config.PostgreSql.json'
+      targetFiles: 'src/Service/dab-config.PostgreSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: Build

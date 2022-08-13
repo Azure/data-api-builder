@@ -61,17 +61,12 @@ To validate, navigate to your folder path (where you should be currently) and yo
 
 To add the entities to the config file with the GraphQL type and permissions defined, run the following add command:
 ```dotnetcli
-# dab add book --source dbo.books --rest book --graphql book --permissions "anonymous:*"
+# dab add book --source dbo.books --graphql book --permissions "anonymous:*"
 
-dab add <entity> --source <source_db> --rest <rest_route> --graphql <graphql_type> --permissions <roles:actions>
+dab add <entity> --source <source_db> --graphql <graphql_type> --permissions <roles:actions>
 ```
 
-You can also run multiple commands in a single batch to perform multiple actions. For example, to add entities for `author` and `book` you can run the following commands:
 
-```dotnetcli
-# dab add author --source dbo.authors --permissions "anonymous:create,read,update"
-# dab add book --source dbo.books --permissions "anonymous:read"
-```
 
 ### Update entities in config
 
@@ -80,7 +75,7 @@ To update entities which are already added to the config, run the following upda
 ```dotnetcli
 # dab update book --permissions "authenticate:create" --fields.include "id,title"
 
-dab update <entity> --source <new_source_db> --rest <new_rest_route> --graphql <new_graphql_type> --permissions <rules:actions> --fields.include <fields_to_include> --fields.exclude <fields_to_exclude>
+dab update <entity> --source <new_source_db> --graphql <new_graphql_type> --permissions <rules:actions> --fields.include <fields_to_include> --fields.exclude <fields_to_exclude>
 ```
 
 ### Add entity relationship mappings

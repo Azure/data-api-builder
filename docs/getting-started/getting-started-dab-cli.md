@@ -66,8 +66,6 @@ To add the entities to the config file with the GraphQL type and permissions def
 dab add <entity> --source <source_db> --graphql <graphql_type> --permissions <roles:actions>
 ```
 
-
-
 ### Update entities in config
 
 To update entities which are already added to the config, run the following update command:

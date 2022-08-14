@@ -50,7 +50,7 @@ jobs:
     inputs:
       scriptPath: configGenerator.sh
       args: 'PostgreSql'
-      workingDirectory: 'src/out/tests/net6.0/'
+      cwd: 'src/out/tests/net6.0/'
       failOnStandardError: true
 
   - task: FileTransform@1

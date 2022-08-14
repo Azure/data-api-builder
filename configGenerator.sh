@@ -1,7 +1,7 @@
 #!/bin/bash
 databaseType=$1;
 commandsFileName="${databaseType}Commands.txt";
-absolutePath=$(pwd -P);
+absolutePath="$( cd "$(dirname "$0")" ; pwd -P )";
 commandsFileNameWithPath="$absolutePath/$commandsFileName";
 #Fetching the path to dab dll
 pathToDLL=$(find ./src/out/cli -name dab.dll)

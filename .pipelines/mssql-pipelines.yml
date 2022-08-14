@@ -40,37 +40,26 @@ jobs:
     displayName: Get and Start Ubuntu SQL Server Image Docker
 
   - task: DotNetCoreCLI@2
-    displayName: Pack the CLI tool
-    inputs:
-      command: pack
-      packagesToPack: '**/Hawaii.Cli.csproj' 
-      packDirectory: '$(Build.ArtifactStagingDirectory)'
-
-  - task: DotNetCoreCLI@2
-    displayName: Install the CLI tool
-    inputs:
-      command: custom
-      custom: 'tool install'
-      arguments: '-g --add-source $(Build.ArtifactStagingDirectory)/nupkg hawaii.cli'
-
-  - bash: |
-      .$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/MsSql_Commands.txt
-    workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles'
-    failOnStderr: true
-
-  - task: FileTransform@1
-    displayName: 'Generate dab-config.MsSql.json'
-    inputs:
-      folderPath: '$(System.DefaultWorkingDirectory)'
-      fileType: 'json'
-      targetFiles: 'src/Service/dab-config.MsSql.json'
-
-  - task: DotNetCoreCLI@2
     displayName: Build
     inputs:
       command: build
       projects: '**/*.csproj'
       arguments: '--configuration $(buildConfiguration)' # Update this to match your need
+
+  - task: ShellScript@2
+    displayName: 'Generate dab-config.MsSql.json'
+    inputs:
+      scriptPath: configGenerator.sh
+      args: 'MsSql'
+      workingDirectory: 'src/out/tests/net6.0/'
+      failOnStandardError: true
+
+  - task: FileTransform@1
+    displayName: 'Transform dab-config.MsSql.json'
+    inputs:
+      folderPath: '$(System.DefaultWorkingDirectory)'
+      fileType: 'json'
+      targetFiles: 'src/out/tests/net6.0/dab-config.MsSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: 'Run MsSql Integration Tests'
@@ -139,36 +128,28 @@ jobs:
         SqlLocalDb.exe info "MSSQLLocalDB"
 
   - task: DotNetCoreCLI@2
-    displayName: Pack the CLI tool
-    inputs:
-      command: pack
-      packagesToPack: '**/Hawaii.Cli.csproj' 
-      packDirectory: '$(Build.ArtifactStagingDirectory)'
-
-  - task: DotNetCoreCLI@2
-    displayName: Install the CLI tool
-    inputs:
-      command: custom
-      custom: 'tool install'
-      arguments: '-g --add-source $(Build.ArtifactStagingDirectory)/nupkg hawaii.cli'
-      
-  - script: cmd < $(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles/MsSql_Commands.txt
-    workingDirectory: '$(System.DefaultWorkingDirectory)/DataGateway.Service/ConfigFiles'
-    failOnStderr: true
-
-  - task: FileTransform@1
-    displayName: 'Generate dab-config.MsSql.json'
-    inputs:
-      folderPath: '$(System.DefaultWorkingDirectory)'
-      fileType: 'json'
-      targetFiles: 'src/Service/dab-config.MsSql.json'
-
-  - task: DotNetCoreCLI@2
     displayName: Build
     inputs:
       command: build
       projects: '**/*.csproj'
       arguments: '--configuration $(buildConfiguration)' # Update this to match your need
+
+  - task: PowerShell@2
+    displayName: 'Generate dab-config.MsSql.json'
+    inputs:
+      targetType: 'filePath'
+      filePath: configGenerator.ps1
+      arguments: 'MsSql'
+      errorActionPreference: 'stop'
+      failOnStderr: true
+      workingDirectory: 'src/out/tests/net6.0/'
+
+  - task: FileTransform@1
+    displayName: 'Transform dab-config.MsSql.json'
+    inputs:
+      folderPath: '$(System.DefaultWorkingDirectory)'
+      fileType: 'json'
+      targetFiles: 'src/out/tests/net6.0/dab-config.MsSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: 'Run MsSql Integration Tests'

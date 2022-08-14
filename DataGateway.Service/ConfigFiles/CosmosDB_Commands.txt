@@ -1,6 +1,0 @@
-hawaii init --name "hawaii-config.Cosmos" --database-type "cosmos" --connection-string " " --cosmos-database "graphqldb" --cosmos-container "planet" --graphql-schema "schema.gql" --host-mode Development --cors-origin "http://localhost:5000"
-hawaii add Planet --name "hawaii-config.Cosmos" --source "graphqldb.planet" --permissions "anonymous:create,read,update,delete" --rest false --graphql true
-hawaii update Planet --name "hawaii-config.Cosmos" --permissions "authenticated:create,read,update,delete"
-hawaii add Character --name "hawaii-config.Cosmos" --source "graphqldb.character" --permissions "authenticated:create,read,update,delete" --rest false --graphql true
-hawaii add Star --name "hawaii-config.Cosmos" --source "graphqldb.star" --permissions "anonymous:create,read,update,delete" --rest false --graphql true
-hawaii update Star --name "hawaii-config.Cosmos" --source "graphqldb.star" --permissions "authenticated:create,read,update,delete"

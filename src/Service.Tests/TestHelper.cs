@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.Tests
             };
 
             IConfigurationRoot config = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory() + "/ConfigFiles")
+                .SetBasePath(Directory.GetCurrentDirectory())
                 .AddInMemoryCollection(configFileNameMap)
                 .Build();
 

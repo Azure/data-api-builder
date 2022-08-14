@@ -34,7 +34,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         /// <param name="expectedPrimaryKeyRoute">The primary key route we
         /// expect to parse from route.</param>
         [DataTestMethod]
-        [TestCategory(TestCategory.MSSQL)]
         [DataRow("foo", "", "foo", "")]
         [DataRow("foo/", "", "foo", "")]
         [DataRow("foo", "/", "foo", "")]
@@ -78,7 +77,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         /// <param name="route">The route to be parsed.</param>
         /// <param name="path">An invalid path for the given route.</param>
         [DataTestMethod]
-        [TestCategory(TestCategory.MSSQL)]
         [DataRow("foo", "bar")]
         [DataRow("\\foo", "foo")]
         [DataRow("\"foo\"", "foo")]

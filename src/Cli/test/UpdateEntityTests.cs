@@ -32,7 +32,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                name: "outputfile");
+                config: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -102,7 +102,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                name: "outputfile");
+                config: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -173,7 +173,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                name: "outputfile");
+                config: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -241,7 +241,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                name: "outputfile");
+                config: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -337,7 +337,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                name: "outputfile");
+                config: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -403,7 +403,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                name: "outputfile");
+                config: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -512,7 +512,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                name: "outputfile");
+                config: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -630,7 +630,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                name: "outputfile");
+                config: "outputfile");
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -669,7 +669,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                name: "outputfile");
+                config: "outputfile");
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -708,7 +708,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                name: "outputfile");
+                config: "outputfile");
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -727,8 +727,8 @@ namespace Cli.Tests
         /// Update Entity with new Policy and Field properties
         /// </summary>
         [DataTestMethod]
-        [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "PolicyAndFields", DisplayName = "Check adding new Policy and Fields to Action")]
-        [DataRow(new string[] { }, new string[] { }, "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "Policy", DisplayName = "Check adding new Policy to Action")]
+        [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "@claims.name eq 'dab'", "@claims.id eq @item.id", "PolicyAndFields", DisplayName = "Check adding new Policy and Fields to Action")]
+        [DataRow(new string[] { }, new string[] { }, "@claims.name eq 'dab'", "@claims.id eq @item.id", "Policy", DisplayName = "Check adding new Policy to Action")]
         [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, null, null, "Fields", DisplayName = "Check adding new fieldsToInclude and FieldsToExclude to Action")]
         public void TestUpdateEntityWithPolicyAndFieldProperties(IEnumerable<string>? fieldsToInclude,
                                                             IEnumerable<string>? fieldsToExclude,
@@ -755,7 +755,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                name: "outputfile"
+                config: "outputfile"
             );
 
             string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntity);
@@ -801,7 +801,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                name: "outputfile"
+                config: "outputfile"
             );
 
             string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyAndFields);
@@ -860,7 +860,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "id:Identity", "name:Company Name" },
-                name: "outputfile");
+                config: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -922,7 +922,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "Macaroni:Mac & Cheese", "region:United State's Region", "russian:русский", "chinese:中文" },
-                name: "outputfile");
+                config: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -986,7 +986,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "name:Company Name", "addr:Company Address", "number:Contact Details" },
-                name: "outputfile");
+                config: "outputfile");
 
             string runtimeConfig = GetConfigWithMappings();
 
@@ -1043,7 +1043,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                name: "outputfile");
+                config: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1105,7 +1105,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: null,
-                name: "outputfile");
+                config: "outputfile");
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -1139,7 +1139,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: mappings.Split(','),
-                name: "outputfile");
+                config: "outputfile");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1188,7 +1188,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: null,
-                name: "outputfile"
+                config: "outputfile"
             );
 
             string runtimeConfig = GetConfigWithMappings();
@@ -1226,7 +1226,7 @@ namespace Cli.Tests
         {
             return @"
                         {
-                        ""$schema"": ""hawaii.draft-01.schema.json"",
+                        ""$schema"": ""dab.draft-01.schema.json"",
                         ""data-source"": {
                             ""database-type"": ""mssql"",
                             ""connection-string"": ""testconnectionstring""

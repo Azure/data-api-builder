@@ -93,6 +93,66 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         WHERE id = " + (STARTING_ID_FOR_TEST_INSERTS + 1) + @" AND book_id = 2
                     ) AS subq
                 "
+            },
+            {
+                "InsertSqlInjectionQuery1",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                        AND title = ' UNION SELECT * FROM books/*'
+                    ) AS subq
+                "
+            },
+            {
+                "InsertSqlInjectionQuery2",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                        AND title = '; SELECT * FROM information_schema.tables/*'
+                    ) AS subq
+                "
+            },
+            {
+                "InsertSqlInjectionQuery3",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                        AND title = 'value; SELECT * FROM v$version--'
+                    ) AS subq
+                "
+            },
+            {
+                "InsertSqlInjectionQuery4",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                        AND title = 'id; DROP TABLE books;'
+                    ) AS subq
+                "
+            },
+            {
+                "InsertSqlInjectionQuery5",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                        AND title = ' '' UNION SELECT * FROM books/*'
+                    ) AS subq
+                "
             }
         };
 

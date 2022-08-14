@@ -851,7 +851,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public virtual async Task TestSettingComplexArgumentUsingVariables(string dbQuery)
         {
             string graphQLQueryName = "books";
-            string graphQLQuery = @"query($orderBy: BookOrderByInput)
+            string graphQLQuery = @"query($orderBy: bookOrderByInput)
             {
                 books(first: 100 orderBy: $orderBy) {
                     items {

@@ -26,7 +26,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                name: "outputfile");
+                config: "outputfile");
 
             string initialConfiguration = GetInitialConfiguration;
             string expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
@@ -49,7 +49,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                name: "outputfile");
+                config: "outputfile");
 
             string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
             string configurationWithOneEntity = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
@@ -74,7 +74,7 @@ namespace Cli.Tests
                 fieldsToExclude: null,
                 policyRequest: null,
                 policyDatabase: null,
-                name: "outputfile");
+                config: "outputfile");
 
             string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
             Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref initialConfiguration));
@@ -97,7 +97,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                name: "outputfile"
+                config: "outputfile"
             );
 
             string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
@@ -110,8 +110,8 @@ namespace Cli.Tests
         /// Add Entity with Policy and Field properties
         /// </summary>
         [DataTestMethod]
-        [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "PolicyAndFields", DisplayName = "Check adding new Entity with both Policy and Fields")]
-        [DataRow(new string[] { }, new string[] { }, "@claims.name eq 'hawaii'", "@claims.id eq @item.id", "Policy", DisplayName = "Check adding new Entity with Policy")]
+        [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "@claims.name eq 'dab'", "@claims.id eq @item.id", "PolicyAndFields", DisplayName = "Check adding new Entity with both Policy and Fields")]
+        [DataRow(new string[] { }, new string[] { }, "@claims.name eq 'dab'", "@claims.id eq @item.id", "Policy", DisplayName = "Check adding new Entity with Policy")]
         [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, null, null, "Fields", DisplayName = "Check adding new Entity with fieldsToInclude and FieldsToExclude")]
         public void AddEntityWithPolicyAndFieldProperties(IEnumerable<string>? fieldsToInclude,
                                                             IEnumerable<string>? fieldsToExclude,
@@ -129,7 +129,7 @@ namespace Cli.Tests
                 fieldsToExclude: fieldsToExclude,
                 policyRequest: policyRequest,
                 policyDatabase: policyDatabase,
-                name: "outputfile"
+                config: "outputfile"
             );
 
             string? expectedConfiguration = null;
@@ -177,7 +177,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { "level" },
                 policyRequest: null,
                 policyDatabase: null,
-                name: "outputfile");
+                config: "outputfile");
 
             string runtimeConfig = GetInitialConfiguration;
 

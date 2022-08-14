@@ -328,11 +328,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         [TestMethod]
         public async Task RequestPaginatedQueryFromMutationResult()
         {
-            string graphQLMutationName = "createBook";
+            string graphQLMutationName = "createbook";
             string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]");
             string graphQLMutation = @"
                 mutation {
-                    createBook(item: { title: ""Books, Pages, and Pagination. The Book"", publisher_id: 1234 }) {
+                    createbook(item: { title: ""Books, Pages, and Pagination. The Book"", publisher_id: 1234 }) {
                         publishers {
                             books(first: 2, after: """ + after + @""") {
                                 items {

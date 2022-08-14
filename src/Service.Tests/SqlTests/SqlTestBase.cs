@@ -87,11 +87,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Add magazines entity to the 
             if (TestCategory.MYSQL.Equals(DatabaseEngine))
             {
-                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "Magazine", "magazines");
+                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "magazine", "magazines");
             }
             else
             {
-                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "Magazine", "foo.magazines");
+                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "magazine", "foo.magazines");
             }
 
             // Add custom entities for the test, if any.
@@ -214,7 +214,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 case TestCategory.MSSQL:
                     // use master as default name for MsSql
                     string sqlDbName = new SqlConnectionStringBuilder(connectionString).InitialCatalog;
-                    DatabaseName = !string.IsNullOrEmpty(sqlDbName) ? DatabaseName : MSSQL_DEFAULT_DB_NAME;
+                    DatabaseName = !string.IsNullOrEmpty(sqlDbName) ? sqlDbName : MSSQL_DEFAULT_DB_NAME;
                     break;
                 case TestCategory.POSTGRESQL:
                     // use username as default name for PostgreSql, if no username use empty string

@@ -365,6 +365,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 );
         }
 
+        /// <summary>
+        /// We try to Sql Inject through the body of an update operation.
+        /// If the update happens successfully we know the sql injection
+        /// failed.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(" UNION SELECT * FROM books/*", "UpdateSqlInjectionQuery1")]
+        [DataRow("; SELECT * FROM information_schema.tables/*", "UpdateSqlInjectionQuery2")]
+        [DataRow("value; SELECT * FROM v$version--", "UpdateSqlInjectionQuery3")]
+        [DataRow("value; DROP TABLE authors;", "UpdateSqlInjectionQuery4")]
+        public virtual async Task PutOne_Update_SqlInjection_Test(string sqlInjection, string query)
+        {
+            string requestBody = @"
+            {
+                ""title"": """ + sqlInjection + @""",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/7",
+                    queryString: null,
+                    entity: _integrationEntityName,
+                    sqlQuery: GetQuery(query),
+                    controller: _restController,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
         #endregion
 
         #region Negative Tests

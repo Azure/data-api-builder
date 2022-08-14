@@ -39,10 +39,10 @@ Project startup requires a config that can be generated using hawaii-cli.
 ##### Use Cli-tool to Generate the config
 Below command will let you generate the config file with the required database-type and connection-string (**Note:** --name denotes name of the generated config, do not add extension).
 ```
-hawaii init --name hawaii-config.XXX --database-type <<DBTYPE>> --connection-string <<CONNSTRING>>
+hawaii init --name dab-config.XXX --database-type <<DBTYPE>> --connection-string <<CONNSTRING>>
 ```
 
-In your editor of choice, you can locate template configuration files in the `DataGateway.Service` directory of the form `hawaii-config.XXX.json`.
+In your editor of choice, you can locate template configuration files in the `DataGateway.Service` directory of the form `dab-config.XXX.json`.
 
 Supply a value `connection-string` for the project to be able to connect the service to your database. These connection strings will be specific to the instance of the database that you are running. Example connection strings are provided for assistance.
 
@@ -106,7 +106,7 @@ Schema and data population files are included that are necessary for running sam
 
 **Note:** Edits to `.sql` files require matching edits to the GraphQL (.gql)schema file and the runtime config.
 
-- Runtime config: `hawaii-config.json`
+- Runtime config: `dab-config.json`
 - GraphQL schema file is `books.gql`
 - Resolver config: `sql-config.json`
 
@@ -234,22 +234,22 @@ HTTP requests must have the `Authorization` HTTP header set with the value `Bear
 
     a. Command Line Argument e.g. `--ConfigFileName=custom-config.json`
 
-    b. Value of `HAWAII_ENVIRONMENT` suffixed to hawaii-config.
-    e.g. setting `HAWAII_ENVIRONMENT=Development` will prompt the runtime to look for `hawaii-config.Development.json`
+    b. Value of `DAB_ENVIRONMENT` suffixed to dab-config.
+    e.g. setting `DAB_ENVIRONMENT=Development` will prompt the runtime to look for `dab-config.Development.json`
 
-    c. Value of `ASPNETCORE_ENVIRONMENT` suffixed to hawaii-config.
-    e.g. setting `ASPNETCORE_ENVIRONMENT=MsSql` will prompt the runtime to look for `hawaii-config.MsSql.json`
+    c. Value of `ASPNETCORE_ENVIRONMENT` suffixed to dab-config.
+    e.g. setting `ASPNETCORE_ENVIRONMENT=MsSql` will prompt the runtime to look for `dab-config.MsSql.json`
 
-    d. By default, runtime will look for `hawaii-config.json`
+    d. By default, runtime will look for `dab-config.json`
 
 3. For any of the configuration file names determined for the environment, if there is another file with the `.overrides` suffix in the current directory, that overridden file name will instead be picked up.
-e.g. if both `hawaii-config.json` and `hawaii-config.overrides.json` are present, precedence will be given to `hawaii-config.overrides.json` - however, the runtime will still follow the above rules of precedence.
-e.g. When HAWAII_ENVIRONMENT is set as `Development` and if all three config files exist- `hawaii-config.Development.json`, `hawaii-config.json`, `hawaii-config.overrides.json`- the runtime will pick `hawaii-config.Development.json`.
+e.g. if both `dab-config.json` and `dab-config.overrides.json` are present, precedence will be given to `dab-config.overrides.json` - however, the runtime will still follow the above rules of precedence.
+e.g. When DAB_ENVIRONMENT is set as `Development` and if all three config files exist- `dab-config.Development.json`, `dab-config.json`, `dab-config.overrides.json`- the runtime will pick `dab-config.Development.json`.
 
 #### Command Line
 
 1. Based on your preferred mode of specifying the configuration file name, there are different ways to launch the runtime.
-2. Set the `HAWAII_ENVIRONMENT` or `ASPNETCORE_ENVIRONMENT`, typically using their value to be database type `MsSql`, `PostgreSql`,`Cosmos`, or `MySql`.
+2. Set the `DAB_ENVIRONMENT` or `ASPNETCORE_ENVIRONMENT`, typically using their value to be database type `MsSql`, `PostgreSql`,`Cosmos`, or `MySql`.
 
     Example: `ASPNETCORE_ENVIRONMENT=PostgreSql`
 

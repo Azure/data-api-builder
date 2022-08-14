@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
@@ -71,7 +72,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             string graphqlMutationName = context.Selection.Field.Name.Value;
-            string entityName = context.Selection.Field.Type.TypeName();
+            IOutputType outputType = context.Selection.Field.Type;
+            string entityName = outputType.TypeName();
+            ObjectType _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+
+            if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
+            {
+                entityName = modelName;
+            }
 
             Tuple<JsonDocument, IMetadata>? result = null;
             Operation mutationOperation =

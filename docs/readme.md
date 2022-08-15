@@ -7,8 +7,8 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 ## Table of content
 
 - [Getting started](./getting-started/getting-started.md)
+- [Command Line Interface](./getting-started/dab-cli.md)
 - [Configuration file](./configuration-file.md)
-- [Command Line Interface](./cli.md)
 - Running Data API builder for Azure Database
   - [Running from source code](./running-from-source-code.md)
   - [Running using a container](./running-using-a-container.md)

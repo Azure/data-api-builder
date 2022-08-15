@@ -1,6 +1,6 @@
 Release Checklist
 - [ ] Make sure rolling build after the latest desired commit required for the release is green. Then create a new branch `release/Mxx` where xx is the release version.
-[] Modify `.pipelines/build-pipelines.yml` to update the major, minor and patch version numbers to match xx. Example, for `M1.5`, set minor to 1 and patch to 5 (major is implicitly 0 here.) This new branch is now frozen at `v0.1.5`
+- [] Modify `.pipelines/build-pipelines.yml` to update the major, minor and patch version numbers to match xx. Example, for `M1.5`, set minor to 1 and patch to 5 (major is implicitly 0 here.) This new branch is now frozen at `v0.1.5`
 - [ ] Trigger a release [build](https://msdata.visualstudio.com/CosmosDB/_build?definitionId=18014) targeting the newly created branch by setting the pipeline variables `isNugetRelease` to `true` and `releaseName` to `Mxx`.
 - [ ] After a successful build,
 - Verify the [nuget feed](https://msdata.visualstudio.com/CosmosDB/_artifacts/feed/DataApiBuilder) is updated with the desired release version for the `dab` package. Download the nuget and do some smoke tests following the instructions [here.](../getting-started/getting-started-dab-cli.md)

@@ -15,4 +15,3 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 - [REST features](./rest.md)
 - [GraphQL features](./graphql.md)
 - [Known Issues and Limitations](/docs/known-issues.md)
-

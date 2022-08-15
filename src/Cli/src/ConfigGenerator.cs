@@ -24,7 +24,8 @@ namespace Cli
 
             if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
             {
-                return false;
+                runtimeConfigFile = RuntimeConfigPath.DefaultName;
+                Console.WriteLine($"Creating a new config file: {runtimeConfigFile}");
             }
 
             return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
@@ -59,7 +60,7 @@ namespace Cli
                     string? graphQLSchemaPath = options.GraphQLSchemaPath;
                     if (string.IsNullOrEmpty(cosmosDatabase) || string.IsNullOrEmpty(graphQLSchemaPath))
                     {
-                        Console.WriteLine($"Please provide the mandatory options for CosmosDB: --cosmos-database, --graphql-schema");
+                        Console.WriteLine($"Provide all the mandatory options for CosmosDB: --cosmos-database, and --graphql-schema");
                         return false;
                     }
 

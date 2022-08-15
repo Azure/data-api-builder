@@ -56,10 +56,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
 
+            string singularName = GetDefinedSingularName(name.Value, configEntity);
             return new(
                 null,
-                new NameNode($"delete{GetDefinedSingularName(name.Value, configEntity)}"),
-                new StringValueNode($"Delete a {name}"),
+                new NameNode($"delete{singularName}"),
+                new StringValueNode($"Delete a {singularName}"),
                 inputValues,
                 new NamedTypeNode(name),
                 fieldDefinitionNodeDirectives

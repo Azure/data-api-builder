@@ -49,7 +49,7 @@ steps:
   inputs:
     targetType: 'filePath'
     filePath: configGenerator.ps1
-    arguments: 'cosmos'
+    arguments: 'Cosmos'
     errorActionPreference: 'stop'
     failOnStderr: true
     workingDirectory: 'src/out/tests/net6.0/'
@@ -59,7 +59,7 @@ steps:
   displayName: 'Generate dab-config.Cosmos.json'
   inputs:
     scriptPath: configGenerator.sh
-    args: 'cosmos'
+    args: 'Cosmos'
     cwd: 'src/out/tests/net6.0/'
     failOnStandardError: true
   condition: ne( variables['Agent.OS'], 'Windows_NT' )

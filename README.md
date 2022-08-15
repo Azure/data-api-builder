@@ -2,9 +2,36 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-### Data API builder for Azure Databases provide modern REST and GraphQL endpoints to your Azure Databases.
+Latest version of Data API builder is  **0.1.5** also known as **M1.5**
+
+## About
+
+**Data API builder for Azure Databases provide modern REST and GraphQL endpoints to your Azure Databases.**
 
 With Data API builder, database objects can be exposed via REST or GraphQL endpoints so that your data can be accessed using modern techniques by any platform, any language, any device. With an integrated and flexible policy engine, granular security is assured; integrated with Azure SQL DB, SQL Server, PostgreSQL, MySQL, MariaDB and Cosmos DB, gives developer an efficiency boost like it was never seen before.
+
+## Features
+
+- Allow collections, tables and views to be accessed via REST and GraphQL
+- Support authentication via JWT and EasyAuth
+- Role-based authorization using received claims
+- Item-level security via policy expressions
+- REST 
+  - CRUD operations via POST, GET, PUT, DELETE
+  - filtering, sorting and pagination
+- GraphQL 
+  - queries and mutations
+  - filtering, sorting and pagination
+  - relationship navigation
+
+## Limitations 
+
+- JWT only supports AAD
+- REST does not support partial updates (PATCH)
+
+## Known Issues
+
+List of known issues and possible workarounds,where applicable and possible, is availabe here: [Known Issues](./docs/known-issues.md).
 
 ## Getting Started
 

@@ -233,7 +233,7 @@ namespace Cli
         {
             JsonSerializerOptions? options = new()
             {
-                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
                 WriteIndented = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 PropertyNamingPolicy = new LowerCaseNamingPolicy()

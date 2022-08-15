@@ -1,6 +1,6 @@
 # REST in Data API builder
 
-Entities configured to be available via REST will be available at the path
+Entities configured to be available via REST will be available at the path 
 
 ```
 http://localhost:5000/api/<entity>
@@ -36,6 +36,14 @@ The items related to the requested entity will be available in the `value` array
   ]
 }
 ```
+
+REST endpoints support the following query parameters to control the returned items:
+
+- [`$orderby`](#sorting-results): defines how the returned data will be sorted
+- [`$first\$after`](#limit-and-paginate-the-returned-result): returns only the top `n` items
+- [`$filter`](): filters the returned items
+- [`$select`](): returns only the selected columns
+
 
 ## Limit and paginate the returned result
 

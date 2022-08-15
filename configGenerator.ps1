@@ -4,7 +4,8 @@ param(
 
 $commandsFileName = $databaseType + "Commands.txt";
 $commandsFileWithPath = $PSScriptRoot + "\" + $commandsFileName;
-$pathToDabExe = Get-ChildItem -Path .\src\out\cli\ -Recurse -include "dab.exe" | %{$_.FullName} ;
+$pathToCLIBuildOutput = $PSScriptRoot + "\src\out\cli";
+$pathToDabExe = Get-ChildItem -Path $pathToCLIBuildOutput -Recurse -include "dab.exe" | %{$_.FullName} ;
 
 # Generating the config files using dab commands
 foreach($command in Get-Content $commandsFileWithPath){

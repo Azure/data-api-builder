@@ -51,14 +51,15 @@ jobs:
       arguments: '--configuration $(buildConfiguration)' # Update this to match your need
 
   - task: ShellScript@2
+    displayName: 'Generate dab-config.MySql.json'
     inputs:
       scriptPath: configGenerator.sh
       args: 'MySql'
       cwd: '$(System.DefaultWorkingDirectory)/src/out/tests/net6.0/'
       failOnStandardError: true
-      
+
   - task: FileTransform@1
-    displayName: 'Generate dab-config.MySql.json'
+    displayName: 'Transform dab-config.MySql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'

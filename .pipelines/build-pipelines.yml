@@ -153,4 +153,4 @@ steps:
     tags: |
       $(BuildDate)-$(Build.SourceVersion)
       $(releaseName)
-      $(nugetVersion)
+      $(dabVersion)

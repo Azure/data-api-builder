@@ -69,6 +69,7 @@ update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:cre
 update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:update" --fields.include "*" --policy-database "@item.id eq 9"
 update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:delete" --fields.include "*" --policy-database "@item.id eq 9"
 update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:read" --fields.include "*"
+update Review --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
 update Review --config "dab-config.MsSql.json" --relationship books --target.entity Book --cardinality one
 update BookWebsitePlacement --config "dab-config.MsSql.json" --permissions "authenticated:create,update" --rest true --graphql true
 update BookWebsitePlacement --config "dab-config.MsSql.json" --permissions "authenticated:delete" --fields.include "*" --policy-database "@claims.id eq @item.id"
@@ -88,8 +89,8 @@ update BookWebsitePlacement --config "dab-config.MsSql.json" --relationship book
 update SupportedType --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update" --rest false
 update Author --config "dab-config.MsSql.json" --relationship books --target.entity Book --cardinality many --linking.object book_author_link
 update Notebook --config "dab-config.MsSql.json" --permissions "anonymous:create,update,delete"
-update Journal --config "dab-config.MsSql.json" --permissions "authenticated:update" --fields.include "*" --policy-database "@item.id ne 1"
-update Journal --config "dab-config.MsSql.json" --permissions "authenticated:read" --fields.include "*"
+update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_noupdate:update" --fields.include "*" --policy-database "@item.id ne 1"
+update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_noupdate:read" --fields.include "*"
 update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:create"
 update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:update" --fields.include "*" --policy-database "@item.id eq 1"
 update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:read" --fields.exclude "*"

@@ -84,10 +84,11 @@ update books_publishers_view_composite --config "dab-config.MySql.json" --permis
 update BookWebsitePlacement --config "dab-config.MySql.json" --relationship books --target.entity Book --cardinality one
 update SupportedType --config "dab-config.MySql.json" --permissions "authenticated:create,read,delete,update" --rest false
 update Author --config "dab-config.MySql.json" --relationship books --target.entity Book --cardinality many --linking.object book_author_link
+update Review --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete"
 update Review --config "dab-config.MySql.json" --rest true --permissions "authenticated:create,read,update,delete" --relationship books --target.entity Book --cardinality one
 update Notebook --config "dab-config.MySql.json" --permissions "anonymous:create,update,delete"
-update Journal --config "dab-config.MySql.json" --permissions "authenticated:update" --fields.include "*" --policy-database "@item.id ne 1"
-update Journal --config "dab-config.MySql.json" --permissions "authenticated:read" --fields.include "*"
+update Journal --config "dab-config.MySql.json" --permissions "policy_tester_noupdate:update" --fields.include "*" --policy-database "@item.id ne 1"
+update Journal --config "dab-config.MySql.json" --permissions "policy_tester_noupdate:read" --fields.include "*"
 update Journal --config "dab-config.MySql.json" --permissions "policy_tester_update_noread:create"
 update Journal --config "dab-config.MySql.json" --permissions "policy_tester_update_noread:update" --fields.include "*" --policy-database "@item.id eq 1"
 update Journal --config "dab-config.MySql.json" --permissions "policy_tester_update_noread:read" --fields.exclude "*"

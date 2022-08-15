@@ -75,13 +75,10 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: 'Creating Nuget Package'
   inputs:
-    command: pack
-    packagesToPack: '**/Cli.csproj'
-    packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
-    nobuild: true
-    versioningScheme: byEnvVar
-    versionEnvVar: dabVersion
-    verbosityPack: 'minimal'
+    command: custom
+    custom: pack
+    projects: '**/Cli.csproj'
+    arguments: '-p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
 
 # This task will authenticate and publish the NuGet Package to internal feed
 # To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.

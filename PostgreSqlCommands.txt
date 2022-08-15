@@ -1,10 +1,10 @@
-init --config "dab-config.PostgreSql.json" --database-type postgresql --connection-string " " --host-mode Development --cors-origin "http://localhost:5000"
+init --config "dab-config.PostgreSql.json" --database-type mssql --connection-string " " --host-mode Development --cors-origin "http://localhost:5000"
 add Publisher --config "dab-config.PostgreSql.json" --source publishers --permissions "anonymous:read"
 add Stock --config "dab-config.PostgreSql.json" --source stocks --permissions "anonymous:create,read,update"
 add Book --config "dab-config.PostgreSql.json" --source books --permissions "anonymous:read" --graphql "book:books"
 add BookWebsitePlacement --config "dab-config.PostgreSql.json" --source book_website_placements --permissions "anonymous:read"
 add Author --config "dab-config.PostgreSql.json" --source authors --permissions "anonymous:read"
-add Review --config "dab-config.PostgreSql.json" --source reviews --permissions "anonymous:read" --graphql "review:reviews"
+add Review --config "dab-config.PostgreSql.json" --source reviews --permissions "anonymous:read" --rest false --graphql "review:reviews"
 add Comic --config "dab-config.PostgreSql.json" --source comics --permissions "anonymous:read"
 add Broker --config "dab-config.PostgreSql.json" --source brokers --permissions "anonymous:read"
 add WebsiteUser --config "dab-config.PostgreSql.json" --source website_users --permissions "anonymous:create,read,delete,update"
@@ -33,7 +33,7 @@ update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tes
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:create,delete"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:update" --fields.include "*"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id eq 1940"
-update Stock --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship comics --target.entity Comic --cardinality many --relationship.fields "categoryName:categoryName"
+update Stock --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update Book --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete"
 update Book --config "dab-config.PostgreSql.json" --relationship publishers --target.entity Publisher --cardinality one
 update Book --config "dab-config.PostgreSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
@@ -66,10 +66,8 @@ update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_0
 update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_08:update" --fields.include "*" --policy-database "@item.id eq 9"
 update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_08:delete" --fields.include "*" --policy-database "@item.id eq 9"
 update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_08:read" --fields.include "*"
-update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_update_noread:create"
-update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_update_noread:update" --fields.include "*" --policy-database "@item.id eq 9"
-update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_update_noread:read" --fields.exclude "*"
-update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_update_noread:delete" --fields.include "*" --policy-database "@item.id eq 9"
+update Review --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete"
+update Review --config "dab-config.PostgreSql.json" --relationship books --target.entity Book --cardinality one
 update BookWebsitePlacement --config "dab-config.PostgreSql.json" --permissions "authenticated:create,update" --rest true --graphql true
 update BookWebsitePlacement --config "dab-config.PostgreSql.json" --permissions "authenticated:delete" --fields.include "*" --policy-database "@claims.id eq @item.id"
 update Author --config "dab-config.PostgreSql.json"  --permissions "authenticated:create,read,update,delete" --rest true --graphql true
@@ -84,8 +82,6 @@ update Fungus --config "dab-config.PostgreSql.json" --permissions "policy_tester
 update BookWebsitePlacement --config "dab-config.PostgreSql.json" --relationship books --target.entity Book --cardinality one
 update SupportedType --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,delete,update" --rest false
 update Author --config "dab-config.PostgreSql.json" --relationship books --target.entity Book --cardinality many --linking.object book_author_link
-update Review --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete"
-update Review --config "dab-config.PostgreSql.json" --rest true --permissions "authenticated:create,read,update,delete" --relationship books --target.entity Book --cardinality one
 update Notebook --config "dab-config.PostgreSql.json" --permissions "anonymous:create,update,delete"
 update Journal --config "dab-config.PostgreSql.json" --permissions "policy_tester_noupdate:update" --fields.include "*" --policy-database "@item.id ne 1"
 update Journal --config "dab-config.PostgreSql.json" --permissions "policy_tester_noupdate:read" --fields.include "*"

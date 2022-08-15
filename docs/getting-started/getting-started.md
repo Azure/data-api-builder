@@ -7,6 +7,12 @@ Welcome to this getting started tutorial that will guide you to have Data API bu
 ### .NET 6.0
 Make sure you have .NET 6.0 SDK installed on your machine: https://dotnet.microsoft.com/en-us/download/dotnet/6.0.
 
+You can check what SDKs you have installed using the following command:
+
+```bash
+dotnet --list-sdks
+```
+
 ### Azure Database
 
 As the Data API builder for Azure Databases generate REST and GraphQL endpoints for database objects, you need to have a database ready to be used. You can choose either a relational or non-relational database. The getting started guide document the process to have Data API builder set up for:
@@ -15,7 +21,7 @@ As the Data API builder for Azure Databases generate REST and GraphQL endpoints 
 
 ### Git
 
-Please note that familiarity with Git commands, tools and concept is assumed throughout all the tutorial.
+Please note that familiarity with Git commands, tools and concept is assumed throughout all the tutorial. Make sure `git` is installed in your machine.
 
 ## Clone the Data API builder for Azure Databases engine
 
@@ -25,10 +31,17 @@ Clone the repository locally:
 git clone https://github.com/azure/data-api-builder
 ```
 
+and then make sure you are using M1.5 release:
+
+```bash
+cd .\data-api-builder\
+git checkout release/M1.5
+```
+
 then move into the folder where the Data API builder for Azure Databases engine has been cloned and then move into the `samples/getting-started` folder, for example:
 
 ```
-cd ./samples/getting-started
+cd .\samples\getting-started
 ```
 
 ## Create the configuration file
@@ -37,13 +50,13 @@ The Data API builder for Azure Databases engine needs a [configuration file](../
 
 Creating a configuration file is simple and you can use the Data API builder CLI to make it even simpler. In this tutorial the CLI will not be used so that you can get the chance to get familar with the configuration file, as it is a key part of Data API builder for Azure Databases.
 
-Create a copy of the `basic-empty-dab-config.json` file and rename it `library-dab-config.json`
+Create a copy of the `basic-empty-dab-config.json` file and rename it `library-dab-config.json` and then open it using your IDE of choice (Visual Studio Code is recommended).
 
 The content of the file is the following:
 
 ```json
 {
-    "$schema": "../schemas/hawaii.draft-01.schema.json",
+    "$schema": "../../schemas/dab.draft-01.schema.json",
     "data-source": {
         "database-type": "",
         "connection-string": ""
@@ -66,8 +79,7 @@ In the `data-source` section you have to specify the database type and the conne
 - `mssql`: for Azure SQL DB, Azure SQL MI or SQL Server
 - `cosmos`: for Azure Cosmos DB (SQL API)
 - `postgresql`: for PostgreSQL
-- `mariadb`: for MariaDB
-- `mysql`: for MySQL
+- `mysql`: for MySQL or MariaDB
 
 Set the value of `database-type` to the database you plan to use. For this tutorial we'll be using `mssql` or `cosmos` to showcase both the relational and non-relational support.
 
@@ -92,4 +104,16 @@ Depending if you want to use Azure SQL Database or Cosmos DB, continue to the ap
 
 - [Getting Started with Data API builder for Azure SQL DB](./getting-started-azure-sql-db.md)
 - [Getting Started with Data API builder for with Azure Cosmos DB](./getting-started-azure-cosmos-db.md)
+
+And then proceeed to the "Next Steps" to go even further
+
+## Next Steps
+
+### Running Data API Builder using Docker
+
+You can use Docker to run the Data API Builder on your machine. Instructions are availabe here: [Running Data API Builder for Azure Databases using a container](../running-using-a-container.md)
+
+### Using Data API Builder CLI to build the configuration file
+
+Instead of creating the configuration file manually, you can take advatange of the CLI [Getting started with Data API Builder (`dab`) CLI](../getting-started/getting-started-dab-cli.md): 
 

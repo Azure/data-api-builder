@@ -389,7 +389,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (orderByObject is not null)
                 {
-                    OrderByColumns = ProcessGraphQLOrderByArg((IDictionary<string, object?>)orderByObject, queryArgumentSchemas[QueryBuilder.ORDER_BY_FIELD_NAME]);
+                    OrderByColumns = ProcessGraphQLOrderByArg((IDictionary<string, object?>)orderByObject);
                 }
             }
 
@@ -787,7 +787,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Create a list of orderBy columns from the orderBy argument
         /// passed to the gql query
         /// </summary>
-        private List<OrderByColumn> ProcessGraphQLOrderByArg(IDictionary<string, object?> orderByFields, IInputField orderByArgumentSchema)
+        private List<OrderByColumn> ProcessGraphQLOrderByArg(IDictionary<string, object?> orderByFields)
         {
             if (_ctx is null)
             {

@@ -69,7 +69,7 @@ steps:
   inputs:
     folderPath: '$(System.DefaultWorkingDirectory)'
     fileType: 'json'
-    targetFiles: 'src/Service/dab-config.Cosmos.json'
+    targetFiles: 'src/out/tests/net6.0/dab-config.Cosmos.json'
 
 - task: DotNetCoreCLI@2
   displayName: 'Run Cosmos DB Integration Tests'

@@ -52,6 +52,7 @@ jobs:
       args: 'PostgreSql'
       cwd: 'src/out/tests/net6.0/'
       failOnStandardError: true
+    condition: succeeded()
 
   - task: FileTransform@1
     displayName: 'Generate dab-config.PostgreSql.json'
@@ -59,6 +60,7 @@ jobs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
       targetFiles: 'src/out/tests/net6.0/dab-config.PostgreSql.json'
+    condition: succeeded()
 
   - task: DotNetCoreCLI@2
     displayName: 'Run Postgres Integration Tests'

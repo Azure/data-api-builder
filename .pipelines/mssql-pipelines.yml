@@ -53,6 +53,7 @@ jobs:
       args: 'MsSql'
       cwd: 'src/out/tests/net6.0/'
       failOnStandardError: true
+    condition: succeeded()
 
   - task: FileTransform@1
     displayName: 'Transform dab-config.MsSql.json'

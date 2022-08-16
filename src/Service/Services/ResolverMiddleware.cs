@@ -313,7 +313,7 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 null => null,
                 NullValueNode => null,
-                IntValueNode i => i.Value,
+                IntValueNode i => IntValueNodeToNumber(i),
                 StringValueNode s => s.Value,
                 BooleanValueNode b => b.Value,
                 FloatValueNode f => f.Value,
@@ -322,6 +322,36 @@ namespace Azure.DataApiBuilder.Service.Services
                 ObjectValueNode obj => obj.Fields.ToDictionary(field => field.Name.Value, field => ExtractRawValue(field.Value)),
                 _ => value
             };
+        }
+
+        private static object IntValueNodeToNumber(IntValueNode i)
+        {
+            static bool TryGet(Func<IntValueNode, object> f, IntValueNode i, out object? o)
+            {
+                try
+                {
+                    o = f(i);
+                    return true;
+                }
+                catch (InvalidFormatException)
+                {
+                    o = null;
+                    return false;
+                }
+            }
+
+            bool success =
+               TryGet(i => i.ToInt32(), i, out object? ret) ||
+               TryGet(i => i.ToInt64(), i, out ret) ||
+               TryGet(i => i.ToInt16(), i, out ret) ||
+               TryGet(i => i.ToByte(), i, out ret) ||
+               TryGet(i => i.ToDecimal(), i, out ret) ||
+               TryGet(i => i.ToDouble(), i, out ret) ||
+               TryGet(i => i.ToSingle(), i, out ret);
+
+            ret ??= i.Value;
+
+            return ret;
         }
 
         /// <summary>

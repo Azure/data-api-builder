@@ -530,6 +530,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 restEndPoint = restEndPoint + queryString;
             }
 
+            JsonSerializerOptions options = new()
+            {
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+
             HttpMethod httpMethod = GetHttpMethodFromOperation(operationType);
 
             //JsonContent payload = requestBody is null ? null : JsonContent.Create(requestBody);
@@ -591,11 +596,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             }
             else
             {
-                JsonSerializerOptions options = new()
-                {
-                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                };
-
                 if (exception)
                 {
                     expected = JsonSerializer.Serialize(RestController.ErrorResponse(

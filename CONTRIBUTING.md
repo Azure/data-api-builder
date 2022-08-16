@@ -45,11 +45,11 @@ __EOF__
 chmod +x .git/hooks/pre-commit
 ```
 
-## Hawaii-Cli
-1. To update the CLI tool trigger name from hawaii to any other, goto csProj file and update the ToolCommandName :
+## dab
+1. To update the CLI tool trigger name from DAB to any other, goto csProj file and update the ToolCommandName :
 ```
 <PackAsTool>true</PackAsTool>
-<ToolCommandName>hawaii</ToolCommandName>
+<ToolCommandName>dab</ToolCommandName>
 <PackageOutputPath>./nupkg</PackageOutputPath>
 ```
 
@@ -60,7 +60,7 @@ dotnet pack
 
 3. Install the tool
 ```
-dotnet tool install --global --add-source ./nupkg hawaii-cli
+dotnet tool install --global --add-source ./nupkg dab
 ```
 
 4. After making new changes. Do the below steps
@@ -77,7 +77,7 @@ dotnet tool install --global --add-source ./nupkg hawaii-cli
 	```
 	c) update the installed tool:
 	```
-	dotnet tool update -g --add-source ./nupkg hawaii-cli --version 2.0.0
+	dotnet tool update -g --add-source ./nupkg dab --version 2.0.0
 	```
 
 ## Share the changes
@@ -94,14 +94,14 @@ tests locally can be useful to debug a failure.
 The only thing that should different between CI and your own machine is how you
 connect to the database that's used for the tests. You should create a custom
 overrides file with your connection string:
-- `hawaii-config.MsSql.overrides.json` for SQL Server
-- `hawaii-config.PostgreSql.overrides.json` for Postgres
-- `hawaii-config.MySql.overrides.json` for MySql
+- `dab-config.MsSql.overrides.json` for SQL Server
+- `dab-config.PostgreSql.overrides.json` for Postgres
+- `dab-config.MySql.overrides.json` for MySql
 
 There's a template for these files called:
-- `hawaii-config.MsSql.overrides.example.json` for SQL Server
-- `hawaii-config.PostgreSql.overrides.example.json` for Postgres
-- `hawaii-config.PostgreSql.overrides.example.json` for MySql
+- `dab-config.MsSql.overrides.example.json` for SQL Server
+- `dab-config.PostgreSql.overrides.example.json` for Postgres
+- `dab-config.PostgreSql.overrides.example.json` for MySql
 
 If you copy those files to the path without `example` in it and change the
 places where it says `REPLACEME` then you should be able to run the tests

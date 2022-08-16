@@ -258,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             return
 @"
 {
-  ""$schema"": ""../../project-hawaii/playground/hawaii.draft-01.schema.json"",
+  ""$schema"": ""../../project-dab/playground/dab.draft-01.schema.json"",
   ""data-source"": {
     ""database-type"": """ + dbType.ToLower() + @""",
     ""connection-string"": """"

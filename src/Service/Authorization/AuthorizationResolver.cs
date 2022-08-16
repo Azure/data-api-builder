@@ -379,7 +379,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// </summary>
         /// <param name="action">Action name.</param>
         /// <returns>IEnumerable of all available action name</returns>
-        private static IEnumerable<Operation> GetAllActions(Operation action)
+        public static IEnumerable<Operation> GetAllActions(Operation action)
         {
             return action is Operation.All ? Action.ValidPermissionActions : new List<Operation> { action };
         }

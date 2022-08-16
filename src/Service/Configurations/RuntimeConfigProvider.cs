@@ -125,6 +125,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     out runtimeConfig))
             {
                 runtimeConfig!.DetermineGlobalSettings();
+                runtimeConfig!.DetermineGraphQLEntityNames();
+
                 if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
                 {
                     runtimeConfig!.ConnectionString = configPath.CONNSTRING;
@@ -210,6 +212,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 RuntimeConfiguration = runtimeConfig;
                 RuntimeConfiguration!.DetermineGlobalSettings();
+                RuntimeConfiguration!.DetermineGraphQLEntityNames();
                 RuntimeConfiguration!.ConnectionString = connectionString;
 
                 if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmos)

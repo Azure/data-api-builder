@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
                         FieldDefinitionNode field = new(
                             location: null,
-                            new(FormatNameForField(columnName)),
+                            new(columnName),
                             description: null,
                             new List<InputValueDefinitionNode>(),
                             column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
@@ -117,9 +117,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     INullableTypeNode targetField = relationship.Cardinality switch
                     {
                         Cardinality.One =>
-                            new NamedTypeNode(FormatNameForObject(targetEntityName, referencedEntity)),
+                            new NamedTypeNode(GetDefinedSingularName(targetEntityName, referencedEntity)),
                         Cardinality.Many =>
-                            new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(FormatNameForObject(targetEntityName, referencedEntity))),
+                            new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(GetDefinedSingularName(targetEntityName, referencedEntity))),
                         _ =>
                             throw new DataApiBuilderException(
                                 message: "Specified cardinality isn't supported",
@@ -129,14 +129,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
                     FieldDefinitionNode relationshipField = new(
                         location: null,
-                        new NameNode(FormatNameForField(relationshipName)),
+                        new NameNode(relationshipName),
                         description: null,
                         new List<InputValueDefinitionNode>(),
                         // TODO: Check for whether it should be a nullable relationship based on the relationship fields
                         new NonNullTypeNode(targetField),
                         new List<DirectiveNode> {
                             new(RelationshipDirectiveType.DirectiveName,
-                                new ArgumentNode("target", FormatNameForObject(targetEntityName, referencedEntity)),
+                                new ArgumentNode("target", GetDefinedSingularName(targetEntityName, referencedEntity)),
                                 new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
                         });
 
@@ -153,9 +153,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 objectTypeDirectives.Add(authorizeDirective!);
             }
 
+            // Top-level object type definition name should be singular.
+            // The singularPlural.Singular value is used, and if not configured,
+            // the top-level entity name value is used. No singularization occurs
+            // if the top-level entity name is already plural.
             return new ObjectTypeDefinitionNode(
                 location: null,
-                new(FormatNameForObject(entityName, configEntity)),
+                name: new(value: GetDefinedSingularName(entityName, configEntity)),
                 description: null,
                 objectTypeDirectives,
                 new List<NamedTypeNode>(),

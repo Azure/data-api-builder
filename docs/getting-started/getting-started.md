@@ -119,9 +119,12 @@ Instead of creating the configuration file manually, you can take advatange of t
 
 ### Exercise
 
-If you what practice what you have learned, here's a little exercise you can docs
+If you what practice what you have learned, here's a little exercise you can do on your own
 
-- Use the code `exercise.library.azure-sql.sql` to 
+- Use the code `/samples/getting-started/azure-sql-db/exercise/exercise.library.azure-sql.sql` to 
   - add the `dbo.series` table where to store series names (for example: [Foundation Series](https://en.wikipedia.org/wiki/Foundation_series))
-  - update the `dbo.books` table to add the `series_id` columns
+  - update the `dbo.books` table to add the `serie_id` column
   - update the `dbo.books` table to add a foreign key constraint to the `dbo.series` table
+- Update the configuration file to add the `serie` entity, supported by the `dbo.series` source table
+- Update the `book` entity to create a relationship with the `serie` entity. Make sure you select `one` for the `cardinality` property
+- Update the `serie` entity to create a relationship with the `book` entity. Make sure you select `many` for the `cardinality` property

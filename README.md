@@ -19,7 +19,7 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 - Role-based authorization using received claims
 - Item-level security via policy expressions
 - REST 
-  - CRUD operations via POST, GET, PUT, DELETE
+  - CRUD operations via POST, GET, PUT, PATCH, DELETE
   - filtering, sorting and pagination
 - GraphQL 
   - queries and mutations
@@ -29,7 +29,6 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 ## Limitations 
 
 - JWT only supports AAD
-- REST does not support partial updates (PATCH)
 - Tables must have a primary key. The primary key must be built on a single column.
 
 ## Known Issues

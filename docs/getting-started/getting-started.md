@@ -119,7 +119,7 @@ Instead of creating the configuration file manually, you can take advatange of t
 
 ### Exercise
 
-If you what practice what you have learned, here's a little exercise you can do on your own
+If you want to practice what you have learned, here's a little exercise you can do on your own
 
 - Use the code `/samples/getting-started/azure-sql-db/exercise/exercise.library.azure-sql.sql` to 
   - add the `dbo.series` table where to store series names (for example: [Foundation Series](https://en.wikipedia.org/wiki/Foundation_series))

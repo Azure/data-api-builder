@@ -30,7 +30,7 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 
 - JWT only supports AAD
 - REST does not support partial updates (PATCH)
-- Tables must have a primary key. The primary key must be built on a single columns.
+- Tables must have a primary key. The primary key must be built on a single column.
 
 ## Known Issues
 

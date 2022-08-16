@@ -141,7 +141,7 @@ This section contains options that will affect the runtime behavior and/or all e
 
 `authentication.provider`: What authentication provider is used. The supported values are `StaticWebApps`, `AppService` or `AAD`
 
-`authentication.provider.jwt`: Needed if authentication provier is `AAD`. In this section you have to specify the `audience` and the `issuer` to allow the received JWT token to be validated and checked agains the `AAD` tenenat you want to use for authentication
+`authentication.provider.jwt`: Needed if authentication provier is `AAD`. In this section you have to specify the `audience` and the `issuer` to allow the received JWT token to be validated and checked agains the `AAD` tenant you want to use for authentication
 
 
 ### Entities

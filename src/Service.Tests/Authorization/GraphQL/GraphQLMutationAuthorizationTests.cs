@@ -53,10 +53,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 
             // Setup mock mutation input, utilized in BaseSqlQueryStructure.InputArgumentToMutationParams() helper.
             // This takes the test's "columnsRequested" and adds them to the mutation input.
-            List<ObjectFieldNode> mutationInputRaw = new();
+            Dictionary<string, object?> mutationInputRaw = new();
             foreach (string column in columnsRequested)
             {
-                mutationInputRaw.Add(new ObjectFieldNode(name: column, value: TEST_COLUMN_VALUE));
+                mutationInputRaw.Add(column, TEST_COLUMN_VALUE);
             }
 
             Dictionary<string, object?> parameters = new()

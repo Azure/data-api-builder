@@ -1,27 +1,27 @@
 # Configuration File
 
-- [Configuration File](#configuration-file)
-  - [Summary](#summary)
-  - [Environments Support](#environments-support)
-  - [Accessing Environment Variables](#accessing-environment-variables)
-  - [File Structure](#file-structure)
-    - [Schema](#schema)
-    - [Data Source](#data-source)
-    - [Runtime global settings](#runtime-global-settings)
-      - [REST](#rest)
-      - [GraphQL](#graphql)
-      - [Host](#host)
-    - [Entities](#entities)
-      - [REST endpoint](#rest-endpoint)
-      - [GraphQL type](#graphql-type)
-    - [Database object source](#database-object-source)
-    - [Relationships](#relationships)
-      - [One-To-Many Relationship](#one-to-many-relationship)
-      - [Many-To-One Relationship](#many-to-one-relationship)
-      - [Many-To-Many Relationship](#many-to-many-relationship)
-    - [Permissions](#permissions)
-      - [Roles](#roles)
-      - [Actions](#actions)
++ [Configuration File](#configuration-file)
+  + [Summary](#summary)
+  + [Environments Support](#environments-support)
+  + [Accessing Environment Variables](#accessing-environment-variables)
+  + [File Structure](#file-structure)
+    + [Schema](#schema)
+    + [Data Source](#data-source)
+    + [Runtime global settings](#runtime-global-settings)
+      + [REST](#rest)
+      + [GraphQL](#graphql)
+      + [Host](#host)
+    + [Entities](#entities)
+      + [REST endpoint](#rest-endpoint)
+      + [GraphQL type](#graphql-type)
+    + [Database object source](#database-object-source)
+    + [Relationships](#relationships)
+      + [One-To-Many Relationship](#one-to-many-relationship)
+      + [Many-To-One Relationship](#many-to-one-relationship)
+      + [Many-To-Many Relationship](#many-to-many-relationship)
+    + [Permissions](#permissions)
+      + [Roles](#roles)
+      + [Actions](#actions)
 
 ## Summary
 
@@ -188,7 +188,7 @@ which instructs Data API builder runtime to expose the REST endpoint for the rel
 
 #### GraphQL type
 
-The `graphql` property defines the name with which the entity is exposed as a GraphQL type", if that is different from the entity name: 
+The `graphql` property defines the name with which the entity is exposed as a GraphQL type, if that is different from the entity name: 
 
 ```json
 "graphql":{
@@ -219,7 +219,7 @@ The `source` property tells Data API builder what is the underlying database obj
 }
 ```
 
-> **IMPORTANT**: A table must have a primary key and that primary key must be created on a single column
+> **IMPORTANT**: A table must have a primary key to be usable by Data API Builder
 
 View are supported and when exposing a view it is required to specify which fields will be used as primary keys:
 
@@ -451,7 +451,7 @@ Both the simple and the more complex definition can be used at the same time, fo
 
 In the `fields` objects, the `*` can be used as the wildcard character to indicate all fields. Exclusions have precedence over inclusions.
 
-The `policy` section contains detail about item-level security rules. There are two kind of policies:
+The `policy` section contains detail about item-level security rules. 
 
 - `database` policy: define a rule - a predicate - that will be injected in the query sent to the database
 

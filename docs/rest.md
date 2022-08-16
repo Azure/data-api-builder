@@ -12,6 +12,14 @@ Using the [Getting Started](./getting-started/getting-started.md) example, where
 http://localhost:5000/api/book
 ```
 
+Depending on the permission defined on the entity in the configuration file, the following HTTP verbs are available:
+
+- [GET](#get): Get zero, one or more items
+- [POST](#post): Create a new item
+- [PUT](#put): Create or replace an item
+- [PATCH](#patch): Update an item
+- [DELETE](#delete): Delete an item
+
 ## Resultset format
 
 The returned result is a JSON object with this format:
@@ -39,7 +47,11 @@ The items related to the requested entity will be available in the `value` array
 }
 ```
 
-## URL parameters
+## GET
+
+Using the GET method you can retrieve one or more items of the desired entity
+
+### URL parameters
 
 REST endpoints support the ability to return an item via its primary key, using URL parameter:
 
@@ -53,7 +65,7 @@ for example:
 http://localhost:5000/api/book/id/1001
 ```
 
-## Query parameters
+### Query parameters
 
 REST endpoints support the following query parameters to control the returned items:
 
@@ -64,7 +76,7 @@ REST endpoints support the following query parameters to control the returned it
 
 Query parameters can be used togheter
 
-### `$select`
+#### `$select`
 
 The query parameter `$select` allow to specify which fields must be returned. For example:
 
@@ -76,7 +88,7 @@ will only return `first_name` and `last_name` fields.
 
 If any of the requested fields do not exist or it is not accessible due to configured permissions, a `400 - Bad Request` will be returned.
 
-### `$filter`
+#### `$filter`
 
 The value of the `$filter` option is predicate expression (an expression that returns a boolean value) using entity's fields. Only items where the expression evaluates to true are included in the response. For example:
 
@@ -104,7 +116,7 @@ not                      | Logical negation      | not (year le 1960)
 **Grouping Operators**   |                       |
 ( )                      | Precedence grouping   | (year ge 1970 or title eq 'Foundation') and pages gt 400
 
-### `$orderby`
+#### `$orderby`
 
 The value of the `orderby` parameter is a comma-separated list of expressions used to sort the items. 
 
@@ -118,7 +130,7 @@ http://localhost:5000/api/author?$orderby=first_name desc, last_name
 
 will return the list of authors sorted by `first_name` descending and then by `last_name` ascending.
 
-### `$first` and `$after`
+#### `$first` and `$after`
 
 The query parameter `$first` allows to limit the number of items returned. For example:
 
@@ -143,4 +155,120 @@ If the number of items available to the entity is bigger than the number specifi
 http://<dab-server>/api/book?$first=<n>&$after=<continuation-data>
 ```
 
+## POST
 
+Create a new iteam for the specified entity. For example:
+
+```
+POST http://localhost:5000/api/book
+
+{
+  "id": 2000,
+  "title": "Do Androids Dream of Electric Sheep?"
+}
+```
+
+Will create a new book. All the fields that cannot be nullable must be supplied. If successful the full entity object, including any null fields, will be returned:
+
+```JSON
+{
+  "value": [
+    {
+      "id": 2000,
+      "title": "Do Androids Dream of Electric Sheep?",
+      "year": null,
+      "pages": null
+    }
+  ]
+}
+```
+
+## PUT
+
+With PUT you can create or replace an item of the specified entity. The query pattern is:
+
+```
+http://<dab-server>/api/<entity>/<primary-key-column>/<primary-key-value>
+```
+
+for example:
+
+```
+PUT /api/book/id/2001
+
+{  
+  "title": "Stranger in a Strange Land",
+  "pages": 525
+}
+```
+
+If there is an item with the specified primary key `2001` that item will be *completely replaced* by the provided data. If instead an item with that primary key does not exists, a new item will be created.
+
+In either case the result will be something like:
+
+```json
+{
+  "value": [
+    {
+      "id": 2001,
+      "title": "Stranger in a Strange Land",
+      "year": null,
+      "pages": 525
+    }
+  ]
+}
+```
+
+## PATCH
+
+With PATH you can update the item of the specified entity. Only the specified fields will be affected. All fields not specified in the request body will not be affected
+
+The query pattern is:
+
+```
+http://<dab-server>/api/<entity>/<primary-key-column>/<primary-key-value>
+```
+
+for example:
+
+```
+PATCH /api/book/id/2001
+
+{    
+  "year": 1991
+}
+```
+
+The result will be something like:
+
+```json
+{
+  "value": [
+    {
+      "id": 2001,
+      "title": "Stranger in a Strange Land",
+      "year": 1991,
+      "pages": 525
+    }
+  ]
+}
+```
+
+## PUT
+
+
+With PATH you can update the item of the specified entity. Only the specified fields will be affected. All fields not specified in the request body will not be affected
+
+The query pattern is:
+
+```
+http://<dab-server>/api/<entity>/<primary-key-column>/<primary-key-value>
+```
+
+for example:
+
+```
+DELETE /api/book/id/2001
+```
+
+The result will be a empty response with status code 204 

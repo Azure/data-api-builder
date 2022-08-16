@@ -121,7 +121,7 @@ This section contains options that will affect the runtime behavior and/or all e
 
 #### REST
 
-`path`: defines the URL path where all exposed REST endpoints will be made available. For example if set to `/api`, the REST endpoint will be exposed `/api/<entity>` Optional. Default is ``;
+`path`: defines the URL path where all exposed REST endpoints will be made available. For example if set to `/api`, the REST endpoint will be exposed `/api/<entity>` Optional. Default is `/api`;
 
 #### GraphQL
 

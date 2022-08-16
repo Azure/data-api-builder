@@ -2,6 +2,8 @@ param(
     [Parameter (Mandatory=$true)][string] $databaseType
 )
 
+$PSDefaultParameterValues['*:Encoding'] = 'utf8';
+
 $commandsFileName = $databaseType + "Commands.txt";
 $commandsFileWithPath = $PSScriptRoot + "\" + $commandsFileName;
 $pathToCLIBuildOutput = $PSScriptRoot + "\src\out\cli";

@@ -1,6 +1,6 @@
 # Running Data API Builder for Azure Databases using CLI
 
-The easiest option that doesn't request cloning the repo is to use the `dab` [CLI tool](./dab-cli.md) that you can find in the `Release` tab:
+The easiest option that doesn't require cloning the repo is to use the `dab` [CLI tool](./dab-cli.md) that you can find in the `Release` tab:
 
 ## Install `dab` CLI
 

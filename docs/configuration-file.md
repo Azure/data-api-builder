@@ -188,7 +188,7 @@ which instructs Data API builder runtime to expose the REST endpoint for the rel
 
 #### GraphQL type
 
-The `graph` property defines the name with which the entity is exposed as a GraphQL type", if that is different from the entity name: 
+The `graphql` property defines the name with which the entity is exposed as a GraphQL type", if that is different from the entity name: 
 
 ```json
 "graphql":{

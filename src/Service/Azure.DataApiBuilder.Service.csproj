@@ -35,33 +35,15 @@
     <Content Include="MySqlBooks.sql">
         <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
-    <!-- <Content Update="dab-config*.json">
-      <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
-    </Content> -->
     <Content Update="appsettings*.json">
       <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
-
   <ItemGroup>
     <!-- extends watching group to include .json and .gql files -->
     <Watch Include="**\*.json;**\*.gql" Exclude="obj\**\*;bin\**\*" />
   </ItemGroup>
-
-
-  <ItemGroup>
-    <Watch Remove="dab-config.Cosmos.json" />
-    <Watch Remove="dab-config.Cosmos.overrides.example.json" />
-    <Watch Remove="dab-config.json" />
-    <Watch Remove="dab-config.Mssql.json" />
-    <Watch Remove="dab-config.MsSql.overrides.example.json" />
-    <Watch Remove="dab-config.Mysql.json" />
-    <Watch Remove="dab-config.MySql.overrides.example.json" />
-    <Watch Remove="dab-config.Postgresql.json" />
-    <Watch Remove="dab-config.PostgreSql.overrides.example.json" />
-  </ItemGroup>
-
 
   <ItemGroup>
     <PackageReference Include="HotChocolate" Version="$(HotChocolateVersion)" />

@@ -13,7 +13,9 @@ go
 create table dbo.books
 (
     id int not null primary key default (next value for dbo.globalId),
-    title nvarchar(1000) not null
+    title nvarchar(1000) not null,
+    [year] int null,
+    [pages] int null
 )
 go
 
@@ -43,7 +45,8 @@ go
 insert into dbo.authors values  
     (1, 'Isaac', null, 'Asimov'),
     (2, 'Robert', 'A.', 'Heinlein'),
-    (3, 'Robert', null, 'Silvenberg')
+    (3, 'Robert', null, 'Silvenberg'),
+    (4, 'Dan', null, 'Simmons')
 go
 
 insert into dbo.books values  

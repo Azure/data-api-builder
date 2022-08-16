@@ -23,7 +23,7 @@ Using the EasyAuth provider is useful when you plan to run Data API builder in A
 
 ## JWT
 
-To use the JWT provider, you need to configuration the `runtime.host` by providing the needed information to verify the recived JWT token:
+To use the JWT provider, you need to configure the `runtime.host` by providing the needed information to verify the received JWT token:
 
 ```json
 "authentication": {

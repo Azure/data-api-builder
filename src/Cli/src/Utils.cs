@@ -91,14 +91,14 @@ namespace Cli
         /// <summary>
         /// Try convert action string to Operation Enum.
         /// </summary>
-        /// <param name="actionName">Action string.</param>
+        /// <param name="operationName">operation string.</param>
         /// <param name="operation">Operation Enum output.</param>
         /// <returns>True if convert is successful. False otherwise.</returns>
-        public static bool TryConvertActionNameToOperation(string actionName, out Operation operation)
+        public static bool TryConvertOperationNameToOperation(string operationName, out Operation operation)
         {
-            if (!Enum.TryParse(actionName, ignoreCase: true, out operation))
+            if (!Enum.TryParse(operationName, ignoreCase: true, out operation))
             {
-                if (actionName.Equals(WILDCARD, StringComparison.OrdinalIgnoreCase))
+                if (operationName.Equals(WILDCARD, StringComparison.OrdinalIgnoreCase))
                 {
                     operation = Operation.All;
                 }
@@ -112,67 +112,67 @@ namespace Cli
         }
 
         /// <summary>
-        /// creates an array of Action element which contains one of the CRUD operation and
-        /// fields to which this action is allowed as permission setting based on the given input.
+        /// creates an array of Operation element which contains one of the CRUD operation and
+        /// fields to which this operation is allowed as permission setting based on the given input.
         /// </summary>
-        public static object[] CreateActions(string actions, Policy? policy, Field? fields)
+        public static object[] CreateOperations(string operations, Policy? policy, Field? fields)
         {
-            object[] action_items;
+            object[] operation_items;
             if (policy is null && fields is null)
             {
-                return actions.Split(",");
+                return operations.Split(",");
             }
 
-            if (actions is WILDCARD)
+            if (operations is WILDCARD)
             {
-                action_items = new object[] { new PermissionOperation(Operation.All, policy, fields) };
+                operation_items = new object[] { new PermissionOperation(Operation.All, policy, fields) };
             }
             else
             {
-                string[]? action_elements = actions.Split(",");
+                string[]? operation_elements = operations.Split(",");
                 if (policy is not null || fields is not null)
                 {
-                    List<object>? action_list = new();
-                    foreach (string? action_element in action_elements)
+                    List<object>? operation_list = new();
+                    foreach (string? operation_element in operation_elements)
                     {
-                        if (TryConvertActionNameToOperation(action_element, out Operation op))
+                        if (TryConvertOperationNameToOperation(operation_element, out Operation op))
                         {
-                            PermissionOperation? action_item = new(op, policy, fields);
-                            action_list.Add(action_item);
+                            PermissionOperation? operation_item = new(op, policy, fields);
+                            operation_list.Add(operation_item);
                         }
                     }
 
-                    action_items = action_list.ToArray();
+                    operation_items = operation_list.ToArray();
                 }
                 else
                 {
-                    action_items = action_elements;
+                    operation_items = operation_elements;
                 }
             }
 
-            return action_items;
+            return operation_items;
         }
 
         /// <summary>
-        /// Given an array of actions, which is a type of JsonElement, convert it to a dictionary
-        /// key: Valid action operation (wild card operation will be expanded)
-        /// value: Action object
+        /// Given an array of operations, which is a type of JsonElement, convert it to a dictionary
+        /// key: Valid operation (wild card operation will be expanded)
+        /// value: Operation object
         /// </summary>
-        /// <param name="Actions">Array of actions which is of type JsonElement.</param>
-        /// <returns>Dictionary of actions</returns>
-        public static IDictionary<Operation, PermissionOperation> ConvertActionArrayToIEnumerable(object[] Actions)
+        /// <param name="operations">Array of operations which is of type JsonElement.</param>
+        /// <returns>Dictionary of operations</returns>
+        public static IDictionary<Operation, PermissionOperation> ConvertActionArrayToIEnumerable(object[] operations)
         {
             Dictionary<Operation, PermissionOperation> result = new();
-            foreach (object action in Actions)
+            foreach (object operation in operations)
             {
-                JsonElement actionJson = (JsonElement)action;
-                if (actionJson.ValueKind is JsonValueKind.String)
+                JsonElement operationJson = (JsonElement)operation;
+                if (operationJson.ValueKind is JsonValueKind.String)
                 {
-                    if (TryConvertActionNameToOperation(actionJson.GetString(), out Operation op))
+                    if (TryConvertOperationNameToOperation(operationJson.GetString(), out Operation op))
                     {
                         if (op is Operation.All)
                         {
-                            // Expand wildcard to all valid actions
+                            // Expand wildcard to all valid operations
                             foreach (Operation validOp in PermissionOperation.ValidPermissionOperations)
                             {
                                 result.Add(validOp, new PermissionOperation(validOp, null, null));
@@ -186,11 +186,11 @@ namespace Cli
                 }
                 else
                 {
-                    PermissionOperation ac = actionJson.Deserialize<PermissionOperation>(GetSerializationOptions())!;
+                    PermissionOperation ac = operationJson.Deserialize<PermissionOperation>(GetSerializationOptions())!;
 
                     if (ac.Name is Operation.All)
                     {
-                        // Expand wildcard to all valid actions
+                        // Expand wildcard to all valid operations.
                         foreach (Operation validOp in PermissionOperation.ValidPermissionOperations)
                         {
                             result.Add(
@@ -209,11 +209,11 @@ namespace Cli
         }
 
         /// <summary>
-        /// creates a single PermissionSetting Object based on role, actions, fieldsToInclude, and fieldsToExclude.
+        /// creates a single PermissionSetting Object based on role, operations, fieldsToInclude, and fieldsToExclude.
         /// </summary>
-        public static PermissionSetting CreatePermissions(string role, string actions, Policy? policy, Field? fields)
+        public static PermissionSetting CreatePermissions(string role, string operations, Policy? policy, Field? fields)
         {
-            return new PermissionSetting(role, CreateActions(actions, policy, fields));
+            return new PermissionSetting(role, CreateOperations(operations, policy, fields));
         }
 
         /// <summary>
@@ -320,7 +320,7 @@ namespace Cli
         /// returns an object of type Policy
         /// if policyRequest or policyDatabase is provided. Otherwise, returns null.
         /// </summary>
-        public static Policy? GetPolicyForAction(string? policyRequest, string? policyDatabase)
+        public static Policy? GetPolicyForOperation(string? policyRequest, string? policyDatabase)
         {
             if (policyRequest is not null || policyDatabase is not null)
             {
@@ -334,7 +334,7 @@ namespace Cli
         /// returns an object of type Field
         /// if fieldsToInclude or fieldsToExclude is provided. Otherwise, returns null.
         /// </summary>
-        public static Field? GetFieldsForAction(IEnumerable<string>? fieldsToInclude, IEnumerable<string>? fieldsToExclude)
+        public static Field? GetFieldsForOperation(IEnumerable<string>? fieldsToInclude, IEnumerable<string>? fieldsToExclude)
         {
             if (fieldsToInclude is not null && fieldsToInclude.Any() || fieldsToExclude is not null && fieldsToExclude.Any())
             {
@@ -379,27 +379,27 @@ namespace Cli
         /// fetch, read -> Invalid
         /// read, delete -> Valid
         /// </summary>
-        /// <param name="actions">array of string containing actions for permissions</param>
+        /// <param name="operations">array of string containing actions for permissions</param>
         /// <returns>True if no invalid action is found.</returns>
-        public static bool VerifyActions(string[] actions)
+        public static bool VerifyOperations(string[] operations)
         {
             // Check if there are any duplicate actions
             // Ex: read,read,create
-            HashSet<string> uniqueActions = actions.ToHashSet();
-            if (uniqueActions.Count() != actions.Length)
+            HashSet<string> uniqueOperations = operations.ToHashSet();
+            if (uniqueOperations.Count() != operations.Length)
             {
                 Console.Error.WriteLine("Duplicate action found in --permissions");
                 return false;
             }
 
-            bool containsWildcardAction = false;
-            foreach (string action in uniqueActions)
+            bool containsWildcardOperation = false;
+            foreach (string operation in uniqueOperations)
             {
-                if (TryConvertActionNameToOperation(action, out Operation op))
+                if (TryConvertOperationNameToOperation(operation, out Operation op))
                 {
                     if (op is Operation.All)
                     {
-                        containsWildcardAction = true;
+                        containsWildcardOperation = true;
                     }
                     else if (!PermissionOperation.ValidPermissionOperations.Contains(op))
                     {
@@ -409,14 +409,14 @@ namespace Cli
                 }
                 else
                 {
-                    // Check for invalid actions.
+                    // Check for invalid operation.
                     Console.Error.WriteLine("Invalid actions found in --permissions");
                     return false;
                 }
             }
 
-            // Check for WILDCARD action with CRUD actions
-            if (containsWildcardAction && uniqueActions.Count() > 1)
+            // Check for WILDCARD operation with CRUD operations.
+            if (containsWildcardOperation && uniqueOperations.Count() > 1)
             {
                 Console.Error.WriteLine(" WILDCARD(*) along with other CRUD actions in a single operation is not allowed.");
                 return false;
@@ -426,17 +426,16 @@ namespace Cli
         }
 
         /// <summary>
-        /// this method will parse role and Action from permission string.
+        /// this method will parse role and operation from permission string.
         /// A valid permission string will be of the form "<<role>>:<<actions>>"
         /// it will return true if parsing is successful and add the parsed value
-        /// to the out params role and action.
+        /// to the out params role and operations.
         /// </summary>
-        public static bool TryGetRoleAndActionFromPermission(IEnumerable<string> permissions, out string? role, out string? actions)
+        public static bool TryGetRoleAndActionFromPermission(IEnumerable<string> permissions, out string? role, out string? operations)
         {
-            // Split permission to role and actions
-            //
+            // Split permission to role and actions.
             role = null;
-            actions = null;
+            operations = null;
             if (permissions.Count() != 2)
             {
                 Console.WriteLine("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
@@ -444,7 +443,7 @@ namespace Cli
             }
 
             role = permissions.ElementAt(0);
-            actions = permissions.ElementAt(1);
+            operations = permissions.ElementAt(1);
             return true;
         }
 

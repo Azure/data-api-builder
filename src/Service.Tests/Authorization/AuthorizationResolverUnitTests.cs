@@ -132,7 +132,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             // Override the permission operations to be a list of operations for wildcard
             // instead of a list of objects created by InitRuntimeConfig()
-            runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY].Permissions[0].Actions =
+            runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY].Permissions[0].Operations =
                 new object[] { JsonSerializer.SerializeToElement(AuthorizationResolver.WILDCARD) };
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -194,11 +194,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             PermissionSetting readOnlyPermission = new(
                 role: READ_ONLY_ROLE,
-                actions: new object[] { JsonSerializer.SerializeToElement(readAction) });
+                operations: new object[] { JsonSerializer.SerializeToElement(readAction) });
 
             PermissionSetting readAndUpdatePermission = new(
             role: READ_AND_UPDATE_ROLE,
-            actions: new object[] { JsonSerializer.SerializeToElement(readAction), JsonSerializer.SerializeToElement(updateAction) });
+            operations: new object[] { JsonSerializer.SerializeToElement(readAction), JsonSerializer.SerializeToElement(updateAction) });
 
             Entity sampleEntity = new(
                 Source: TEST_ENTITY,
@@ -430,11 +430,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             PermissionSetting authenticatedPermission = new(
                 role: AuthorizationResolver.ROLE_AUTHENTICATED,
-                actions: new object[] { JsonSerializer.SerializeToElement(readAction) });
+                operations: new object[] { JsonSerializer.SerializeToElement(readAction) });
 
             PermissionSetting anonymousPermission = new(
             role: AuthorizationResolver.ROLE_ANONYMOUS,
-            actions: new object[] { JsonSerializer.SerializeToElement(readAction), JsonSerializer.SerializeToElement(updateAction) });
+            operations: new object[] { JsonSerializer.SerializeToElement(readAction), JsonSerializer.SerializeToElement(updateAction) });
 
             Entity sampleEntity = new(
                 Source: TEST_ENTITY,
@@ -1176,7 +1176,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             PermissionSetting permissionForEntity = new(
                 role: roleName,
-                actions: new object[] { JsonSerializer.SerializeToElement(operationForRole) });
+                operations: new object[] { JsonSerializer.SerializeToElement(operationForRole) });
 
             Entity sampleEntity = new(
                 Source: TEST_ENTITY,

@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             PermissionSetting permissionForEntity = new(
                 role: roleName,
-                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
                 Source: TEST_ENTITY,

@@ -213,7 +213,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 {
                     string role = permission.Role;
                     RoleMetadata roleToOperation = new();
-                    object[] Operations = permission.Actions;
+                    object[] Operations = permission.Operations;
                     foreach (JsonElement operationElement in Operations)
                     {
                         Operation operation = Operation.None;
@@ -293,22 +293,22 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         PopulateAllowedExposedColumns(operationToColumn.AllowedExposedColumns, entityName, allowedColumns);
 
                         IEnumerable<Operation> operations = GetAllOperations(operation);
-                        foreach (Operation opElement in operations)
+                        foreach (Operation crudOperation in operations)
                         {
                             // Try to add the opElement to the map if not present.
                             // Builds up mapping: i.e. Operation.Create permitted in {Role1, Role2, ..., RoleN}
-                            if (!entityToRoleMap.OperationToRolesMap.TryAdd(opElement, new List<string>(new string[] { role })))
+                            if (!entityToRoleMap.OperationToRolesMap.TryAdd(crudOperation, new List<string>(new string[] { role })))
                             {
-                                entityToRoleMap.OperationToRolesMap[opElement].Add(role);
+                                entityToRoleMap.OperationToRolesMap[crudOperation].Add(role);
                             }
 
                             foreach (string allowedColumn in allowedColumns)
                             {
                                 entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateOperationToRoleMap());
-                                entityToRoleMap.FieldToRolesMap[allowedColumn][opElement].Add(role);
+                                entityToRoleMap.FieldToRolesMap[allowedColumn][crudOperation].Add(role);
                             }
 
-                            roleToOperation.OperationToColumnMap[opElement] = operationToColumn;
+                            roleToOperation.OperationToColumnMap[crudOperation] = operationToColumn;
                         }
 
                         if (ROLE_ANONYMOUS.Equals(role, StringComparison.OrdinalIgnoreCase))

@@ -157,8 +157,8 @@ namespace Cli
                 return false;
             }
 
-            Policy? policy = GetPolicyForAction(options.PolicyRequest, options.PolicyDatabase);
-            Field? field = GetFieldsForAction(options.FieldsToInclude, options.FieldsToExclude);
+            Policy? policy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
+            Field? field = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
 
             PermissionSetting[]? permissionSettings = ParsePermission(options.Permissions, policy, field);
             if (permissionSettings is null)
@@ -207,7 +207,7 @@ namespace Cli
             }
 
             // Check if provided actions are valid
-            if (!VerifyActions(actions!.Split(",")))
+            if (!VerifyOperations(actions!.Split(",")))
             {
                 return null;
             }
@@ -287,8 +287,8 @@ namespace Cli
             PermissionSetting[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, Relationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;
-            Policy? updatedPolicy = GetPolicyForAction(options.PolicyRequest, options.PolicyDatabase);
-            Field? updatedFields = GetFieldsForAction(options.FieldsToInclude, options.FieldsToExclude);
+            Policy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
+            Field? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
 
             if (options.Permissions is not null && options.Permissions.Any())
             {
@@ -387,7 +387,7 @@ namespace Cli
             List<PermissionSetting> updatedPermissionsList = new();
             string[] newActionArray = newActions!.Split(",");
 
-            if (!VerifyActions(newActionArray))
+            if (!VerifyOperations(newActionArray))
             {
                 return null;
             }
@@ -409,7 +409,7 @@ namespace Cli
                     else
                     {
                         // User didn't use WILDCARD, and wants to update some of the actions.
-                        IDictionary<Operation, PermissionOperation> existingActions = ConvertActionArrayToIEnumerable(permission.Actions);
+                        IDictionary<Operation, PermissionOperation> existingActions = ConvertActionArrayToIEnumerable(permission.Operations);
 
                         // Merge existing actions with new actions
                         object[] updatedActionArray = GetUpdatedActionArray(newActionArray, policy, fields, existingActions);
@@ -456,7 +456,7 @@ namespace Cli
             foreach (string action in newActions)
             {
                 // Getting existing Policy and Fields
-                if (TryConvertActionNameToOperation(action, out Operation op))
+                if (TryConvertOperationNameToOperation(action, out Operation op))
                 {
                     if (existingActions.ContainsKey(op))
                     {

@@ -67,8 +67,8 @@ public class EndToEndTests
         Assert.AreEqual("{\"type\":{\"singular\":\"todo\",\"plural\":\"todos\"}}", JsonSerializer.Serialize(entity.GraphQL));
         Assert.AreEqual(1, entity.Permissions.Length);
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
-        Assert.AreEqual(1, entity.Permissions[0].Actions.Length);
-        Assert.AreEqual(WILDCARD, ((JsonElement)entity.Permissions[0].Actions[0]).GetString());
+        Assert.AreEqual(1, entity.Permissions[0].Operations.Length);
+        Assert.AreEqual(WILDCARD, ((JsonElement)entity.Permissions[0].Operations[0]).GetString());
     }
 
     /// <summary>
@@ -98,8 +98,8 @@ public class EndToEndTests
         Assert.IsNull(entity.GraphQL);
         Assert.AreEqual(1, entity.Permissions.Length);
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
-        Assert.AreEqual(1, entity.Permissions[0].Actions.Length);
-        Assert.AreEqual(WILDCARD, ((JsonElement)entity.Permissions[0].Actions[0]).GetString());
+        Assert.AreEqual(1, entity.Permissions[0].Operations.Length);
+        Assert.AreEqual(WILDCARD, ((JsonElement)entity.Permissions[0].Operations[0]).GetString());
         Assert.IsNull(entity.Mappings);
         Assert.IsNull(entity.Relationships);
     }
@@ -181,12 +181,12 @@ public class EndToEndTests
         Assert.AreEqual("true", JsonSerializer.Serialize(entity.GraphQL), ignoreCase: true);
         Assert.AreEqual(1, entity.Permissions.Length);
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
-        Assert.AreEqual(4, entity.Permissions[0].Actions.Length);
+        Assert.AreEqual(4, entity.Permissions[0].Operations.Length);
         //Only create and delete are updated.
-        Assert.AreEqual("{\"action\":\"create\",\"fields\":{\"include\":[\"id\",\"content\"],\"exclude\":[\"rating\",\"level\"]}}", JsonSerializer.Serialize(entity.Permissions[0].Actions[0]), ignoreCase: true);
-        Assert.AreEqual("{\"action\":\"delete\",\"fields\":{\"include\":[\"id\",\"content\"],\"exclude\":[\"rating\",\"level\"]}}", JsonSerializer.Serialize(entity.Permissions[0].Actions[1]), ignoreCase: true);
-        Assert.AreEqual("\"read\"", JsonSerializer.Serialize(entity.Permissions[0].Actions[2]), ignoreCase: true);
-        Assert.AreEqual("\"update\"", JsonSerializer.Serialize(entity.Permissions[0].Actions[3]), ignoreCase: true);
+        Assert.AreEqual("{\"action\":\"create\",\"fields\":{\"include\":[\"id\",\"content\"],\"exclude\":[\"rating\",\"level\"]}}", JsonSerializer.Serialize(entity.Permissions[0].Operations[0]), ignoreCase: true);
+        Assert.AreEqual("{\"action\":\"delete\",\"fields\":{\"include\":[\"id\",\"content\"],\"exclude\":[\"rating\",\"level\"]}}", JsonSerializer.Serialize(entity.Permissions[0].Operations[1]), ignoreCase: true);
+        Assert.AreEqual("\"read\"", JsonSerializer.Serialize(entity.Permissions[0].Operations[2]), ignoreCase: true);
+        Assert.AreEqual("\"update\"", JsonSerializer.Serialize(entity.Permissions[0].Operations[3]), ignoreCase: true);
 
         Assert.IsTrue(entity.Relationships!.ContainsKey("r1"));
         Relationship relationship = entity.Relationships["r1"];

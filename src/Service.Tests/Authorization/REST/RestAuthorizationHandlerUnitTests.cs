@@ -360,7 +360,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
 
             // Override the operation to be a list of string for wildcard instead of a list of object created by InitRuntimeConfig()
             //
-            runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY].Permissions[0].Actions = new object[] { JsonSerializer.SerializeToElement(AuthorizationResolver.WILDCARD) };
+            runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY].Permissions[0].Operations = new object[] { JsonSerializer.SerializeToElement(AuthorizationResolver.WILDCARD) };
 
             return AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
         }

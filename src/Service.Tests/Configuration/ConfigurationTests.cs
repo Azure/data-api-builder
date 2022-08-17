@@ -333,7 +333,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.IsInstanceOfType(entity.Permissions, typeof(PermissionSetting[]));
                 foreach (PermissionSetting permission in entity.Permissions)
                 {
-                    foreach (object action in permission.Actions)
+                    foreach (object action in permission.Operations)
                     {
                         HashSet<Operation> allowedActions =
                             new() { Operation.All, Operation.Create, Operation.Read,

@@ -195,7 +195,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
                 {
                     string roleName = permissionSetting.Role;
-                    Object[] actions = permissionSetting.Actions;
+                    Object[] actions = permissionSetting.Operations;
                     foreach (Object action in actions)
                     {
                         if (action is null)
@@ -298,7 +298,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
                 {
-                    Object[] actions = permissionSetting.Actions;
+                    Object[] actions = permissionSetting.Operations;
 
                     // processedActions will contain the processed actions which are formed after performing all kind of
                     // validations and pre-processing.
@@ -325,7 +325,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     }
 
                     // Update the permissionsetting.Actions to point to the processedActions.
-                    permissionSetting.Actions = processedActions.ToArray();
+                    permissionSetting.Operations = processedActions.ToArray();
                 }
             }
         }

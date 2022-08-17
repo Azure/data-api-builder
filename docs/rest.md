@@ -159,7 +159,7 @@ http://<dab-server>/api/book?$first=<n>&$after=<continuation-data>
 
 ## POST
 
-Create a new iteam for the specified entity. For example:
+Create a new item for the specified entity. For example:
 
 ```
 POST http://localhost:5000/api/book

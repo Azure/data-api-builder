@@ -20,6 +20,8 @@ The returned result is a JSON object with this format:
 }
 ```
 
+> **Attention!**: Only the first 100 items are returned by default.
+
 ## Supported GraphQL Root Types
 
 Data API Builder support the following GraphQL root types:

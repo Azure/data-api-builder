@@ -47,6 +47,8 @@ The items related to the requested entity will be available in the `value` array
 }
 ```
 
+> **Attention!**: Only the first 100 items are returned by default.
+
 ## GET
 
 Using the GET method you can retrieve one or more items of the desired entity

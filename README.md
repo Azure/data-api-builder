@@ -34,7 +34,7 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 
 ## Known Issues
 
-List of known issues and possible workarounds,where applicable and possible, is availabe here: [Known Issues](./docs/known-issues.md).
+List of known issues and possible workarounds, where applicable and possible, is available here: [Known Issues](./docs/known-issues.md).
 
 ## Getting Started
 

@@ -223,7 +223,7 @@ In either case the result will be something like:
 
 ## PATCH
 
-With PATH you can update the item of the specified entity. Only the specified fields will be affected. All fields not specified in the request body will not be affected
+With PATCH you can update the item of the specified entity. Only the specified fields will be affected. All fields not specified in the request body will not be affected
 
 The query pattern is:
 

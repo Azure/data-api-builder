@@ -44,7 +44,7 @@ Data API Builder, unless otherwise specified, will use the *singular* name of an
 
 ### Pagination
 
-All query types returing zero or more items supports pagination: 
+All query types returning zero or more items support pagination: 
 
 ```graphql
 {

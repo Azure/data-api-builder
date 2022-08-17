@@ -15,7 +15,7 @@ then, to install this tool globally, use:
 dotnet tool install -g --add-source ./ dab --version <version_number>
 ```
 
-> **ATTENTION**: if you are running on Linux or MacOS, you will need to add .NET global tools (`dab`) to your path as well, once installed run:
+> **ATTENTION**: if you are running on Linux or MacOS, you will need to add .NET global tools to your PATH to call `dab` directly. Once installed run:
 > `export PATH=$PATH:~/.dotnet/tools`
 
 ## Update `dab` CLI to latest version

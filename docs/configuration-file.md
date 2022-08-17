@@ -13,7 +13,7 @@
       + [Host](#host)
     + [Entities](#entities)
       + [REST endpoint](#rest-endpoint)
-      + [GraphQL type](#graphql-type)
+    + [GraphQL type](#graphql-type)
     + [Database object source](#database-object-source)
     + [Relationships](#relationships)
       + [One-To-Many Relationship](#one-to-many-relationship)
@@ -164,29 +164,17 @@ Within the entity section, there are feature specific sections:
 
 #### REST endpoint
 
-The `rest` property allows setting the path at which the entity will be reachable via REST
+The `rest` property allows setting the path at which the entity will be reachable via REST:
 
+```
 "rest":{
-    "route": "route-path",
+    "route": "route-path"
 }
 ```
 
-or
+which instructs Data API builder runtime to expose the REST endpoint for the related entity and to name it using the provided type name. Subpaths (for example `/url-path/url-subpath`) are *not* supported.
 
-```json
-"rest":{
-    "route": {
-        "singular": "url-path",
-        "plural": "url-path-plural"
-    }
-}
-```
-
-which instructs Data API builder runtime to expose the REST endpoint for the related entity and to name it using the provided type name. `plural` is optional and can be used to tell Data API builder the correct plural form to use when building the REST endpoint. If omitted Data API builder will try to pluralize the name automatically, following the english rules for pluralization (eg: https://engdic.org/singular-and-plural-noun-rules-definitions-examples)
-
-> IMPORTANT!: Subpaths (for example `/url-path/url-subpath`) are *not* supported.
-
-#### GraphQL type
+### GraphQL type
 
 The `graphql` property defines the name with which the entity is exposed as a GraphQL type, if that is different from the entity name: 
 

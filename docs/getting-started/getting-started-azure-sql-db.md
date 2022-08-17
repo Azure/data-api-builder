@@ -6,10 +6,10 @@ As mentioned before, this tutorial assumes that you already have a SQL Server or
 
 ## Get the database connection string
 
-The are several ways to get an Azure SQL database connection string. More details here:
+There are several ways to get an Azure SQL database connection string. More details here:
 https://docs.microsoft.com/en-us/azure/azure-sql/database/connect-query-content-reference-guide?view=azuresql
 
-Both if you are connectiong to Azure SQL DB or Azure SQL MI or SQL Server, the connection string look like:
+If you are connecting to Azure SQL DB, Azure SQL MI, or SQL Server, the connection string look like:
 
 ```
 Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;
@@ -34,7 +34,7 @@ Once you have your connection string, add it to the configuration file you have 
 
 ## Create the database objects
 
-Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `libray.azure-sql.sql` script in the 'azure-sql-db' folder that you can use to create three tables, along with sample data:
+Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `libray.azure-sql.sql` script in the `azure-sql-db` folder that you can use to create three tables, along with sample data:
 
 - `dbo.authors`: Table containing authors
 - `dbo.books`: Table containing books
@@ -64,9 +64,9 @@ Start by adding the `author` entity:
 
 within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL). The name `author`, in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case is `dbo.authors`.
 
-> **NOTE**: Entities names are case sensitive and they will be exposed via REST and GraphQL as you have typed them.
+> **NOTE**: Entities names are case sensitive, and they will be exposed via REST and GraphQL as you have typed them.
 
-After that, you need to specify the permission for the exposed entity, so that you can be sure only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial we're just allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `author` entity.
+After that, the permissions for the exposed entity are defined via the `permission` element; it allows you to be sure that only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial, we're allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `author` entity.
 
 You can also add the `book` entity now, applying the same concepts you just learnt for the `author` entity. Once you have added the `author` entity, the `entities` object of configuration file will look like the following:
 
@@ -102,14 +102,17 @@ that's all is needed at the moment. Data API builder is ready to be run.
 From the `samples/getting-started` folder, start Data API Builder engine :
 
 ```
-./run-dab.cmd library.config.json
+./run-dab.cmd library-dab-config.json
 ```
 
 Use `run-dab.sh` if you are on Linux. After a few seconds, you'll see something like
 
 ```
-Now listening on: http://localhost:5000
-Now listening on: https://localhost:5001
+      Successfully completed runtime initialization.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: https://localhost:5001
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5000
 ```
 
 The Data API builder engine is running and is ready to accept requests.
@@ -148,12 +151,13 @@ GET /api/book/id/1000
 The ability to filter by primary key is supported by all verbs with the exception of POST as that verb is used to create a new item and therefore searching an item by its primary key is not applicable.
 
 The GET verb also supports several query parameters that allow you to manipulate and refine the requested data:
-- `$orderby`: defines how the returned data will be sorted
-- `$first`: returns only the top `n` items
-- `$filter`: filters the returned items
-- `$select`: returns only the selected columns
 
-For more details on how they can be used, refer to the [REST documentation](./docs/REST.md)
+- `$orderby`: return items in the specified order
+- `$first`: the top `n` items to return
+- `$filter`: expression to filter the returned items
+- `$select`:  list of field names to be returned
+ 
+For more details on how they can be used, refer to the [REST documentation](../rest.md)
 
 ### GraphQL endpoint
 
@@ -180,9 +184,9 @@ will return the first five books ordered by title in descending order.
 
 ## Adding entities relationships
 
-Everything up and working, and now you probably want to take advantage as much as possible of GraphQL capabilities to handle complex request in just one request. For example you may want to get all the Authors in your library along with the Books they have written. In order to achieve that you need to let Data API Builder know that you want that relationship to be available to be used in queries.
+Everything is now up and working, and now you probably want to take advantage as much as possible of GraphQL capabilities to handle complex queries by sending just one request. For example you may want to get all the Authors in your library along with the Books they have written. In order to achieve that you need to let Data API Builder know that you want such relationship to be available to be used in queries.
 
-Stop the engine and go back to the `library.config.json` and add the `relationships` section to the `author` entity, using the code below:
+Stop the engine (`Ctrl+C`) and go back to the `library-dab-config.json` and add the `relationships` section to the `author` entity, using the code below:
 
 ```json
 "relationships": {
@@ -194,13 +198,13 @@ Stop the engine and go back to the `library.config.json` and add the `relationsh
 }
 ```
 
-The element under `relationship` is used to add a field - `books` in the sample - to the generated GraphQL object, so that one will be able to navigate the relationship between an Author and its Books. Within the `books` object there are three fields:
+The element under `relationship` is used to add a field - `books` in the sample - to the generated GraphQL object, so that one will be able to navigate the relationship between an Author and their Books. Within the `books` object there are three fields:
 
 - `cardinality`: set to `many` as an author can be associated with more than one book
 - `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample is `book` as we are creating the relationship on the `author` entity.
 - `linking.object`: the database table used to support the many-to-many relationship. That table is the `dbo.books_authors`.
 
-Data API Builder will automatically figure out what are the columns that are used to support the relationship between all the involved parts by analyzing the forieng keys constratins that exist between the involved tables. For this reason the configuration is done! (If you don't have foreign keys you can always manually specify the columns you want to use to navigate from one table to another. More on this in the [relationships documentation](relationships.md))
+Data API Builder will automatically figure out what are the columns that are used to support the relationship between all the involved parts by analyzing the forieng keys constratins that exist between the involved tables. For this reason the configuration is done! (If you don't have foreign keys you can always manually specify the columns you want to use to navigate from one table to another. More on this in the [relationships documentation](../relationships.md))
 
 The `author` entity should now look like the following:
 
@@ -223,7 +227,7 @@ The `author` entity should now look like the following:
 },
 ```
 
-as we also want to enable quering a Book and getting its authors, we need to also make a similar change to the Book entity:
+as we also want to enable querying a book and getting its authors, we also need to make a similar change to the book entity:
 
 ```json
 "book": {
@@ -246,7 +250,7 @@ as we also want to enable quering a Book and getting its authors, we need to als
 }
 ```
 
-Done, you can now restart the Data API builder engine, and using GraphQL you can now execute queries like:
+Once this is done, you can now restart the Data API builder engine, and using GraphQL you can now execute queries like:
 
 ```graphql
 {
@@ -297,7 +301,7 @@ Congratulations, you have just created a fully working backend to support your m
 
 ## Deploy on Azure
 
-WIP
+
 
 ## Conclusion
 

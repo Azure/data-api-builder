@@ -273,4 +273,4 @@ for example:
 DELETE /api/book/id/2001
 ```
 
-The result will be a empty response with status code 204 
+The result will be an empty response with status code 204 

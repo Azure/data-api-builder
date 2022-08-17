@@ -31,7 +31,7 @@ Data API Builder support the following GraphQL root types:
 
 ## Queries
 
-Each entity has support the following actions:
+Each entity has support for the following actions:
 
 - [Pagination](#pagination)
 - [Query by Primary key](#query-by-primary-key)

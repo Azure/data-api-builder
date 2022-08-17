@@ -21,6 +21,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         string GetSchemaName(string entityName);
 
+        Dictionary<RelationShipPair, ForeignKeyDefinition> GetPairToFkDefinition();
+
         /// <summary>
         /// Obtains the underlying source object's name (SQL table or Cosmos container).
         /// </summary>

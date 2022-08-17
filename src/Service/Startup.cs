@@ -404,6 +404,12 @@ namespace Azure.DataApiBuilder.Service
                     await sqlMetadataProvider.InitializeAsync();
                 }
 
+                if (app.ApplicationServices.GetService<RuntimeConfigProvider>()!.IsDeveloperMode())
+                {
+                    // Perform semantic validation in development mode only.
+                    runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProvider);
+                }
+
                 _logger.LogInformation($"Successfully completed runtime initialization.");
                 return true;
             }

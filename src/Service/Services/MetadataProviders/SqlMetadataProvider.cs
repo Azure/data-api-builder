@@ -30,6 +30,8 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private readonly Dictionary<string, Entity> _entities;
 
+        private Dictionary<RelationShipPair, ForeignKeyDefinition> _pairToFkDefinition;
+
         // nullable since Mock tests do not need it.
         // TODO: Refactor the Mock tests to remove the nullability here
         // once the runtime config is implemented tracked by #353.
@@ -91,6 +93,11 @@ namespace Azure.DataApiBuilder.Service.Services
         public IQueryBuilder GetQueryBuilder()
         {
             return SqlQueryBuilder;
+        }
+
+        public Dictionary<RelationShipPair, ForeignKeyDefinition> GetPairToFkDefinition()
+        {
+            return _pairToFkDefinition;
         }
 
         /// <inheritdoc />
@@ -784,10 +791,9 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Gather all the referencing and referenced columns for each pair
             // of referencing and referenced tables.
-            Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition
-                = await ExecuteAndSummarizeFkMetadata(queryForForeignKeyInfo, parameters);
+            _pairToFkDefinition = await ExecuteAndSummarizeFkMetadata(queryForForeignKeyInfo, parameters);
 
-            FillInferredFkInfo(pairToFkDefinition, tablesToBePopulatedWithFK);
+            FillInferredFkInfo(_pairToFkDefinition, tablesToBePopulatedWithFK);
 
             ValidateAllFkHaveBeenInferred(tablesToBePopulatedWithFK);
         }

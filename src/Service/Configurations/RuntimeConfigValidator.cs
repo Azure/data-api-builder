@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
 using Action = Azure.DataApiBuilder.Config.Action;
+using Azure.DataApiBuilder.Service.Services;
 
 namespace Azure.DataApiBuilder.Service.Configurations
 {
@@ -285,6 +286,31 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Method to perform the different validations related to the semantic correctness of the
+        /// runtime configuration, focusing on the relationship section of the entity.
+        /// </summary>
+        /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
+        public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            //Console.WriteLine(sqlMetadataProvider.GetPairToFkDefinition());
+            List<string> allEntities = new List<string>(runtimeConfig.Entities.Keys);
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+            {
+                foreach ((string relationshipName, Relationship relationship) in entity.Relationships!)
+                {
+                    if(!allEntities.Contains(relationship.TargetEntity))
+                    {
+                        throw new DataApiBuilderException(
+                                    message: $"entity: {relationship.TargetEntity} used for relationship is not defined in the config.",
+                                    statusCode: System.Net.HttpStatusCode.NotImplemented,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    }
+                }
+            }
+            Console.WriteLine("Validating Config...");
         }
 
         /// <summary>

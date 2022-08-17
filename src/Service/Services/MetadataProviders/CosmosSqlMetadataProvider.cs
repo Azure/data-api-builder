@@ -131,6 +131,11 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
+        public Dictionary<RelationShipPair, ForeignKeyDefinition> GetPairToFkDefinition()
+        {
+            throw new NotImplementedException();
+        }
+
         public bool TryGetExposedColumnName(string entityName, string field, out string? name)
         {
             throw new NotImplementedException();

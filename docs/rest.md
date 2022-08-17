@@ -6,7 +6,7 @@ Entities configured to be available via REST will be available at the path
 http://<dab-server>/api/<entity>
 ```
 
-Using the [Getting Started](./getting-started/getting-started.md) example, where there are the `books` and the `authors` entity configured for REST access, the path would, for example:
+Using the [Getting Started](./getting-started/getting-started.md) example, where there are the `books` and the `authors` entity configured for REST access, the path would be, for example:
 
 ```
 http://localhost:5000/api/book

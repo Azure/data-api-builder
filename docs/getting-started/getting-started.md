@@ -4,7 +4,7 @@ Welcome to this getting started tutorial that will guide you to have Data API bu
 
 ## Prerequisites
 
-### .NET 6.0
+### .NET 6 SDK
 Make sure you have .NET 6.0 SDK installed on your machine: https://dotnet.microsoft.com/en-us/download/dotnet/6.0.
 
 You can check what SDKs you have installed using the following command:
@@ -21,14 +21,14 @@ As the Data API builder for Azure Databases generate REST and GraphQL endpoints 
 
 ### Git
 
-Please note that familiarity with Git commands, tools and concept is assumed throughout all the tutorial. Make sure `git` is installed in your machine.
+Please note that familiarity with Git commands and tooling is assumed throughout the tutorial. Make sure `git` is installed in your machine.
 
 ## Clone the Data API builder for Azure Databases engine
 
 Clone the repository locally:
 
 ```
-git clone https://github.com/azure/data-api-builder
+git clone https://github.com/Azure/data-api-builder.git
 ```
 
 and then make sure you are using the M1.5 release:

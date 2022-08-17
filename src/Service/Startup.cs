@@ -407,7 +407,7 @@ namespace Azure.DataApiBuilder.Service
                 if (app.ApplicationServices.GetService<RuntimeConfigProvider>()!.IsDeveloperMode())
                 {
                     // Perform semantic validation in development mode only.
-                    runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProvider);
+                    runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProvider!);
                 }
 
                 _logger.LogInformation($"Successfully completed runtime initialization.");

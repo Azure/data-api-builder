@@ -8,6 +8,8 @@ using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using Azure.DataApiBuilder.Service.Services;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -72,6 +74,102 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     $" role:{AuthorizationHelpers.TEST_ROLE} is not valid.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+        }
+
+        /// <summary>
+        /// Test method to validate that an appropriate exception is thrown when there is an invalid action
+        /// supplied in the runtimeconfig.
+        /// </summary>
+        /// <param name="dbPolicy">Database policy.</param>
+        /// <param name="action">The action to be validated.</param>
+        // [DataTestMethod]
+        // [DataRow("@claims.id eq @item.col1", Operation.Insert, DisplayName = "Invalid action Insert specified in config")]
+        // [DataRow("@claims.id eq @item.col2", Operation.Upsert, DisplayName = "Invalid action Upsert specified in config")]
+        // [DataRow("@claims.id eq @item.col3", Operation.UpsertIncremental, DisplayName = "Invalid action UpsertIncremental specified in config")]
+        [TestMethod]
+        public void InvalidRelationshipInConfig()
+        {
+            Action actionForRole = new(
+                Name: Operation.Create,
+                Fields: null,
+                Policy: null);
+
+            PermissionSetting permissionForEntity = new(
+                role: "anonymous",
+                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+
+            Dictionary<string, Relationship> relationshipMap = new();
+            Relationship sampleRelationship1 = new (
+                Cardinality: Cardinality.One,
+                TargetEntity: "FAKE_ENTITY",
+                SourceFields: null,
+                TargetFields: null,
+                LinkingObject: null,
+                LinkingSourceFields: null,
+                LinkingTargetFields: null
+            );
+
+            relationshipMap.Add("test_rname1", sampleRelationship1);
+
+            Entity sampleEntity1 = new(
+                Source: "TEST_SOURCE1",
+                Rest: null,
+                GraphQL: null,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: relationshipMap,
+                Mappings: null
+                );
+
+            Entity sampleEntity2 = new(
+                Source: "TEST_SOURCE2",
+                Rest: null,
+                GraphQL: false,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+                );
+
+            Dictionary<string, Entity> entityMap = new();
+            entityMap.Add("SampleEntity1", sampleEntity1);
+            entityMap.Add("SampleEntity2", sampleEntity2);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                MsSql: null,
+                CosmosDb: null,
+                PostgreSql: null,
+                MySql: null,
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                Entities: entityMap
+                );
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+            // Assert that expected exception is thrown.
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+            Assert.AreEqual($"entity: {sampleRelationship1.TargetEntity} used for relationship is not defined in the config.", ex.Message);
+            Assert.AreEqual(HttpStatusCode.UnprocessableEntity, ex.StatusCode);
+
+            runtimeConfig.Entities["SampleEntity1"].Relationships.Remove("test_rname1");
+            Relationship sampleRelationship2 = new (
+                Cardinality: Cardinality.One,
+                TargetEntity: "SampleEntity2",
+                SourceFields: null,
+                TargetFields: null,
+                LinkingObject: null,
+                LinkingSourceFields: null,
+                LinkingTargetFields: null
+            );
+
+            runtimeConfig.Entities["SampleEntity1"].Relationships.Add("test_rname2", sampleRelationship2);
+
+            ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+            Assert.AreEqual($"entity: {sampleRelationship2.TargetEntity} is disabled for GraphQL.", ex.Message);
+            Assert.AreEqual(HttpStatusCode.UnprocessableEntity, ex.StatusCode);
+
+            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x => x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
+
         }
 
         /// <summary>

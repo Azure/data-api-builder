@@ -295,26 +295,69 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
         public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
         {
-            //Console.WriteLine(sqlMetadataProvider.GetPairToFkDefinition());
+            Console.WriteLine("Validating Relationship Section in Config...");
             List<string> allEntities = new List<string>(runtimeConfig.Entities.Keys);
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
+                if (entity.Relationships is null)
+                {
+                    continue;
+                }
+
                 foreach ((string relationshipName, Relationship relationship) in entity.Relationships!)
                 {
-                    if(!allEntities.Contains(relationship.TargetEntity))
+                    // entity referenced in relationship is not defined in the config.
+                    if (!allEntities.Contains(relationship.TargetEntity))
                     {
                         throw new DataApiBuilderException(
-                                    message: $"entity: {relationship.TargetEntity} used for relationship is not defined in the config.",
-                                    statusCode: System.Net.HttpStatusCode.NotImplemented,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            message: $"entity: {relationship.TargetEntity} used for relationship is not defined in the config.",
+                            statusCode: System.Net.HttpStatusCode.UnprocessableEntity,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    }
+
+                    // if graphQL is disabled for an entity it can't be referenced by other entity in their relationship.
+                    object? graphQLDetails = runtimeConfig.Entities[relationship.TargetEntity].GraphQL;
+                    if (graphQLDetails is not null && graphQLDetails.Equals(false))
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"entity: {relationship.TargetEntity} is disabled for GraphQL.",
+                            statusCode: System.Net.HttpStatusCode.UnprocessableEntity,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    }
+
+                    // linking.object can be provided without linking.source.fields and linking.target.fields
+                    // in the config only when foreign key relation is defined in the database.
+                    List<Tuple<string,string>> relationshipPairFromDatabase = new();
+                    foreach (RelationShipPair relationShipPair in sqlMetadataProvider.GetPairToFkDefinition().Keys)
+                    {
+                        relationshipPairFromDatabase.Add(Tuple.Create(relationShipPair.ReferencedDbObject.Name, relationShipPair.ReferencingDbObject.Name));
+                    }
+
+                    if (relationship.LinkingObject is not null
+                        && (relationship.LinkingSourceFields is null && relationship.LinkingTargetFields is null))
+                    {
+                        Tuple<string,string> pair1 = Tuple.Create(entity.GetSourceName(), relationship.LinkingObject);
+                        Tuple<string,string> pair2 = Tuple.Create(relationship.LinkingObject, entity.GetSourceName());
+
+                        Tuple<string,string> pair3 = Tuple.Create(runtimeConfig.Entities[relationship.TargetEntity].GetSourceName(), relationship.LinkingObject);
+                        Tuple<string,string> pair4 = Tuple.Create(relationship.LinkingObject, runtimeConfig.Entities[relationship.TargetEntity].GetSourceName());
+
+                        if(!((relationshipPairFromDatabase.Contains(pair1) || relationshipPairFromDatabase.Contains(pair2))
+                            && (relationshipPairFromDatabase.Contains(pair3) || relationshipPairFromDatabase.Contains(pair4))))
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"Could not find relation between Linking Object: {relationship.LinkingObject} with entities: {relationship.TargetEntity} and {entityName}.",
+                                statusCode: System.Net.HttpStatusCode.UnprocessableEntity,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        }
                     }
                 }
             }
-            Console.WriteLine("Validating Config...");
+
         }
 
         /// <summary>
-        /// Method to do the pre-processing needed in the permissions section of the runtimeconfig object.
+        /// Method to do the pre-processing needed in the permissions section of the runtime config object.
         /// For eg. removing the @item. directives, checking for invalid characters in claimTypes etc.
         /// </summary>
         /// <param name="runtimeConfig">The deserialised config object obtained from the json config supplied.</param>

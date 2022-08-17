@@ -115,7 +115,7 @@ You can use Docker to run the Data API Builder on your machine. Instructions are
 
 ### Using Data API Builder CLI to build the configuration file
 
-Instead of creating the configuration file manually, you can take advantange of the CLI [Getting started with Data API Builder (`dab`) CLI](../getting-started/getting-started-dab-cli.md): 
+Instead of creating the configuration file manually, you can take advantage of the CLI [Getting started with Data API Builder (`dab`) CLI](../getting-started/getting-started-dab-cli.md): 
 
 ### Exercise
 

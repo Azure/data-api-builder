@@ -299,12 +299,14 @@ that will return all the books written by Isaac Asimov.
 
 Congratulations, you have just created a fully working backend to support your modern applications!
 
-## Deploy on Azure
+## Exercise
 
+If you want to practice what you have learned, here's a little exercise you can do on your own
 
-
-## Conclusion
-
-WIP
-
-
+- Using the database setup script `/samples/getting-started/azure-sql-db/exercise/exercise.library.azure-sql.sql`:
+  - add the table `dbo.series` which will store series names (for example: [Foundation Series](https://en.wikipedia.org/wiki/Foundation_series))
+  - update the `dbo.books` table by adding a column named `series_id`
+  - update the `dbo.books` table by adding a foreign key constraint on the `dbo.series` table
+- Update the configuration file with a new entity named `series`, supported by the `dbo.series` source table you just created.
+- Update the `book` entity by creating a relationship with the `series` entity. Make sure you select `one` for the `cardinality` property
+- Update the `series` entity by creating a relationship with the `book` entity. Make sure you select `many` for the `cardinality` property

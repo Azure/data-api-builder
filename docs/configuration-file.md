@@ -84,7 +84,6 @@ The `data-source` element contains the information needed to connect to the back
 - `mssql`: for Azure SQL DB, Azure SQL MI and SQL Server
 - `postgresql`: for PostgresSQL
 - `mysql`: for MySQL
-- `mariadb`: for MariaDB
 - `cosmos`: for Cosmos DB
 
 while `connection-string` contains the ADO.NET connection string that Data API builder will use to connect to the backend database
@@ -134,7 +133,7 @@ This section contains options that will affect the runtime behavior and/or all e
 
 `cors.origins`: Array with a list of allowed origins.
 
-`cors.credentials`: Set [`Access-Control-Allow-Credentials`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Credentials) CORS header
+`cors.credentials`: Set [`Access-Control-Allow-Credentials`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Credentials) CORS header. By default, it is `false`.
 
 `authentication`: Configure the authentication process
 
@@ -194,17 +193,7 @@ The `source` property tells Data API builder what is the underlying database obj
 }
 ```
 
-> **IMPORTANT**: A table must have a primary key to be usable by Data API Builder
-
-View are supported and when exposing a view it is required to specify which fields will be used as primary keys:
-
-```json
-"source": {
-    "type": "table",
-    "object": "s002.view_todo",
-    "key-fields": [ "title", "author" ]
-}
-```
+> **IMPORTANT**: A table or a view defined as the source must have a primary key to be usable by Data API Builder
 
 ### Relationships
 

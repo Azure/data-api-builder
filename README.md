@@ -25,6 +25,7 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
   - queries and mutations
   - filtering, sorting and pagination
   - relationship navigation
+- Easy development via dedicated CLI
 
 ## Limitations 
 

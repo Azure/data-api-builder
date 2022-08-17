@@ -46,8 +46,8 @@ dab start
 
 To quickly get started using the CLI, make sure you have read the [Getting Started](./getting-started/getting-started.md) guide to become familiar with basic Data API builder concepts and then use the [Getting started with Data API Builder (`dab`) CLI](./getting-started/getting-started-dab-cli.md) to learn how to use the CLI tool.
 
-## Uninstall the tool
-
+## Uninstall `dab` CLI
+`
 For some reason, if you need to uninstall `dab` cli, simply do:
 
 ```bash

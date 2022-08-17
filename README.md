@@ -30,8 +30,8 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 ## Limitations 
 
 - JWT only supports AAD
-- Tables must have a primary key. The primary key must be built on a single column.
-- MySQL, MariaDB and PostgreSQL are not yet fully supported.
+- Tables must have a primary key
+- MySQL, MariaDB and PostgreSQL are not yet fully supported
 
 ## Known Issues
 

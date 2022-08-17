@@ -9,7 +9,7 @@ As mentioned before, this tutorial assumes that you already have a SQL Server or
 There are several ways to get an Azure SQL database connection string. More details here:
 https://docs.microsoft.com/en-us/azure/azure-sql/database/connect-query-content-reference-guide?view=azuresql
 
-Both if you are connectiong to Azure SQL DB or Azure SQL MI or SQL Server, the connection string look like:
+If you are connecting to Azure SQL DB, Azure SQL MI, or SQL Server, the connection string look like:
 
 ```
 Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;
@@ -64,9 +64,9 @@ Start by adding the `author` entity:
 
 within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL). The name `author`, in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case is `dbo.authors`.
 
-> **NOTE**: Entities names are case sensitive and they will exposed via REST and GraphQL as you have typed them.
+> **NOTE**: Entities names are case sensitive, and they will be exposed via REST and GraphQL as you have typed them.
 
-After that, the permission for the exposed entity are defined via the `permission` element; it allows you to be sure that only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial we're just allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `author` entity.
+After that, the permissions for the exposed entity are defined via the `permission` element; it allows you to be sure that only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial, we're allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `author` entity.
 
 You can also add the `book` entity now, applying the same concepts you just learnt for the `author` entity. Once you have added the `author` entity, the `entities` object of configuration file will look like the following:
 
@@ -140,6 +140,7 @@ The following HTTP verbs are supported:
 - `GET`: return one or more items
 - `POST`: create a new item
 - `PUT`: update or create an item
+- `PATCH`: update an item
 - `DELETE`: delete an item
 
 Whenver you need to access a single item, you can get the item you want by specifying its primary key:
@@ -184,7 +185,7 @@ will return the first five books ordered by title in descending order.
 
 ## Adding entities relationships
 
-Everything is now up and working, and now you probably want to take advantage as much as possible of GraphQL capabilities to handle complex queeries by sending just one request. For example you may want to get all the Authors in your library along with the Books they have written. In order to achieve that you need to let Data API Builder know that you want such relationship to be available to be used in queries.
+Everything is now up and working, and now you probably want to take advantage as much as possible of GraphQL capabilities to handle complex queries by sending just one request. For example you may want to get all the Authors in your library along with the Books they have written. In order to achieve that you need to let Data API Builder know that you want such relationship to be available to be used in queries.
 
 Stop the engine (`Ctrl+C`) and go back to the `library-dab-config.json` and add the `relationships` section to the `author` entity, using the code below:
 
@@ -227,7 +228,7 @@ The `author` entity should now look like the following:
 },
 ```
 
-as we also want to enable quering a book and getting its authors, we also nned to make a similar change to the book entity:
+as we also want to enable querying a book and getting its authors, we also need to make a similar change to the book entity:
 
 ```json
 "book": {

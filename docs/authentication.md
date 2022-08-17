@@ -23,7 +23,7 @@ Using the EasyAuth provider is useful when you plan to run Data API builder in A
 
 ## JWT
 
-To use the JWT provider, you need to configure the `runtime.host` by providing the needed information to verify the received JWT token:
+To use the JWT provider, you need to configure the `runtime.host.authentication` section by providing the needed information to verify the received JWT token:
 
 ```json
 "authentication": {
@@ -37,9 +37,9 @@ To use the JWT provider, you need to configure the `runtime.host` by providing t
 
 ## Roles Selection
 
-Once a request has been authenticated via any of the available mechanisms, the roles defined in the claims will be used to determine how permission rules will be applied to [authorize](./authorization.md) the request.
+Once a request has been authenticated via any of the available mechanisms, the roles defined in the claims will be used to help determine how permission rules will be applied to [authorize](./authorization.md) the request.
 
-## Anonymous Request
+## Anonymous Requests
 
-Request can also be made without being authenticated. In such case the request will be automatically assigned to the `anonymous` system role so that it can be properly [authorized](./authorization.md).
+Requests can also be made without being authenticated. In such case the request will be automatically assigned to the `anonymous` system role so that it can be properly [authorized](./authorization.md).
 

@@ -1,6 +1,6 @@
 # Running Data API Builder for Azure Databases using a container
 
-Login in into the `hawaiicr` Azure Container Registry:
+Login into the `hawaiicr` Azure Container Registry:
 
 ```bash
 az acr login --name hawaiiacr

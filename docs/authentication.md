@@ -9,7 +9,7 @@ Authentication is not performed by Data API builder, but is delegated to one of 
 
 ## EasyAuth
 
-When using this provider, Data API builder will expect to EasyAuth to have authenticated the request, and to have authentication data available in the `X-MS-CLIENT-PRINCIPAL` HTTP header, as described here: [Work with user identities in Azure App Service authentication](https://docs.microsoft.com/en-us/azure/app-service/configure-authentication-user-identities).
+When using this provider, Data API builder will expect to EasyAuth to have authenticated the request, and to have authentication data available in the `X-MS-CLIENT-PRINCIPAL` HTTP header, as described here for App Service: [Work with user identities in Azure App Service authentication](https://docs.microsoft.com/en-us/azure/app-service/configure-authentication-user-identities) and here for Static Web Apps: [Accessing User Information](https://docs.microsoft.com/azure/static-web-apps/user-information?tabs=csharp).
 
 To use this provider you need to specify the following configuration in the `runtime.host` section of the configuration file:
 

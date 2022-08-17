@@ -6,7 +6,7 @@ Entities configured to be available via REST will be available at the path
 http://<dab-server>/api/<entity>
 ```
 
-Using the [Getting Started](./getting-started/getting-started.md) example, where there are the `books` and the `authors` entity configured for REST access, the path would, for example:
+Using the [Getting Started](./getting-started/getting-started.md) example, where there are the `books` and the `authors` entity configured for REST access, the path would be, for example:
 
 ```
 http://localhost:5000/api/book
@@ -159,7 +159,7 @@ http://<dab-server>/api/book?$first=<n>&$after=<continuation-data>
 
 ## POST
 
-Create a new iteam for the specified entity. For example:
+Create a new item for the specified entity. For example:
 
 ```
 POST http://localhost:5000/api/book
@@ -204,7 +204,7 @@ PUT /api/book/id/2001
 }
 ```
 
-If there is an item with the specified primary key `2001` that item will be *completely replaced* by the provided data. If instead an item with that primary key does not exists, a new item will be created.
+If there is an item with the specified primary key `2001` that item will be *completely replaced* by the provided data. If instead an item with that primary key does not exist, a new item will be created.
 
 In either case the result will be something like:
 
@@ -223,7 +223,7 @@ In either case the result will be something like:
 
 ## PATCH
 
-With PATH you can update the item of the specified entity. Only the specified fields will be affected. All fields not specified in the request body will not be affected
+With PATCH you can update the item of the specified entity. Only the specified fields will be affected. All fields not specified in the request body will not be affected
 
 The query pattern is:
 
@@ -273,4 +273,4 @@ for example:
 DELETE /api/book/id/2001
 ```
 
-The result will be a empty response with status code 204 
+The result will be an empty response with status code 204 

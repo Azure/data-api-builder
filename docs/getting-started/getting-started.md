@@ -31,7 +31,7 @@ Clone the repository locally:
 git clone https://github.com/azure/data-api-builder
 ```
 
-and then make sure you are using M1.5 release:
+and then make sure you are using the M1.5 release:
 
 ```bash
 cd .\data-api-builder\
@@ -50,7 +50,7 @@ The Data API builder for Azure Databases engine needs a [configuration file](../
 
 Creating a configuration file is simple and you can use the Data API builder CLI to make it even simpler. In this tutorial the CLI will not be used so that you can get the chance to get familar with the configuration file, as it is a key part of Data API builder for Azure Databases.
 
-Create a copy of the `basic-empty-dab-config.json` file and rename it `library-dab-config.json` and then open it using your IDE of choice (Visual Studio Code is recommended).
+Create a copy of the `basic-empty-dab-config.json` file and rename it `library-dab-config.json` and then open it using your editor of choice (such as Visual Studio Code).
 
 The content of the file is the following:
 
@@ -115,7 +115,7 @@ You can use Docker to run the Data API Builder on your machine. Instructions are
 
 ### Using Data API Builder CLI to build the configuration file
 
-Instead of creating the configuration file manually, you can take advantange of the CLI [Getting started with Data API Builder (`dab`) CLI](../getting-started/getting-started-dab-cli.md): 
+Instead of creating the configuration file manually, you can take advantage of the CLI [Getting started with Data API Builder (`dab`) CLI](../getting-started/getting-started-dab-cli.md): 
 
 ### Exercise
 

@@ -89,7 +89,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// Try convert action string to Operation Enum.
+        /// Try convert operation string to Operation Enum.
         /// </summary>
         /// <param name="operationName">operation string.</param>
         /// <param name="operation">Operation Enum output.</param>
@@ -160,7 +160,7 @@ namespace Cli
         /// </summary>
         /// <param name="operations">Array of operations which is of type JsonElement.</param>
         /// <returns>Dictionary of operations</returns>
-        public static IDictionary<Operation, PermissionOperation> ConvertActionArrayToIEnumerable(object[] operations)
+        public static IDictionary<Operation, PermissionOperation> ConvertOperationArrayToIEnumerable(object[] operations)
         {
             Dictionary<Operation, PermissionOperation> result = new();
             foreach (object operation in operations)
@@ -371,7 +371,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// Verifies whether the action provided by the user is valid or not
+        /// Verifies whether the operation provided by the user is valid or not
         /// Example:
         /// *, create -> Invalid
         /// create, create, read -> Invalid
@@ -379,11 +379,11 @@ namespace Cli
         /// fetch, read -> Invalid
         /// read, delete -> Valid
         /// </summary>
-        /// <param name="operations">array of string containing actions for permissions</param>
-        /// <returns>True if no invalid action is found.</returns>
+        /// <param name="operations">array of string containing operations for permissions</param>
+        /// <returns>True if no invalid operation is found.</returns>
         public static bool VerifyOperations(string[] operations)
         {
-            // Check if there are any duplicate actions
+            // Check if there are any duplicate operations
             // Ex: read,read,create
             HashSet<string> uniqueOperations = operations.ToHashSet();
             if (uniqueOperations.Count() != operations.Length)
@@ -418,7 +418,7 @@ namespace Cli
             // Check for WILDCARD operation with CRUD operations.
             if (containsWildcardOperation && uniqueOperations.Count() > 1)
             {
-                Console.Error.WriteLine(" WILDCARD(*) along with other CRUD actions in a single operation is not allowed.");
+                Console.Error.WriteLine(" WILDCARD(*) along with other CRUD operations in a single operation is not allowed.");
                 return false;
             }
 
@@ -431,9 +431,9 @@ namespace Cli
         /// it will return true if parsing is successful and add the parsed value
         /// to the out params role and operations.
         /// </summary>
-        public static bool TryGetRoleAndActionFromPermission(IEnumerable<string> permissions, out string? role, out string? operations)
+        public static bool TryGetRoleAndOperationFromPermission(IEnumerable<string> permissions, out string? role, out string? operations)
         {
-            // Split permission to role and actions.
+            // Split permission to role and operations.
             role = null;
             operations = null;
             if (permissions.Count() != 2)

@@ -164,7 +164,7 @@ namespace Cli.Tests
         [DataRow(new string[] { "anonymous", "fetch,create" }, DisplayName = "Mix of invalid and valid CRUD operations")]
         [DataRow(new string[] { "anonymous", "reads,create" }, DisplayName = "Misspelled CRUD operations")]
         [DataRow(new string[] { }, DisplayName = "No permissions entered")]
-        public void TestAddEntityPermissionWithInvalidAction(IEnumerable<string> permissions)
+        public void TestAddEntityPermissionWithInvalidOperation(IEnumerable<string> permissions)
         {
 
             AddOptions options = new(

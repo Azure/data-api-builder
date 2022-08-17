@@ -449,7 +449,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             if (headers is not null)
             {
-                foreach ((string key,StringValues value) in headers)
+                foreach ((string key, StringValues value) in headers)
                 {
                     request.Headers.Add(key, value.ToString());
                 }

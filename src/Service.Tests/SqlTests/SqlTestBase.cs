@@ -8,7 +8,6 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Auth;
@@ -424,29 +423,39 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             bool paginated = false,
             int verifyNumRecords = -1)
         {
+            // Create the rest endpoint using the path and entity name.
             string restEndPoint = path + "/" + entity;
 
+            // Append primaryKeyRoute to the endpoint if it is not empty.
             if (!string.IsNullOrEmpty(primaryKeyRoute))
             {
                 restEndPoint = restEndPoint + "/" + primaryKeyRoute;
             }
 
+            // Append queryString to the endpoint if it is not empty.
             if (!string.IsNullOrEmpty(queryString))
             {
                 restEndPoint = restEndPoint + queryString;
             }
 
+            // Use UnsafeRelaxedJsonEscaping to be less strict about what is encoded.
+            // More details can be found here:
+            // https://docs.microsoft.com/en-us/dotnet/api/system.text.encodings.web.javascriptencoder.unsaferelaxedjsonescaping?view=net-6.0
             JsonSerializerOptions options = new()
             {
                 Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             };
 
+            // Get the httpMethod based on the operation to be executed.
             HttpMethod httpMethod = GetHttpMethodFromOperation(operationType);
+
+            // Create the request to be sent to the engine.
             HttpRequestMessage request = new(httpMethod, restEndPoint)
             {
                 Content = JsonContent.Create(requestBody, options: options)
             };
 
+            // Add headers to the request if any.
             if (headers is not null)
             {
                 foreach ((string key, StringValues value) in headers)
@@ -455,9 +464,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 }
             }
 
+            // Send request to the engine.
             HttpResponseMessage response = await HttpClient.SendAsync(request);
-
-            string responseBody = await response.Content.ReadAsStringAsync();
 
             // if an exception is expected we generate the correct error
             // The expected result should be a Query that confirms the result state
@@ -500,27 +508,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 }
             }
 
-            if (!exception)
-            {
-                Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expected, responseBody));
-                Assert.AreEqual(expectedStatusCode, response.StatusCode);
-                if (operationType == Operation.Insert)
-                {
-                    string responseUri = (response.Headers.Location.OriginalString);
-                    string requestUri = request.RequestUri.OriginalString;
-                    string actualLocation = responseUri.Substring(
-                        responseUri.IndexOf(requestUri + "/") + requestUri.Length + 1);
-                    Assert.AreEqual(expectedLocationHeader, actualLocation);
-                }
-            }
-            else
-            {
-                responseBody = Regex.Replace(responseBody, @"\\u0022", @"\\""");
-                responseBody = Regex.Unescape(responseBody);
-                Assert.AreEqual(expected, responseBody, ignoreCase: true);
-            }
+            await SqlTestHelper.VerifyResultAsync(
+                expected: expected,
+                request: request,
+                response: response,
+                exception: exception,
+                httpMethod: httpMethod,
+                expectedLocationHeader: expectedLocationHeader,
+                verifyNumRecords: verifyNumRecords);
         }
 
+        /// <summary>
+        /// Helper method to get the HttpMethod based on the operation type.
+        /// </summary>
+        /// <param name="operationType">The operation to be executed on the entity.</param>
+        /// <returns></returns>
+        /// <exception cref="DataApiBuilderException"></exception>
         private static HttpMethod GetHttpMethodFromOperation(Operation operationType)
         {
             switch (operationType)

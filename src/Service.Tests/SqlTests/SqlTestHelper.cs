@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -84,50 +85,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Performs test on the given entity name by calling the correct Api based on the
-        /// operation type passed for the given primaryKeyRoute (if any).
-        /// </summary>
-        /// <param name="controller">The REST controller with the request context.</param>
-        /// <param name="entityName">The entity name.</param>
-        /// <param name="primaryKeyRoute">The primary key portion of the route.</param>
-        /// <param name="operationType">The operation type to be tested.</param>
-        public static async Task<IActionResult> PerformApiTest(
-            RestController controller,
-            string path,
-            string entityName,
-            string primaryKeyRoute,
-            Operation operationType = Operation.Read)
-
-        {
-            IActionResult actionResult;
-            string pathAndEntityName = $"{path}/{entityName}";
-            switch (operationType)
-            {
-                case Operation.Read:
-                    actionResult = await controller.Find($"{pathAndEntityName}/{primaryKeyRoute}");
-                    break;
-                case Operation.Insert:
-                    actionResult = await controller.Insert($"{pathAndEntityName}");
-                    break;
-                case Operation.Delete:
-                    actionResult = await controller.Delete($"{pathAndEntityName}/{primaryKeyRoute}");
-                    break;
-                case Operation.Update:
-                case Operation.Upsert:
-                    actionResult = await controller.Upsert($"{pathAndEntityName}/{primaryKeyRoute}");
-                    break;
-                case Operation.UpdateIncremental:
-                case Operation.UpsertIncremental:
-                    actionResult = await controller.UpsertIncremental($"{pathAndEntityName}/{primaryKeyRoute}");
-                    break;
-                default:
-                    throw new NotSupportedException("This operation is not yet supported.");
-            }
-
-            return actionResult;
-        }
-
-        /// <summary>
         /// Verifies the ActionResult is as expected with the expected status code.
         /// </summary>
         /// <param name="actionResult">The action result of the operation to verify.</param>
@@ -192,6 +149,59 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             else
             {
                 Assert.AreEqual(expected, actual, ignoreCase: true);
+            }
+        }
+
+        /// <summary>
+        /// Verifies the ActionResult is as expected with the expected status code.
+        /// </summary>
+        /// <param name="expected">Expected result of the query execution.</param>
+        /// <param name="request">The HttpRequestMessage sent to the engine via HttpClient.</param>
+        /// <param name="response">The HttpResponseMessage returned by the engine.</param>
+        /// <param name="exception">Boolean value indicating whether an exception is expected as
+        /// a result of executing the request on the engine.</param>
+        /// <param name="httpMethod">The http method specified in the request.</param>
+        /// <param name="expectedLocationHeader">The expected location header in the response(if any).</param>
+        /// <param name="verifyNumRecords"></param>
+        /// <returns></returns>
+        public static async Task VerifyResultAsync(
+            string expected,
+            HttpRequestMessage request,
+            HttpResponseMessage response,
+            bool exception,
+            HttpMethod httpMethod,
+            string expectedLocationHeader,
+            int verifyNumRecords)
+        {
+            string responseBody = await response.Content.ReadAsStringAsync();
+            if (!exception)
+            {
+                Assert.IsTrue(JsonStringsDeepEqual(expected, responseBody));
+
+                // Assert that the expectedLocation and actualLocation are equal in case of
+                // POST operation.
+                if (httpMethod == HttpMethod.Post )
+                {
+                    string responseUri = (response.Headers.Location.OriginalString);
+                    string requestUri = request.RequestUri.OriginalString;
+                    string actualLocation = responseUri.Substring(requestUri.Length + 1);
+                    Assert.AreEqual(expectedLocationHeader, actualLocation);
+                }
+
+                if (response.StatusCode == HttpStatusCode.OK && verifyNumRecords >= 0)
+                {
+                    // Assert the number of records received is equal to expected number of records.
+                    Dictionary<string, JsonElement[]> actualAsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(responseBody);
+                    Assert.AreEqual(actualAsDict["value"].Length, verifyNumRecords);
+                }
+            }
+            else
+            {
+                responseBody = Regex.Replace(responseBody, @"\\u0022", @"\\""");
+
+                // Convert the escaped characters into their unescaped form.
+                responseBody = Regex.Unescape(responseBody);
+                Assert.AreEqual(expected, responseBody, ignoreCase: true);
             }
         }
 

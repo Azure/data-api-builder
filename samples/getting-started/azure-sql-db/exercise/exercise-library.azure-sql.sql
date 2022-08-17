@@ -3,7 +3,7 @@ drop table if exists dbo.series;
 create table dbo.series
 (
     id int not null primary key default (next value for dbo.globalId),
-    [series] nvarchar(1000) not null
+    [name] nvarchar(1000) not null
 )
 go
 

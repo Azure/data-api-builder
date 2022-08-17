@@ -12,7 +12,6 @@
       + [GraphQL](#graphql)
       + [Host](#host)
     + [Entities](#entities)
-      + [REST endpoint](#rest-endpoint)
     + [GraphQL type](#graphql-type)
     + [Database object source](#database-object-source)
     + [Relationships](#relationships)
@@ -161,18 +160,6 @@ Each exposed entity is enclosed in a dedicated section. The property name will b
 will instruct Data API builder to expose a GraphQL entity named `users` and a REST endpoint reachable via `/users` url path.
 
 Within the entity section, there are feature specific sections:
-
-#### REST endpoint
-
-The `rest` property allows setting the path at which the entity will be reachable via REST:
-
-```
-"rest":{
-    "route": "route-path"
-}
-```
-
-which instructs Data API builder runtime to expose the REST endpoint for the related entity and to name it using the provided type name. Subpaths (for example `/url-path/url-subpath`) are *not* supported.
 
 ### GraphQL type
 

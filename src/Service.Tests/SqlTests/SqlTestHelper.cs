@@ -180,7 +180,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
                 // Assert that the expectedLocation and actualLocation are equal in case of
                 // POST operation.
-                if (httpMethod == HttpMethod.Post )
+                if (httpMethod == HttpMethod.Post)
                 {
                     string responseUri = (response.Headers.Location.OriginalString);
                     string requestUri = request.RequestUri.OriginalString;
@@ -197,6 +197,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             }
             else
             {
+                // Quote(") has to be treated differently than other unicode characters
+                // as it has to be added with a preceding backslash.
                 responseBody = Regex.Replace(responseBody, @"\\u0022", @"\\""");
 
                 // Convert the escaped characters into their unescaped form.

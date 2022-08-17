@@ -94,7 +94,7 @@ steps:
     nuGetFeedType: 'internal'
     publishVstsFeed: CosmosDB/DataApiBuilder
     versioningScheme: 'off'
-    allowPackageConflicts: false
+    allowPackageConflicts: true
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

@@ -168,15 +168,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
             await InitializeTestFixture(context);
-            _restService = new RestService(_queryEngine,
-                _mutationEngine,
-                _sqlMetadataProvider,
-                _httpContextAccessor.Object,
-                _authorizationService.Object,
-                _authorizationResolver,
-                _runtimeConfigProvider);
-            _restController = new RestController(_restService,
-                                                 _restControllerLogger);
         }
 
         #endregion

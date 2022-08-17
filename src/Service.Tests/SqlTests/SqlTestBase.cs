@@ -1,8 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -400,7 +398,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="queryString">string represents the query string provided in URL</param>
         /// <param name="entity">string represents the name of the entity</param>
         /// <param name="sqlQuery">string represents the query to be executed</param>
-        /// <param name="controller">string represents the rest controller</param>
         /// <param name="operationType">The operation type to be tested.</param>
         /// <param name="requestBody">string represents JSON data used in mutation operations</param>
         /// <param name="exception">bool represents if we expect an exception</param>
@@ -409,102 +406,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="expectedSubStatusCode">enum represents the returned sub status code</param>
         /// <param name="expectedLocationHeader">The expected location header in the response (if any)</param>
         /// <returns></returns>
-        /*protected static async Task SetupAndRunRestApiTest(
-            string primaryKeyRoute,
-            string queryString,
-            string entity,
-            string sqlQuery,
-            RestController controller,
-            Operation operationType = Operation.Read,
-            string path = "api",
-            IHeaderDictionary headers = null,
-            string requestBody = null,
-            bool exception = false,
-            string expectedErrorMessage = "",
-            HttpStatusCode expectedStatusCode = HttpStatusCode.OK,
-            string expectedSubStatusCode = "BadRequest",
-            string expectedLocationHeader = null,
-            string expectedAfterQueryString = "",
-            bool paginated = false,
-            int verifyNumRecords = -1)
-        {
-            ConfigureRestController(
-                controller,
-                queryString,
-                operationType,
-                headers,
-                requestBody
-                );
-
-            string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
-            if (expectedLocationHeader != null)
-            {
-                expectedLocationHeader =
-                    baseUrl
-                    + @"/" + expectedLocationHeader;
-            }
-
-            IActionResult actionResult = await SqlTestHelper.PerformApiTest(
-                        controller,
-                        path,
-                        entity,
-                        primaryKeyRoute,
-                        operationType);
-
-            // if an exception is expected we generate the correct error
-            // The expected result should be a Query that confirms the result state
-            // of the Operation performed for the test. However:
-            // Initial DELETE request results in 204 no content, no exception thrown.
-            // Subsequent DELETE requests result in 404, which result in an exception.
-            string expected;
-            if ((operationType is Operation.Delete ||
-                 operationType is Operation.Upsert ||
-                 operationType is Operation.UpsertIncremental ||
-                 operationType is Operation.Update ||
-                 operationType is Operation.UpdateIncremental)
-                && actionResult is NoContentResult)
-            {
-                expected = null;
-            }
-            else
-            {
-                JsonSerializerOptions options = new()
-                {
-                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                };
-
-                if (exception)
-                {
-                    expected = JsonSerializer.Serialize(RestController.ErrorResponse(
-                        expectedSubStatusCode.ToString(),
-                        expectedErrorMessage,
-                        expectedStatusCode).Value,
-                        options);
-                }
-                else
-                {
-                    string dbResult = await GetDatabaseResultAsync(sqlQuery);
-                    // For FIND requests, null result signifies an empty result set
-                    dbResult = (operationType is Operation.Read && dbResult is null) ? "[]" : dbResult;
-                    expected = $"{{\"value\":{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";
-                }
-            }
-
-            SqlTestHelper.VerifyResult(
-                actionResult,
-                expected,
-                expectedStatusCode,
-                expectedLocationHeader,
-                !exception,
-                verifyNumRecords);
-        }*/
-
         protected static async Task SetupAndRunRestApiTest(
             string primaryKeyRoute,
             string queryString,
             string entity,
             string sqlQuery,
-            RestController controller,
             Operation operationType = Operation.Read,
             string path = "api",
             IHeaderDictionary headers = null,
@@ -635,19 +541,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         statusCode: HttpStatusCode.NotImplemented,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
             }
-        }
-
-        /// <summary>
-        /// Helper function encodes the url with query string into the correct
-        /// format. We utilize the toString() of the HttpValueCollection
-        /// which is used by the NameValueCollection returned from
-        /// ParseQueryString to avoid writing this ourselves.
-        /// </summary>
-        /// <param name="fullUrl">Url to be encoded as query string.</param>
-        /// <returns>query string encoded url.</returns>
-        private static string EncodeQueryString(string fullUrl)
-        {
-            return HttpUtility.ParseQueryString(fullUrl).ToString();
         }
 
         /// <summary>

@@ -74,7 +74,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 queryString: "?$select=id,content",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                controller: _restController,
                 exception: true,
                 expectedErrorMessage: "Invalid field to be returned requested: content",
                 expectedStatusCode: HttpStatusCode.BadRequest

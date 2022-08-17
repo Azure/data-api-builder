@@ -46,10 +46,17 @@ namespace Azure.DataApiBuilder.Service.Models
                     try
                     {
                         Dictionary<string, object?>[]? fieldValuePairs = JsonSerializer.Deserialize<Dictionary<string, object?>[]>(payload);
-                        throw new DataApiBuilderException(
-                            statusCode: HttpStatusCode.BadRequest,
-                            message: "Mutation operation on many instances of an entity in a single request are not yet supported.",
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        if (fieldValuePairs is null)
+                        {
+                            throw new JsonException("Failed to deserialize the insert payload");
+                        }
+                        else
+                        {
+                            throw new DataApiBuilderException(
+                                statusCode: HttpStatusCode.BadRequest,
+                                message: "Mutation operation on many instances of an entity in a single request are not yet supported.",
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        }
                     }
                     catch (JsonException)
                     {

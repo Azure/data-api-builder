@@ -117,14 +117,6 @@ You can use Docker to run the Data API Builder on your machine. Instructions are
 
 Instead of creating the configuration file manually, you can take advantage of the CLI [Getting started with Data API Builder (`dab`) CLI](../getting-started/getting-started-dab-cli.md): 
 
-### Exercise
+### Deploy on Azure
 
-If you want to practice what you have learned, here's a little exercise you can do on your own
-
-- Use the code `/samples/getting-started/azure-sql-db/exercise/exercise.library.azure-sql.sql` to 
-  - add the `dbo.series` table where to store series names (for example: [Foundation Series](https://en.wikipedia.org/wiki/Foundation_series))
-  - update the `dbo.books` table to add the `series_id` column
-  - update the `dbo.books` table to add a foreign key constraint to the `dbo.series` table
-- Update the configuration file to add the `series` entity, supported by the `dbo.series` source table
-- Update the `book` entity to create a relationship with the `series` entity. Make sure you select `one` for the `cardinality` property
-- Update the `series` entity to create a relationship with the `book` entity. Make sure you select `many` for the `cardinality` property
+** Work in progress **

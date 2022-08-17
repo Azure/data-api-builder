@@ -31,7 +31,7 @@ Clone the repository locally:
 git clone https://github.com/azure/data-api-builder
 ```
 
-and then make sure you are using M1.5 release:
+and then make sure you are using the M1.5 release:
 
 ```bash
 cd .\data-api-builder\

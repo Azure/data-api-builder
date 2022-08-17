@@ -18,5 +18,4 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 - [Authentication](./authentication.md) - **Work in progress**
 - [Authorization](./authorization.md) - **Work in progress**
 - [Relationships](./relationships.md) - **Work in progress**
-- [Known Issues and Limitations](/docs/known-issues.md)
-
+- [Known Issues and Limitations](/docs/known-issues.md) - **Work in progress**

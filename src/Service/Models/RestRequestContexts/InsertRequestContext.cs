@@ -43,10 +43,21 @@ namespace Azure.DataApiBuilder.Service.Models
                 }
                 catch (JsonException)
                 {
-                    throw new DataApiBuilderException(
-                        message: "The request body is not in a valid JSON format.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    try
+                    {
+                        Dictionary<string, object?>[]? fieldValuePairs = JsonSerializer.Deserialize<Dictionary<string, object?>[]>(payload);
+                        throw new DataApiBuilderException(
+                            statusCode: HttpStatusCode.BadRequest,
+                            message: "Mutation operation on many instances of an entity in a single request are not yet supported.",
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
+                    catch (JsonException)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "The request body is not in a valid JSON format.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
                 }
             }
             else

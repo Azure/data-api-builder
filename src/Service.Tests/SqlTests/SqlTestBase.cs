@@ -536,11 +536,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             };
 
             HttpMethod httpMethod = GetHttpMethodFromOperation(operationType);
-
-            //JsonContent payload = requestBody is null ? null : JsonContent.Create(requestBody);
             HttpRequestMessage request = new(httpMethod, restEndPoint)
             {
-                Content = JsonContent.Create(requestBody)
+                Content = JsonContent.Create(requestBody, options: options)
             };
 
             if (headers is not null)
@@ -554,29 +552,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             HttpResponseMessage response = await HttpClient.SendAsync(request);
 
             string responseBody = await response.Content.ReadAsStringAsync();
-
-            /*ConfigureRestController(
-                controller,
-                queryString,
-                operationType,
-                headers,
-                requestBody
-                );*/
-
-            //string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
-            /*if (expectedLocationHeader != null)
-            {
-                expectedLocationHeader =
-                    baseUrl
-                    + @"/" + expectedLocationHeader;
-            }*/
-
-            /*IActionResult actionResult = await SqlTestHelper.PerformApiTest(
-                        controller,
-                        path,
-                        entity,
-                        primaryKeyRoute,
-                        operationType);*/
 
             // if an exception is expected we generate the correct error
             // The expected result should be a Query that confirms the result state
@@ -638,13 +613,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 responseBody = Regex.Unescape(responseBody);
                 Assert.AreEqual(expected, responseBody, ignoreCase: true);
             }
-            /*SqlTestHelper.VerifyResult(
-                actionResult,
-                expected,
-                expectedStatusCode,
-                expectedLocationHeader,
-                !exception,
-                verifyNumRecords);*/
         }
 
         private static HttpMethod GetHttpMethodFromOperation(Operation operationType)

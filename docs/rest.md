@@ -204,7 +204,7 @@ PUT /api/book/id/2001
 }
 ```
 
-If there is an item with the specified primary key `2001` that item will be *completely replaced* by the provided data. If instead an item with that primary key does not exists, a new item will be created.
+If there is an item with the specified primary key `2001` that item will be *completely replaced* by the provided data. If instead an item with that primary key does not exist, a new item will be created.
 
 In either case the result will be something like:
 

@@ -7,7 +7,7 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Action = Azure.DataApiBuilder.Config.Action;
+using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authorization
 {
@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             Policy policy = new(requestPolicy, databasePolicy);
 
-            Action actionForRole = new(
+            PermissionOperation actionForRole = new(
                 Name: operation,
                 Fields: fieldsForRole,
                 Policy: policy);

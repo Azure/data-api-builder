@@ -342,8 +342,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                             ((JsonElement)action).ValueKind == JsonValueKind.Object);
                         if (((JsonElement)action).ValueKind == JsonValueKind.Object)
                         {
-                            Config.Action configAction =
-                                ((JsonElement)action).Deserialize<Config.Action>(RuntimeConfig.SerializerOptions);
+                            Config.PermissionOperation configAction =
+                                ((JsonElement)action).Deserialize<Config.PermissionOperation>(RuntimeConfig.SerializerOptions);
                             Assert.IsTrue(allowedActions.Contains(configAction.Name));
                             Assert.IsTrue(configAction.Policy == null
                                 || configAction.Policy.GetType() == typeof(Policy));

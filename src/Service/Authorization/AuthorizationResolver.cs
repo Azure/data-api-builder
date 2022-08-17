@@ -13,7 +13,7 @@ using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Action = Azure.DataApiBuilder.Config.Action;
+using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Azure.DataApiBuilder.Service.Authorization
 {
@@ -235,9 +235,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         }
                         else
                         {
-                            // If not a string, the operationObj is expected to be an object that can be deserialised into Action object.
-                            // We will put validation checks later to make sure this is the case.
-                            if (RuntimeConfig.TryGetDeserializedConfig(operationElement.ToString(), out Action? operationObj)
+                            // If not a string, the operationObj is expected to be an object that can be deserialised into PermissionOperation
+                            // object. We will put validation checks later to make sure this is the case.
+                            if (RuntimeConfig.TryGetDeserializedConfig(operationElement.ToString(), out PermissionOperation? operationObj)
                                 && operationObj is not null)
                             {
                                 operation = operationObj.Name;
@@ -381,7 +381,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <returns>IEnumerable of all available operations.</returns>
         public static IEnumerable<Operation> GetAllOperations(Operation operation)
         {
-            return operation is Operation.All ? Action.ValidPermissionOperations : new List<Operation> { operation };
+            return operation is Operation.All ? PermissionOperation.ValidPermissionOperations : new List<Operation> { operation };
         }
 
         /// <summary>

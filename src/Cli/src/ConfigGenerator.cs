@@ -2,7 +2,7 @@ using System.Collections;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using static Cli.Utils;
-using Action = Azure.DataApiBuilder.Config.Action;
+using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Cli
 {
@@ -409,7 +409,7 @@ namespace Cli
                     else
                     {
                         // User didn't use WILDCARD, and wants to update some of the actions.
-                        IDictionary<Operation, Action> existingActions = ConvertActionArrayToIEnumerable(permission.Actions);
+                        IDictionary<Operation, PermissionOperation> existingActions = ConvertActionArrayToIEnumerable(permission.Actions);
 
                         // Merge existing actions with new actions
                         object[] updatedActionArray = GetUpdatedActionArray(newActionArray, policy, fields, existingActions);
@@ -445,9 +445,9 @@ namespace Cli
         private static object[] GetUpdatedActionArray(string[] newActions,
                                                         Policy? newPolicy,
                                                         Field? newFields,
-                                                        IDictionary<Operation, Action> existingActions)
+                                                        IDictionary<Operation, PermissionOperation> existingActions)
         {
-            Dictionary<Operation, Action> updatedActions = new();
+            Dictionary<Operation, PermissionOperation> updatedActions = new();
 
             Policy? existingPolicy = null;
             Field? existingFields = null;
@@ -468,12 +468,12 @@ namespace Cli
                     Policy? updatedPolicy = newPolicy is null ? existingPolicy : newPolicy;
                     Field? updatedFields = newFields is null ? existingFields : newFields;
 
-                    updatedActions.Add(op, new Action(op, updatedPolicy, updatedFields));
+                    updatedActions.Add(op, new PermissionOperation(op, updatedPolicy, updatedFields));
                 }
             }
 
             // Looping through existing actions
-            foreach (KeyValuePair<Operation, Action> action in existingActions)
+            foreach (KeyValuePair<Operation, PermissionOperation> action in existingActions)
             {
                 // if any existing action doesn't require update, it is added as it is.
                 if (!updatedActions.ContainsKey(action.Key))
@@ -487,7 +487,7 @@ namespace Cli
             // Otherwise, it is added as action object.
             //
             ArrayList updatedActionArray = new();
-            foreach (Action updatedAction in updatedActions.Values)
+            foreach (PermissionOperation updatedAction in updatedActions.Values)
             {
                 if (updatedAction.Policy is null && updatedAction.Fields is null)
                 {

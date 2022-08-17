@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
 using Humanizer;
-using Action = Azure.DataApiBuilder.Config.Action;
+using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>
 /// Contains the methods for transforming objects, serialization options.
@@ -125,7 +125,7 @@ namespace Cli
 
             if (actions is WILDCARD)
             {
-                action_items = new object[] { new Action(Operation.All, policy, fields) };
+                action_items = new object[] { new PermissionOperation(Operation.All, policy, fields) };
             }
             else
             {
@@ -137,7 +137,7 @@ namespace Cli
                     {
                         if (TryConvertActionNameToOperation(action_element, out Operation op))
                         {
-                            Action? action_item = new(op, policy, fields);
+                            PermissionOperation? action_item = new(op, policy, fields);
                             action_list.Add(action_item);
                         }
                     }
@@ -160,9 +160,9 @@ namespace Cli
         /// </summary>
         /// <param name="Actions">Array of actions which is of type JsonElement.</param>
         /// <returns>Dictionary of actions</returns>
-        public static IDictionary<Operation, Action> ConvertActionArrayToIEnumerable(object[] Actions)
+        public static IDictionary<Operation, PermissionOperation> ConvertActionArrayToIEnumerable(object[] Actions)
         {
-            Dictionary<Operation, Action> result = new();
+            Dictionary<Operation, PermissionOperation> result = new();
             foreach (object action in Actions)
             {
                 JsonElement actionJson = (JsonElement)action;
@@ -173,27 +173,29 @@ namespace Cli
                         if (op is Operation.All)
                         {
                             // Expand wildcard to all valid actions
-                            foreach (Operation validOp in Action.ValidPermissionOperations)
+                            foreach (Operation validOp in PermissionOperation.ValidPermissionOperations)
                             {
-                                result.Add(validOp, new Action(validOp, null, null));
+                                result.Add(validOp, new PermissionOperation(validOp, null, null));
                             }
                         }
                         else
                         {
-                            result.Add(op, new Action(op, null, null));
+                            result.Add(op, new PermissionOperation(op, null, null));
                         }
                     }
                 }
                 else
                 {
-                    Action ac = actionJson.Deserialize<Action>(GetSerializationOptions())!;
+                    PermissionOperation ac = actionJson.Deserialize<PermissionOperation>(GetSerializationOptions())!;
 
                     if (ac.Name is Operation.All)
                     {
                         // Expand wildcard to all valid actions
-                        foreach (Operation validOp in Action.ValidPermissionOperations)
+                        foreach (Operation validOp in PermissionOperation.ValidPermissionOperations)
                         {
-                            result.Add(validOp, new Action(validOp, Policy: ac.Policy, Fields: ac.Fields));
+                            result.Add(
+                                validOp,
+                                new PermissionOperation(validOp, Policy: ac.Policy, Fields: ac.Fields));
                         }
                     }
                     else
@@ -399,7 +401,7 @@ namespace Cli
                     {
                         containsWildcardAction = true;
                     }
-                    else if (!Action.ValidPermissionOperations.Contains(op))
+                    else if (!PermissionOperation.ValidPermissionOperations.Contains(op))
                     {
                         Console.Error.WriteLine("Invalid actions found in --permissions");
                         return false;

@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Action = Azure.DataApiBuilder.Config.Action;
+using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authorization
 {
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 Operation.All));
 
             // The wildcard operation should be expanded to all the explicit operations.
-            foreach (Operation operation in Action.ValidPermissionOperations)
+            foreach (Operation operation in PermissionOperation.ValidPermissionOperations)
             {
                 Assert.IsTrue(authZResolver.AreRoleAndOperationDefinedForEntity(
                     AuthorizationHelpers.TEST_ENTITY,
@@ -182,12 +182,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 include: new HashSet<string> { "col1" },
                 exclude: null);
 
-            Action readAction = new(
+            PermissionOperation readAction = new(
                 Name: Operation.Read,
                 Fields: fieldsForRole,
                 Policy: null);
 
-            Action updateAction = new(
+            PermissionOperation updateAction = new(
                 Name: Operation.Update,
                 Fields: fieldsForRole,
                 Policy: null);
@@ -301,7 +301,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            foreach (Operation operation in Action.ValidPermissionOperations)
+            foreach (Operation operation in PermissionOperation.ValidPermissionOperations)
             {
                 if (operation is Operation.Create)
                 {
@@ -418,12 +418,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 include: new HashSet<string> { "col1" },
                 exclude: null);
 
-            Action readAction = new(
+            PermissionOperation readAction = new(
                 Name: Operation.Read,
                 Fields: fieldsForRole,
                 Policy: null);
 
-            Action updateAction = new(
+            PermissionOperation updateAction = new(
                 Name: Operation.Update,
                 Fields: fieldsForRole,
                 Policy: null);
@@ -798,7 +798,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            foreach (Operation operation in Action.ValidPermissionOperations)
+            foreach (Operation operation in PermissionOperation.ValidPermissionOperations)
             {
                 // Validate that the authorization check passes for valid CRUD operations
                 // because columns are accessbile or inaccessible.
@@ -869,7 +869,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            foreach (Operation operation in Action.ValidPermissionOperations)
+            foreach (Operation operation in PermissionOperation.ValidPermissionOperations)
             {
                 Assert.AreEqual(expected, authZResolver.AreColumnsAllowedForOperation(
                     AuthorizationHelpers.TEST_ENTITY,
@@ -1169,7 +1169,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                     database: databasePolicy);
             }
 
-            Action operationForRole = new(
+            PermissionOperation operationForRole = new(
                 Name: operation,
                 Fields: fieldsForRole,
                 Policy: policy);

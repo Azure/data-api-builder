@@ -10,7 +10,7 @@ using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
-using Action = Azure.DataApiBuilder.Config.Action;
+using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Azure.DataApiBuilder.Service.Configurations
 {
@@ -220,10 +220,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         }
                         else
                         {
-                            Action configAction;
+                            PermissionOperation configAction;
                             try
                             {
-                                configAction = JsonSerializer.Deserialize<Config.Action>(action.ToString()!)!;
+                                configAction = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
 
                             }
                             catch
@@ -311,8 +311,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         }
                         else
                         {
-                            Action configAction;
-                            configAction = JsonSerializer.Deserialize<Config.Action>(action.ToString()!)!;
+                            PermissionOperation configAction;
+                            configAction = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
 
                             if (configAction.Policy is not null && configAction.Policy.Database is not null)
                             {
@@ -468,7 +468,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <returns>Boolean value indicating whether the action is valid or not.</returns>
         public static bool IsValidPermissionAction(Operation action)
         {
-            return action is Operation.All || Action.ValidPermissionOperations.Contains(action);
+            return action is Operation.All || PermissionOperation.ValidPermissionOperations.Contains(action);
         }
     }
 }

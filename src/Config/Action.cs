@@ -10,7 +10,7 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="Name">What kind of action is allowed.</param>
     /// <param name="Policy">Details about item-level security rules.</param>
     /// <param name="Fields">Details what fields to include or exclude</param>
-    public record Action(
+    public record PermissionOperation(
         [property: JsonPropertyName("action"),
         JsonConverter(typeof(OperationEnumJsonConverter))]
         Operation Name,

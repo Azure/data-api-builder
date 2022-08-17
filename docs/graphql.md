@@ -20,6 +20,13 @@ The returned result is a JSON object with this format:
 }
 ```
 
+## Supported GraphQL Root Types
+
+Data API Builder support the following GraphQL root types:
+
+[Queries](#queries)
+[Mutations](#mutations)
+
 ## Queries
 
 Each entity has support the following actions:
@@ -207,3 +214,17 @@ query {
   }
 }
 ```
+
+## Mutations
+
+### Create
+
+WIP
+
+### Update
+
+WIP
+
+### Delete
+
+WIP

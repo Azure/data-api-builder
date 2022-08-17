@@ -9,9 +9,9 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.Services;
 using Microsoft.Extensions.Logging;
 using Action = Azure.DataApiBuilder.Config.Action;
-using Azure.DataApiBuilder.Service.Services;
 
 namespace Azure.DataApiBuilder.Service.Configurations
 {
@@ -296,7 +296,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
         {
             Console.WriteLine("Validating Relationship Section in Config...");
-            List<string> allEntities = new List<string>(runtimeConfig.Entities.Keys);
+            List<string> allEntities = new(runtimeConfig.Entities.Keys);
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 if (entity.Relationships is null)
@@ -327,7 +327,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                     // linking.object can be provided without linking.source.fields and linking.target.fields
                     // in the config only when foreign key relation is defined in the database.
-                    List<Tuple<string,string>> relationshipPairFromDatabase = new();
+                    List<Tuple<string, string>> relationshipPairFromDatabase = new();
                     foreach (RelationShipPair relationShipPair in sqlMetadataProvider.GetPairToFkDefinition().Keys)
                     {
                         relationshipPairFromDatabase.Add(Tuple.Create(relationShipPair.ReferencedDbObject.Name, relationShipPair.ReferencingDbObject.Name));
@@ -336,13 +336,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     if (relationship.LinkingObject is not null
                         && (relationship.LinkingSourceFields is null && relationship.LinkingTargetFields is null))
                     {
-                        Tuple<string,string> pair1 = Tuple.Create(entity.GetSourceName(), relationship.LinkingObject);
-                        Tuple<string,string> pair2 = Tuple.Create(relationship.LinkingObject, entity.GetSourceName());
+                        Tuple<string, string> pair1 = Tuple.Create(entity.GetSourceName(), relationship.LinkingObject);
+                        Tuple<string, string> pair2 = Tuple.Create(relationship.LinkingObject, entity.GetSourceName());
 
-                        Tuple<string,string> pair3 = Tuple.Create(runtimeConfig.Entities[relationship.TargetEntity].GetSourceName(), relationship.LinkingObject);
-                        Tuple<string,string> pair4 = Tuple.Create(relationship.LinkingObject, runtimeConfig.Entities[relationship.TargetEntity].GetSourceName());
+                        Tuple<string, string> pair3 = Tuple.Create(runtimeConfig.Entities[relationship.TargetEntity].GetSourceName(), relationship.LinkingObject);
+                        Tuple<string, string> pair4 = Tuple.Create(relationship.LinkingObject, runtimeConfig.Entities[relationship.TargetEntity].GetSourceName());
 
-                        if(!((relationshipPairFromDatabase.Contains(pair1) || relationshipPairFromDatabase.Contains(pair2))
+                        if (!((relationshipPairFromDatabase.Contains(pair1) || relationshipPairFromDatabase.Contains(pair2))
                             && (relationshipPairFromDatabase.Contains(pair3) || relationshipPairFromDatabase.Contains(pair4))))
                         {
                             throw new DataApiBuilderException(

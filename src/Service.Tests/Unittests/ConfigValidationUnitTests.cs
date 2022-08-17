@@ -4,12 +4,12 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Azure.DataApiBuilder.Service.Services;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Dictionary<string, Relationship> relationshipMap = new();
-            Relationship sampleRelationship1 = new (
+            Relationship sampleRelationship1 = new(
                 Cardinality: Cardinality.One,
                 TargetEntity: "FAKE_ENTITY",
                 SourceFields: null,
@@ -152,7 +152,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(HttpStatusCode.UnprocessableEntity, ex.StatusCode);
 
             runtimeConfig.Entities["SampleEntity1"].Relationships.Remove("test_rname1");
-            Relationship sampleRelationship2 = new (
+            Relationship sampleRelationship2 = new(
                 Cardinality: Cardinality.One,
                 TargetEntity: "SampleEntity2",
                 SourceFields: null,

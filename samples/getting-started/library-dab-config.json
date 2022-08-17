@@ -2,7 +2,7 @@
   "$schema": "../../schemas/dab.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "Server=dmmssqlsrv.database.windows.net;Database=lab;User ID=dab_user;Password=931sAC1_AZ34erfr!;TrustServerCertificate=true"
+    "connection-string": "Server=dmmssqlsrv.database.windows.net;Database=lab;User ID=dab_user;Password=<ReplaceMe>;TrustServerCertificate=true"
   },
   "runtime": {
     "host": {

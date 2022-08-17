@@ -39,9 +39,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     NameNode name = objectTypeDefinitionNode.Name;
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
 
-                    AddMutations(dbEntityName, action: Operation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
-                    AddMutations(dbEntityName, action: Operation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
-                    AddMutations(dbEntityName, action: Operation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                    AddMutations(dbEntityName, operation: Operation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                    AddMutations(dbEntityName, operation: Operation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                    AddMutations(dbEntityName, operation: Operation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
                 }
             }
 
@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// Helper function to create mutation definitions.
         /// </summary>
         /// <param name="dbEntityName">Represents the top-level entity name in runtime config.</param>
-        /// <param name="action"></param>
+        /// <param name="operation"></param>
         /// <param name="entityPermissionsMap"></param>
         /// <param name="name"></param>
         /// <param name="inputs"></param>
@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         private static void AddMutations(
             string dbEntityName,
-            Operation action,
+            Operation operation,
             Dictionary<string, EntityMetadata>? entityPermissionsMap,
             NameNode name,
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
@@ -81,10 +81,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             List<FieldDefinitionNode> mutationFields
             )
         {
-            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: action, entityPermissionsMap);
+            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: operation, entityPermissionsMap);
             if (rolesAllowedForMutation.Count() > 0)
             {
-                switch (action)
+                switch (operation)
                 {
                     case Operation.Create:
                         mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entities, dbEntityName, rolesAllowedForMutation));

@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// Test that wildcard operation are expanded to explicit operations.
         /// Verifies that internal data structure are created correctly.
         /// </summary>
-        [TestMethod("Wildcard operation is expanded to all valid operation")]
+        [TestMethod("Wildcard operation is expanded to all valid operations")]
         public void TestWildcardOperation()
         {
             List<string> expectedRoles = new() { AuthorizationHelpers.TEST_ROLE };
@@ -130,8 +130,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ROLE,
                 Operation.All);
 
-            // Override the actipns to be a list of operations for wildcard
-            // instead of a list of object created by InitRuntimeConfig()
+            // Override the permission operations to be a list of operations for wildcard
+            // instead of a list of objects created by InitRuntimeConfig()
             runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY].Permissions[0].Actions =
                 new object[] { JsonSerializer.SerializeToElement(AuthorizationResolver.WILDCARD) };
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ROLE,
                 Operation.All));
 
-            // All the wildcard operation should be expand to explicit operations.
+            // The wildcard operation should be expanded to all the explicit operations.
             foreach (Operation operation in Action.ValidPermissionOperations)
             {
                 Assert.IsTrue(authZResolver.AreRoleAndOperationDefinedForEntity(
@@ -461,8 +461,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            // Assert that for authenticated role, only Read operation is allowed and
-            // Update operation is not allowed even though update is allowed for anonymous role.
+            // Assert that for the role authenticated, only the Read operation is allowed.
+            // The Update operation is not allowed even though update is allowed for the role anonymous.
             Assert.IsTrue(authZResolver.AreRoleAndOperationDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationResolver.ROLE_AUTHENTICATED, Operation.Read));
             Assert.IsTrue(authZResolver.AreRoleAndOperationDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,

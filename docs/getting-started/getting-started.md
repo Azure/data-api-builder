@@ -16,7 +16,7 @@ dotnet --list-sdks
 ### Azure Database
 
 As the Data API builder for Azure Databases generate REST and GraphQL endpoints for database objects, you need to have a database ready to be used. You can choose either a relational or non-relational database. The getting started guide document the process to have Data API builder set up for:
-- Azure SQL Database
+- Azure SQL 
 - Azure Cosmos DB
 
 ### Git
@@ -100,9 +100,9 @@ Both the business entities need a modern endpoint, REST and/or GraphQL, to allow
 
 ## Configure the Entities
 
-Depending if you want to use Azure SQL Database or Cosmos DB, continue to the appropriate link:
+Depending if you want to use Azure SQL or Cosmos DB, continue to the appropriate link:
 
-- [Getting Started with Data API builder for Azure SQL DB](./getting-started-azure-sql-db.md)
+- [Getting Started with Data API builder for Azure SQL](./getting-started-azure-sql.md)
 - [Getting Started with Data API builder for with Azure Cosmos DB](./getting-started-azure-cosmos-db.md)
 
 And then proceed to the "Next Steps" to go even further

@@ -339,8 +339,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Validates that exception is thrown during startup when multiple
         /// entities generate queries with the same name.
         /// </summary>
-        /// <param name="entityNames">List of entity names defined by the user</param>
-        /// <param name="isExceptionExpected">Flag to help with the exception validation</param>
         [TestMethod]
         public void ValidateEntitesWithSameNameButDifferentCasingsNotSupported()
         {
@@ -366,9 +364,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Validates that when the entity definitions do not create
             // duplicate GraphQL queries, exception is not thrown.
             Dictionary<string, Entity> entityCollection2 = new();
-            Entity notebook = GraphQLTestHelpers.GenerateEmptyEntity();
+            Entity Book = GraphQLTestHelpers.GenerateEntityWithSingularPlural("book_alt", "books_alt");
             entityCollection2.Add("book", book);
-            entityCollection2.Add("notebook", notebook);
+            entityCollection2.Add("Book", Book);
 
             try
             {

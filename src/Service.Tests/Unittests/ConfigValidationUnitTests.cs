@@ -353,7 +353,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             book.GraphQL = new GraphQLEntitySettings(true);
 
             Entity book_alt = GraphQLTestHelpers.GenerateEntityWithSingularPlural("book", "books");
-            entityCollection1.Add("book",book);
+            entityCollection1.Add("book", book);
             entityCollection1.Add("book_alt", book_alt);
 
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
@@ -368,7 +368,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Dictionary<string, Entity> entityCollection2 = new();
             Entity notebook = GraphQLTestHelpers.GenerateEmptyEntity();
             entityCollection2.Add("book", book);
-            entityCollection2.Add("notebook",notebook);
+            entityCollection2.Add("notebook", notebook);
 
             try
             {

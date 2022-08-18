@@ -10,8 +10,8 @@ using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
-using Action = Azure.DataApiBuilder.Config.Action;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
+using Action = Azure.DataApiBuilder.Config.Action;
 
 namespace Azure.DataApiBuilder.Service.Configurations
 {
@@ -113,8 +113,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public static void ValidateEntitiesDoNotGenerateDuplicateQueries(Dictionary<string, Entity> entityCollection)
         {
             HashSet<string> queryNames = new();
-            
-            foreach(KeyValuePair<string, Entity> entityEntry in entityCollection )
+
+            foreach (KeyValuePair<string, Entity> entityEntry in entityCollection)
             {
                 string entityName = entityEntry.Key;
                 Entity entity = entityEntry.Value;
@@ -126,9 +126,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 }
 
                 string pkQueryName = $"{FormatNameForField(GetDefinedSingularName(entityName, entity))}_by_pk";
-                string listQueryName = FormatNameForField(Pluralize(entityName,entity).Value);
+                string listQueryName = FormatNameForField(Pluralize(entityName, entity).Value);
 
-                if(queryNames.Contains(pkQueryName) || queryNames.Contains(listQueryName))
+                if (queryNames.Contains(pkQueryName) || queryNames.Contains(listQueryName))
                 {
                     throw new DataApiBuilderException(
                         message: $"Entity definitions generate duplicate queries",

@@ -450,10 +450,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             HttpMethod httpMethod = GetHttpMethodFromOperation(operationType);
 
             // Create the request to be sent to the engine.
-            HttpRequestMessage request = new(httpMethod, restEndPoint)
+            HttpRequestMessage request;
+            if (!string.IsNullOrEmpty(requestBody))
             {
-                Content = JsonContent.Create(requestBody, options: options)
-            };
+                using JsonDocument requestBodyJsonDoc = JsonDocument.Parse(requestBody);
+                request = new(httpMethod, restEndPoint)
+                {
+                    Content = JsonContent.Create(JsonSerializer.SerializeToElement(requestBodyJsonDoc), options: options)
+                };
+            }
+            else
+            {
+                request = new(httpMethod, restEndPoint);
+            }
 
             // Add headers to the request if any.
             if (headers is not null)

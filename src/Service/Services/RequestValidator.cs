@@ -382,8 +382,19 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <exception cref="NotSupportedException"></exception>
         private static JsonElement GetInsertPayload(string requestBody)
         {
-            //requestBody = requestBody.Substring(1, requestBody.Length - 2);
-            return JsonDocument.Parse(requestBody).RootElement.Clone();
+            using JsonDocument insertPayload = JsonDocument.Parse(requestBody);
+
+            if (insertPayload.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                throw new DataApiBuilderException(
+                    statusCode: HttpStatusCode.BadRequest,
+                    message: "Mutation operation on many instances of an entity in a single request are not yet supported.",
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+            else
+            {
+                return insertPayload.RootElement.Clone();
+            }
         }
 
         /// <summary>

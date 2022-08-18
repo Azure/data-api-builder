@@ -15,7 +15,7 @@ variables:
   buildConfiguration: 'Release'
   major: 0
   minor: 1
-  patch: $[counter(variables['build.reason'], 5)]
+  patch: $[counter(variables['build.reason'], 6)]
   publishNugetToFeed: $(isNugetRelease)
 
 steps:

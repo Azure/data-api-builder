@@ -15,7 +15,7 @@ variables:
   buildConfiguration: 'Release'
   major: 0
   minor: 1
-  patch: 5
+  patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 5)]
   publishNugetToFeed: $(isNugetRelease)
 
 steps:
@@ -94,7 +94,7 @@ steps:
     nuGetFeedType: 'internal'
     publishVstsFeed: CosmosDB/DataApiBuilder
     versioningScheme: 'off'
-    allowPackageConflicts: true
+    allowPackageConflicts: false
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

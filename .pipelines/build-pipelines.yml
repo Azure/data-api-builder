@@ -21,7 +21,6 @@ variables:
   publishNugetToFeed: $(isNugetRelease)
 
 steps:
-
 - task: NuGetAuthenticate@0
   displayName: 'NuGet Authenticate'
 

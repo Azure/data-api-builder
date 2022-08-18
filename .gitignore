@@ -1,15 +1,21 @@
-bin/
-obj/
+# Generated Files
+**/bin
+**/obj
+**/coverage
+**/coveragereport
+**/TestResults
 system-commandline-sentinel-files/
+out/
+publish/
 
 # only include appsettings for a few default environments
 appsettings.*.json
-hawaii-config.*.json
-!hawaii-config.PostgreSql.json
-!hawaii-config.MsSql.json
-!hawaii-config.MySql.json
-!hawaii-config.Cosmos.json
-!hawaii-config.*.example.json
+dab-config.*.json
+!dab-config.PostgreSql.json
+!dab-config.MsSql.json
+!dab-config.MySql.json
+!dab-config.Cosmos.json
+!dab-config.*.example.json
 
 *.cd
 
@@ -18,11 +24,16 @@ hawaii-config.*.json
 .idea/
 **/.vscode/**/*
 **/*.user
+.localhistory/
+*.code-workspace
 
 # include some basic vscode config files
-!/Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/.vscode/launch.json
-!/Cosmos.GraphQL.Service/Cosmos.GraphQL.Service/.vscode/tasks.json
+!/src/Service/.vscode/launch.json
+!/src/Service/.vscode/tasks.json
 
 .fake
 .ionide
 *.orig
+
+# Nuget package
+**/nupkg

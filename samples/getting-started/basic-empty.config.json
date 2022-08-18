@@ -1,0 +1,14 @@
+{
+    "$schema": "../schemas/dab.draft-01.schema.json",
+    "data-source": {
+        "database-type": "",
+        "connection-string": ""
+    },
+    "runtime": {
+      "host": {
+        "mode": "development"
+      }
+    },
+    "entities": {
+    }
+}

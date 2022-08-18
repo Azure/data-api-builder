@@ -453,10 +453,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             HttpRequestMessage request;
             if (!string.IsNullOrEmpty(requestBody))
             {
-                using JsonDocument requestBodyJsonDoc = JsonDocument.Parse(requestBody);
+                JsonElement requestBodyElement = JsonDocument.Parse(requestBody).RootElement.Clone();
                 request = new(httpMethod, restEndPoint)
                 {
-                    Content = JsonContent.Create(JsonSerializer.SerializeToElement(requestBodyJsonDoc), options: options)
+                    Content = JsonContent.Create(requestBodyElement, options: options)
                 };
             }
             else

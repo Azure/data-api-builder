@@ -265,13 +265,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         /// <summary>
         /// Tests the InsertOne functionality with a request body containing values that do not match the value type defined in the schema.
         /// </summary>
-        /*[TestMethod]
+        [TestMethod]
         public virtual async Task InsertOneWithInvalidTypeInJsonBodyTest()
         {
             string requestBody = @"
             {
                 ""title"": [""My New Book"", ""Another new Book"", {""author"": ""unknown""}],
-                ""publisher_id"": [1234, 4321]
+                ""publisher_id"": [1234,4321]
             }";
 
             await SetupAndRunRestApiTest(
@@ -282,11 +282,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: "Parameter \"[1234, 4321]\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
+                expectedErrorMessage: "Parameter \"[1234,4321]\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
             );
-        }*/
+        }
 
         /// <summary>
         /// Tests the InsertOne functionality with no valid fields in the request body.

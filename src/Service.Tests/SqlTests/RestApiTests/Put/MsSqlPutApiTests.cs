@@ -131,6 +131,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 $"WHERE [categoryid] = 4 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
                 $"AND [piecesAvailable] is NULL AND [piecesRequired] = 4 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "UpdateSqlInjectionQuery1",
+                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
+                $"WHERE id = 7 AND [title] = ' UNION SELECT * FROM books/*' " +
+                $"AND [publisher_id] = 1234" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "UpdateSqlInjectionQuery2",
+                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
+                $"WHERE id = 7 AND [title] = '; SELECT * FROM information_schema.tables/*' " +
+                $"AND [publisher_id] = 1234" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "UpdateSqlInjectionQuery3",
+                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
+                $"WHERE id = 7 AND [title] = 'value; SELECT * FROM v$version--' " +
+                $"AND [publisher_id] = 1234" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "UpdateSqlInjectionQuery4",
+                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
+                $"WHERE id = 7 AND [title] = 'value; DROP TABLE authors;' " +
+                $"AND [publisher_id] = 1234" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
         #region Test Fixture Setup
@@ -184,8 +212,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// <returns></returns>
         public override string GetUniqueDbErrorMessage()
         {
-            return "Cannot insert the value NULL into column 'piecesRequired', " +
-                   "table 'master.dbo.stocks'; column does not allow nulls. UPDATE fails.";
+            return $"Cannot insert the value NULL into column 'piecesRequired', " +
+                   $"table '{DatabaseName}.dbo.stocks'; column does not allow nulls. UPDATE fails.";
         }
 
         #endregion

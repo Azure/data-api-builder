@@ -37,11 +37,11 @@ steps:
   inputs:
     restoreSolution: '$(solution)'
 - task: FileTransform@1
-  displayName: 'Generate hawaii-config.Cosmos.json'
+  displayName: 'Generate dab-config.Cosmos.json'
   inputs:
     folderPath: '$(System.DefaultWorkingDirectory)'
     fileType: 'json'
-    targetFiles: 'src/Service/hawaii-config.Cosmos.json'
+    targetFiles: 'src/Service/dab-config.Cosmos.json'
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:

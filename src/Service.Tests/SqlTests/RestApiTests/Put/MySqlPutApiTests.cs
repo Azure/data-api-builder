@@ -195,6 +195,54 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                         AND piecesRequired = 4
                     ) AS subq
                 "
+            },
+            {
+                "UpdateSqlInjectionQuery1",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = ' UNION SELECT * FROM books/*'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "UpdateSqlInjectionQuery2",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = '; SELECT * FROM information_schema.tables/*'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "UpdateSqlInjectionQuery3",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = 'value; SELECT * FROM v$version--'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "UpdateSqlInjectionQuery4",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = 'value; DROP TABLE authors;'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
             }
         };
 

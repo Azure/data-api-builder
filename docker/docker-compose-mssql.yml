@@ -1,0 +1,8 @@
+version: "3.9"
+services:
+  hawaii:
+    image: "hawaiiacr.azurecr.io/dab/refs/heads/main:latest"
+    ports:
+      - "5000:5000"
+    volumes:
+      - "../src/Service/dab-config.MsSql.json:/App/dab-config.json"

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Models;
 using HotChocolate.Language;
@@ -73,31 +74,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// UnderlyingGraphQLEntityType is the type main GraphQL type that is described by
-        /// this type. This strips all modifiers, such as List and Non-Null.
-        /// So the following GraphQL types would all have the underlyingType Book:
-        /// - Book
-        /// - [Book]
-        /// - Book!
-        /// - [Book]!
-        /// - [Book!]!
-        /// </summary>
-        internal static ObjectType UnderlyingGraphQLEntityType(IType type)
-        {
-            if (type is ObjectType underlyingType)
-            {
-                return underlyingType;
-            }
-
-            return UnderlyingGraphQLEntityType(type.InnerType());
-        }
-
-        /// <summary>
         /// Extracts the *Connection.items schema field from the *Connection schema field
         /// </summary>
         internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
         {
-            return UnderlyingGraphQLEntityType(connectionSchemaField.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+            return GraphQLUtils.UnderlyingGraphQLEntityType(connectionSchemaField.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
         }
     }
 }

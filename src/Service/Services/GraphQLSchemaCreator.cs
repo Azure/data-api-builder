@@ -131,6 +131,8 @@ namespace Azure.DataApiBuilder.Service.Services
             // First pass - build up the object and input types for all the entities
             foreach ((string entityName, Entity entity) in entities)
             {
+                // Skip creating the GraphQL object for the current entity due to configuration
+                // explicitly excluding the entity from the GraphQL endpoint.
                 if (entity.GraphQL is not null && entity.GraphQL is bool graphql && graphql == false)
                 {
                     continue;

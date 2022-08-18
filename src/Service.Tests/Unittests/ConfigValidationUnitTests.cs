@@ -336,44 +336,47 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Validates that exception is thrown during startup when
-        /// entities with the same name but different casings are defined in the config.
+        /// Validates that exception is thrown during startup when multiple
+        /// entities generate queries with the same name.
         /// </summary>
         /// <param name="entityNames">List of entity names defined by the user</param>
         /// <param name="isExceptionExpected">Flag to help with the exception validation</param>
-        [DataTestMethod]
-        [DataRow(new string[] { "Book", "Notebook", "Jorunal" }, false, DisplayName = "Valid list of entities")]
-        [DataRow(new string[] { "Book", "Notebook", "Jorunal", "book" }, true, DisplayName = "InValid list of entities - different case in first letter")]
-        [DataRow(new string[] { "Book", "Notebook", "Journal", "JournaL" }, true, DisplayName = "InValid list of entities - different case in last letter")]
-        [DataRow(new string[] { "Book", "Notebook", "Jorunal", "NoTEBooK" }, true, DisplayName = "InValid list of entities - different case in multiple letters")]
-        [DataRow(new string[] { "Book", "Notebook", "Jorunal", "BOOK" }, true, DisplayName = "InValid list of entities - different case in all the letters")]
-        public void ValidateEntitesWithSameNameButDifferentCasingsNotSupported(string[] entityNames, bool isExceptionExpected)
+        [TestMethod]
+        public void ValidateEntitesWithSameNameButDifferentCasingsNotSupported()
         {
-            Dictionary<string, Entity> entityCollection = new();
-            foreach (string entityName in entityNames)
-            {
-                entityCollection.Add(entityName, GraphQLTestHelpers.GenerateEmptyEntity());
-            }
 
-            if (isExceptionExpected)
-            {
-                DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RuntimeConfigValidator.ValidateEntitiesWithDifferentCasings(entityCollection));
+            // Validates that when entity definitions generate queries with the same name,
+            // an exception is thrown.
+            Dictionary<string, Entity> entityCollection1 = new();
 
-                Assert.AreEqual(expected: $"Entities with the same name but a different casing found.", actual: dabException.Message);
-                Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
-                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
-            }
-            else
+            Entity book = GraphQLTestHelpers.GenerateEmptyEntity();
+            book.GraphQL = new GraphQLEntitySettings(true);
+
+            Entity book_alt = GraphQLTestHelpers.GenerateEntityWithSingularPlural("book", "books");
+            entityCollection1.Add("book",book);
+            entityCollection1.Add("book_alt", book_alt);
+
+            DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
+                    action: () => RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueries(entityCollection1));
+
+            Assert.AreEqual(expected: $"Entity definitions generate duplicate queries", actual: dabException.Message);
+            Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+            Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+
+            // Validates that when the entity definitions do not create
+            // duplicate GraphQL queries, exception is not thrown.
+            Dictionary<string, Entity> entityCollection2 = new();
+            Entity notebook = GraphQLTestHelpers.GenerateEmptyEntity();
+            entityCollection2.Add("book", book);
+            entityCollection2.Add("notebook",notebook);
+
+            try
             {
-                try
-                {
-                    RuntimeConfigValidator.ValidateEntitiesWithDifferentCasings(entityCollection);
-                }
-                catch
-                {
-                    Assert.Fail("Unexpected Exception is being thrown.");
-                }
+                RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueries(entityCollection2);
+            }
+            catch
+            {
+                Assert.Fail("Unexpcted exception as the entity definitions do not create duplicate GraphQL queries");
             }
         }
     }

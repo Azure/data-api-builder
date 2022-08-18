@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
 using Action = Azure.DataApiBuilder.Config.Action;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
 namespace Azure.DataApiBuilder.Service.Configurations
 {
@@ -101,31 +102,43 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
             }
 
-            ValidateEntitiesWithDifferentCasings(runtimeConfig.Entities);
+            ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
         }
 
         /// <summary>
-        /// Check that same entity name with different case in one or more characters are not present.
+        /// Check that no two entity definitions generate queries with the same name.
         /// </summary>
         /// <param name="entityCollection"></param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateEntitiesWithDifferentCasings(Dictionary<string, Entity> entityCollection)
+        public static void ValidateEntitiesDoNotGenerateDuplicateQueries(Dictionary<string, Entity> entityCollection)
         {
-            HashSet<string> entityNamesInLowerCase = new();
-            foreach (string entityName in entityCollection.Keys)
+            HashSet<string> queryNames = new();
+            
+            foreach(KeyValuePair<string, Entity> entityEntry in entityCollection )
             {
-                string entityNameInLowerCase = entityName.ToLowerInvariant();
+                string entityName = entityEntry.Key;
+                Entity entity = entityEntry.Value;
 
-                if (entityNamesInLowerCase.Contains(entityNameInLowerCase))
+                if (entity.GraphQL is null
+                    || (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
+                {
+                    continue;
+                }
+
+                string pkQueryName = $"{FormatNameForField(GetDefinedSingularName(entityName, entity))}_by_pk";
+                string listQueryName = FormatNameForField(Pluralize(entityName,entity).Value);
+
+                if(queryNames.Contains(pkQueryName) || queryNames.Contains(listQueryName))
                 {
                     throw new DataApiBuilderException(
-                    message: $"Entities with the same name but a different casing found.",
-                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        message: $"Entity definitions generate duplicate queries",
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
                 else
                 {
-                    entityNamesInLowerCase.Add(entityNameInLowerCase);
+                    queryNames.Add(pkQueryName);
+                    queryNames.Add(listQueryName);
                 }
             }
 

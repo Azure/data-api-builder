@@ -44,9 +44,9 @@ namespace Azure.DataApiBuilder.Service.Models
                 catch (JsonException)
                 {
                     throw new DataApiBuilderException(
-                            message: "The request body is not in a valid JSON format.",
-                            statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        message: "The request body is not in a valid JSON format.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
             }
             else

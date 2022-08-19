@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Security.Claims;
-using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -20,7 +19,6 @@ using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
@@ -303,63 +301,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Constructs an http context with request consisting of the given query string and/or body data.
-        /// </summary>
-        /// <param name="queryStringUrl">query</param>
-        /// <param name="bodyData">The data to be put in the request body e.g. GraphQLQuery</param>
-        /// <param name="operation">The operation used to define the HttpContext HTTP Method</param>
-        /// <returns>The http context with request consisting of the given query string (if any)
-        /// and request body (if any) as a stream of utf-8 bytes.</returns>
-        protected static DefaultHttpContext GetRequestHttpContext(
-            string queryStringUrl = null,
-            IHeaderDictionary headers = null,
-            string bodyData = null,
-            Operation operation = Operation.Read)
-        {
-            DefaultHttpContext httpContext;
-            IFeatureCollection features = new FeatureCollection();
-            //Add response features
-            features.Set<IHttpResponseFeature>(new HttpResponseFeature());
-            features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(new MemoryStream()));
-
-            if (headers is not null)
-            {
-                features.Set<IHttpRequestFeature>(new HttpRequestFeature { Headers = headers, Method = SqlTestHelper.OperationTypeToHTTPVerb(operation) });
-                httpContext = new(features);
-            }
-            else
-            {
-                features.Set<IHttpRequestFeature>(new HttpRequestFeature { Method = SqlTestHelper.OperationTypeToHTTPVerb(operation) });
-                httpContext = new(features);
-            }
-
-            if (!string.IsNullOrEmpty(queryStringUrl))
-            {
-                httpContext.Request.QueryString = new(queryStringUrl);
-            }
-
-            if (!string.IsNullOrEmpty(bodyData))
-            {
-                MemoryStream stream = new(Encoding.UTF8.GetBytes(bodyData));
-                httpContext.Request.Body = stream;
-                httpContext.Request.ContentLength = stream.Length;
-            }
-
-            // Add identity object to the Mock context object.
-            ClaimsIdentity identity = new(authenticationType: "Bearer");
-            identity.AddClaim(new Claim(ClaimTypes.Role, "anonymous"));
-            identity.AddClaim(new Claim(ClaimTypes.Role, "authenticated"));
-
-            ClaimsPrincipal user = new(identity);
-            httpContext.User = user;
-
-            // Set the user role as authenticated to allow tests to execute with all privileges.
-            httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = "authenticated";
-
-            return httpContext;
-        }
-
-        /// <summary>
         /// Sends raw SQL query to database engine to retrieve expected result in JSON format.
         /// </summary>
         /// <param name="queryText">raw database query, typically a SELECT</param>
@@ -576,34 +517,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         private static string ExpectedNextLinkIfAny(bool paginated, string baseUrl, string queryString)
         {
             return paginated ? $",\"nextLink\":\"{baseUrl}{queryString}\"" : string.Empty;
-        }
-
-        /// <summary>
-        /// Add HttpContext with query and body(if any) to the RestController
-        /// </summary>
-        /// <param name="restController">The controller to configure.</param>
-        /// <param name="queryString">The query string in the url.</param>
-        /// <param name="requestBody">The data to be put in the request body.</param>
-        protected static void ConfigureRestController(
-            RestController restController,
-            string queryString,
-            Operation operation,
-            IHeaderDictionary headers = null,
-            string requestBody = null
-            )
-        {
-            restController.ControllerContext.HttpContext =
-                GetRequestHttpContext(
-                    queryString,
-                    headers,
-                    bodyData: requestBody,
-                    operation);
-
-            // Set the mock context accessor's request same as the controller's request.
-            _httpContextAccessor.Setup(x => x.HttpContext.Request).Returns(restController.ControllerContext.HttpContext.Request);
-
-            //Set the mock context accessor's Items same as the controller's Items
-            _httpContextAccessor.Setup(x => x.HttpContext.Items).Returns(restController.ControllerContext.HttpContext.Items);
         }
 
         /// <summary>

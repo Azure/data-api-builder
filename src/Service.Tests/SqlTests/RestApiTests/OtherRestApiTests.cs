@@ -1,12 +1,11 @@
 using System;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -89,24 +88,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         [TestMethod]
         public async Task HandleAndExecuteUnsupportedOperationUnitTestAsync()
         {
-            string expected = "{\"error\":{\"code\":\"BadRequest\",\"message\":\"This operation is not supported.\",\"status\":400}}";
-            // need header to instantiate identity in controller
-            HeaderDictionary headers = new();
-            headers.Add("x-ms-client-principal", Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"hello\":\"world\"}")));
-
-            ConfigureRestController(_restController, string.Empty, Operation.None);
-
+            string expectedBody = string.Empty;
             // Setup params to invoke function with
             // Must use valid entity name
             string path = "api";
             string entityName = "Book";
-            Operation operationType = Operation.None;
-            string primaryKeyRoute = string.Empty;
+            HttpMethod method = HttpMethod.Head;
 
-            // Reflection to invoke a private method to unit test all code paths
-            PrivateObject testObject = new(_restController);
-            IActionResult actionResult = await testObject.Invoke("HandleOperation", new object[] { $"{path}/{entityName}/{primaryKeyRoute}", operationType });
-            SqlTestHelper.VerifyResult(actionResult, expected, System.Net.HttpStatusCode.BadRequest, string.Empty);
+            // Since primarykey route and querystring are empty for this test, end point would only comprise
+            // of path and entity name.
+            string restEndPoint = path + "/" + entityName;
+
+            HttpRequestMessage request = new(method, restEndPoint);
+            // need header to instantiate identity in controller
+            request.Headers.Add("x-ms-client-principal", Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"hello\":\"world\"}")));
+
+            // Send request to the engine.
+            HttpResponseMessage response = await HttpClient.SendAsync(request);
+
+            // Read response as string.
+            string responseBody = await response.Content.ReadAsStringAsync();
+
+            // Assert that expectedBody and responseBody are the same.
+            Assert.AreEqual(expectedBody, responseBody);
         }
 
         #region Private helpers

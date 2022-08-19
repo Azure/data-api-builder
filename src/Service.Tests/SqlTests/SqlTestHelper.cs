@@ -3,13 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Models;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 
@@ -87,74 +85,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <summary>
         /// Verifies the ActionResult is as expected with the expected status code.
         /// </summary>
-        /// <param name="actionResult">The action result of the operation to verify.</param>
-        /// <param name="expected">string represents the expected result. This value can be null for NoContent or NotFound
-        /// results of operations like GET and DELETE</param>
-        /// <param name="expectedStatusCode">int represents the returned http status code</param>
-        /// <param name="expectedLocationHeader">The expected location header in the response(if any).</param>
-        public static void VerifyResult(
-            IActionResult actionResult,
-            string expected,
-            HttpStatusCode expectedStatusCode,
-            string expectedLocationHeader,
-            bool isJson = false,
-            int verifyNumRecords = -1)
-        {
-            JsonSerializerOptions options = new()
-            {
-                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-            };
-            string actual;
-            switch (actionResult)
-            {
-                case OkObjectResult okResult:
-                    Assert.AreEqual((int)expectedStatusCode, okResult.StatusCode);
-                    actual = JsonSerializer.Serialize(okResult.Value, options);
-                    // if verifyNumRecords is positive we want to compare its value to
-                    // the number of elements associated with "value" in the actual result.
-                    // because the okResult.Value is an annonymous type we use the serialized
-                    // json string, actual, to easily get the inner array and get its length.
-                    if (verifyNumRecords >= 0)
-                    {
-                        Dictionary<string, JsonElement[]> actualAsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(actual);
-                        Assert.AreEqual(actualAsDict["value"].Length, verifyNumRecords);
-                    }
-
-                    break;
-                case CreatedResult createdResult:
-                    Assert.AreEqual((int)expectedStatusCode, createdResult.StatusCode);
-                    Assert.AreEqual(expectedLocationHeader, createdResult.Location);
-                    actual = JsonSerializer.Serialize(createdResult.Value);
-                    break;
-                // NoContentResult does not have value property for messages
-                case NoContentResult noContentResult:
-                    Assert.AreEqual((int)expectedStatusCode, noContentResult.StatusCode);
-                    actual = null;
-                    break;
-                case NotFoundResult notFoundResult:
-                    Assert.AreEqual((int)expectedStatusCode, notFoundResult.StatusCode);
-                    actual = null;
-                    break;
-                default:
-                    JsonResult actualResult = (JsonResult)actionResult;
-                    actual = JsonSerializer.Serialize(actualResult.Value, options);
-                    break;
-            }
-
-            Console.WriteLine($"Expected: {expected}\nActual: {actual}");
-            if (isJson && !string.IsNullOrEmpty(expected))
-            {
-                Assert.IsTrue(JsonStringsDeepEqual(expected, actual));
-            }
-            else
-            {
-                Assert.AreEqual(expected, actual, ignoreCase: true);
-            }
-        }
-
-        /// <summary>
-        /// Verifies the ActionResult is as expected with the expected status code.
-        /// </summary>
         /// <param name="expected">Expected result of the query execution.</param>
         /// <param name="request">The HttpRequestMessage sent to the engine via HttpClient.</param>
         /// <param name="response">The HttpResponseMessage returned by the engine.</param>
@@ -176,6 +106,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string responseBody = await response.Content.ReadAsStringAsync();
             if (!exception)
             {
+                Console.WriteLine($"Expected: {expected}\nActual: {responseBody}");
                 Assert.IsTrue(JsonStringsDeepEqual(expected, responseBody));
 
                 // Assert that the expectedLocation and actualLocation are equal in case of
@@ -203,7 +134,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
                 // Convert the escaped characters into their unescaped form.
                 responseBody = Regex.Unescape(responseBody);
-                Assert.AreEqual(expected, responseBody, ignoreCase: true);
+                Console.WriteLine($"Expected: {expected}\nActual: {responseBody}");
+                Assert.AreEqual(expected, responseBody);
             }
         }
 

@@ -336,46 +336,124 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Validates that exception is thrown during startup when multiple
-        /// entities generate queries with the same name.
+        /// Validates that exception is thrown when the graphQL type is bool
+        /// and the entity names just differ by the case in the first character.
+        /// Entities Book and book generate the same query: book_by_pk
+        /// </summary>
+        [DataTestMethod]
+        public void ValidateEntitesWithCollisionInNameThrowsException()
+        {
+            // Entity Name: Book
+            // pk_query: book_by_pk
+            // List Query: books
+            Entity Book = GraphQLTestHelpers.GenerateEmptyEntity();
+            Book.GraphQL = true;
+
+            // Entity Name: book
+            // pk_query: book_by_pk
+            // List Query: books
+            Entity book = GraphQLTestHelpers.GenerateEmptyEntity();
+            book.GraphQL = new GraphQLEntitySettings(Type: true);
+
+            Dictionary<string, Entity> entityCollection = new();
+            entityCollection.Add("book", book);
+            entityCollection.Add("Book", Book);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book");
+        }
+
+        /// <summary>
+        /// Validates that exception is thrown when 
+        /// Entity 1: GraphQL type is SingularPlural
+        /// Entity 2: GraphQL type is bool and matches with the SingularPlural definition
         /// </summary>
         [TestMethod]
-        public void ValidateEntitesWithSameNameButDifferentCasingsNotSupported()
+        public void ValidateEntitesWithCollisionInSingularPluralDefinitions()
         {
+            Dictionary<string, Entity> entityCollection = new();
 
-            // Validates that when entity definitions generate queries with the same name,
-            // an exception is thrown.
-            Dictionary<string, Entity> entityCollection1 = new();
+            // Entity Name: book_alt
+            // pk_query: book_by_pk
+            // List query: books
+            Entity book_alt = GraphQLTestHelpers.GenerateEntityWithSingularPlural("book", "books");
 
+            // Entity Name: book
+            // pk_query: book_by_pk
+            // List Query: books
             Entity book = GraphQLTestHelpers.GenerateEmptyEntity();
             book.GraphQL = new GraphQLEntitySettings(true);
 
-            Entity book_alt = GraphQLTestHelpers.GenerateEntityWithSingularPlural("book", "books");
-            entityCollection1.Add("book", book);
-            entityCollection1.Add("book_alt", book_alt);
+            entityCollection.Add("book_alt", book_alt);
+            entityCollection.Add("book", book);
 
-            DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueries(entityCollection1));
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book");
+        }
 
-            Assert.AreEqual(expected: $"Entity definitions generate duplicate queries", actual: dabException.Message);
-            Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
-            Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+        /// <summary>
+        /// Validates that exception is not thrown when entities generate unique graphql
+        /// query names.
+        /// </summary>
+        [TestMethod]
+        public void ValidateValidEntityDefinitionsDoNotGenerateDuplicateQueries()
+        {
+            Dictionary<string, Entity> entityCollection = new();
 
-            // Validates that when the entity definitions do not create
-            // duplicate GraphQL queries, exception is not thrown.
-            Dictionary<string, Entity> entityCollection2 = new();
-            Entity Book = GraphQLTestHelpers.GenerateEntityWithSingularPlural("book_alt", "books_alt");
-            entityCollection2.Add("book", book);
-            entityCollection2.Add("Book", Book);
+            // GraphQL is not enabled for this entity
+            Entity Book = GraphQLTestHelpers.GenerateEmptyEntity();
+
+            // Entity Name: book
+            // pk query: book_by_pk
+            // List query: books
+            Entity book = GraphQLTestHelpers.GenerateEmptyEntity();
+            book.GraphQL = new GraphQLEntitySettings(true);
+
+            // Entity Name: book_alt
+            // pk_query: book_alt_by_pk
+            // List query: books_alt
+            Entity book_alt = GraphQLTestHelpers.GenerateEntityWithSingularPlural("book_alt", "books_alt");
+
+            // Entity Name: BooK
+            // pk_query: booK_by_pk
+            // List query: booKs
+            Entity BooK = GraphQLTestHelpers.GenerateEntityWithSingularPlural("BooK", "BooKs");
+
+            // Entity Name: BOOK
+            // pk_query: bOOK_by_pk
+            // List query: bOOKS
+            Entity BOOK = GraphQLTestHelpers.GenerateEntityWithSingularPlural("BOOK", "BOOKS");
+
+            entityCollection.Add("book", book);
+            entityCollection.Add("Book", Book);
+            entityCollection.Add("book_alt", book_alt);
+            entityCollection.Add("BooK", BooK);
+            entityCollection.Add("BOOK", BOOK);
 
             try
             {
-                RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueries(entityCollection2);
+                RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueries(entityCollection);
             }
             catch
             {
-                Assert.Fail("Unexpcted exception as the entity definitions do not create duplicate GraphQL queries");
+                Assert.Fail("Unexpected Exception thrown for valid set of entity definitions");
             }
+
         }
+
+        /// <summary>
+        /// A test helper method to validate the exception thrown when multiple entities create
+        /// queries with the same name.
+        /// </summary>
+        /// <param name="entityCollections"></param>
+        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(Dictionary<string, Entity> entityCollection, string entityName)
+        {
+
+            DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
+               action: () => RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueries(entityCollection));
+
+            Assert.AreEqual(expected: $"Entity {entityName} generates query names that already exists.", actual: dabException.Message);
+            Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+            Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+
+        }
+
     }
 }

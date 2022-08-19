@@ -100,9 +100,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (runtimeConfig.GraphQLGlobalSettings.Enabled)
             {
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
+                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
             }
-
-            ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
         }
 
         /// <summary>
@@ -131,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 if (queryNames.Contains(pkQueryName) || queryNames.Contains(listQueryName))
                 {
                     throw new DataApiBuilderException(
-                        message: $"Entity definitions generate duplicate queries",
+                        message: $"Entity {entityName} generates query names that already exists.",
                         statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }

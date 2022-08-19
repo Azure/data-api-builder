@@ -10,8 +10,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
     [TestClass]
     public abstract class RestApiTestBase : SqlTestBase
     {
-        protected static RestService _restService;
-        protected static RestController _restController;
         protected static readonly string _integrationEntityName = "Book";
         protected static readonly string _integrationTableName = "books";
         protected static readonly string _entityWithCompositePrimaryKey = "Review";

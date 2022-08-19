@@ -386,7 +386,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             entityCollection.Add("book_alt", book_alt);
             entityCollection.Add("book", book);
-
             ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book");
         }
 
@@ -428,7 +427,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             entityCollection.Add("book_alt", book_alt);
             entityCollection.Add("BooK", BooK);
             entityCollection.Add("BOOK", BOOK);
-
+            
             try
             {
                 RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueries(entityCollection);
@@ -437,7 +436,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 Assert.Fail("Unexpected Exception thrown for valid set of entity definitions");
             }
-
         }
 
         /// <summary>
@@ -448,14 +446,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="entityName">Entity name to construct the expected exception message</param>
         private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(Dictionary<string, Entity> entityCollection, string entityName)
         {
-
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
                action: () => RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueries(entityCollection));
 
             Assert.AreEqual(expected: $"Entity {entityName} generates query names that already exists.", actual: dabException.Message);
             Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
             Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
-
         }
 
     }

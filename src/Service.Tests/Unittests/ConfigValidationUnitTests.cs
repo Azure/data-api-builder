@@ -427,7 +427,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             entityCollection.Add("book_alt", book_alt);
             entityCollection.Add("BooK", BooK);
             entityCollection.Add("BOOK", BOOK);
-            
+
             try
             {
                 RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueries(entityCollection);

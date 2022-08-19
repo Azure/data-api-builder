@@ -291,6 +291,11 @@ namespace Cli
             Policy? updatedPolicy = GetPolicyForAction(options.PolicyRequest, options.PolicyDatabase);
             Field? updatedFields = GetFieldsForAction(options.FieldsToInclude, options.FieldsToExclude);
 
+            if (false.Equals(updatedGraphqlDetails))
+            {
+                Console.WriteLine("WARNING: Disabling GraphQL will restrict it's usage in relationship.");
+            }
+
             if (options.Permissions is not null && options.Permissions.Any())
             {
                 // Get the Updated Permission Settings
@@ -541,6 +546,14 @@ namespace Cli
                 && !string.Equals(cardinality, Cardinality.Many.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine($"Failed to parse the given cardinality : {cardinality}. Supported values are one/many.");
+                return false;
+            }
+
+            // If GraphQL is disabled, entity cannot be used in relationship
+            //
+            if (false.Equals(runtimeConfig.Entities[targetEntity].GraphQL))
+            {
+                Console.WriteLine($"Entity: {targetEntity} cannot be used in relationship as it is disabled for GraphQL.");
                 return false;
             }
 

@@ -1220,6 +1220,58 @@ namespace Cli.Tests
             Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: cardinality, targetEntity: targetEntity));
         }
 
+        /// <summary>
+        /// Test to verify Failure on adding an entity in the relationship that is disabled for graphQL.
+        /// </summary>
+        [TestMethod]
+        public void TestVerifyCanAddRelationshipWithEntityDisabledForGraphQL()
+        {
+            Action actionForRole = new(
+                Name: Operation.Create,
+                Fields: null,
+                Policy: null);
+
+            PermissionSetting permissionForEntity = new(
+                role: "anonymous",
+                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+
+            Entity sampleEntity1 = new(
+                Source: JsonSerializer.SerializeToElement("SOURCE1"),
+                Rest: true,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+            );
+
+            // entity with graphQL disabled
+            Entity sampleEntity2 = new(
+                Source: JsonSerializer.SerializeToElement("SOURCE2"),
+                Rest: true,
+                GraphQL: false,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+            );
+
+            Dictionary<string, Entity> entityMap = new();
+            entityMap.Add("SampleEntity1", sampleEntity1);
+            entityMap.Add("SampleEntity2", sampleEntity2);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "schema",
+                DataSource: new DataSource(DatabaseType.mssql),
+                CosmosDb: null,
+                MsSql: null,
+                PostgreSql: null,
+                MySql: null,
+                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                Entities: entityMap
+            );
+
+            Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: "one", targetEntity: "SampleEntity2"));
+        }
+
         #endregion
 
         private static string GetInitialConfigString()

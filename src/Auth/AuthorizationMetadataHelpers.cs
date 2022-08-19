@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Auth
 
     /// <summary>
     /// Represents the permission metadata of an operation
-    /// An operation lists both columns that are included and/or exluded
+    /// An operation lists both columns that are included and/or excluded
     /// for that operation.
     /// </summary>
     public class OperationMetadata

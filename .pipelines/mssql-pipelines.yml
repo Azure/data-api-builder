@@ -30,6 +30,8 @@ jobs:
     displayName: Restore NuGet packages
     inputs:
       restoreSolution: '$(solution)'
+      feedsToUse: config
+      nugetConfigPath: Nuget.config
 
   - task: DockerInstaller@0
     displayName: Docker Installer
@@ -101,6 +103,8 @@ jobs:
     displayName: Restore NuGet packages
     inputs:
       restoreSolution: '$(solution)'
+      feedsToUse: config
+      nugetConfigPath: Nuget.config
 
   - task: PowerShell@2
     displayName: Install SQL LocalDB

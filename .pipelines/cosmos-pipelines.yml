@@ -31,11 +31,16 @@ steps:
   inputs:
     packageType: sdk
     version: 6.0.x
+    
 - task: NuGetToolInstaller@1
+
 - task: NuGetCommand@2
   displayName: Restore NuGet packages
   inputs:
     restoreSolution: '$(solution)'
+    feedsToUse: config
+    nugetConfigPath: Nuget.config
+
 - task: FileTransform@1
   displayName: 'Generate dab-config.Cosmos.json'
   inputs:

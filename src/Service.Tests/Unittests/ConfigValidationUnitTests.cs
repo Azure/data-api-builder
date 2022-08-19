@@ -336,12 +336,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Validates that exception is thrown when the graphQL type is bool
-        /// and the entity names just differ by the case in the first character.
-        /// Entities Book and book generate the same query: book_by_pk
+        /// Validates that exception is thrown when the graphQL types of two
+        /// entities are bool and the names just differ by the casing in the first character.
+        /// Since, during query generation, the first character is made lowercase 
+        /// both these entities would generate same query names.
         /// </summary>
-        [DataTestMethod]
-        public void ValidateEntitesWithCollisionInNameThrowsException()
+        [TestMethod]
+        public void ValidateEntitesWithNameCollisionsGeneratesDuplicateQueries()
         {
             // Entity Name: Book
             // pk_query: book_by_pk
@@ -363,11 +364,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Validates that exception is thrown when 
-        /// Entity 1: GraphQL type is SingularPlural
-        /// Entity 2: GraphQL type is bool and matches with the SingularPlural definition
+        /// Entity 1 has GraphQL type as SingularPlural
+        /// Entity 2 has GraphQL type is bool
+        /// and there is collision in the entity name and SingularPlural names
         /// </summary>
         [TestMethod]
-        public void ValidateEntitesWithCollisionInSingularPluralDefinitions()
+        public void ValidateEntitesWithCollisionInSingularPluralGeneratesDuplicateQueries()
         {
             Dictionary<string, Entity> entityCollection = new();
 
@@ -393,7 +395,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// query names.
         /// </summary>
         [TestMethod]
-        public void ValidateValidEntityDefinitionsDoNotGenerateDuplicateQueries()
+        public void ValidateValidEntityDefinitionsDoesNotGenerateDuplicateQueries()
         {
             Dictionary<string, Entity> entityCollection = new();
 
@@ -442,7 +444,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// A test helper method to validate the exception thrown when multiple entities create
         /// queries with the same name.
         /// </summary>
-        /// <param name="entityCollections"></param>
+        /// <param name="entityCollection">Entity definitions</param>
+        /// <param name="entityName">Entity name to construct the expected exception message</param>
         private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(Dictionary<string, Entity> entityCollection, string entityName)
         {
 

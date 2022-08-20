@@ -148,7 +148,7 @@ steps:
     SessionTimeout: '60'
     MaxConcurrency: '50'
     MaxRetryAttempts: '5'
-  condition: and(succeeded(), eq(variables['isNugetRelease'], 'true'))
+  condition: and(succeeded(), eq(variables['codesigning'], 'true'))
 
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.

@@ -115,6 +115,41 @@ steps:
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)' 
 
+- task: EsrpCodeSigning@1
+  displayName: 'Code Signing'
+  inputs:
+    ConnectedServiceName: 'ESRP - DAB'
+    FolderPath: '$(Build.ArtifactStagingDirectory)'
+    Pattern: '*.dll, *.exe'
+    signConfigType: 'inlineSignParams'
+    inlineOperation: |
+      [
+          {
+            "KeyCode": "CP-230012",
+            "OperationCode": "SigntoolSign",
+            "Parameters": {
+              "OpusName": "Microsoft",
+              "OpusInfo": "http://www.microsoft.com",
+              "FileDigest": "/fd \"SHA256\"",
+              "PageHash": "/NPH",
+              "TimeStamp": "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+            },
+            "ToolName": "sign",
+            "ToolVersion": "1.0"
+          },
+          {
+            "KeyCode": "CP-230012",
+            "OperationCode": "SigntoolVerify",
+            "Parameters": {},
+            "ToolName": "sign",
+            "ToolVersion": "1.0"
+          }
+      ]
+    SessionTimeout: '60'
+    MaxConcurrency: '50'
+    MaxRetryAttempts: '5'
+  condition: and(succeeded(), eq(variables['isNugetRelease'], 'true'))
+
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.
 - task: PowerShell@2

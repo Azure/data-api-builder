@@ -1,0 +1,46 @@
+{
+  "paths": {
+    "/Book": {
+      "post": {
+        "example": {
+          "parameters": {
+            "__body__": {
+              "title": "RESTLER BOOK",
+              "publisher_id": 1234
+            }
+          }
+        }
+      }
+    },
+    "/Book/{id}": {
+      "put": {
+        "example": {
+          "parameters": {
+            "id": 1
+          }
+        }
+      },
+      "patch": {
+        "example": {
+          "parameters": {
+            "id": 1
+          }
+        }
+      }
+    },
+    "/Journal": {
+      "post": {
+        "example": {
+          "parameters": {
+            "__body__": {
+              "id": 1472,
+              "journalname": "Restler's Diary",
+              "color": "blue",
+              "ownername": "the big boss"
+            }
+          }
+        }
+      }
+    }
+  }
+}

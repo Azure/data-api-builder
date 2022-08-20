@@ -18,23 +18,112 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "title": {
-                    "type": "string"
-                  },
-                  "publisher_id": {
-                    "type": "integer",
-                    "format": "int32"
-                  }
+                "$ref": "#/components/schemas/Book"
+              }
+            }
+          }
+        },
+        "x-codegen-request-body-name": "body",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookResponse"
                 }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Rest"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookManyResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "403": {
+            "description": "Unauthorized"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/Book/id/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Rest"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "403": {
+            "description": "Unauthorized"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Incremental book update",
+        "tags": [
+          "Rest"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Book"
+              },
+              "example": {
+                "title": "RESTLER BOOK PATCH DOPE",
+                "publisher_id": 1234
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Created",
+          "200": {
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
@@ -58,35 +147,45 @@
           }
         }
       },
-      "get": {
+      "put": {
+        "summary": "Upsert book",
         "tags": [
           "Rest"
         ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
-    "/Book/id/{id}": {
-      "get": {
-        "tags": [
-          "Rest"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Book"
+              },
+              "example": {
+                "id": 12,
+                "title": "RESTLER BOOK PUT DOPE",
+                "publisher_id": 1234
+              }
             }
           }
-        ],
+        },
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -94,19 +193,226 @@
         "tags": [
           "Rest"
         ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "403": {
+            "description": "Unauthorized"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/Journal": {
+      "post": {
+        "summary": "Add a new Journal.",
+        "tags": [
+          "Rest"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "format": "int32"
+                      }
+                    }
+                  },
+                  {
+                    "$ref": "#/components/schemas/Journal"
+                  }
+                ]
+              },
+              "example": {
+                "ref": "C:\\Users\\seleonar\\Documents\\SqlDev\\restler_persisted_settings\\examples\\examples\\examples.json"
+              }
             }
           }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JournalResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Rest"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JournalManyResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "403": {
+            "description": "Unauthorized"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/Journal/id/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Rest"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JournalResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "403": {
+            "description": "Unauthorized"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Incremental journal update",
+        "tags": [
+          "Rest"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Journal"
+              },
+              "example": {
+                "id": 1,
+                "journalname": "RESTLER PATCHED JOURNAL",
+                "color": "BLUE",
+                "ownername": "Undercover Seth"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JournalResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Upsert journal",
+        "tags": [
+          "Rest"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Journal"
+              },
+              "example": {
+                "ref": "./examples/examples.json"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JournalResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JournalResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Rest"
         ],
         "responses": {
           "200": {
             "description": "Success"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "403": {
+            "description": "Unauthorized"
+          },
+          "400": {
+            "description": "Bad Request"
           }
         }
       }
@@ -131,6 +437,171 @@
           }
         },
         "additionalProperties": false
+      },
+      "Book": {
+        "type": "object",
+        "required": [
+          "title",
+          "publisher_id"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "publisher_id": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "example": {
+          "title": "The Book of Restler",
+          "publisher_id": 1941
+        }
+      },
+      "BookResponse": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "title": {
+                "type": "string"
+              },
+              "publisher_id": {
+                "type": "integer",
+                "format": "int32"
+              }
+            }
+          }
+        },
+        "example": {
+          "value": [
+            {
+              "id": 1,
+              "title": "Response Title",
+              "publisher_id": 1234
+            }
+          ]
+        }
+      },
+      "BookManyResponse": {
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "title": {
+                "type": "string"
+              },
+              "publisher_id": {
+                "type": "integer",
+                "format": "int32"
+              }
+            }
+          }
+        },
+        "example": {
+          "values": [
+            {
+              "id": 1,
+              "title": "Response Title",
+              "publisher_id": 1234
+            }
+          ]
+        }
+      },
+      "Journal": {
+        "type": "object",
+        "properties": {
+          "journalname": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "ownername": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "journalname": "Restler Journal",
+          "color": "blue",
+          "ownername": "jeff vader"
+        }
+      },
+      "JournalResponse": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "journalname": {
+                "type": "string"
+              },
+              "color": {
+                "type": "string"
+              },
+              "ownername": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "example": {
+          "value": [
+            {
+              "id": 1,
+              "journalname": "Response Journal Name",
+              "color": "aqua",
+              "ownername": "matilda baggins"
+            }
+          ]
+        }
+      },
+      "JournalManyResponse": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "journalname": {
+                "type": "string"
+              },
+              "color": {
+                "type": "string"
+              },
+              "ownername": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "example": {
+          "values": [
+            {
+              "id": 1,
+              "journalname": "Response Journal Name",
+              "color": "aqua",
+              "ownername": "matilda baggins"
+            }
+          ]
+        }
       }
     }
   }

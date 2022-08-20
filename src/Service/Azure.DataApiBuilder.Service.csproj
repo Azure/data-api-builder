@@ -60,6 +60,7 @@
     <Watch Remove="dab-config.MySql.overrides.example.json" />
     <Watch Remove="dab-config.Postgresql.json" />
     <Watch Remove="dab-config.PostgreSql.overrides.example.json" />
+    <Watch Remove="wwwroot\examples\examples.json" />
   </ItemGroup>
 
 
@@ -94,7 +95,5 @@
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
     <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="wwwroot\" />
-  </ItemGroup>
+  <ProjectExtensions><VisualStudio><UserProperties wwwroot_4swaggerdab_1json__JsonSchema="https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/schemas/v3.0/schema.json" /></VisualStudio></ProjectExtensions>
 </Project>

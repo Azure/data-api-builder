@@ -382,7 +382,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 using JsonDocument insertPayload = JsonDocument.Parse(requestBody);
                 return insertPayload.RootElement.Clone();
             }
-            catch(JsonException)
+            catch (JsonException)
             {
                 throw new DataApiBuilderException(
                     message: REQUEST_BODY_INVALID_JSON_ERR_MESSAGE,

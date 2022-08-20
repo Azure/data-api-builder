@@ -14,6 +14,11 @@ namespace Azure.DataApiBuilder.Service.Services
     /// </summary>
     public class RequestValidator
     {
+        public const string REQUEST_BODY_INVALID_JSON_ERR_MESSAGE = "Request body contains invalid JSON.";
+        public const string BATCH_MUTATION_UNSUPPORTED_ERR_MESSAGE = "Mutation operation on many instances of an entity in a single request are not yet supported.";
+        public const string QUERY_STRING_INVALID_USAGE_ERR_MESSAGE = "Query string for this HTTP request type is an invalid URL.";
+        public const string PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE = "Primary Key for this HTTP request type is required.";
+
         /// <summary>
         /// Validates the given request by ensuring:
         /// - each field to be returned is one of the exposed names for the entity.
@@ -93,42 +98,32 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Validates the request body and queryString with respect to an Insert operation.
+        /// Validates the queryString is not present for mutation.
         /// </summary>
-        /// <param name="queryString">Query string from the url.</param>
-        /// <param name="requestBody">The string JSON body from the request.</param>
-        /// <exception cref="DataApiBuilderException"></exception>
-        public static JsonElement ValidateInsertRequest(string queryString, string requestBody)
+        /// <param name="queryString">queryString e.g. "$?filter="</param>
+        /// <exception cref="DataApiBuilderException">Thrown when queryString provided or whitespace provided as querystring.</exception>
+        public static void ValidateQueryStringNotProvided(string? queryString)
         {
             if (!string.IsNullOrEmpty(queryString))
             {
                 throw new DataApiBuilderException(
-                    message: "Query string for POST requests is an invalid url.",
+                    message: QUERY_STRING_INVALID_USAGE_ERR_MESSAGE,
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
-
-            JsonElement insertPayloadRoot = new();
-
-            if (!string.IsNullOrEmpty(requestBody))
-            {
-                insertPayloadRoot = GetInsertPayload(requestBody);
-            }
-
-            return insertPayloadRoot;
         }
 
         /// <summary>
-        /// Validates the primarykeyroute is populated with respect to a Delete operation.
+        /// Validates the primaryKeyRoute is populated
         /// </summary>
-        /// <param name="primaryKeyRoute">Primary key route from the url.</param>
-        /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateDeleteRequest(string? primaryKeyRoute)
+        /// <param name="primaryKeyRoute">URL route e.g. "Entity/id/1"</param>
+        /// <exception cref="DataApiBuilderException">Thrown when primaryKeyRoute not provided.</exception>
+        public static void ValidatePrimaryKeyRouteProvided(string? primaryKeyRoute)
         {
-            if (string.IsNullOrEmpty(primaryKeyRoute))
+            if (string.IsNullOrWhiteSpace(primaryKeyRoute))
             {
                 throw new DataApiBuilderException(
-                    message: "Primary Key for DELETE requests is required.",
+                    message: PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
@@ -137,28 +132,28 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Validates the primarykeyroute is populated with respect to an Update or Upsert operation.
         /// </summary>
-        /// <param name="primaryKeyRoute">Primary key route from the url.</param>
-        /// <param name="requestBody">The body of the request.</param>
-        /// <exception cref="DataApiBuilderException"></exception>
+        /// <param name="requestBody">Request body content</param>
+        /// <exception cref="DataApiBuilderException">Thrown when request body is invalid JSON
+        /// or JSON is a batch request (mutation of more than one entity in a single request).</exception>
         /// <returns>JsonElement representing the body of the request.</returns>
-        public static JsonElement ValidateUpdateOrUpsertRequest(string? primaryKeyRoute, string requestBody)
+        public static JsonElement ParseRequestBodyContents(string requestBody)
         {
-            if (string.IsNullOrEmpty(primaryKeyRoute))
-            {
-                throw new DataApiBuilderException(
-                    message: "Primary Key for UPSERT requests is required.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-            }
-
-            JsonElement upsertPayloadRoot = new();
+            JsonElement mutationPayloadRoot = new();
 
             if (!string.IsNullOrEmpty(requestBody))
             {
-                upsertPayloadRoot = GetInsertPayload(requestBody);
+                mutationPayloadRoot = ParseRequestBody(requestBody);
+
+                if (mutationPayloadRoot.ValueKind is JsonValueKind.Array)
+                {
+                    throw new DataApiBuilderException(
+                        statusCode: HttpStatusCode.BadRequest,
+                        message: BATCH_MUTATION_UNSUPPORTED_ERR_MESSAGE,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
             }
 
-            return upsertPayloadRoot;
+            return mutationPayloadRoot;
         }
 
         /// <summary>
@@ -375,25 +370,25 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Creates a JSON payload from a string.
+        /// Creates a JsonElement object from JSON in request body.
         /// </summary>
-        /// <param name="requestBody">JSON string representation of request body</param>
-        /// <returns></returns>
-        /// <exception cref="NotSupportedException"></exception>
-        private static JsonElement GetInsertPayload(string requestBody)
+        /// <param name="requestBody">Request body content</param>
+        /// <returns>JsonElement from parsed request body.</returns>
+        /// <exception cref="DataApiBuilderException">Invalid Request Body JSON</exception>
+        private static JsonElement ParseRequestBody(string requestBody)
         {
-            using JsonDocument insertPayload = JsonDocument.Parse(requestBody);
-
-            if (insertPayload.RootElement.ValueKind == JsonValueKind.Array)
+            try
+            {
+                using JsonDocument insertPayload = JsonDocument.Parse(requestBody);
+                return insertPayload.RootElement.Clone();
+            }
+            catch(JsonException)
             {
                 throw new DataApiBuilderException(
+                    message: REQUEST_BODY_INVALID_JSON_ERR_MESSAGE,
                     statusCode: HttpStatusCode.BadRequest,
-                    message: "Mutation operation on many instances of an entity in a single request are not yet supported.",
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-            }
-            else
-            {
-                return insertPayload.RootElement.Clone();
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                    );
             }
         }
 

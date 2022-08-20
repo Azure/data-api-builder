@@ -1,6 +1,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
@@ -240,7 +241,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 exception: true,
-                expectedErrorMessage: "Query string for POST requests is an invalid url.",
+                expectedErrorMessage: RequestValidator.QUERY_STRING_INVALID_USAGE_ERR_MESSAGE,
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

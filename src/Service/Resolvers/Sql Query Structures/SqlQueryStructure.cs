@@ -171,12 +171,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                             value: predicate.Value);
             }
 
-            // context.OrderByColumnsInUrl will lack TableAlias because it is created in RequestParser
+            // context.OrderByColumnsObackingColumns will lack TableAlias because it is created in RequestParser
             // which may be called for any type of operation. To avoid coupling the OrderByClauseInUrl
             // to only Find, we populate the TableAlias in this constructor where we know we have a Find operation.
-            OrderByColumns = context.OrderByClauseInUrl is not null ?
-                GetOrderByBackingColumns(context.OrderByClauseInUrl) :
-                PrimaryKeyAsOrderByColumns();
+            OrderByColumns = context.OrderByClauseOfBackingColumns is not null ?
+                context.OrderByClauseOfBackingColumns : PrimaryKeyAsOrderByColumns();
+
             foreach (OrderByColumn column in OrderByColumns)
             {
                 if (string.IsNullOrEmpty(column.TableAlias))
@@ -273,7 +273,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         private List<OrderByColumn> PrimaryKeyAsOrderByColumns()
         {
-            if (_primaryKeyAsOrderByColumns == null)
+            if (_primaryKeyAsOrderByColumns is null)
             {
                 _primaryKeyAsOrderByColumns = new();
 

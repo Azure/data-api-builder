@@ -390,7 +390,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                        SELECT  ""treeId"", ""species"" AS ""fancyName"", ""region"", ""height""
                         FROM " + _integrationMappingTable + @"
-                      ORDER BY ""fancyName""
+                      ORDER BY ""species""
                   ) AS subq"
             },
             {

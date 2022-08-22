@@ -1,4 +1,7 @@
+using System;
+using System.Net;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -77,9 +80,9 @@ namespace Azure.DataApiBuilder.Service.Services
                 case "uniqueidentifier":
                     return typeof(Guid);
                 default:
-                    throw new DataGatewayException(message: $"Tried to convert unsupported data type: {sqlType}",
+                    throw new DataApiBuilderException(message: $"Tried to convert unsupported data type: {sqlType}",
                         statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
         }
     }

@@ -1,3 +1,4 @@
+
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
     // <summary>

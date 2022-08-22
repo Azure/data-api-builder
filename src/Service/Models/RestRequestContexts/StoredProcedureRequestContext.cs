@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using Azure.DataGateway.Config;
+using Azure.DataApiBuilder.Config;
 
-namespace Azure.DataGateway.Service.Models
+namespace Azure.DataApiBuilder.Service.Models
 {
     /// <summary>
     /// StoredProcedureRequestContext provides all needed request context for a stored procedure query.

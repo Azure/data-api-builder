@@ -199,10 +199,10 @@ namespace Azure.DataApiBuilder.Service.Services
             // Stored procedure does not exist in DB schema
             if (procedureMetadata.Rows.Count == 0)
             {
-                throw new DataGatewayException(
+                throw new DataApiBuilderException(
                     message: $"No stored procedure definition found for the given database object {storedProcedureName}",
                     statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
             // Each row in the procedureParams DataTable corresponds to a single parameter
@@ -230,10 +230,10 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     if (!storedProcedureDefinition.Parameters.TryGetValue(configParamKey, out ParameterDefinition? parameterDefinition))
                     {
-                        throw new DataGatewayException(
+                        throw new DataApiBuilderException(
                             message: $"Could not find parameter \"{configParamKey}\" specified in config for procedure \"{schemaName}.{storedProcedureName}\"",
                             statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataGatewayException.SubStatusCodes.ErrorInInitialization);
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
                     else
                     {

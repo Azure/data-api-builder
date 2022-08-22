@@ -109,6 +109,15 @@ namespace Azure.DataApiBuilder.Config
                     {
                         throw new NotSupportedException("The runtime does not support this GraphQL settings type for an entity.");
                     }
+
+                    GraphQLEntitySettings graphQLEntitySettings = new(Type: nameConfiguration);
+                    GraphQL = graphQLEntitySettings;
+                }
+            }
+            else
+            {
+                throw new NotSupportedException("The runtime does not support this GraphQL settings type for an entity.");
+            }
         }
 
         /// <summary>
@@ -150,36 +159,11 @@ namespace Azure.DataApiBuilder.Config
                     Parameters = objectSource.Parameters;
                     KeyFields = objectSource.KeyFields;
                 }
-
-                    GraphQLEntitySettings graphQLEntitySettings = new(Type: nameConfiguration);
-                    GraphQL = graphQLEntitySettings;
-                }
-            }
-            else
-            {
-                throw new NotSupportedException("The runtime does not support this GraphQL settings type for an entity.");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Describes the type, name and parameters for a
-    /// database object source. Useful for more complex sources like stored procedures.
-    /// </summary>
-    /// <param name="Type">Type of the database object.</param>
-    /// <param name="Name">The name of the database object.</param>
-    /// <param name="Parameters">The Parameters to be used for constructing this object
-    /// in case its a stored procedure.</param>
-    public record DatabaseObjectSource(
-        string Type,
-        [property: JsonPropertyName("object")] string Name,
-        string[]? Parameters);
             }
             else
             {
                 throw new JsonException(message: $"Source not one of string or object");
             }
-
         }
 
         /// <summary>
@@ -198,27 +182,26 @@ namespace Azure.DataApiBuilder.Config
                     _ => throw new JsonException(message: "Source type must be one of: [table, view, stored-procedure]")
                 };
         }
-
-        /// <summary>
-        /// Describes the type, name, parameters, and key fields for a
-        /// database object source.
-        /// </summary>
-        /// <param name="Type"> Type of the database object.
-        /// Should be one of [table, view, stored-procedure]. </param>
-        /// <param name="Name"> The name of the database object. </param>
-        /// <param name="Parameters"> If Type is SourceType.StoredProcedure,
-        /// Parameters to be passed as defaults to the procedure call </param>
-        /// <param name="KeyFields"> The field(s) to be used as primary keys.
-        /// Support tracked in #547 </param>
-        public record DatabaseObjectSource(
-            string Type,
-            [property: JsonPropertyName("object")]
-            string Name,
-            Dictionary<string, object>? Parameters,
-            [property: JsonPropertyName("key-fields")]
-            Array KeyFields);
-
     }
+
+    /// <summary>
+    /// Describes the type, name, parameters, and key fields for a
+    /// database object source.
+    /// </summary>
+    /// <param name="Type"> Type of the database object.
+    /// Should be one of [table, view, stored-procedure]. </param>
+    /// <param name="Name"> The name of the database object. </param>
+    /// <param name="Parameters"> If Type is SourceType.StoredProcedure,
+    /// Parameters to be passed as defaults to the procedure call </param>
+    /// <param name="KeyFields"> The field(s) to be used as primary keys.
+    /// Support tracked in #547 </param>
+    public record DatabaseObjectSource(
+        string Type,
+        [property: JsonPropertyName("object")]
+            string Name,
+        Dictionary<string, object>? Parameters,
+        [property: JsonPropertyName("key-fields")]
+            Array KeyFields);
 
     /// <summary>
     /// Supported source types as defined by json schema

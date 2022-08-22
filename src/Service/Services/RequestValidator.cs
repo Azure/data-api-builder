@@ -140,15 +140,15 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Mutations also validated using ValidateInsertRequestContext call in RestService
         /// </summary>
         /// <param name="primaryKeyRoute">Primary key route from the url.</param>
-        /// <exception cref="DataGatewayException"></exception>
+        /// <exception cref="DataApiBuilderException"></exception>
         public static void ValidateStoredProcedureRequest(string? primaryKeyRoute)
         {
             if (!string.IsNullOrWhiteSpace(primaryKeyRoute))
             {
-                throw new DataGatewayException(
+                throw new DataApiBuilderException(
                     message: "Primary key route not supported for this entity.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
         }
 
@@ -188,19 +188,19 @@ namespace Azure.DataApiBuilder.Service.Services
             // this should not throw any error. Tracked by issue #158.
             if (extraFields.Count > 0)
             {
-                throw new DataGatewayException(
+                throw new DataApiBuilderException(
                     message: $"Invalid request. Contained unexpected fields: {string.Join(", ", extraFields)}",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
             // If missing a parameter in the request and do not have a default specified in config
             if (missingFields.Count > 0)
             {
-                throw new DataGatewayException(
+                throw new DataApiBuilderException(
                     message: $"Invalid request. Missing required procedure parameters: {string.Join(", ", missingFields)}",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
         }
@@ -447,7 +447,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         /// <summary>
         /// Tries to get the stored procedure definition for the given entity
-        /// Throws a DataGatewayException to return Bad Request to client instead of Unexpected Error
+        /// Throws a DataApiBuilderException to return Bad Request to client instead of Unexpected Error
         /// Useful for accessing the definition within the request pipeline
         /// </summary>
         private static StoredProcedureDefinition TryGetStoredProcedureDefinition(string entityName, ISqlMetadataProvider sqlMetadataProvider)
@@ -458,10 +458,10 @@ namespace Azure.DataApiBuilder.Service.Services
             }
             catch (InvalidCastException)
             {
-                throw new DataGatewayException(
+                throw new DataApiBuilderException(
                     message: $"Underlying database object for entity {entityName} does not exist.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
         }
 

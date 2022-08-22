@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
@@ -188,10 +189,10 @@ namespace Azure.DataApiBuilder.Service.Models
                 }
                 catch (JsonException)
                 {
-                    throw new DataGatewayException(
+                    throw new DataApiBuilderException(
                         message: "The request body is not in a valid JSON format.",
                         statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
             }
             else

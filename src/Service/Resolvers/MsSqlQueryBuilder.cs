@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Text;
 using Azure.DataApiBuilder.Service.Models;
 using Microsoft.Data.SqlClient;
 

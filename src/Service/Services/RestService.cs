@@ -126,9 +126,9 @@ namespace Azure.DataApiBuilder.Service.Services
                         RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                         break;
                     default:
-                        throw new DataGatewayException(message: "This operation is not supported.",
+                        throw new DataApiBuilderException(message: "This operation is not supported.",
                                                        statusCode: HttpStatusCode.BadRequest,
-                                                       subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
                 if (!string.IsNullOrEmpty(primaryKeyRoute))
@@ -263,9 +263,9 @@ namespace Azure.DataApiBuilder.Service.Services
                         operationType);
                     break;
                 default:
-                    throw new DataGatewayException(message: "This operation is not supported.",
+                    throw new DataApiBuilderException(message: "This operation is not supported.",
                                                    statusCode: HttpStatusCode.BadRequest,
-                                                   subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
             // Throws bad request if primaryKeyRoute set

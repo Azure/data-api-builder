@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using Azure.DataGateway.Config;
-using Azure.DataGateway.Service.Exceptions;
-using Azure.DataGateway.Service.Services;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Services;
 
-namespace Azure.DataGateway.Service.Resolvers
+namespace Azure.DataApiBuilder.Service.Resolvers
 {
     ///<summary>
     /// Wraps all the required data and logic to write a SQL EXECUTE query
@@ -47,10 +47,10 @@ namespace Azure.DataGateway.Service.Resolvers
                     {
                         // In the case GetParamAsProcedureParameterType fails to parse as SystemType from database metadata
                         // Keep message being returned to the client more generalized to not expose schema info
-                        throw new DataGatewayException(
+                        throw new DataApiBuilderException(
                             message: $"Invalid value supplied for field: {paramKey}",
                             statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
                 }
                 else
@@ -65,9 +65,9 @@ namespace Azure.DataGateway.Service.Resolvers
                     {
                         // In case required parameters not found in request and no default specified in config
                         // Should already be handled in the request validation step
-                        throw new DataGatewayException(message: $"Did not provide all procedure params, missing: \"{paramKey}\"",
+                        throw new DataApiBuilderException(message: $"Did not provide all procedure params, missing: \"{paramKey}\"",
                             statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataGatewayException.SubStatusCodes.BadRequest);
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
                 }
 

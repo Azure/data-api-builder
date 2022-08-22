@@ -678,6 +678,42 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             throw new NotImplementedException();
         }
 
+        // Pending Stored Procedure Support
+        [TestMethod]
+        [Ignore]
+        public override Task FindManyStoredProcedureTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindOneStoredProcedureTestUsingParameter()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindStoredProcedureWithNonEmptyPrimaryKeyRoute()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindStoredProcedureWithMissingParameter()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindStoredProcedureWithNonexistentParameter()
+        {
+            throw new NotImplementedException();
+        }
+
         public override string GetDefaultSchema()
         {
             return DEFAULT_SCHEMA;

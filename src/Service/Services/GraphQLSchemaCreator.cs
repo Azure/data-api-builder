@@ -133,7 +133,8 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 // Skip creating the GraphQL object for the current entity due to configuration
                 // explicitly excluding the entity from the GraphQL endpoint.
-                if (entity.GraphQL is not null && entity.GraphQL is bool graphql && graphql == false)
+                if (entity.ObjectType is SourceType.StoredProcedure
+                    || entity.GraphQL is not null && entity.GraphQL is bool graphql && graphql == false)
                 {
                     continue;
                 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -772,5 +773,42 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         {
             return _queryMap[key];
         }
+
+        // Pending Stored Procedure Support
+        [TestMethod]
+        [Ignore]
+        public override Task FindManyStoredProcedureTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindOneStoredProcedureTestUsingParameter()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindStoredProcedureWithNonEmptyPrimaryKeyRoute()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindStoredProcedureWithMissingParameter()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindStoredProcedureWithNonexistentParameter()
+        {
+            throw new NotImplementedException();
+        }
+
     }
 }

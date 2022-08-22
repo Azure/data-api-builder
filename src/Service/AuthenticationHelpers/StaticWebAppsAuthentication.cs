@@ -26,6 +26,13 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             public string? UserId { get; set; }
             public string? UserDetails { get; set; }
             public IEnumerable<string>? UserRoles { get; set; }
+            public IEnumerable<SWAPrincipalClaim>? Claims { get; set; }
+        }
+
+        public class SWAPrincipalClaim
+        {
+            public string? Typ { get; set; }
+            public string? Val { get; set; }
         }
 
         public static ClaimsIdentity? Parse(HttpContext context)
@@ -34,27 +41,44 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             StaticWebAppsClientPrincipal principal = new();
             try
             {
-                if (context.Request.Headers.TryGetValue(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, out StringValues header))
+                if (context.Request.Headers.TryGetValue(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, out StringValues headerPayload))
                 {
-                    string data = header[0];
+                    string data = headerPayload[0];
                     byte[] decoded = Convert.FromBase64String(data);
                     string json = Encoding.UTF8.GetString(decoded);
                     principal = JsonSerializer.Deserialize<StaticWebAppsClientPrincipal>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
                 }
 
-                if (!principal?.UserRoles?.Any() ?? true)
+                if (principal is null || principal.UserRoles is null)
+                {
+                    return null;
+                }
+
+                if (!principal.UserRoles.Any())
                 {
                     return identity;
                 }
 
-                identity = new(principal!.IdentityProvider);
+                identity = new(principal.IdentityProvider);
                 identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, principal.UserId ?? string.Empty));
                 identity.AddClaim(new Claim(ClaimTypes.Name, principal.UserDetails ?? string.Empty));
-                identity.AddClaims(principal.UserRoles!.Select(r => new Claim(ClaimTypes.Role, r)));
+                identity.AddClaims(principal.UserRoles.Select(r => new Claim(ClaimTypes.Role, r)));
+
+                if (principal.Claims is not null && principal.Claims.Any())
+                {
+                    identity.AddClaims(principal.Claims
+                        .Where(claim => claim.Typ is not null && claim.Val is not null)
+                        .Select(claim => new Claim(type: claim.Typ!, value: claim.Val!))
+                        );
+                }
 
                 return identity;
             }
-            catch (Exception error)
+            catch (Exception error) when (
+                error is JsonException ||
+                error is ArgumentNullException ||
+                error is NotSupportedException ||
+                error is InvalidOperationException)
             {
                 // Logging the parsing failure exception to the console, but not rethrowing
                 // nor creating a DataApiBuilder exception because the authentication handler

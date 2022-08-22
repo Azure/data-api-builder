@@ -452,7 +452,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         baseUrl = baseUrl + "?" + HttpUtility.ParseQueryString(queryString).ToString();
                     }
 
-                    string dbResult = await GetDatabaseResultAsync(sqlQuery);
+                    string dbResult = await GetDatabaseResultAsync(sqlQuery, expectJson);
                     // For FIND requests, null result signifies an empty result set
                     dbResult = (operationType is Operation.Read && dbResult is null) ? "[]" : dbResult;
                     expected = $"{{\"value\":{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";

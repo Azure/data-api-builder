@@ -46,7 +46,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entity: _integrationProcedureFindMany_EntityName,
                 sqlQuery: GetQuery("FindManyStoredProcedureTest"),
-                controller: _restController,
                 expectJson: false
                 );
         }
@@ -63,7 +62,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?id=1",
                 entity: _integrationProcedureFindOne_EntityName,
                 sqlQuery: GetQuery("FindOneStoredProcedureTestUsingParameter"),
-                controller: _restController,
                 expectJson: false
                 );
         }
@@ -974,8 +972,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entity: _integrationProcedureFindMany_EntityName,
                 sqlQuery: string.Empty,
-                controller: _restController,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Primary key route not supported for this entity.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -993,8 +990,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entity: _integrationProcedureFindOne_EntityName,
                 sqlQuery: string.Empty,
-                controller: _restController,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid request. Missing required procedure parameters: id",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
@@ -1013,8 +1009,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?param=value",
                 entity: _integrationProcedureFindMany_EntityName,
                 sqlQuery: string.Empty,
-                controller: _restController,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid request. Contained unexpected fields: param",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
@@ -1025,8 +1020,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?id=1&param=value",
                 entity: _integrationProcedureFindOne_EntityName,
                 sqlQuery: string.Empty,
-                controller: _restController,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid request. Contained unexpected fields: param",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );

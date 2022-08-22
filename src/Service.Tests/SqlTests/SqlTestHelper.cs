@@ -44,7 +44,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <returns>True if JSON objects are the same</returns>
         public static bool JsonStringsDeepEqual(string jsonString1, string jsonString2)
         {
-            return JToken.DeepEquals(JToken.Parse(jsonString1), JToken.Parse(jsonString2));
+            return string.IsNullOrEmpty(jsonString1) && string.IsNullOrEmpty(jsonString2) ||
+                JToken.DeepEquals(JToken.Parse(jsonString1), JToken.Parse(jsonString2));
         }
 
         /// <summary>

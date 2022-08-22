@@ -1,10 +1,8 @@
 using System;
 using System.Net;
 using System.Net.Http;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests

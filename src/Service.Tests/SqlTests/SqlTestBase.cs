@@ -458,6 +458,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 }
             }
 
+            // Verify the expected and actual response are identical.
             await SqlTestHelper.VerifyResultAsync(
                 expected: expected,
                 request: request,

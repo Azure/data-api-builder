@@ -14,7 +14,6 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Controllers;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -388,7 +387,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             };
 
             // Get the httpMethod based on the operation to be executed.
-            HttpMethod httpMethod = GetHttpMethodFromOperation(operationType);
+            HttpMethod httpMethod = SqlTestHelper.GetHttpMethodFromOperation(operationType);
 
             // Create the request to be sent to the engine.
             HttpRequestMessage request;
@@ -467,34 +466,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 httpMethod: httpMethod,
                 expectedLocationHeader: expectedLocationHeader,
                 verifyNumRecords: verifyNumRecords);
-        }
-
-        /// <summary>
-        /// Helper method to get the HttpMethod based on the operation type.
-        /// </summary>
-        /// <param name="operationType">The operation to be executed on the entity.</param>
-        /// <returns></returns>
-        /// <exception cref="DataApiBuilderException"></exception>
-        private static HttpMethod GetHttpMethodFromOperation(Operation operationType)
-        {
-            switch (operationType)
-            {
-                case Operation.Read:
-                    return HttpMethod.Get;
-                case Operation.Insert:
-                    return HttpMethod.Post;
-                case Operation.Delete:
-                    return HttpMethod.Delete;
-                case Operation.Upsert:
-                    return HttpMethod.Put;
-                case Operation.UpsertIncremental:
-                    return HttpMethod.Patch;
-                default:
-                    throw new DataApiBuilderException(
-                        message: "Operation not supported for the request.",
-                        statusCode: HttpStatusCode.NotImplemented,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
-            }
         }
 
         /// <summary>

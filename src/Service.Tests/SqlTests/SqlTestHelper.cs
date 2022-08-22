@@ -7,7 +7,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Models;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 
@@ -140,30 +140,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Returns the HTTP verb for a provided Operation.
+        /// Helper method to get the HttpMethod based on the operation type.
         /// </summary>
-        /// <param name="operationType">Operation such as Find, Upsert, Delete, etc.
-        /// When Operation.None is provided from some tests, return empty string.</param>
-        /// <returns>Matching HttpConstants value</returns>
-        /// <exception cref="ArgumentException"></exception>
-        public static string OperationTypeToHTTPVerb(Operation operationType)
+        /// <param name="operationType">The operation to be executed on the entity.</param>
+        /// <returns></returns>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static HttpMethod GetHttpMethodFromOperation(Operation operationType)
         {
             switch (operationType)
             {
                 case Operation.Read:
-                    return HttpConstants.GET;
+                    return HttpMethod.Get;
                 case Operation.Insert:
-                    return HttpConstants.POST;
-                case Operation.Upsert:
-                    return HttpConstants.PUT;
-                case Operation.UpsertIncremental:
-                    return HttpConstants.PATCH;
+                    return HttpMethod.Post;
                 case Operation.Delete:
-                    return HttpConstants.DELETE;
-                case Operation.None:
-                    return string.Empty;
+                    return HttpMethod.Delete;
+                case Operation.Upsert:
+                    return HttpMethod.Put;
+                case Operation.UpsertIncremental:
+                    return HttpMethod.Patch;
                 default:
-                    throw new ArgumentException(message: $"Invalid operationType {operationType} provided");
+                    throw new DataApiBuilderException(
+                        message: "Operation not supported for the request.",
+                        statusCode: HttpStatusCode.NotImplemented,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
             }
         }
 

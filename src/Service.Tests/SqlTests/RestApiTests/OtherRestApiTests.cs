@@ -100,34 +100,5 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             // Assert that expectedBody and responseBody are the same.
             Assert.AreEqual(expectedBody, responseBody);
         }
-
-        #region Private helpers
-
-        /// <summary>
-        /// Helper function uses reflection to invoke
-        /// private methods from outside class.
-        /// Expects async method returning Task.
-        /// </summary>
-        class PrivateObject
-        {
-            private readonly object _classToInvoke;
-            public PrivateObject(object classToInvoke)
-            {
-                _classToInvoke = classToInvoke;
-            }
-
-            public Task<IActionResult> Invoke(string privateMethodName, params object[] privateMethodArgs)
-            {
-                MethodInfo methodInfo = _classToInvoke.GetType().GetMethod(privateMethodName, BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (methodInfo is null)
-                {
-                    throw new System.Exception($"{privateMethodName} not found in class '{_classToInvoke.GetType()}'");
-                }
-
-                return (Task<IActionResult>)methodInfo.Invoke(_classToInvoke, privateMethodArgs);
-            }
-        }
-
-        #endregion
     }
 }

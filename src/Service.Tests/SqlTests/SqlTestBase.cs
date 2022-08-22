@@ -428,7 +428,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                  operationType is Operation.UpsertIncremental ||
                  operationType is Operation.Update ||
                  operationType is Operation.UpdateIncremental)
-                 && response.StatusCode.Equals(HttpStatusCode.NoContent)
+                 && response.StatusCode == HttpStatusCode.NoContent
                 )
             {
                 expected = string.Empty;

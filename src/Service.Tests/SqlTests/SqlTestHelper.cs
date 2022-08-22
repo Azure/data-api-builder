@@ -110,6 +110,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 // POST operation.
                 if (httpMethod == HttpMethod.Post)
                 {
+                    // Find the actual location using the response and request uri.
+                    // Response uri = Request uri + "/" + actualLocation
+                    // For eg. Request URI: http://localhost/api/Review
+                    // Response URI: http://localhost/api/Review/book_id/1/id/5001
+                    // therefore, actualLocation = book_id/1/id/5001
                     string responseUri = (response.Headers.Location.OriginalString);
                     string requestUri = request.RequestUri.OriginalString;
                     string actualLocation = responseUri.Substring(requestUri.Length + 1);

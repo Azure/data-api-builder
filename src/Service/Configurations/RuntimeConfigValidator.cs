@@ -291,12 +291,21 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <summary>
         /// Method to perform the different validations related to the semantic correctness of the
         /// runtime configuration, focusing on the relationship section of the entity.
+        /// Validating Cases:
+        /// 1. entity not defined in config cannot be used in relationship.
+        /// 2. entity with graphQL disabled cannot be used in a relationship with another entity
+        /// having graphQL enabled.
+        /// 3. if config doesn't contain linkingSourceFields and LinkingTargetFields for the
+        /// the given linkingObject, then the underlying database should contain it's relationship
+        /// with source and target entity.
         /// </summary>
         /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
         public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
         {
             _logger.LogInformation("Validating Relationship Section in Config...");
             List<string> allEntities = new(runtimeConfig.Entities.Keys);
+
+            // Loop through each entity in the config and verify it's relationship.
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 if (entity.Relationships is null)

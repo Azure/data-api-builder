@@ -123,7 +123,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Assert.AreEqual(actualAsDict["value"].Length, verifyNumRecords);
                 }
 
-                Console.WriteLine($"Expected: {expected}\nActual: {responseBody}");
                 Assert.IsTrue(JsonStringsDeepEqual(expected, responseBody));
             }
             else
@@ -134,7 +133,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
                 // Convert the escaped characters into their unescaped form.
                 responseBody = Regex.Unescape(responseBody);
-                Console.WriteLine($"Expected: {expected}\nActual: {responseBody}");
                 Assert.AreEqual(expected, responseBody);
             }
         }

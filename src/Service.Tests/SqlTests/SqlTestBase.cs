@@ -39,8 +39,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
     {
         protected static IQueryExecutor _queryExecutor;
         protected static IQueryBuilder _queryBuilder;
-        protected static IQueryEngine _queryEngine;
-        protected static IMutationEngine _mutationEngine;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
         protected static DbExceptionParser _dbExceptionParser;
@@ -123,23 +121,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             //Initialize the authorization resolver object
             _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
 
-            _queryEngine = new SqlQueryEngine(
-                _queryExecutor,
-                _queryBuilder,
-                _sqlMetadataProvider,
-                _httpContextAccessor.Object,
-                _authorizationResolver,
-                _queryEngineLogger);
-            _mutationEngine =
-                new SqlMutationEngine(
-                _queryEngine,
-                _queryExecutor,
-                _queryBuilder,
-                _sqlMetadataProvider,
-                _authorizationResolver,
-                _httpContextAccessor.Object,
-                _mutationEngineLogger);
-
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
                 {
@@ -161,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
                         {
                             return new SqlMutationEngine(
-                                    _queryEngine,
+                                    ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider),
                                     _queryExecutor,
                                     _queryBuilder,
                                     _sqlMetadataProvider,

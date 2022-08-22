@@ -822,6 +822,10 @@
       "graphql": false,
       "permissions": [
         {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
           "role": "authenticated",
           "actions": [ "*" ]
         }
@@ -835,6 +839,10 @@
       "rest": true,
       "graphql": false,
       "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
         {
           "role": "authenticated",
           "actions": [ "*" ]

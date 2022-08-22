@@ -203,7 +203,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
 
                 default:
-                    throw new NotSupportedException("This operation is not yet supported.");
+                    throw new DataApiBuilderException(
+                        message: "Unsupported operation.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
         }
 

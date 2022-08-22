@@ -141,6 +141,77 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// Executes the REST mutation query and returns IActionResult asynchronously.
+        /// Result error cases differ for Stored Procedure requests than normal mutation requests
+        /// QueryStructure built does not depend on Operation enum, thus not useful to use
+        /// PerformMutationOperation method
+        /// </summary>
+        public async Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context)
+        {
+            SqlExecuteStructure executeQueryStructure = new(context.EntityName, _sqlMetadataProvider, context.ResolvedParameters!);
+            string queryText = _queryBuilder.Build(executeQueryStructure);
+            _logger.LogInformation(queryText);
+
+            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, executeQueryStructure.Parameters);
+            Dictionary<string, object?>? resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
+
+            // A note on returning stored procedure results:
+            // We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes
+            // of the DbDataReader. For example, we can't enforce that an UPDATE command outputs a result set using an OUTPUT
+            // clause. As such, for this iteration we are just returning the success condition of the operation type that maps
+            // to each action, with data always from the first result set, as there may be arbitrarily many.
+            switch (context.OperationType)
+            {
+                case Operation.Delete:
+                    // Returns a 204 No Content so long as the stored procedure executes without error
+                    return new NoContentResult();
+                case Operation.Insert:
+                    // Returns a 201 Created with whatever the first result set is returned from the procedure
+                    // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the first and only result set
+                    if (dbDataReader.HasRows)
+                    {
+                        return new CreatedResult(location: context.EntityName, OkMutationResponse(resultRecord).Value);
+                    }
+                    else
+                    {   // If no result set returned, just return a 201 Created with empty array instead of array with single null value
+                        return new CreatedResult(
+                            location: context.EntityName,
+                            value: new
+                            {
+                                value = JsonDocument.Parse("[]").RootElement.Clone()
+                            }
+                        );
+                    }
+                case Operation.Update:
+                case Operation.UpdateIncremental:
+                case Operation.Upsert:
+                case Operation.UpsertIncremental:
+                    // Since we cannot check if anything was created, just return a 200 Ok response with first result set output
+                    // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the first and only result set
+                    if (dbDataReader.HasRows)
+                    {
+                        return OkMutationResponse(resultRecord);
+                    }
+                    else
+                    {
+                        // If no result set returned, return 200 Ok response with empty array instead of array with single null value
+                        return new OkObjectResult(
+                            value: new
+                            {
+                                value = JsonDocument.Parse("[]").RootElement.Clone()
+                            }
+                        );
+                    }
+
+                default:
+                    throw new DataApiBuilderException(
+                        message: "Unsupported operation.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Executes the REST mutation query and returns IActionResult asynchronously.
         /// </summary>
         /// <param name="context">context of REST mutation request.</param>
         /// <returns>IActionResult</returns>
@@ -247,7 +318,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// form that complies with vNext Api guidelines.
         /// </summary>
         /// <param name="result">Dictionary representing the results of the client's request.</param>
-        private static OkObjectResult OkMutationResponse(Dictionary<string, object?> result)
+        private static OkObjectResult OkMutationResponse(Dictionary<string, object?>? result)
         {
             // Convert Dictionary to array of JsonElements
             string jsonString = $"[{JsonSerializer.Serialize(result)}]";

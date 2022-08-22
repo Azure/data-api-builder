@@ -105,13 +105,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// Check that no two entity definitions generate queries with the same name.
+        /// Validate that the entities that have graphQL exposed do not generate queries with the 
+        /// same name.
         /// </summary>
-        /// <param name="entityCollection"></param>
+        /// <param name="entityCollection">Entity definitions</param>
         /// <exception cref="DataApiBuilderException"></exception>
         public static void ValidateEntitiesDoNotGenerateDuplicateQueries(Dictionary<string, Entity> entityCollection)
         {
-            HashSet<string> queryNames = new();
+            HashSet<string> graphQLQueries = new();
 
             foreach (KeyValuePair<string, Entity> entityEntry in entityCollection)
             {
@@ -124,20 +125,24 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     continue;
                 }
 
-                string pkQueryName = $"{FormatNameForField(GetDefinedSingularName(entityName, entity))}_by_pk";
-                string listQueryName = FormatNameForField(Pluralize(entityName, entity).Value);
+                // For entities that have graphQL exposed, two queries would be generated.
+                // Primary Key Query: For fetching an item using its primary key.
+                // List Query: To fetch a paginated list of items
+                // Query names for both these queries are determined.
+                string pkQuery = $"{FormatNameForField(GetDefinedSingularName(entityName, entity))}_by_pk";
+                string listQuery = FormatNameForField(Pluralize(entityName, entity).Value);
 
-                if (queryNames.Contains(pkQueryName) || queryNames.Contains(listQueryName))
+                if (graphQLQueries.Contains(pkQuery) || graphQLQueries.Contains(listQuery))
                 {
                     throw new DataApiBuilderException(
-                        message: $"Entity {entityName} generates query names that already exists.",
+                        message: $"Entity {entityName} generates queries that already exist",
                         statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
                 else
                 {
-                    queryNames.Add(pkQueryName);
-                    queryNames.Add(listQueryName);
+                    graphQLQueries.Add(pkQuery);
+                    graphQLQueries.Add(listQuery);
                 }
             }
 

@@ -381,6 +381,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             }
 
             // Use UnsafeRelaxedJsonEscaping to be less strict about what is encoded.
+            // For eg. Without using this encoder, quotation mark (") will be encoded as
+            // \" rather than \u0022. And single quote(') will be encoded as \u0027 rather
+            // than being left unescaped.
             // More details can be found here:
             // https://docs.microsoft.com/en-us/dotnet/api/system.text.encodings.web.javascriptencoder.unsaferelaxedjsonescaping?view=net-6.0
             JsonSerializerOptions options = new()

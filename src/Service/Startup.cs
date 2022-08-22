@@ -389,7 +389,7 @@ namespace Azure.DataApiBuilder.Service
 
                 if (app.ApplicationServices.GetService<RuntimeConfigProvider>()!.IsDeveloperMode())
                 {
-                    // Perform semantic validation in development mode only.
+                    // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 }
 
@@ -406,7 +406,7 @@ namespace Azure.DataApiBuilder.Service
 
                 if (app.ApplicationServices.GetService<RuntimeConfigProvider>()!.IsDeveloperMode())
                 {
-                    // Perform semantic validation in development mode only.
+                    // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProvider!);
                 }
 

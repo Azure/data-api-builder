@@ -295,7 +295,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
         public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
         {
-            Console.WriteLine("Validating Relationship Section in Config...");
+            _logger.LogInformation("Validating Relationship Section in Config...");
             List<string> allEntities = new(runtimeConfig.Entities.Keys);
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
@@ -304,7 +304,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     continue;
                 }
 
-                foreach ((string relationshipName, Relationship relationship) in entity.Relationships!)
+                foreach ((string relationshipName, Relationship relationship) in entity.Relationships)
                 {
                     // entity referenced in relationship is not defined in the config.
                     if (!allEntities.Contains(relationship.TargetEntity))
@@ -315,9 +315,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                     }
 
-                    // if graphQL is disabled for an entity it can't be referenced by other entity in their relationship.
-                    object? graphQLDetails = runtimeConfig.Entities[relationship.TargetEntity].GraphQL;
-                    if (graphQLDetails is not null && graphQLDetails.Equals(false))
+                    // if graphQL is disabled for an entity it can't be referenced by other entity which has GraphQL enabled.
+                    object? targetEntityGraphQLDetails = runtimeConfig.Entities[relationship.TargetEntity].GraphQL;
+                    if (true.Equals(entity.GraphQL) && false.Equals(targetEntityGraphQLDetails))
                     {
                         throw new DataApiBuilderException(
                             message: $"entity: {relationship.TargetEntity} is disabled for GraphQL.",
@@ -330,12 +330,19 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     List<Tuple<string, string>> relationshipPairFromDatabase = new();
                     foreach (RelationShipPair relationShipPair in sqlMetadataProvider.GetPairToFkDefinition().Keys)
                     {
+                        // relationshipPairFromDatabase will contain list of all the pair that has foreign key relation
+                        // defined in the underlying database.
                         relationshipPairFromDatabase.Add(Tuple.Create(relationShipPair.ReferencedDbObject.Name, relationShipPair.ReferencingDbObject.Name));
                     }
 
+                    // check to look for foreignKey pair definition between entity and linking object
+                    // as linkingSourceFields and linkingTargetFields are null.
                     if (relationship.LinkingObject is not null
                         && (relationship.LinkingSourceFields is null && relationship.LinkingTargetFields is null))
                     {
+                        // creating different pair of linking object,with sourceEntity and targetEntity
+                        // and checking if their foreignKey pair is defined in the DB, by checking if it is present in
+                        // the relationshipPairFromDatabase
                         Tuple<string, string> pair1 = Tuple.Create(entity.GetSourceName(), relationship.LinkingObject);
                         Tuple<string, string> pair2 = Tuple.Create(relationship.LinkingObject, entity.GetSourceName());
 

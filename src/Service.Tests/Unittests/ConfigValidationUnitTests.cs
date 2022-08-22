@@ -77,27 +77,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test method to validate that an appropriate exception is thrown when an invalid relationship
-        /// is present in the runtime config.
-        /// Cases:
-        /// 1. Target Entity used in relationship is not defined in the config.
-        /// 2. Entity used in the relationship has GraphQL disabled.
-        /// 3. LinkingObject was provided without LinkingSourceField and LinkingTargetField. the relationship was
-        ///     not defined in the Database as well.
-        /// 4. target entity defined in the config, with enabled graphQL and relationship with LinkingObject available in DB.
+        /// Test method to check that Exception is thrown when Target Entity used in relationship is not defined in the config.
         /// </summary>
         [TestMethod]
-        public void InvalidRelationshipInConfig()
+        public void TestAddingRelationshipWithInvalidEntity()
         {
-            Action actionForRole = new(
-                Name: Operation.Create,
-                Fields: null,
-                Policy: null);
-
-            PermissionSetting permissionForEntity = new(
-                role: "anonymous",
-                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
-
             Dictionary<string, Relationship> relationshipMap = new();
 
             // Creating relationship with an Invalid entity in relationship
@@ -113,14 +97,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             relationshipMap.Add("test_rname1", sampleRelationship);
 
-            Entity sampleEntity1 = new(
-                Source: JsonSerializer.SerializeToElement("TEST_SOURCE1"),
-                Rest: null,
-                GraphQL: true,
-                Permissions: new PermissionSetting[] { permissionForEntity },
-                Relationships: relationshipMap,
-                Mappings: null
-                );
+            Entity sampleEntity1 = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCE1",
+                relationshipMap: relationshipMap
+            );
 
             Dictionary<string, Entity> entityMap = new();
             entityMap.Add("SampleEntity1", sampleEntity1);
@@ -138,15 +118,34 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
-            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x => x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
+            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
+                x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
 
             // Assert that expected exception is thrown. Entity used in relationship is Invalid
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
             Assert.AreEqual($"entity: {sampleRelationship.TargetEntity} used for relationship is not defined in the config.", ex.Message);
             Assert.AreEqual(HttpStatusCode.UnprocessableEntity, ex.StatusCode);
+        }
 
-            // Update the relationship to have a valid target entity
-            sampleRelationship = new(
+        /// <summary>
+        /// Test method to check that Exception is thrown when Entity used in the relationship has GraphQL disabled.
+        /// whereas the source entity has graphQL enabled.
+        /// </summary>
+        [TestMethod]
+        public void TestAddingRelationshipWithDisabledGraphQL()
+        {
+            // Adding entity with GraphQL disabled
+            Entity sampleEntity2 = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCE2",
+                relationshipMap: null
+            );
+
+            sampleEntity2.GraphQL = false; //setting graphQL to false will restrict it's usage in relationship
+
+            Dictionary<string, Relationship> relationshipMap = new();
+
+            Relationship sampleRelationship = new(
                 Cardinality: Cardinality.One,
                 TargetEntity: "SampleEntity2",
                 SourceFields: null,
@@ -156,28 +155,63 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 LinkingTargetFields: null
             );
 
-            runtimeConfig.Entities["SampleEntity1"].Relationships["test_rname1"] = sampleRelationship;
+            relationshipMap.Add("test_rname1", sampleRelationship);
 
-            // Adding entity with GraphQL disabled
-            Entity sampleEntity2 = new(
-                Source: JsonSerializer.SerializeToElement("TEST_SOURCE2"),
-                Rest: null,
-                GraphQL: false, //setting graphQL to false will restrict it's usage in relationship
-                Permissions: new PermissionSetting[] { permissionForEntity },
-                Relationships: null,
-                Mappings: null
+            // Adding relationship to SampleEntity1 (which has GraphQL enabled)
+            Entity sampleEntity1 = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCE1",
+                relationshipMap: relationshipMap
+            );
+
+            Dictionary<string, Entity> entityMap = new();
+            entityMap.Add("SampleEntity1", sampleEntity1);
+            entityMap.Add("SampleEntity2", sampleEntity2);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                MsSql: null,
+                CosmosDb: null,
+                PostgreSql: null,
+                MySql: null,
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                Entities: entityMap
                 );
 
-            runtimeConfig.Entities.Add("SampleEntity2", sampleEntity2);
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
+                x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
 
-            // Exception should be thrown as we cannot use an entity (with graphQL disabled) in a relationship.
-            ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
-            Assert.AreEqual($"entity: {sampleRelationship.TargetEntity} is disabled for GraphQL.", ex.Message);
+            // Assert that expected exception is thrown. Entity used in relationship is Invalid
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+            Assert.AreEqual($"entity: {sampleRelationship.TargetEntity} used for relationship is not defined in the config.", ex.Message);
             Assert.AreEqual(HttpStatusCode.UnprocessableEntity, ex.StatusCode);
+        }
+
+        /// <summary>
+        /// Test method to check that Exception is thrown when LinkingObject was provided
+        /// without LinkingSourceField and LinkingTargetField. And the relationship is not defined in the Database as well.
+        /// Also checks that After Adding the foreign key pair in DB, it should not throw exception.
+        /// </summary>
+        [TestMethod]
+        public void TestRelationshipWithLinkingObjectNotHavingForeignKeyPairDefinedInDB()
+        {
+            Action actionForRole = new(
+                Name: Operation.Create,
+                Fields: null,
+                Policy: null);
+
+            PermissionSetting permissionForEntity = new(
+                role: "anonymous",
+                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+
+            Dictionary<string, Relationship> relationshipMap = new();
 
             // adding linking object without LinkingSourceFields and LinkingTargetFields
             // Linking object doesn't have a defined primary-foreign key relation in the DB.
-            sampleRelationship = new(
+            Relationship sampleRelationship = new(
                 Cardinality: Cardinality.Many,
                 TargetEntity: "SampleEntity2",
                 SourceFields: null,
@@ -187,7 +221,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 LinkingTargetFields: null
             );
 
-            runtimeConfig.Entities["SampleEntity1"].Relationships["test_rname1"] = sampleRelationship;
+            relationshipMap.Add("test_rname1", sampleRelationship);
+
+            Entity sampleEntity1 = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCE1",
+                relationshipMap: relationshipMap
+            );
 
             sampleRelationship = new(
                 Cardinality: Cardinality.Many,
@@ -202,19 +241,32 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             relationshipMap = new();
             relationshipMap.Add("test_rname2", sampleRelationship);
 
-            sampleEntity2 = new(
-                Source: JsonSerializer.SerializeToElement("TEST_SOURCE2"),
-                Rest: null,
-                GraphQL: true,
-                Permissions: new PermissionSetting[] { permissionForEntity },
-                Relationships: relationshipMap,
-                Mappings: null
+            Entity sampleEntity2 = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCE2",
+                relationshipMap: relationshipMap
+            );
+
+            Dictionary<string, Entity> entityMap = new();
+            entityMap.Add("SampleEntity1", sampleEntity1);
+            entityMap.Add("SampleEntity2", sampleEntity2);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                MsSql: null,
+                CosmosDb: null,
+                PostgreSql: null,
+                MySql: null,
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                Entities: entityMap
                 );
 
-            runtimeConfig.Entities["SampleEntity2"] = sampleEntity2;
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x => x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
 
             // Assert that expected exception is thrown.
-            ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
             Assert.AreEqual($"Could not find relation between Linking Object: {sampleRelationship.LinkingObject} with entities: SampleEntity2 and SampleEntity1.", ex.Message);
             Assert.AreEqual(HttpStatusCode.UnprocessableEntity, ex.StatusCode);
 
@@ -493,6 +545,35 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection);
             }
+        }
+
+        /// <summary>
+        /// Method to create a sample entity with GraphQL enabled,
+        /// with given source and relationship Info.
+        /// </summary>
+        /// <param name="source">Database name of entity.</param>
+        /// <param name="relationshipMap">Dictionary containing {relationshipName, Relationship}</param>
+        private static Entity GetSampleEntityUsingSourceAndRelationshipMap(string source, Dictionary<string, Relationship>? relationshipMap)
+        {
+            Action actionForRole = new(
+                Name: Operation.Create,
+                Fields: null,
+                Policy: null);
+
+            PermissionSetting permissionForEntity = new(
+                role: "anonymous",
+                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+
+            Entity sampleEntity = new(
+                Source: JsonSerializer.SerializeToElement(source),
+                Rest: null,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: relationshipMap,
+                Mappings: null
+                );
+
+            return sampleEntity;
         }
     }
 }

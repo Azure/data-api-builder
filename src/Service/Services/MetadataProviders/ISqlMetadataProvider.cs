@@ -21,6 +21,9 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         string GetSchemaName(string entityName);
 
+        /// <summary>
+        /// Get the foreign key pair from the underlying database.
+        /// </summary>
         Dictionary<RelationShipPair, ForeignKeyDefinition> GetPairToFkDefinition();
 
         /// <summary>

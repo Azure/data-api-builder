@@ -1221,7 +1221,9 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to verify Failure on adding an entity in the relationship that is disabled for graphQL.
+        /// Test to verify that adding a relationship to an entity which has GraphQL disabled should fail.
+        /// The test created 2 entities. One entity has GQL enabled which tries to create relationship with
+        /// another entity which has GQL disabled which is invalid.
         /// </summary>
         [TestMethod]
         public void TestVerifyCanAddRelationshipWithEntityDisabledForGraphQL()

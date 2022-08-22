@@ -400,7 +400,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 sqlQuery: string.Empty,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
@@ -425,7 +425,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 sqlQuery: string.Empty,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.InternalServerError,
                 expectedSubStatusCode: $"{DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed}"
@@ -453,7 +453,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     sqlQuery: string.Empty,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: "Invalid request body. Missing field in body: publisher_id.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
@@ -483,7 +483,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     sqlQuery: string.Empty,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: $"Cannot perform INSERT and could not find {_integrationEntityName} with primary key <id: 1000> to perform UPDATE on.",
                     expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
@@ -505,7 +505,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     sqlQuery: string.Empty,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: $"Cannot perform INSERT and could not find {_entityWithCompositePrimaryKey} with primary key <id: 5002, book_id: 1> to perform UPDATE on.",
                     expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
@@ -533,7 +533,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     sqlQuery: string.Empty,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: $"Invalid request body. Missing field in body: publisher_id.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
@@ -551,7 +551,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     sqlQuery: string.Empty,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: $"Invalid request body. Missing field in body: categoryName.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
@@ -608,7 +608,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     operationType: Operation.Upsert,
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: "No Update could be performed, record not found",
                     expectedStatusCode: HttpStatusCode.PreconditionFailed,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
@@ -638,7 +638,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     sqlQuery: string.Empty,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: "Primary Key for UPSERT requests is required.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedLocationHeader: expectedLocationHeader
@@ -668,7 +668,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 sqlQuery: string.Empty,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -688,7 +688,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 sqlQuery: string.Empty,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );

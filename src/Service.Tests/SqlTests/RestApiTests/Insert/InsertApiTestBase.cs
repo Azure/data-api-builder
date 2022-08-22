@@ -230,7 +230,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 sqlQuery: string.Empty,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Query string for POST requests is an invalid url.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -255,7 +255,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 sqlQuery: string.Empty,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Mutation operation on many instances of an entity in a single request are not yet supported.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
@@ -281,7 +281,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 sqlQuery: string.Empty,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Parameter \"[1234,4321]\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
@@ -304,7 +304,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 sqlQuery: string.Empty,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Missing field in body: title.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -329,7 +329,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 sqlQuery: string.Empty,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Field not allowed in body: id.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -354,7 +354,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 sqlQuery: string.Empty,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Missing field in body: id.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
@@ -381,7 +381,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 sqlQuery: string.Empty,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Missing field in body: title.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
@@ -400,7 +400,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 sqlQuery: string.Empty,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
@@ -426,7 +426,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 sqlQuery: string.Empty,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid value for field piecesRequired in request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -447,7 +447,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 sqlQuery: string.Empty,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -477,7 +477,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 entity: _integrationBrokenMappingEntity,
                 sqlQuery: string.Empty,
                 operationType: Operation.Insert,
-                exception: true,
+                exceptionExpected: true,
                 requestBody: requestBody,
                 expectedErrorMessage: "Invalid request body. Contained unexpected fields in body: hazards",
                 expectedStatusCode: HttpStatusCode.BadRequest,

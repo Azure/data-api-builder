@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     sqlQuery: string.Empty,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: "Not Found",
                     expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
@@ -128,7 +128,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     sqlQuery: string.Empty,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
                     expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
@@ -151,7 +151,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     sqlQuery: string.Empty,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: "Primary Key for DELETE requests is required.",
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
@@ -182,7 +182,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     sqlQuery: string.Empty,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: message,
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()

@@ -339,7 +339,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="sqlQuery">string represents the query to be executed</param>
         /// <param name="operationType">The operation type to be tested.</param>
         /// <param name="requestBody">string represents JSON data used in mutation operations</param>
-        /// <param name="exception">bool represents if we expect an exception</param>
+        /// <param name="exceptionExpected">bool represents if we expect an exception</param>
         /// <param name="expectedErrorMessage">string represents the error message in the JsonResponse</param>
         /// <param name="expectedStatusCode">int represents the returned http status code</param>
         /// <param name="expectedSubStatusCode">enum represents the returned sub status code</param>
@@ -354,7 +354,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string path = "api",
             IHeaderDictionary headers = null,
             string requestBody = null,
-            bool exception = false,
+            bool exceptionExpected = false,
             string expectedErrorMessage = "",
             HttpStatusCode expectedStatusCode = HttpStatusCode.OK,
             string expectedSubStatusCode = "BadRequest",
@@ -434,7 +434,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             }
             else
             {
-                if (exception)
+                if (exceptionExpected)
                 {
                     expected = JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
@@ -462,7 +462,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 expected: expected,
                 request: request,
                 response: response,
-                exception: exception,
+                exceptionExpected: exceptionExpected,
                 httpMethod: httpMethod,
                 expectedLocationHeader: expectedLocationHeader,
                 verifyNumRecords: verifyNumRecords);

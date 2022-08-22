@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="expected">Expected result of the query execution.</param>
         /// <param name="request">The HttpRequestMessage sent to the engine via HttpClient.</param>
         /// <param name="response">The HttpResponseMessage returned by the engine.</param>
-        /// <param name="exception">Boolean value indicating whether an exception is expected as
+        /// <param name="exceptionExpected">Boolean value indicating whether an exception is expected as
         /// a result of executing the request on the engine.</param>
         /// <param name="httpMethod">The http method specified in the request.</param>
         /// <param name="expectedLocationHeader">The expected location header in the response(if any).</param>
@@ -98,17 +98,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string expected,
             HttpRequestMessage request,
             HttpResponseMessage response,
-            bool exception,
+            bool exceptionExpected,
             HttpMethod httpMethod,
             string expectedLocationHeader,
             int verifyNumRecords)
         {
             string responseBody = await response.Content.ReadAsStringAsync();
-            if (!exception)
+            if (!exceptionExpected)
             {
-                Console.WriteLine($"Expected: {expected}\nActual: {responseBody}");
-                Assert.IsTrue(JsonStringsDeepEqual(expected, responseBody));
-
                 // Assert that the expectedLocation and actualLocation are equal in case of
                 // POST operation.
                 if (httpMethod == HttpMethod.Post)
@@ -119,12 +116,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Assert.AreEqual(expectedLocationHeader, actualLocation);
                 }
 
-                if (response.StatusCode == HttpStatusCode.OK && verifyNumRecords >= 0)
+                // Assert the number of records received is equal to expected number of records.
+                if (response.StatusCode is HttpStatusCode.OK && verifyNumRecords >= 0)
                 {
-                    // Assert the number of records received is equal to expected number of records.
                     Dictionary<string, JsonElement[]> actualAsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(responseBody);
                     Assert.AreEqual(actualAsDict["value"].Length, verifyNumRecords);
                 }
+
+                Console.WriteLine($"Expected: {expected}\nActual: {responseBody}");
+                Assert.IsTrue(JsonStringsDeepEqual(expected, responseBody));
             }
             else
             {

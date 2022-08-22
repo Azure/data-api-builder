@@ -363,7 +363,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$filter=id eq (publisher_id gt 1)",
                 entity: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringSingleAndFilter)),
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "A binary operator with incompatible types was detected. " +
                     "Found operand types 'Edm.Int32' and 'Edm.Boolean' for operator kind 'Equal'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
@@ -940,7 +940,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=0",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid number of items requested, $first must be an integer greater than 0. Actual value: 0",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -964,7 +964,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: $"?$filter={keyword}{value} {compareTo}",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "$filter query parameter is not well formed.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
@@ -979,7 +979,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$filter=pq ge 4",
                 entity: _simple_all_books,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: $"Could not find a property named 'pq' on type 'default_namespace.{_simple_all_books}.{GetDefaultSchemaForEdmModel()}books_view_all'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
@@ -989,7 +989,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$filter=pq le 4",
                 entity: _simple_subset_stocks,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: $"Could not find a property named 'pq' on type 'default_namespace.{_simple_subset_stocks}.{GetDefaultSchemaForEdmModel()}stocks_view_selected'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
@@ -1000,7 +1000,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$filter=not (title gt 1)",
                 entity: _composite_subset_bookPub,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: $"Could not find a property named 'title' on type 'default_namespace.{_composite_subset_bookPub}.{GetDefaultSchemaForEdmModel()}books_publishers_view_composite'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
@@ -1017,7 +1017,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "The request is invalid since it contains a primary key with no value specified.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -1037,7 +1037,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Support for url template with implicit primary key field names is not yet added.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
@@ -1055,7 +1055,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$select=id,content",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid field to be returned requested: content",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -1078,7 +1078,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entity: _nonExistentEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: $"{_nonExistentEntityName} is not a valid entity.",
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
@@ -1093,7 +1093,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entity: integrationEntityNameIncorrectCase,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: $"{integrationEntityNameIncorrectCase} is not a valid entity.",
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
@@ -1113,7 +1113,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$select=id,null",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid Field name: null or white space",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
@@ -1132,7 +1132,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$select=",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid Field name: null or white space",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
@@ -1150,7 +1150,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$orderby=id random",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: HttpUtility.UrlDecode("Syntax error at position 9 in \u0027id random\u0027."),
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -1167,7 +1167,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$orderby=Pinecone",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: $"Could not find a property named 'Pinecone' on type 'default_namespace.{_integrationEntityName}.{GetDefaultSchemaForEdmModel()}books'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -1185,7 +1185,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$orderby='Large Pinecone'",
                 entity: _integrationEntityHasColumnWithSpace,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: $"Invalid orderby column requested: Large Pinecone.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -1203,7 +1203,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?orderby=id",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: $"Invalid Query Parameter: orderby",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -1220,7 +1220,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$orderby=null",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "OrderBy property is not supported.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -1241,7 +1241,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entity: _integrationBrokenMappingEntity,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "The request is invalid since the primary keys: spores requested were not found in the entity definition.",
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: "EntityNotFound"
@@ -1263,7 +1263,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$select=hazards",
                 entity: _integrationBrokenMappingEntity,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid field to be returned requested: hazards",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
@@ -1284,7 +1284,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$select=species",
                 entity: _integrationMappingEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithUnMappedFieldsToBeReturned)),
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid field to be returned requested: species",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -1322,7 +1322,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: $"?$select=id",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: message,
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -1357,7 +1357,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: $"?$select={sqlInjection}",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: $"Invalid field to be returned requested: {sqlInjection}",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -1392,7 +1392,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: $"?$select={sqlInjection}",
                 entity: _integrationEntityName,
                 sqlQuery: string.Empty,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: $"Invalid field to be returned requested: {sqlInjection}",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );

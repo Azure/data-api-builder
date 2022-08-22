@@ -323,7 +323,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     sqlQuery: null,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: $"Cannot perform INSERT and could not find {_integrationEntityName} with primary key <id: 1000> to perform UPDATE on.",
                     expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
@@ -352,7 +352,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     sqlQuery: null,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: $"Cannot perform INSERT and could not find {_integration_NonAutoGenPK_EntityName} with primary key <id: 1000> to perform UPDATE on.",
                     expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
@@ -384,7 +384,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     operationType: Operation.UpsertIncremental,
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: "No Update could be performed, record not found",
                     expectedStatusCode: HttpStatusCode.PreconditionFailed,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
@@ -414,7 +414,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 entity: _integrationBrokenMappingEntity,
                 sqlQuery: string.Empty,
                 operationType: Operation.UpsertIncremental,
-                exception: true,
+                exceptionExpected: true,
                 requestBody: requestBody,
                 expectedErrorMessage: "Invalid request body. Either insufficient or extra fields supplied.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
@@ -446,7 +446,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 sqlQuery: string.Empty,
                 operationType: Operation.UpsertIncremental,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -466,7 +466,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 sqlQuery: string.Empty,
                 operationType: Operation.UpsertIncremental,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );

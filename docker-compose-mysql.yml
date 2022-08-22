@@ -1,8 +1,0 @@
-version: "3.9"
-services:
-  hawaii:
-    image: "hawaiiacr.azurecr.io/hawaii/refs/heads/main:latest"
-    ports:
-      - "5000:5000"
-    volumes:
-      - "./DataGateway.Service/hawaii-config.MySql.json:/App/hawaii-config.json"

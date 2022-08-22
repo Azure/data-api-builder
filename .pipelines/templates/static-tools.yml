@@ -11,6 +11,9 @@ jobs:
     vmImage: '${{ parameters.VmImage }}'
 
   steps:
+  - task: NuGetAuthenticate@0
+    displayName: 'NuGet Authenticate'
+
   - checkout: self  # self represents the repo where the initial Pipelines YAML file was found
     clean: true  # if true, execute `execute git clean -ffdx && git reset --hard HEAD` before fetching
 
@@ -60,10 +63,10 @@ jobs:
     displayName: 'Vulnerability Assessment'
 
   - task: DotNetCoreCLI@2
-    displayName: Build Azure.DataGateway.Service.sln
+    displayName: Build Azure.DataApiBuilder.sln
     inputs:
       command: build
-      projects: 'Azure.DataGateway.Service.sln'
+      projects: 'src/Azure.DataApiBuilder.sln'
       configuration: '${{ parameters.BuildConfiguration }}'
       publishTestResults: true
 

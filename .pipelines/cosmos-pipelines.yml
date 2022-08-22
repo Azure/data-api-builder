@@ -23,22 +23,30 @@ variables:
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
 steps:
+- task: NuGetAuthenticate@0
+  displayName: 'NuGet Authenticate'
+  
 - task: UseDotNet@2
   displayName: Setup .NET SDK v6.0.x
   inputs:
     packageType: sdk
     version: 6.0.x
+    
 - task: NuGetToolInstaller@1
+
 - task: NuGetCommand@2
   displayName: Restore NuGet packages
   inputs:
     restoreSolution: '$(solution)'
+    feedsToUse: config
+    nugetConfigPath: Nuget.config
+
 - task: FileTransform@1
-  displayName: 'Generate hawaii-config.Cosmos.json'
+  displayName: 'Generate dab-config.Cosmos.json'
   inputs:
     folderPath: '$(System.DefaultWorkingDirectory)'
     fileType: 'json'
-    targetFiles: 'DataGateway.Service/hawaii-config.Cosmos.json'
+    targetFiles: 'src/Service/dab-config.Cosmos.json'
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:

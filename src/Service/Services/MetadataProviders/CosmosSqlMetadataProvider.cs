@@ -84,8 +84,8 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
 
             return database switch
             {
-                string s when string.IsNullOrEmpty(s) && !string.IsNullOrEmpty(_cosmosDb.Container) => _cosmosDb.Database,
-                string s => s,
+                string db when string.IsNullOrEmpty(db) && !string.IsNullOrEmpty(_cosmosDb.Database) => _cosmosDb.Database,
+                string db => db,
                 _ => throw new DataApiBuilderException(
                         message: $"No container provided for {entityName}",
                         statusCode: System.Net.HttpStatusCode.InternalServerError,

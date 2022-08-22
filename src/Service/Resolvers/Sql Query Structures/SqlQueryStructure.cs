@@ -171,8 +171,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                             value: predicate.Value);
             }
 
-            // context.OrderByColumnsObackingColumns will lack TableAlias because it is created in RequestParser
-            // which may be called for any type of operation. To avoid coupling the OrderByClauseInUrl
+            // context.OrderByClauseOfBackingColumns will lack TableAlias because it is created in RequestParser
+            // which may be called for any type of operation. To avoid coupling the OrderByClauseOfBackingColumns
             // to only Find, we populate the TableAlias in this constructor where we know we have a Find operation.
             OrderByColumns = context.OrderByClauseOfBackingColumns is not null ?
                 context.OrderByClauseOfBackingColumns : PrimaryKeyAsOrderByColumns();
@@ -231,24 +231,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
             ParametrizeColumns();
-        }
-
-        /// <summary>
-        /// The OrderByClauseInUrl uses exposed names since it comes from
-        /// the request. Here we convert this to use backing column for
-        /// the actual query we will generate.
-        /// </summary>
-        /// <param name="orderByClauseInUrl">OrderByColumns with exposed names.</param>
-        /// <returns>OrderByColumns with backing column names.</returns>
-        private List<OrderByColumn> GetOrderByBackingColumns(List<OrderByColumn> orderByClauseInUrl)
-        {
-            foreach (OrderByColumn column in orderByClauseInUrl)
-            {
-                SqlMetadataProvider.TryGetBackingColumn(EntityName, column.ColumnName!, out string? backingColumn);
-                column.ColumnName = backingColumn!;
-            }
-
-            return orderByClauseInUrl;
         }
 
         /// <summary>

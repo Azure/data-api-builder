@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Service.Models
 {

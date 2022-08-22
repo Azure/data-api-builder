@@ -348,7 +348,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // pk_query: book_by_pk
             // List Query: books
             Entity Book = GraphQLTestHelpers.GenerateEmptyEntity();
-            Book.GraphQL = new GraphQLGlobalSettings(true);
+            Book.GraphQL = new GraphQLEntitySettings(true);
 
             // Entity Name: book
             // pk_query: book_by_pk

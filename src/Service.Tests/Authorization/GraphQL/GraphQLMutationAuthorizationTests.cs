@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 
             // Creates Mock AuthorizationResolver to return a preset result based on [TestMethod] input.
             Mock<IAuthorizationResolver> _authorizationResolver = new();
-            _authorizationResolver.Setup(x => x.AreColumnsAllowedForAction(
+            _authorizationResolver.Setup(x => x.AreColumnsAllowedForOperation(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<Operation>(),

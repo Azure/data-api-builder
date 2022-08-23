@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Controllers;
@@ -490,6 +491,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
+                "FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationMappingTable + @"
+                      ORDER BY species
+                      LIMIT 100
+                  ) AS subq"
+            },
+            {
                 "FindTestWithQueryStringSpaceInNamesOrderByAsc",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('ID Number', `ID Number`, 'First Name', `First Name`, 'Last Name', `Last Name`)) AS data
@@ -783,5 +795,42 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         {
             return _queryMap[key];
         }
+
+        // Pending Stored Procedure Support
+        [TestMethod]
+        [Ignore]
+        public override Task FindManyStoredProcedureTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindOneStoredProcedureTestUsingParameter()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindStoredProcedureWithNonEmptyPrimaryKeyRoute()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindStoredProcedureWithMissingParameter()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindStoredProcedureWithNonexistentParameter()
+        {
+            throw new NotImplementedException();
+        }
+
     }
 }

@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Auth;
@@ -355,6 +356,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <returns>string in JSON format</returns>
         protected static async Task<string> GetDatabaseResultAsync(
             string queryText,
+            bool expectJson = true,
             Operation operationType = Operation.Read)
         {
             string result;
@@ -370,8 +372,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             }
             else
             {
-                using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader, _queryExecutor));
-                result = sqlResult.RootElement.ToString();
+                if (expectJson)
+                {
+                    using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader, _queryExecutor));
+                    result = sqlResult.RootElement.ToString();
+                }
+                else
+                {
+                    JsonArray resultArray = new();
+                    Dictionary<string, object> row;
+
+                    while ((row = await _queryExecutor.ExtractRowFromDbDataReader(reader)) is not null)
+                    {
+                        JsonElement jsonRow = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(row));
+                        resultArray.Add(jsonRow);
+                    }
+
+                    using JsonDocument sqlResult = JsonDocument.Parse(resultArray.ToJsonString());
+                    result = sqlResult.RootElement.ToString();
+                }
+
             }
 
             return result;
@@ -412,7 +432,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string expectedLocationHeader = null,
             string expectedAfterQueryString = "",
             bool paginated = false,
-            int verifyNumRecords = -1)
+            int verifyNumRecords = -1,
+            bool expectJson = true)
         {
             ConfigureRestController(
                 controller,
@@ -468,7 +489,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 }
                 else
                 {
-                    string dbResult = await GetDatabaseResultAsync(sqlQuery);
+                    string dbResult = await GetDatabaseResultAsync(sqlQuery, expectJson);
                     // For FIND requests, null result signifies an empty result set
                     dbResult = (operationType is Operation.Read && dbResult is null) ? "[]" : dbResult;
                     expected = $"{{\"value\":{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";

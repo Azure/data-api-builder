@@ -1073,7 +1073,7 @@ namespace Cli.Tests
         {
             string? role, actions;
             IEnumerable<string> permissions = new string[] { "anonymous,create" }; //wrong format
-            bool isSuccess = TryGetRoleAndActionFromPermission(permissions, out role, out actions);
+            bool isSuccess = TryGetRoleAndOperationFromPermission(permissions, out role, out actions);
 
             Assert.IsFalse(isSuccess);
             Assert.IsNull(role);

@@ -368,7 +368,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             && (relationshipPairFromDatabase.Contains(pair3) || relationshipPairFromDatabase.Contains(pair4))))
                         {
                             throw new DataApiBuilderException(
-                                message: $"Could not find relation between Linking Object: {relationship.LinkingObject}"+
+                                message: $"Could not find relation between Linking Object: {relationship.LinkingObject}" +
                                     " with entities: {relationship.TargetEntity} and {entityName}.",
                                 statusCode: System.Net.HttpStatusCode.UnprocessableEntity,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);

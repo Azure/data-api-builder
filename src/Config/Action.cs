@@ -10,7 +10,7 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="Name">What kind of action is allowed.</param>
     /// <param name="Policy">Details about item-level security rules.</param>
     /// <param name="Fields">Details what fields to include or exclude</param>
-    public record Action(
+    public record PermissionOperation(
         [property: JsonPropertyName("action"),
         JsonConverter(typeof(OperationEnumJsonConverter))]
         Operation Name,
@@ -19,8 +19,8 @@ namespace Azure.DataApiBuilder.Config
         [property: JsonPropertyName("fields")]
         Field? Fields)
     {
-        // Set of allowed actions for a request.
-        public static readonly HashSet<Operation> ValidPermissionActions = new() { Operation.Create, Operation.Read, Operation.Update, Operation.Delete };
+        // Set of allowed operations for a request.
+        public static readonly HashSet<Operation> ValidPermissionOperations = new() { Operation.Create, Operation.Read, Operation.Update, Operation.Delete };
     }
 
     /// <summary>

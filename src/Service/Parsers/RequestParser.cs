@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
                         break;
                     case SORT_URL:
                         string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
-                        context.OrderByClauseInUrl = GenerateOrderByList(context, sqlMetadataProvider, sortQueryString);
+                        (context.OrderByClauseInUrl, context.OrderByClauseOfBackingColumns) = GenerateOrderByLists(context, sqlMetadataProvider, sortQueryString);
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -135,9 +135,9 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// associated with the sort param.</param>
         /// <returns>A List<OrderByColumns></returns>
         /// <exception cref="DataApiBuilderException"></exception>
-        private static List<OrderByColumn>? GenerateOrderByList(RestRequestContext context,
-                                                                ISqlMetadataProvider sqlMetadataProvider,
-                                                                string sortQueryString)
+        private static (List<OrderByColumn>?, List<OrderByColumn>?) GenerateOrderByLists(RestRequestContext context,
+                                                                                         ISqlMetadataProvider sqlMetadataProvider,
+                                                                                         string sortQueryString)
         {
             string schemaName = context.DatabaseObject.SchemaName;
             string tableName = context.DatabaseObject.Name;
@@ -148,7 +148,9 @@ namespace Azure.DataApiBuilder.Service.Parsers
             // used for performant Remove operations
             HashSet<string> remainingKeys = new(primaryKeys);
 
-            List<OrderByColumn> orderByList = new();
+            List<OrderByColumn> orderByListUrl = new();
+            List<OrderByColumn> orderByListBackingColumn = new();
+
             // OrderBy AST is in the form of a linked list
             // so we traverse by calling node.ThenBy until
             // node is null
@@ -159,42 +161,49 @@ namespace Azure.DataApiBuilder.Service.Parsers
                 // column name of null. ie: $orderby='hello world', or $orderby=null
                 // note: null support is not currently implemented.
                 QueryNode? expression = node.Expression is not null ? node.Expression :
-                                        throw new DataApiBuilderException(message: "OrderBy property is not supported.",
-                                                                       HttpStatusCode.BadRequest,
-                                                                       DataApiBuilderException.SubStatusCodes.BadRequest);
-                string backingColumnName;
+                                        throw new DataApiBuilderException(
+                                            message: "OrderBy property is not supported.",
+                                            HttpStatusCode.BadRequest,
+                                            DataApiBuilderException.SubStatusCodes.BadRequest);
+
+                string? backingColumnName;
+                string exposedName;
                 if (expression.Kind is QueryNodeKind.SingleValuePropertyAccess)
                 {
+                    exposedName = ((SingleValuePropertyAccessNode)expression).Property.Name;
+                    sqlMetadataProvider.TryGetBackingColumn(context.EntityName, exposedName, out backingColumnName);
                     // if name is in SingleValuePropertyAccess node it matches our model and we will
                     // always be able to get backing column successfully
-                    sqlMetadataProvider.TryGetBackingColumn(context.EntityName, ((SingleValuePropertyAccessNode)expression).Property.Name, out backingColumnName!);
                 }
                 else if (expression.Kind is QueryNodeKind.Constant &&
                         ((ConstantNode)expression).Value is not null)
                 {
                     // since this comes from constant node, it was not checked against our model
                     // so this may return false in which case we throw for a bad request
-                    if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, ((ConstantNode)expression).Value.ToString()!, out backingColumnName!))
+                    exposedName = ((ConstantNode)expression).Value.ToString()!;
+                    if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, exposedName, out backingColumnName))
                     {
                         throw new DataApiBuilderException(
-                            message: $"Invalid orderby column requested: {((ConstantNode)expression).Value.ToString()!}.",
+                            message: $"Invalid orderby column requested: {exposedName}.",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
                 }
                 else
                 {
-                    throw new DataApiBuilderException(message: "OrderBy property is not supported.",
-                                                   HttpStatusCode.BadRequest,
-                                                   DataApiBuilderException.SubStatusCodes.BadRequest);
+                    throw new DataApiBuilderException(
+                        message: "OrderBy property is not supported.",
+                        HttpStatusCode.BadRequest,
+                        DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
                 // Sorting order is stored in node.Direction as OrderByDirection Enum
                 // We convert to an Enum of our own that matches the SQL text we want
                 OrderBy direction = GetDirection(node.Direction);
                 // Add OrderByColumn and remove any matching columns from our primary key set
-                orderByList.Add(new OrderByColumn(schemaName, tableName, backingColumnName, direction: direction));
-                remainingKeys.Remove(backingColumnName);
+                orderByListUrl.Add(new OrderByColumn(schemaName, tableName, exposedName, direction: direction));
+                orderByListBackingColumn.Add(new OrderByColumn(schemaName, tableName, backingColumnName!, direction: direction));
+                remainingKeys.Remove(backingColumnName!);
                 node = node.ThenBy;
             }
 
@@ -205,11 +214,13 @@ namespace Azure.DataApiBuilder.Service.Parsers
             {
                 if (remainingKeys.Contains(column))
                 {
-                    orderByList.Add(new OrderByColumn(schemaName, tableName, column));
+                    sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, column, out string? exposedName);
+                    orderByListUrl.Add(new OrderByColumn(schemaName, tableName, exposedName!));
+                    orderByListBackingColumn.Add(new OrderByColumn(schemaName, tableName, column));
                 }
             }
 
-            return orderByList;
+            return (orderByListUrl, orderByListBackingColumn);
         }
 
         /// <summary>

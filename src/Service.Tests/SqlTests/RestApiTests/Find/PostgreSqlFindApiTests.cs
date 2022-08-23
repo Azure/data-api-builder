@@ -382,6 +382,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
+                "FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                       SELECT  ""treeId"", ""species"" AS ""fancyName"", ""region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                      ORDER BY ""species""
+                  ) AS subq"
+            },
+            {
                 "FindTestWithFirstAndSpacedColumnOrderBy",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data

@@ -36,6 +36,11 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         TableDefinition GetTableDefinition(string entityName);
 
+        /// <summary>
+        /// Obtains the underlying StoredProcedureDefinition for the given entity name.
+        /// </summary>
+        StoredProcedureDefinition GetStoredProcedureDefinition(string entityName);
+
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
 
         /// <summary>

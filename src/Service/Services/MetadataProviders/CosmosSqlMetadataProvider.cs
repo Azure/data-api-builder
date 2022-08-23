@@ -98,6 +98,12 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotSupportedException("Cosmos backends don't support direct table definitions. Definitions are provided via the GraphQL schema");
         }
 
+        public StoredProcedureDefinition GetStoredProcedureDefinition(string entityName)
+        {
+            // There's a lot of unimplemented methods here, maybe need to rethink the current interface implementation
+            throw new NotSupportedException("Cosmos backends (probably) don't support direct stored procedure definitions, either.");
+        }
+
         public Task InitializeAsync()
         {
             return Task.CompletedTask;

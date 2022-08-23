@@ -35,7 +35,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Given the RestRequestContext, obtains the query text and executes it against the backend.
         /// </summary>
-        public Task<IActionResult> ExecuteAsync(RestRequestContext context);
+        public Task<IActionResult> ExecuteAsync(FindRequestContext context);
+
+        // <summary>
+        // Given the StoredProcedureRequestContext, obtains the query text and executes it against the backend.
+        // </summary>
+        public Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context);
 
         /// <summary>
         /// Resolves a jsonElement representing an inner object based on the field's schema and metadata

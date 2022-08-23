@@ -1228,14 +1228,14 @@ namespace Cli.Tests
         [TestMethod]
         public void TestVerifyCanAddRelationshipWithEntityDisabledForGraphQL()
         {
-            Action actionForRole = new(
+            PermissionOperation actionForRole = new(
                 Name: Operation.Create,
                 Fields: null,
                 Policy: null);
 
             PermissionSetting permissionForEntity = new(
                 role: "anonymous",
-                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity1 = new(
                 Source: JsonSerializer.SerializeToElement("SOURCE1"),

@@ -523,7 +523,6 @@ namespace Cli
             }
 
             // Checking if both cardinality and targetEntity is provided.
-            //
             if (cardinality is null || targetEntity is null)
             {
                 Console.WriteLine("cardinality and target entity is mandatory to update/add a relationship.");
@@ -531,7 +530,6 @@ namespace Cli
             }
 
             // Both the source entity and target entity needs to present in config to establish relationship.
-            //
             if (!runtimeConfig.Entities.ContainsKey(targetEntity))
             {
                 Console.WriteLine($"Entity:{targetEntity} is not present. Relationship cannot be added.");
@@ -539,7 +537,6 @@ namespace Cli
             }
 
             // Check if provided value of cardinality is present in the enum.
-            //
             if (!string.Equals(cardinality, Cardinality.One.ToString(), StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(cardinality, Cardinality.Many.ToString(), StringComparison.OrdinalIgnoreCase))
             {
@@ -548,7 +545,6 @@ namespace Cli
             }
 
             // If GraphQL is disabled, entity cannot be used in relationship
-            //
             if (false.Equals(runtimeConfig.Entities[targetEntity].GraphQL))
             {
                 Console.WriteLine($"Entity: {targetEntity} cannot be used in relationship as it is disabled for GraphQL.");

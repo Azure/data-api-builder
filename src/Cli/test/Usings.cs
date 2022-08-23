@@ -7,4 +7,3 @@ global using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
 global using static Cli.ConfigGenerator;
 global using static Cli.Tests.TestHelper;
 global using static Cli.Utils;
-global using Action = Azure.DataApiBuilder.Config.Action;

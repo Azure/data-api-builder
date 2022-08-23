@@ -198,15 +198,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void TestRelationshipWithLinkingObjectNotHavingForeignKeyPairDefinedInDB()
         {
-            Action actionForRole = new(
-                Name: Operation.Create,
-                Fields: null,
-                Policy: null);
-
-            PermissionSetting permissionForEntity = new(
-                role: "anonymous",
-                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
-
             Dictionary<string, Relationship> relationshipMap = new();
 
             // adding linking object without LinkingSourceFields and LinkingTargetFields
@@ -263,11 +254,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
-            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x => x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
+            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
+                x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
 
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
-            Assert.AreEqual($"Could not find relation between Linking Object: {sampleRelationship.LinkingObject} with entities: SampleEntity2 and SampleEntity1.", ex.Message);
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+            Assert.AreEqual($"Could not find relation between Linking Object: {sampleRelationship.LinkingObject}"
+                + " with entities: SampleEntity2 and SampleEntity1.", ex.Message);
             Assert.AreEqual(HttpStatusCode.UnprocessableEntity, ex.StatusCode);
 
             // Adding ForeignKey relation for LinkingObject and the other related entities.
@@ -281,7 +275,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ForeignKeyDefinition fd2 = new();
             foreignKeyPair.Add(rp2, fd2);
 
-            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x => x.GetPairToFkDefinition()).Returns(foreignKeyPair);
+            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
+                x.GetPairToFkDefinition()).Returns(foreignKeyPair);
 
             // No Exception should be thrown
             configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object);
@@ -307,7 +302,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
 
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.AreEqual("Claimtype cannot be empty.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
@@ -338,7 +334,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
 
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.IsTrue(ex.Message.StartsWith("Invalid format for claim type"));
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
@@ -380,7 +377,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
 
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidatePermissionsInConfig(runtimeConfig));
             string actionName = actionOp.ToString();
             Assert.AreEqual($"No other field can be present with wildcard in the included set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
                 $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
@@ -402,7 +400,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
 
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidatePermissionsInConfig(runtimeConfig));
             string actionName = actionOp.ToString();
             Assert.AreEqual($"No other field can be present with wildcard in the excluded set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
                 $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
@@ -555,14 +554,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="relationshipMap">Dictionary containing {relationshipName, Relationship}</param>
         private static Entity GetSampleEntityUsingSourceAndRelationshipMap(string source, Dictionary<string, Relationship>? relationshipMap)
         {
-            Action actionForRole = new(
+            PermissionOperation actionForRole = new(
                 Name: Operation.Create,
                 Fields: null,
                 Policy: null);
 
             PermissionSetting permissionForEntity = new(
                 role: "anonymous",
-                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
                 Source: JsonSerializer.SerializeToElement(source),

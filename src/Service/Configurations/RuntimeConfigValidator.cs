@@ -354,14 +354,22 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         Tuple<string, string> pair1 = Tuple.Create(entity.GetSourceName(), relationship.LinkingObject);
                         Tuple<string, string> pair2 = Tuple.Create(relationship.LinkingObject, entity.GetSourceName());
 
-                        Tuple<string, string> pair3 = Tuple.Create(runtimeConfig.Entities[relationship.TargetEntity].GetSourceName(), relationship.LinkingObject);
-                        Tuple<string, string> pair4 = Tuple.Create(relationship.LinkingObject, runtimeConfig.Entities[relationship.TargetEntity].GetSourceName());
+                        Tuple<string, string> pair3 = Tuple.Create(
+                            runtimeConfig.Entities[relationship.TargetEntity].GetSourceName(),
+                            relationship.LinkingObject
+                            );
+
+                        Tuple<string, string> pair4 = Tuple.Create(
+                            relationship.LinkingObject,
+                            runtimeConfig.Entities[relationship.TargetEntity].GetSourceName()
+                            );
 
                         if (!((relationshipPairFromDatabase.Contains(pair1) || relationshipPairFromDatabase.Contains(pair2))
                             && (relationshipPairFromDatabase.Contains(pair3) || relationshipPairFromDatabase.Contains(pair4))))
                         {
                             throw new DataApiBuilderException(
-                                message: $"Could not find relation between Linking Object: {relationship.LinkingObject} with entities: {relationship.TargetEntity} and {entityName}.",
+                                message: $"Could not find relation between Linking Object: {relationship.LinkingObject}"+
+                                    " with entities: {relationship.TargetEntity} and {entityName}.",
                                 statusCode: System.Net.HttpStatusCode.UnprocessableEntity,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }

@@ -114,11 +114,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             HashSet<string> graphQLQueries = new();
 
-            foreach (KeyValuePair<string, Entity> entityEntry in entityCollection)
+            foreach ((string entityName, Entity entity) in entityCollection)
             {
-                string entityName = entityEntry.Key;
-                Entity entity = entityEntry.Value;
-
                 if (entity.GraphQL is null
                     || (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
                 {

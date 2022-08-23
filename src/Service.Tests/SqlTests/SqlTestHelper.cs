@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
     {
         // This is is the key which holds all the rows in the response
         // for REST requests.
-        public static readonly string jsonKeyInRestResponse = "value";
+        public static readonly string jsonResultTopLevelKey = "value";
         public static void RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
@@ -128,7 +128,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 if (response.StatusCode is HttpStatusCode.OK && verifyNumRecords >= 0)
                 {
                     Dictionary<string, JsonElement[]> actualAsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(responseBody);
-                    Assert.AreEqual(actualAsDict[jsonKeyInRestResponse].Length, verifyNumRecords);
+                    Assert.AreEqual(actualAsDict[jsonResultTopLevelKey].Length, verifyNumRecords);
                 }
 
                 Assert.IsTrue(JsonStringsDeepEqual(expected, responseBody));

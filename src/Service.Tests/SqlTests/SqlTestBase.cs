@@ -458,7 +458,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     string dbResult = await GetDatabaseResultAsync(sqlQuery, expectJson);
                     // For FIND requests, null result signifies an empty result set
                     dbResult = (operationType is Operation.Read && dbResult is null) ? "[]" : dbResult;
-                    expected = $"{{\"{SqlTestHelper.jsonKeyInRestResponse}\":" +
+                    expected = $"{{\"{SqlTestHelper.jsonResultTopLevelKey}\":" +
                         $"{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";
                 }
             }

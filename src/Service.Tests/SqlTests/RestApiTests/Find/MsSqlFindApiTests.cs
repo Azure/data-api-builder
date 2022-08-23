@@ -26,6 +26,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindManyStoredProcedureTest",
+                $"EXECUTE {_integrationProcedureFindMany_ProcName}"
+            },
+            {
+                "FindOneStoredProcedureTestUsingParameter",
+                $"EXECUTE {_integrationProcedureFindOne_ProcName} @id = 1"
+            },
+            {
                 "FindEmptyResultSetWithQueryFilter",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE 1 != 1 FOR JSON PATH, INCLUDE_NULL_VALUES"

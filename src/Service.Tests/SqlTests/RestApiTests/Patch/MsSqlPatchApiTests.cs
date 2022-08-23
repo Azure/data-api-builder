@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Service.Controllers;
-using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
@@ -130,16 +128,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         {
             DatabaseEngine = TestCategory.MSSQL;
             await InitializeTestFixture(context);
-            // Setup REST Components
-            _restService = new RestService(_queryEngine,
-                _mutationEngine,
-                _sqlMetadataProvider,
-                _httpContextAccessor.Object,
-                _authorizationService.Object,
-                _authorizationResolver,
-                _runtimeConfigProvider);
-            _restController = new RestController(_restService,
-                                                 _restControllerLogger);
         }
 
         /// <summary>

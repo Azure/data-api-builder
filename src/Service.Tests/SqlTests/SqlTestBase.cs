@@ -3,8 +3,8 @@ using System.Data.Common;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Security.Claims;
-using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -19,14 +19,12 @@ using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
@@ -42,8 +40,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
     {
         protected static IQueryExecutor _queryExecutor;
         protected static IQueryBuilder _queryBuilder;
-        protected static IQueryEngine _queryEngine;
-        protected static IMutationEngine _mutationEngine;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
         protected static DbExceptionParser _dbExceptionParser;
@@ -126,23 +122,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             //Initialize the authorization resolver object
             _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
 
-            _queryEngine = new SqlQueryEngine(
-                _queryExecutor,
-                _queryBuilder,
-                _sqlMetadataProvider,
-                _httpContextAccessor.Object,
-                _authorizationResolver,
-                _queryEngineLogger);
-            _mutationEngine =
-                new SqlMutationEngine(
-                _queryEngine,
-                _queryExecutor,
-                _queryBuilder,
-                _sqlMetadataProvider,
-                _authorizationResolver,
-                _httpContextAccessor.Object,
-                _mutationEngineLogger);
-
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
                 {
@@ -150,11 +129,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     {
                         services.AddHttpContextAccessor();
                         services.AddSingleton(_runtimeConfigProvider);
-                        services.AddSingleton(_queryEngine);
+                        services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
+                        {
+                            return new SqlQueryEngine(
+                                _queryExecutor,
+                                _queryBuilder,
+                                _sqlMetadataProvider,
+                                ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
+                                _authorizationResolver,
+                                _queryEngineLogger
+                                );
+                        });
                         services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
                         {
                             return new SqlMutationEngine(
-                                    _queryEngine,
+                                    ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider),
                                     _queryExecutor,
                                     _queryBuilder,
                                     _sqlMetadataProvider,
@@ -293,63 +282,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Constructs an http context with request consisting of the given query string and/or body data.
-        /// </summary>
-        /// <param name="queryStringUrl">query</param>
-        /// <param name="bodyData">The data to be put in the request body e.g. GraphQLQuery</param>
-        /// <param name="operation">The operation used to define the HttpContext HTTP Method</param>
-        /// <returns>The http context with request consisting of the given query string (if any)
-        /// and request body (if any) as a stream of utf-8 bytes.</returns>
-        protected static DefaultHttpContext GetRequestHttpContext(
-            string queryStringUrl = null,
-            IHeaderDictionary headers = null,
-            string bodyData = null,
-            Operation operation = Operation.Read)
-        {
-            DefaultHttpContext httpContext;
-            IFeatureCollection features = new FeatureCollection();
-            //Add response features
-            features.Set<IHttpResponseFeature>(new HttpResponseFeature());
-            features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(new MemoryStream()));
-
-            if (headers is not null)
-            {
-                features.Set<IHttpRequestFeature>(new HttpRequestFeature { Headers = headers, Method = SqlTestHelper.OperationTypeToHTTPVerb(operation) });
-                httpContext = new(features);
-            }
-            else
-            {
-                features.Set<IHttpRequestFeature>(new HttpRequestFeature { Method = SqlTestHelper.OperationTypeToHTTPVerb(operation) });
-                httpContext = new(features);
-            }
-
-            if (!string.IsNullOrEmpty(queryStringUrl))
-            {
-                httpContext.Request.QueryString = new(queryStringUrl);
-            }
-
-            if (!string.IsNullOrEmpty(bodyData))
-            {
-                MemoryStream stream = new(Encoding.UTF8.GetBytes(bodyData));
-                httpContext.Request.Body = stream;
-                httpContext.Request.ContentLength = stream.Length;
-            }
-
-            // Add identity object to the Mock context object.
-            ClaimsIdentity identity = new(authenticationType: "Bearer");
-            identity.AddClaim(new Claim(ClaimTypes.Role, "anonymous"));
-            identity.AddClaim(new Claim(ClaimTypes.Role, "authenticated"));
-
-            ClaimsPrincipal user = new(identity);
-            httpContext.User = user;
-
-            // Set the user role as authenticated to allow tests to execute with all privileges.
-            httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = "authenticated";
-
-            return httpContext;
-        }
-
-        /// <summary>
         /// Sends raw SQL query to database engine to retrieve expected result in JSON format.
         /// </summary>
         /// <param name="queryText">raw database query, typically a SELECT</param>
@@ -406,10 +338,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="queryString">string represents the query string provided in URL</param>
         /// <param name="entity">string represents the name of the entity</param>
         /// <param name="sqlQuery">string represents the query to be executed</param>
-        /// <param name="controller">string represents the rest controller</param>
         /// <param name="operationType">The operation type to be tested.</param>
         /// <param name="requestBody">string represents JSON data used in mutation operations</param>
-        /// <param name="exception">bool represents if we expect an exception</param>
+        /// <param name="exceptionExpected">bool represents if we expect an exception</param>
         /// <param name="expectedErrorMessage">string represents the error message in the JsonResponse</param>
         /// <param name="expectedStatusCode">int represents the returned http status code</param>
         /// <param name="expectedSubStatusCode">enum represents the returned sub status code</param>
@@ -420,12 +351,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string queryString,
             string entity,
             string sqlQuery,
-            RestController controller,
             Operation operationType = Operation.Read,
             string path = "api",
             IHeaderDictionary headers = null,
             string requestBody = null,
-            bool exception = false,
+            bool exceptionExpected = false,
             string expectedErrorMessage = "",
             HttpStatusCode expectedStatusCode = HttpStatusCode.OK,
             string expectedSubStatusCode = "BadRequest",
@@ -435,27 +365,61 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             int verifyNumRecords = -1,
             bool expectJson = true)
         {
-            ConfigureRestController(
-                controller,
-                queryString,
-                operationType,
-                headers,
-                requestBody
-                );
-            string baseUrl = UriHelper.GetEncodedUrl(controller.HttpContext.Request);
-            if (expectedLocationHeader != null)
+            // Create the rest endpoint using the path and entity name.
+            string restEndPoint = path + "/" + entity;
+
+            // Append primaryKeyRoute to the endpoint if it is not empty.
+            if (!string.IsNullOrEmpty(primaryKeyRoute))
             {
-                expectedLocationHeader =
-                    baseUrl
-                    + @"/" + expectedLocationHeader;
+                restEndPoint = restEndPoint + "/" + primaryKeyRoute;
             }
 
-            IActionResult actionResult = await SqlTestHelper.PerformApiTest(
-                        controller,
-                        path,
-                        entity,
-                        primaryKeyRoute,
-                        operationType);
+            // Append queryString to the endpoint if it is not empty.
+            if (!string.IsNullOrEmpty(queryString))
+            {
+                restEndPoint = restEndPoint + queryString;
+            }
+
+            // Use UnsafeRelaxedJsonEscaping to be less strict about what is encoded.
+            // For eg. Without using this encoder, quotation mark (") will be encoded as
+            // \u0022 rather than \". And single quote(') will be encoded as \u0027 rather
+            // than being left unescaped.
+            // More details can be found here:
+            // https://docs.microsoft.com/en-us/dotnet/api/system.text.encodings.web.javascriptencoder.unsaferelaxedjsonescaping?view=net-6.0
+            JsonSerializerOptions options = new()
+            {
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+
+            // Get the httpMethod based on the operation to be executed.
+            HttpMethod httpMethod = SqlTestHelper.GetHttpMethodFromOperation(operationType);
+
+            // Create the request to be sent to the engine.
+            HttpRequestMessage request;
+            if (!string.IsNullOrEmpty(requestBody))
+            {
+                JsonElement requestBodyElement = JsonDocument.Parse(requestBody).RootElement.Clone();
+                request = new(httpMethod, restEndPoint)
+                {
+                    Content = JsonContent.Create(requestBodyElement, options: options)
+                };
+            }
+            else
+            {
+                request = new(httpMethod, restEndPoint);
+            }
+
+            // Add headers to the request if any.
+            if (headers is not null)
+            {
+                foreach ((string key, StringValues value) in headers)
+                {
+                    request.Headers.Add(key, value.ToString());
+                }
+            }
+
+            // Send request to the engine.
+            HttpResponseMessage response = await HttpClient.SendAsync(request);
 
             // if an exception is expected we generate the correct error
             // The expected result should be a Query that confirms the result state
@@ -468,18 +432,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                  operationType is Operation.UpsertIncremental ||
                  operationType is Operation.Update ||
                  operationType is Operation.UpdateIncremental)
-                && actionResult is NoContentResult)
+                 && response.StatusCode == HttpStatusCode.NoContent
+                )
             {
-                expected = null;
+                expected = string.Empty;
             }
             else
             {
-                JsonSerializerOptions options = new()
-                {
-                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                };
-
-                if (exception)
+                if (exceptionExpected)
                 {
                     expected = JsonSerializer.Serialize(RestController.ErrorResponse(
                         expectedSubStatusCode.ToString(),
@@ -489,33 +449,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 }
                 else
                 {
+                    string baseUrl = HttpClient.BaseAddress.ToString() + path + "/" + entity;
+                    if (!string.IsNullOrEmpty(queryString))
+                    {
+                        baseUrl = baseUrl + "?" + HttpUtility.ParseQueryString(queryString).ToString();
+                    }
+
                     string dbResult = await GetDatabaseResultAsync(sqlQuery, expectJson);
                     // For FIND requests, null result signifies an empty result set
                     dbResult = (operationType is Operation.Read && dbResult is null) ? "[]" : dbResult;
-                    expected = $"{{\"value\":{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, EncodeQueryString(baseUrl), $"{expectedAfterQueryString}")}}}";
+                    expected = $"{{\"{SqlTestHelper.jsonResultTopLevelKey}\":" +
+                        $"{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";
                 }
             }
 
-            SqlTestHelper.VerifyResult(
-                actionResult,
-                expected,
-                expectedStatusCode,
-                expectedLocationHeader,
-                !exception,
-                verifyNumRecords);
-        }
-
-        /// <summary>
-        /// Helper function encodes the url with query string into the correct
-        /// format. We utilize the toString() of the HttpValueCollection
-        /// which is used by the NameValueCollection returned from
-        /// ParseQueryString to avoid writing this ourselves.
-        /// </summary>
-        /// <param name="fullUrl">Url to be encoded as query string.</param>
-        /// <returns>query string encoded url.</returns>
-        private static string EncodeQueryString(string fullUrl)
-        {
-            return HttpUtility.ParseQueryString(fullUrl).ToString();
+            // Verify the expected and actual response are identical.
+            await SqlTestHelper.VerifyResultAsync(
+                expected: expected,
+                request: request,
+                response: response,
+                exceptionExpected: exceptionExpected,
+                httpMethod: httpMethod,
+                expectedLocationHeader: expectedLocationHeader,
+                verifyNumRecords: verifyNumRecords);
         }
 
         /// <summary>
@@ -539,34 +495,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         private static string ExpectedNextLinkIfAny(bool paginated, string baseUrl, string queryString)
         {
             return paginated ? $",\"nextLink\":\"{baseUrl}{queryString}\"" : string.Empty;
-        }
-
-        /// <summary>
-        /// Add HttpContext with query and body(if any) to the RestController
-        /// </summary>
-        /// <param name="restController">The controller to configure.</param>
-        /// <param name="queryString">The query string in the url.</param>
-        /// <param name="requestBody">The data to be put in the request body.</param>
-        protected static void ConfigureRestController(
-            RestController restController,
-            string queryString,
-            Operation operation,
-            IHeaderDictionary headers = null,
-            string requestBody = null
-            )
-        {
-            restController.ControllerContext.HttpContext =
-                GetRequestHttpContext(
-                    queryString,
-                    headers,
-                    bodyData: requestBody,
-                    operation);
-
-            // Set the mock context accessor's request same as the controller's request.
-            _httpContextAccessor.Setup(x => x.HttpContext.Request).Returns(restController.ControllerContext.HttpContext.Request);
-
-            //Set the mock context accessor's Items same as the controller's Items
-            _httpContextAccessor.Setup(x => x.HttpContext.Items).Returns(restController.ControllerContext.HttpContext.Items);
         }
 
         /// <summary>

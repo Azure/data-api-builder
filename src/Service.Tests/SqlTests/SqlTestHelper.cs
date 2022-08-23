@@ -15,6 +15,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 {
     public class SqlTestHelper : TestHelper
     {
+        // This is is the key which holds all the rows in the response
+        // for REST requests.
+        public static readonly string jsonKeyInRestResponse = "value";
         public static void RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
@@ -112,8 +115,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 {
                     // Find the actual location using the response and request uri.
                     // Response uri = Request uri + "/" + actualLocation
-                    // For eg. Request URI: http://localhost/api/Review
-                    // Response URI: http://localhost/api/Review/book_id/1/id/5001
+                    // For eg. POST Request URI: http://localhost/api/Review
+                    // 201 Created Response URI: http://localhost/api/Review/book_id/1/id/5001
                     // therefore, actualLocation = book_id/1/id/5001
                     string responseUri = (response.Headers.Location.OriginalString);
                     string requestUri = request.RequestUri.OriginalString;
@@ -125,7 +128,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 if (response.StatusCode is HttpStatusCode.OK && verifyNumRecords >= 0)
                 {
                     Dictionary<string, JsonElement[]> actualAsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(responseBody);
-                    Assert.AreEqual(actualAsDict["value"].Length, verifyNumRecords);
+                    Assert.AreEqual(actualAsDict[jsonKeyInRestResponse].Length, verifyNumRecords);
                 }
 
                 Assert.IsTrue(JsonStringsDeepEqual(expected, responseBody));
@@ -165,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 default:
                     throw new DataApiBuilderException(
                         message: "Operation not supported for the request.",
-                        statusCode: HttpStatusCode.NotImplemented,
+                        statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
             }
         }

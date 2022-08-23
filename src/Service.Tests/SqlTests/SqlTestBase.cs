@@ -382,7 +382,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             // Use UnsafeRelaxedJsonEscaping to be less strict about what is encoded.
             // For eg. Without using this encoder, quotation mark (") will be encoded as
-            // \" rather than \u0022. And single quote(') will be encoded as \u0027 rather
+            // \u0022 rather than \". And single quote(') will be encoded as \u0027 rather
             // than being left unescaped.
             // More details can be found here:
             // https://docs.microsoft.com/en-us/dotnet/api/system.text.encodings.web.javascriptencoder.unsaferelaxedjsonescaping?view=net-6.0
@@ -458,7 +458,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     string dbResult = await GetDatabaseResultAsync(sqlQuery, expectJson);
                     // For FIND requests, null result signifies an empty result set
                     dbResult = (operationType is Operation.Read && dbResult is null) ? "[]" : dbResult;
-                    expected = $"{{\"value\":{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";
+                    expected = $"{{\"{SqlTestHelper.jsonKeyInRestResponse}\":" +
+                        $"{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";
                 }
             }
 

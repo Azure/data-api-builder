@@ -157,9 +157,9 @@ namespace Azure.DataApiBuilder.Service.Models
                 Console.Error.WriteLine(e.Message);
                 Console.Error.WriteLine(e.StackTrace);
                 throw new DataApiBuilderException(
-                    message: "Request content invalid.",
+                    message: "$filter query parameter is not well formed.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCumulativeColumnCheckFailed);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
         }
 

@@ -57,7 +57,6 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// <returns>String representing the Field name</returns>
         public override string Visit(SingleValuePropertyAccessNode nodeIn)
         {
-            // For filter clause.
             _metadataProvider.TryGetBackingColumn(_struct.EntityName, nodeIn.Property.Name, out string? backingColumnName);
             return _metadataProvider.GetQueryBuilder().QuoteIdentifier(backingColumnName!);
         }

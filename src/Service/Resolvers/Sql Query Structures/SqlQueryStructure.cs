@@ -180,8 +180,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 if (string.IsNullOrEmpty(column.TableAlias))
                 {
                     column.TableAlias = TableAlias;
-                    sqlMetadataProvider.TryGetBackingColumn(EntityName, column.ColumnName!, out string? backingColumnName);
-                    column.ColumnName = backingColumnName!;
                 }
             }
 

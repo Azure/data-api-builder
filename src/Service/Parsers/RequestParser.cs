@@ -162,13 +162,11 @@ namespace Azure.DataApiBuilder.Service.Parsers
                                         throw new DataApiBuilderException(message: "OrderBy property is not supported.",
                                                                        HttpStatusCode.BadRequest,
                                                                        DataApiBuilderException.SubStatusCodes.BadRequest);
-                string columnName;
                 string backingColumnName;
                 if (expression.Kind is QueryNodeKind.SingleValuePropertyAccess)
                 {
                     // if name is in SingleValuePropertyAccess node it matches our model and we will
                     // always be able to get backing column successfully
-                    columnName = ((SingleValuePropertyAccessNode)expression).Property.Name;
                     sqlMetadataProvider.TryGetBackingColumn(context.EntityName, ((SingleValuePropertyAccessNode)expression).Property.Name, out backingColumnName!);
                 }
                 else if (expression.Kind is QueryNodeKind.Constant &&
@@ -176,7 +174,6 @@ namespace Azure.DataApiBuilder.Service.Parsers
                 {
                     // since this comes from constant node, it was not checked against our model
                     // so this may return false in which case we throw for a bad request
-                    columnName = ((ConstantNode)expression).Value.ToString()!;
                     if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, ((ConstantNode)expression).Value.ToString()!, out backingColumnName!))
                     {
                         throw new DataApiBuilderException(
@@ -196,7 +193,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
                 // We convert to an Enum of our own that matches the SQL text we want
                 OrderBy direction = GetDirection(node.Direction);
                 // Add OrderByColumn and remove any matching columns from our primary key set
-                orderByList.Add(new OrderByColumn(schemaName, tableName, columnName, direction: direction));
+                orderByList.Add(new OrderByColumn(schemaName, tableName, backingColumnName, direction: direction));
                 remainingKeys.Remove(backingColumnName);
                 node = node.ThenBy;
             }

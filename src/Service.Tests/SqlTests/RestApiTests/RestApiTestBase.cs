@@ -38,6 +38,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _simple_all_books = "books_view_all";
         protected static readonly string _simple_subset_stocks = "stocks_view_selected";
         protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
+        protected static readonly string _integrationProcedureFindMany_EntityName = "GetBooks";
+        protected static readonly string _integrationProcedureFindMany_ProcName = "get_books";
+        protected static readonly string _integrationProcedureFindOne_EntityName = "GetBook";
+        protected static readonly string _integrationProcedureFindOne_ProcName = "get_book_by_id";
         protected static readonly string _integrationMappingDifferentEntityRoute = "plants";
         protected static readonly string _Composite_NonAutoGenPK_EntityRoute = "commodities";
 

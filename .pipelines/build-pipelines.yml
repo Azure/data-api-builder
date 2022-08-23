@@ -21,6 +21,9 @@ variables:
   publishNugetToFeed: $(isNugetRelease)
 
 steps:
+- task: NuGetAuthenticate@0
+  displayName: 'NuGet Authenticate'
+
 # If this is a release, do not append the build number at the end as it will 
 # generate the prerelease nuget version.
 # We cannot set this in variables section above because $(isNugetRelease) 
@@ -49,6 +52,8 @@ steps:
 - task: NuGetCommand@2
   inputs:
     restoreSolution: '$(solution)'
+    feedsToUse: config
+    nugetConfigPath: Nuget.config
 
 - task: DotNetCoreCLI@2
   displayName: Check formatting
@@ -75,19 +80,10 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: 'Creating Nuget Package'
   inputs:
-    command: pack
-    packagesToPack: '**/Cli.csproj'
-    packDirectory: '$(Build.ArtifactStagingDirectory)/nupkg'
-    nobuild: true
-    versioningScheme: byEnvVar
-    versionEnvVar: dabVersion
-    verbosityPack: 'minimal'
-
-# This task will authenticate and publish the NuGet Package to internal feed
-# To release a new version update the VersionPrefix in Hawaii.Cli.csproj file.
-- task: NuGetAuthenticate@0
-  displayName: 'NuGet Authenticate'
-  condition: eq(variables.publishNugetToFeed, 'true')
+    command: custom
+    custom: pack
+    projects: '**/Cli.csproj'
+    arguments: '-p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Internal Feed'
@@ -156,4 +152,4 @@ steps:
     tags: |
       $(BuildDate)-$(Build.SourceVersion)
       $(releaseName)
-      $(nugetVersion)
+      $(dabVersion)

@@ -135,6 +135,77 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
+        /// Validates a stored procedure request does not specify a primary key route.
+        /// Applies to all stored procedure requests, both Queries and Mutations
+        /// Mutations also validated using ValidateInsertRequestContext call in RestService
+        /// </summary>
+        /// <param name="primaryKeyRoute">Primary key route from the url.</param>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static void ValidateStoredProcedureRequest(string? primaryKeyRoute)
+        {
+            if (!string.IsNullOrWhiteSpace(primaryKeyRoute))
+            {
+                throw new DataApiBuilderException(
+                    message: "Primary key route not supported for this entity.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Validates all required input parameters are supplied by request, and no extraneous parameters are provided
+        /// Checks query string for Find operations, body for all other operations
+        /// Defers type checking until parameterizing stage to prevent duplicating work
+        /// </summary>
+        public static void ValidateStoredProcedureRequestContext(
+            StoredProcedureRequestContext spRequestCtx,
+            ISqlMetadataProvider sqlMetadataProvider)
+        {
+            StoredProcedureDefinition storedProcedureDefinition =
+                TryGetStoredProcedureDefinition(spRequestCtx.EntityName, sqlMetadataProvider);
+
+            HashSet<string> missingFields = new();
+            HashSet<string> extraFields = new(spRequestCtx.ResolvedParameters.Keys);
+            foreach ((string paramKey, ParameterDefinition paramDefinition) in storedProcedureDefinition.Parameters)
+            {
+                // If parameter not specified in request OR config
+                if (!spRequestCtx.ResolvedParameters!.ContainsKey(paramKey)
+                    && !paramDefinition.HasConfigDefault)
+                {
+                    // Ideally should check if a default is set in sql, but no easy way to do so - would have to parse procedure's object definition
+                    // See https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-parameters-transact-sql?view=sql-server-ver16#:~:text=cursor%2Dreference%20parameter.-,has_default_value,-bit
+                    // For SQL Server not populating this metadata for us; MySQL doesn't seem to allow parameter defaults so not relevant. 
+                    missingFields.Add(paramKey);
+                }
+                else
+                {
+                    extraFields.Remove(paramKey);
+                }
+            }
+
+            // If query string or body contains extra parameters that don't exist
+            // TO DO: If the request header contains x-ms-must-match custom header with value of "ignore"
+            // this should not throw any error. Tracked by issue #158.
+            if (extraFields.Count > 0)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Invalid request. Contained unexpected fields: {string.Join(", ", extraFields)}",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            // If missing a parameter in the request and do not have a default specified in config
+            if (missingFields.Count > 0)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Invalid request. Missing required procedure parameters: {string.Join(", ", missingFields)}",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+        }
+
+        /// <summary>
         /// Validates the primarykeyroute is populated with respect to an Update or Upsert operation.
         /// </summary>
         /// <param name="primaryKeyRoute">Primary key route from the url.</param>
@@ -369,6 +440,26 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 throw new DataApiBuilderException(
                     message: $"TableDefinition for entity: {entityName} does not exist.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Tries to get the stored procedure definition for the given entity
+        /// Throws a DataApiBuilderException to return Bad Request to client instead of Unexpected Error
+        /// Useful for accessing the definition within the request pipeline
+        /// </summary>
+        private static StoredProcedureDefinition TryGetStoredProcedureDefinition(string entityName, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            try
+            {
+                return sqlMetadataProvider.GetStoredProcedureDefinition(entityName);
+            }
+            catch (InvalidCastException)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Underlying database object for entity {entityName} does not exist.",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }

@@ -36,6 +36,40 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Tests the REST Api for find many operation on stored procedure
+        /// Stored procedure result is not necessarily json.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task FindManyStoredProcedureTest()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationProcedureFindMany_EntityName,
+                sqlQuery: GetQuery("FindManyStoredProcedureTest"),
+                controller: _restController,
+                expectJson: false
+                );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for find one operation using required parameter
+        /// For Find operations, parameters must be passed in query string
+        /// </summary>
+        [TestMethod]
+        public virtual async Task FindOneStoredProcedureTestUsingParameter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?id=1",
+                entity: _integrationProcedureFindOne_EntityName,
+                sqlQuery: GetQuery("FindOneStoredProcedureTestUsingParameter"),
+                controller: _restController,
+                expectJson: false
+                );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operations on empty result sets
         /// 1. GET an entity with no rows (empty table)
         /// 2. GET an entity with rows, filtered to none by query parameter
@@ -973,6 +1007,77 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         #endregion
 
         #region Negative Tests
+
+        /// <summary>
+        /// Tests the REST Api for Find operation on a stored procedure with a
+        /// non-empty primary key route
+        /// Expect a 400 Bad Request to be returned
+        /// </summary>
+        [TestMethod]
+        public virtual async Task FindStoredProcedureWithNonEmptyPrimaryKeyRoute()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: string.Empty,
+                entity: _integrationProcedureFindMany_EntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Primary key route not supported for this entity.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operations on a stored procedure missing a required parameter
+        /// Expect a 400 Bad Request to be returned
+        /// </summary>
+        [TestMethod]
+        public virtual async Task FindStoredProcedureWithMissingParameter()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationProcedureFindOne_EntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Invalid request. Missing required procedure parameters: id",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operations on a stored procedure with extraneous parameters supplied
+        /// Expect a 400 Bad Request to be returned
+        /// </summary>
+        [TestMethod]
+        public virtual async Task FindStoredProcedureWithNonexistentParameter()
+        {
+            // On an entity that takes no parameters
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?param=value",
+                entity: _integrationProcedureFindMany_EntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Invalid request. Contained unexpected fields: param",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
+
+            // On an entity that takes parameters other than those supplied
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?id=1&param=value",
+                entity: _integrationProcedureFindOne_EntityName,
+                sqlQuery: string.Empty,
+                controller: _restController,
+                exception: true,
+                expectedErrorMessage: "Invalid request. Contained unexpected fields: param",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
+        }
 
         /// <summary>
         /// Tests the REST Api for Find operation using $first=0

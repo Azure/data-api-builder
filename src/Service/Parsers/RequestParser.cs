@@ -170,10 +170,10 @@ namespace Azure.DataApiBuilder.Service.Parsers
                 string exposedName;
                 if (expression.Kind is QueryNodeKind.SingleValuePropertyAccess)
                 {
-                    // if name is in SingleValuePropertyAccess node it matches our model and we will
-                    // always be able to get backing column successfully
                     exposedName = ((SingleValuePropertyAccessNode)expression).Property.Name;
                     sqlMetadataProvider.TryGetBackingColumn(context.EntityName, exposedName, out backingColumnName);
+                    // if name is in SingleValuePropertyAccess node it matches our model and we will
+                    // always be able to get backing column successfully
                 }
                 else if (expression.Kind is QueryNodeKind.Constant &&
                         ((ConstantNode)expression).Value is not null)

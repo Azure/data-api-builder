@@ -568,6 +568,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation for all records.
+        /// Uses entity with mapped columns, and order by title in ascending order.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=fancyName",
+                entity: _integrationMappingDifferentEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc)),
+                controller: _restController
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation for all records
         /// when there is a space in the column name.
         /// order by "ID Number" in ascending order.

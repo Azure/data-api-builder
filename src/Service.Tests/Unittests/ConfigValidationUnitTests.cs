@@ -227,7 +227,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             PermissionSetting permissionForEntity = new(
                 role: AuthorizationHelpers.TEST_ROLE,
-                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
                 Source: AuthorizationHelpers.TEST_ENTITY,

@@ -36,11 +36,24 @@ namespace Azure.DataApiBuilder.Config
     {
         public const string JSON_PROPERTY_NAME = "entities";
 
+        [JsonIgnore]
+        public SourceType ObjectType { get; private set; } = new();
+
+        [JsonIgnore]
+        public string SourceName { get; private set; } = string.Empty;
+
+        [JsonIgnore]
+        public Dictionary<string, object>? Parameters { get; private set; }
+
+        [JsonIgnore]
+        public Array? KeyFields { get; private set; }
+
         [property: JsonPropertyName("graphql")]
         public object? GraphQL { get; set; } = GraphQL;
 
         /// <summary>
         /// Gets the name of the underlying source database object.
+        /// Prefer accessing SourceName itself if TryPopulateSourceFields has been called
         /// </summary>
         public string GetSourceName()
         {
@@ -106,20 +119,99 @@ namespace Azure.DataApiBuilder.Config
                 throw new NotSupportedException("The runtime does not support this GraphQL settings type for an entity.");
             }
         }
+
+        /// <summary>
+        /// After the Entity has been deserialized, populate the source-related fields
+        /// Deserialize into DatabaseObjectSource to parse fields if source is an object
+        /// This allows us to avoid using Newtonsoft for direct deserialization
+        /// Called at deserialization time - in RuntimeConfigProvider
+        /// </summary>
+        public void TryPopulateSourceFields()
+        {
+            if (Source is null)
+            {
+                throw new JsonException(message: "Must specify entity source.");
+            }
+
+            JsonElement sourceJson = (JsonElement)Source;
+
+            // In the case of a simple, string source, we assume the source type is a table; parameters and key fields left null
+            // Note: engine supports views backing entities labeled as Tables, as long as their primary key can be inferred
+            if (sourceJson.ValueKind is JsonValueKind.String)
+            {
+                ObjectType = SourceType.Table;
+                SourceName = JsonSerializer.Deserialize<string>((JsonElement)Source)!;
+            }
+            else if (sourceJson.ValueKind is JsonValueKind.Object)
+            {
+                DatabaseObjectSource? objectSource
+                    = JsonSerializer.Deserialize<DatabaseObjectSource>((JsonElement)Source,
+                    options: RuntimeConfig.SerializerOptions);
+
+                if (objectSource is null)
+                {
+                    throw new JsonException(message: "Could not deserialize source object.");
+                }
+                else
+                {
+                    ObjectType = ConvertSourceType(objectSource.Type);
+                    SourceName = objectSource.Name;
+                    Parameters = objectSource.Parameters;
+                    KeyFields = objectSource.KeyFields;
+                }
+            }
+            else
+            {
+                throw new JsonException(message: $"Source not one of string or object");
+            }
+        }
+
+        /// <summary>
+        /// Tries to convert the given string sourceType into one of the supported SourceType enums
+        /// Throws an exception if not a case-insensitive match
+        /// </summary>
+        private static SourceType ConvertSourceType(string? sourceType)
+        {
+            // If sourceType is not explicitly specified, we assume it is a Table
+            return sourceType is null ? SourceType.Table
+                : sourceType.ToLowerInvariant() switch
+                {
+                    "table" => SourceType.Table,
+                    "view" => SourceType.View,
+                    "stored-procedure" => SourceType.StoredProcedure,
+                    _ => throw new JsonException(message: "Source type must be one of: [table, view, stored-procedure]")
+                };
+        }
     }
 
     /// <summary>
-    /// Describes the type, name and parameters for a
-    /// database object source. Useful for more complex sources like stored procedures.
+    /// Describes the type, name, parameters, and key fields for a
+    /// database object source.
     /// </summary>
-    /// <param name="Type">Type of the database object.</param>
-    /// <param name="Name">The name of the database object.</param>
-    /// <param name="Parameters">The Parameters to be used for constructing this object
-    /// in case its a stored procedure.</param>
+    /// <param name="Type"> Type of the database object.
+    /// Should be one of [table, view, stored-procedure]. </param>
+    /// <param name="Name"> The name of the database object. </param>
+    /// <param name="Parameters"> If Type is SourceType.StoredProcedure,
+    /// Parameters to be passed as defaults to the procedure call </param>
+    /// <param name="KeyFields"> The field(s) to be used as primary keys.
+    /// Support tracked in #547 </param>
     public record DatabaseObjectSource(
         string Type,
-        [property: JsonPropertyName("object")] string Name,
-        string[]? Parameters);
+        [property: JsonPropertyName("object")]
+            string Name,
+        Dictionary<string, object>? Parameters,
+        [property: JsonPropertyName("key-fields")]
+            Array KeyFields);
+
+    /// <summary>
+    /// Supported source types as defined by json schema
+    /// </summary>
+    public enum SourceType
+    {
+        Table,
+        View,
+        StoredProcedure
+    }
 
     /// <summary>
     /// Describes the REST settings specific to an entity.

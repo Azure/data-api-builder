@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
@@ -70,7 +71,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <summary>
         /// NVC stores the query string parsed into a NameValueCollection.
         /// </summary>
-        public NameValueCollection? ParsedQueryString { get; set; } = new();
+        public NameValueCollection ParsedQueryString { get; set; } = new();
 
         /// <summary>
         /// String holds information needed for pagination.
@@ -164,6 +165,40 @@ namespace Azure.DataApiBuilder.Service.Models
         public void UpdateReturnFields(IEnumerable<string> fields)
         {
             FieldsToBeReturned = fields.ToList();
+        }
+
+        /// <summary>
+        /// Tries to parse the json request body into FieldValuePairsInBody dictionary
+        /// </summary>
+        public void PopulateFieldValuePairsInBody(JsonElement? jsonBody)
+        {
+            string? payload = jsonBody.ToString();
+            if (!string.IsNullOrEmpty(payload))
+            {
+                try
+                {
+                    Dictionary<string, object?>? fieldValuePairs = JsonSerializer.Deserialize<Dictionary<string, object?>>(payload);
+                    if (fieldValuePairs is not null)
+                    {
+                        FieldValuePairsInBody = fieldValuePairs;
+                    }
+                    else
+                    {
+                        throw new JsonException("Failed to deserialize the request body payload");
+                    }
+                }
+                catch (JsonException)
+                {
+                    throw new DataApiBuilderException(
+                        message: "The request body is not in a valid JSON format.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+            }
+            else
+            {
+                FieldValuePairsInBody = new();
+            }
         }
     }
 }

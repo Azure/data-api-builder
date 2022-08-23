@@ -95,6 +95,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     $"WHERE {predicates}";
         }
 
+        /// <summary>
+        /// TODO; tracked here: https://github.com/Azure/hawaii-engine/issues/630
+        /// </summary>
+        public string Build(SqlExecuteStructure structure)
+        {
+            throw new NotImplementedException();
+        }
+
         public string Build(SqlUpsertQueryStructure structure)
         {
             if (structure.IsFallbackToUpdate)

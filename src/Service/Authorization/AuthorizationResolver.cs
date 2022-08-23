@@ -619,7 +619,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 return new List<string>();
             }
 
-            return _metadataProvider.GetTableDefinition(entityName).Columns.Keys;
+            // Table definition is null on stored procedure entities
+            TableDefinition? tableDefinition = _metadataProvider.GetTableDefinition(entityName);
+            return tableDefinition is null ? new List<string>() : tableDefinition.Columns.Keys;
         }
 
         /// <summary>

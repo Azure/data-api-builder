@@ -58,7 +58,8 @@ namespace Azure.DataApiBuilder.Config
     public record HostGlobalSettings
         (HostModeType Mode = HostModeType.Production,
          Cors? Cors = null,
-         AuthenticationConfig? Authentication = null)
+         AuthenticationConfig? Authentication = null,
+         AuthorizationType RequestAuthorizationType = AuthorizationType.Anonymous)
         : GlobalSettings();
 
     /// <summary>

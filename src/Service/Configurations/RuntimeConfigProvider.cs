@@ -257,5 +257,18 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             return RuntimeConfiguration?.HostGlobalSettings.Mode is HostModeType.Development;
         }
+
+        /// <summary>
+        /// When we are in development mode, we want to honor the default request authorization
+        /// type specified in the config. This gives us the ability to simulate
+        /// authenticated/anonymous state of request in development mode.
+        /// </summary>
+        /// <returns></returns>
+        public virtual bool IsAuthenticatedRequestInDevelopmentMode()
+        {
+            return IsDeveloperMode() &&
+                RuntimeConfiguration?.HostGlobalSettings.RequestAuthorizationType
+                is AuthorizationType.Authenticated;
+        }
     }
 }

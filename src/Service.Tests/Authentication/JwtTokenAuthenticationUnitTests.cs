@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.Authorization;
+using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -20,6 +21,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication
 {
@@ -265,6 +267,31 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 ignoreCase: true);
         }
 
+        [DataTestMethod]
+        [DataRow(true, "Authenticated", null, false,
+            DisplayName = "Jwt- Treat request as authenticated in development mode")]
+        [DataRow(false, "Anonymous", null, false,
+            DisplayName = "Jwt- Treat request as anonymous in development mode")]
+        [DataRow(true, "author", "author", true,
+            DisplayName = "Jwt- Treat request as authenticated in development mode " +
+            "and honor the clienRoleHeader")]
+        public async Task TestAuthenticatedRequestInDevelopmentModeJwt(bool treatRequestAsAuthenticated,
+            string expectedClientRoleHeader,
+            string clientRoleHeader,
+            bool sendClientRoleHeader)
+        {
+            RsaSecurityKey key = new(RSA.Create(2048));
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(key: key,
+                    token: null,
+                    clientRoleHeader: clientRoleHeader,
+                    sendClientRoleHeader: sendClientRoleHeader,
+                    treatRequestAsAuthenticated: treatRequestAsAuthenticated);
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: expectedClientRoleHeader,
+                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString());
+        }
         #endregion
 
         #region Helper Methods
@@ -274,8 +301,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// </summary>
         /// <param name="key"></param>
         /// <returns>IHost</returns>
-        private static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key)
+        private static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key,
+            bool treatReuqestasAuthenticated)
         {
+            // Setup RuntimeConfigProvider object for the pipeline.
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            Mock<RuntimeConfigPath> runtimeConfigPath = new();
+            Mock<RuntimeConfigProvider> runtimeConfigProvider = new(runtimeConfigPath.Object,
+                configProviderLogger.Object);
+            runtimeConfigProvider.Setup(x => x.IsAuthenticatedRequestInDevelopmentMode()).
+                Returns(treatReuqestasAuthenticated);
+
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>
                 {
@@ -306,6 +342,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                                     };
                                 });
                             services.AddAuthorization();
+                            services.AddSingleton(runtimeConfigProvider.Object);
                         })
                         .ConfigureLogging(o =>
                         {
@@ -343,9 +380,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             SecurityKey key,
             string token,
             bool sendClientRoleHeader = false,
-            string? clientRoleHeader = null)
+            string? clientRoleHeader = null,
+            bool treatRequestAsAuthenticated = false)
         {
-            using IHost host = await CreateWebHostCustomIssuer(key);
+            using IHost host = await CreateWebHostCustomIssuer(key, treatRequestAsAuthenticated);
             TestServer server = host.GetTestServer();
 
             return await server.SendAsync(context =>

@@ -42,7 +42,7 @@ type Foo @model(name: ""Foo""){
                 entities: new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 entityPermissionsMap: GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     entityNames: new string[] { "Foo" },
-                    actions: new Operation[] { operationType },
+                    operations: new Operation[] { operationType },
                     roles: rolesDefinedInPermissions)
                 );
 

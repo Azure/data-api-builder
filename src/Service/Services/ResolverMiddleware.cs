@@ -199,7 +199,9 @@ namespace Azure.DataApiBuilder.Service.Services
 
             if (value is ObjectValueNode obj)
             {
-                return obj.Fields.ToDictionary(field => field.Name.Value, field => ExtractValueFromIValueNode(field.Value, argumentSchema, variables));
+                return obj.Fields.ToDictionary(
+                    field => field.Name.Value,
+                    field => ExtractValueFromIValueNode(field.Value, InputObjectTypeFromIInputField(argumentSchema).Fields[field.Name.Value], variables));
             }
 
             return argumentSchema.Type.TypeName().Value switch

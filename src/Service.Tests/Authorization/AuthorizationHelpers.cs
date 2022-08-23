@@ -7,7 +7,7 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Action = Azure.DataApiBuilder.Config.Action;
+using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authorization
 {
@@ -47,14 +47,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// </summary>
         /// <param name="entityName"></param>
         /// <param name="roleName"></param>
-        /// <param name="action"></param>
+        /// <param name="operation"></param>
         /// <param name="includedCols"></param>
         /// <param name="excludedCols"></param>
         /// <returns></returns>
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
             string roleName = "Reader",
-            Operation action = Operation.Create,
+            Operation operation = Operation.Create,
             HashSet<string>? includedCols = null,
             HashSet<string>? excludedCols = null,
             string? databasePolicy = null,
@@ -73,14 +73,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             Policy policy = new(requestPolicy, databasePolicy);
 
-            Action actionForRole = new(
-                Name: action,
+            PermissionOperation actionForRole = new(
+                Name: operation,
                 Fields: fieldsForRole,
                 Policy: policy);
 
             PermissionSetting permissionForEntity = new(
                 role: roleName,
-                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
                 Source: TEST_ENTITY,

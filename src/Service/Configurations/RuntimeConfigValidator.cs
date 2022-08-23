@@ -220,11 +220,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         }
                         else
                         {
-                            PermissionOperation configAction;
+                            PermissionOperation configOperation;
                             try
                             {
-                                configAction = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
-
+                                configOperation = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
                             }
                             catch
                             {
@@ -234,7 +233,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                             }
 
-                            actionOp = configAction.Name;
+                            actionOp = configOperation.Name;
                             // If we have reached this point, it means that we don't have any invalid
                             // data type in actions. However we need to ensure that the actionOp is valid.
                             if (!IsValidPermissionAction(actionOp))
@@ -252,17 +251,17 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 throw GetInvalidActionException(entityName, roleName, actionElement.ToString());
                             }
 
-                            if (configAction.Fields is not null)
+                            if (configOperation.Fields is not null)
                             {
                                 // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
                                 // don't contain any other field. If they do, we throw an appropriate exception.
-                                if (configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Include.Count > 1 ||
-                                    configAction.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Exclude.Count > 1)
+                                if (configOperation.Fields.Include.Contains(AuthorizationResolver.WILDCARD) && configOperation.Fields.Include.Count > 1 ||
+                                    configOperation.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && configOperation.Fields.Exclude.Count > 1)
                                 {
                                     // See if included or excluded columns contain wildcard and another field.
                                     // If thats the case with both of them, we specify 'included' in error.
-                                    string misconfiguredColumnSet = configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
-                                        && configAction.Fields.Include.Count > 1 ? "included" : "excluded";
+                                    string misconfiguredColumnSet = configOperation.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
+                                        && configOperation.Fields.Include.Count > 1 ? "included" : "excluded";
                                     string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
                                     throw new DataApiBuilderException(
                                             message: $"No other field can be present with wildcard in the {misconfiguredColumnSet} set for:" +
@@ -271,14 +270,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                                 }
 
-                                if (configAction.Policy is not null && configAction.Policy.Database is not null)
+                                if (configOperation.Policy is not null && configOperation.Policy.Database is not null)
                                 {
                                     // validate that all the fields mentioned in database policy are accessible to user.
-                                    AreFieldsAccessible(configAction.Policy.Database,
-                                        configAction.Fields.Include, configAction.Fields.Exclude);
+                                    AreFieldsAccessible(configOperation.Policy.Database,
+                                        configOperation.Fields.Include, configOperation.Fields.Exclude);
 
                                     // validate that all the claimTypes in the policy are well formed.
-                                    ValidateClaimsInPolicy(configAction.Policy.Database);
+                                    ValidateClaimsInPolicy(configOperation.Policy.Database);
                                 }
                             }
                         }
@@ -311,16 +310,16 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         }
                         else
                         {
-                            PermissionOperation configAction;
-                            configAction = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
+                            PermissionOperation configOperation;
+                            configOperation = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
 
-                            if (configAction.Policy is not null && configAction.Policy.Database is not null)
+                            if (configOperation.Policy is not null && configOperation.Policy.Database is not null)
                             {
                                 // Remove all the occurences of @item. directive from the policy.
-                                configAction.Policy.Database = ProcessFieldsInPolicy(configAction.Policy.Database);
+                                configOperation.Policy.Database = ProcessFieldsInPolicy(configOperation.Policy.Database);
                             }
 
-                            processedActions.Add(JsonSerializer.SerializeToElement(configAction));
+                            processedActions.Add(JsonSerializer.SerializeToElement(configOperation));
                         }
                     }
 

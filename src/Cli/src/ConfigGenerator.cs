@@ -437,8 +437,8 @@ namespace Cli
         /// Only add existing operations to the merged list if there is no update.
         /// </summary>
         /// <param name="newOperations">operation items to update received from user.</param>
-        /// <param name="fieldsToInclude">fields to allow the operation permission</param>
-        /// <param name="fieldsToExclude">fields that will be excluded form the operation permission.</param>
+        /// <param name="fieldsToInclude">fields that are included for the operation permission</param>
+        /// <param name="fieldsToExclude">fields that are excluded from the operation permission.</param>
         /// <param name="existingOperations">operation items present in the config.</param>
         /// <returns>Array of updated operation objects</returns>
         private static object[] GetUpdatedOperationArray(string[] newOperations,

@@ -369,7 +369,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     }
                 }
             }
-
         }
 
         /// <summary>

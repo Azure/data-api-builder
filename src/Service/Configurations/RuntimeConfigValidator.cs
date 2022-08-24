@@ -107,6 +107,25 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <summary>
         /// Validate that the entities that have graphQL exposed do not generate queries with the 
         /// same name.
+        /// For example: Consider the entity definitions
+        /// "Book": {
+        ///   "graphql": true
+        /// }
+        ///  
+        /// "book": {
+        ///     "graphql": true
+        /// }
+        /// "Notebook": {
+        ///     "graphql": {
+        ///         "type": {
+        ///             "singular": "book",
+        ///             "plural": "books"
+        ///         }
+        ///     }
+        /// }
+        /// All these entities will create the follwing quereis
+        /// pk query: book
+        /// List query: books
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
         /// <exception cref="DataApiBuilderException"></exception>
@@ -126,8 +145,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 // Primary Key Query: For fetching an item using its primary key.
                 // List Query: To fetch a paginated list of items
                 // Query names for both these queries are determined.
-                string pkQuery = $"{FormatNameForField(GetDefinedSingularName(entityName, entity))}_by_pk";
-                string listQuery = FormatNameForField(Pluralize(entityName, entity).Value);
+                string pkQuery = GenerateByPKQueryName(entityName, entity);
+                string listQuery = GenerateListQueryName(entityName, entity);
 
                 if (graphQLQueries.Contains(pkQuery) || graphQLQueries.Contains(listQuery))
                 {
@@ -142,7 +161,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     graphQLQueries.Add(listQuery);
                 }
             }
-
         }
 
         /// <summary>

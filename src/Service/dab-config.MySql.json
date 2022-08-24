@@ -188,7 +188,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update", "delete" ]
         },
         {
           "role": "authenticated",
@@ -510,7 +510,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update" ]
         },
         {
           "role": "authenticated",
@@ -531,7 +531,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update" ]
         },
         {
           "role": "authenticated",
@@ -681,6 +681,10 @@
       "source": "empty_table",
       "rest": true,
       "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
         {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]

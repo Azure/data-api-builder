@@ -1,9 +1,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestBootstrapTests
@@ -106,17 +104,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestBootstrapTests
                     context: null,
                     new List<string> { compositeDbViewquery },
                     new List<string[]> { customEntity });
-                // Perform a GET operation on the view to confirm that it is functional.
-                // Set up rest controller.
-                RestService _restService = new(_queryEngine,
-                    _mutationEngine,
-                    _sqlMetadataProvider,
-                    _httpContextAccessor.Object,
-                    _authorizationService.Object,
-                    _authorizationResolver,
-                    _runtimeConfigProvider);
-                RestController _restController = new(_restService,
-                                                     _restControllerLogger);
 
                 // Query to validate the GET operation result.
                 string query = @"
@@ -132,9 +119,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestBootstrapTests
                 await SetupAndRunRestApiTest(
                     primaryKeyRoute: "book_id/1/author_id/123",
                     queryString: string.Empty,
-                    entityNameOrRoute: _compositeViewName,
-                    sqlQuery: query,
-                    controller: _restController
+                    entity: _compositeViewName,
+                    sqlQuery: query
                 );
             }
         }

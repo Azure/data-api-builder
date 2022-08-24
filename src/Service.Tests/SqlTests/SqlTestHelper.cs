@@ -2,13 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text.Encodings.Web;
+using System.Net.Http;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Controllers;
-using Azure.DataApiBuilder.Service.Models;
-using Microsoft.AspNetCore.Mvc;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 
@@ -16,6 +15,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 {
     public class SqlTestHelper : TestHelper
     {
+        // This is is the key which holds all the rows in the response
+        // for REST requests.
+        public static readonly string jsonResultTopLevelKey = "value";
         public static void RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
@@ -45,7 +47,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <returns>True if JSON objects are the same</returns>
         public static bool JsonStringsDeepEqual(string jsonString1, string jsonString2)
         {
-            return JToken.DeepEquals(JToken.Parse(jsonString1), JToken.Parse(jsonString2));
+            return string.IsNullOrEmpty(jsonString1) && string.IsNullOrEmpty(jsonString2) ||
+                JToken.DeepEquals(JToken.Parse(jsonString1), JToken.Parse(jsonString2));
         }
 
         /// <summary>
@@ -83,142 +86,90 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Performs test on the given entity name by calling the correct Api based on the
-        /// operation type passed for the given primaryKeyRoute (if any).
-        /// </summary>
-        /// <param name="controller">The REST controller with the request context.</param>
-        /// <param name="entityNameOrRoute">The entity name/route.</param>
-        /// <param name="primaryKeyRoute">The primary key portion of the route.</param>
-        /// <param name="operationType">The operation type to be tested.</param>
-        public static async Task<IActionResult> PerformApiTest(
-            RestController controller,
-            string path,
-            string entityNameOrRoute,
-            string primaryKeyRoute,
-            Operation operationType = Operation.Read)
-
-        {
-            IActionResult actionResult;
-            string pathAndEntityNameOrRoute = $"{path}/{entityNameOrRoute}";
-            switch (operationType)
-            {
-                case Operation.Read:
-                    actionResult = await controller.Find($"{pathAndEntityNameOrRoute}/{primaryKeyRoute}");
-                    break;
-                case Operation.Insert:
-                    actionResult = await controller.Insert($"{pathAndEntityNameOrRoute}");
-                    break;
-                case Operation.Delete:
-                    actionResult = await controller.Delete($"{pathAndEntityNameOrRoute}/{primaryKeyRoute}");
-                    break;
-                case Operation.Update:
-                case Operation.Upsert:
-                    actionResult = await controller.Upsert($"{pathAndEntityNameOrRoute}/{primaryKeyRoute}");
-                    break;
-                case Operation.UpdateIncremental:
-                case Operation.UpsertIncremental:
-                    actionResult = await controller.UpsertIncremental($"{pathAndEntityNameOrRoute}/{primaryKeyRoute}");
-                    break;
-                default:
-                    throw new NotSupportedException("This operation is not yet supported.");
-            }
-
-            return actionResult;
-        }
-
-        /// <summary>
         /// Verifies the ActionResult is as expected with the expected status code.
         /// </summary>
-        /// <param name="actionResult">The action result of the operation to verify.</param>
-        /// <param name="expected">string represents the expected result. This value can be null for NoContent or NotFound
-        /// results of operations like GET and DELETE</param>
-        /// <param name="expectedStatusCode">int represents the returned http status code</param>
+        /// <param name="expected">Expected result of the query execution.</param>
+        /// <param name="request">The HttpRequestMessage sent to the engine via HttpClient.</param>
+        /// <param name="response">The HttpResponseMessage returned by the engine.</param>
+        /// <param name="exceptionExpected">Boolean value indicating whether an exception is expected as
+        /// a result of executing the request on the engine.</param>
+        /// <param name="httpMethod">The http method specified in the request.</param>
         /// <param name="expectedLocationHeader">The expected location header in the response(if any).</param>
-        public static void VerifyResult(
-            IActionResult actionResult,
+        /// <param name="verifyNumRecords"></param>
+        /// <returns></returns>
+        public static async Task VerifyResultAsync(
             string expected,
-            HttpStatusCode expectedStatusCode,
+            HttpRequestMessage request,
+            HttpResponseMessage response,
+            bool exceptionExpected,
+            HttpMethod httpMethod,
             string expectedLocationHeader,
-            bool isJson = false,
-            int verifyNumRecords = -1)
+            int verifyNumRecords)
         {
-            JsonSerializerOptions options = new()
+            string responseBody = await response.Content.ReadAsStringAsync();
+            if (!exceptionExpected)
             {
-                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-            };
-            string actual;
-            switch (actionResult)
-            {
-                case OkObjectResult okResult:
-                    Assert.AreEqual((int)expectedStatusCode, okResult.StatusCode);
-                    actual = JsonSerializer.Serialize(okResult.Value, options);
-                    // if verifyNumRecords is positive we want to compare its value to
-                    // the number of elements associated with "value" in the actual result.
-                    // because the okResult.Value is an annonymous type we use the serialized
-                    // json string, actual, to easily get the inner array and get its length.
-                    if (verifyNumRecords >= 0)
-                    {
-                        Dictionary<string, JsonElement[]> actualAsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(actual);
-                        Assert.AreEqual(actualAsDict["value"].Length, verifyNumRecords);
-                    }
+                // Assert that the expectedLocation and actualLocation are equal in case of
+                // POST operation.
+                if (httpMethod == HttpMethod.Post)
+                {
+                    // Find the actual location using the response and request uri.
+                    // Response uri = Request uri + "/" + actualLocation
+                    // For eg. POST Request URI: http://localhost/api/Review
+                    // 201 Created Response URI: http://localhost/api/Review/book_id/1/id/5001
+                    // therefore, actualLocation = book_id/1/id/5001
+                    string responseUri = (response.Headers.Location.OriginalString);
+                    string requestUri = request.RequestUri.OriginalString;
+                    string actualLocation = responseUri.Substring(requestUri.Length + 1);
+                    Assert.AreEqual(expectedLocationHeader, actualLocation);
+                }
 
-                    break;
-                case CreatedResult createdResult:
-                    Assert.AreEqual((int)expectedStatusCode, createdResult.StatusCode);
-                    Assert.AreEqual(expectedLocationHeader, createdResult.Location);
-                    actual = JsonSerializer.Serialize(createdResult.Value);
-                    break;
-                // NoContentResult does not have value property for messages
-                case NoContentResult noContentResult:
-                    Assert.AreEqual((int)expectedStatusCode, noContentResult.StatusCode);
-                    actual = null;
-                    break;
-                case NotFoundResult notFoundResult:
-                    Assert.AreEqual((int)expectedStatusCode, notFoundResult.StatusCode);
-                    actual = null;
-                    break;
-                default:
-                    JsonResult actualResult = (JsonResult)actionResult;
-                    actual = JsonSerializer.Serialize(actualResult.Value, options);
-                    break;
-            }
+                // Assert the number of records received is equal to expected number of records.
+                if (response.StatusCode is HttpStatusCode.OK && verifyNumRecords >= 0)
+                {
+                    Dictionary<string, JsonElement[]> actualAsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(responseBody);
+                    Assert.AreEqual(actualAsDict[jsonResultTopLevelKey].Length, verifyNumRecords);
+                }
 
-            Console.WriteLine($"Expected: {expected}\nActual: {actual}");
-            if (isJson && !string.IsNullOrEmpty(expected))
-            {
-                Assert.IsTrue(JsonStringsDeepEqual(expected, actual));
+                Assert.IsTrue(JsonStringsDeepEqual(expected, responseBody));
             }
             else
             {
-                Assert.AreEqual(expected, actual, ignoreCase: true);
+                // Quote(") has to be treated differently than other unicode characters
+                // as it has to be added with a preceding backslash.
+                responseBody = Regex.Replace(responseBody, @"\\u0022", @"\\""");
+
+                // Convert the escaped characters into their unescaped form.
+                responseBody = Regex.Unescape(responseBody);
+                Assert.AreEqual(expected, responseBody);
             }
         }
 
         /// <summary>
-        /// Returns the HTTP verb for a provided Operation.
+        /// Helper method to get the HttpMethod based on the operation type.
         /// </summary>
-        /// <param name="operationType">Operation such as Find, Upsert, Delete, etc.
-        /// When Operation.None is provided from some tests, return empty string.</param>
-        /// <returns>Matching HttpConstants value</returns>
-        /// <exception cref="ArgumentException"></exception>
-        public static string OperationTypeToHTTPVerb(Operation operationType)
+        /// <param name="operationType">The operation to be executed on the entity.</param>
+        /// <returns></returns>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static HttpMethod GetHttpMethodFromOperation(Operation operationType)
         {
             switch (operationType)
             {
                 case Operation.Read:
-                    return HttpConstants.GET;
+                    return HttpMethod.Get;
                 case Operation.Insert:
-                    return HttpConstants.POST;
-                case Operation.Upsert:
-                    return HttpConstants.PUT;
-                case Operation.UpsertIncremental:
-                    return HttpConstants.PATCH;
+                    return HttpMethod.Post;
                 case Operation.Delete:
-                    return HttpConstants.DELETE;
-                case Operation.None:
-                    return string.Empty;
+                    return HttpMethod.Delete;
+                case Operation.Upsert:
+                    return HttpMethod.Put;
+                case Operation.UpsertIncremental:
+                    return HttpMethod.Patch;
                 default:
-                    throw new ArgumentException(message: $"Invalid operationType {operationType} provided");
+                    throw new DataApiBuilderException(
+                        message: "Operation not supported for the request.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
             }
         }
 

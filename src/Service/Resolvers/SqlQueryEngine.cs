@@ -172,7 +172,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
             string after = SqlPaginationUtil.MakeCursorFromJsonElement(
                                element: rootEnumerated.Last(),
-                               orderByColumns: context.OrderByClauseInUrl,
+                               orderByColumns: context.OrderByClauseOfBackingColumns,
                                primaryKey: _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
                                entityName: context.EntityName,
                                schemaName: context.DatabaseObject.SchemaName,

@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Service.Controllers;
-using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
@@ -262,6 +260,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc",
+                $"SELECT [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
+                $"ORDER BY species " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithQueryStringSpaceInNamesOrderByAsc",
                 $"SELECT * FROM { _integrationTableHasColumnWithSpace } " +
                 $"ORDER BY [ID Number] " +
@@ -408,16 +412,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         {
             DatabaseEngine = TestCategory.MSSQL;
             await InitializeTestFixture(context);
-            // Setup REST Components
-            _restService = new RestService(_queryEngine,
-                _mutationEngine,
-                _sqlMetadataProvider,
-                _httpContextAccessor.Object,
-                _authorizationService.Object,
-                _authorizationResolver,
-                _runtimeConfigProvider);
-            _restController = new RestController(_restService,
-                                                 _restControllerLogger);
         }
 
         /// <summary>

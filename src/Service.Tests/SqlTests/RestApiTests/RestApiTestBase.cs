@@ -1,5 +1,3 @@
-using Azure.DataApiBuilder.Service.Controllers;
-using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
@@ -10,8 +8,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
     [TestClass]
     public abstract class RestApiTestBase : SqlTestBase
     {
-        protected static RestService _restService;
-        protected static RestController _restController;
         protected static readonly string _integrationEntityName = "Book";
         protected static readonly string _integrationTableName = "books";
         protected static readonly string _entityWithCompositePrimaryKey = "Review";
@@ -31,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationBrokenMappingEntity = "Fungus";
         protected static readonly string _integrationUniqueCharactersEntity = "ArtOfWar";
         protected static readonly string _integrationUniqueCharactersTable = "aow";
-        protected static readonly string _nonExistentEntityName = "!@#$%^&*()_+definitely_nonexistent_entity!@#$%^&*()_+";
+        protected static readonly string _nonExistentEntityName = "!@$%^&*()_+definitely_nonexistent_entity!@$%^&*()_+";
         protected static readonly string _nonExistentStocksEntityRouteName = "asset";
         protected static readonly string _emptyTableEntityName = "Empty";
         protected static readonly string _emptyTableTableName = "empty_table";

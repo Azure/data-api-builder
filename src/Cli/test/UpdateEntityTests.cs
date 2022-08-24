@@ -1314,7 +1314,7 @@ namespace Cli.Tests
             entityMap.Add("SampleEntity2", sampleEntity2);
 
             // Runtime Setting with GraphQL disabled
-            Dictionary<GlobalSettingsType, object> runtimeSettings = new();
+            Dictionary<GlobalSettingsType, object> runtimeSettings = new ();
             runtimeSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings(Enabled: false));
 
             RuntimeConfig runtimeConfigWithRuntimeDisabledGraphQL = new(
@@ -1332,7 +1332,7 @@ namespace Cli.Tests
 
             runtimeSettings[GlobalSettingsType.GraphQL] = new GraphQLGlobalSettings(Enabled: true);
 
-            _ = new(
+            RuntimeConfig runtimeConfigWithRuntimeEnabledGraphQL = new(
                 Schema: "schema",
                 DataSource: new DataSource(DatabaseType.mssql),
                 CosmosDb: null,

@@ -382,6 +382,36 @@
               }
             }
           ]
+        },
+        {
+          "role": "policy_tester_update_noread",
+          "actions": [
+            "create",
+            {
+              "action": "update",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 9"
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [ "*" ]
+              }
+            },
+            {
+              "action": "delete",
+              "fields": {
+                "include": [ "*" ]
+              },
+              "policy": {
+                "database": "@item.id eq 9"
+              }
+            }
+          ]
         }
       ],
       "relationships": {
@@ -540,8 +570,8 @@
         }
       ]
     },
-    "SupportedType": {
-      "source": "type_table",
+    "stocks_price": {
+      "source": "stocks_price",
       "rest": false,
       "permissions": [
         {
@@ -554,8 +584,8 @@
         }
       ]
     },
-    "stocks_price": {
-      "source": "stocks_price",
+    "SupportedType": {
+      "source": "type_table",
       "rest": false,
       "permissions": [
         {
@@ -589,7 +619,7 @@
     "Shrub": {
       "source": "trees",
       "rest": {
-        "path": "plants"
+        "path":  "plants"
       },
       "permissions": [
         {
@@ -743,57 +773,6 @@
         }
       ]
     },
-    "books_view_all": {
-      "source": "books_view_all",
-      "rest": true,
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [ "create", "read", "update", "delete" ]
-        }
-      ],
-      "relationships": {
-      }
-    },
-    "stocks_view_selected": {
-      "source": "stocks_view_selected",
-      "rest": true,
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [ "create", "read", "update", "delete" ]
-        }
-      ],
-      "relationships": {
-      }
-    },
-    "books_publishers_view_composite": {
-      "source": "books_publishers_view_composite",
-      "rest": true,
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [ "create", "read", "update", "delete" ]
-        }
-      ],
-      "relationships": {
-      }
-    },
     "ArtOfWar": {
       "source": "aow",
       "rest": true,
@@ -813,42 +792,6 @@
         "StrategicAttack": "謀攻",
         "NoteNum": "┬─┬ノ( º _ ºノ)"
       }
-    },
-    "GetBooks": {
-      "source": {
-        "type": "stored-procedure",
-        "object": "get_books"
-      },
-      "rest": true,
-      "graphql": false,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [ "*" ]
-        }
-      ]
-    },
-    "GetBook": {
-      "source": {
-        "type": "stored-procedure",
-        "object": "get_book_by_id"
-      },
-      "rest": true,
-      "graphql": false,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [ "*" ]
-        }
-      ]
     }
   }
 }

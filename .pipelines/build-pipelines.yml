@@ -112,7 +112,7 @@ steps:
 - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
   displayName: 'Generation Task'
   inputs:
-      BuildDropPath: '$(System.ArtifactsDirectory)/buildOutput'
+      BuildDropPath: '$(Build.ArtifactStagingDirectory)'
 
 # this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
 - task: PublishPipelineArtifact@1

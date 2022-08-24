@@ -29,10 +29,9 @@ To allow this ability to work, Data API Builder needs to know how the two object
 No matter what database you are using with Data API Builder, you have to explicity tell Data API Builder that an object is related to another one even if, using Foreign Key metadata when available, it could infer it automatically. This is done to allow you to have full control on what is exposed via GraphQL and what not.
 
 There are three types of relatioship that can be established between two entities:
-
-- [One-To-Many]()
-- [Many-To-One]()
-- [Many-To-Many]()
+- [One-To-Many Relationship](#one-to-many-relationship)
+- [Many-To-One Relationship](#many-to-one-relationship)
+- [Many-To-Many Relationship](#many-to-many-relationship)
 
 ### One-To-Many Relationship
 
@@ -154,7 +153,7 @@ which, in turn, will allow a GraphQL query like the following:
 
 where each book will return also the series it belongs to.
 
-### Many-To-Many
+### Many-To-Many Relationship
 
 WIP
 

@@ -74,4 +74,10 @@
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
     <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
   </ItemGroup>
+
+  <Target Name="MyPostCompileTarget" AfterTargets="Build">
+        <Exec Command="echo hello"/>
+  </Target>
+
+
 </Project>

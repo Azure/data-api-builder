@@ -532,9 +532,10 @@ namespace Cli
             // Add/Update of relationship is not allowed when GraphQL is disabled in Global RUntime Settings
             if (runtimeConfig.RuntimeSettings!.ContainsKey(GlobalSettingsType.GraphQL))
             {
-                GraphQLGlobalSettings? graphQLGlobalSettings = (GraphQLGlobalSettings)Convert.ChangeType(
-                    runtimeConfig.RuntimeSettings[GlobalSettingsType.GraphQL], typeof(GraphQLGlobalSettings)
+                GraphQLGlobalSettings? graphQLGlobalSettings = JsonSerializer.Deserialize<GraphQLGlobalSettings>(
+                    (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.GraphQL]
                     );
+                // GraphQLGlobalSettings? graphQLGlobalSettings = (GraphQLGlobalSettings)runtimeConfig.RuntimeSettings[GlobalSettingsType.GraphQL];
                 if (graphQLGlobalSettings is not null && !graphQLGlobalSettings.Enabled)
                 {
                     Console.WriteLine("Cannot add/update relationship as GraphQL is disabled in the" +

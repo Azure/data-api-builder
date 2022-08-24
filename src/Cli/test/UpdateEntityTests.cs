@@ -1315,7 +1315,9 @@ namespace Cli.Tests
 
             // Runtime Setting with GraphQL disabled
             Dictionary<GlobalSettingsType, object> runtimeSettings = new();
-            runtimeSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings(Enabled: false));
+            runtimeSettings.Add(GlobalSettingsType.GraphQL,
+                JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(Enabled: false))
+                );
 
             RuntimeConfig runtimeConfigWithRuntimeDisabledGraphQL = new(
                 Schema: "schema",
@@ -1329,10 +1331,15 @@ namespace Cli.Tests
             );
 
             // Verification should fail
-            Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfigWithRuntimeDisabledGraphQL, cardinality: "one", targetEntity: "SampleEntity2"));
+            Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfigWithRuntimeDisabledGraphQL,
+                cardinality: "one",
+                targetEntity: "SampleEntity2")
+                );
 
             // enabling GraphQL for runtime setting
-            runtimeSettings[GlobalSettingsType.GraphQL] = new GraphQLGlobalSettings(Enabled: true);
+            runtimeSettings[GlobalSettingsType.GraphQL] = JsonSerializer.SerializeToElement(
+                new GraphQLGlobalSettings(Enabled: true)
+                );
 
             RuntimeConfig runtimeConfigWithRuntimeEnabledGraphQL = new(
                 Schema: "schema",
@@ -1346,7 +1353,10 @@ namespace Cli.Tests
             );
 
             // verification should pass
-            Assert.IsTrue(VerifyCanUpdateRelationship(runtimeConfigWithRuntimeEnabledGraphQL, cardinality: "one", targetEntity: "SampleEntity2"));
+            Assert.IsTrue(VerifyCanUpdateRelationship(runtimeConfigWithRuntimeEnabledGraphQL,
+                cardinality: "one",
+                targetEntity: "SampleEntity2")
+                );
         }
 
         #endregion

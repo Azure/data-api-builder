@@ -216,11 +216,11 @@ namespace Azure.DataApiBuilder.Config
     /// <summary>
     /// Describes the REST settings specific to an entity.
     /// </summary>
-    /// <param name="Route">Instructs the runtime to use this route as the path
+    /// <param name="Path">Instructs the runtime to use this as the path
     /// at which the REST endpoint for this entity is exposed
-    /// instead of using the entity-name. Can be a string or Singular-Plural type.
+    /// instead of using the entity-name. Can be a string type.
     /// If string, a corresponding plural route will be added as per the rules at
-    /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
+    /// </param>
     public record RestEntitySettings(object Path);
 
     /// <summary>

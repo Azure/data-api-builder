@@ -286,7 +286,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <returns>route for the given Entity.</returns>
         private static string GetEntityRoute(Entity entity, string entityName)
         {
-            // if entity.Rest is null or true we just use source name
+            // if entity.Rest is null or true we just use entity name
             if (entity.Rest is null || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.True)
             {
                 return entityName;

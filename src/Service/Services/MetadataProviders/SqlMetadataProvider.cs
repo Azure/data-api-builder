@@ -270,7 +270,11 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 Entity entity = _entities[entityName];
                 string route = GetEntityRoute(entity, entityName);
-                EntityRouteToEntityName[route] = entityName;
+
+                if (!string.IsNullOrEmpty(route))
+                {
+                    EntityRouteToEntityName[route] = entityName;
+                }
             }
         }
 
@@ -278,13 +282,20 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Deserialize and return the entity's route.
         /// </summary>
         /// <param name="entity">Entity to get the route of.</param>
+        /// <param name="entityName">name of the entity</param>
         /// <returns>route for the given Entity.</returns>
         private static string GetEntityRoute(Entity entity, string entityName)
         {
-            // if entity.Rest is null or a bool we just use source name
-            if (entity.Rest is null || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.True or JsonValueKind.False)
+            // if entity.Rest is null or true we just use source name
+            if (entity.Rest is null || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.True)
             {
                 return entityName;
+            }
+
+            // for false return empty string so we know not to add in caller
+            if (((JsonElement)entity.Rest).ValueKind is JsonValueKind.False)
+            {
+                return string.Empty;
             }
 
             // otherwise we have to convert each part of the Rest property we want into correct objects

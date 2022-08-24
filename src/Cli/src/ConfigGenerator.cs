@@ -535,7 +535,6 @@ namespace Cli
                 GraphQLGlobalSettings? graphQLGlobalSettings = JsonSerializer.Deserialize<GraphQLGlobalSettings>(
                     (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.GraphQL]
                     );
-                // GraphQLGlobalSettings? graphQLGlobalSettings = (GraphQLGlobalSettings)runtimeConfig.RuntimeSettings[GlobalSettingsType.GraphQL];
                 if (graphQLGlobalSettings is not null && !graphQLGlobalSettings.Enabled)
                 {
                     Console.WriteLine("Cannot add/update relationship as GraphQL is disabled in the" +

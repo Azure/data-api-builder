@@ -791,7 +791,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             if (_ctx is null)
             {
-                throw new ArgumentNullException("IMiddlewareContext should be intiliazed before trying to parse the orderBy argument.");
+                throw new ArgumentNullException("IMiddlewareContext should be initialized before trying to parse the orderBy argument.");
             }
 
             // Create list of primary key columns
@@ -802,13 +802,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             List<string> remainingPkCols = new(PrimaryKey());
 
-            //InputObjectType orderByArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(orderByArgumentSchema);
             foreach ((string fieldName, object? fieldValue) in orderByFields)
             {
-                //object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
-                //    value: field.Value,
-                //    argumentSchema: orderByArgumentObject.Fields[field.Name.Value],
-                //    variables: _ctx.Variables);
 
                 if (fieldValue is null)
                 {

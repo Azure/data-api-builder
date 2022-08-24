@@ -4,7 +4,6 @@ using HotChocolate.Language;
 
 namespace Azure.DataApiBuilder.Service.Models
 {
-
     public static class FieldFilterParser
     {
         /// <summary>

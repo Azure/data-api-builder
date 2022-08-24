@@ -303,8 +303,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 {
                     RestEntitySettings rest =
                         ((JsonElement)entity.Rest).Deserialize<RestEntitySettings>(RuntimeConfig.SerializerOptions);
-                    Assert.IsTrue(
-                        ((JsonElement)rest.Path).ValueKind == JsonValueKind.String);
+                    Assert.IsTrue(((JsonElement)rest.Path).ValueKind == JsonValueKind.String);
                 }
 
                 Assert.IsTrue(entity.GraphQL == null

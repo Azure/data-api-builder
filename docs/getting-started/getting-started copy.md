@@ -23,15 +23,41 @@ As the Data API builder for Azure Databases generate REST and GraphQL endpoints 
 
 Data API Builder provides as CLI tool to simplify configuration and execution of the engine. Detailed description on how DAB CLI  can be installed on your machine can be found here: [Running Data API Builder for Azure Databases using CLI](../running-using-dab-cli.md)
 
-## Getting to know the configuration file
+
+### Git
+
+Please note that familiarity with Git commands and tooling is assumed throughout the tutorial. Make sure `git` is installed in your machine.
+
+## Clone the Data API builder for Azure Databases engine
+
+Clone the repository locally:
+
+```
+git clone https://github.com/Azure/data-api-builder.git
+```
+
+and then make sure you are using the M1.5 release:
+
+```bash
+cd .\data-api-builder\
+git checkout release/M1.5
+```
+
+then move into the folder where the Data API builder for Azure Databases engine has been cloned and then move into the `samples/getting-started` folder, for example:
+
+```
+cd .\samples\getting-started
+```
+
+## Create the configuration file
 
 The Data API builder for Azure Databases engine needs a [configuration file](../configuration-file.md) to know to which database it has to connect to, and what are the entities that have to be exposed, and their properties.
 
-Let's start with an overview of a basic configuration file, and then we'll move to initializing one using the DAB CLI.
+Creating a configuration file is simple and you can use the Data API builder CLI to make it even simpler. In this tutorial the CLI will not be used so that you can get the chance to get familar with the configuration file, as it is a key part of Data API builder for Azure Databases.
 
-### Overview of configuration file
+Create a copy of the `basic-empty-dab-config.json` file and rename it `library-dab-config.json` and then open it using your editor of choice (such as Visual Studio Code).
 
-A very basic configuration file looks like the following:
+The content of the file is the following:
 
 ```json
 {
@@ -62,21 +88,11 @@ In the `data-source` section you have to specify the database type and the conne
 
 Set the value of `database-type` to the database you plan to use. For this tutorial we'll be using `mssql` or `cosmos` to showcase both the relational and non-relational support.
 
-Once you have chosen the database you want to connect to, you need to provide the connection string in the `connection-string` property. This is a standard ADO.NET connection string for the database you'll be using and you can get it from the Azure Portal, for example. 
+Once you have chosen the database you want to connect to, you need to provide the connection string in the `connection-string` property. This is a standard ADO.NET connection string for the database you'll be using and you can get it from the Azure Portal, for example. If don't know the connection string, no worries, we'll take care of that later.
 
 The `runtime` section is telling Data API builder to run in `development` mode. This means database errors will be surfaced and returned with full detail. This is great for development, but can be a security risk when running in production: that's why switching to `production` mode will disable this ability.
 
 The remaining property is the `entities` property and it is empty for now. This property will contain all the object you want to be exposed as REST or GraphQL endpoints.
-
-### Initialize the configuration file
-
-Initializing a configuration file is simple and you can use the Data API builder CLI to make it even simpler. 
-
-```bash
-dab init --database-type "<database-type>" --connection-string "<connection-string>"
-```
-
-where `database-type` and `connection-string` you can use any of the values described in the [Overview of configuration file](#overview-of-configuration-file) section above. If don't know the connection string, no worries: hold your breath for a second and we'll take care of that later, in one of the database-specific Getting Started document we ave created for you.
 
 ## The sample scenario
 
@@ -108,4 +124,4 @@ Instead of creating the configuration file manually, you can take advantage of t
 
 ### Deploy on Azure
 
-Data API Builder can run in Azure so that you can easily build scalable applications. Detailed explanation - along with a sample script to help you getting started - is available here: [Running in Azure](./../running-in-azure.md)
+** Work in progress **

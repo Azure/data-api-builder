@@ -333,26 +333,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.IsInstanceOfType(entity.Permissions, typeof(PermissionSetting[]));
                 foreach (PermissionSetting permission in entity.Permissions)
                 {
-                    foreach (object action in permission.Actions)
+                    foreach (object operation in permission.Operations)
                     {
                         HashSet<Operation> allowedActions =
                             new() { Operation.All, Operation.Create, Operation.Read,
                                 Operation.Update, Operation.Delete };
-                        Assert.IsTrue(((JsonElement)action).ValueKind == JsonValueKind.String ||
-                            ((JsonElement)action).ValueKind == JsonValueKind.Object);
-                        if (((JsonElement)action).ValueKind == JsonValueKind.Object)
+                        Assert.IsTrue(((JsonElement)operation).ValueKind == JsonValueKind.String ||
+                            ((JsonElement)operation).ValueKind == JsonValueKind.Object);
+                        if (((JsonElement)operation).ValueKind == JsonValueKind.Object)
                         {
-                            Config.Action configAction =
-                                ((JsonElement)action).Deserialize<Config.Action>(RuntimeConfig.SerializerOptions);
-                            Assert.IsTrue(allowedActions.Contains(configAction.Name));
-                            Assert.IsTrue(configAction.Policy == null
-                                || configAction.Policy.GetType() == typeof(Policy));
-                            Assert.IsTrue(configAction.Fields == null
-                                || configAction.Fields.GetType() == typeof(Field));
+                            Config.PermissionOperation configOperation =
+                                ((JsonElement)operation).Deserialize<Config.PermissionOperation>(RuntimeConfig.SerializerOptions);
+                            Assert.IsTrue(allowedActions.Contains(configOperation.Name));
+                            Assert.IsTrue(configOperation.Policy == null
+                                || configOperation.Policy.GetType() == typeof(Policy));
+                            Assert.IsTrue(configOperation.Fields == null
+                                || configOperation.Fields.GetType() == typeof(Field));
                         }
                         else
                         {
-                            Operation name = ((JsonElement)action).Deserialize<Operation>(RuntimeConfig.SerializerOptions);
+                            Operation name = ((JsonElement)operation).Deserialize<Operation>(RuntimeConfig.SerializerOptions);
                             Assert.IsTrue(allowedActions.Contains(name));
                         }
                     }

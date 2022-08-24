@@ -27,10 +27,6 @@ dab-config.*.json
 .localhistory/
 *.code-workspace
 
-# include some basic vscode config files
-!/src/Service/.vscode/launch.json
-!/src/Service/.vscode/tasks.json
-
 .fake
 .ionide
 *.orig

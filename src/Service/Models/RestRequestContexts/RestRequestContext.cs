@@ -63,6 +63,12 @@ namespace Azure.DataApiBuilder.Service.Models
         public virtual List<OrderByColumn>? OrderByClauseInUrl { get; set; }
 
         /// <summary>
+        /// List of OrderBy Columns which represent the OrderByClause using backing columns.
+        /// Based on the operation type, this property may or may not be populated.
+        /// </summary>
+        public virtual List<OrderByColumn>? OrderByClauseOfBackingColumns { get; set; }
+
+        /// <summary>
         /// Dictionary of field names and their values given in the request body.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
@@ -151,9 +157,9 @@ namespace Azure.DataApiBuilder.Service.Models
                 Console.Error.WriteLine(e.Message);
                 Console.Error.WriteLine(e.StackTrace);
                 throw new DataApiBuilderException(
-                    message: "Request content invalid.",
+                    message: "$filter query parameter is not well formed.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCumulativeColumnCheckFailed);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
         }
 

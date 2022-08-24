@@ -28,42 +28,42 @@ namespace Azure.DataApiBuilder.Auth
         /// </summary>
         /// <param name="entityName">Entity from request</param>
         /// <param name="roleName">Role defined in client role header</param>
-        /// <param name="action">Action type: Create, Read, Update, Delete</param>
+        /// <param name="operation">Operation type: Create, Read, Update, Delete</param>
         /// <returns>True, if a matching permission entry is found.</returns>
-        public bool AreRoleAndActionDefinedForEntity(string entityName, string roleName, Operation action);
+        public bool AreRoleAndOperationDefinedForEntity(string entityName, string roleName, Operation operation);
 
         /// <summary>
         /// Any columns referenced in a request's headers, URL(filter/orderby/routes), and/or body
-        /// are compared against the inclued/excluded column permission defined for the entityName->roleName->action
+        /// are compared against the inclued/excluded column permission defined for the entityName->roleName->operation
         /// </summary>
         /// <param name="entityName">Entity from request</param>
         /// <param name="roleName">Role defined in client role header</param>
-        /// <param name="action">Action type: Create, Read, Update, Delete</param>
+        /// <param name="operation">Operation type: Create, Read, Update, Delete</param>
         /// <param name="columns">Compiled list of any column referenced in a request</param>
         /// <returns></returns>
-        public bool AreColumnsAllowedForAction(string entityName, string roleName, Operation action, IEnumerable<string> columns);
+        public bool AreColumnsAllowedForOperation(string entityName, string roleName, Operation operation, IEnumerable<string> columns);
 
         /// <summary>
         /// Method to return the list of exposed columns for the given combination of
-        /// entityName, roleName, action.
+        /// entityName, roleName, operation.
         /// </summary>
         /// <param name="entityName">Entity from request</param>
         /// <param name="roleName">Role defined in client role header</param>
-        /// <param name="action">Action type: Create, Read, Update, Delete</param>
+        /// <param name="operation">Operation type: Create, Read, Update, Delete</param>
         /// <returns></returns>
-        public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, Operation action);
+        public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, Operation operation);
 
         /// <summary>
-        /// Retrieves the policy of an action within an entity's role entry
+        /// Retrieves the policy of an operation within an entity's role entry
         /// within the permissions section of the runtime config, and tries to process
         /// the policy.
         /// </summary>
         /// <param name="entityName">Entity from request.</param>
         /// <param name="roleName">Role defined in client role header.</param>
-        /// <param name="action">Action type: Create, Read, Update, Delete.</param>
+        /// <param name="operation">Operation type: Create, Read, Update, Delete.</param>
         /// <param name="httpContext">Contains token claims of the authenticated user used in policy evaluation.</param>
         /// <returns>Returns the parsed policy, if successfully processed, or an exception otherwise.</returns>
-        public string TryProcessDBPolicy(string entityName, string roleName, Operation action, HttpContext httpContext);
+        public string TryProcessDBPolicy(string entityName, string roleName, Operation operation, HttpContext httpContext);
 
         /// <summary>
         /// Get list of roles defined for entity within runtime configuration.. This is applicable for GraphQL when creating authorization
@@ -74,25 +74,25 @@ namespace Azure.DataApiBuilder.Auth
         public IEnumerable<string> GetRolesForEntity(string entityName);
 
         /// <summary>
-        /// Returns the collection of roles which can perform {action} the provided field.
+        /// Returns the collection of roles which can perform {operation} the provided field.
         /// Applicable to GraphQL field directive @authorize on ObjectType fields.
         /// </summary>
-        /// <param name="entityName">EntityName whose actionMetadata will be searched.</param>
-        /// <param name="field">Field to lookup action permissions</param>
-        /// <param name="action">Specific action to get collection of roles</param>
-        /// <returns>Collection of role names allowed to perform action on Entity's field.</returns>
-        public IEnumerable<string> GetRolesForField(string entityName, string field, Operation action);
+        /// <param name="entityName">EntityName whose operationMetadata will be searched.</param>
+        /// <param name="field">Field to lookup operation permissions</param>
+        /// <param name="operation">Specific operation to get collection of roles</param>
+        /// <returns>Collection of role names allowed to perform operation on Entity's field.</returns>
+        public IEnumerable<string> GetRolesForField(string entityName, string field, Operation operation);
 
         /// <summary>
-        /// Returns a list of roles which define permissions for the provided action.
-        /// i.e. list of roles which allow the action "read" on entityName.
+        /// Returns a list of roles which define permissions for the provided operation.
+        /// i.e. list of roles which allow the operation 'Read' on entityName.
         /// </summary>
         /// <param name="entityName">Entity to lookup permissions</param>
-        /// <param name="action">Action to lookup applicable roles</param>
+        /// <param name="operation">Operation to lookup applicable roles</param>
         /// <returns>Collection of roles. Empty list if entityPermissionsMap is null.</returns>
-        public static IEnumerable<string> GetRolesForAction(
+        public static IEnumerable<string> GetRolesForOperation(
             string entityName,
-            Operation action,
+            Operation operation,
             Dictionary<string, EntityMetadata>? entityPermissionsMap)
         {
             if (entityName is null)
@@ -101,7 +101,7 @@ namespace Azure.DataApiBuilder.Auth
             }
 
             if (entityPermissionsMap is not null &&
-                entityPermissionsMap[entityName].ActionToRolesMap.TryGetValue(action, out List<string>? roleList) &&
+                entityPermissionsMap[entityName].OperationToRolesMap.TryGetValue(operation, out List<string>? roleList) &&
                 roleList is not null)
             {
                 return roleList;

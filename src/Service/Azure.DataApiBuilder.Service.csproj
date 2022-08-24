@@ -74,7 +74,6 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="$(ConfigVersion)" />
     <PackageReference Include="MSTest.TestFramework" Version="2.2.6" />
     <PackageReference Include="MySqlConnector" Version="$(MySQLVersion)" />
-    <PackageReference Include="Humanizer" Version="$(HumanizerVersion)" />
     <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     <PackageReference Include="Npgsql" Version="$(PostgresVersion)" />
     <PackageReference Include="Microsoft.OData.Edm" Version="$(ODataVersion)" />

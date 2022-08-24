@@ -1274,6 +1274,78 @@ namespace Cli.Tests
             Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: "one", targetEntity: "SampleEntity2"));
         }
 
+        /// <summary>
+        /// Test to verify that adding a relationship to an entity which has GraphQL disabled should fail.
+        /// The test created 2 entities. One entity has GQL enabled which tries to create relationship with
+        /// another entity which has GQL disabled which is invalid.
+        /// </summary>
+        [TestMethod]
+        public void TestVerifyCanAddRelationshipWithGraphQlDisabledInRuntimeSettings()
+        {
+            PermissionOperation actionForRole = new(
+                Name: Operation.Create,
+                Fields: null,
+                Policy: null);
+
+            PermissionSetting permissionForEntity = new(
+                role: "anonymous",
+                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+
+            Entity sampleEntity1 = new(
+                Source: JsonSerializer.SerializeToElement("SOURCE1"),
+                Rest: true,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+            );
+
+            Entity sampleEntity2 = new(
+                Source: JsonSerializer.SerializeToElement("SOURCE2"),
+                Rest: true,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+            );
+
+            Dictionary<string, Entity> entityMap = new();
+            entityMap.Add("SampleEntity1", sampleEntity1);
+            entityMap.Add("SampleEntity2", sampleEntity2);
+
+            // Runtime Setting with GraphQL disabled
+            Dictionary<GlobalSettingsType, object> runtimeSettings = new();
+            runtimeSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings(Enabled: false));
+
+            RuntimeConfig runtimeConfigWithRuntimeDisabledGraphQL = new(
+                Schema: "schema",
+                DataSource: new DataSource(DatabaseType.mssql),
+                CosmosDb: null,
+                MsSql: null,
+                PostgreSql: null,
+                MySql: null,
+                RuntimeSettings: runtimeSettings,
+                Entities: entityMap
+            );
+
+            Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfigWithRuntimeDisabledGraphQL, cardinality: "one", targetEntity: "SampleEntity2"));
+
+            runtimeSettings[GlobalSettingsType.GraphQL] = new GraphQLGlobalSettings(Enabled: true);
+
+            _ = new(
+                Schema: "schema",
+                DataSource: new DataSource(DatabaseType.mssql),
+                CosmosDb: null,
+                MsSql: null,
+                PostgreSql: null,
+                MySql: null,
+                RuntimeSettings: runtimeSettings,
+                Entities: entityMap
+            );
+
+            Assert.IsTrue(VerifyCanUpdateRelationship(runtimeConfigWithRuntimeDisabledGraphQL, cardinality: "one", targetEntity: "SampleEntity2"));
+        }
+
         #endregion
 
         private static string GetInitialConfigString()

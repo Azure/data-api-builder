@@ -261,7 +261,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                 configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
             Assert.AreEqual($"Could not find relation between Linking Object: {sampleRelationship.LinkingObject}"
-                + " with entities: SampleEntity2 and SampleEntity1.", ex.Message);
+                + $" with entities: SampleEntity2 and SampleEntity1.", ex.Message);
             Assert.AreEqual(HttpStatusCode.UnprocessableEntity, ex.StatusCode);
 
             // Adding ForeignKey relation for LinkingObject and the other related entities.

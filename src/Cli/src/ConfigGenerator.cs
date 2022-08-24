@@ -529,6 +529,20 @@ namespace Cli
                 return false;
             }
 
+            // Add/Update of relationship is not allowed when GraphQL is disabled in Global RUntime Settings
+            if (runtimeConfig.RuntimeSettings!.ContainsKey(GlobalSettingsType.GraphQL))
+            {
+                GraphQLGlobalSettings? graphQLGlobalSettings = (GraphQLGlobalSettings)Convert.ChangeType(
+                    runtimeConfig.RuntimeSettings[GlobalSettingsType.GraphQL], typeof(GraphQLGlobalSettings)
+                    );
+                if (graphQLGlobalSettings is not null && !graphQLGlobalSettings.Enabled)
+                {
+                    Console.WriteLine("Cannot add/update relationship as GraphQL is disabled in the" +
+                    " global runtime settings of the config.");
+                    return false;
+                }
+            }
+
             // Both the source entity and target entity needs to present in config to establish relationship.
             if (!runtimeConfig.Entities.ContainsKey(targetEntity))
             {

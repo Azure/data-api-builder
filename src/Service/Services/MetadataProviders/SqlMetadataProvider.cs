@@ -13,7 +13,6 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
-using Humanizer;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.Services
@@ -270,17 +269,17 @@ namespace Azure.DataApiBuilder.Service.Services
             foreach (string entityName in _entities.Keys)
             {
                 Entity entity = _entities[entityName];
-                string pluralizedRoute = PluralizeEntityRoute(entity, entityName);
-                EntityRouteToEntityName[pluralizedRoute] = entityName;
+                string route = GetEntityRoute(entity, entityName);
+                EntityRouteToEntityName[route] = entityName;
             }
         }
 
         /// <summary>
-        /// Correctly pluralize the entity's route.
+        /// Deserialize and return the entity's route.
         /// </summary>
-        /// <param name="entity">Entity to pluralize the route of.</param>
-        /// <returns>pluralized route for the given Entity.</returns>
-        private static string PluralizeEntityRoute(Entity entity, string entityName)
+        /// <param name="entity">Entity to get the route of.</param>
+        /// <returns>route for the given Entity.</returns>
+        private static string GetEntityRoute(Entity entity, string entityName)
         {
             // if entity.Rest is null or a bool we just use source name
             if (entity.Rest is null || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.True or JsonValueKind.False)
@@ -292,14 +291,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // they are json element so this means deserializing at each step with case insensitivity
             JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
             RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)entity.Rest, options)!;
-            if (((JsonElement)rest.Route).ValueKind is JsonValueKind.String)
-            {
-                return JsonSerializer.Deserialize<string>((JsonElement)rest.Route, options).Pluralize()!;
-            }
-
-            SingularPlural restRoute = JsonSerializer.Deserialize<SingularPlural>((JsonElement)rest.Route, options)!;
-            // Plural takes precedence, otherwise we pluralize singular before returning
-            return !string.IsNullOrWhiteSpace(restRoute.Plural) ? restRoute.Plural : restRoute.Singular.Pluralize();
+            return JsonSerializer.Deserialize<string>((JsonElement)rest.Path, options)!;
         }
 
         /// <summary>

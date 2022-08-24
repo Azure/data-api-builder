@@ -24,6 +24,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationTieBreakTable = "authors";
         protected static readonly string _integrationMappingEntity = "Tree";
         protected static readonly string _integrationMappingTable = "trees";
+        protected static readonly string _integrationMappingDifferentEntity = "plants";
         protected static readonly string _integrationBrokenMappingEntity = "Fungus";
         protected static readonly string _integrationUniqueCharactersEntity = "ArtOfWar";
         protected static readonly string _integrationUniqueCharactersTable = "aow";

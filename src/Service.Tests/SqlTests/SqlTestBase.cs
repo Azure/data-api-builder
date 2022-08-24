@@ -366,7 +366,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             bool expectJson = true)
         {
             // Create the rest endpoint using the path and entity name.
-            string restEndPoint = path + "/" + entity;
+            string restEndPoint = path + "/" + entityNameOrRoute;
 
             // Append primaryKeyRoute to the endpoint if it is not empty.
             if (!string.IsNullOrEmpty(primaryKeyRoute))
@@ -449,7 +449,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 }
                 else
                 {
-                    string baseUrl = HttpClient.BaseAddress.ToString() + path + "/" + entity;
+                    string baseUrl = HttpClient.BaseAddress.ToString() + path + "/" + entityNameOrRoute;
                     if (!string.IsNullOrEmpty(queryString))
                     {
                         baseUrl = baseUrl + "?" + HttpUtility.ParseQueryString(queryString).ToString();

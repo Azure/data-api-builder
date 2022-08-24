@@ -304,12 +304,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     RestEntitySettings rest =
                         ((JsonElement)entity.Rest).Deserialize<RestEntitySettings>(RuntimeConfig.SerializerOptions);
                     Assert.IsTrue(
-                        ((JsonElement)rest.Route).ValueKind == JsonValueKind.String
-                        || ((JsonElement)rest.Route).ValueKind == JsonValueKind.Object);
-                    if (((JsonElement)rest.Route).ValueKind == JsonValueKind.Object)
-                    {
-                        SingularPlural route = ((JsonElement)rest.Route).Deserialize<SingularPlural>(RuntimeConfig.SerializerOptions);
-                    }
+                        ((JsonElement)rest.Path).ValueKind == JsonValueKind.String);
                 }
 
                 Assert.IsTrue(entity.GraphQL == null

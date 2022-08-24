@@ -221,7 +221,7 @@ namespace Azure.DataApiBuilder.Config
     /// instead of using the entity-name. Can be a string or Singular-Plural type.
     /// If string, a corresponding plural route will be added as per the rules at
     /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
-    public record RestEntitySettings(object Route);
+    public record RestEntitySettings(object Path);
 
     /// <summary>
     /// Describes the GraphQL settings specific to an entity.

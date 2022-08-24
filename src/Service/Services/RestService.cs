@@ -93,9 +93,10 @@ namespace Azure.DataApiBuilder.Service.Services
                 switch (operationType)
                 {
                     case Operation.Read:
-                        context = new FindRequestContext(entityName,
-                                                         dbo: dbObject,
-                                                         isList: string.IsNullOrEmpty(primaryKeyRoute));
+                        context = new FindRequestContext(
+                            entityName,
+                            dbo: dbObject,
+                            isList: string.IsNullOrEmpty(primaryKeyRoute));
                         break;
                     case Operation.Insert:
                         JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
@@ -109,9 +110,10 @@ namespace Azure.DataApiBuilder.Service.Services
                             _sqlMetadataProvider);
                         break;
                     case Operation.Delete:
-                        context = new DeleteRequestContext(entityName,
-                                                           dbo: dbObject,
-                                                           isList: false);
+                        context = new DeleteRequestContext(
+                            entityName,
+                            dbo: dbObject,
+                            isList: false);
                         RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                         break;
                     case Operation.Update:
@@ -119,16 +121,18 @@ namespace Azure.DataApiBuilder.Service.Services
                     case Operation.Upsert:
                     case Operation.UpsertIncremental:
                         JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
-                        context = new UpsertRequestContext(entityName,
-                                                           dbo: dbObject,
-                                                           upsertPayloadRoot,
-                                                           operationType);
+                        context = new UpsertRequestContext(
+                            entityName,
+                            dbo: dbObject,
+                            upsertPayloadRoot,
+                            operationType);
                         RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                         break;
                     default:
-                        throw new DataApiBuilderException(message: "This operation is not supported.",
-                                                       statusCode: HttpStatusCode.BadRequest,
-                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        throw new DataApiBuilderException(
+                            message: "This operation is not supported.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
                 if (!string.IsNullOrEmpty(primaryKeyRoute))

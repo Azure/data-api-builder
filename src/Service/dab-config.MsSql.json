@@ -163,10 +163,7 @@
     "Stock": {
       "source": "stocks",
       "rest": {
-        "route": {
-          "singular": "asset",
-          "plural": "commodities"
-        }
+        "path": "commodities"
       },
       "graphql": true,
       "permissions": [
@@ -595,9 +592,7 @@
     "Shrub": {
       "source": "trees",
       "rest": {
-        "route": {
-          "singular": "plant"
-        }
+        "path": "plants"
       },
       "permissions": [
         {

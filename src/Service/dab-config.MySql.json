@@ -160,10 +160,7 @@
     "Stock": {
       "source": "stocks",
       "rest": {
-        "route": {
-          "singular": "asset",
-          "plural": "commodities"
-        }
+        "path": "commodities"
       },
       "graphql": true,
       "permissions": [
@@ -385,36 +382,6 @@
               }
             }
           ]
-        },
-        {
-          "role": "policy_tester_update_noread",
-          "actions": [
-            "create",
-            {
-              "action": "update",
-              "fields": {
-                "include": [ "*" ]
-              },
-              "policy": {
-                "database": "@item.id eq 9"
-              }
-            },
-            {
-              "action": "read",
-              "fields": {
-                "exclude": [ "*" ]
-              }
-            },
-            {
-              "action": "delete",
-              "fields": {
-                "include": [ "*" ]
-              },
-              "policy": {
-                "database": "@item.id eq 9"
-              }
-            }
-          ]
         }
       ],
       "relationships": {
@@ -622,9 +589,7 @@
     "Shrub": {
       "source": "trees",
       "rest": {
-        "route": {
-          "singular": "plant"
-        }
+        "path": "plants"
       },
       "permissions": [
         {
@@ -848,6 +813,42 @@
         "StrategicAttack": "謀攻",
         "NoteNum": "┬─┬ノ( º _ ºノ)"
       }
+    },
+    "GetBooks": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "get_books"
+      },
+      "rest": true,
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
+        }
+      ]
+    },
+    "GetBook": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "get_book_by_id"
+      },
+      "rest": true,
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
+        }
+      ]
     }
   }
 }

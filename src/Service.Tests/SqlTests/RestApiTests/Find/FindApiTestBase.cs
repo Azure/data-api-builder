@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/2",
                 queryString: string.Empty,
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindByIdTest))
             );
         }
@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationProcedureFindMany_EntityName,
+                entityNameOrRoute: _integrationProcedureFindMany_EntityName,
                 sqlQuery: GetQuery("FindManyStoredProcedureTest"),
                 expectJson: false
                 );
@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?id=1",
-                entity: _integrationProcedureFindOne_EntityName,
+                entityNameOrRoute: _integrationProcedureFindOne_EntityName,
                 sqlQuery: GetQuery("FindOneStoredProcedureTestUsingParameter"),
                 expectJson: false
                 );
@@ -78,14 +78,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _emptyTableEntityName,
+                entityNameOrRoute: _emptyTableEntityName,
                 sqlQuery: GetQuery("FindEmptyTable")
             );
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=1 ne 1",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery("FindEmptyResultSetWithQueryFilter")
             );
         }
@@ -101,7 +101,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationUniqueCharactersEntity,
+                entityNameOrRoute: _integrationUniqueCharactersEntity,
                 sqlQuery: GetQuery("FindOnTableWithUniqueCharacters"));
         }
 
@@ -115,21 +115,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/2",
                 queryString: string.Empty,
-                entity: _simple_all_books,
+                entityNameOrRoute: _simple_all_books,
                 sqlQuery: GetQuery("FindViewAll")
             );
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/2/pieceid/1",
                 queryString: string.Empty,
-                entity: _simple_subset_stocks,
+                entityNameOrRoute: _simple_subset_stocks,
                 sqlQuery: GetQuery("FindViewSelected")
             );
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/2",
                 queryString: string.Empty,
-                entity: _composite_subset_bookPub,
+                entityNameOrRoute: _composite_subset_bookPub,
                 sqlQuery: GetQuery("FindViewComposite")
             );
         }
@@ -144,35 +144,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id ge 4",
-                entity: _simple_all_books,
+                entityNameOrRoute: _simple_all_books,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneGeFilterOnView")
             );
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
                 queryString: "?$select=id,title",
-                entity: _simple_all_books,
+                entityNameOrRoute: _simple_all_books,
                 sqlQuery: GetQuery("FindByIdTestWithQueryStringFieldsOnView")
             );
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=pieceid eq 1",
-                entity: _simple_subset_stocks,
+                entityNameOrRoute: _simple_subset_stocks,
                 sqlQuery: GetQuery("FindTestWithFilterQueryStringOneEqFilterOnView")
             );
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=not (categoryid gt 1)",
-                entity: _simple_subset_stocks,
+                entityNameOrRoute: _simple_subset_stocks,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneNotFilterOnView")
             );
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter= id lt 5",
-                entity: _composite_subset_bookPub,
+                entityNameOrRoute: _composite_subset_bookPub,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneLtFilterOnView")
             );
         }
@@ -187,7 +187,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
                 queryString: "?$select=id,title",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindByIdTestWithQueryStringFields))
             );
         }
@@ -202,7 +202,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=id",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringOneField))
             );
 
@@ -218,7 +218,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFields))
             );
         }
@@ -233,61 +233,61 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id eq 1",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryStringOneEqFilter")
             );
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=2 eq id",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryStringValueFirstOneEqFilter")
             );
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id gt 3",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneGtFilter")
             );
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id ge 4",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneGeFilter")
             );
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id lt 5",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneLtFilter")
             );
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id le 4",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneLeFilter")
             );
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id ne 3",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneNeFilter")
             );
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=not (id lt 2)",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneNotFilter")
             );
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=not (title eq null)",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneRightNullEqFilter")
             );
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=null ne title",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneLeftNullNeFilter")
             );
         }
@@ -302,7 +302,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id lt 3 and id gt 1",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringSingleAndFilter))
             );
         }
@@ -317,7 +317,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id lt 3 or id gt 4",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringSingleOrFilter))
             );
         }
@@ -332,7 +332,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id lt 4 and id gt 1 and title ne 'Awesome book'",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleAndFilters))
             );
 
@@ -348,7 +348,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=id eq 1 or id eq 2 or id eq 3",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleOrFilters))
             );
         }
@@ -363,7 +363,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=(id gt 2 and id lt 4) or (title eq 'Awesome book')",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleAndOrFilters))
             );
         }
@@ -378,7 +378,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=(not (id lt 3) or id lt 4) or not (title eq 'Awesome book')",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterQueryStringMultipleNotAndOrFilters))
             );
         }
@@ -408,7 +408,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/567/book_id/1",
                 queryString: "?$select=id,content",
-                entity: _entityWithCompositePrimaryKey,
+                entityNameOrRoute: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithPrimaryKeyContainingForeignKey))
             );
         }
@@ -463,7 +463,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$after={HttpUtility.UrlEncode(after)}",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterSingleKeyPagination))
             );
         }
@@ -481,7 +481,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
-                entity: _entityWithCompositePrimaryKey,
+                entityNameOrRoute: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterMultiKeyPagination))
             );
         }
@@ -535,7 +535,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=title",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFieldsOrderByAsc))
             );
         }
@@ -550,7 +550,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=fancyName",
-                entity: _integrationMappingDifferentEntity,
+                entityNameOrRoute: _integrationMappingDifferentEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc))
             );
         }
@@ -566,7 +566,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby='ID Number'",
-                entity: _integrationEntityHasColumnWithSpace,
+                entityNameOrRoute: _integrationEntityHasColumnWithSpace,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringSpaceInNamesOrderByAsc))
             );
         }
@@ -603,7 +603,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=publisher_id desc",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithQueryStringAllFieldsOrderByDesc))
             );
         }
@@ -807,13 +807,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=id desc, publisher_id",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestVerifyMaintainColumnOrderForOrderBy))
             );
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=publisher_id, id desc",
-                entity: _integrationEntityName,
+                entityNameOrRoute: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestVerifyMaintainColumnOrderForOrderByInReverse")
             );
 
@@ -853,7 +853,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationMappingEntity,
+                entityNameOrRoute: _integrationMappingEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithMappedFieldsToBeReturned))
             );
         }
@@ -871,7 +871,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=Scientific Name",
-                entity: _integrationMappingEntity,
+                entityNameOrRoute: _integrationMappingEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithSingleMappedFieldsToBeReturned))
             );
         }
@@ -889,7 +889,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=treeId",
-                entity: _integrationMappingEntity,
+                entityNameOrRoute: _integrationMappingEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithUnMappedFieldsToBeReturned))
             );
         }
@@ -906,7 +906,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$filter=fancyName eq 'Tsuga terophylla'",
-                entity: _integrationMappingDifferentEntity,
+                entityNameOrRoute: _integrationMappingDifferentEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithDifferentMappedFieldsAndFilter))
             );
         }
@@ -924,7 +924,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$orderby=fancyName",
-                entity: _integrationMappingDifferentEntity,
+                entityNameOrRoute: _integrationMappingDifferentEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithDifferentMappedFieldsAndOrderBy))
             );
         }
@@ -966,7 +966,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$orderby=fancyName,treeId&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
-                entity: _integrationMappingDifferentEntity,
+                entityNameOrRoute: _integrationMappingDifferentEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy))
             );
         }
@@ -985,7 +985,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
                 queryString: string.Empty,
-                entity: _integrationProcedureFindMany_EntityName,
+                entityNameOrRoute: _integrationProcedureFindMany_EntityName,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
                 expectedErrorMessage: "Primary key route not supported for this entity.",
@@ -1003,7 +1003,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationProcedureFindOne_EntityName,
+                entityNameOrRoute: _integrationProcedureFindOne_EntityName,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid request. Missing required procedure parameters: id",
@@ -1022,7 +1022,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?param=value",
-                entity: _integrationProcedureFindMany_EntityName,
+                entityNameOrRoute: _integrationProcedureFindMany_EntityName,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid request. Contained unexpected fields: param",
@@ -1033,7 +1033,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?id=1&param=value",
-                entity: _integrationProcedureFindOne_EntityName,
+                entityNameOrRoute: _integrationProcedureFindOne_EntityName,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid request. Contained unexpected fields: param",
@@ -1187,8 +1187,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entityNameOrRoute: _nonExistentStocksEntityRouteName,
                 sqlQuery: string.Empty,
-                controller: _restController,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: $"Invalid Entity route: {_nonExistentStocksEntityRouteName}.",
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
@@ -1213,7 +1212,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrRoute: _nonExistentEntityName,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
-                expectedErrorMessage: $"{_nonExistentEntityName} is not a valid entity.",
+                expectedErrorMessage: $"Invalid Entity route: {_nonExistentEntityName}.",
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
             );
@@ -1228,7 +1227,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrRoute: integrationEntityNameIncorrectCase,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
-                expectedErrorMessage: $"{integrationEntityNameIncorrectCase} is not a valid entity.",
+                expectedErrorMessage: $"Invalid Entity route: {integrationEntityNameIncorrectCase}.",
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
             );

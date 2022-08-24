@@ -141,7 +141,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public override string BuildForeignKeyInfoQuery(int numberOfParameters)
+        public override string BuildForeignKeyInfoQuery(int numberOfParameters, bool developerMode)
         {
             string[] databaseNameParams = CreateParams(DATABASE_NAME_PARAM, numberOfParameters);
             string[] tableNameParams = CreateParams(TABLE_NAME_PARAM, numberOfParameters);
@@ -172,7 +172,12 @@ WHERE
     (REFERENCED_TABLE_SCHEMA IN (@{tableSchemaParamsForInClause}) AND
     REFERENCED_TABLE_NAME IN (@{tableNameParamsForInClause}))";
 
-            Console.WriteLine($"Foreign Key Query is : {foreignKeyQuery}");
+            // only display foreign key query information in dev mode
+            if (developerMode)
+            {
+                Console.WriteLine($"Foreign Key Query is : {foreignKeyQuery}");
+            }
+
             return foreignKeyQuery;
         }
 

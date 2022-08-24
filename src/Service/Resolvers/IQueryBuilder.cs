@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Builds the query to obtain foreign key information with the given
         /// number of parameters.
         /// </summary>
-        public string BuildForeignKeyInfoQuery(int numberOfParameters);
+        public string BuildForeignKeyInfoQuery(int numberOfParameters, bool developerMode);
 
         /// <summary>
         /// Adds database specific quotes to string identifier

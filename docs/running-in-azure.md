@@ -32,7 +32,7 @@ now clone the Data API builder repository if you haven't done yet, and from the 
  docker build . -t dabcr.azurecr.io/dab:M1.5
 ```
 
-and the push it to the registry:
+and then push it to the registry:
 
 ```
 docker push dabcr.azurecr.io/dab:M1.5

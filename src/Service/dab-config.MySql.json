@@ -16,7 +16,7 @@
     },
     "host": {
       "mode": "development",
-      "requestAuthorizationType": "Anonymous",
+      "default-request-authorization": "Anonymous",
       "cors": {
         "origins": [ "http://localhost:5000" ],
         "allow-credentials": false

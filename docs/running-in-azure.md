@@ -48,7 +48,7 @@ And you're now ready to run Data API Builder in Azure.
 
 The easiest way to run Data API Builder in Azure so that it will be easily accessible from other services is to use an App Service as it will automatically provide HTTPS support.
 
-The steps to have Data API Builder running in an App Service are the following (don't worry a script will do everything you. The list is reported so you know what's going to happen when you run the script):
+The steps to have Data API Builder running in an App Service are the following (don't worry a script will do everything for you. The list is reported so you know what's going to happen when you run the script):
 
 - Create an [App Service Plan](https://docs.microsoft.com/en-us/azure/app-service/app-service-plan-manage)
 - Create an App Service that uses the previously created Docker image (for reference: [Configure a custom container for Azure App Service](https://docs.microsoft.com/en-us/azure/app-service/configure-custom-container?pivots=container-linux))

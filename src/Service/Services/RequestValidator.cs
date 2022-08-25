@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Service.Services
     public class RequestValidator
     {
         public const string REQUEST_BODY_INVALID_JSON_ERR_MESSAGE = "Request body contains invalid JSON.";
-        public const string BATCH_MUTATION_UNSUPPORTED_ERR_MESSAGE = "Mutation operation on many instances of an entity in a single request are not yet supported.";
+        public const string BATCH_MUTATION_UNSUPPORTED_ERR_MESSAGE = "A Mutation operation on more than one entity in a single request is not yet supported.";
         public const string QUERY_STRING_INVALID_USAGE_ERR_MESSAGE = "Query string for this HTTP request type is an invalid URL.";
         public const string PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE = "Primary Key for this HTTP request type is required.";
 

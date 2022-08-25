@@ -114,7 +114,7 @@ A many to one relationship is similar to the One-To-Many relatioship with two ma
 - the `cardinality` is set to `one`
 - the created GraphQL field will return a scalar not a list
 
-Following the Book Series samples used before, a book can be in just one serie, so the relationship will be created using the following DAB CLI command:
+Following the Book Series samples used before, a book can be in just one series, so the relationship will be created using the following DAB CLI command:
 
 ```
 dab update book --relationship series --target.entity series --cardinality one

@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     break;
                 case Operation.Insert:
                     RequestValidator.ValidateQueryStringNotProvided(queryString);
-                    JsonElement insertPayloadRoot = RequestValidator.ParseRequestBodyContents(requestBody);
+                    JsonElement insertPayloadRoot = RequestValidator.ParseRequestBody(requestBody);
                     context = new InsertRequestContext(
                         entityName,
                         dbo: dbObject,
@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
                     RequestValidator.ValidatePrimaryKeyRouteProvided(primaryKeyRoute);
-                    JsonElement upsertPayloadRoot = RequestValidator.ParseRequestBodyContents(requestBody);
+                    JsonElement upsertPayloadRoot = RequestValidator.ParseRequestBody(requestBody);
                     context = new UpsertRequestContext(entityName,
                                                        dbo: dbObject,
                                                        upsertPayloadRoot,

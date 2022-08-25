@@ -136,13 +136,25 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <exception cref="DataApiBuilderException">Thrown when request body is invalid JSON
         /// or JSON is a batch request (mutation of more than one entity in a single request).</exception>
         /// <returns>JsonElement representing the body of the request.</returns>
-        public static JsonElement ParseRequestBodyContents(string requestBody)
+        public static JsonElement ParseRequestBody(string requestBody)
         {
             JsonElement mutationPayloadRoot = new();
 
             if (!string.IsNullOrEmpty(requestBody))
             {
-                mutationPayloadRoot = ParseRequestBody(requestBody);
+                try
+                {
+                    using JsonDocument payload = JsonDocument.Parse(requestBody);
+                    mutationPayloadRoot = payload.RootElement.Clone();
+                }
+                catch (JsonException)
+                {
+                    throw new DataApiBuilderException(
+                        message: REQUEST_BODY_INVALID_JSON_ERR_MESSAGE,
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                        );
+                }
 
                 if (mutationPayloadRoot.ValueKind is JsonValueKind.Array)
                 {
@@ -366,29 +378,6 @@ namespace Azure.DataApiBuilder.Service.Services
                     message: $"TableDefinition for entity: {entityName} does not exist.",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-            }
-        }
-
-        /// <summary>
-        /// Creates a JsonElement object from JSON in request body.
-        /// </summary>
-        /// <param name="requestBody">Request body content</param>
-        /// <returns>JsonElement from parsed request body.</returns>
-        /// <exception cref="DataApiBuilderException">Invalid Request Body JSON</exception>
-        private static JsonElement ParseRequestBody(string requestBody)
-        {
-            try
-            {
-                using JsonDocument insertPayload = JsonDocument.Parse(requestBody);
-                return insertPayload.RootElement.Clone();
-            }
-            catch (JsonException)
-            {
-                throw new DataApiBuilderException(
-                    message: REQUEST_BODY_INVALID_JSON_ERR_MESSAGE,
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
-                    );
             }
         }
 

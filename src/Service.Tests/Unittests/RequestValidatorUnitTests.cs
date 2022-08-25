@@ -132,6 +132,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             PerformTest(findRequestContext, _mockMetadataStore.Object, expectsException: false);
         }
 
+        /// <summary>
+        /// Ensures improper JSON included in a request body (i.e. for POST/PUT/PATCH requests)
+        /// is handled gracefully.
+        /// Gracefully means the client receives an HTTP 400 Bad Request response and not an
+        /// HTTP 5XX type response.
+        /// </summary>
+        /// <param name="requestBody">Request Body string</param>
+        /// <param name="expectsException">true/false</param>
         [DataTestMethod]
         [DataRow(@"{""title"":""Hello, World""}", false, DisplayName = "Request body is valid json")]
         [DataRow("", false, DisplayName = "Request body is empty, does not fail parser")]
@@ -143,7 +151,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (expectsException)
             {
                 DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RequestValidator.ParseRequestBodyContents(requestBody),
+                    action: () => RequestValidator.ParseRequestBody(requestBody),
                     message: RequestValidator.REQUEST_BODY_INVALID_JSON_ERR_MESSAGE);
 
                 Assert.AreEqual(expected: HttpStatusCode.BadRequest, actual: dabException.StatusCode);
@@ -151,10 +159,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             else
             {
-                RequestValidator.ParseRequestBodyContents(requestBody);
+                RequestValidator.ParseRequestBody(requestBody);
             }
         }
 
+        /// <summary>
+        /// Ensures the provided primaryKeyRoute (calculated by the caller)
+        /// is present for the current request.
+        /// i.e. When the primaryKeyRoute for a GET (Find Many) request is null, empty, or whitespace.
+        /// -> calling ValidatePrimaryKeyRouteProvided() will raise an exception.
+        /// </summary>
+        /// <param name="primaryKeyRoute">route string i.e. /id/5</param>
+        /// <param name="expectsException">true/false</param>
         [DataTestMethod]
         [DataRow(null, true, DisplayName = "PrimaryKey route null when not expected.")]
         [DataRow("", true, DisplayName = "PrimaryKey route empty when not expected.")]
@@ -177,6 +193,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
         }
 
+        /// <summary>
+        /// Ensures that a given request does not include a
+        /// queryString value (as calculated by the caller).
+        /// is present for the current request.
+        /// i.e. When a queryString is provided for a POST request,
+        /// -> calling ValidateQueryStringNotProvided() will raise an exception.
+        /// </summary>
+        /// <param name="queryString">string i.e. $?select=id</param>
+        /// <param name="expectsException">true/false</param>
         [DataTestMethod]
         [DataRow(null, false, DisplayName = "queryString null when expected.")]
         [DataRow("", false, DisplayName = "queryString empty when expected.")]

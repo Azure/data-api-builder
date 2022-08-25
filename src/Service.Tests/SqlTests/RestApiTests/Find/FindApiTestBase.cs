@@ -1188,7 +1188,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrRoute: _nonExistentStocksEntityRouteName,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
-                expectedErrorMessage: $"Invalid Entity route: {_nonExistentStocksEntityRouteName}.",
+                expectedErrorMessage: $"Invalid Entity path: {_nonExistentStocksEntityRouteName}.",
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
             );
@@ -1212,7 +1212,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrRoute: _nonExistentEntityName,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
-                expectedErrorMessage: $"Invalid Entity route: {_nonExistentEntityName}.",
+                expectedErrorMessage: $"Invalid Entity path: {_nonExistentEntityName}.",
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
             );

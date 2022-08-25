@@ -292,7 +292,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// up until the next '/' if one exists, and the primary
         /// key as the substring following the '/'. For example
         /// a request route shoud be of the form
-        /// /{path}/{EntityRoute}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
+        /// /{RESTPath}/{EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
         /// </summary>
         /// <param name="route">String containing path + entity route
         /// (and optionally primary key).</param>
@@ -301,8 +301,10 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <exception cref="DataApiBuilderException"></exception>
         public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string route)
         {
-            string path = _runtimeConfigProvider.RestPath.TrimStart('/');
-            if (!route.StartsWith(path))
+            // route will ignore leading '/' so we trim here to allow for restPath
+            // that start with '/'
+            string restPath = _runtimeConfigProvider.RestPath.TrimStart('/');
+            if (!route.StartsWith(restPath))
             {
                 throw new DataApiBuilderException(
                     message: $"Invalid Path for route: {route}.",
@@ -310,9 +312,9 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
-            // entity route comes after the path, so get substring starting from
-            // the end of path. If path is not empty we trim the '/' following the path.
-            string routeAfterPath = string.IsNullOrEmpty(path) ? route : route.Substring(path.Length).TrimStart('/');
+            // entity's path comes after the rest path, so get substring starting from
+            // the end of restPath. If restPath is not empty we trim the '/' following the path.
+            string routeAfterPath = string.IsNullOrEmpty(restPath) ? route : route.Substring(restPath.Length).TrimStart('/');
             string primaryKeyRoute = string.Empty;
             string? entityName;
             // a '/' remaining in this substring means we have a primary key route
@@ -329,7 +331,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (!_sqlMetadataProvider.TryGetEntityNameFromRoute(entityRouteName, out entityName))
                 {
                     throw new DataApiBuilderException(
-                        message: $"Invalid Entity route: {entityRouteName}.",
+                        message: $"Invalid Entity path: {entityRouteName}.",
                         statusCode: HttpStatusCode.NotFound,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
                 }
@@ -340,7 +342,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (!_sqlMetadataProvider.TryGetEntityNameFromRoute(routeAfterPath, out entityName))
                 {
                     throw new DataApiBuilderException(
-                        message: $"Invalid Entity route: {routeAfterPath}.",
+                        message: $"Invalid Entity path: {routeAfterPath}.",
                         statusCode: HttpStatusCode.NotFound,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
                 }

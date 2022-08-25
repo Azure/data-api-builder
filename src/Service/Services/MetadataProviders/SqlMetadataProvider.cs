@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
 
-        private Dictionary<string, string> EntityRouteToEntityName { get; } = new();
+        private Dictionary<string, string> EntityPathToEntityName { get; } = new();
 
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
@@ -164,7 +164,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <inheritdoc />
         public virtual bool TryGetEntityNameFromRoute(string entityRouteName, [NotNullWhen(true)] out string? entityName)
         {
-            return EntityRouteToEntityName.TryGetValue(entityRouteName, out entityName);
+            return EntityPathToEntityName.TryGetValue(entityRouteName, out entityName);
         }
 
         /// <inheritdoc />
@@ -180,7 +180,7 @@ namespace Azure.DataApiBuilder.Service.Services
             GenerateDatabaseObjectForEntities();
             await PopulateObjectDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();
-            GenerateRestRouteToEntityMap();
+            GenerateRestPathToEntityMap();
             InitODataParser();
             timer.Stop();
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
@@ -267,7 +267,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Generates the map used to find a given entity based
         /// on the request route that will be used for that entity.
         /// </summary>
-        private void GenerateRestRouteToEntityMap()
+        private void GenerateRestPathToEntityMap()
         {
             foreach (string entityName in _entities.Keys)
             {
@@ -276,7 +276,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 if (!string.IsNullOrEmpty(route))
                 {
-                    EntityRouteToEntityName[route] = entityName;
+                    EntityPathToEntityName[route] = entityName;
                 }
             }
         }
@@ -284,7 +284,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Deserialize and return the entity's route.
         /// </summary>
-        /// <param name="entity">Entity to get the route of.</param>
+        /// <param name="entity">Entity object to get the route of.</param>
         /// <param name="entityName">name of the entity</param>
         /// <returns>route for the given Entity.</returns>
         private static string GetEntityRoute(Entity entity, string entityName)

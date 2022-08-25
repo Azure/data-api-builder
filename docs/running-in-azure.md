@@ -58,7 +58,7 @@ At the first run the script will create an `.env` file that you have to fill out
 - `RESOURCE_GROUP`: named of the resource group you are using (eg: `my-dab-rg`)
 - `APP_NAME`: the name of the App Service you want to create (eg: `dab-backend`)
 - `APP_PLAN_NAME`: the name of the App Service Plan you want to create (eg: `dab-backend-plan`)
-- `DAB_CONFIG_FILE`: the configuratio file you want to use (eg: `library-dab-config.json`)
+- `DAB_CONFIG_FILE`: the configuration file you want to use (eg: `library-dab-config.json`)
 - `STORAGE_ACCOUNT`: the name for the Storage Account you want to create (eg: `dabstorage`)
 - `LOCATION`: the region when you want to create the resources (eg: `westus2`)
 - `IMAGE_NAME`: the image you want to use (eg: `dabcr.azurecr.io/dab:M1.5`)

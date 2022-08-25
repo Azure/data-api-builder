@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         ///         }
         ///     }
         /// }
-        /// All these entities will create the follwing quereis
+        /// All these entities will create the follwing queries
         /// pk query: book
         /// List query: books
         /// </summary>

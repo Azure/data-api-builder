@@ -294,9 +294,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// 1. entity not defined in config cannot be used in relationship.
         /// 2. entity with graphQL disabled cannot be used in a relationship with another entity
         /// having graphQL enabled.
-        /// 3. if config doesn't contain linkingSourceFields and LinkingTargetFields for the
-        /// the given linkingObject, then the underlying database should contain it's relationship
-        /// with source and target entity.
+        /// 3. if config doesn't contain LinkingSourceFields and LinkingTargetFields for the
+        /// the given linkingObject, then the underlying database should contain a foreign key relationship
+        /// between source and target entity.
         /// </summary>
         /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
         public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
@@ -304,7 +304,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             _logger.LogInformation("Validating Relationship Section in Config...");
             List<string> allEntities = new(runtimeConfig.Entities.Keys);
 
-            // Loop through each entity in the config and verify it's relationship.
+            // Loop through each entity in the config and verify its relationship.
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 if (entity.Relationships is null)

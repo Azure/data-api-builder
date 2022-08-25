@@ -39,6 +39,8 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private const int NUMBER_OF_RESTRICTIONS = 4;
 
+        protected bool DeveloperMode { get; }
+
         protected string ConnectionString { get; init; }
 
         protected IQueryBuilder SqlQueryBuilder { get; init; }
@@ -72,6 +74,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 entity.TryPopulateSourceFields();
             }
 
+            DeveloperMode = runtimeConfigProvider.IsDeveloperMode();
             ConnectionString = runtimeConfig.ConnectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
@@ -903,7 +906,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =
-                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tableNames.Count());
+                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tableNames.Count(), DeveloperMode);
 
             // Build the parameters dictionary for the foreign key info query
             // consisting of all schema names and table names.

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text.Json;
@@ -292,7 +293,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// up until the next '/' if one exists, and the primary
         /// key as the substring following the '/'. For example
         /// a request route shoud be of the form
-        /// /{RESTPath}/{EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
+        /// {RESTPath}/{EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
         /// </summary>
         /// <param name="route">String containing path + entity route
         /// (and optionally primary key).</param>
@@ -315,37 +316,21 @@ namespace Azure.DataApiBuilder.Service.Services
             // entity's path comes after the rest path, so get substring starting from
             // the end of restPath. If restPath is not empty we trim the '/' following the path.
             string routeAfterPath = string.IsNullOrEmpty(restPath) ? route : route.Substring(restPath.Length).TrimStart('/');
-            string primaryKeyRoute = string.Empty;
             string? entityName;
-            // a '/' remaining in this substring means we have a primary key route
-            if (routeAfterPath.Contains('/'))
+
+            // Split reoutAfterPath on the first occurence of '/', if we get back 2 elements
+            // this means we have a non empty primary key route which we save. Otherwise, save
+            // primary key route as empty string. Entity Path will always be the element at index 0.
+            string[] entityPathAndPKRoute = routeAfterPath.Split(new[] { '/' }, 2);
+            string entityPath = entityPathAndPKRoute[0];
+            string primaryKeyRoute = entityPathAndPKRoute.Length == 2 ? entityPathAndPKRoute[1] : string.Empty;
+
+            if (!_sqlMetadataProvider.TryGetEntityNameFromRoute(entityPath, out entityName))
             {
-                // primary key route is what follows the first '/', we trim this and any
-                // additional '/'
-                int indexOfSlash = routeAfterPath.IndexOf('/');
-                primaryKeyRoute = routeAfterPath.Substring(indexOfSlash).TrimStart('/');
-                // save entity route as string up until first '/'
-                // use entity route to get correct entity name if one exists
-                // if no valid entity related to the provided entity route, throw exception
-                string entityRouteName = routeAfterPath[..indexOfSlash];
-                if (!_sqlMetadataProvider.TryGetEntityNameFromRoute(entityRouteName, out entityName))
-                {
-                    throw new DataApiBuilderException(
-                        message: $"Invalid Entity path: {entityRouteName}.",
-                        statusCode: HttpStatusCode.NotFound,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
-                }
-            }
-            else
-            {
-                // if no valid entity related to the provided entity route, throw exception
-                if (!_sqlMetadataProvider.TryGetEntityNameFromRoute(routeAfterPath, out entityName))
-                {
-                    throw new DataApiBuilderException(
-                        message: $"Invalid Entity path: {routeAfterPath}.",
-                        statusCode: HttpStatusCode.NotFound,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
-                }
+                throw new DataApiBuilderException(
+                    message: $"Invalid Entity path: {entityPath}.",
+                    statusCode: HttpStatusCode.NotFound,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
             return (entityName!, primaryKeyRoute);

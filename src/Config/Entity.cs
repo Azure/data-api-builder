@@ -219,7 +219,6 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="Path">Instructs the runtime to use this as the path
     /// at which the REST endpoint for this entity is exposed
     /// instead of using the entity-name. Can be a string type.
-    /// If string, a corresponding plural route will be added as per the rules at
     /// </param>
     public record RestEntitySettings(object Path);
 

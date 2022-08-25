@@ -272,7 +272,7 @@ namespace Azure.DataApiBuilder.Service.Services
             foreach (string entityName in _entities.Keys)
             {
                 Entity entity = _entities[entityName];
-                string route = GetEntityRoute(entity, entityName);
+                string route = GetEntityRoute(entity, entityName).TrimStart('/');
 
                 if (!string.IsNullOrEmpty(route))
                 {

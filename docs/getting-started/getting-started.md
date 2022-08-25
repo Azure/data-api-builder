@@ -76,7 +76,7 @@ Initializing a configuration file is simple and you can use the Data API builder
 dab init --database-type "<database-type>" --connection-string "<connection-string>"
 ```
 
-where `database-type` and `connection-string` you can use any of the values described in the [Overview of configuration file](#overview-of-configuration-file) section above. If don't know the connection string, no worries: hold your breath for a second and we'll take care of that later, in one of the database-specific Getting Started document we ave created for you.
+where `database-type` and `connection-string` you can use any of the values described in the [Overview of configuration file](#overview-of-configuration-file) section above. If don't know the connection string, no worries: hold your breath for a second and we'll take care of that later, in one of the database-specific Getting Started document we have created for you.
 
 ## The sample scenario
 

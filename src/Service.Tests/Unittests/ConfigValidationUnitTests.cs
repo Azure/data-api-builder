@@ -552,7 +552,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="source">Database name of entity.</param>
         /// <param name="relationshipMap">Dictionary containing {relationshipName, Relationship}</param>
-        private static Entity GetSampleEntityUsingSourceAndRelationshipMap(string source, Dictionary<string, Relationship>? relationshipMap)
+        private static Entity GetSampleEntityUsingSourceAndRelationshipMap(
+            string source,
+            Dictionary<string,
+            Relationship>? relationshipMap
+            )
         {
             PermissionOperation actionForRole = new(
                 Name: Operation.Create,

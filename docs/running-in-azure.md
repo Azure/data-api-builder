@@ -6,7 +6,7 @@ Data API Builder can be run in Azure via container image. Therefore is assumed t
 
 Build the the Docker image using the provided Dockerfile:
 
-If don't have an Azure Container Registry already available, create one, for example (the sample resource group `my-dab-rg` is assumned to exists already):
+If don't have an Azure Container Registry already available, create one, for example (the sample resource group `my-dab-rg` is assumned to exist already):
 
 ```bash
 az acr create -g my-dab-rg -n dabcr -l WestUs2 --sku Standard --admin-enabled true

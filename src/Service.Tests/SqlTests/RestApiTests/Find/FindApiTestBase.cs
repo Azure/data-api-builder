@@ -1227,7 +1227,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrRoute: integrationEntityNameIncorrectCase,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
-                expectedErrorMessage: $"Invalid Entity route: {integrationEntityNameIncorrectCase}.",
+                expectedErrorMessage: $"Invalid Entity path: {integrationEntityNameIncorrectCase}.",
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
             );

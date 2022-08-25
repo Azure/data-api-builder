@@ -90,7 +90,7 @@ The option `relationship.fields` allows you to define which fields will be used 
 
 In the above sample, the `id` database field of the `series` entity will be matched with the database field `series_id` of the `book` entity.
 
-The configuration fill will also contain that information:
+The configuration will also contain that information:
 
 ```json
 "series": {

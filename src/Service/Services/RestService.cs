@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text.Json;
@@ -323,7 +322,7 @@ namespace Azure.DataApiBuilder.Service.Services
             string entityPath = entityPathAndPKRoute[0];
             string primaryKeyRoute = entityPathAndPKRoute.Length == 2 ? entityPathAndPKRoute[1] : string.Empty;
 
-            if (!_sqlMetadataProvider.TryGetEntityNameFromRoute(entityPath, out string? entityName))
+            if (!_sqlMetadataProvider.TryGetEntityNameFromPath(entityPath, out string? entityName))
             {
                 throw new DataApiBuilderException(
                     message: $"Invalid Entity path: {entityPath}.",

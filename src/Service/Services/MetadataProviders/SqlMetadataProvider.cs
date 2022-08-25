@@ -162,9 +162,9 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        public virtual bool TryGetEntityNameFromRoute(string entityRouteName, [NotNullWhen(true)] out string? entityName)
+        public virtual bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
         {
-            return EntityPathToEntityName.TryGetValue(entityRouteName, out entityName);
+            return EntityPathToEntityName.TryGetValue(entityPathName, out entityName);
         }
 
         /// <inheritdoc />

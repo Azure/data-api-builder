@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         [DataRow("foo/bar/baz/qux", "/foo", "bar", "baz/qux")]
         [DataRow("foo/bar/baz/qux", "/foo/bar/", "baz", "qux")]
         [DataRow("foo/bar/baz/qux", "/foo/bar/baz", "qux", "")]
-        [DataRow("foo////bar////baz/qux", "////foo", "bar", "baz/qux")]
+        [DataRow("foo////bar////baz/qux", "////foo", "bar", "///baz/qux")]
         [DataRow("foo/bar/baz/qux/1/fred/23/thud/456789", "",
             "foo", "bar/baz/qux/1/fred/23/thud/456789")]
         public void ParseEntityNameAndPrimaryKeyTest(string route,
@@ -136,9 +136,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                 queryBuilder,
                 sqlMetadataLogger.Object);
             string outParam;
-            sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromRoute(It.IsAny<string>(), out outParam)).Returns(true);
+            sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam)).Returns(true);
             Dictionary<string, string> _routeToEntityMock = new() { { entityName, entityName } };
-            sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromRoute(It.IsAny<string>(), out outParam))
+            sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam))
                                .Callback(new metaDataCallback((string entityRoute, out string entity) => _ = _routeToEntityMock.TryGetValue(entityRoute, out entity)))
                                .Returns((string entityRoute, out string entity) => _routeToEntityMock.TryGetValue(entityRoute, out entity));
             Mock<IAuthorizationService> authorizationService = new();

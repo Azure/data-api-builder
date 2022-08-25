@@ -257,7 +257,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
-                expectedErrorMessage: "Mutation operation on many instances of an entity in a single request are not yet supported.",
+                expectedErrorMessage: RequestValidator.BATCH_MUTATION_UNSUPPORTED_ERR_MESSAGE,
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
             );

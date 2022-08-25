@@ -2,6 +2,8 @@ BEGIN TRANSACTION
 DROP VIEW IF EXISTS books_view_all;
 DROP VIEW IF EXISTS stocks_view_selected;
 DROP VIEW IF EXISTS books_publishers_view_composite;
+DROP PROCEDURE IF EXISTS get_books;
+DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -253,3 +255,8 @@ EXEC('CREATE VIEW books_publishers_view_composite as SELECT
       publishers.name,books.id,books.publisher_id
       FROM dbo.books,dbo.publishers
       where publishers.id = books.publisher_id');
+EXEC('CREATE PROCEDURE get_book_by_id @id int AS
+      SELECT * FROM dbo.books
+      WHERE id = @id');
+EXEC('CREATE PROCEDURE get_books AS
+      SELECT * FROM dbo.books');

@@ -129,8 +129,12 @@ namespace Azure.DataApiBuilder.Service.Tests
                     ""permissions"": [
                       {
                         ""role"": ""anonymous"",
-                        ""actions"": [ ""read"" ]
-                      },
+                        ""actions"": [" +
+                        $" \"{Operation.Create.ToString().ToLower()}\"," +
+                        $" \"{Operation.Read.ToString().ToLower()}\"," +
+                        $" \"{Operation.Delete.ToString().ToLower()}\"," +
+                        $" \"{Operation.Update.ToString().ToLower()}\" ]" +
+                      @"},
                       {
                         ""role"": ""authenticated"",
                         ""actions"": [" +

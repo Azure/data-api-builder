@@ -265,29 +265,29 @@ namespace Azure.DataApiBuilder.Service.Services
 
         /// <summary>
         /// Generates the map used to find a given entity based
-        /// on the request route that will be used for that entity.
+        /// on the path that will be used for that entity.
         /// </summary>
         private void GenerateRestPathToEntityMap()
         {
             foreach (string entityName in _entities.Keys)
             {
                 Entity entity = _entities[entityName];
-                string route = GetEntityRoute(entity, entityName).TrimStart('/');
+                string path = GetEntityPath(entity, entityName).TrimStart('/');
 
-                if (!string.IsNullOrEmpty(route))
+                if (!string.IsNullOrEmpty(path))
                 {
-                    EntityPathToEntityName[route] = entityName;
+                    EntityPathToEntityName[path] = entityName;
                 }
             }
         }
 
         /// <summary>
-        /// Deserialize and return the entity's route.
+        /// Deserialize and return the entity's path.
         /// </summary>
-        /// <param name="entity">Entity object to get the route of.</param>
+        /// <param name="entity">Entity object to get the path of.</param>
         /// <param name="entityName">name of the entity</param>
         /// <returns>route for the given Entity.</returns>
-        private static string GetEntityRoute(Entity entity, string entityName)
+        private static string GetEntityPath(Entity entity, string entityName)
         {
             // if entity.Rest is null or true we just use entity name
             if (entity.Rest is null || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.True)

@@ -336,7 +336,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// </summary>
         /// <param name="primaryKeyRoute">string represents the primary key route</param>
         /// <param name="queryString">string represents the query string provided in URL</param>
-        /// <param name="entityNameOrPath">string represents the name/route of the entity</param>
+        /// <param name="entityNameOrPath">string represents the name/path of the entity</param>
         /// <param name="sqlQuery">string represents the query to be executed</param>
         /// <param name="operationType">The operation type to be tested.</param>
         /// <param name="requestBody">string represents JSON data used in mutation operations</param>

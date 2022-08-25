@@ -35,7 +35,7 @@ There are three types of relatioship that can be established between two entitie
 
 ### One-To-Many Relationship
 
-A one-to-many relationship allows an object to access a list of related objects. For example a books series can allow the access to all the books in that series:
+A one-to-many relationship allows an object to access a list of related objects. For example a books series can allow access to all the books in that series:
 
 ```graphql
 {

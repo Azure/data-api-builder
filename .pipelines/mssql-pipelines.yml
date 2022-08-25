@@ -15,6 +15,9 @@ jobs:
       buildConfiguration: 'Release'
 
   steps:
+  - task: NuGetAuthenticate@0
+    displayName: 'NuGet Authenticate'
+
   - task: UseDotNet@2
     displayName: Setup .NET SDK v6.0.x
     inputs:
@@ -27,6 +30,8 @@ jobs:
     displayName: Restore NuGet packages
     inputs:
       restoreSolution: '$(solution)'
+      feedsToUse: config
+      nugetConfigPath: Nuget.config
 
   - task: DotNetCoreCLI@2
     inputs:
@@ -88,6 +93,9 @@ jobs:
       SqlVersionCode: '15.0'
 
   steps:
+  - task: NuGetAuthenticate@0
+    displayName: 'NuGet Authenticate'
+  
   - task: UseDotNet@2
     displayName: Setup .NET SDK v6.0.x
     inputs:
@@ -100,6 +108,8 @@ jobs:
     displayName: Restore NuGet packages
     inputs:
       restoreSolution: '$(solution)'
+      feedsToUse: config
+      nugetConfigPath: Nuget.config
 
   - task: DotNetCoreCLI@2
     inputs:

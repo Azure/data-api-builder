@@ -84,10 +84,10 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
 
             return database switch
             {
-                string s when string.IsNullOrEmpty(s) && !string.IsNullOrEmpty(_cosmosDb.Container) => _cosmosDb.Database,
-                string s => s,
+                string db when string.IsNullOrEmpty(db) && !string.IsNullOrEmpty(_cosmosDb.Database) => _cosmosDb.Database,
+                string db when !string.IsNullOrEmpty(db) => db,
                 _ => throw new DataApiBuilderException(
-                        message: $"No container provided for {entityName}",
+                        message: $"No database provided for {entityName}",
                         statusCode: System.Net.HttpStatusCode.InternalServerError,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization)
             };
@@ -96,6 +96,12 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         public TableDefinition GetTableDefinition(string entityName)
         {
             throw new NotSupportedException("Cosmos backends don't support direct table definitions. Definitions are provided via the GraphQL schema");
+        }
+
+        public StoredProcedureDefinition GetStoredProcedureDefinition(string entityName)
+        {
+            // There's a lot of unimplemented methods here, maybe need to rethink the current interface implementation
+            throw new NotSupportedException("Cosmos backends (probably) don't support direct stored procedure definitions, either.");
         }
 
         public Task InitializeAsync()

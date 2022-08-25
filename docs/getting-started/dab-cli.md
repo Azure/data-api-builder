@@ -4,8 +4,6 @@ The Data API Builder CLI (**dab CLI** or `dab`) is a command line tool that stre
 
 - Find the source code here: [Cli](../../src/Cli)
 - Getting started: [Getting started](./getting-started-dab-cli.md)
-- Contribute: [Build from Source](../../src/Cli/CONTRIBUTING.md)
-
 ## Key Features of `dab` CLI
 
 - Initialize the configuration file for REST and GraphQL endpoints
@@ -19,5 +17,4 @@ The Data API Builder CLI (**dab CLI** or `dab`) is a command line tool that stre
 ## Contributing to the CLI
 
 Your feedback and contributions are key to its success.
-
 [Build from Source](../../CONTRIBUTING.md)

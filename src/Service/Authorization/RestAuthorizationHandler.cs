@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     context.Succeed(requirement);
                 }
             }
-            else if (requirement is EntityRoleActionPermissionsRequirement)
+            else if (requirement is EntityRoleOperationPermissionsRequirement)
             {
                 if (context.Resource is not null)
                 {
@@ -97,11 +97,11 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     }
 
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    IEnumerable<Operation> actions = HttpVerbToActions(httpContext.Request.Method);
+                    IEnumerable<Operation> operations = HttpVerbToOperations(httpContext.Request.Method);
 
-                    foreach (Operation action in actions)
+                    foreach (Operation operation in operations)
                     {
-                        bool isAuthorized = _authorizationResolver.AreRoleAndActionDefinedForEntity(entityName, roleName, action);
+                        bool isAuthorized = _authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, roleName, operation);
                         if (!isAuthorized)
                         {
                             context.Fail();
@@ -137,12 +137,12 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
                     string entityName = restContext.EntityName;
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    IEnumerable<Operation> actions = HttpVerbToActions(httpContext.Request.Method);
+                    IEnumerable<Operation> operations = HttpVerbToOperations(httpContext.Request.Method);
 
                     // Delete operations do not have column level restrictions.
                     // If the operation is allowed for the role, the column requirement is implicitly successful,
                     // and the authorization check can be short circuited here.
-                    if (actions.Count() == 1 && actions.Contains(Operation.Delete))
+                    if (operations.Count() == 1 && operations.Contains(Operation.Delete))
                     {
                         context.Succeed(requirement);
                         return Task.CompletedTask;
@@ -151,11 +151,11 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     // Attempts to get list of unique columns present in request metadata.
                     restContext.CalculateCumulativeColumns();
 
-                    // Two actions must be checked when HTTP operation is PUT or PATCH,
-                    // otherwise, just one action is checked.
-                    // PUT and PATCH resolve to actions 'create' and 'update'.
-                    // A user must fulfill all actions' permissions requirements to proceed.
-                    foreach (Operation action in actions)
+                    // Two operations must be checked when HTTP operation is PUT or PATCH,
+                    // otherwise, just one operation is checked.
+                    // PUT and PATCH resolve to operations 'Create' and 'Update'.
+                    // A user must fulfill all operations' permissions requirements to proceed.
+                    foreach (Operation operation in operations)
                     {
                         // Get a list of all columns present in a request that need to be authorized.
                         IEnumerable<string> columnsToCheck = restContext.CumulativeColumns;
@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         // i.e. columnsToCheck = convertExposedNamesToBackingColumns()
 
                         // Authorize field names present in a request.
-                        if (columnsToCheck.Count() > 0 && _authorizationResolver.AreColumnsAllowedForAction(entityName, roleName, action, columnsToCheck))
+                        if (columnsToCheck.Count() > 0 && _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName, operation, columnsToCheck))
                         {
                             // Find operations with no column filter in the query string will have FieldsToBeReturned == 0.
                             // Then, the "allowed columns" resolved, will be set on FieldsToBeReturned.
@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                             if (restContext.FieldsToBeReturned.Count == 0 && restContext.OperationType == Operation.Read)
                             {
                                 // Union performed to avoid duplicate field names in FieldsToBeReturned.
-                                IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedExposedColumns(entityName, roleName, action);
+                                IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedExposedColumns(entityName, roleName, operation);
                                 restContext.UpdateReturnFields(fieldsReturnedForFind);
                             }
                         }
@@ -184,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                             // so only those included columns are present in the result(s).
                             // - For other operation types, columnsToCheck is a result of identifying
                             // any reference to a column in all parts of a request (body, URL, querystring)
-                            IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedExposedColumns(entityName, roleName, action);
+                            IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedExposedColumns(entityName, roleName, operation);
                             restContext.UpdateReturnFields(fieldsReturnedForFind);
                         }
                         else
@@ -208,8 +208,8 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// matching CRUD operation(s), to facilitate authorization checks.
         /// </summary>
         /// <param name="httpVerb"></param>
-        /// <returns>A collection of ActionTypes resolved from the http verb type of the request.</returns>
-        private static IEnumerable<Operation> HttpVerbToActions(string httpVerb)
+        /// <returns>A collection of Operation types resolved from the http verb type of the request.</returns>
+        private static IEnumerable<Operation> HttpVerbToOperations(string httpVerb)
         {
             switch (httpVerb)
             {

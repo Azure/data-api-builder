@@ -1,7 +1,7 @@
 namespace Azure.DataApiBuilder.Config
 {
     /// <summary>
-    /// Represents a database object - which could be a view or table.
+    /// Represents a database object - which could be a view, table, or stored procedure.
     /// </summary>
     public class DatabaseObject
     {
@@ -10,6 +10,10 @@ namespace Azure.DataApiBuilder.Config
         public string Name { get; set; } = null!;
 
         public TableDefinition TableDefinition { get; set; } = null!;
+
+        public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
+
+        public SourceType? ObjectType { get; set; } = null!;
 
         public DatabaseObject(string schemaName, string tableName)
         {
@@ -43,6 +47,22 @@ namespace Azure.DataApiBuilder.Config
         {
             return HashCode.Combine(SchemaName, Name);
         }
+    }
+
+    public class StoredProcedureDefinition
+    {
+        /// <summary>
+        /// The list of input parameters
+        /// Key: parameter name, Value: ParameterDefinition object
+        /// </summary>
+        public Dictionary<string, ParameterDefinition> Parameters { get; set; } = new();
+    }
+
+    public class ParameterDefinition
+    {
+        public Type SystemType { get; set; } = null!;
+        public bool HasConfigDefault { get; set; }
+        public object? ConfigDefaultValue { get; set; }
     }
 
     public class TableDefinition

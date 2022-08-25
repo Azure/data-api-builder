@@ -332,7 +332,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual string BuildForeignKeyInfoQuery(int numberOfParameters)
+        public virtual string BuildForeignKeyInfoQuery(int numberOfParameters, bool developerMode)
         {
             string[] schemaNameParams =
                 CreateParams(kindOfParam: SCHEMA_NAME_PARAM, numberOfParameters);
@@ -374,7 +374,13 @@ FROM
 WHERE
     ReferencingColumnUsage.TABLE_SCHEMA IN (@{tableSchemaParamsForInClause})
     AND ReferencingColumnUsage.TABLE_NAME IN (@{tableNameParamsForInClause})";
-            Console.WriteLine($"Foreign Key Query is : {foreignKeyQuery}");
+
+            // only display foreign key query information in dev mode
+            if (developerMode)
+            {
+                Console.WriteLine($"Foreign Key Query is : {foreignKeyQuery}");
+            }
+
             return foreignKeyQuery;
         }
 

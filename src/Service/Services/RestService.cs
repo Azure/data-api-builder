@@ -316,8 +316,6 @@ namespace Azure.DataApiBuilder.Service.Services
             // entity's path comes after the rest path, so get substring starting from
             // the end of restPath. If restPath is not empty we trim the '/' following the path.
             string routeAfterPath = string.IsNullOrEmpty(restPath) ? route : route.Substring(restPath.Length).TrimStart('/');
-            string? entityName;
-
             // Split reoutAfterPath on the first occurence of '/', if we get back 2 elements
             // this means we have a non empty primary key route which we save. Otherwise, save
             // primary key route as empty string. Entity Path will always be the element at index 0.
@@ -325,7 +323,7 @@ namespace Azure.DataApiBuilder.Service.Services
             string entityPath = entityPathAndPKRoute[0];
             string primaryKeyRoute = entityPathAndPKRoute.Length == 2 ? entityPathAndPKRoute[1] : string.Empty;
 
-            if (!_sqlMetadataProvider.TryGetEntityNameFromRoute(entityPath, out entityName))
+            if (!_sqlMetadataProvider.TryGetEntityNameFromRoute(entityPath, out string? entityName))
             {
                 throw new DataApiBuilderException(
                     message: $"Invalid Entity path: {entityPath}.",
@@ -333,7 +331,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
-            return (entityName!, primaryKeyRoute);
+            return (entityName, primaryKeyRoute);
         }
 
         private HttpContext GetHttpContext()

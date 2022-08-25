@@ -66,6 +66,10 @@ echo "configure webapp storage-account" | tee -a log.txt
 az webapp config storage-account add -g $RESOURCE_GROUP -n $APP_NAME --custom-id config --storage-type AzureFiles --share-name config --account-name $STORAGE_ACCOUNT --access-key "${asak}" --mount-path /App/config \
     -o json >> log.txt
 
+echo "configure cors" | tee -a log.txt
+az webapp cors add -g $RESOURCE_GROUP -n $APP_NAME --allowed-origins "*" \
+    -o json >> log.txt
+
 echo "configure webapp appsettings" | tee -a log.txt
 az webapp config appsettings set -g $RESOURCE_GROUP -n $APP_NAME --settings WEBSITES_PORT=5000 \
     -o json >> log.txt

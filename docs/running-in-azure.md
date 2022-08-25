@@ -31,7 +31,7 @@ I'll be using the `username` and `password` values later. If you don't want to u
 Now clone the Data API builder repository if you haven't done yet, and from the cloned repository local folder, using the branch you want - M1.5 in this sample - build the Docker image using the provided [Dockerfile](../Dockerfile), and tag it with the name of the registry you decided to use. For example:
 
 ```bash
- docker build . -t dabcr.azurecr.io/dab:M1.5
+docker build . -t dabcr.azurecr.io/dab:M1.5
 ```
 
 ### Publich the Docker image to the Azure Container Registry
@@ -56,6 +56,7 @@ The steps to have Data API Builder running in an App Service are the following (
 - Upload the configuration file
 - Mount the created Storage Account to the created App Service (for reference: [Mount storage to Linux container](https://docs.microsoft.com/en-us/azure/app-service/configure-connect-to-azure-storage?tabs=cli&pivots=container-linux#mount-storage-to-linux-container))
 - Update the App Service to tell Data API Builder to use the configuration file
+- Configure CORS to allow cross-origin calls from your frontends. *Please note that the provided script set CORS to allow ANY origin which is not a best pratice from a security standpoint. Only allow accepting request from trusted frontends.*
 
 To make it easier to perform all the above step, a shell script `azure-deploy.sh` file is available in `/samples/azure`
 

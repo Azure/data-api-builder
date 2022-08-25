@@ -59,6 +59,7 @@ namespace Azure.DataApiBuilder.Config
         (HostModeType Mode = HostModeType.Production,
          Cors? Cors = null,
          AuthenticationConfig? Authentication = null,
+         [property:JsonPropertyName("default-request-authorization")]
          AuthorizationType RequestAuthorizationType = AuthorizationType.Anonymous)
         : GlobalSettings();
 

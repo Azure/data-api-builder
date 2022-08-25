@@ -25,6 +25,7 @@ jobs:
     inputs:
       command: custom
       custom: 'tool install PowerShell'
+      arguments: '--global'
   
   - task: NuGetToolInstaller@1
 

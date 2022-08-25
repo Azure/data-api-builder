@@ -37,6 +37,7 @@ jobs:
     inputs:
       command: custom
       custom: 'tool install PowerShell'
+      arguments: '--global'
 
   - task: DockerInstaller@0
     displayName: Docker Installer
@@ -115,6 +116,7 @@ jobs:
     inputs:
       command: custom
       custom: 'tool install PowerShell'
+      arguments: '--global'
 
   - task: PowerShell@2
     displayName: Install SQL LocalDB

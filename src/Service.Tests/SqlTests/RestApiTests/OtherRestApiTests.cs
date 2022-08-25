@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=id,content",
-                entityNameOrRoute: _integrationEntityName,
+                entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid field to be returned requested: content",

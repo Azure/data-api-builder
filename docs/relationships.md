@@ -74,7 +74,7 @@ which will update the `series` entity - used in the example - to look like the f
 }
 ```
 
-A new key has been added under the `relationships` element: `books`. The element defines the name that will used for GraphQL field that will be used in the GraphQL object to navigate from the series object to the object defined in the `target.entity`, `book` in this case. This means that there must be an entity called `books` in configuration file. 
+A new key has been added under the `relationships` element: `books`. The element defines the name that will be used for GraphQL field to navigate from the series object to the object defined in the `target.entity`, `book` in this case. This means that there must be an entity called `book` in configuration file. 
 
 `cardinality` property tells Data API Builder that the there can be many books in each series, so the created GraphQL field willr return a list of items.
 

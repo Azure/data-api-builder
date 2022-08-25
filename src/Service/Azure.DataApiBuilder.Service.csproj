@@ -35,6 +35,9 @@
     <Content Include="MySqlBooks.sql">
         <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
+    <Content Update="dab-config*.json">
+      <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
+    </Content>
     <Content Update="appsettings*.json">
       <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
@@ -43,6 +46,14 @@
   <ItemGroup>
     <!-- extends watching group to include .json and .gql files -->
     <Watch Include="**\*.json;**\*.gql" Exclude="obj\**\*;bin\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Watch Remove="dab-config.Cosmos.json" />
+    <Watch Remove="dab-config.json" />
+    <Watch Remove="dab-config.Mssql.json" />
+    <Watch Remove="dab-config.Mysql.json" />
+    <Watch Remove="dab-config.Postgresql.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -74,10 +85,8 @@
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
     <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
   </ItemGroup>
-
-  <Target Name="MyPostCompileTarget" AfterTargets="Build">
-        <Exec Command="echo hello"/>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="dotnet pwsh ../../configGenerator.ps1"/>
   </Target>
-
 
 </Project>

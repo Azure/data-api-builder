@@ -38,31 +38,16 @@ steps:
     restoreSolution: '$(solution)'
 
 - task: DotNetCoreCLI@2
+  inputs:
+    command: custom
+    custom: 'tool install PowerShell'
+    
+- task: DotNetCoreCLI@2
   displayName: Build
   inputs:
     command: build
     projects: '**/*.csproj'
     arguments: '--configuration $(buildConfiguration)' # Update this to match your need
-
-- task: PowerShell@2
-  displayName: 'Generate dab-config.Cosmos.json'
-  inputs:
-    targetType: 'filePath'
-    filePath: configGenerator.ps1
-    arguments: 'Cosmos'
-    errorActionPreference: 'stop'
-    failOnStderr: true
-    workingDirectory: 'src/out/tests/net6.0/'
-  condition: eq( variables['Agent.OS'], 'Windows_NT' )
-
-- task: ShellScript@2
-  displayName: 'Generate dab-config.Cosmos.json'
-  inputs:
-    scriptPath: configGenerator.sh
-    args: 'Cosmos'
-    cwd: 'src/out/tests/net6.0/'
-    failOnStandardError: true
-  condition: ne( variables['Agent.OS'], 'Windows_NT' )
 
 - task: FileTransform@1
   displayName: 'Transform dab-config.Cosmos.json'
@@ -77,7 +62,7 @@ steps:
     command: test
     arguments: '--filter "TestCategory=Cosmos" --configuration $(buildConfiguration) $(ADDITIONAL_TEST_ARGS)'
     projects: '**/*Tests/*.csproj'
-
+    
 # '/XPlat Code coverage --results-directory /home/vsts/work/1/s/TestResults/'
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

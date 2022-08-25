@@ -1,16 +1,16 @@
-param(
-    [Parameter (Mandatory=$true)][string] $databaseType
-)
-
 $PSDefaultParameterValues['*:Encoding'] = 'utf8';
 
-$commandsFileName = $databaseType + "Commands.txt";
-$commandsFileWithPath = $PSScriptRoot + "\" + $commandsFileName;
+$commandFiles = "MsSqlCommands.txt", "MySqlCommands.txt", "PostgreSqlCommands.txt", "CosmosCommands.txt";
 $pathToCLIBuildOutput = $PSScriptRoot + "\src\out\cli";
-$pathToDabExe = Get-ChildItem -Path $pathToCLIBuildOutput -Recurse -include "dab.exe" | %{$_.FullName} ;
+$pathToDabDLL = Get-ChildItem -Path $pathToCLIBuildOutput -Recurse -include "dab.dll" | %{$_.FullName} ;
 
-# Generating the config files using dab commands
-foreach($command in Get-Content $commandsFileWithPath){
-    $commandToExecute = $pathToDabExe + " " + $command;
-    Invoke-Expression $commandToExecute;
+foreach($file in $commandFiles)
+{
+    $commandsFileWithPath = $PSScriptRoot + "\" + $file;
+    
+    # Generating the config files using dab commands
+    foreach($command in Get-Content $commandsFileWithPath){
+        $commandToExecute = "dotnet " + $pathToDabDLL + " " + $command;
+        Invoke-Expression $commandToExecute;
+    }
 }

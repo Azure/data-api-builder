@@ -59,6 +59,11 @@ steps:
     arguments: '--verify-no-changes'
 
 - task: DotNetCoreCLI@2
+  inputs:
+    command: custom
+    custom: 'tool install PowerShell'
+
+- task: DotNetCoreCLI@2
   displayName: Build
   inputs:
     command: build

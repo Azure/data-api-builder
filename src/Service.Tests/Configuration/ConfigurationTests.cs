@@ -92,7 +92,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable.")]
-        [TestCategory(TestCategory.COSMOS)]
         public async Task TestConflictAlreadySetConfiguration()
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
@@ -108,7 +107,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod("Validates that the config controller returns a conflict when using local configuration.")]
-        [TestCategory(TestCategory.COSMOS)]
         public async Task TestConflictLocalConfiguration()
         {
             Environment.SetEnvironmentVariable
@@ -126,7 +124,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod("Validates setting the configuration at runtime.")]
-        [TestCategory(TestCategory.COSMOS)]
         public async Task TestSettingConfigurations()
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
@@ -140,7 +137,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod("Validates that local cosmos settings can be loaded and the correct classes are in the service provider.")]
-        [TestCategory(TestCategory.COSMOS)]
         public void TestLoadingLocalCosmosSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
@@ -150,7 +146,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod("Validates that local MsSql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.MSSQL)]
-        [TestCategory(TestCategory.MSSQL)]
         public void TestLoadingLocalMsSqlSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
@@ -173,7 +168,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod("Validates that local PostgreSql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.POSTGRESQL)]
-        [TestCategory(TestCategory.POSTGRESQL)]
         public void TestLoadingLocalPostgresSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, POSTGRESQL_ENVIRONMENT);
@@ -196,7 +190,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod("Validates that local MySql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.MYSQL)]
-        [TestCategory(TestCategory.MYSQL)]
         public void TestLoadingLocalMySqlSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MYSQL_ENVIRONMENT);
@@ -219,7 +212,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod("Validates that trying to override configs that are already set fail.")]
-        [TestCategory(TestCategory.COSMOS)]
         public async Task TestOverridingLocalSettingsFails()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
@@ -233,7 +225,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod("Validates that setting the configuration at runtime will instantiate the proper classes.")]
-        [TestCategory(TestCategory.COSMOS)]
         public async Task TestSettingConfigurationCreatesCorrectClasses()
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
@@ -381,7 +372,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// precendence than default configuration file dab-config.json
         /// </summary>
         [TestMethod("Validates command line configuration provider.")]
-        [TestCategory(TestCategory.COSMOS)]
         public void TestCommandLineConfigurationProvider()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
@@ -401,7 +391,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// takes precendence than ASPNETCORE_ENVIRONMENT for the configuration file.
         /// </summary>
         [TestMethod("Validates precedence is given to DAB_ENVIRONMENT environment variable name.")]
-        [TestCategory(TestCategory.COSMOS)]
         public void TestRuntimeEnvironmentVariable()
         {
             Environment.SetEnvironmentVariable(
@@ -414,7 +403,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
-        [TestMethod("Validates the runtime configuration file."), TestCategory(TestCategory.MSSQL)]
+        [TestMethod("Validates the runtime configuration file.")]
         public void TestConfigIsValid()
         {
             RuntimeConfigPath configPath =
@@ -437,7 +426,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         // has highest precedence irrespective of what the connection string is in the config file.
         /// </summary>
         [TestMethod("Validates that environment variable DAB_CONNSTRING has highest precedence.")]
-        [TestCategory(TestCategory.COSMOS)]
         public void TestConnectionStringEnvVarHasHighestPrecedence()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);

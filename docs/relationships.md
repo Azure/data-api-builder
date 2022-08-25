@@ -80,7 +80,7 @@ A new key has been added under the `relationships` element: `books`. The element
 
 That's all you need. At startup Data API Builder will automatically detect the database fields that needs to be used to sustain the defined relationship.
 
-If you don't have a Foreign Key constraint sustaining the database relationship, Data API Builder cannot figure out automatically what fields will be used to related the two entities, so you have to provide it manually. You can do it with DAB CLI:
+If you don't have a Foreign Key constraint sustaining the database relationship, Data API Builder cannot figure out automatically what fields will be used to relate the two entities, so you have to provide it manually. You can do it with DAB CLI:
 
 ```bash
 dab update series --relationship books --target.entity book --cardinality many  --relationship.fields "id:series_id"

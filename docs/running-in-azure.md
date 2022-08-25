@@ -51,7 +51,7 @@ The steps to have Data API Builder running in an App Service are the following:
 - Mount the created Storage Account to the created App Service (for reference: [Mount storage to Linux container](https://docs.microsoft.com/en-us/azure/app-service/configure-connect-to-azure-storage?tabs=cli&pivots=container-linux#mount-storage-to-linux-container))
 - Update the App Service to tell Data API Builder to use the configuration file
 
-To make it easier to perform all the above step as shell script `azure-deploy.sh` file is available in `/samples/azure`
+To make it easier to perform all the above step, a shell script `azure-deploy.sh` file is available in `/samples/azure`
 
 At the first run the script will create an `.env` file that you have to fill out with the correct values for your enviroment.
 

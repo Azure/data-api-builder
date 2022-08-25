@@ -6,7 +6,7 @@ Data API Builder can be run in Azure via container image. Therefore is assumed t
 
 Build the the Docker image using the provided Dockerfile:
 
-If don't have an Azure Container Registry already available, create one, for example (the sample resource group `my-dab-rg` is assumned to exists already):
+If don't have an Azure Container Registry already available, create one, for example (the sample resource group `my-dab-rg` is assumned to exist already):
 
 ```bash
 az acr create -g my-dab-rg -n dabcr -l WestUs2 --sku Standard --admin-enabled true
@@ -32,7 +32,7 @@ now clone the Data API builder repository if you haven't done yet, and from the 
  docker build . -t dabcr.azurecr.io/dab:M1.5
 ```
 
-and the push it to the registry:
+and then push it to the registry:
 
 ```
 docker push dabcr.azurecr.io/dab:M1.5
@@ -51,14 +51,14 @@ The steps to have Data API Builder running in an App Service are the following:
 - Mount the created Storage Account to the created App Service (for reference: [Mount storage to Linux container](https://docs.microsoft.com/en-us/azure/app-service/configure-connect-to-azure-storage?tabs=cli&pivots=container-linux#mount-storage-to-linux-container))
 - Update the App Service to tell Data API Builder to use the configuration file
 
-To make it easier to perform all the above step as shell script `azure-deploy.sh` file is available in `/samples/azure`
+To make it easier to perform all the above step, a shell script `azure-deploy.sh` file is available in `/samples/azure`
 
 At the first run the script will create an `.env` file that you have to fill out with the correct values for your enviroment.
 
 - `RESOURCE_GROUP`: named of the resource group you are using (eg: `my-dab-rg`)
 - `APP_NAME`: the name of the App Service you want to create (eg: `dab-backend`)
 - `APP_PLAN_NAME`: the name of the App Service Plan you want to create (eg: `dab-backend-plan`)
-- `DAB_CONFIG_FILE`: the configuratio file you want to use (eg: `library-dab-config.json`)
+- `DAB_CONFIG_FILE`: the configuration file you want to use (eg: `library-dab-config.json`)
 - `STORAGE_ACCOUNT`: the name for the Storage Account you want to create (eg: `dabstorage`)
 - `LOCATION`: the region when you want to create the resources (eg: `westus2`)
 - `IMAGE_NAME`: the image you want to use (eg: `dabcr.azurecr.io/dab:M1.5`)

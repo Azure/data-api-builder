@@ -26,7 +26,7 @@ To allow this ability to work, Data API Builder needs to know how the two object
 
 ## Configuring a Relationship
 
-No matter what database you are using with Data API Builder, you have to explicity tell Data API Builder that an object is related to another one even if, using Foreign Key metadata when available, it could infer it automatically. This is done to allow you to have full control on what is exposed via GraphQL and what not.
+No matter what database you are using with Data API Builder, you have to explicitly tell Data API Builder that an object is related to another one even if, using Foreign Key metadata when available, it could infer it automatically. This is done to allow you to have full control on what is exposed via GraphQL and what not.
 
 There are three types of relatioship that can be established between two entities:
 - [One-To-Many Relationship](#one-to-many-relationship)

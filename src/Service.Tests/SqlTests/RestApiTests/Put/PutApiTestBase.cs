@@ -639,7 +639,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     sqlQuery: string.Empty,
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedLocationHeader: expectedLocationHeader

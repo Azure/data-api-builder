@@ -152,7 +152,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     sqlQuery: string.Empty,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()

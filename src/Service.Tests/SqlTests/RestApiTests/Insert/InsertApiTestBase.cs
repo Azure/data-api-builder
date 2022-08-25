@@ -231,7 +231,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 sqlQuery: string.Empty,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: RequestValidator.QUERY_STRING_INVALID_USAGE_ERR_MESSAGE,
                 expectedStatusCode: HttpStatusCode.BadRequest
             );

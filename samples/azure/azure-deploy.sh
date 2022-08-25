@@ -22,7 +22,7 @@ LOCATION=""
 EOF
 	echo "Enviroment file (.env) not detected."
 	echo "Please configure values for your environment in the created .env file and run the script again."
-	echo "Read the docs/running-in-azure.md the get info on needed enviroment variables."
+	echo "Read the docs/running-in-azure.md to get info on needed enviroment variables."
 	exit 1
 fi
 

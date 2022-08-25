@@ -52,7 +52,7 @@ A one-to-many relationship allows an object to access a list of related objects.
 }
 ```
 
-If there are Foreign Key supporting the relationaship between the two underlying database objects, you only need to tell Data API Builder, that you want to expose such relationship. With DAB CLI:
+If there are Foreign Key supporting the relationship between the two underlying database objects, you only need to tell Data API Builder, that you want to expose such relationship. With DAB CLI:
 
 ```bash
 dab update series --relationship books --target.entity book --cardinality many 

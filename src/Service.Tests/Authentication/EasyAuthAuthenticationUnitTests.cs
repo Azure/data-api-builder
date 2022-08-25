@@ -152,13 +152,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 ignoreCase: true);
         }
 
+        /// <summary>
+        /// Test to validate that the request is appropriately treated as anonymous/authenticated
+        /// in development mode depending on the value feature switch we have in config file.
+        /// </summary>
+        /// <param name="treatRequestAsAuthenticated">Boolean value indicating whether to treat the
+        /// request as authenticated by default.</param>
+        /// <param name="expectedClientRoleHeader">Expected value of X-MS-API-ROLE header.</param>
+        /// <param name="clientRoleHeader">Value of X-MS-API-ROLE header specified in request.</param>
+        /// <param name="sendClientRoleHeader">Boolean value indicating whether or not to send
+        /// clientRoleHeader in the request.</param>
+        /// <returns></returns>
         [DataTestMethod]
         [DataRow(true, "Authenticated", null, false,
-            DisplayName = "Treat request as authenticated in development mode")]
+            DisplayName = "EasyAuth- Treat request as authenticated in development mode")]
         [DataRow(false, "Anonymous", null, false,
-            DisplayName = "Treat request as anonymous in development mode")]
+            DisplayName = "EasyAuth- Treat request as anonymous in development mode")]
         [DataRow(true, "author", "author", true,
-            DisplayName = "Treat request as authenticated in development mode and honor the clienRoleHeader")]
+            DisplayName = "EasyAuth- Treat request as authenticated in development mode " +
+            "and honor the clienRoleHeader")]
         public async Task TestAuthenticatedRequestInDevelopmentMode(bool treatRequestAsAuthenticated,
             string expectedClientRoleHeader,
             string clientRoleHeader,
@@ -191,7 +203,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Mock<RuntimeConfigPath> runtimeConfigPath = new();
             Mock<RuntimeConfigProvider> runtimeConfigProvider = new(runtimeConfigPath.Object,
                 configProviderLogger.Object);
-            runtimeConfigProvider.Setup(x => x.IsAuthenticatedRequestInDevelopmentMode()).
+            runtimeConfigProvider.Setup(x => x.DoTreatRequestasAuthenticatedInDevelopmentMode()).
                 Returns(treatAsAuthenticatedRequest);
 
             return await new HostBuilder()

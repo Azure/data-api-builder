@@ -54,13 +54,7 @@ steps:
     restoreSolution: '$(solution)'
     feedsToUse: config
     nugetConfigPath: Nuget.config
-
-- task: DotNetCoreCLI@2
-  inputs:
-    command: custom
-    custom: 'tool install PowerShell'
-    arguments: '--global'
-
+    
 - task: DotNetCoreCLI@2
   displayName: Check formatting
   inputs:

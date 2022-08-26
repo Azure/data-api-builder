@@ -20,13 +20,7 @@ jobs:
     inputs:
       packageType: sdk
       version: 6.0.x
-
-  - task: DotNetCoreCLI@2
-    inputs:
-      command: custom
-      custom: 'tool install PowerShell'
-      arguments: '--global'
-  
+      
   - task: NuGetToolInstaller@1
 
   - task: NuGetCommand@2

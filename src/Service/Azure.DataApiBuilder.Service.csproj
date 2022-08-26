@@ -86,7 +86,8 @@
     <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="dotnet pwsh ../../configGenerator.ps1"/>
+    <Exec Command="powershell.exe -command ../../configGenerator.ps1" Condition=" '$(OS)' == 'Windows_NT' "/>
+    <Exec Command="../../configGenerator.sh" Condition=" '$(OS)' != 'Windows_NT' " />
   </Target>
 
 </Project>

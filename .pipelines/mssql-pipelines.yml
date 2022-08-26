@@ -33,12 +33,6 @@ jobs:
       feedsToUse: config
       nugetConfigPath: Nuget.config
 
-  - task: DotNetCoreCLI@2
-    inputs:
-      command: custom
-      custom: 'tool install PowerShell'
-      arguments: '--global'
-
   - task: DockerInstaller@0
     displayName: Docker Installer
     inputs:
@@ -111,13 +105,7 @@ jobs:
       restoreSolution: '$(solution)'
       feedsToUse: config
       nugetConfigPath: Nuget.config
-
-  - task: DotNetCoreCLI@2
-    inputs:
-      command: custom
-      custom: 'tool install PowerShell'
-      arguments: '--global'
-
+      
   - task: PowerShell@2
     displayName: Install SQL LocalDB
     inputs:

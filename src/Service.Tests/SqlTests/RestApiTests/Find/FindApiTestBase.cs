@@ -1405,6 +1405,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Validates that query strings with keyless parameters
+        /// result in a bad request, HTTP 400.
+        /// ?$ -> $ is interpreted as the value of query string parameter null.
+        /// ?=12 -> 12 is interpreted as the value query string parameter empty string.
+        /// </summary>
+        /// <param name="queryString"></param>
+        /// <returns></returns>
+        [DataTestMethod]
+        [DataRow("?$", DisplayName = "Null key, value present")]
+        [DataRow("?=12", DisplayName = "Empty string key, value present")]
+        [DataRow("?$ &=12", DisplayName = "Param1: Null key, Param2: Empty string key")]
+        public async Task FindTestWithInvalidQueryStringNoKey(string queryString)
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: queryString,
+                entity: _integrationMappingEntity,
+                sqlQuery: null,
+                exceptionExpected: true,
+                expectedErrorMessage: "A query parameter without a key is not supported.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for FindById operation with attempts at
         /// Sql Injection in the primary key route.
         /// </summary>

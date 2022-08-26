@@ -159,8 +159,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// request as authenticated by default.</param>
         /// <param name="expectedClientRoleHeader">Expected value of X-MS-API-ROLE header.</param>
         /// <param name="clientRoleHeader">Value of X-MS-API-ROLE header specified in request.</param>
-        /// <param name="sendClientRoleHeader">Boolean value indicating whether or not to send
-        /// clientRoleHeader in the request.</param>
         /// <returns></returns>
         [DataTestMethod]
         [DataRow(true, "Authenticated", null,

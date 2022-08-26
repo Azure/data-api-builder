@@ -11,7 +11,7 @@ for file in "${commandFiles[@]}"
 do
     commandsFileNameWithPath="$absolutePath/$file";
     while read -r command; do
-        cmd="dotnet ${pathToDLL} ${command}";
-        eval $cmd;
+        command="dotnet ${pathToDLL} ${command}";
+        eval $command;
     done <$commandsFileNameWithPath;
 done

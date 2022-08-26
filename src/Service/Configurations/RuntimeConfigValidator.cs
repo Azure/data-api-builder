@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
@@ -101,10 +100,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (runtimeConfig.GraphQLGlobalSettings.Enabled)
             {
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
-                
+
                 // Running this validation only in development mode to ensure
                 // fast startup of engine in production mode.
-                if(runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
+                if (runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
                 {
                     ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
                 }

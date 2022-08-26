@@ -162,68 +162,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 RequestValidator.ParseRequestBody(requestBody);
             }
         }
-
-        /// <summary>
-        /// Ensures the provided primaryKeyRoute (calculated by the caller)
-        /// is present for the current request.
-        /// i.e. When the primaryKeyRoute for a GET (Find Many) request is null, empty, or whitespace.
-        /// -> calling ValidatePrimaryKeyRouteProvided() will raise an exception.
-        /// </summary>
-        /// <param name="primaryKeyRoute">route string i.e. /id/5</param>
-        /// <param name="expectsException">true/false</param>
-        [DataTestMethod]
-        [DataRow(null, true, DisplayName = "PrimaryKey route null when not expected.")]
-        [DataRow("", true, DisplayName = "PrimaryKey route empty when not expected.")]
-        [DataRow(" ", true, DisplayName = "PrimaryKey route whitespace when not expected.")]
-        [DataRow("/Entity/id/1", false, DisplayName = "PrimaryKey route provided when expected.")]
-        public void PrimaryKeyRouteExpectedForHttpRequestType(string primaryKeyRoute, bool expectsException)
-        {
-            if (expectsException)
-            {
-                DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RequestValidator.ValidatePrimaryKeyRouteProvided(primaryKeyRoute),
-                    message: RequestValidator.REQUEST_BODY_INVALID_JSON_ERR_MESSAGE);
-
-                Assert.AreEqual(expected: HttpStatusCode.BadRequest, actual: dabException.StatusCode);
-                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.BadRequest, actual: dabException.SubStatusCode);
-            }
-            else
-            {
-                RequestValidator.ValidatePrimaryKeyRouteProvided(primaryKeyRoute);
-            }
-        }
-
-        /// <summary>
-        /// Ensures that a given request does not include a
-        /// queryString value (as calculated by the caller).
-        /// is present for the current request.
-        /// i.e. When a queryString is provided for a POST request,
-        /// -> calling ValidateQueryStringNotProvided() will raise an exception.
-        /// </summary>
-        /// <param name="queryString">string i.e. $?select=id</param>
-        /// <param name="expectsException">true/false</param>
-        [DataTestMethod]
-        [DataRow(null, false, DisplayName = "queryString null when expected.")]
-        [DataRow("", false, DisplayName = "queryString empty when expected.")]
-        [DataRow(" ", true, DisplayName = "queryString whitespace only when not expected.")]
-        [DataRow("$?select=id", true, DisplayName = "queryString provided when not expected.")]
-        public void QueryStringExpectedForHttpRequestType(string queryString, bool expectsException)
-        {
-            if (expectsException)
-            {
-                DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RequestValidator.ValidateQueryStringNotProvided(queryString),
-                    message: RequestValidator.QUERY_STRING_INVALID_USAGE_ERR_MESSAGE);
-
-                Assert.AreEqual(expected: HttpStatusCode.BadRequest, actual: dabException.StatusCode);
-                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.BadRequest, actual: dabException.SubStatusCode);
-            }
-            else
-            {
-                RequestValidator.ValidateQueryStringNotProvided(queryString);
-            }
-        }
-
         #endregion
         #region Negative Tests
         /// <summary>

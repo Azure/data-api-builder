@@ -98,8 +98,7 @@ namespace Azure.DataApiBuilder.Service.Services
                                                          isList: string.IsNullOrEmpty(primaryKeyRoute));
                         break;
                     case Operation.Insert:
-                        RequestValidator.ValidateQueryStringNotProvided(queryString);
-                        JsonElement insertPayloadRoot = RequestValidator.ParseRequestBody(requestBody);
+                        JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
                         context = new InsertRequestContext(
                             entityName,
                             dbo: dbObject,
@@ -110,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             _sqlMetadataProvider);
                         break;
                     case Operation.Delete:
-                        RequestValidator.ValidatePrimaryKeyRouteProvided(primaryKeyRoute);
+                        RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                         context = new DeleteRequestContext(entityName,
                                                            dbo: dbObject,
                                                            isList: false);
@@ -119,8 +118,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     case Operation.UpdateIncremental:
                     case Operation.Upsert:
                     case Operation.UpsertIncremental:
-                        RequestValidator.ValidatePrimaryKeyRouteProvided(primaryKeyRoute);
-                        JsonElement upsertPayloadRoot = RequestValidator.ParseRequestBody(requestBody);
+                        JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
                         context = new UpsertRequestContext(entityName,
                                                            dbo: dbObject,
                                                            upsertPayloadRoot,

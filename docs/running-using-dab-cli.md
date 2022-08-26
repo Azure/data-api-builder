@@ -6,7 +6,7 @@ The easiest option that doesn't require cloning the repo is to use the `dab` [CL
 
 You can install the `dab` CLI using [.NET tools](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools):
 
-- Download the latest version of the package: [dab.<version_number>.nupkg](https://github.com/Azure/data-api-builder/releases/tag/v0.1.5-alpha)
+- Download the latest version of the package: [dab.<version_number>.nupkg](https://github.com/Azure/data-api-builder/releases/)
 - Navigate to the folder where the package file is downloaded.
 
 then, to install this tool globally, use:
@@ -15,7 +15,7 @@ then, to install this tool globally, use:
 dotnet tool install -g --add-source ./ dab --version <version_number>
 ```
 
-> **ATTENTION**: if you are running on Linux or MacOS, you will need to add .NET global tools to your PATH to call `dab` directly. Once installed run:
+> **ATTENTION**: if you are running on Linux or MacOS, you may need to add .NET global tools to your PATH to call `dab` directly. Once installed run:
 > `export PATH=$PATH:~/.dotnet/tools`
 
 ## Update `dab` CLI to latest version

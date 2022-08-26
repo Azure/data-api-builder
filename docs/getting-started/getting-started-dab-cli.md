@@ -10,7 +10,6 @@ This CLI tool is part of [.NET global tools](https://www.nuget.org/packages?pack
 
 Make sure you have installed the `dab` CLI tool as described here: [Running Data API Builder for Azure Databases using CLI](../running-using-dab-cli.md)
 
-
 ## Generate the config file
 
 This CLI tool will generate a `dab` engine config file for you, then you can build your config by adding required entities, relationships, roles, and permissions etc.

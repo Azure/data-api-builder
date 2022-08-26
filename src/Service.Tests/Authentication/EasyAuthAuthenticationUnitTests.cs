@@ -114,7 +114,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 await SendRequestAndGetHttpContextState(
                     generatedToken,
                     EasyAuthType.StaticWebApps,
-                    sendClientRoleHeader: true,
                     clientRoleHeader: clientRoleHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.AreEqual(expected: addAuthenticated, postMiddlewareContext.User.Identity.IsAuthenticated);
@@ -164,27 +163,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// clientRoleHeader in the request.</param>
         /// <returns></returns>
         [DataTestMethod]
-        [DataRow(true, "Authenticated", null, false,
+        [DataRow(true, "Authenticated", null,
             DisplayName = "EasyAuth- Treat request as authenticated in development mode")]
-        [DataRow(false, "Anonymous", null, false,
+        [DataRow(false, "Anonymous", null,
             DisplayName = "EasyAuth- Treat request as anonymous in development mode")]
-        [DataRow(true, "author", "author", true,
+        [DataRow(true, "author", "author",
             DisplayName = "EasyAuth- Treat request as authenticated in development mode " +
             "and honor the clienRoleHeader")]
-        [DataRow(true, "Anonymous", "Anonymous", true,
+        [DataRow(true, "Anonymous", "Anonymous",
             DisplayName = "EasyAuth- Treat request as authenticated in development mode " +
             "and honor the clienRoleHeader even when specified as anonymous")]
         public async Task TestAuthenticatedRequestInDevelopmentMode(bool treatRequestAsAuthenticated,
             string expectedClientRoleHeader,
-            string clientRoleHeader,
-            bool sendClientRoleHeader)
+            string clientRoleHeader)
         {
             HttpContext postMiddlewareContext =
                 await SendRequestAndGetHttpContextState(
                     token: null,
                     easyAuthType: EasyAuthType.StaticWebApps,
                     clientRoleHeader: clientRoleHeader,
-                    sendClientRoleHeader: sendClientRoleHeader,
                     treatRequestAsAuthenticated: treatRequestAsAuthenticated);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
@@ -258,7 +255,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             string? token,
             EasyAuthType easyAuthType,
             bool sendAuthorizationHeader = false,
-            bool sendClientRoleHeader = false,
             string? clientRoleHeader = null,
             bool treatRequestAsAuthenticated = false)
         {
@@ -280,7 +276,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                     context.Request.Headers.Add(easyAuthHeader);
                 }
 
-                if (sendClientRoleHeader)
+                if (clientRoleHeader is not null)
                 {
                     KeyValuePair<string, StringValues> easyAuthHeader =
                         new(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader);

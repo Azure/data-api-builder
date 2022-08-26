@@ -3,7 +3,7 @@ commandFiles=("MsSqlCommands.txt" "MySqlCommands.txt" "PostgreSqlCommands.txt" "
 #Fetching absolute path of this script
 absolutePath="$( cd "$(dirname "$0")" ; pwd -P )";
 cliOutputPath="$absolutePath/src/out/cli";
-#Fetching the path of dab dll
+#Fetching the path of dab dll file
 pathToDLL=$(find $cliOutputPath -name dab.dll)
 #Generating the config using dab commands
 echo "Generating config file using dab commands";

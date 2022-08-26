@@ -315,12 +315,16 @@ namespace Azure.DataApiBuilder.Service.Services
             // entity's path comes after the restPath, so get substring starting from
             // the end of restPath. If restPath is not empty we trim the '/' following the path.
             string routeAfterPath = string.IsNullOrEmpty(restPath) ? route : route.Substring(restPath.Length).TrimStart('/');
-            // Split reoutAfterPath on the first occurence of '/', if we get back 2 elements
+            // Split routeAfterPath on the first occurence of '/', if we get back 2 elements
             // this means we have a non empty primary key route which we save. Otherwise, save
             // primary key route as empty string. Entity Path will always be the element at index 0.
-            string[] entityPathAndPKRoute = routeAfterPath.Split(new[] { '/' }, 2);
+            // ie: {EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
+            // splits into [{EntityPath}] when there is an empty primary key route and into
+            // [{EntityPath}, {Primarykeyroute}] when there is a non empty primary key route.
+            int maxNumberOfElementsFromSplit = 2;
+            string[] entityPathAndPKRoute = routeAfterPath.Split(new[] { '/' }, maxNumberOfElementsFromSplit);
             string entityPath = entityPathAndPKRoute[0];
-            string primaryKeyRoute = entityPathAndPKRoute.Length == 2 ? entityPathAndPKRoute[1] : string.Empty;
+            string primaryKeyRoute = entityPathAndPKRoute.Length == maxNumberOfElementsFromSplit ? entityPathAndPKRoute[1] : string.Empty;
 
             if (!_sqlMetadataProvider.TryGetEntityNameFromPath(entityPath, out string? entityName))
             {

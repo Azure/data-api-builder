@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="queryString">queryString e.g. "$?filter="</param>
         /// <param name="requestBody">The string JSON body from the request.</param>
-        /// <exception cref="DataApiBuilderException">Raised when invalid JSON in requestBody is found.</exception>
+        /// <exception cref="DataApiBuilderException">Raised when queryString is present or invalid JSON in requestBody is found.</exception>
         public static JsonElement ValidateInsertRequest(string queryString, string requestBody)
         {
             if (!string.IsNullOrEmpty(queryString))
@@ -231,7 +231,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="primaryKeyRoute">URL route e.g. "Entity/id/1"</param>
         /// <param name="requestBody">The string JSON body from the request.</param>
-        /// <exception cref="DataApiBuilderException">Raised when invalid JSON in requestBody is found.</exception>
+        /// <exception cref="DataApiBuilderException">Raised when either primary key route is absent or invalid JSON in requestBody is found.</exception>
         public static JsonElement ValidateUpdateOrUpsertRequest(string? primaryKeyRoute, string requestBody)
         {
             if (string.IsNullOrWhiteSpace(primaryKeyRoute))
@@ -249,7 +249,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Validates the primarykeyroute is populated with respect to a Delete operation.
         /// </summary>
         /// <param name="primaryKeyRoute">URL route e.g. "Entity/id/1"</param>
-        /// <exception cref="DataApiBuilderException">Raised when invalid JSON in requestBody is found.</exception>
+        /// <exception cref="DataApiBuilderException">Raised when primary key route is absent</exception>
         public static void ValidateDeleteRequest(string? primaryKeyRoute)
         {
             if (string.IsNullOrWhiteSpace(primaryKeyRoute))

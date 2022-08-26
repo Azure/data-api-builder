@@ -154,7 +154,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
 
         /// <summary>
         /// Test to validate that the request is appropriately treated as anonymous/authenticated
-        /// in development mode depending on the value feature switch we have in config file.
+        /// in development mode depending on the value feature switch we have in the config file.
         /// </summary>
         /// <param name="treatRequestAsAuthenticated">Boolean value indicating whether to treat the
         /// request as authenticated by default.</param>
@@ -177,7 +177,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             bool sendClientRoleHeader)
         {
             HttpContext postMiddlewareContext =
-                await SendRequestAndGetHttpContextState(token: null,
+                await SendRequestAndGetHttpContextState(
+                    token: null,
                     easyAuthType: EasyAuthType.StaticWebApps,
                     clientRoleHeader: clientRoleHeader,
                     sendClientRoleHeader: sendClientRoleHeader,
@@ -203,7 +204,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Mock<RuntimeConfigPath> runtimeConfigPath = new();
             Mock<RuntimeConfigProvider> runtimeConfigProvider = new(runtimeConfigPath.Object,
                 configProviderLogger.Object);
-            runtimeConfigProvider.Setup(x => x.DoTreatRequestasAuthenticatedInDevelopmentMode()).
+            runtimeConfigProvider.Setup(x => x.IsAuthenticatedDevModeRequest()).
                 Returns(treatAsAuthenticatedRequest);
 
             return await new HostBuilder()

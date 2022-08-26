@@ -271,7 +271,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// Test to validate that the request is appropriately treated as anonymous/authenticated
         /// in development mode depending on the value feature switch we have in config file.
         /// </summary>
-        /// <param name="treatRequestAsAuthenticated">Boolean value indicating whether to treat the
+        /// <param name="treatDevModeRequestAsAuthenticated">Boolean value indicating whether to treat the
         /// request as authenticated by default.</param>
         /// <param name="expectedClientRoleHeader">Expected value of X-MS-API-ROLE header.</param>
         /// <param name="clientRoleHeader">Value of X-MS-API-ROLE header specified in request.</param>
@@ -286,7 +286,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         [DataRow(true, "author", "author", true,
             DisplayName = "Jwt- Treat request as authenticated in development mode " +
             "and honor the clienRoleHeader")]
-        public async Task TestAuthenticatedRequestInDevelopmentModeJwt(bool treatRequestAsAuthenticated,
+        public async Task TestAuthenticatedRequestInDevelopmentModeJwt(
+            bool treatDevModeRequestAsAuthenticated,
             string expectedClientRoleHeader,
             string clientRoleHeader,
             bool sendClientRoleHeader)
@@ -297,10 +298,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                     token: null,
                     clientRoleHeader: clientRoleHeader,
                     sendClientRoleHeader: sendClientRoleHeader,
-                    treatRequestAsAuthenticated: treatRequestAsAuthenticated);
+                    treatDevModeRequestAsAuthenticated: treatDevModeRequestAsAuthenticated);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
-            Assert.AreEqual(expected: expectedClientRoleHeader,
+            Assert.AreEqual(
+                expected: (int)HttpStatusCode.OK,
+                actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(
+                expected: expectedClientRoleHeader,
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString());
         }
         #endregion
@@ -313,15 +317,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// <param name="key"></param>
         /// <returns>IHost</returns>
         private static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key,
-            bool treatReuqestasAuthenticated)
+            bool treatDevModeRequestAsAuthenticated)
         {
             // Setup RuntimeConfigProvider object for the pipeline.
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             Mock<RuntimeConfigPath> runtimeConfigPath = new();
             Mock<RuntimeConfigProvider> runtimeConfigProvider = new(runtimeConfigPath.Object,
                 configProviderLogger.Object);
-            runtimeConfigProvider.Setup(x => x.DoTreatRequestasAuthenticatedInDevelopmentMode()).
-                Returns(treatReuqestasAuthenticated);
+            runtimeConfigProvider.Setup(x => x.IsAuthenticatedDevModeRequest()).
+                Returns(treatDevModeRequestAsAuthenticated);
 
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>
@@ -392,9 +396,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             string token,
             bool sendClientRoleHeader = false,
             string? clientRoleHeader = null,
-            bool treatRequestAsAuthenticated = false)
+            bool treatDevModeRequestAsAuthenticated = false)
         {
-            using IHost host = await CreateWebHostCustomIssuer(key, treatRequestAsAuthenticated);
+            using IHost host = await CreateWebHostCustomIssuer(key, treatDevModeRequestAsAuthenticated);
             TestServer server = host.GetTestServer();
 
             return await server.SendAsync(context =>

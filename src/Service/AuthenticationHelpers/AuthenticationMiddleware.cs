@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             // 1. When the request has a valid jwt/easyauth token,
             // 2. When in development mode, we want the default state of request as authenticated.
             bool isAuthenticatedRequest = authNResult.Succeeded ||
-                _runtimeConfigurationProvider.DoTreatRequestasAuthenticatedInDevelopmentMode();
+                _runtimeConfigurationProvider.IsAuthenticatedDevModeRequest();
 
             string clientRoleHeader = isAuthenticatedRequest
                 ? AuthorizationType.Authenticated.ToString()

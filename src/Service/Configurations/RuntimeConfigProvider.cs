@@ -264,7 +264,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// simulate authenticated/anonymous authentication state of request in development mode.
         /// </summary>
         /// <returns></returns>
-        public virtual bool DoTreatRequestasAuthenticatedInDevelopmentMode()
+        public virtual bool IsAuthenticatedDevModeRequest()
         {
             return IsDeveloperMode() &&
                 RuntimeConfiguration?.HostGlobalSettings.RequestAuthorizationType

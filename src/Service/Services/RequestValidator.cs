@@ -98,38 +98,6 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Validates the queryString is not present for mutation.
-        /// </summary>
-        /// <param name="queryString">queryString e.g. "$?filter="</param>
-        /// <exception cref="DataApiBuilderException">Thrown when queryString provided or whitespace provided as querystring.</exception>
-        public static void ValidateQueryStringNotProvided(string? queryString)
-        {
-            if (!string.IsNullOrEmpty(queryString))
-            {
-                throw new DataApiBuilderException(
-                    message: QUERY_STRING_INVALID_USAGE_ERR_MESSAGE,
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-            }
-        }
-
-        /// <summary>
-        /// Validates the primaryKeyRoute is populated
-        /// </summary>
-        /// <param name="primaryKeyRoute">URL route e.g. "Entity/id/1"</param>
-        /// <exception cref="DataApiBuilderException">Thrown when primaryKeyRoute not provided.</exception>
-        public static void ValidatePrimaryKeyRouteProvided(string? primaryKeyRoute)
-        {
-            if (string.IsNullOrWhiteSpace(primaryKeyRoute))
-            {
-                throw new DataApiBuilderException(
-                    message: PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-            }
-        }
-
-        /// <summary>
         /// Validates a stored procedure request does not specify a primary key route.
         /// Applies to all stored procedure requests, both Queries and Mutations
         /// Mutations also validated using ValidateInsertRequestContext call in RestService

@@ -1,8 +1,9 @@
 #!/bin/bash
 commandFiles=("MsSqlCommands.txt" "MySqlCommands.txt" "PostgreSqlCommands.txt" "CosmosCommands.txt")
-absolutePath=$(pwd -P);
+absolutePath="$( cd "$(dirname "$0")" ; pwd -P )";
+cliOutputPath="$absolutePath/src/out/cli";
 #Fetching the path to dab dll
-pathToDLL=$(find ./src/out/cli -name dab.dll)
+pathToDLL=$(find $cliOutputPath -name dab.dll)
 #Generating the config using dab commands
 echo "Generating config file using dab commands";
 for file in "${commandFiles[@]}"

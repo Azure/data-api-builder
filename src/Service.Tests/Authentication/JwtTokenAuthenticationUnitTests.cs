@@ -52,10 +52,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// library(Microsoft.AspNetCore.Authentication.JwtBearer) validation methods
         /// </summary>
         [DataTestMethod]
-        [DataRow(false, null, DisplayName = "Authenticated role - X-MS-API-ROLE is not sent")]
-        [DataRow(true, "author", DisplayName = "Authenticated role - existing X-MS-API-ROLE is honored")]
+        [DataRow(null, DisplayName = "Authenticated role - X-MS-API-ROLE is not sent")]
+        [DataRow("author", DisplayName = "Authenticated role - existing X-MS-API-ROLE is honored")]
         [TestMethod]
-        public async Task TestValidToken(bool sendClientRoleHeader, string clientRoleHeader)
+        public async Task TestValidToken(string clientRoleHeader)
         {
             RsaSecurityKey key = new(RSA.Create(2048));
             string token = CreateJwt(
@@ -70,11 +70,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 await SendRequestAndGetHttpContextState(
                     key,
                     token,
-                    sendClientRoleHeader,
                     clientRoleHeader);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
-            Assert.AreEqual(expected: sendClientRoleHeader ? clientRoleHeader : AuthorizationType.Authenticated.ToString(),
+            Assert.AreEqual(
+                expected: clientRoleHeader is not null ? clientRoleHeader : AuthorizationType.Authenticated.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -85,15 +85,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// </summary>
         /// <returns></returns>
         [DataTestMethod]
-        [DataRow(false, null, DisplayName = "Anonymous role - X-MS-API-ROLE is not sent")]
-        [DataRow(true, "author", DisplayName = "Anonymous role - existing X-MS-API-ROLE is not honored")]
+        [DataRow(null, DisplayName = "Anonymous role - X-MS-API-ROLE is not sent")]
+        [DataRow("author", DisplayName = "Anonymous role - existing X-MS-API-ROLE is not honored")]
         [TestMethod]
-        public async Task TestMissingJwtToken(bool sendClientRoleHeader, string clientRoleHeader)
+        public async Task TestMissingJwtToken(string clientRoleHeader)
         {
             RsaSecurityKey key = new(RSA.Create(2048));
             string token = null;
             HttpContext postMiddlewareContext
-                = await SendRequestAndGetHttpContextState(key, token, sendClientRoleHeader, clientRoleHeader);
+                = await SendRequestAndGetHttpContextState(key, token, clientRoleHeader);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
             Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
@@ -279,28 +279,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// clientRoleHeader in the request.</param>
         /// <returns></returns>
         [DataTestMethod]
-        [DataRow(true, "Authenticated", null, false,
+        [DataRow(true, "Authenticated", null,
             DisplayName = "Jwt- Treat request as authenticated in development mode")]
-        [DataRow(false, "Anonymous", null, false,
+        [DataRow(false, "Anonymous", null,
             DisplayName = "Jwt- Treat request as anonymous in development mode")]
-        [DataRow(true, "author", "author", true,
+        [DataRow(true, "author", "author",
             DisplayName = "Jwt- Treat request as authenticated in development mode " +
             "and honor the clienRoleHeader")]
-        [DataRow(true, "Anonymous", "Anonymous", true,
+        [DataRow(true, "Anonymous", "Anonymous",
             DisplayName = "Jwt- Treat request as authenticated in development mode " +
             "and honor the clienRoleHeader even when specified as anonymous")]
         public async Task TestAuthenticatedRequestInDevelopmentModeJwt(
             bool treatDevModeRequestAsAuthenticated,
             string expectedClientRoleHeader,
-            string clientRoleHeader,
-            bool sendClientRoleHeader)
+            string clientRoleHeader)
         {
             RsaSecurityKey key = new(RSA.Create(2048));
             HttpContext postMiddlewareContext =
                 await SendRequestAndGetHttpContextState(key: key,
                     token: null,
                     clientRoleHeader: clientRoleHeader,
-                    sendClientRoleHeader: sendClientRoleHeader,
                     treatDevModeRequestAsAuthenticated: treatDevModeRequestAsAuthenticated);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.AreEqual(
@@ -397,7 +395,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         private static async Task<HttpContext> SendRequestAndGetHttpContextState(
             SecurityKey key,
             string token,
-            bool sendClientRoleHeader = false,
             string? clientRoleHeader = null,
             bool treatDevModeRequestAsAuthenticated = false)
         {
@@ -413,7 +410,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                     context.Request.Headers.Add(authHeader);
                 }
 
-                if (sendClientRoleHeader)
+                if (clientRoleHeader is not null)
                 {
                     KeyValuePair<string, StringValues> easyAuthHeader =
                         new(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader);

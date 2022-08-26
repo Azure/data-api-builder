@@ -256,7 +256,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     // effectively reuse the ValidateInsertRequest - throws error if query string is nonempty
                     // and parses the body into json
                     JsonElement requestPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
-                        context = new StoredProcedureRequestContext(
+                    context = new StoredProcedureRequestContext(
                         entityName,
                         dbo: dbObject,
                         requestPayloadRoot,

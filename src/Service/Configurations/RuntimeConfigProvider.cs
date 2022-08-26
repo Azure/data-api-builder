@@ -266,9 +266,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <returns></returns>
         public virtual bool IsAuthenticatedDevModeRequest()
         {
+            if (RuntimeConfiguration is null)
+            {
+                return false;
+            }
+
             return IsDeveloperMode() &&
-                RuntimeConfiguration?.HostGlobalSettings.RequestAuthorizationType
-                is AuthorizationType.Authenticated;
+                RuntimeConfiguration.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated;
         }
     }
 }

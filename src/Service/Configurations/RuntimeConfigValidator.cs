@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
@@ -100,7 +101,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (runtimeConfig.GraphQLGlobalSettings.Enabled)
             {
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
-                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
+                
+                // Running this validation only in development mode to ensure
+                // fast startup of engine in production mode.
+                if(runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
+                {
+                    ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
+                }
             }
         }
 
@@ -123,13 +130,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
         ///         }
         ///     }
         /// }
-        /// All these entities will create the following queries
-        /// pk query: book
-        /// List query: books
+        /// All these entities will create queries with the following field names
+        /// pk query name: book_by_pk
+        /// List query name: books
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateEntitiesDoNotGenerateDuplicateQueries(Dictionary<string, Entity> entityCollection)
+        public static void ValidateEntitiesDoNotGenerateDuplicateQueries(IDictionary<string, Entity> entityCollection)
         {
             HashSet<string> graphQLQueries = new();
 
@@ -145,20 +152,15 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 // Primary Key Query: For fetching an item using its primary key.
                 // List Query: To fetch a paginated list of items
                 // Query names for both these queries are determined.
-                string pkQuery = GenerateByPKQueryName(entityName, entity);
-                string listQuery = GenerateListQueryName(entityName, entity);
+                string pkQueryName = GenerateByPKQueryName(entityName, entity);
+                string listQueryName = GenerateListQueryName(entityName, entity);
 
-                if (graphQLQueries.Contains(pkQuery) || graphQLQueries.Contains(listQuery))
+                if (!graphQLQueries.Add(pkQueryName) || !graphQLQueries.Add(listQueryName))
                 {
                     throw new DataApiBuilderException(
                         message: $"Entity {entityName} generates queries that already exist",
                         statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-                }
-                else
-                {
-                    graphQLQueries.Add(pkQuery);
-                    graphQLQueries.Add(listQuery);
                 }
             }
         }

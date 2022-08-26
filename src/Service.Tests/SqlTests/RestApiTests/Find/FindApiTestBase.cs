@@ -944,7 +944,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=fancyName",
-                entityNameOrPath: _integrationMappingDifferentEntityRoute,
+                entityNameOrPath: _integrationMappingDifferentEntityPath,
                 sqlQuery: GetQuery(nameof(FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy)),
                 expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
                 paginated: true
@@ -1185,10 +1185,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entityNameOrPath: _nonExistentStocksEntityRouteName,
+                entityNameOrPath: _nonExistentStocksEntityPathName,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
-                expectedErrorMessage: $"Invalid Entity path: {_nonExistentStocksEntityRouteName}.",
+                expectedErrorMessage: $"Invalid Entity path: {_nonExistentStocksEntityPathName}.",
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
             );

@@ -137,10 +137,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                 sqlMetadataLogger.Object);
             string outParam;
             sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam)).Returns(true);
-            Dictionary<string, string> _routeToEntityMock = new() { { entityName, entityName } };
+            Dictionary<string, string> _pathToEntityMock = new() { { entityName, entityName } };
             sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam))
-                               .Callback(new metaDataCallback((string entityRoute, out string entity) => _ = _routeToEntityMock.TryGetValue(entityRoute, out entity)))
-                               .Returns((string entityRoute, out string entity) => _routeToEntityMock.TryGetValue(entityRoute, out entity));
+                               .Callback(new metaDataCallback((string entityPath, out string entity) => _ = _pathToEntityMock.TryGetValue(entityPath, out entity)))
+                               .Returns((string entityPath, out string entity) => _pathToEntityMock.TryGetValue(entityPath, out entity));
             Mock<IAuthorizationService> authorizationService = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             DefaultHttpContext context = new();
@@ -184,9 +184,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         /// This delegate is for the callback used
         /// with the mocked SqlMetadataProvider.
         /// </summary>
-        /// <param name="entityRoute">The entity route.</param>
+        /// <param name="entityPath">The entity path.</param>
         /// <param name="entity">Name of entity.</param>
-        delegate void metaDataCallback(string entityRoute, out string entity);
+        delegate void metaDataCallback(string entityPath, out string entity);
         #endregion
     }
 }

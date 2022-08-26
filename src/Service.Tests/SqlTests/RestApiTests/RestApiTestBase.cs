@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationUniqueCharactersEntity = "ArtOfWar";
         protected static readonly string _integrationUniqueCharactersTable = "aow";
         protected static readonly string _nonExistentEntityName = "!@$%^&*()_+definitely_nonexistent_entity!@$%^&*()_+";
-        protected static readonly string _nonExistentStocksEntityRouteName = "asset";
+        protected static readonly string _nonExistentStocksEntityPathName = "asset";
         protected static readonly string _emptyTableEntityName = "Empty";
         protected static readonly string _emptyTableTableName = "empty_table";
         protected static readonly string _simple_all_books = "books_view_all";
@@ -39,8 +39,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationProcedureFindMany_ProcName = "get_books";
         protected static readonly string _integrationProcedureFindOne_EntityName = "GetBook";
         protected static readonly string _integrationProcedureFindOne_ProcName = "get_book_by_id";
-        protected static readonly string _integrationMappingDifferentEntityRoute = "plants";
-        protected static readonly string _Composite_NonAutoGenPK_EntityRoute = "commodities";
+        protected static readonly string _integrationMappingDifferentEntityPath = "plants";
+        protected static readonly string _Composite_NonAutoGenPK_EntityPath = "commodities";
 
         public abstract string GetQuery(string key);
     }

@@ -294,7 +294,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// a request route shoud be of the form
         /// {RESTPath}/{EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
         /// </summary>
-        /// <param name="route">String containing REST path + entity path
+        /// <param name="route">The request route, containing REST path + entity path
         /// (and optionally primary key).</param>
         /// <returns>entity name associated with entity path
         /// and primary key route.</returns>

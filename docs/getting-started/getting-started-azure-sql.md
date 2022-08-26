@@ -32,7 +32,7 @@ Once you have your connection string, add it to the configuration file you have 
 }
 ```
 
-if you haven't created your configuration file yet, you can do it right now, for example:
+if you haven't created your configuration file yet, you can do it right now, for example, below command will generate a config with name `dab-config.json`, use --config otherwise to specify the name:
 
 ```bash
 dab init --database-type "mssql" --connection-string "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=<Password>;TrustServerCertificate=true"

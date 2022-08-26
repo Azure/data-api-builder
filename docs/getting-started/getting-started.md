@@ -1,6 +1,6 @@
 # Getting started with Data API builder for Azure Databases
 
-Welcome to this guide that will help you get started with Data API builder (DAB) for Azure Databases. First your are going to get it running locally on your machine. Then we will show you how to deploy Data API builder for Azure Databases in an Azure Container Instance. At the end of the tutorial you'll understand what's needed to run Data API builder for Azure Databases both on-prem and on Azure.
+Welcome to this guide that will help you get started with Data API builder (DAB) for Azure Databases. First you are going to get it running locally on your machine. Then we will show you how to deploy Data API builder for Azure Databases in an Azure Container Instance. At the end of the tutorial you'll understand what's needed to run Data API builder for Azure Databases both on-prem and on Azure.
 
 ## Prerequisites
 
@@ -8,7 +8,7 @@ Welcome to this guide that will help you get started with Data API builder (DAB)
 
 Make sure you have .NET 6.0 SDK installed on your machine: https://dotnet.microsoft.com/en-us/download/dotnet/6.0.
 
-You can list the SDKs installed in your machine by using the following command:
+You can list the SDKs installed on your machine by using the following command:
 
 ```bash
 dotnet --list-sdks
@@ -16,14 +16,14 @@ dotnet --list-sdks
 
 ### Azure Database
 
-As the Data API builder for Azure Databases generates REST and GraphQL endpoints for database objects, you need to have a database ready fr the tutorial. You can choose either a relational or non-relational database. This getting started guide documents the process to have Data API builder set up for:
+As the Data API builder for Azure Databases generates REST and GraphQL endpoints for database objects, you need to have a database ready for the tutorial. You can choose either a relational or non-relational database. This getting started guide documents the process to have Data API builder set up for:
 
 - Azure SQL 
 - Azure Cosmos DB
 
 ## Installing DAB CLI
 
-Data API Builder provides a CLI tool to simplify configuration and execution of the engine. Detailed description on how DAB CLI can be installed on your machine can be found here: [Running Data API Builder for Azure Databases using CLI](../running-using-dab-cli.md)
+Data API Builder provides a CLI tool to simplify configuration and execution of the engine. A detailed description on how DAB CLI can be installed on your machine can be found here: [Running Data API Builder for Azure Databases using CLI](../running-using-dab-cli.md)
 
 ## Getting to know the configuration file
 
@@ -62,9 +62,9 @@ In the `data-source` section you have to specify the database type and the conne
 - `postgresql`: for PostgreSQL
 - `mysql`: for MySQL or MariaDB
 
-Set the value of `database-type` to the database you want to use. For this tutorial we'll be using `mssql` or `cosmos` to showcase both DAB support for relational and non-relational databases.
+Set the value of `database-type` to the database you want to use. For this tutorial we'll be using `mssql` or `cosmos` to showcase DAB's support for both relational and non-relational databases.
 
-Once you have chosen the database you want to connect to, you need to provide the connection string in the `connection-string` property. This is a standard ADO.NET connection string. You can get it from the Azure Portal, for instance. 
+Once you have chosen the database you want to connect to, you will need to provide the connection string in the `connection-string` property. This is a standard ADO.NET connection string. You can get it from the Azure Portal, for instance. 
 
 The `runtime` section is telling Data API builder to run in `development` mode. This means database errors will be surfaced and returned with full detail. This is great for development, but can be a security risk when running in production: that's why switching to `production` mode will disable this debug feature.
 
@@ -78,11 +78,11 @@ Initializing a configuration file can be done with the Data API builder CLI as w
 dab init --database-type "<database-type>" --connection-string "<connection-string>"
 ```
 
-where for `database-type` and `connection-string` you can use any of the values described in the [Overview of configuration file](#overview-of-configuration-file) section above. If you don't know the connection string, no worries, we'll take care of that later, in one of the database-specific Getting Started documents we ave created for you.
+where for `database-type` and `connection-string` you can use any of the values described in the [Overview of configuration file](#overview-of-configuration-file) section above. If you don't know the connection string, no worries, we'll take care of that later, in one of the database-specific Getting Started documents we have created for you.
 
 ## The sample scenario
 
-In this tutorial we'll be creating the backend API for a small solution that allow end-users to keep track books in their library. Therefore the business entities we'll be dealing with are
+In this tutorial we'll be creating the backend API for a small solution that allows end-users to keep track of books in their library. Therefore, the business entities we'll be dealing with are
 
 - Books
 - Authors

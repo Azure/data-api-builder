@@ -630,8 +630,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 ""issue_number"": 1234
             }";
 
-            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
-
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: string.Empty,
                     queryString: null,
@@ -641,8 +639,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
-                    expectedStatusCode: HttpStatusCode.BadRequest,
-                    expectedLocationHeader: expectedLocationHeader
+                    expectedStatusCode: HttpStatusCode.BadRequest
                 );
         }
 

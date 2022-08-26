@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -470,6 +471,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
+        }
+
+        /// <summary>
+        /// Tests the Patch functionality with a REST PATCH request
+        /// without a primary key route. We expect a failure and so
+        /// no sql query is provided.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchWithNoPrimaryKeyRouteTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Batman Returns"",
+                ""issue_number"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entity: _integration_NonAutoGenPK_EntityName,
+                    sqlQuery: string.Empty,
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    exceptionExpected: true,
+                    expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
+                    expectedStatusCode: HttpStatusCode.BadRequest
+                    );
         }
 
         #endregion

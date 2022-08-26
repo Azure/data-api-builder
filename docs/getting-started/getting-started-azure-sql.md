@@ -32,9 +32,17 @@ Once you have your connection string, add it to the configuration file you have 
 }
 ```
 
+if you haven't created your configuration file yet, you can do it right now, for example, below command will generate a config with name `dab-config.json`, use --config otherwise to specify the name:
+
+```bash
+dab init --database-type "mssql" --connection-string "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=<Password>;TrustServerCertificate=true"
+```
+
+if you already have created the configuration file, you can just open it with an editor like VS Code and manually update the `connection-string` and the `database-type` in the `data-source` section.
+
 ## Create the database objects
 
-Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `libray.azure-sql.sql` script in the `azure-sql-db` folder that you can use to create three tables, along with sample data:
+Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `libray.azure-sql.sql` script in the `azure-sql-db` folder in the GitHub repo. You can use it to create three tables, along with sample data:
 
 - `dbo.authors`: Table containing authors
 - `dbo.books`: Table containing books
@@ -46,7 +54,13 @@ Execute the script in the SQL Server or Azure SQL database you decided to use, s
 
 Now, you'll want to expose the `books` and the `authors` table as REST or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.
 
-Start by adding the `author` entity:
+You can do this either using the CLI:
+
+```bash
+dab add author --source dbo.authors --permissions "anonymous:*"
+```
+
+or by adding the `author` entity manually to the config file:
 
 ```json
 "entities": {
@@ -99,23 +113,26 @@ that's all is needed at the moment. Data API builder is ready to be run.
 
 ## Start Data API builder for Azure SQL Database
 
-From the `samples/getting-started` folder, start Data API Builder engine :
+You are ready to serve your API. Run the below command (this will start the engine with default config `dab-config.json`, use option --config otherwise):
 
 ```
-./run-dab.cmd library-dab-config.json
+dab start
 ```
 
-Use `run-dab.sh` if you are on Linux. After a few seconds, you'll see something like
+when you'll see something like:
 
 ```
+info: Azure.DataApiBuilder.Service.Startup[0]
       Successfully completed runtime initialization.
 info: Microsoft.Hosting.Lifetime[14]
-      Now listening on: https://localhost:5001
-info: Microsoft.Hosting.Lifetime[14]
       Now listening on: http://localhost:5000
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: https://localhost:5001
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
 ```
 
-The Data API builder engine is running and is ready to accept requests.
+you'll be good to go, Data API Builder is up and running, ready to serve your requests.
 
 ## Query the endpoints
 
@@ -186,7 +203,15 @@ will return the first five books ordered by title in descending order.
 
 Everything is now up and working, and now you probably want to take advantage as much as possible of GraphQL capabilities to handle complex queries by sending just one request. For example you may want to get all the Authors in your library along with the Books they have written. In order to achieve that you need to let Data API Builder know that you want such relationship to be available to be used in queries.
 
-Stop the engine (`Ctrl+C`) and go back to the `library-dab-config.json` and add the `relationships` section to the `author` entity, using the code below:
+Stop the engine (`Ctrl+C`).
+
+Relationships are also defined in the configuration file, via the `relationships` section. Relationships must be defined on each entity where you want to have them. For example to create a relationshop between a Book and its Authors, you can use the following DAB CLI command:
+
+```bash
+dab update author --relationship "books" --cardinality "many" --target.entity "book" --linking.object "dbo.books_authors"
+```
+
+which will create the `relationships` section in the `author` entity:
 
 ```json
 "relationships": {
@@ -229,14 +254,17 @@ The `author` entity should now look like the following:
 
 as we also want to enable querying a book and getting its authors, we also need to make a similar change to the book entity:
 
+```bash
+```
+
+that will update the configuration file so that the `book` entity will look like the following code:
+
 ```json
 "book": {
     "source": "dbo.books",
     "permissions": [
         {
-            "actions": [
-            "*"
-            ],
+            "actions": [ "*" ],
             "role": "anonymous"
         }
     ],

@@ -286,6 +286,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         [DataRow(true, "author", "author", true,
             DisplayName = "Jwt- Treat request as authenticated in development mode " +
             "and honor the clienRoleHeader")]
+        [DataRow(true, "Anonymous", "Anonymous", true,
+            DisplayName = "Jwt- Treat request as authenticated in development mode " +
+            "and honor the clienRoleHeader even when specified as anonymous")]
         public async Task TestAuthenticatedRequestInDevelopmentModeJwt(
             bool treatDevModeRequestAsAuthenticated,
             string expectedClientRoleHeader,

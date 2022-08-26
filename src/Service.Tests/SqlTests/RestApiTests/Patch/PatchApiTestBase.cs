@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entityNameOrPath: _Composite_NonAutoGenPK_EntityRoute,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOne_Insert_Nulled_Test"),
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "categoryid/1/pieceid/1",
                     queryString: null,
-                    entityNameOrPath: _Composite_NonAutoGenPK_EntityRoute,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOne_Update_Nulled_Test"),
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
@@ -134,7 +134,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entityNameOrPath: _Composite_NonAutoGenPK_EntityRoute,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOne_Insert_CompositeNonAutoGenPK_Test"),
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
@@ -153,7 +153,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entityNameOrPath: _Composite_NonAutoGenPK_EntityRoute,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOne_Insert_Empty_Test"),
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
@@ -170,7 +170,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entityNameOrPath: _Composite_NonAutoGenPK_EntityRoute,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOne_Insert_Default_Test"),
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
@@ -245,7 +245,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "categoryid/1/pieceid/1",
                     queryString: null,
-                    entityNameOrPath: _Composite_NonAutoGenPK_EntityRoute,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOne_Update_CompositeNonAutoGenPK_Test"),
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
@@ -261,7 +261,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "categoryid/1/pieceid/1",
                     queryString: null,
-                    entityNameOrPath: _Composite_NonAutoGenPK_EntityRoute,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOne_Update_Empty_Test"),
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
@@ -442,7 +442,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/2/pieceid/1",
                 queryString: string.Empty,
-                entityNameOrPath: _Composite_NonAutoGenPK_EntityRoute,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
                 operationType: Operation.UpsertIncremental,
                 requestBody: requestBody,
@@ -462,7 +462,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/3/pieceid/1",
                 queryString: string.Empty,
-                entityNameOrPath: _Composite_NonAutoGenPK_EntityRoute,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
                 operationType: Operation.UpsertIncremental,
                 requestBody: requestBody,

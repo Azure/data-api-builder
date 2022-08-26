@@ -97,16 +97,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             ValidateAuthenticationConfig();
 
-            if (runtimeConfig.GraphQLGlobalSettings.Enabled)
+            // Running these graphQL validations only in development mode to ensure
+            // fast startup of engine in production mode.
+            if (runtimeConfig.GraphQLGlobalSettings.Enabled
+                 && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
             {
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
-
-                // Running this validation only in development mode to ensure
-                // fast startup of engine in production mode.
-                if (runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
-                {
-                    ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
-                }
+                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
             }
         }
 

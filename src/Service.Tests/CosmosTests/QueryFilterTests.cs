@@ -19,11 +19,10 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         private static readonly string _graphQLQueryName = "planets";
 
         [ClassInitialize]
-        public static async Task TestFixtureSetupAsync(TestContext context)
+        public static void TestFixtureSetup(TestContext context)
         {
             Init(context);
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
-            await DeleteDatabaseToFreeUpStorageAsync(cosmosClient);
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             CreateItems(DATABASE_NAME, _containerName, 10);

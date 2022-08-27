@@ -109,10 +109,10 @@ namespace Azure.DataApiBuilder.Service.Services
                             _sqlMetadataProvider);
                         break;
                     case Operation.Delete:
+                        RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                         context = new DeleteRequestContext(entityName,
                                                            dbo: dbObject,
                                                            isList: false);
-                        RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                         break;
                     case Operation.Update:
                     case Operation.UpdateIncremental:
@@ -255,7 +255,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     // Stored procedure call is semantically identical for all methods except Find, so we can
                     // effectively reuse the ValidateInsertRequest - throws error if query string is nonempty
                     // and parses the body into json
-                    JsonElement requestPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
+                    JsonElement requestPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
                     context = new StoredProcedureRequestContext(
                         entityName,
                         dbo: dbObject,

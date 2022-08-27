@@ -490,7 +490,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: string.Empty,
                     queryString: null,
-                    entity: _integration_NonAutoGenPK_EntityName,
+                    entityNameOrPath: _integration_NonAutoGenPK_EntityName,
                     sqlQuery: string.Empty,
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,

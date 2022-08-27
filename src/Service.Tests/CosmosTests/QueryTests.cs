@@ -50,9 +50,10 @@ query{
         private const int TOTAL_ITEM_COUNT = 10;
 
         [ClassInitialize]
-        public static void TestFixtureSetup(TestContext context)
+        public static async Task TestFixtureSetupAsync(TestContext context)
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            await DeleteDatabaseToFreeUpStorageAsync(cosmosClient);
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);

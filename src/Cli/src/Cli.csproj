@@ -23,4 +23,9 @@
     <ProjectReference Include="..\..\Service\Azure.DataApiBuilder.Service.csproj" />
   </ItemGroup>
 
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="powershell.exe -command ..\..\..\configGenerator.ps1 " Condition=" '$(OS)' == 'Windows_NT' "/>
+    <Exec Command="bash ../../../configGenerator.sh" Condition=" '$(OS)' != 'Windows_NT' " UseCommandProcessor="False"/>
+  </Target>
+
 </Project>

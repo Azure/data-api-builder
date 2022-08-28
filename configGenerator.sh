@@ -5,7 +5,10 @@ absolutePath="$( cd "$(dirname "$0")" ; pwd -P )";
 cliOutputPath="$absolutePath/src/out/cli";
 #Fetching the path of dab dll file
 pathToDLL=$(find $cliOutputPath -name dab.dll)
-#Generating the config using dab commands
+workingDirectory="$absolutePath/src/Service/"
+# During start-up engine looks for config files inside /src/Service directory.
+cd $workingDirectory;
+# Generating the config using dab commands
 echo "Generating config file using dab commands";
 for file in "${commandFiles[@]}"
 do

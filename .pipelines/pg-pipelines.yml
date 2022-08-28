@@ -52,11 +52,11 @@ jobs:
       arguments: '--configuration $(buildConfiguration)' # Update this to match your need
     
   - task: FileTransform@1
-    displayName: 'Transform dab-config.PostgreSql.json'
+    displayName: 'Transform dab-config.Postgresql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'src/out/tests/net6.0/dab-config.PostgreSql.json'
+      targetFiles: 'src/out/tests/net6.0/dab-config.Postgresql.json'
     
   - task: DotNetCoreCLI@2
     displayName: 'Run Postgres Integration Tests'

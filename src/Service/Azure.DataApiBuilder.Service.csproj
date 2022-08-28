@@ -43,10 +43,12 @@
     </Content>
   </ItemGroup>
 
+
   <ItemGroup>
     <!-- extends watching group to include .json and .gql files -->
     <Watch Include="**\*.json;**\*.gql" Exclude="obj\**\*;bin\**\*" />
   </ItemGroup>
+
 
   <ItemGroup>
     <Watch Remove="dab-config.Cosmos.json" />
@@ -55,6 +57,7 @@
     <Watch Remove="dab-config.Mysql.json" />
     <Watch Remove="dab-config.Postgresql.json" />
   </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="HotChocolate" Version="$(HotChocolateVersion)" />
@@ -85,9 +88,4 @@
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
     <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
   </ItemGroup>
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="powershell.exe -command ../../configGenerator.ps1" Condition=" '$(OS)' == 'Windows_NT' "/>
-    <Exec Command="bash ../../configGenerator.sh" Condition=" '$(OS)' != 'Windows_NT' " UseCommandProcessor="False"/>
-  </Target>
-
 </Project>

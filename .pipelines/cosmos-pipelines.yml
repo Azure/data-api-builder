@@ -40,9 +40,6 @@ steps:
     restoreSolution: '$(solution)'
     feedsToUse: config
     nugetConfigPath: Nuget.config
-
-- task: FileTransform@1
-  displayName: 'Generate dab-config.Cosmos.json'
     
 - task: DotNetCoreCLI@2
   displayName: Build

@@ -56,11 +56,11 @@ jobs:
       arguments: '--configuration $(buildConfiguration)' # Update this to match your need
 
   - task: FileTransform@1
-    displayName: 'Transform dab-config.MySql.json'
+    displayName: 'Transform dab-config.Mysql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'src/out/tests/net6.0/dab-config.MySql.json'
+      targetFiles: 'src/out/tests/net6.0/dab-config.Mysql.json'
       
   - task: DotNetCoreCLI@2
     displayName: 'Run MySql Integration Tests'

@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -629,8 +630,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 ""issue_number"": 1234
             }";
 
-            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
-
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: string.Empty,
                     queryString: null,
@@ -639,9 +638,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     exceptionExpected: true,
-                    expectedErrorMessage: "Primary Key for UPSERT requests is required.",
-                    expectedStatusCode: HttpStatusCode.BadRequest,
-                    expectedLocationHeader: expectedLocationHeader
+                    expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
+                    expectedStatusCode: HttpStatusCode.BadRequest
                 );
         }
 

@@ -132,6 +132,36 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             PerformTest(findRequestContext, _mockMetadataStore.Object, expectsException: false);
         }
 
+        /// <summary>
+        /// Ensures improper JSON included in a request body (i.e. for POST/PUT/PATCH requests)
+        /// is handled gracefully.
+        /// Gracefully means the client receives an HTTP 400 Bad Request response and not an
+        /// HTTP 5XX type response.
+        /// </summary>
+        /// <param name="requestBody">Request Body string</param>
+        /// <param name="expectsException">true/false</param>
+        [DataTestMethod]
+        [DataRow(@"{""title"":""Hello, World""}", false, DisplayName = "Request body is valid json")]
+        [DataRow("", false, DisplayName = "Request body is empty, does not fail parser")]
+        [DataRow(null, false, DisplayName = "Request body null, does not fail parser")]
+        [DataRow(@"{""title"":""Hello, World}", true, DisplayName = "Request body is invalid json, missing quote")]
+        [DataRow(@" ", true, DisplayName = "Request body is invalid json, whitespace only")]
+        public void RequestBodyJsonParsing(string requestBody, bool expectsException)
+        {
+            if (expectsException)
+            {
+                DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
+                    action: () => RequestValidator.ParseRequestBody(requestBody),
+                    message: RequestValidator.REQUEST_BODY_INVALID_JSON_ERR_MESSAGE);
+
+                Assert.AreEqual(expected: HttpStatusCode.BadRequest, actual: dabException.StatusCode);
+                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.BadRequest, actual: dabException.SubStatusCode);
+            }
+            else
+            {
+                RequestValidator.ParseRequestBody(requestBody);
+            }
+        }
         #endregion
         #region Negative Tests
         /// <summary>

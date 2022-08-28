@@ -59,7 +59,7 @@ steps:
   displayName: 'Run Cosmos DB Integration Tests'
   inputs:
     command: test
-    arguments: '--filter "TestCategory=Cosmos" --configuration $(buildConfiguration) $(ADDITIONAL_TEST_ARGS)'
+    arguments: '--filter "TestCategory=Cosmos" --no-build --configuration $(buildConfiguration) $(ADDITIONAL_TEST_ARGS)'
     projects: '**/*Tests/*.csproj'
     
 # '/XPlat Code coverage --results-directory /home/vsts/work/1/s/TestResults/'

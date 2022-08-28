@@ -62,7 +62,7 @@ jobs:
     displayName: 'Run Postgres Integration Tests'
     inputs:
       command: test
-      arguments: '--filter "TestCategory=PostgreSql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+      arguments: '--filter "TestCategory=PostgreSql" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
       projects: '**/*Tests/*.csproj'
 
   - task: PublishCodeCoverageResults@1

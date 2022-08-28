@@ -274,8 +274,7 @@ namespace Cli.Tests
                   },
                   ""authentication"": {
                     ""provider"": ""StaticWebApps""
-                  },
-                  ""devmode-authenticate-all-requests"": false
+                  }
                 }
               },
               ""entities"": {

@@ -164,6 +164,16 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
 
+            // Validate that the user has not specified the devmode-authenticate-all-requests
+            // feature switch when in hostmode is production.
+
+            if (runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production
+                && runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is not null)
+            {
+                throw new NotSupportedException("Default state of authentication cannot be" +
+                    " set for requests in production mode.");
+            }
+
             bool isAudienceSet =
                 runtimeConfig.AuthNConfig is not null &&
                 runtimeConfig.AuthNConfig.Jwt is not null &&

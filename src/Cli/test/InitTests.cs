@@ -51,8 +51,7 @@ namespace Cli.Tests
       },
       ""authentication"": {
         ""provider"": ""StaticWebApps""
-      },
-      ""devmode-authenticate-all-requests"": false
+      }
     }
   },
   ""entities"": {}
@@ -106,8 +105,7 @@ namespace Cli.Tests
       },
       ""authentication"": {
         ""provider"": ""StaticWebApps""
-      },
-      ""devmode-authenticate-all-requests"": false
+      }
     }
   },
   ""entities"": {}

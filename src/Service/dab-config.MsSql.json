@@ -19,7 +19,7 @@
     },
     "host": {
       "mode": "development",
-      "is-devmode-default-request-authenticated": false,
+      "devmode-authenticate-all-requests": false,
       "cors": {
         "origins": [ "http://localhost:5000" ],
         "allow-credentials": false

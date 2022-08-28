@@ -72,7 +72,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                     token,
                     clientRoleHeader);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(
+                expected: (int)HttpStatusCode.OK,
+                actual: postMiddlewareContext.Response.StatusCode);
             Assert.AreEqual(
                 expected: clientRoleHeader is not null ? clientRoleHeader : AuthorizationType.Authenticated.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
@@ -95,8 +97,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             HttpContext postMiddlewareContext
                 = await SendRequestAndGetHttpContextState(key, token, clientRoleHeader);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
+            Assert.AreEqual(
+                expected: (int)HttpStatusCode.OK,
+                actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(
+                expected: AuthorizationType.Anonymous.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -117,9 +122,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 );
 
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(
+                expected: (int)HttpStatusCode.OK,
+                actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
+            Assert.AreEqual(
+                expected: AuthorizationType.Anonymous.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -143,7 +151,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
+            Assert.AreEqual(
+                expected: AuthorizationType.Anonymous.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -161,7 +170,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
+            Assert.AreEqual(
+                expected: AuthorizationType.Anonymous.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -179,7 +189,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
+            Assert.AreEqual(
+                expected: AuthorizationType.Anonymous.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }

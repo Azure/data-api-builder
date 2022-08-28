@@ -49,7 +49,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK,
                 actual: postMiddlewareContext.Response.StatusCode);
-            Assert.AreEqual(expected: AuthorizationType.Authenticated.ToString(),
+            Assert.AreEqual(
+                expected: AuthorizationType.Authenticated.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -73,8 +74,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 sendAuthorizationHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
-            Assert.AreEqual(expected: AuthorizationType.Authenticated.ToString(),
+            Assert.AreEqual(
+                expected: (int)HttpStatusCode.OK,
+                actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(
+                expected: AuthorizationType.Authenticated.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -86,7 +90,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         [TestMethod]
         public async Task TestValidStaticWebAppsEasyAuthTokenWithAnonymousRoleOnly()
         {
-            string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: false);
+            string generatedToken =
+                AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: false);
             HttpContext postMiddlewareContext =
                 await SendRequestAndGetHttpContextState(generatedToken, EasyAuthType.StaticWebApps);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
@@ -142,7 +147,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         public async Task TestInvalidEasyAuthToken(string token, bool sendAuthorizationHeader = false)
         {
             HttpContext postMiddlewareContext =
-                await SendRequestAndGetHttpContextState(token, EasyAuthType.StaticWebApps, sendAuthorizationHeader);
+                await SendRequestAndGetHttpContextState(
+                    token,
+                    EasyAuthType.StaticWebApps,
+                    sendAuthorizationHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
@@ -171,7 +179,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         [DataRow(true, "Anonymous", "Anonymous",
             DisplayName = "EasyAuth- Treat request as authenticated in development mode " +
             "and honor the clienRoleHeader even when specified as anonymous")]
-        public async Task TestAuthenticatedRequestInDevelopmentMode(bool treatRequestAsAuthenticated,
+        public async Task TestAuthenticatedRequestInDevelopmentMode(
+            bool treatRequestAsAuthenticated,
             string expectedClientRoleHeader,
             string clientRoleHeader)
         {
@@ -194,7 +203,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// Configures test server with bare minimum middleware
         /// </summary>
         /// <returns>IHost</returns>
-        private static async Task<IHost> CreateWebHostEasyAuth(EasyAuthType easyAuthType,
+        private static async Task<IHost> CreateWebHostEasyAuth(
+            EasyAuthType easyAuthType,
             bool treatAsAuthenticatedRequest)
         {
             // Setup RuntimeConfigProvider object for the pipeline.

@@ -52,7 +52,7 @@ namespace Cli.Tests
       ""authentication"": {
         ""provider"": ""StaticWebApps""
       },
-      ""is-devmode-default-request-authenticated"": false
+      ""devmode-authenticate-all-requests"": false
     }
   },
   ""entities"": {}
@@ -107,7 +107,7 @@ namespace Cli.Tests
       ""authentication"": {
         ""provider"": ""StaticWebApps""
       },
-      ""is-devmode-default-request-authenticated"": false
+      ""devmode-authenticate-all-requests"": false
     }
   },
   ""entities"": {}

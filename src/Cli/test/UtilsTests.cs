@@ -37,7 +37,7 @@ namespace Cli.Tests
 
             // when rest is non-boolean string
             restDetails = GetRestDetails("book");
-            Assert.AreEqual(new RestEntitySettings(Route: "/book"), restDetails);
+            Assert.AreEqual(new RestEntitySettings(Path: "/book"), restDetails);
         }
 
         /// <summary>

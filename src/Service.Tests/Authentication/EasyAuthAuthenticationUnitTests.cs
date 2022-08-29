@@ -15,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataApiBuilder.Service.AuthenticationHelpers.StaticWebAppsAuthentication;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication
 {
@@ -75,6 +76,44 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Assert.AreEqual(expected: AuthorizationType.Authenticated.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
+        }
+
+        /// <summary>
+        /// Ensures SWA token payload claims are processed by
+        /// validating that those claims are present
+        /// on the authenticated .NET ClaimsPrincipal object.
+        /// Demonstrates using the immutable claim values tid and oid
+        /// as a combined key for uniquely identifying the API's data
+        /// and determining whether a user should be granted access to that data.
+        /// </summary>
+        /// <seealso cref="https://docs.microsoft.com/azure/active-directory/develop/access-tokens#validate-user-permission"/>
+        [TestMethod]
+        public async Task TestStaticWebAppsEasyAuthTokenClaims()
+        {
+            string objectIdClaimType = "oid";
+            string objectId = "f35eaa76-b8e6-4c7c-99a2-5aeeeee9ba58";
+
+            string tenantIdClaimType = "tid";
+            string tenantId = "8f902aef-2c06-42c9-a3d0-bc31f04a3dca";
+
+            List<SWAPrincipalClaim> payloadClaims = new();
+            payloadClaims.Add(new SWAPrincipalClaim() { Typ = objectIdClaimType, Val = objectId });
+            payloadClaims.Add(new SWAPrincipalClaim() { Typ = tenantIdClaimType, Val = tenantId });
+
+            string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(
+                addAuthenticated: true,
+                claims: payloadClaims
+                );
+
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
+                generatedToken,
+                EasyAuthType.StaticWebApps);
+
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(expected: true, actual: postMiddlewareContext.User.HasClaim(type: objectIdClaimType, value: objectId));
+            Assert.AreEqual(expected: true, actual: postMiddlewareContext.User.HasClaim(type: tenantIdClaimType, value: tenantId));
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
         }
 
         /// <summary>

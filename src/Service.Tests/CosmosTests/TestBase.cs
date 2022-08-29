@@ -161,5 +161,6 @@ type Star @model(name:""Star"") {
                     roles: new string[] { "anonymous", "authenticated" }
                 );
         }
+        
     }
 }

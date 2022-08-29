@@ -29,12 +29,21 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             public IEnumerable<SWAPrincipalClaim>? Claims { get; set; }
         }
 
+        /// <summary>
+        /// Representation of a user claim in a SWA token payload. 
+        /// </summary>
         public class SWAPrincipalClaim
         {
             public string? Typ { get; set; }
             public string? Val { get; set; }
         }
 
+        /// <summary>
+        /// Processes the x-ms-client-principal payload containing
+        /// SWA token payload.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns>ClaimsIdentity containing authentication metadata.</returns>
         public static ClaimsIdentity? Parse(HttpContext context)
         {
             ClaimsIdentity? identity = null;
@@ -49,12 +58,9 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     principal = JsonSerializer.Deserialize<StaticWebAppsClientPrincipal>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
                 }
 
-                if (principal is null || principal.UserRoles is null)
-                {
-                    return null;
-                }
-
-                if (!principal.UserRoles.Any())
+                // Null UserRoles collection indicates that SWA authentication failed
+                // because all requests will at least have the 'anonymous role'
+                if (principal is null || principal.UserRoles is null || !principal.UserRoles.Any())
                 {
                     return identity;
                 }
@@ -64,6 +70,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 identity.AddClaim(new Claim(ClaimTypes.Name, principal.UserDetails ?? string.Empty));
                 identity.AddClaims(principal.UserRoles.Select(r => new Claim(ClaimTypes.Role, r)));
 
+                // Copy all SWA token claims to .NET ClaimsIdentity object.
                 if (principal.Claims is not null && principal.Claims.Any())
                 {
                     identity.AddClaims(principal.Claims
@@ -80,9 +87,10 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 error is NotSupportedException ||
                 error is InvalidOperationException)
             {
-                // Logging the parsing failure exception to the console, but not rethrowing
-                // nor creating a DataApiBuilder exception because the authentication handler
-                // will create and send a 401 unauthorized response to the client.
+                // Log any SWA token processing failures to the console.
+                // Does not raise or rethrow a DataApiBuilder exception because
+                // the authentication handler caller will return a 401 unauthorized
+                // response to the client.
                 Console.Error.WriteLine("Failure processing the StaticWebApps EasyAuth header.");
                 Console.Error.WriteLine(error.Message);
                 Console.Error.WriteLine(error.StackTrace);

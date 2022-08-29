@@ -15,6 +15,6 @@
 
 ### Guidelines for versioning
 
-- Major – incremented to 1 when we do a public release. Currently it is zero. If do other release which is not-backward compatible then increment again.
-- Minor – If we release monthly, we should bump this version every time we do a snap (create a branch for release).
-- Patch – Automatically release by the pipeline
+- Major – incremented to 1 when we do a public release. Currently it is zero. Any releases not backwards compatible should result in a major version number increment.
+- Minor – Incremented every time we do a snap (e.g. creating a branch for a monthly release).
+- Patch – Automatically set by the pipeline

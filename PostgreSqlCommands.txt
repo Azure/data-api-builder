@@ -1,11 +1,11 @@
 init --config "dab-config.PostgreSql.json" --database-type mssql --connection-string "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME" --host-mode Development --cors-origin "http://localhost:5000"
 add Publisher --config "dab-config.PostgreSql.json" --source publishers --permissions "anonymous:read"
 add Stock --config "dab-config.PostgreSql.json" --source stocks --permissions "anonymous:create,read,update"
-add Book --config "dab-config.PostgreSql.json" --source books --permissions "anonymous:read" --graphql "book:books"
+add Book --config "dab-config.PostgreSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
 add BookWebsitePlacement --config "dab-config.PostgreSql.json" --source book_website_placements --permissions "anonymous:read"
 add Author --config "dab-config.PostgreSql.json" --source authors --permissions "anonymous:read"
-add Review --config "dab-config.PostgreSql.json" --source reviews --permissions "anonymous:read" --rest false --graphql "review:reviews"
-add Comic --config "dab-config.PostgreSql.json" --source comics --permissions "anonymous:read"
+add Review --config "dab-config.PostgreSql.json" --source reviews --permissions "anonymous:create,read,update" --rest false --graphql "review:reviews"
+add Comic --config "dab-config.PostgreSql.json" --source comics --permissions "anonymous:create,read,update"
 add Broker --config "dab-config.PostgreSql.json" --source brokers --permissions "anonymous:read"
 add WebsiteUser --config "dab-config.PostgreSql.json" --source website_users --permissions "anonymous:create,read,delete,update"
 add SupportedType --config "dab-config.PostgreSql.json" --source type_table --permissions "anonymous:create,read,delete,update"
@@ -68,6 +68,7 @@ update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_0
 update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_08:read" --fields.include "*"
 update Review --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete"
 update Review --config "dab-config.PostgreSql.json" --relationship books --target.entity Book --cardinality one
+update Empty --config "dab-config.MsSql.json" --permissions "anonymous:read"
 update BookWebsitePlacement --config "dab-config.PostgreSql.json" --permissions "authenticated:create,update" --rest true --graphql true
 update BookWebsitePlacement --config "dab-config.PostgreSql.json" --permissions "authenticated:delete" --fields.include "*" --policy-database "@claims.id eq @item.id"
 update Author --config "dab-config.PostgreSql.json"  --permissions "authenticated:create,read,update,delete" --rest true --graphql true

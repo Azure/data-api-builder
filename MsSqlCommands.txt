@@ -1,11 +1,11 @@
 init --config "dab-config.MsSql.json" --database-type mssql --connection-string "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;" --host-mode Development --cors-origin "http://localhost:5000"
 add Publisher --config "dab-config.MsSql.json" --source publishers --permissions "anonymous:read"
 add Stock --config "dab-config.MsSql.json" --source stocks --permissions "anonymous:create,read,update"
-add Book --config "dab-config.MsSql.json" --source books --permissions "anonymous:read" --graphql "book:books"
+add Book --config "dab-config.MsSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
 add BookWebsitePlacement --config "dab-config.MsSql.json" --source book_website_placements --permissions "anonymous:read"
 add Author --config "dab-config.MsSql.json" --source authors --permissions "anonymous:read"
-add Review --config "dab-config.MsSql.json" --source reviews --permissions "anonymous:read" --rest false --graphql "review:reviews"
-add Comic --config "dab-config.MsSql.json" --source comics --permissions "anonymous:read"
+add Review --config "dab-config.MsSql.json" --source reviews --permissions "anonymous:create,read,update" --rest false --graphql "review:reviews"
+add Comic --config "dab-config.MsSql.json" --source comics --permissions "anonymous:create,read,update"
 add Broker --config "dab-config.MsSql.json" --source brokers --permissions "anonymous:read"
 add WebsiteUser --config "dab-config.MsSql.json" --source website_users --permissions "anonymous:create,read,delete,update"
 add SupportedType --config "dab-config.MsSql.json" --source type_table --permissions "anonymous:create,read,delete,update"
@@ -89,6 +89,7 @@ update BookWebsitePlacement --config "dab-config.MsSql.json" --relationship book
 update SupportedType --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update" --rest false
 update Author --config "dab-config.MsSql.json" --relationship books --target.entity Book --cardinality many --linking.object book_author_link
 update Notebook --config "dab-config.MsSql.json" --permissions "anonymous:create,update,delete"
+update Empty --config "dab-config.MsSql.json" --permissions "anonymous:read"
 update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_noupdate:update" --fields.include "*" --policy-database "@item.id ne 1"
 update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_noupdate:read" --fields.include "*"
 update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:create"

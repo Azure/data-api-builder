@@ -83,7 +83,7 @@ steps:
     command: custom
     custom: pack
     projects: '**/Cli.csproj'
-    arguments: '-p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
+    arguments: '-p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg --no-build'
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Internal Feed'

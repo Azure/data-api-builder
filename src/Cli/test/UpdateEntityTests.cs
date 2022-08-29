@@ -1226,7 +1226,7 @@ namespace Cli.Tests
         /// another entity which has GQL disabled which is invalid.
         /// </summary>
         [TestMethod]
-        public void TestVerifyCanAddRelationshipWithEntityDisabledForGraphQL()
+        public void EnsureFailure_AddRelationshipToEntityWithDisabledGraphQL()
         {
             PermissionOperation actionForRole = new(
                 Name: Operation.Create,
@@ -1275,12 +1275,11 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to verify that adding a relationship to an entity which has GraphQL disabled should fail.
-        /// The test created 2 entities. One entity has GQL enabled which tries to create relationship with
-        /// another entity which has GQL disabled which is invalid.
+        /// Test to verify that adding/updating a relationship should fail
+        /// when the graphQL in the global runtime settings is disabled.
         /// </summary>
         [TestMethod]
-        public void TestVerifyCanAddRelationshipWithGraphQlDisabledInRuntimeSettings()
+        public void EnsureFailure_AddRelationshipWithGraphQlDisabledInRuntimeSettings()
         {
             PermissionOperation actionForRole = new(
                 Name: Operation.Create,
@@ -1330,13 +1329,14 @@ namespace Cli.Tests
                 Entities: entityMap
             );
 
-            // Verification should fail
+            // verification failed with graphQL disabled in global runtime settings
             Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfigWithRuntimeDisabledGraphQL,
                 cardinality: "one",
                 targetEntity: "SampleEntity2")
                 );
 
-            // enabling GraphQL for runtime setting
+            // enabling GraphQL for runtime setting, should now
+            // pass the verification for adding/updating of relationship
             runtimeSettings[GlobalSettingsType.GraphQL] = JsonSerializer.SerializeToElement(
                 new GraphQLGlobalSettings(Enabled: true)
                 );
@@ -1352,7 +1352,7 @@ namespace Cli.Tests
                 Entities: entityMap
             );
 
-            // verification should pass
+            // verification passed after enabling graphQL in global runtime settings
             Assert.IsTrue(VerifyCanUpdateRelationship(runtimeConfigWithRuntimeEnabledGraphQL,
                 cardinality: "one",
                 targetEntity: "SampleEntity2")

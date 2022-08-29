@@ -283,16 +283,16 @@ namespace Cli
 
             object updatedSource = options.Source is null ? entity!.Source : options.Source;
             object? updatedRestDetails = options.RestRoute is null ? entity!.Rest : GetRestDetails(options.RestRoute);
-            object? updatedGraphqlDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
+            object? updatedGraphQLDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
             PermissionSetting[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, Relationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;
             Policy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             Field? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
 
-            if (false.Equals(updatedGraphqlDetails))
+            if (false.Equals(updatedGraphQLDetails))
             {
-                Console.WriteLine("WARNING: Disabling GraphQL will restrict it's usage in relationship.");
+                Console.WriteLine("WARNING: Disabling GraphQL for this entity will restrict it's usage in relationships");
             }
 
             if (options.Permissions is not null && options.Permissions.Any())
@@ -356,7 +356,7 @@ namespace Cli
 
             runtimeConfig.Entities[options.Entity] = new Entity(updatedSource,
                                                                 updatedRestDetails,
-                                                                updatedGraphqlDetails,
+                                                                updatedGraphQLDetails,
                                                                 updatedPermissions,
                                                                 updatedRelationships,
                                                                 updatedMappings);
@@ -529,12 +529,13 @@ namespace Cli
                 return false;
             }
 
-            // Add/Update of relationship is not allowed when GraphQL is disabled in Global RUntime Settings
+            // Add/Update of relationship is not allowed when GraphQL is disabled in Global Runtime Settings
             if (runtimeConfig.RuntimeSettings!.TryGetValue(GlobalSettingsType.GraphQL, out object? graphQLRuntimeSetting))
             {
                 GraphQLGlobalSettings? graphQLGlobalSettings = JsonSerializer.Deserialize<GraphQLGlobalSettings>(
                     (JsonElement)graphQLRuntimeSetting
-                    );
+                );
+
                 if (graphQLGlobalSettings is not null && !graphQLGlobalSettings.Enabled)
                 {
                     Console.WriteLine("Cannot add/update relationship as GraphQL is disabled in the" +

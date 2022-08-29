@@ -30,6 +30,8 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private readonly Dictionary<string, Entity> _entities;
 
+        // Contains all the referencing and referenced columns for each pair
+        // of referencing and referenced tables.
         private Dictionary<RelationShipPair, ForeignKeyDefinition> _pairToFkDefinition;
 
         // nullable since Mock tests do not need it.
@@ -103,6 +105,7 @@ namespace Azure.DataApiBuilder.Service.Services
             return SqlQueryBuilder;
         }
 
+        /// <inheritdoc/>
         public Dictionary<RelationShipPair, ForeignKeyDefinition> GetPairToFkDefinition()
         {
             return _pairToFkDefinition;

@@ -162,7 +162,9 @@
     },
     "Stock": {
       "source": "stocks",
-      "rest": true,
+      "rest": {
+        "path": "commodities"
+      },
       "graphql": true,
       "permissions": [
         {
@@ -186,7 +188,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update", "delete" ]
         },
         {
           "role": "authenticated",
@@ -478,7 +480,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update" ]
         },
         {
           "role": "authenticated",
@@ -499,7 +501,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update" ]
         },
         {
           "role": "authenticated",
@@ -589,7 +591,9 @@
     },
     "Shrub": {
       "source": "trees",
-      "rest": true,
+      "rest": {
+        "path": "plants"
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -645,6 +649,10 @@
       "source": "empty_table",
       "rest": true,
       "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
         {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
@@ -808,6 +816,42 @@
         "StrategicAttack": "謀攻",
         "NoteNum": "┬─┬ノ( º _ ºノ)"
       }
+    },
+    "GetBooks": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "get_books"
+      },
+      "rest": true,
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
+        }
+      ]
+    },
+    "GetBook": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "get_book_by_id"
+      },
+      "rest": true,
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
+        }
+      ]
     }
   }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Text;
 using Azure.DataApiBuilder.Service.Models;
 using Microsoft.Data.SqlClient;
 
@@ -87,6 +88,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     $"WHERE {predicates} ";
         }
 
+        /// <inheritdoc />
+        public string Build(SqlExecuteStructure structure)
+        {
+            return $"EXECUTE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                $"{BuildProcedureParameterList(structure.ProcedureParameters)}";
+        }
+
         /// <summary>
         /// Avoid redundant check, wrap the sequence in a transaction,
         /// and protect the first table access with appropriate locking.
@@ -169,6 +177,24 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         WrapSubqueryColumn(c, structure.JoinQueries[c.TableAlias!]) + $" AS {QuoteIdentifier(c.Label)}" :
                         Build(c)
             ));
+        }
+
+        /// <summary>
+        /// Builds the parameter list for the stored procedure execute call
+        /// paramKeys are the user-generated procedure parameter names
+        /// paramValues are the auto-generated, parameterized values (@param0, @param1..)
+        /// </summary>
+        private static string BuildProcedureParameterList(Dictionary<string, object> procedureParameters)
+        {
+            StringBuilder sb = new();
+            foreach ((string paramKey, object paramValue) in procedureParameters)
+            {
+                sb.Append($"@{paramKey} = {paramValue}, ");
+            }
+
+            string parameterList = sb.ToString();
+            // If at least one parameter added, remove trailing comma and space, else return empty string
+            return parameterList.Length > 0 ? parameterList[..^2] : parameterList;
         }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -106,6 +107,15 @@ namespace Azure.DataApiBuilder.Service.Services
         protected override DatabaseObject GenerateDbObject(string schemaName, string tableName)
         {
             return new(GetDefaultSchemaName(), tableName);
+        }
+
+        /// <summary>
+        /// Takes a string version of a MySql data type and returns its .NET common language runtime (CLR) counterpart
+        /// TODO: For MySql stored procedure support, this needs to be implemented.
+        /// </summary>
+        public override Type SqlToCLRType(string sqlType)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -163,7 +163,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend.
         // </summary>
-        public Task<IActionResult> ExecuteAsync(RestRequestContext context)
+        public Task<IActionResult> ExecuteAsync(FindRequestContext context)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context)
         {
             throw new NotImplementedException();
         }

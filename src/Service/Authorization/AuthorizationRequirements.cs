@@ -14,12 +14,12 @@ namespace Azure.DataApiBuilder.Service.Authorization
     /// <summary>
     /// Instructs the authorization handler to check that:
     ///     - The entity has an entry for the role defined in the client role header.
-    ///     - The discovered role entry has an entry for the actiontype of the request.
+    ///     - The discovered role entry has an entry for the operationtype of the request.
     /// 
     /// Implements IAuthorizationRequirement, which is an empty marker interface.
     /// https://docs.microsoft.com/aspnet/core/security/authorization/policies?view=aspnetcore-6.0#requirements
     /// </summary>
-    public class EntityRoleActionPermissionsRequirement : IAuthorizationRequirement { }
+    public class EntityRoleOperationPermissionsRequirement : IAuthorizationRequirement { }
 
     /// <summary>
     /// Instructs the authorization handler to check that:

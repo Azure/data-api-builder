@@ -63,7 +63,7 @@ public class EndToEndTests
         Assert.AreEqual(1, runtimeConfig.Entities.Count()); // 1 new entity added
         Assert.IsTrue(runtimeConfig.Entities.ContainsKey("todo"));
         Entity entity = runtimeConfig.Entities["todo"];
-        Assert.AreEqual("{\"route\":\"/todo\"}", JsonSerializer.Serialize(entity.Rest));
+        Assert.AreEqual("{\"path\":\"/todo\"}", JsonSerializer.Serialize(entity.Rest));
         Assert.AreEqual("{\"type\":{\"singular\":\"todo\",\"plural\":\"todos\"}}", JsonSerializer.Serialize(entity.GraphQL));
         Assert.AreEqual(1, entity.Permissions.Length);
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
@@ -174,7 +174,7 @@ public class EndToEndTests
 
         Assert.IsTrue(runtimeConfig.Entities.ContainsKey("todo"));
         Entity entity = runtimeConfig.Entities["todo"];
-        Assert.AreEqual("{\"route\":\"/todo\"}", JsonSerializer.Serialize(entity.Rest));
+        Assert.AreEqual("{\"path\":\"/todo\"}", JsonSerializer.Serialize(entity.Rest));
         Assert.IsNotNull(entity.GraphQL);
         Assert.IsTrue(((JsonElement)entity.GraphQL).Deserialize<bool>());
         //The value isn entity.GraphQL is true/false, we expect the serialization to be a string.

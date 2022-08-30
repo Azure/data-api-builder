@@ -1435,6 +1435,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [DataRow("?$", DisplayName = "Null key, value $ present")]
         [DataRow("?$key", DisplayName = "Null key, value $key present")]
         [DataRow("?=12", DisplayName = "Empty string key, value 12 present")]
+        [DataRow("?   =12", DisplayName = "Whitespace string key, value 12 present")]
         [DataRow("?$select=Scientific Name&$key2", DisplayName = "Valid Param1, Param2: Null key, value $key2 present")]
         [DataRow("?$ &=12", DisplayName = "Param1: Null key, Param2: Empty string key")]
         public async Task FindTestWithInvalidQueryStringNoKey(string queryString)

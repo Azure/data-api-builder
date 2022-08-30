@@ -98,7 +98,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
         {
             foreach (string key in context.ParsedQueryString!.Keys)
             {
-                if (string.IsNullOrEmpty(key))
+                if (string.IsNullOrWhiteSpace(key))
                 {
                     throw new DataApiBuilderException(
                         message: $"A query parameter without a key is not supported.",

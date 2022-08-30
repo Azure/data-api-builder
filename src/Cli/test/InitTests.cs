@@ -144,6 +144,31 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Test to verify that an error is thrown when user tries to
+        /// initialize a config that already exists.
+        /// </summary>
+        [TestMethod]
+        public void EnsureFailureOnReInitializingExistingConfig()
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: "testconnectionstring",
+                cosmosDatabase: null,
+                cosmosContainer: null,
+                graphQLSchemaPath: null,
+                hostMode: HostModeType.Development,
+                corsOrigin: new List<string>() { },
+                config: "outfile.json");
+
+            // config generated successfully for the first time.
+            Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(options));
+
+            // error is thrown because the config file with the same name
+            // already exists.
+            Assert.AreEqual(false, ConfigGenerator.TryGenerateConfig(options));
+        }
+
+        /// <summary>
         /// Call ConfigGenerator.TryCreateRuntimeConfig and verify json result.
         /// </summary>
         /// <param name="options">InitOptions.</param>

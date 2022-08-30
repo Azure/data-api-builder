@@ -28,6 +28,15 @@ namespace Cli
                 Console.WriteLine($"Creating a new config file: {runtimeConfigFile}");
             }
 
+            // throwing error when re-initializing the same config file to avoid
+            // overwriting/wiping-out the existing configuration.
+            if (File.Exists(runtimeConfigFile))
+            {
+                Console.Error.Write($"Config file: {runtimeConfigFile} already exists. " +
+                    "Please provide a different name or remove the existing config file.");
+                return false;
+            }
+
             return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
         }
 

@@ -61,6 +61,60 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Test to verify creation of initial config without providing
+        /// connection-string
+        /// </summary>
+        [TestMethod]
+        public void TestInitializingConfigWithoutConnectionString()
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: null,
+                cosmosDatabase: null,
+                cosmosContainer: null,
+                graphQLSchemaPath: null,
+                hostMode: HostModeType.Development,
+                corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                config: "outputfile");
+
+            string expectedRuntimeConfig =
+            @"{
+  ""$schema"": ""dab.draft-01.schema.json"",
+  ""data-source"": {
+    ""database-type"": ""mssql"",
+    ""connection-string"": """"
+  },
+  ""mssql"": {
+    ""set-session-context"": true
+  },
+  ""runtime"": {
+    ""rest"": {
+      ""enabled"": true,
+      ""path"": ""/api""
+    },
+    ""graphql"": {
+      ""allow-introspection"": true,
+      ""enabled"": true,
+      ""path"": ""/graphql""
+    },
+    ""host"": {
+      ""mode"": ""development"",
+      ""cors"": {
+        ""origins"": [""http://localhost:3000"", ""http://nolocalhost:80""],
+        ""allow-credentials"": false
+      },
+      ""authentication"": {
+        ""provider"": ""StaticWebApps""
+      }
+    }
+  },
+  ""entities"": {}
+}";
+
+            RunTest(options, expectedRuntimeConfig);
+        }
+
+        /// <summary>
         /// Test cosmos db specifc settings like cosmos-database, cosmos-container, cosmos-schema file.
         /// </summary>
         [TestMethod]

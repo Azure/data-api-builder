@@ -118,7 +118,7 @@ steps:
 - task: EsrpCodeSigning@1
   displayName: 'Code Signing'
   inputs:
-    ConnectedServiceName: 'ESRP - DAB'
+    ConnectedServiceName: 'ESRP Official Codesigning'
     FolderPath: '$(Build.ArtifactStagingDirectory)'
     Pattern: '*.dll, *.exe'
     signConfigType: 'inlineSignParams'

@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// </summary>
             ConfigValidationError,
             /// <summary>
-            /// Provided EasyAuth header is non-existant or malformed.
+            /// Provided EasyAuth header is non-existent or malformed.
             /// </summary>
             ErrorProcessingEasyAuthHeader
         }

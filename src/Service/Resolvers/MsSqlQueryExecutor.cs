@@ -4,8 +4,8 @@ using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Azure.Core;
-using Azure.Identity;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 

@@ -1432,15 +1432,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// <param name="queryString"></param>
         /// <returns></returns>
         [DataTestMethod]
-        [DataRow("?$", DisplayName = "Null key, value present")]
-        [DataRow("?=12", DisplayName = "Empty string key, value present")]
+        [DataRow("?$", DisplayName = "Null key, value $ present")]
+        [DataRow("?$key", DisplayName = "Null key, value $key present")]
+        [DataRow("?=12", DisplayName = "Empty string key, value 12 present")]
+        [DataRow("?$select=Scientific Name&$key2", DisplayName = "Valid Param1, Param2: Null key, value $key2 present")]
         [DataRow("?$ &=12", DisplayName = "Param1: Null key, Param2: Empty string key")]
         public async Task FindTestWithInvalidQueryStringNoKey(string queryString)
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: queryString,
-                entity: _integrationMappingEntity,
+                entityNameOrPath: _integrationMappingEntity,
                 sqlQuery: null,
                 exceptionExpected: true,
                 expectedErrorMessage: "A query parameter without a key is not supported.",

@@ -2,7 +2,6 @@ namespace Cli.Tests
 {
     public static class TestHelper
     {
-
         /// <summary>
         /// Adds the entity properties to the configuration and returns the updated configuration json as a string.
         /// </summary>

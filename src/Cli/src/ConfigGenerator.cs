@@ -29,7 +29,7 @@ namespace Cli
             }
 
             // throwing error when initializing the config file if it already exists,
-            //  to avoid overwriting/wiping-out the existing configuration.
+            // to avoid overwriting/wiping-out the existing configuration.
             if (File.Exists(runtimeConfigFile))
             {
                 Console.Error.Write($"Config file: {runtimeConfigFile} already exists. " +

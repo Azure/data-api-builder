@@ -6,10 +6,11 @@ namespace Cli.Tests;
 [TestClass]
 public class EndToEndTests
 {
+    private static string _testRuntimeConfig = "dab-config-test.json";
+
     /// <summary>
     /// Initializing config for cosmos DB.
     /// </summary>
-    private static string _testRuntimeConfig = "dab-config-test.json";
     [TestMethod]
     public void TestInitForCosmosDB()
     {
@@ -203,18 +204,6 @@ public class EndToEndTests
         Assert.AreEqual("{\"id\":\"identity\",\"name\":\"Company Name\"}", JsonSerializer.Serialize(entity.Mappings));
     }
 
-    /// <summary>
-    /// method to clean up the generated test config file
-    /// </summary>
-    [TestCleanup]
-    public void CleanUp()
-    {
-        if (File.Exists(_testRuntimeConfig))
-        {
-            File.Delete(_testRuntimeConfig);
-        }
-    }
-
     // <summary>
     // Test to verify the engine gets started using start command
     // </summary>
@@ -264,6 +253,20 @@ public class EndToEndTests
         }
 
         return runtimeConfig;
+    }
+
+    /// <summary>
+    /// method to clean up the generated test config file
+    /// to avoid error while initializing the existing config file
+    /// as all the tests are generating config with the same name.
+    /// </summary>
+    [TestCleanup]
+    public void CleanUp()
+    {
+        if (File.Exists(_testRuntimeConfig))
+        {
+            File.Delete(_testRuntimeConfig);
+        }
     }
 
 }

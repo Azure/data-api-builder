@@ -27,9 +27,6 @@ namespace Cli.Tests
               ""database-type"": ""mssql"",
               ""connection-string"": ""testconnectionstring""
             },
-            ""mssql"": {
-              ""set-session-context"": true
-            },
             ""runtime"": {
               ""rest"": {
                 ""enabled"": true,
@@ -252,9 +249,6 @@ namespace Cli.Tests
               ""data-source"": {
                 ""database-type"": ""mssql"",
                 ""connection-string"": ""localhost:5000""
-              },
-              ""mssql"": {
-                ""set-session-context"": true
               },
               ""runtime"": {
                 ""rest"": {

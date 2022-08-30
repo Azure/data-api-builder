@@ -1231,9 +1231,6 @@ namespace Cli.Tests
                             ""database-type"": ""mssql"",
                             ""connection-string"": ""testconnectionstring""
                         },
-                        ""mssql"": {
-                            ""set-session-context"": true
-                        },
                         ""runtime"": {
                             ""rest"": {
                                 ""enabled"": true,

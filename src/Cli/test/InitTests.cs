@@ -6,6 +6,8 @@ namespace Cli.Tests
     [TestClass]
     public class InitTests
     {
+        private static string _testRuntimeConfig = "dab-config-test.json";
+
         /// <summary>
         /// Test the simple init config for mssql database. PG and MySQL should be similar.
         /// There is no need for a separate test.
@@ -21,7 +23,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: "outfile.json");
+                config: _testRuntimeConfig);
 
             string expectedRuntimeConfig =
             @"{
@@ -74,7 +76,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: "outfile.json");
+                config: _testRuntimeConfig);
 
             string expectedRuntimeConfig = @"{
   ""$schema"": ""dab.draft-01.schema.json"",
@@ -138,7 +140,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: graphQLSchema,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: "outfile.json");
+                config: _testRuntimeConfig);
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }
@@ -158,7 +160,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { },
-                config: "outfile.json");
+                config: _testRuntimeConfig);
 
             // config generated successfully for the first time.
             Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(options));

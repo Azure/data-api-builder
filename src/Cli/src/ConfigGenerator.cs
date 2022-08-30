@@ -16,12 +16,6 @@ namespace Cli
         /// </summary>
         public static bool TryGenerateConfig(InitOptions options)
         {
-            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
-            {
-                Console.Error.Write($"Failed to create the runtime config file.");
-                return false;
-            }
-
             if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
             {
                 runtimeConfigFile = RuntimeConfigPath.DefaultName;
@@ -34,6 +28,12 @@ namespace Cli
             {
                 Console.Error.Write($"Config file: {runtimeConfigFile} already exists. " +
                     "Please provide a different name or remove the existing config file.");
+                return false;
+            }
+
+            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
+            {
+                Console.Error.Write($"Failed to create the runtime config file.");
                 return false;
             }
 

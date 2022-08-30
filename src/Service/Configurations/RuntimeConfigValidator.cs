@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Azure.DataApiBuilder.Service.Configurations
@@ -96,9 +97,67 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             ValidateAuthenticationConfig();
 
-            if (runtimeConfig.GraphQLGlobalSettings.Enabled)
+            // Running these graphQL validations only in development mode to ensure
+            // fast startup of engine in production mode.
+            if (runtimeConfig.GraphQLGlobalSettings.Enabled
+                 && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
             {
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
+                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
+            }
+        }
+
+        /// <summary>
+        /// Validate that the entities that have graphQL exposed do not generate queries with the 
+        /// same name.
+        /// For example: Consider the entity definitions
+        /// "Book": {
+        ///   "graphql": true
+        /// }
+        ///  
+        /// "book": {
+        ///     "graphql": true
+        /// }
+        /// "Notebook": {
+        ///     "graphql": {
+        ///         "type": {
+        ///             "singular": "book",
+        ///             "plural": "books"
+        ///         }
+        ///     }
+        /// }
+        /// All these entities will create queries with the following field names
+        /// pk query name: book_by_pk
+        /// List query name: books
+        /// </summary>
+        /// <param name="entityCollection">Entity definitions</param>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static void ValidateEntitiesDoNotGenerateDuplicateQueries(IDictionary<string, Entity> entityCollection)
+        {
+            HashSet<string> graphQLQueries = new();
+
+            foreach ((string entityName, Entity entity) in entityCollection)
+            {
+                if (entity.GraphQL is null
+                    || (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
+                {
+                    continue;
+                }
+
+                // For entities that have graphQL exposed, two queries would be generated.
+                // Primary Key Query: For fetching an item using its primary key.
+                // List Query: To fetch a paginated list of items
+                // Query names for both these queries are determined.
+                string pkQueryName = GenerateByPKQueryName(entityName, entity);
+                string listQueryName = GenerateListQueryName(entityName, entity);
+
+                if (!graphQLQueries.Add(pkQueryName) || !graphQLQueries.Add(listQueryName))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Entity {entityName} generates queries that already exist",
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
             }
         }
 

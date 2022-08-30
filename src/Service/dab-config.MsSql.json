@@ -162,7 +162,9 @@
     },
     "Stock": {
       "source": "stocks",
-      "rest": true,
+      "rest": {
+        "path": "commodities"
+      },
       "graphql": true,
       "permissions": [
         {
@@ -589,7 +591,9 @@
     },
     "Shrub": {
       "source": "trees",
-      "rest": true,
+      "rest": {
+        "path": "plants"
+      },
       "permissions": [
         {
           "role": "anonymous",

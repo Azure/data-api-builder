@@ -17,7 +17,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integration_NonAutoGenPK_TableName = "magazines";
         protected static readonly string _integration_AutoGenNonPK_EntityName = "Comic";
         protected static readonly string _integration_AutoGenNonPK_TableName = "comics";
-        protected static readonly string _Composite_NonAutoGenPK_EntityName = "Stock";
         protected static readonly string _Composite_NonAutoGenPK_TableName = "stocks";
         protected static readonly string _integrationEntityHasColumnWithSpace = "Broker";
         protected static readonly string _integrationTableHasColumnWithSpace = "brokers";
@@ -25,11 +24,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationTieBreakTable = "authors";
         protected static readonly string _integrationMappingEntity = "Tree";
         protected static readonly string _integrationMappingTable = "trees";
-        protected static readonly string _integrationMappingDifferentEntity = "Shrub";
+        protected static readonly string _integrationMappingDifferentEntity = "plants";
         protected static readonly string _integrationBrokenMappingEntity = "Fungus";
         protected static readonly string _integrationUniqueCharactersEntity = "ArtOfWar";
         protected static readonly string _integrationUniqueCharactersTable = "aow";
         protected static readonly string _nonExistentEntityName = "!@$%^&*()_+definitely_nonexistent_entity!@$%^&*()_+";
+        protected static readonly string _nonExistentStocksEntityPathName = "asset";
         protected static readonly string _emptyTableEntityName = "Empty";
         protected static readonly string _emptyTableTableName = "empty_table";
         protected static readonly string _simple_all_books = "books_view_all";
@@ -39,6 +39,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationProcedureFindMany_ProcName = "get_books";
         protected static readonly string _integrationProcedureFindOne_EntityName = "GetBook";
         protected static readonly string _integrationProcedureFindOne_ProcName = "get_book_by_id";
+        protected static readonly string _integrationMappingDifferentEntityPath = "plants";
+        protected static readonly string _Composite_NonAutoGenPK_EntityPath = "commodities";
 
         public abstract string GetQuery(string key);
     }

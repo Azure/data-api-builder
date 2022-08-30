@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Parsers;
@@ -72,6 +73,15 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="name"/>Out parameter in which we will save backing column name.<param>
         /// <returns>True if exists, false otherwise.</returns>
         bool TryGetBackingColumn(string entityName, string field, out string? name);
+
+        /// <summary>
+        /// Try to obtain the name of the Entity that has the provided Path. If It
+        /// exists save in out param, and return true, otherwise return false.
+        /// </summary>
+        /// <param name="entityPathName">Entity's path as seen in a request.</param>
+        /// <param name="entityName">Name of the associated entity.</param>
+        /// <returns>True if exists, otherwise false.</returns>
+        bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName);
 
         /// <summary>
         /// Obtains the underlying database type.

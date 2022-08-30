@@ -49,7 +49,7 @@ namespace Cli
         public DatabaseType DatabaseType { get; }
 
         [Option("connection-string", Required = false, HelpText = "Connection details to connect to the database.")]
-        public string ConnectionString { get; }
+        public string? ConnectionString { get; }
 
         [Option("cosmos-database", Required = false, HelpText = "Database name for Cosmos DB.")]
         public string? CosmosDatabase { get; }

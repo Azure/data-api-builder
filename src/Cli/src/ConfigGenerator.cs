@@ -44,8 +44,8 @@ namespace Cli
             DatabaseType dbType = options.DatabaseType;
             DataSource dataSource = new(dbType);
 
-            // default connection-string should be used if not
-            // explicitly provided by the user
+            // default value of connection-string should be used, i.e Empty-string
+            // if not explicitly provided by the user
             if (options.ConnectionString is not null)
             {
                 dataSource.ConnectionString = options.ConnectionString;

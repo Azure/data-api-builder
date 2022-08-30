@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
@@ -166,6 +167,11 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             {
                 _partitionKeyPaths[$"{database}/{container}"] = partitionKeyPath;
             }
+        }
+
+        public bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -141,17 +141,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Helper to pluralize the value of a NameNode HotChocolate schema object
-        /// </summary>
-        /// <param name="name">HotChocolate schema object type NameNode</param>
-        /// <param name="configEntity">Entity definition from runtime configuration.</param>
-        /// <returns></returns>
-        public static NameNode Pluralize(NameNode name, Entity configEntity)
-        {
-            return Pluralize(name.Value, configEntity);
-        }
-
-        /// <summary>
         /// Helper to pluralize the passed in string with the plural name defined
         /// for the entity in the runtime configuration.
         /// If the plural name is not defined, use the singularName.Pluralize() value
@@ -188,6 +177,28 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             DirectiveNode modelDirective = node.Directives.First(d => d.Name.Value == ModelDirectiveType.DirectiveName);
 
             return modelDirective.Arguments.Count == 1 ? (string)(modelDirective.Arguments[0].Value.Value ?? node.Name.Value) : node.Name.Value;
+        }
+
+        /// <summary>
+        /// Generates the pk query's name for an entity exposed for GraphQL.
+        /// </summary>
+        /// <param name="entityName">Name of the entity</param>
+        /// <param name="entity">Entity definition</param>
+        /// <returns>Name of the primay key query</returns>
+        public static string GenerateByPKQueryName(string entityName, Entity entity)
+        {
+            return $"{FormatNameForField(GetDefinedSingularName(entityName, entity))}_by_pk";
+        }
+
+        /// <summary>
+        /// Generates the list query's name for an entity exposed for GraphQL.
+        /// </summary>
+        /// <param name="entityName">Name of the entity</param>
+        /// <param name="entity">Entity definition</param>
+        /// <returns>Name of the list query</returns>
+        public static string GenerateListQueryName(string entityName, Entity entity)
+        {
+            return FormatNameForField(Pluralize(entityName, entity).Value);
         }
     }
 }

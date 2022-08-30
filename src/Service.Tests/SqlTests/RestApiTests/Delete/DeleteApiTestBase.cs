@@ -2,6 +2,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
@@ -29,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/5",
                     queryString: null,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: null,
                     operationType: Operation.Delete,
                     requestBody: null,
@@ -52,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "treeId/1",
                     queryString: null,
-                    entity: _integrationMappingEntity,
+                    entityNameOrPath: _integrationMappingEntity,
                     sqlQuery: null,
                     operationType: Operation.Delete,
                     requestBody: null,
@@ -76,7 +77,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "┬─┬ノ( º _ ºノ)/1",
                     queryString: null,
-                    entity: _integrationUniqueCharactersEntity,
+                    entityNameOrPath: _integrationUniqueCharactersEntity,
                     sqlQuery: null,
                     operationType: Operation.Delete,
                     requestBody: null,
@@ -100,7 +101,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
@@ -124,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "title/7",
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
@@ -147,12 +148,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: string.Empty,
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
                     exceptionExpected: true,
-                    expectedErrorMessage: "Primary Key for DELETE requests is required.",
+                    expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
@@ -178,7 +179,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: $"id/1{sqlInjection}",
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,

@@ -32,7 +32,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: "outfile.json");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -102,7 +102,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: "outfile.json");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -173,7 +173,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: "outfile.json");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -241,7 +241,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: "outfile.json");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -337,7 +337,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: "outfile.json");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -403,7 +403,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: "outfile.json");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -512,7 +512,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: "outfile.json");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -630,7 +630,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: "outfile.json");
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -669,7 +669,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: "outfile.json");
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -708,7 +708,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: "outfile.json");
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -755,7 +755,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: "outputfile"
+                config: "outfile.json"
             );
 
             string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntity);
@@ -801,7 +801,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: "outputfile"
+                config: "outfile.json"
             );
 
             string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyAndFields);
@@ -860,7 +860,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "id:Identity", "name:Company Name" },
-                config: "outputfile");
+                config: "outfile.json");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -922,7 +922,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "Macaroni:Mac & Cheese", "region:United State's Region", "russian:русский", "chinese:中文" },
-                config: "outputfile");
+                config: "outfile.json");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -986,7 +986,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "name:Company Name", "addr:Company Address", "number:Contact Details" },
-                config: "outputfile");
+                config: "outfile.json");
 
             string runtimeConfig = GetConfigWithMappings();
 
@@ -1043,7 +1043,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: "outfile.json");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1105,7 +1105,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: null,
-                config: "outputfile");
+                config: "outfile.json");
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -1139,7 +1139,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: mappings.Split(','),
-                config: "outputfile");
+                config: "outfile.json");
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1188,7 +1188,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: null,
-                config: "outputfile"
+                config: "outfile.json"
             );
 
             string runtimeConfig = GetConfigWithMappings();

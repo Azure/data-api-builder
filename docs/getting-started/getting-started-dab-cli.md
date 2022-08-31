@@ -6,38 +6,9 @@ Welcome to this getting started tutorial that will guide you to install and setu
 
 This CLI tool is part of [.NET global tools](https://www.nuget.org/packages?packagetype=dotnettool). As a prerequisite to install and run this tool, you'll need to have [.NET SDK](https://dotnet.microsoft.com/en-us/download) >=6 installed on your development machine.
 
-## Install the `dab` CLI
+## Install CLI
 
-You can install the `dab` CLI using [.NET tools](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools).
-
-- Download the latest version of the package: [dab.<version_number>.nupkg](https://msdata.visualstudio.com/CosmosDB/_artifacts/feed/DataApiBuilder)
-- Navigate to the folder where the package file is downloaded.
-
-To install this tool globally, use:
-
-```dotnetcli
-# dotnet tool install -g --add-source ./ dab --version <version_number>
-```
-
-> [!NOTE]
-> If you are running on Linux or MacOS, you will need to add .NET global tools (`dab`) to your path as well, once installed run:
-> `export PATH=$PATH:~/.dotnet/tools`
-
-### Update the package version
-
-If you already have an older version of `dab` CLI installed, update the tool using:
-
-```dotnetcli
-# dotnet tool update -g --add-source ./ dab --version <version_number>
-```
-
-### Validate the Install
-
-Installing the package will make the `dab` command available on your development machine. To validate your installation, you can check the installed version with:
-
-```dotnetcli
-# dab --version
-```
+Make sure you have installed the `dab` CLI tool as described here: [Running Data API Builder for Azure Databases using CLI](../running-using-dab-cli.md)
 
 ## Generate the config file
 
@@ -115,11 +86,3 @@ To start the Data API Builder engine, use:
 > DAB loads the config in the following order (if not supplied in command-line arguments):
 > - `dab-config.{DAB_ENVIRONMENT}.json` : For example, the `dab-config.Development.json` and `dab-config.Production.json` files. The environment version of the file is loaded based on the value set for `DAB_ENVIRONMENT` environment variable.
 > - `dab-config.json`
-
-## Uninstall the tool
-
-For some reason, if you need to uninstall `dab` cli, simply do:
-
-```dotnetcli
-dotnet tool uninstall -g dab
-```

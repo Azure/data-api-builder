@@ -157,7 +157,7 @@ type Star @model(name:""Star"") {
         {
             return GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     entityNames: entities,
-                    actions: new Operation[] { Operation.Create, Operation.Read, Operation.Update, Operation.Delete },
+                    operations: new Operation[] { Operation.Create, Operation.Read, Operation.Update, Operation.Delete },
                     roles: new string[] { "anonymous", "authenticated" }
                 );
         }

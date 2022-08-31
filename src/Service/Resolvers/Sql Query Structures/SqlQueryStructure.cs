@@ -171,10 +171,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                             value: predicate.Value);
             }
 
-            // context.OrderByColumnsInUrl will lack TableAlias because it is created in RequestParser
-            // which may be called for any type of operation. To avoid coupling the OrderByClauseInUrl
+            // context.OrderByClauseOfBackingColumns will lack TableAlias because it is created in RequestParser
+            // which may be called for any type of operation. To avoid coupling the OrderByClauseOfBackingColumns
             // to only Find, we populate the TableAlias in this constructor where we know we have a Find operation.
-            OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsOrderByColumns();
+            OrderByColumns = context.OrderByClauseOfBackingColumns is not null ?
+                context.OrderByClauseOfBackingColumns : PrimaryKeyAsOrderByColumns();
+
             foreach (OrderByColumn column in OrderByColumns)
             {
                 if (string.IsNullOrEmpty(column.TableAlias))
@@ -245,6 +247,28 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 sqlMetadataProvider.TryGetBackingColumn(EntityName, exposedFieldName, out string? backingColumn);
                 AddColumn(backingColumn!, exposedFieldName);
             }
+        }
+
+        /// <summary>
+        /// Exposes the primary key of the underlying table of the structure
+        /// as a list of OrderByColumn
+        /// </summary>
+        private List<OrderByColumn> PrimaryKeyAsOrderByColumns()
+        {
+            if (_primaryKeyAsOrderByColumns is null)
+            {
+                _primaryKeyAsOrderByColumns = new();
+
+                foreach (string column in PrimaryKey())
+                {
+                    _primaryKeyAsOrderByColumns.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
+                                                                      tableName: DatabaseObject.Name,
+                                                                      columnName: column,
+                                                                      tableAlias: TableAlias));
+                }
+            }
+
+            return _primaryKeyAsOrderByColumns;
         }
 
         /// <summary>
@@ -849,28 +873,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return orderByColumnsList;
-        }
-
-        /// <summary>
-        /// Exposes the primary key of the underlying table of the structure
-        /// as a list of OrderByColumn
-        /// </summary>
-        public List<OrderByColumn> PrimaryKeyAsOrderByColumns()
-        {
-            if (_primaryKeyAsOrderByColumns == null)
-            {
-                _primaryKeyAsOrderByColumns = new();
-
-                foreach (string column in PrimaryKey())
-                {
-                    _primaryKeyAsOrderByColumns.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
-                                                                      tableName: DatabaseObject.Name,
-                                                                      columnName: column,
-                                                                      tableAlias: TableAlias));
-                }
-            }
-
-            return _primaryKeyAsOrderByColumns;
         }
 
         /// <summary>

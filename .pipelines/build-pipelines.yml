@@ -14,7 +14,7 @@ variables:
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
   major: 0
-  minor: 0
+  minor: 2
   # Maintain a separate patch value between CI and PR runs.
   # The counter is reset when the minor version is updated.
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
@@ -110,6 +110,11 @@ steps:
     args: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion)
 
 - template: templates/code-signing.yml 
+
+- task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+  displayName: 'Generation Task'
+  inputs:
+      BuildDropPath: '$(Build.ArtifactStagingDirectory)'
 
 # this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
 - task: PublishPipelineArtifact@1

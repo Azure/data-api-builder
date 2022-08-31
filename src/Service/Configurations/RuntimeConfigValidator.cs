@@ -10,7 +10,8 @@ using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
-using Action = Azure.DataApiBuilder.Config.Action;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
+using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Azure.DataApiBuilder.Service.Configurations
 {
@@ -96,9 +97,67 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             ValidateAuthenticationConfig();
 
-            if (runtimeConfig.GraphQLGlobalSettings.Enabled)
+            // Running these graphQL validations only in development mode to ensure
+            // fast startup of engine in production mode.
+            if (runtimeConfig.GraphQLGlobalSettings.Enabled
+                 && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
             {
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
+                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
+            }
+        }
+
+        /// <summary>
+        /// Validate that the entities that have graphQL exposed do not generate queries with the 
+        /// same name.
+        /// For example: Consider the entity definitions
+        /// "Book": {
+        ///   "graphql": true
+        /// }
+        ///  
+        /// "book": {
+        ///     "graphql": true
+        /// }
+        /// "Notebook": {
+        ///     "graphql": {
+        ///         "type": {
+        ///             "singular": "book",
+        ///             "plural": "books"
+        ///         }
+        ///     }
+        /// }
+        /// All these entities will create queries with the following field names
+        /// pk query name: book_by_pk
+        /// List query name: books
+        /// </summary>
+        /// <param name="entityCollection">Entity definitions</param>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static void ValidateEntitiesDoNotGenerateDuplicateQueries(IDictionary<string, Entity> entityCollection)
+        {
+            HashSet<string> graphQLQueries = new();
+
+            foreach ((string entityName, Entity entity) in entityCollection)
+            {
+                if (entity.GraphQL is null
+                    || (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
+                {
+                    continue;
+                }
+
+                // For entities that have graphQL exposed, two queries would be generated.
+                // Primary Key Query: For fetching an item using its primary key.
+                // List Query: To fetch a paginated list of items
+                // Query names for both these queries are determined.
+                string pkQueryName = GenerateByPKQueryName(entityName, entity);
+                string listQueryName = GenerateListQueryName(entityName, entity);
+
+                if (!graphQLQueries.Add(pkQueryName) || !graphQLQueries.Add(listQueryName))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Entity {entityName} generates queries that already exist",
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
             }
         }
 
@@ -195,7 +254,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
                 {
                     string roleName = permissionSetting.Role;
-                    Object[] actions = permissionSetting.Actions;
+                    Object[] actions = permissionSetting.Operations;
                     foreach (Object action in actions)
                     {
                         if (action is null)
@@ -220,11 +279,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         }
                         else
                         {
-                            Action configAction;
+                            PermissionOperation configOperation;
                             try
                             {
-                                configAction = JsonSerializer.Deserialize<Config.Action>(action.ToString()!)!;
-
+                                configOperation = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
                             }
                             catch
                             {
@@ -234,7 +292,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                             }
 
-                            actionOp = configAction.Name;
+                            actionOp = configOperation.Name;
                             // If we have reached this point, it means that we don't have any invalid
                             // data type in actions. However we need to ensure that the actionOp is valid.
                             if (!IsValidPermissionAction(actionOp))
@@ -252,17 +310,17 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 throw GetInvalidActionException(entityName, roleName, actionElement.ToString());
                             }
 
-                            if (configAction.Fields is not null)
+                            if (configOperation.Fields is not null)
                             {
                                 // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
                                 // don't contain any other field. If they do, we throw an appropriate exception.
-                                if (configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Include.Count > 1 ||
-                                    configAction.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && configAction.Fields.Exclude.Count > 1)
+                                if (configOperation.Fields.Include.Contains(AuthorizationResolver.WILDCARD) && configOperation.Fields.Include.Count > 1 ||
+                                    configOperation.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && configOperation.Fields.Exclude.Count > 1)
                                 {
                                     // See if included or excluded columns contain wildcard and another field.
                                     // If thats the case with both of them, we specify 'included' in error.
-                                    string misconfiguredColumnSet = configAction.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
-                                        && configAction.Fields.Include.Count > 1 ? "included" : "excluded";
+                                    string misconfiguredColumnSet = configOperation.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
+                                        && configOperation.Fields.Include.Count > 1 ? "included" : "excluded";
                                     string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
                                     throw new DataApiBuilderException(
                                             message: $"No other field can be present with wildcard in the {misconfiguredColumnSet} set for:" +
@@ -271,14 +329,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                                 }
 
-                                if (configAction.Policy is not null && configAction.Policy.Database is not null)
+                                if (configOperation.Policy is not null && configOperation.Policy.Database is not null)
                                 {
                                     // validate that all the fields mentioned in database policy are accessible to user.
-                                    AreFieldsAccessible(configAction.Policy.Database,
-                                        configAction.Fields.Include, configAction.Fields.Exclude);
+                                    AreFieldsAccessible(configOperation.Policy.Database,
+                                        configOperation.Fields.Include, configOperation.Fields.Exclude);
 
                                     // validate that all the claimTypes in the policy are well formed.
-                                    ValidateClaimsInPolicy(configAction.Policy.Database);
+                                    ValidateClaimsInPolicy(configOperation.Policy.Database);
                                 }
                             }
                         }
@@ -298,7 +356,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
                 {
-                    Object[] actions = permissionSetting.Actions;
+                    Object[] actions = permissionSetting.Operations;
 
                     // processedActions will contain the processed actions which are formed after performing all kind of
                     // validations and pre-processing.
@@ -311,21 +369,21 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         }
                         else
                         {
-                            Action configAction;
-                            configAction = JsonSerializer.Deserialize<Config.Action>(action.ToString()!)!;
+                            PermissionOperation configOperation;
+                            configOperation = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
 
-                            if (configAction.Policy is not null && configAction.Policy.Database is not null)
+                            if (configOperation.Policy is not null && configOperation.Policy.Database is not null)
                             {
                                 // Remove all the occurences of @item. directive from the policy.
-                                configAction.Policy.Database = ProcessFieldsInPolicy(configAction.Policy.Database);
+                                configOperation.Policy.Database = ProcessFieldsInPolicy(configOperation.Policy.Database);
                             }
 
-                            processedActions.Add(JsonSerializer.SerializeToElement(configAction));
+                            processedActions.Add(JsonSerializer.SerializeToElement(configOperation));
                         }
                     }
 
                     // Update the permissionsetting.Actions to point to the processedActions.
-                    permissionSetting.Actions = processedActions.ToArray();
+                    permissionSetting.Operations = processedActions.ToArray();
                 }
             }
         }
@@ -468,7 +526,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <returns>Boolean value indicating whether the action is valid or not.</returns>
         public static bool IsValidPermissionAction(Operation action)
         {
-            return action is Operation.All || Action.ValidPermissionActions.Contains(action);
+            return action is Operation.All || PermissionOperation.ValidPermissionOperations.Contains(action);
         }
     }
 }

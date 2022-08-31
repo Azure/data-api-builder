@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
@@ -62,6 +63,12 @@ namespace Azure.DataApiBuilder.Service.Models
         public virtual List<OrderByColumn>? OrderByClauseInUrl { get; set; }
 
         /// <summary>
+        /// List of OrderBy Columns which represent the OrderByClause using backing columns.
+        /// Based on the operation type, this property may or may not be populated.
+        /// </summary>
+        public virtual List<OrderByColumn>? OrderByClauseOfBackingColumns { get; set; }
+
+        /// <summary>
         /// Dictionary of field names and their values given in the request body.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
@@ -70,7 +77,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <summary>
         /// NVC stores the query string parsed into a NameValueCollection.
         /// </summary>
-        public NameValueCollection? ParsedQueryString { get; set; } = new();
+        public NameValueCollection ParsedQueryString { get; set; } = new();
 
         /// <summary>
         /// String holds information needed for pagination.
@@ -150,9 +157,9 @@ namespace Azure.DataApiBuilder.Service.Models
                 Console.Error.WriteLine(e.Message);
                 Console.Error.WriteLine(e.StackTrace);
                 throw new DataApiBuilderException(
-                    message: "Request content invalid.",
+                    message: "$filter query parameter is not well formed.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCumulativeColumnCheckFailed);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
         }
 
@@ -164,6 +171,40 @@ namespace Azure.DataApiBuilder.Service.Models
         public void UpdateReturnFields(IEnumerable<string> fields)
         {
             FieldsToBeReturned = fields.ToList();
+        }
+
+        /// <summary>
+        /// Tries to parse the json request body into FieldValuePairsInBody dictionary
+        /// </summary>
+        public void PopulateFieldValuePairsInBody(JsonElement? jsonBody)
+        {
+            string? payload = jsonBody.ToString();
+            if (!string.IsNullOrEmpty(payload))
+            {
+                try
+                {
+                    Dictionary<string, object?>? fieldValuePairs = JsonSerializer.Deserialize<Dictionary<string, object?>>(payload);
+                    if (fieldValuePairs is not null)
+                    {
+                        FieldValuePairsInBody = fieldValuePairs;
+                    }
+                    else
+                    {
+                        throw new JsonException("Failed to deserialize the request body payload");
+                    }
+                }
+                catch (JsonException)
+                {
+                    throw new DataApiBuilderException(
+                        message: "The request body is not in a valid JSON format.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+            }
+            else
+            {
+                FieldValuePairsInBody = new();
+            }
         }
     }
 }

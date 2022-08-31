@@ -159,7 +159,9 @@
     },
     "Stock": {
       "source": "stocks",
-      "rest": true,
+      "rest": {
+        "path": "commodities"
+      },
       "graphql": true,
       "permissions": [
         {
@@ -183,7 +185,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update", "delete" ]
         },
         {
           "role": "authenticated",
@@ -505,7 +507,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update" ]
         },
         {
           "role": "authenticated",
@@ -526,7 +528,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update" ]
         },
         {
           "role": "authenticated",
@@ -616,7 +618,9 @@
     },
     "Shrub": {
       "source": "trees",
-      "rest": true,
+      "rest": {
+        "path": "plants"
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -672,6 +676,10 @@
       "source": "empty_table",
       "rest": true,
       "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
         {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]

@@ -20,7 +20,7 @@ GraphQL queries can traverse related objects and their fields, so that with just
 }
 ```
 
-to retrieve books and thier authors. 
+to retrieve books and their authors.
 
 To allow this ability to work, Data API Builder needs to know how the two objects are related to each other. The `relationships` section in the configuration file provide the necessary metadata for making this ability working correctly and efficiently.
 
@@ -29,6 +29,7 @@ To allow this ability to work, Data API Builder needs to know how the two object
 No matter what database you are using with Data API Builder, you have to explicitly tell Data API Builder that an object is related to another one even if, using Foreign Key metadata when available, it could infer it automatically. This is done to allow you to have full control on what is exposed via GraphQL and what not.
 
 There are three types of relatioship that can be established between two entities:
+
 - [One-To-Many Relationship](#one-to-many-relationship)
 - [Many-To-One Relationship](#many-to-one-relationship)
 - [Many-To-Many Relationship](#many-to-many-relationship)
@@ -74,7 +75,7 @@ which will update the `series` entity - used in the example - to look like the f
 }
 ```
 
-A new key has been added under the `relationships` element: `books`. The element defines the name that will be used for GraphQL field to navigate from the series object to the object defined in the `target.entity`, `book` in this case. This means that there must be an entity called `book` in configuration file. 
+A new key has been added under the `relationships` element: `books`. The element defines the name that will be used for GraphQL field to navigate from the series object to the object defined in the `target.entity`, `book` in this case. This means that there must be an entity called `book` in configuration file.
 
 `cardinality` property tells Data API Builder that there can be many books in each series, so the created GraphQL field will return a list of items.
 
@@ -110,13 +111,14 @@ The configuration will also contain that information:
 
 ### Many-To-One Relationship
 
-A many to one relationship is similar to the One-To-Many relatioship with two major differences:
+A many to one relationship is similar to the One-To-Many relationship with two major differences:
+
 - the `cardinality` is set to `one`
 - the created GraphQL field will return a scalar not a list
 
 Following the Book Series samples used before, a book can be in just one series, so the relationship will be created using the following DAB CLI command:
 
-```
+```bash
 dab update book --relationship series --target.entity series --cardinality one
 ```
 
@@ -155,5 +157,4 @@ where each book will return also the series it belongs to.
 
 ### Many-To-Many Relationship
 
-WIP
-
+Many to many relationships can be seen as a pair of One-to-Many and Many-to-One relationships working together.

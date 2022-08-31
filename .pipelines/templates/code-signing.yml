@@ -1,10 +1,15 @@
+parameters:
+- name: 'path'  # defaults for any parameters that aren't specified
+  type: string
+  default: '$(Build.ArtifactStagingDirectory)\publish'
+
 steps:
 - task: EsrpCodeSigning@1
-  displayName: 'Code Signing our code'
+  displayName: 'Code Signing Microsoft code'
   inputs:
     condition: and(succeeded(), eq(variables['codesigning'], 'true'))
     ConnectedServiceName: 'ESRP Official Codesigning'
-    FolderPath: '$(Build.ArtifactStagingDirectory)\publish'
+    FolderPath: ${{ parameters.path }}
     Pattern: |
       dab
       dab.dll
@@ -66,7 +71,7 @@ steps:
   inputs:
     condition: and(succeeded(), eq(variables['codesigning'], 'true'))
     ConnectedServiceName: 'ESRP Official Codesigning'
-    FolderPath: '$(Build.ArtifactStagingDirectory)'
+    FolderPath: ${{ parameters.path }}
     Pattern: |
       CommandLine.dll
       GreenDonut.dll

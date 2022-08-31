@@ -48,7 +48,7 @@ jobs:
     displayName: 'Generate dab-config.MsSql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
-      fileType: 'json'
+      fileType: json
       targetFiles: 'src/Service/dab-config.MsSql.json'
 
   - task: DotNetCoreCLI@2

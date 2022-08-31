@@ -79,7 +79,7 @@ steps:
 
 - template: templates/code-signing.yml
   parameters:
-    path: '$(Build.SourcesDirectory)\src\out'
+    path: '$(Build.SourcesDirectory)/src/out'
 
 - task: DotNetCoreCLI@2
   displayName: 'Creating Nuget Package'
@@ -98,13 +98,13 @@ steps:
 
 - template: templates/code-signing.yml
   parameters:
-    path: '$(Build.ArtifactStagingDirectory)\publish'
+    path: '$(Build.ArtifactStagingDirectory)/publish'
 
 - task: PowerShell@2
   displayName: "Zip the binaries after signing"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)\publish.ps1
+    filePath: $(System.DefaultWorkingDirectory)/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -CreateZip
 
 - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0

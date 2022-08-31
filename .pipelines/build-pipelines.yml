@@ -109,15 +109,10 @@ steps:
     scriptPath: publish.sh
     args: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion)
 
-# this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
-- task: PublishPipelineArtifact@1
-  displayName: "Upload build artifacts"
-  inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)' 
-
 - task: EsrpCodeSigning@1
   displayName: 'Code Signing'
   inputs:
+    condition: and(succeeded(), eq(variables['codesigning'], 'true'))
     ConnectedServiceName: 'ESRP Official Codesigning'
     FolderPath: '$(Build.ArtifactStagingDirectory)'
     Pattern: '*.dll, *.exe'
@@ -148,8 +143,13 @@ steps:
     SessionTimeout: '60'
     MaxConcurrency: '50'
     MaxRetryAttempts: '5'
-  condition: and(succeeded(), eq(variables['codesigning'], 'true'))
 
+# this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
+- task: PublishPipelineArtifact@1
+  displayName: "Upload build artifacts"
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)' 
+    
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.
 - task: PowerShell@2

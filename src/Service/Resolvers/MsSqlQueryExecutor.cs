@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 {
     public class MsSqlQueryExecutor : QueryExecutor<SqlConnection>
     {
-        private const string DATABASE_SCOPE = @"https://database.windows.net/.default";
+        public const string DATABASE_SCOPE = @"https://database.windows.net/.default";
 
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,

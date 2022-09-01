@@ -142,6 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 Assert.AreEqual(exceptionType, ex.GetType());
                 Assert.AreEqual(exceptionMessage, ex.Message);
                 Assert.AreEqual(2, configProviderLogger.Invocations.Count);

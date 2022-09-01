@@ -20,7 +20,7 @@ GraphQL queries can traverse related objects and their fields, so that with just
 }
 ```
 
-to retrieve books and thier authors. 
+to retrieve books and their authors. 
 
 To allow this ability to work, Data API Builder needs to know how the two objects are related to each other. The `relationships` section in the configuration file provide the necessary metadata for making this ability working correctly and efficiently.
 

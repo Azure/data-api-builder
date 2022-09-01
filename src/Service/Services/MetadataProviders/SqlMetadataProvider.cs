@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -48,6 +50,8 @@ namespace Azure.DataApiBuilder.Service.Services
         private Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
 
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
+
+        private Dictionary<string, string> EntityPathToEntityName { get; } = new();
 
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
@@ -158,6 +162,12 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
+        public virtual bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
+        {
+            return EntityPathToEntityName.TryGetValue(entityPathName, out entityName);
+        }
+
+        /// <inheritdoc />
         public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntityNamesAndDbObjects()
         {
             return EntityToDatabaseObject.ToList();
@@ -170,6 +180,7 @@ namespace Azure.DataApiBuilder.Service.Services
             GenerateDatabaseObjectForEntities();
             await PopulateObjectDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();
+            GenerateRestPathToEntityMap();
             InitODataParser();
             timer.Stop();
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
@@ -251,6 +262,51 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Takes a string version of a sql data type and returns its .NET common language runtime (CLR) counterpart
         /// </summary>
         public abstract Type SqlToCLRType(string sqlType);
+
+        /// <summary>
+        /// Generates the map used to find a given entity based
+        /// on the path that will be used for that entity.
+        /// </summary>
+        private void GenerateRestPathToEntityMap()
+        {
+            foreach (string entityName in _entities.Keys)
+            {
+                Entity entity = _entities[entityName];
+                string path = GetEntityPath(entity, entityName).TrimStart('/');
+
+                if (!string.IsNullOrEmpty(path))
+                {
+                    EntityPathToEntityName[path] = entityName;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Deserialize and return the entity's path.
+        /// </summary>
+        /// <param name="entity">Entity object to get the path of.</param>
+        /// <param name="entityName">name of the entity</param>
+        /// <returns>route for the given Entity.</returns>
+        private static string GetEntityPath(Entity entity, string entityName)
+        {
+            // if entity.Rest is null or true we just use entity name
+            if (entity.Rest is null || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.True)
+            {
+                return entityName;
+            }
+
+            // for false return empty string so we know not to add in caller
+            if (((JsonElement)entity.Rest).ValueKind is JsonValueKind.False)
+            {
+                return string.Empty;
+            }
+
+            // otherwise we have to convert each part of the Rest property we want into correct objects
+            // they are json element so this means deserializing at each step with case insensitivity
+            JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
+            RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)entity.Rest, options)!;
+            return JsonSerializer.Deserialize<string>((JsonElement)rest.Path, options)!;
+        }
 
         /// <summary>
         /// Returns the default schema name. Throws exception here since

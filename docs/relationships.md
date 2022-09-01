@@ -161,18 +161,79 @@ Many to many relationships can be seen as a pair of One-to-Many and Many-to-One 
 
 Data API builder support this type of relationship natively:
 
-- the cardinality of both entities participating in the Many-to-Many relationship must be set to `many`
-- for relational databases a linking object or entity must be provided
+- using a pair of One-to-Many/Many-to-One relationships
+- using a *linking object*
+
+#### Using a pair of One-to-Many/Many-to-One relationships
+
+Continuing using the books and authors sample, one business requirement that is likely to be there is to keep track of how royalties are split between the authors of a book. To implement such requirement a dedicate entity that link together an author, a book and the assigned royalties is needed, so that there are three entities involved. If
+
+- `authors`, to represent biographical details of authors
+- `books`, to represent book data like title and ISBN
+- `books_authors` to represent data that is related both to a book and to its author, for example the percentage of royalties an author gets for a specific book
+
+the three entities can be visualized link in the following diagram.
+
+![Many-to-Many Relationship](./media/relationship-many-to-many-01.png)
+
+As visible there are two bi-directional relationships:
+
+- One-to-Many/Many-to-One relationship between `authors` and the `books_authors`
+- One-to-Many/Many-to-One relationship between `books` and the `books_authors`
+
+To allow such scenario to be gracefully handle by DAB, all is needed is to create the related entities and mapping in the configuration file. Assuming the `book` and `author` entity are already in the configuration file (see the Getting Started guide if you need help on that):
+
+```bash
+dab add book_author --source dbo.books_authors --permissions "anonymous:*"
+```
+
+to add the new entity and then run
+
+```bash
+dab update book --relationship books --target.entity books_authors --cardinality many --relationship.fields "id:book_id"
+dab update author --relationship authors --target.entity books_authors --cardinality many --relationship.fields "id:author_id"
+```
+
+to add the aforementioned relationships to the newly created `book_author` entity, and then
+
+```bash
+dab update book_author --relationship book --target.entity book --cardinality one --relationship.fields "book_id:id"
+dab update book_author --relationship author --target.entity author --cardinality one --relationship.fields "author_id:id"
+```
+
+to add the relationships from `book_author` to `book` and `authors`. With the provided configuration DAB will be able to handle nested queryies like the following:
+
+```graphql
+{
+ authors {
+    items {
+      first_name
+      last_name      
+      books {
+        items {
+          book {
+            id
+            title
+          }
+          royalties_percentage
+        }
+      }      
+    }
+  }
+}
+```
+
+where you are asking the return all the authors, the book they have written along with the related royalties.
 
 #### Using a linking object
 
-In relational databases Many-to-Many relationships are created using an third table that *links* the tables participating in the Many-to-Many relationship together:
+The process described in the previous section works great if all the entities involved in the Many-to-Many relationships needs to be access via GraphQL. This is not always the case. For example, if you don't need to keep track of royalties, the `book_author` entity doesn't really bring any value to the end user, as it is just used to associated books to their authors. In relational databases Many-to-Many relationships are created using such third table that *links* the tables participating in the Many-to-Many relationship together:
 
-![Many-to-Many Relationship](./media/relationship-many-to-many.png)
+![Many-to-Many Relationship](./media/relationship-many-to-many-02.png)
 
 In the diagram above you can see that there is a table named `books_authors` that is linking authors with their books and books with their authors. This linking table doesn't need to be exposed to the end user as it is just an artifact to allow the Many-to-Many relationship to exists, but Data API builder needs to know its existence in order to properly use it.
 
-DAB CLI can be used to create the Many-to-Many relationship and also configure the linking object:
+DAB CLI can be used to create the Many-to-Many relationship and also configure the linking object (make sure to remove all the relationships created in the previous section and start only with the `book` and `author` entity with no configured relationship between them already):
 
 ```bash
 dab update book --relationship authors --target.entity author --cardinality many --relationship.fields "id:id" --linking.object "dbo.books_authors" --linking.source.fields "book_id" --linking.target.fields "author_id" 
@@ -239,7 +300,3 @@ dab update author --relationship books --target.entity book --cardinality many -
 ```
 
 which will define a Many-to-Many relationship between the `author` entity and the `book` entity, using the linking object `dbo.books_authors` behind the scenes.
-
-#### Using a linking entity
-
-WIP

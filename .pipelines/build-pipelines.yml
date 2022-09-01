@@ -79,7 +79,8 @@ steps:
 
 - template: templates/code-signing.yml
   parameters:
-    path: '$(Build.SourcesDirectory)/src/out'
+    # This is the path that will be used for packing nuget package.
+    path: '$(Build.SourcesDirectory)/src/out/cli/$(buildConfiguration)/net6.0/publish' 
 
 - task: DotNetCoreCLI@2
   displayName: 'Creating Nuget Package'

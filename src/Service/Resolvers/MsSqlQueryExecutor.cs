@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -33,16 +34,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string sqltext,
             IDictionary<string, object?> parameters)
         {
-            SqlConnectionStringBuilder connStringBuilder = new(ConnectionString);
-            using (SqlConnection conn = new(connStringBuilder.ConnectionString))
+            using (SqlConnection conn = new(ConnectionString))
             {
-                if (string.IsNullOrEmpty(connStringBuilder.UserID))
+                string? accessToken = await TryGetAccessTokenAsync(ConnectionString);
+                if (accessToken is not null)
                 {
-                    DefaultAzureCredential credential = new();
-                    AccessToken accessToken =
-                        await credential.GetTokenAsync(
-                            new TokenRequestContext(new[] { DATABASE_SCOPE }));
-                    conn.AccessToken = accessToken.Token;
+                    QueryExecutorLogger.LogInformation("Using access token obtained from DefaultAzureCredential.");
+                    conn.AccessToken = accessToken;
                 }
 
                 await conn.OpenAsync();
@@ -71,6 +69,30 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     throw DbExceptionParser.Parse(e);
                 }
             }
+        }
+
+        /// <summary>
+        /// Determines if access token needs to be obtained or not based on the
+        /// properties specified in the connection string.
+        /// </summary>
+        /// <param name="connString"></param>
+        /// <returns>True when access token should be obtained, false otherwise.</returns>
+        public static async Task<string?> TryGetAccessTokenAsync(string connString)
+        {
+            SqlConnectionStringBuilder connStringBuilder = new(connString);
+            if (string.IsNullOrEmpty(connStringBuilder.UserID) &&
+               string.IsNullOrEmpty(connStringBuilder.Password) &&
+               connStringBuilder.Authentication == SqlAuthenticationMethod.NotSpecified)
+            {
+                DefaultAzureCredential credential = new();
+                AccessToken defaultAccessToken =
+                    await credential.GetTokenAsync(
+                        new TokenRequestContext(new[] { DATABASE_SCOPE }));
+
+                return defaultAccessToken.Token;
+            }
+
+            return null;
         }
     }
 }

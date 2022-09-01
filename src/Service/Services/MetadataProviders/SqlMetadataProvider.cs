@@ -59,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.Services
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
             new(StringComparer.InvariantCulture);
 
-        private readonly ILogger<ISqlMetadataProvider> _logger;
+        protected ILogger<ISqlMetadataProvider> SqlMetadataProviderLogger { get; }
 
         public SqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Service.Services
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             _queryExecutor = queryExecutor;
-            _logger = logger;
+            SqlMetadataProviderLogger = logger;
         }
 
         /// <inheritdoc />
@@ -183,7 +183,7 @@ namespace Azure.DataApiBuilder.Service.Services
             GenerateRestPathToEntityMap();
             InitODataParser();
             timer.Stop();
-            _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
+            SqlMetadataProviderLogger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
         }
 
         /// <summary>

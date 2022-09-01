@@ -62,21 +62,14 @@ namespace Azure.DataApiBuilder.Service.Services
 
             try
             {
-                SqlConnectionStringBuilder connStringBuilder = new(ConnectionString);
                 // for non-MySql DB types, this will throw an exception
                 // for malformed connection strings
                 conn.ConnectionString = ConnectionString;
-                if (string.IsNullOrEmpty(connStringBuilder.UserID))
+                string? accessToken = await MsSqlQueryExecutor.TryGetAccessTokenAsync(ConnectionString);
+                if (accessToken is not null)
                 {
-                    DefaultAzureCredential credential = new();
-                        /*(new DefaultAzureCredentialOptions
-                        {
-                          ManagedIdentityClientId = "2e2658cb-b558-4b57-80ec-da969eec38b8"
-                        });*/
-                    AccessToken accessToken =
-                        await credential.GetTokenAsync(
-                            new TokenRequestContext(new[] { MsSqlQueryExecutor.DATABASE_SCOPE }));
-                    conn.AccessToken = accessToken.Token;
+                    SqlMetadataProviderLogger.LogInformation("Using access token obtained from DefaultAzureCredential.");
+                    conn.AccessToken = accessToken;
                 }
             }
             catch (Exception ex)

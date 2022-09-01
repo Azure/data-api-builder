@@ -89,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// </summary>
         /// <seealso cref="https://docs.microsoft.com/azure/active-directory/develop/access-tokens#validate-user-permission"/>
         [TestMethod]
-        public async Task TestStaticWebAppsEasyAuthTokenClaims(string claimType, string claimValue)
+        public async Task TestStaticWebAppsEasyAuthTokenClaims()
         {
             string objectIdClaimType = "oid";
             string objectId = "f35eaa76-b8e6-4c7c-99a2-5aeeeee9ba58";

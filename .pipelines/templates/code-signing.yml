@@ -7,7 +7,7 @@ steps:
 - task: EsrpCodeSigning@1
   displayName: 'Code Signing Microsoft code'
   inputs:
-    condition: and(succeeded(), eq(variables['codesigning'], 'true'))
+    condition: and(succeeded())
     ConnectedServiceName: 'ESRP Official Codesigning'
     FolderPath: ${{ parameters.path }}
     Pattern: |
@@ -69,7 +69,7 @@ steps:
 - task: EsrpCodeSigning@1
   displayName: 'Code Signing OSS and Third party'
   inputs:
-    condition: and(succeeded(), eq(variables['codesigning'], 'true'))
+    condition: and(succeeded())
     ConnectedServiceName: 'ESRP Official Codesigning'
     FolderPath: ${{ parameters.path }}
     Pattern: |

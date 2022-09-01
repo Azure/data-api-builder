@@ -93,7 +93,7 @@ steps:
   displayName: "Package DAB to multiple platforms"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)\publish.ps1
+    filePath: $(System.DefaultWorkingDirectory)/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -Package
 
 - template: templates/code-signing.yml

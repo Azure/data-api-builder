@@ -67,7 +67,7 @@ steps:
   displayName: Build
   inputs:
     command: publish
-    projects: '**/Cli.csproj'
+    projects: '**/*.sln'
     arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion)' 
 
 - task: DotNetCoreCLI@2

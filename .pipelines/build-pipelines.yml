@@ -66,8 +66,8 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
-    command: build
-    projects: '**/*.csproj'
+    command: publish
+    projects: '**/Cli.csproj'
     arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion)' 
 
 - task: DotNetCoreCLI@2
@@ -88,7 +88,7 @@ steps:
     command: custom
     custom: pack
     projects: '**/Cli.csproj'
-    arguments: '--configuration $(buildConfiguration) --no-build --no-restore -p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
+    arguments: '--configuration $(buildConfiguration) --no-build -p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
 
 - task: PowerShell@2
   displayName: "Package DAB to multiple platforms"

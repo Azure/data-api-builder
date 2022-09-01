@@ -11,33 +11,10 @@ steps:
     ConnectedServiceName: 'ESRP Official Codesigning'
     FolderPath: ${{ parameters.path }}
     Pattern: |
-      dab
-      dab.dll
-      dab.exe
-      Azure.*
-      createdump*
-      Microsoft.*.dll
-      System*.dll
-      api-ms*.dll
-      mscor*.dll
-      msquic.dll
-      netstandard.dll
-      ucrtbase.dll
-      WindowsBase.dll
-      aspnetcorev2_inprocess.dll
-      clretwrc.dll
-      clrjit.dll
-      coreclr.dll
-      Cosmos.CRTCompat.dll
-      hostfxr.dll
-      hostpolicy.dll
-      liclrjit.*
-      libcoreclr*
-      libdbgshim.*
-      libhostfxr.*
-      libhostpolicy.*
-      libmscor*
-      libSystem*
+      **/dab
+      **/dab.dll
+      **/dab.exe
+      **/Azure.DataApiBuilder*
     signConfigType: 'inlineSignParams'
     inlineOperation: |
       [
@@ -73,13 +50,13 @@ steps:
     ConnectedServiceName: 'ESRP Official Codesigning'
     FolderPath: ${{ parameters.path }}
     Pattern: |
-      CommandLine.dll
-      GreenDonut.dll
-      HotChocolate*
-      Humanizer*
-      MySqlConnector*
-      Newtonsoft.Json*
-      Npgsql*
+      **/CommandLine.dll
+      **/GreenDonut.dll
+      **/HotChocolate*.dll
+      **/Humanizer*.dll
+      **/MySqlConnector.dll
+      **/Newtonsoft.Json.dll
+      **/Npgsql.dll
     signConfigType: 'inlineSignParams'
     inlineOperation: |
       [

@@ -41,7 +41,7 @@ steps:
     feedsToUse: config
     nugetConfigPath: Nuget.config
 
-- task: FileTransform@1
+- task: FileTransform@1.206.0
   displayName: 'Generate dab-config.Cosmos.json'
   inputs:
     folderPath: '$(System.DefaultWorkingDirectory)'

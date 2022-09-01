@@ -39,8 +39,9 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         }
 
         /// <summary>
-        /// Processes the x-ms-client-principal payload containing
-        /// SWA token payload.
+        /// Base64 decodes and deserializes the x-ms-client-principal payload containing
+        /// SWA token metadata.
+        /// Writes SWA token metadata (roles and token claims) to .NET ClaimsIdentity object.
         /// </summary>
         /// <param name="context"></param>
         /// <returns>ClaimsIdentity containing authentication metadata.</returns>

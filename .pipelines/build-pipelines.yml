@@ -115,7 +115,7 @@ steps:
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -CreateZip
 
 - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-  displayName: 'Generation Task'
+  displayName: 'SBOM Generation Task'
   inputs:
       BuildDropPath: '$(Build.ArtifactStagingDirectory)'
 

@@ -10,11 +10,7 @@ steps:
     condition: and(succeeded())
     ConnectedServiceName: 'ESRP Official Codesigning'
     FolderPath: ${{ parameters.path }}
-    Pattern: |
-      **/dab
-      **/dab.dll
-      **/dab.exe
-      **/Azure.DataApiBuilder*
+    Pattern: 'dab, dab.dll, dab.exe, Azure.DataApiBuilder*'
     signConfigType: 'inlineSignParams'
     inlineOperation: |
       [
@@ -49,14 +45,7 @@ steps:
     condition: and(succeeded())
     ConnectedServiceName: 'ESRP Official Codesigning'
     FolderPath: ${{ parameters.path }}
-    Pattern: |
-      **/CommandLine.dll
-      **/GreenDonut.dll
-      **/HotChocolate*.dll
-      **/Humanizer*.dll
-      **/MySqlConnector.dll
-      **/Newtonsoft.Json.dll
-      **/Npgsql.dll
+    Pattern: 'CommandLine.dll, GreenDonut.dll, HotChocolate*.dll, Humanizer*.dll, MySqlConnector.dll, Newtonsoft.Json.dll, Npgsql.dll'
     signConfigType: 'inlineSignParams'
     inlineOperation: |
       [

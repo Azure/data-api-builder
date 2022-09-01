@@ -88,13 +88,24 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// ParseQueryString is a helper function used to parse the query String provided
         /// in the URL of the http request. It parses and saves the values that are needed to
         /// later generate queries in the given RestRequestContext.
+        /// ParsedQueryString is of type NameValueCollection which allows null keys (See documentation),
+        /// so any instance of a null key will result in a bad request.
         /// </summary>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
         /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds many of the components needed to parse the query.</param>
+        /// <seealso cref="https://docs.microsoft.com/dotnet/api/system.collections.specialized.namevaluecollection?view=net-6.0#remarks"/>
         public static void ParseQueryString(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider)
         {
             foreach (string key in context.ParsedQueryString!.Keys)
             {
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"A query parameter without a key is not supported.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
                 switch (key)
                 {
                     case FIELDS_URL:
@@ -118,9 +129,10 @@ namespace Azure.DataApiBuilder.Service.Parsers
                         context.First = RequestValidator.CheckFirstValidity(context.ParsedQueryString[key]!);
                         break;
                     default:
-                        throw new DataApiBuilderException(message: $"Invalid Query Parameter: {key.ToString()}",
-                                                       statusCode: HttpStatusCode.BadRequest,
-                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        throw new DataApiBuilderException(
+                            message: $"Invalid Query Parameter: {key}",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
             }
         }

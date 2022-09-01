@@ -10,7 +10,7 @@ steps:
     condition: and(succeeded())
     ConnectedServiceName: 'ESRP Official Codesigning'
     FolderPath: ${{ parameters.path }}
-    Pattern: 'dab, dab.dll, dab.exe, Azure.DataApiBuilder*'
+    Pattern: 'dab.dll, dab.exe, Azure.DataApiBuilder*.dll, Azure.DataApiBuilder*.exe'
     signConfigType: 'inlineSignParams'
     inlineOperation: |
       [

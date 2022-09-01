@@ -1,8 +1,8 @@
 param (
-    [Parameter (Mandatory=$true)][string] $BuildConfiguration
-    [Parameter (Mandatory=$true)][string] $BuildOutputDir
-    [Parameter (Mandatory=$true)][string] $DabVersion
-    [Parameter (Mandatory=$false)][switch] $Package
+    [Parameter (Mandatory=$true)][string] $BuildConfiguration,
+    [Parameter (Mandatory=$true)][string] $BuildOutputDir,
+    [Parameter (Mandatory=$true)][string] $DabVersion,
+    [Parameter (Mandatory=$false)][switch] $Package,
     [Parameter (Mandatory=$false)][switch] $CreateZip
 )
 

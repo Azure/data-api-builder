@@ -101,6 +101,11 @@ steps:
   parameters:
     path: '$(Build.ArtifactStagingDirectory)/publish'
 
+- template: templates/code-signing.yml
+  parameters:
+    path: '$(Build.ArtifactStagingDirectory)/nupkg'
+    signNuget: true
+
 - task: PowerShell@2
   displayName: "Zip the binaries after signing"
   inputs:

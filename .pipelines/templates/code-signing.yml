@@ -87,7 +87,7 @@ steps:
 - ${{ if eq(parameters.signNuget, true) }}:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing Nuget package'
-    condition: and(succeeded(), eq(variables['codesigning'], 'true'))
+    condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
     inputs:
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}

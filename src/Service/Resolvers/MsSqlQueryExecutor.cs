@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Data;
 using System.Data.Common;
-using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -25,49 +21,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Executes sql text that return result set.
+        /// Modified the properties of the supplied connection to support managed identity access.
+        /// In the case of MsSql, gets access token if deemed necessary and sets it on the connection.
         /// </summary>
-        /// <param name="sqltext">Sql text to be executed.</param>
-        /// <param name="parameters">The parameters used to execute the SQL text.</param>
-        /// <returns>DbDataReader object for reading the result set.</returns>
-        public override async Task<DbDataReader> ExecuteQueryAsync(
-            string sqltext,
-            IDictionary<string, object?> parameters)
+        /// <param name="conn">The supplied connection to modify for managed identity access.</param>
+        public override async Task HandleManagedIdentityAccessIfAny(DbConnection conn)
         {
-            using (SqlConnection conn = new(ConnectionString))
+            SqlConnection sqlConn = (SqlConnection)conn;
+            string? accessToken = await TryGetAccessTokenAsync(ConnectionString);
+            if (accessToken is not null)
             {
-                string? accessToken = await TryGetAccessTokenAsync(ConnectionString);
-                if (accessToken is not null)
-                {
-                    QueryExecutorLogger.LogInformation("Using access token obtained from DefaultAzureCredential.");
-                    conn.AccessToken = accessToken;
-                }
-
-                await conn.OpenAsync();
-                DbCommand cmd = conn.CreateCommand();
-                cmd.CommandText = sqltext;
-                cmd.CommandType = CommandType.Text;
-                if (parameters != null)
-                {
-                    foreach (KeyValuePair<string, object?> parameterEntry in parameters)
-                    {
-                        DbParameter parameter = cmd.CreateParameter();
-                        parameter.ParameterName = "@" + parameterEntry.Key;
-                        parameter.Value = parameterEntry.Value ?? DBNull.Value;
-                        cmd.Parameters.Add(parameter);
-                    }
-                }
-
-                try
-                {
-                    return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
-                }
-                catch (DbException e)
-                {
-                    QueryExecutorLogger.LogError(e.Message);
-                    QueryExecutorLogger.LogError(e.StackTrace);
-                    throw DbExceptionParser.Parse(e);
-                }
+                QueryExecutorLogger.LogInformation("Using access token obtained from DefaultAzureCredential.");
+                sqlConn.AccessToken = accessToken;
             }
         }
 

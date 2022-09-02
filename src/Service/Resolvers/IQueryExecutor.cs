@@ -30,5 +30,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="onlyExtract">List of columns to extract. Extracts all if unspecified.</param>
         ///<returns>A dictionary representating the row in <c>ColumnName: Value</c> format, null if no row was found</returns>
         public Task<Dictionary<string, object?>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader, List<string>? onlyExtract = null);
+
+        /// <summary>
+        /// Modified the properties of the supplied connection to support managed identity access.
+        /// </summary>
+        public Task HandleManagedIdentityAccessIfAny(DbConnection conn);
     }
 }

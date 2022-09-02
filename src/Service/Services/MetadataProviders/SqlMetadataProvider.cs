@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Services
         // nullable since Mock tests do not need it.
         // TODO: Refactor the Mock tests to remove the nullability here
         // once the runtime config is implemented tracked by #353.
-        private readonly IQueryExecutor? _queryExecutor;
+        protected IQueryExecutor? QueryExecutor { get; }
 
         private const int NUMBER_OF_RESTRICTIONS = 4;
 
@@ -197,6 +197,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
+            await QueryExecutor!.HandleManagedIdentityAccessIfAny(conn);
             await conn.OpenAsync();
 
             string tablePrefix = GetTablePrefix(conn.Database, schemaName);
@@ -809,7 +810,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Using a data adapter, obtains the schema of the given table name
         /// and adds the corresponding entity in the data set.
         /// </summary>
-        protected virtual async Task<DataTable> FillSchemaForTableAsync(
+        protected async Task<DataTable> FillSchemaForTableAsync(
             string schemaName,
             string tableName)
         {
@@ -835,6 +836,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // for non-MySql DB types, this will throw an exception
                 // for malformed connection strings
                 conn.ConnectionString = ConnectionString;
+                await QueryExecutor!.HandleManagedIdentityAccessIfAny(conn);
             }
             catch (Exception ex)
             {
@@ -887,6 +889,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
+            await QueryExecutor!.HandleManagedIdentityAccessIfAny(conn);
             await conn.OpenAsync();
             // We can specify the Catalog, Schema, Table Name, Column Name to get
             // the specified column(s).

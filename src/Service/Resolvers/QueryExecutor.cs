@@ -38,10 +38,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>DbDataReader object for reading the result set.</returns>
         public virtual async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
         {
-            TConnection conn = new()
+            using TConnection conn = new()
             {
                 ConnectionString = ConnectionString,
             };
+
+            await HandleManagedIdentityAccessIfAny(conn);
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandText = sqltext;
@@ -67,6 +69,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 QueryExecutorLogger.LogError(e.StackTrace);
                 throw DbExceptionParser.Parse(e);
             }
+        }
+
+        /// <inheritdoc />
+        public virtual async Task HandleManagedIdentityAccessIfAny(DbConnection conn)
+        {
+            // no-op in the base class.
+            await Task.Yield();
         }
 
         /// <inheritdoc />

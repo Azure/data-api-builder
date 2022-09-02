@@ -7,13 +7,16 @@ parameters:
 - name: 'signNuget'
   type: boolean
   default: false
-- name: 'isReleaseBuild'
-  default: false
 
 # We are spliting the signing between our code and OSS/Third party code
 # because they are using different signing key code.
 # Same reason with nuget package signing. It is using different code.
 steps:
+- bash: |
+    echo ISNUGETRELEASE = $ISNUGETRELEASE
+    echo isReleaseBuild = $isReleaseBuild
+  displayName: Check release build
+
 - ${{ if eq(parameters.signNuget, false) }}:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing Microsoft code'

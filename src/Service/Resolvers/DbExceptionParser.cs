@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Net;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -10,24 +11,37 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// Parses some db exceptions and converts them to useful exceptions that can be reported
     /// to the user
     ///</summary>
-    public class DbExceptionParser
+    public abstract class DbExceptionParser
     {
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
-        private readonly bool _developerMode;
+        protected readonly bool _developerMode;
+        protected List<int>? badRequestErrorCodes;
 
         public DbExceptionParser(RuntimeConfigProvider configProvider)
         {
             _developerMode = configProvider.IsDeveloperMode();
         }
 
-        public virtual Exception Parse(DbException e)
+        public Exception Parse(DbException e)
         {
             string message = _developerMode ? e.Message : GENERIC_DB_EXCEPTION_MESSAGE;
+            HttpStatusCode statusCode = IsBadRequestException(e) ? HttpStatusCode.BadRequest : HttpStatusCode.InternalServerError;
             return new DataApiBuilderException(
                 message: message,
-                statusCode: HttpStatusCode.InternalServerError,
+                statusCode: statusCode,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed
             );
+        }
+
+        /// <summary>
+        /// Helper method to check whether the exception is considered to have occurred because
+        /// of a bad request issued by the client.
+        /// </summary>
+        /// <param name="e">The exception thrown as a result of execution of the request.</param>
+        /// <returns></returns>
+        protected virtual bool IsBadRequestException(DbException e)
+        {
+            return e.SqlState is not null && badRequestErrorCodes!.Contains(Int32.Parse(e.SqlState));
         }
     }
 }

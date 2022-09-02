@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             Mock<RuntimeConfigProvider> provider = new(configPath.Object, configProviderLogger.Object);
             provider.Setup(x => x.IsDeveloperMode()).Returns(isDeveloperMode);
-            DbExceptionParser parser = new(provider.Object);
+            DbExceptionParser parser = new MsSqlDbExceptionParser(provider.Object);
             DbException e = CreateSqlException();
             string actual = parser.Parse(e).Message;
             Assert.AreEqual(expected, actual);

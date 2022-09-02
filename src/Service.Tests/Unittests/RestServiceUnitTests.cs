@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             RuntimeConfigProvider runtimeConfigProvider =
                 TestHelper.GetMockRuntimeConfigProvider(runtimeConfigPath, path);
             MsSqlQueryBuilder queryBuilder = new();
-            DbExceptionParser dbExceptionParser = new(runtimeConfigProvider);
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<ILogger<ISqlMetadataProvider>> sqlMetadataLogger = new();
             Mock<ILogger<SqlQueryEngine>> queryEngineLogger = new();

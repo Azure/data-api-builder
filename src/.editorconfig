@@ -444,6 +444,7 @@ dotnet_diagnostic.SA1028.severity = silent
 dotnet_diagnostic.SA0001.severity = silent
 dotnet_diagnostic.SA0002.severity = silent
 dotnet_diagnostic.SA1600.severity = suggestion
+csharp_style_prefer_top_level_statements = true:silent
 
 [*.{cs,vb}]
 dotnet_diagnostic.CA1034.severity=suggestion
@@ -468,3 +469,11 @@ dotnet_naming_symbols.constant_fields.applicable_kinds   = field
 dotnet_naming_symbols.constant_fields.required_modifiers = const
 dotnet_naming_style.upper_case_style.capitalization = all_upper
 dotnet_style_operator_placement_when_wrapping = beginning_of_line
+dotnet_style_coalesce_expression = true:suggestion
+dotnet_style_null_propagation = true:suggestion
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
+dotnet_style_prefer_auto_properties = true:error
+dotnet_style_object_initializer = true:error
+dotnet_style_collection_initializer = true:suggestion
+dotnet_style_prefer_simplified_boolean_expressions = true:suggestion
+dotnet_diagnostic.CA1051.severity = suggestion

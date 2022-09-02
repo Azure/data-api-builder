@@ -1,6 +1,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -485,6 +486,55 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedSubStatusCode: "BadRequest",
                 expectedLocationHeader: expectedLocationHeader
                 );
+        }
+
+        /// <summary>
+        /// Test to validate that when we try to perform an insertion which has a foreign key dependency
+        /// on another table, the request would fail and will be classified as a bad request.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task InsertOneTestViolatingForeignKeyConstraint()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 12345
+            }";
+
+            // The expected error message is different depending on what database the test is
+            // being executed upon.
+            string expectedErrorMessage;
+            if (this.GetType() == typeof(MsSqlInsertApiTests))
+            {
+                expectedErrorMessage = "The INSERT statement conflicted with the FOREIGN KEY constraint" +
+                    " \"book_publisher_fk\". The conflict occurred in database \"master\", table \"dbo.publishers\"" +
+                    ", column 'id'.";
+            }
+            else if(this.GetType() == typeof(MySqlInsertApiTests))
+            {
+                expectedErrorMessage = "Cannot add or update a child row: a foreign key constraint fails " +
+                    "(`mysql`.`books`, CONSTRAINT `book_publisher_fk` FOREIGN KEY (`publisher_id`) REFERENCES" +
+                    " `publishers` (`id`) ON DELETE CASCADE)";
+            }
+            else
+            {
+                expectedErrorMessage = "23503: insert or update on table \"books\" violates foreign key" +
+                    " constraint \"book_publisher_fk\"";
+            }
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entity: _integrationEntityName,
+                sqlQuery: string.Empty,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: expectedErrorMessage,
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+            );
         }
 
         #endregion

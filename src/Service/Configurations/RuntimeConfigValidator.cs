@@ -229,8 +229,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production
                 && runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is not null)
             {
-                throw new NotSupportedException("Default state of authentication cannot be" +
-                    " set for requests in production mode.");
+                throw new DataApiBuilderException(
+                    message: $"Default state of authentication cannot be set for requests in production mode.",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
 
             bool isAudienceSet =

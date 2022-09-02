@@ -261,7 +261,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <summary>
         /// When we are in development mode, we want to honor the default-request-authorization
         /// feature switch value specified in the config file. This gives us the ability to
-        /// simulate authenticated/anonymous authentication state of request in development mode.
+        /// simulate a request's authenticated/anonymous authentication state in development mode.
         /// </summary>
         /// <returns></returns>
         public virtual bool IsAuthenticatedDevModeRequest()

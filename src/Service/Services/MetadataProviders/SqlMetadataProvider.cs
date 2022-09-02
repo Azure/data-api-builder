@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Service.Services
             ConnectionString = runtimeConfig.ConnectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
-            _queryExecutor = queryExecutor;
+            QueryExecutor = queryExecutor;
             SqlMetadataProviderLogger = logger;
         }
 
@@ -1046,11 +1046,11 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             // Execute the foreign key info query.
             using DbDataReader reader =
-                await _queryExecutor!.ExecuteQueryAsync(queryForForeignKeyInfo, parameters);
+                await QueryExecutor!.ExecuteQueryAsync(queryForForeignKeyInfo, parameters);
 
             // Extract the first row from the result.
             Dictionary<string, object?>? foreignKeyInfo =
-                await _queryExecutor!.ExtractRowFromDbDataReader(reader);
+                await QueryExecutor!.ExtractRowFromDbDataReader(reader);
 
             Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition = new();
             while (foreignKeyInfo != null)
@@ -1080,7 +1080,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 foreignKeyDefinition.ReferencingColumns.Add(
                     (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencingColumns)]!);
 
-                foreignKeyInfo = await _queryExecutor.ExtractRowFromDbDataReader(reader);
+                foreignKeyInfo = await QueryExecutor.ExtractRowFromDbDataReader(reader);
             }
 
             return pairToFkDefinition;

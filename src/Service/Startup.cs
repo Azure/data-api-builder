@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Service
                     case DatabaseType.cosmos:
                         return null!;
                     case DatabaseType.mssql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<SqlConnection>>(serviceProvider);
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryExecutor>(serviceProvider);
                     case DatabaseType.postgresql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<NpgsqlConnection>>(serviceProvider);
                     case DatabaseType.mysql:

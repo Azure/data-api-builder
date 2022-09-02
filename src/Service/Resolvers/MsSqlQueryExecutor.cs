@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string? accessToken = await TryGetAccessTokenAsync(ConnectionString);
             if (accessToken is not null)
             {
-                QueryExecutorLogger.LogInformation("Using access token obtained from DefaultAzureCredential.");
+                QueryExecutorLogger.LogTrace("Using access token obtained from DefaultAzureCredential to connect to database.");
                 sqlConn.AccessToken = accessToken;
             }
         }

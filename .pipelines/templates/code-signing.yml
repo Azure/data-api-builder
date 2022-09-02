@@ -8,7 +8,6 @@ parameters:
   type: boolean
   default: false
 - name: 'isReleaseBuild'
-  type: boolean
   default: false
 
 # We are spliting the signing between our code and OSS/Third party code

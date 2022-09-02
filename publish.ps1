@@ -13,7 +13,7 @@ $RIDs = "win-x64", "linux-x64", "osx-x64"
 if ($Package)
 {
     foreach ($RID in $RIDs) {
-        $cmd = "dotnet publish --configuration $BuildConfiguration --output $BuildOutputDir/publish/$BuildConfiguration/$RID/cli --runtime $RID --self-contained true -p:Version=$DabVersion $BuildRoot/src/Cli/src/Cli.csproj"
+        $cmd = "dotnet publish --configuration $BuildConfiguration --output $BuildOutputDir/publish/$BuildConfiguration/$RID/dab --runtime $RID --self-contained true -p:Version=$DabVersion $BuildRoot/src/Cli/src/Cli.csproj"
         Write-Host $cmd
         Invoke-Expression $cmd
     }
@@ -22,7 +22,7 @@ if ($Package)
 if ($CreateZip)
 {
     foreach ($RID in $RIDs) {
-        $cmd = "Compress-Archive -Force -Path $BuildOutputDir/publish/$BuildConfiguration/$RID/cli/* -DestinationPath $BuildOutputDir/publish/$BuildConfiguration/$RID/cli_$DabVersion.zip"
+        $cmd = "Compress-Archive -Force -Path $BuildOutputDir/publish/$BuildConfiguration/$RID/dab/* -DestinationPath $BuildOutputDir/publish/$BuildConfiguration/$RID/dab_$DabVersion.zip"
         Write-Host $cmd
         Invoke-Expression $cmd
     }

@@ -12,27 +12,11 @@ parameters:
 # because they are using different signing key code.
 # Same reason with nuget package signing. It is using different code.
 steps:
-
-# Need to set a variable at runtime because template is evaluate and inject in the compile time
-# and during the compile time we do not have the value of the variable.
-- bash: |
-    echo ISNUGETRELEASE = $ISNUGETRELEASE
-    echo ISNUGETRELEASE = $(isNugetRelease)
-    echo ISNUGETRELEASE = $[variables.isNugetRelease]
-    if [ "$ISNUGETRELEASE" = "true" ]
-    then
-      echo "##vso[task.setvariable variable=codesigning]true"
-    else
-      echo "##vso[task.setvariable variable=codesigning]false"
-    fi
-    echo codesigning = $codesigning
-  displayName: Set signing flag
-
 - ${{ if eq(parameters.signNuget, false) }}:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing Microsoft code'
+    condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
     inputs:
-      condition: and(succeeded(), eq(variables['codesigning'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: 'dab.dll, dab.exe, Azure.DataApiBuilder*.dll, Azure.DataApiBuilder*.exe'
@@ -66,8 +50,8 @@ steps:
 
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing OSS and Third party'
+    condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
     inputs:
-      condition: and(succeeded(), eq(variables['codesigning'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: 'CommandLine.dll, GreenDonut.dll, HotChocolate*.dll, Humanizer*.dll, MySqlConnector.dll, Newtonsoft.Json.dll, Npgsql.dll'
@@ -103,8 +87,8 @@ steps:
 - ${{ if eq(parameters.signNuget, true) }}:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing Nuget package'
+    condition: and(succeeded(), eq(variables['codesigning'], 'true'))
     inputs:
-      condition: and(succeeded(), eq(variables['codesigning'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: '*.nupkg'

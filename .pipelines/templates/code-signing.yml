@@ -12,16 +12,11 @@ parameters:
 # because they are using different signing key code.
 # Same reason with nuget package signing. It is using different code.
 steps:
-- bash: |
-    echo ISNUGETRELEASE = $ISNUGETRELEASE
-    echo isReleaseBuild = $isReleaseBuild
-  displayName: Check release build
-
 - ${{ if eq(parameters.signNuget, false) }}:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing Microsoft code'
     inputs:
-      condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
+      condition: and(succeeded(), eq(variables['ISNUGETRELEASE'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: 'dab.dll, dab.exe, Azure.DataApiBuilder*.dll, Azure.DataApiBuilder*.exe'
@@ -56,7 +51,7 @@ steps:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing OSS and Third party'
     inputs:
-      condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
+      condition: and(succeeded(), eq(variables['ISNUGETRELEASE'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: 'CommandLine.dll, GreenDonut.dll, HotChocolate*.dll, Humanizer*.dll, MySqlConnector.dll, Newtonsoft.Json.dll, Npgsql.dll'
@@ -93,7 +88,7 @@ steps:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing Nuget package'
     inputs:
-      condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
+      condition: and(succeeded(), eq(variables['ISNUGETRELEASE'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: '*.nupkg'

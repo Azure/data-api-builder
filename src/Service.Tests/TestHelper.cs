@@ -91,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.Tests
             mockRuntimeConfigProvider.Setup(x => x.RestPath).Returns(path);
             mockRuntimeConfigProvider.Setup(x => x.TryLoadRuntimeConfigValue()).Returns(true);
             string configJson = RuntimeConfigProvider.GetRuntimeConfigJsonString(configPath.ConfigFileName);
-            RuntimeConfig.TryGetDeserializedConfig(configJson, out RuntimeConfig runtimeConfig);
+            RuntimeConfig.TryGetDeserializedConfig(configJson, out RuntimeConfig runtimeConfig, configProviderLogger.Object);
             mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
             return mockRuntimeConfigProvider.Object;
         }

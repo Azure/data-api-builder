@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private const int NUMBER_OF_RESTRICTIONS = 4;
 
-        protected bool DeveloperMode { get; }
+        public bool DeveloperMode { get; }
 
         protected string ConnectionString { get; init; }
 

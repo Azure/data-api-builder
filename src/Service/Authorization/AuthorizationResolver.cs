@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
@@ -43,12 +44,12 @@ namespace Azure.DataApiBuilder.Service.Authorization
             if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
             {
                 // Datastructure constructor will pull required properties from metadataprovider.
-                SetEntityPermissionMap(runtimeConfig);
+                SetEntityPermissionMap(runtimeConfig, RuntimeConfigProvider.ConfigProviderLogger);
             }
             else
             {
                 runtimeConfigProvider.RuntimeConfigLoaded +=
-                    (object? sender, RuntimeConfig config) => SetEntityPermissionMap(config);
+                    (object? sender, RuntimeConfig config) => SetEntityPermissionMap(config, RuntimeConfigProvider.ConfigProviderLogger);
             }
         }
 
@@ -199,7 +200,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// </summary>
         /// <param name="runtimeConfig"></param>
         /// <returns></returns>
-        public void SetEntityPermissionMap(RuntimeConfig? runtimeConfig)
+        public void SetEntityPermissionMap(RuntimeConfig? runtimeConfig, ILogger logger)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig!.Entities)
             {
@@ -237,7 +238,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         {
                             // If not a string, the operationObj is expected to be an object that can be deserialised into PermissionOperation
                             // object. We will put validation checks later to make sure this is the case.
-                            if (RuntimeConfig.TryGetDeserializedConfig(operationElement.ToString(), out PermissionOperation? operationObj)
+                            if (RuntimeConfig.TryGetDeserializedConfig(operationElement.ToString(), out PermissionOperation? operationObj, logger)
                                 && operationObj is not null)
                             {
                                 operation = operationObj.Name;

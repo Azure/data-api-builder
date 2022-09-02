@@ -180,14 +180,20 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Parse the value of "after" parameter from query parameters, validate it, and return the json object it stores
         /// </summary>
-        public static IEnumerable<PaginationColumn> ParseAfterFromQueryParams(IDictionary<string, object?> queryParams, PaginationMetadata paginationMetadata)
+        public static IEnumerable<PaginationColumn> ParseAfterFromQueryParams(
+            IDictionary<string, object?> queryParams,
+            PaginationMetadata paginationMetadata,
+            ISqlMetadataProvider sqlMetadataProvider)
         {
             if (queryParams.TryGetValue(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME, out object? continuationObject))
             {
                 if (continuationObject is not null)
                 {
                     string afterPlainText = (string)continuationObject;
-                    return ParseAfterFromJsonString(afterPlainText, paginationMetadata);
+                    return ParseAfterFromJsonString(
+                        afterPlainText,
+                        paginationMetadata,
+                        sqlMetadataProvider: sqlMetadataProvider);
                 }
             }
 
@@ -200,8 +206,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public static IEnumerable<PaginationColumn> ParseAfterFromJsonString(string afterJsonString,
                                                                              PaginationMetadata paginationMetadata,
-                                                                             string entityName = "",
-                                                                             ISqlMetadataProvider? sqlMetadataProvider = null)
+                                                                             ISqlMetadataProvider sqlMetadataProvider,
+                                                                             string entityName = ""
+                                                                             )
         {
             IEnumerable<PaginationColumn>? after;
             try
@@ -307,13 +314,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     e is NotSupportedException
                     )
                 {
-                    // print the actual error for the dev
-                    // but return a generic error to the user to maintain
+                    // save the actual error message for the dev
+                    // otherwise return a generic error to the user to maintain
                     // consistency in using the pagination token opaquely
-                    Console.Error.WriteLine(e);
-                    string notValidString = $"{afterJsonString} is not a valid pagination token.";
+                    string errorMessage = sqlMetadataProvider.DeveloperMode ? e.Message :
+                        $"{afterJsonString} is not a valid pagination token.";
                     throw new DataApiBuilderException(
-                        message: notValidString,
+                        message: errorMessage,
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }

@@ -225,8 +225,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After,
                                                                                   PaginationMetadata,
-                                                                                  EntityName,
-                                                                                  sqlMetadataProvider));
+                                                                                  sqlMetadataProvider,
+                                                                                  EntityName));
             }
 
             _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
@@ -422,7 +422,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata));
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata, sqlMetadataProvider));
 
                 if (PaginationMetadata.RequestedEndCursor)
                 {

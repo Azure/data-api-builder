@@ -16,7 +16,16 @@ steps:
 # Need to set a variable at runtime because template is evaluate and inject in the compile time
 # and during the compile time we do not have the value of the variable.
 - bash: |
-    echo "##vso[task.setvariable variable=codesigning]$ISNUGETRELEASE"
+    echo ISNUGETRELEASE = $ISNUGETRELEASE
+    echo ISNUGETRELEASE = $(isNugetRelease)
+    echo ISNUGETRELEASE = $[variables.isNugetRelease]
+    if [ "$ISNUGETRELEASE" = "true" ]
+    then
+      echo "##vso[task.setvariable variable=codesigning]true"
+    else
+      echo "##vso[task.setvariable variable=codesigning]false"
+    fi
+    echo codesigning = $codesigning
   displayName: Set signing flag
 
 - ${{ if eq(parameters.signNuget, false) }}:

@@ -16,7 +16,7 @@ steps:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing Microsoft code'
     inputs:
-      condition: and(succeeded())
+      condition: and(succeeded(), eq(variables['isNugetRelease'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: 'dab.dll, dab.exe, Azure.DataApiBuilder*.dll, Azure.DataApiBuilder*.exe'
@@ -51,7 +51,7 @@ steps:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing OSS and Third party'
     inputs:
-      condition: and(succeeded())
+      condition: and(succeeded(), eq(variables['isNugetRelease'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: 'CommandLine.dll, GreenDonut.dll, HotChocolate*.dll, Humanizer*.dll, MySqlConnector.dll, Newtonsoft.Json.dll, Npgsql.dll'
@@ -88,7 +88,7 @@ steps:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing Nuget package'
     inputs:
-      condition: and(succeeded())
+      condition: and(succeeded(), eq(variables['isNugetRelease'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: '*.nupkg'

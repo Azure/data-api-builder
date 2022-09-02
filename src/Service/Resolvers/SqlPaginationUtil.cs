@@ -183,7 +183,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public static IEnumerable<PaginationColumn> ParseAfterFromQueryParams(
             IDictionary<string, object?> queryParams,
             PaginationMetadata paginationMetadata,
-            ISqlMetadataProvider sqlMetadataProvider)
+            ISqlMetadataProvider sqlMetadataProvider,
+            string EntityName)
         {
             if (queryParams.TryGetValue(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME, out object? continuationObject))
             {
@@ -193,7 +194,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     return ParseAfterFromJsonString(
                         afterPlainText,
                         paginationMetadata,
-                        sqlMetadataProvider: sqlMetadataProvider);
+                        sqlMetadataProvider,
+                        EntityName);
                 }
             }
 
@@ -207,7 +209,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public static IEnumerable<PaginationColumn> ParseAfterFromJsonString(string afterJsonString,
                                                                              PaginationMetadata paginationMetadata,
                                                                              ISqlMetadataProvider sqlMetadataProvider,
-                                                                             string entityName = ""
+                                                                             string entityName
                                                                              )
         {
             IEnumerable<PaginationColumn>? after;

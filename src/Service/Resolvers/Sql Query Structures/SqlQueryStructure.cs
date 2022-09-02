@@ -422,7 +422,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata, sqlMetadataProvider));
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata, sqlMetadataProvider, EntityName));
 
                 if (PaginationMetadata.RequestedEndCursor)
                 {

@@ -7,6 +7,9 @@ parameters:
 - name: 'signNuget'
   type: boolean
   default: false
+- name: 'isReleaseBuild'
+  type: boolean
+  default: false
 
 # We are spliting the signing between our code and OSS/Third party code
 # because they are using different signing key code.
@@ -16,7 +19,7 @@ steps:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing Microsoft code'
     inputs:
-      condition: and(succeeded(), eq(variables['publishNugetToFeed'], 'true'))
+      condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: 'dab.dll, dab.exe, Azure.DataApiBuilder*.dll, Azure.DataApiBuilder*.exe'
@@ -51,7 +54,7 @@ steps:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing OSS and Third party'
     inputs:
-      condition: and(succeeded(), eq(variables['publishNugetToFeed'], 'true'))
+      condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: 'CommandLine.dll, GreenDonut.dll, HotChocolate*.dll, Humanizer*.dll, MySqlConnector.dll, Newtonsoft.Json.dll, Npgsql.dll'
@@ -88,7 +91,7 @@ steps:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing Nuget package'
     inputs:
-      condition: and(succeeded(), eq(variables['publishNugetToFeed'], 'true'))
+      condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: '*.nupkg'

@@ -12,11 +12,18 @@ parameters:
 # because they are using different signing key code.
 # Same reason with nuget package signing. It is using different code.
 steps:
+
+# Need to set a variable at runtime because template is evaluate and inject in the compile time
+# and during the compile time we do not have the value of the variable.
+- bash: |
+    echo "##vso[task.setvariable variable=codesigning]$ISNUGETRELEASE"
+  displayName: Set signing flag
+
 - ${{ if eq(parameters.signNuget, false) }}:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing Microsoft code'
     inputs:
-      condition: and(succeeded(), eq(variables['ISNUGETRELEASE'], 'true'))
+      condition: and(succeeded(), eq(variables['codesigning'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: 'dab.dll, dab.exe, Azure.DataApiBuilder*.dll, Azure.DataApiBuilder*.exe'
@@ -51,7 +58,7 @@ steps:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing OSS and Third party'
     inputs:
-      condition: and(succeeded(), eq(variables['ISNUGETRELEASE'], 'true'))
+      condition: and(succeeded(), eq(variables['codesigning'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: 'CommandLine.dll, GreenDonut.dll, HotChocolate*.dll, Humanizer*.dll, MySqlConnector.dll, Newtonsoft.Json.dll, Npgsql.dll'
@@ -88,7 +95,7 @@ steps:
   - task: EsrpCodeSigning@1
     displayName: 'Code Signing Nuget package'
     inputs:
-      condition: and(succeeded(), eq(variables['ISNUGETRELEASE'], 'true'))
+      condition: and(succeeded(), eq(variables['codesigning'], 'true'))
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: '*.nupkg'

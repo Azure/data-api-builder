@@ -1,8 +1,5 @@
-using System;
 using System.Data.Common;
-using System.Net;
 using Azure.DataApiBuilder.Service.Configurations;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -18,7 +15,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         protected override bool IsBadRequestException(DbException e)
         {
             int errorNumber = ((SqlException)e).Number;
-            return badRequestErrorCodes.Contains(errorNumber);
+            return badRequestErrorCodes!.Contains(errorNumber);
         }
     }
 }

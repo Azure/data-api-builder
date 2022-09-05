@@ -511,7 +511,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                     " \"book_publisher_fk\". The conflict occurred in database \"master\", table \"dbo.publishers\"" +
                     ", column 'id'.";
             }
-            else if(this.GetType() == typeof(MySqlInsertApiTests))
+            else if (this.GetType() == typeof(MySqlInsertApiTests))
             {
                 expectedErrorMessage = "Cannot add or update a child row: a foreign key constraint fails " +
                     "(`mysql`.`books`, CONSTRAINT `book_publisher_fk` FOREIGN KEY (`publisher_id`) REFERENCES" +

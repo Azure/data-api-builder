@@ -8,7 +8,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     {
         public MsSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
         {
-            badRequestErrorCodes = new(){ 515, 547 };
+            badRequestErrorCodes = new() { 515, 547 };
         }
 
         /// <inheritdoc/>

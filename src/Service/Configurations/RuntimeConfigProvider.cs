@@ -38,6 +38,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
+        /// The access token representing a Managed Identity to connect to the database.
+        /// </summary>
+        public string? ManagedIdentityAccessToken { get; private set; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="RuntimeConfigProvider"/> class.
         /// </summary>
         /// <param name="runtimeConfigPath"></param>
@@ -194,7 +199,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="configuration">The engine configuration.</param>
         /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
         /// <param name="connectionString">The connection string to the database.</param>
-        public void Initialize(string configuration, string? schema, string connectionString)
+        public void Initialize(
+            string configuration,
+            string? schema,
+            string connectionString,
+            string? accessToken)
         {
             if (string.IsNullOrEmpty(connectionString))
             {
@@ -226,6 +235,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     RuntimeConfiguration = RuntimeConfiguration with { CosmosDb = cosmosDb };
                 }
             }
+
+            ManagedIdentityAccessToken = accessToken;
 
             EventHandler<RuntimeConfig>? handlers = RuntimeConfigLoaded;
             if (handlers != null)

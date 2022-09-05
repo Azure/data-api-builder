@@ -1,7 +1,5 @@
 using System;
-using System.Data;
 using System.Net;
-using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;

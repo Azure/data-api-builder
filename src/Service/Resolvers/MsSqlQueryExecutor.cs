@@ -12,12 +12,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     {
         public const string DATABASE_SCOPE = @"https://database.windows.net/.default";
 
+        private readonly string? _managedIdentityAccessToken;
+
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
             ILogger<QueryExecutor<SqlConnection>> logger)
             : base(runtimeConfigProvider, dbExceptionParser, logger)
         {
+            _managedIdentityAccessToken = runtimeConfigProvider.ManagedIdentityAccessToken;
         }
 
         /// <summary>
@@ -25,10 +28,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// In the case of MsSql, gets access token if deemed necessary and sets it on the connection.
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
-        public override async Task HandleManagedIdentityAccessIfAny(DbConnection conn)
+        public override async Task HandleManagedIdentityAccessIfAnyAsync(DbConnection conn)
         {
             SqlConnection sqlConn = (SqlConnection)conn;
-            string? accessToken = await TryGetAccessTokenAsync(ConnectionString);
+            string? accessToken = _managedIdentityAccessToken ?? await TryGetAccessTokenAsync(ConnectionString);
             if (accessToken is not null)
             {
                 QueryExecutorLogger.LogTrace("Using access token obtained from DefaultAzureCredential to connect to database.");
@@ -42,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="connString"></param>
         /// <returns>True when access token should be obtained, false otherwise.</returns>
-        public static async Task<string?> TryGetAccessTokenAsync(string connString)
+        private static async Task<string?> TryGetAccessTokenAsync(string connString)
         {
             SqlConnectionStringBuilder connStringBuilder = new(connString);
             if (string.IsNullOrEmpty(connStringBuilder.UserID) &&

@@ -336,7 +336,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// </summary>
         /// <param name="primaryKeyRoute">string represents the primary key route</param>
         /// <param name="queryString">string represents the query string provided in URL</param>
-        /// <param name="entity">string represents the name of the entity</param>
+        /// <param name="entityNameOrPath">string represents the name/path of the entity</param>
         /// <param name="sqlQuery">string represents the query to be executed</param>
         /// <param name="operationType">The operation type to be tested.</param>
         /// <param name="requestBody">string represents JSON data used in mutation operations</param>
@@ -349,10 +349,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static async Task SetupAndRunRestApiTest(
             string primaryKeyRoute,
             string queryString,
-            string entity,
+            string entityNameOrPath,
             string sqlQuery,
             Operation operationType = Operation.Read,
-            string path = "api",
+            string restPath = "api",
             IHeaderDictionary headers = null,
             string requestBody = null,
             bool exceptionExpected = false,
@@ -366,7 +366,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             bool expectJson = true)
         {
             // Create the rest endpoint using the path and entity name.
-            string restEndPoint = path + "/" + entity;
+            string restEndPoint = restPath + "/" + entityNameOrPath;
 
             // Append primaryKeyRoute to the endpoint if it is not empty.
             if (!string.IsNullOrEmpty(primaryKeyRoute))
@@ -449,7 +449,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 }
                 else
                 {
-                    string baseUrl = HttpClient.BaseAddress.ToString() + path + "/" + entity;
+                    string baseUrl = HttpClient.BaseAddress.ToString() + restPath + "/" + entityNameOrPath;
                     if (!string.IsNullOrEmpty(queryString))
                     {
                         baseUrl = baseUrl + "?" + HttpUtility.ParseQueryString(queryString).ToString();

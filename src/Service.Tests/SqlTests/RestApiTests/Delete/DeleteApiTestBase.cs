@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/5",
                     queryString: null,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: null,
                     operationType: Operation.Delete,
                     requestBody: null,
@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "treeId/1",
                     queryString: null,
-                    entity: _integrationMappingEntity,
+                    entityNameOrPath: _integrationMappingEntity,
                     sqlQuery: null,
                     operationType: Operation.Delete,
                     requestBody: null,
@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "┬─┬ノ( º _ ºノ)/1",
                     queryString: null,
-                    entity: _integrationUniqueCharactersEntity,
+                    entityNameOrPath: _integrationUniqueCharactersEntity,
                     sqlQuery: null,
                     operationType: Operation.Delete,
                     requestBody: null,
@@ -101,7 +101,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
@@ -125,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "title/7",
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
@@ -148,7 +148,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: string.Empty,
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
@@ -179,7 +179,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: $"id/1{sqlInjection}",
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,

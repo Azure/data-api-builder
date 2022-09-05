@@ -143,6 +143,24 @@
               "type": "string",
               "description": "The object in the backend database that is mapped to the entity"
             },
+            "rest": {
+              "oneOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ]
+                }
+              ]
+            },
             "graphql": {
               "oneOf": [
                 {

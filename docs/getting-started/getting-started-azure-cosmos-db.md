@@ -157,7 +157,7 @@ Now that the Data API builder engine is running, you can use your favourite REST
 ### REST Endpoint
 
 Unlike other databases, Data API Builder for Azure Cosmos DB does not support generating REST endpoints because there is already a[REST API endpoint](https://docs.microsoft.com/en-us/rest/api/cosmos-db/) capability built-in to the Azure Cosmos DB service.
- 
+
 ### GraphQL endpoint
 
 GraphQL endpoint is available at

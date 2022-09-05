@@ -97,6 +97,17 @@ namespace Azure.DataApiBuilder.Service.Tests
         }
 
         /// <summary>
+        /// Given the environment, return the runtime config provider.
+        /// </summary>
+        /// <param name="environment">The environment for which the test is being run.</param>
+        /// <returns></returns>
+        public static RuntimeConfigProvider GetRuntimeConfigProvider(string environment)
+        {
+            RuntimeConfigPath configPath = GetRuntimeConfigPath(environment);
+            return GetRuntimeConfigProvider(configPath);
+        }
+
+        /// <summary>
         /// Given the configurationProvider, try to load and get the runtime config object.
         /// </summary>
         /// <param name="configProvider"></param>

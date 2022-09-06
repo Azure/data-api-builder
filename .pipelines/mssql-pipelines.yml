@@ -44,7 +44,7 @@ jobs:
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu SQL Server Image Docker
 
-  - task: FileTransform@1
+  - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.MsSql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
@@ -129,7 +129,7 @@ jobs:
         SqlLocalDb.exe start MSSQLLocalDB
         SqlLocalDb.exe info "MSSQLLocalDB"
 
-  - task: FileTransform@1
+  - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.MsSql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'

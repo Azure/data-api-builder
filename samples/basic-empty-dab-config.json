@@ -5,9 +5,9 @@
         "connection-string": ""
     },
     "runtime": {
-      "host": {
-        "mode": "development"
-      }
+        "host": {
+            "mode": "development"
+        }
     },
     "entities": {
     }

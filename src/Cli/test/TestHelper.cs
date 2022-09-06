@@ -2,6 +2,9 @@ namespace Cli.Tests
 {
     public static class TestHelper
     {
+        // Config file name for tests
+        public static string _testRuntimeConfig = "dab-config-test.json";
+
         /// <summary>
         /// Adds the entity properties to the configuration and returns the updated configuration json as a string.
         /// </summary>

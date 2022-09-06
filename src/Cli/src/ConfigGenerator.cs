@@ -22,7 +22,7 @@ namespace Cli
                 Console.WriteLine($"Creating a new config file: {runtimeConfigFile}");
             }
 
-            // throwing error when initializing the config file if it already exists,
+            // Throwing error when initializing the config file if it already exists,
             // to avoid overwriting/wiping-out the existing configuration.
             if (File.Exists(runtimeConfigFile))
             {
@@ -431,7 +431,7 @@ namespace Cli
                 }
             }
 
-            // if the role we are trying to update is not found, we create a new one
+            // If the role we are trying to update is not found, we create a new one
             // and add it to permissionSettings list.
             if (!role_found)
             {
@@ -483,7 +483,7 @@ namespace Cli
             // Looping through existing operations
             foreach (KeyValuePair<Operation, PermissionOperation> operation in existingOperations)
             {
-                // if any existing operation doesn't require update, it is added as it is.
+                // If any existing operation doesn't require update, it is added as it is.
                 if (!updatedOperations.ContainsKey(operation.Key))
                 {
                     updatedOperations.Add(operation.Key, operation.Value);
@@ -593,7 +593,7 @@ namespace Cli
 
         /// <summary>
         /// This method will try starting the engine.
-        /// it will use the config provided by the user, else will look for the default config.
+        /// It will use the config provided by the user, else will look for the default config.
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options)
         {

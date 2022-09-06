@@ -6,8 +6,6 @@ namespace Cli.Tests;
 [TestClass]
 public class EndToEndTests
 {
-    private static string _testRuntimeConfig = "dab-config-test.json";
-
     /// <summary>
     /// Initializing config for cosmos DB.
     /// </summary>
@@ -256,7 +254,7 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// method to clean up the generated test config file
+    /// Method to clean up the generated test config file
     /// to avoid error while initializing the existing config file
     /// as all the tests are generating config with the same name.
     /// </summary>

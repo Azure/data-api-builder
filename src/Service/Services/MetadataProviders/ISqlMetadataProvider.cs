@@ -32,6 +32,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         string GetDatabaseObjectName(string entityName);
 
+        (string, string) ParseSchemaAndDbObjectName(string source);
+
         /// <summary>
         /// Obtains the underlying TableDefinition for the given entity name.
         /// </summary>

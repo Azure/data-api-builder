@@ -109,13 +109,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that the entities that have graphQL exposed do not generate queries with the 
+        /// Validate that the entities that have graphQL exposed do not generate queries with the
         /// same name.
         /// For example: Consider the entity definitions
         /// "Book": {
         ///   "graphql": true
         /// }
-        ///  
+        ///
         /// "book": {
         ///     "graphql": true
         /// }
@@ -393,31 +393,25 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                     // linking.object can be provided without linking.source.fields and linking.target.fields
                     // in the config only when foreign key relation is defined in the database.
-                    List<Tuple<string, string>> relationshipPairFromDatabase = new();
-                    foreach (RelationShipPair relationshipPair in sqlMetadataProvider.GetPairToFkDefinition().Keys)
-                    {
-                        // relationshipPairFromDatabase lists all pairs which have a foreign key relationship
-                        // defined in the underlying database.
-                        relationshipPairFromDatabase.Add(Tuple.Create(relationshipPair.ReferencingDbObject.Name, relationshipPair.ReferencedDbObject.Name));
-                    }
+                    Dictionary<RelationShipPair, ForeignKeyDefinition> relationshipPairFromDatabase = sqlMetadataProvider.GetPairToFkDefinition();
 
                     // check to look for foreignKey pair definition between entity and linking object
                     // as linkingSourceFields and linkingTargetFields are null.
                     if (relationship.LinkingObject is not null
                         && (relationship.LinkingSourceFields is null && relationship.LinkingTargetFields is null))
                     {
-                        // creating different pair of linking object,with sourceEntity and targetEntity
-                        // {referencingDBobject, referencedDBobject}
-                        // and checking if their foreignKey pair is defined in the DB, by checking if it is present in
-                        // the relationshipPairFromDatabase
-                        Tuple<string, string> pair1 = Tuple.Create(relationship.LinkingObject, entity.GetSourceName());
+                        (string sourceSchemaName, string sourceDbObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(entity.GetSourceName())!;
+                        (string targetSchemaName, string targetDbObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(runtimeConfig.Entities[relationship.TargetEntity].GetSourceName())!;
+                        (string linkingObjectSchema, string linkingObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(relationship.LinkingObject)!;
 
-                        Tuple<string, string> pair2 = Tuple.Create(
-                            relationship.LinkingObject,
-                            runtimeConfig.Entities[relationship.TargetEntity].GetSourceName()
-                            );
+                        DatabaseObject sourceDatabaseObject = new (sourceSchemaName, sourceDbObjectName);
+                        DatabaseObject targetDatabaseObject = new (targetSchemaName, targetDbObjectName);
+                        DatabaseObject linkingDatabaseObject = new (linkingObjectSchema, linkingObjectName);
 
-                        if (!(relationshipPairFromDatabase.Contains(pair1) && relationshipPairFromDatabase.Contains(pair2)))
+                        RelationShipPair linkingObjectSourceEntityPair = new ( linkingDatabaseObject, sourceDatabaseObject);
+                        RelationShipPair linkingObjectTargetEntityPair = new ( linkingDatabaseObject, targetDatabaseObject);
+
+                        if (!(relationshipPairFromDatabase.ContainsKey(linkingObjectSourceEntityPair) && relationshipPairFromDatabase.ContainsKey(linkingObjectTargetEntityPair)))
                         {
                             throw new DataApiBuilderException(
                                 message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
@@ -430,19 +424,19 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     // if linking.object is null , and sourceFields and targetFields are not provided,
                     // then there should be a relationship defined between source and target entity in the DB.
                     if (relationship.LinkingObject is null
-                        && relationship.SourceFields is null && relationship.TargetFields is null)
+                        && (relationship.SourceFields is null || relationship.TargetFields is null))
                     {
-                        Tuple<string, string> pair1 = Tuple.Create(
-                            entity.GetSourceName(),
-                            runtimeConfig.Entities[relationship.TargetEntity].GetSourceName()
-                        );
+                        // Parsing schema and DbObjectName to create relationshipPair and searching in relationshipPairFromDatabase
+                        (string sourceSchemaName, string sourceDbObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(entity.GetSourceName())!;
+                        (string targetSchemaName, string targetDbObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(runtimeConfig.Entities[relationship.TargetEntity].GetSourceName())!;
 
-                        Tuple<string, string> pair2 = Tuple.Create(
-                            runtimeConfig.Entities[relationship.TargetEntity].GetSourceName(),
-                            entity.GetSourceName()
-                        );
+                        DatabaseObject sourceDatabaseObject = new (sourceSchemaName, sourceDbObjectName);
+                        DatabaseObject targetDatabaseObject = new (targetSchemaName, targetDbObjectName);
 
-                        if (!(relationshipPairFromDatabase.Contains(pair1) || relationshipPairFromDatabase.Contains(pair2)))
+                        RelationShipPair SourceAndTargetEntityPair = new ( sourceDatabaseObject, targetDatabaseObject);
+                        RelationShipPair TargetAndSourceEntityPair = new ( targetDatabaseObject, sourceDatabaseObject);
+
+                        if (!(relationshipPairFromDatabase.ContainsKey(SourceAndTargetEntityPair) || relationshipPairFromDatabase.ContainsKey(TargetAndSourceEntityPair)))
                         {
                             throw new DataApiBuilderException(
                                 message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",

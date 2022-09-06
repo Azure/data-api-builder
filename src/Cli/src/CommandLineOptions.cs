@@ -48,7 +48,7 @@ namespace Cli
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmos, mysql, postgresql")]
         public DatabaseType DatabaseType { get; }
 
-        [Option("connection-string", Required = false, HelpText = "Connection details to connect to the database.")]
+        [Option("connection-string", Required = false, HelpText = "(Default: '') Connection details to connect to the database.")]
         public string? ConnectionString { get; }
 
         [Option("cosmos-database", Required = false, HelpText = "Database name for Cosmos DB.")]

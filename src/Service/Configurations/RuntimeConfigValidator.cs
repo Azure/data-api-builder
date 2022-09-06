@@ -404,12 +404,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         (string targetSchemaName, string targetDbObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(runtimeConfig.Entities[relationship.TargetEntity].GetSourceName())!;
                         (string linkingObjectSchema, string linkingObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(relationship.LinkingObject)!;
 
-                        DatabaseObject sourceDatabaseObject = new (sourceSchemaName, sourceDbObjectName);
-                        DatabaseObject targetDatabaseObject = new (targetSchemaName, targetDbObjectName);
-                        DatabaseObject linkingDatabaseObject = new (linkingObjectSchema, linkingObjectName);
+                        DatabaseObject sourceDatabaseObject = new(sourceSchemaName, sourceDbObjectName);
+                        DatabaseObject targetDatabaseObject = new(targetSchemaName, targetDbObjectName);
+                        DatabaseObject linkingDatabaseObject = new(linkingObjectSchema, linkingObjectName);
 
-                        RelationShipPair linkingObjectSourceEntityPair = new ( linkingDatabaseObject, sourceDatabaseObject);
-                        RelationShipPair linkingObjectTargetEntityPair = new ( linkingDatabaseObject, targetDatabaseObject);
+                        RelationShipPair linkingObjectSourceEntityPair = new(linkingDatabaseObject, sourceDatabaseObject);
+                        RelationShipPair linkingObjectTargetEntityPair = new(linkingDatabaseObject, targetDatabaseObject);
 
                         if (!(relationshipPairFromDatabase.ContainsKey(linkingObjectSourceEntityPair) && relationshipPairFromDatabase.ContainsKey(linkingObjectTargetEntityPair)))
                         {
@@ -430,11 +430,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         (string sourceSchemaName, string sourceDbObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(entity.GetSourceName())!;
                         (string targetSchemaName, string targetDbObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(runtimeConfig.Entities[relationship.TargetEntity].GetSourceName())!;
 
-                        DatabaseObject sourceDatabaseObject = new (sourceSchemaName, sourceDbObjectName);
-                        DatabaseObject targetDatabaseObject = new (targetSchemaName, targetDbObjectName);
+                        DatabaseObject sourceDatabaseObject = new(sourceSchemaName, sourceDbObjectName);
+                        DatabaseObject targetDatabaseObject = new(targetSchemaName, targetDbObjectName);
 
-                        RelationShipPair SourceAndTargetEntityPair = new ( sourceDatabaseObject, targetDatabaseObject);
-                        RelationShipPair TargetAndSourceEntityPair = new ( targetDatabaseObject, sourceDatabaseObject);
+                        RelationShipPair SourceAndTargetEntityPair = new(sourceDatabaseObject, targetDatabaseObject);
+                        RelationShipPair TargetAndSourceEntityPair = new(targetDatabaseObject, sourceDatabaseObject);
 
                         if (!(relationshipPairFromDatabase.ContainsKey(SourceAndTargetEntityPair) || relationshipPairFromDatabase.ContainsKey(TargetAndSourceEntityPair)))
                         {

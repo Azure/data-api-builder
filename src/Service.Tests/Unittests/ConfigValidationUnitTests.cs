@@ -308,7 +308,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             entityMap = GetSampleEntityMap(
                 sourceEntity: "SampleEntity1",
                 targetEntity: "SampleEntity2",
-                sourceFields: new string[]{"id"},
+                sourceFields: new string[] { "id" },
                 targetFields: null,
                 linkingObject: null
             );
@@ -323,7 +323,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
                 );
-
 
             runtimeConfig = new(
                 Schema: "UnitTestSchema",
@@ -964,17 +963,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Dictionary<string, Entity> entityMap = new();
             entityMap.Add(sourceEntity, sampleEntity1);
             entityMap.Add(targetEntity, sampleEntity2);
-
-            RuntimeConfig runtimeConfig = new(
-                Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
-                Entities: entityMap
-                );
 
             return entityMap;
         }

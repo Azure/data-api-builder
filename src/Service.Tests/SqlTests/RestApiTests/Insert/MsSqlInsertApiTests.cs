@@ -1,5 +1,8 @@
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
@@ -132,6 +135,39 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
+
+        #region Overriden tests
+        /// <inheritdoc/>
+        [TestMethod]
+        public override async Task InsertOneTestViolatingForeignKeyConstraint()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 12345
+            }";
+
+            // The expected error message is different depending on what database the test is
+            // being executed upon.
+            string expectedErrorMessage = "The INSERT statement conflicted with the FOREIGN KEY constraint" +
+                    $" \"book_publisher_fk\". The conflict occurred in database \"{DatabaseName}\", table \"{_defaultSchemaName}.publishers\"" +
+                    ", column 'id'.";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: string.Empty,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: expectedErrorMessage,
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+            );
+        }
+        #endregion
+
         #region Test Fixture Setup
 
         /// <summary>

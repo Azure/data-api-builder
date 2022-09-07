@@ -17,8 +17,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using static Azure.DataApiBuilder.Service.AuthenticationHelpers.StaticWebAppsAuthentication;
 using Moq;
+using static Azure.DataApiBuilder.Service.AuthenticationHelpers.StaticWebAppsAuthentication;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication
 {

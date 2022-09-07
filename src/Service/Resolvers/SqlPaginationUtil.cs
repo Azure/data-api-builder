@@ -320,7 +320,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     e is NotSupportedException
                     )
                 {
-                    string errorMessage = runtimeConfigProvider.IsDeveloperMode()? $"{e.Message}\n{e.StackTrace}" :
+                    string errorMessage = runtimeConfigProvider.IsDeveloperMode() ? $"{e.Message}\n{e.StackTrace}" :
                         $"{afterJsonString} is not a valid pagination token.";
                     throw new DataApiBuilderException(
                         message: errorMessage,

@@ -87,11 +87,6 @@ namespace Azure.DataApiBuilder.Service.Services
         IQueryBuilder GetQueryBuilder();
 
         /// <summary>
-        /// Indicates if the service is running in developer mode or not.
-        /// </summary>
-        public bool DeveloperMode { get; }
-
-        /// <summary>
         /// Returns a collection of (EntityName, DatabaseObject) without
         /// exposing the internal representation.
         /// </summary>

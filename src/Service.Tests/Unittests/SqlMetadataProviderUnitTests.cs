@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             SetUpSQLMetadataProvider();
             await ResetDbStateAsync();
-            await _sqlMetadataProvider.InitializeAsync();
+            await _sqlMetadataProvider.InitializeAsync(_runtimeConfigProvider);
         }
 
         /// <summary>
@@ -113,7 +113,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             try
             {
-                await _sqlMetadataProvider.InitializeAsync();
+                await _sqlMetadataProvider.InitializeAsync(_runtimeConfigProvider);
             }
             catch (DataApiBuilderException ex)
             {

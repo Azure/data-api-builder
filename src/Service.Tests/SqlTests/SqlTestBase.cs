@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Execute additional queries, if any.
             await ExecuteQueriesOnDbAsync(customQueries);
 
-            await _sqlMetadataProvider.InitializeAsync();
+            await _sqlMetadataProvider.InitializeAsync(_runtimeConfigProvider);
 
             // sets the database name using the connection string
             SetDatabaseNameFromConnectionString(_runtimeConfig.ConnectionString);

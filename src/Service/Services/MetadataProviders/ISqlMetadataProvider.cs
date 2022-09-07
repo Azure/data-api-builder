@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 
@@ -15,7 +16,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Initializes this metadata provider for the runtime.
         /// </summary>
-        Task InitializeAsync();
+        Task InitializeAsync(RuntimeConfigProvider runtimeConfigProvider);
 
         /// <summary>
         /// Obtains the underlying source object's schema name (SQL) or container name (Cosmos).

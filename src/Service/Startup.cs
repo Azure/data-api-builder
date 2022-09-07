@@ -242,13 +242,13 @@ namespace Azure.DataApiBuilder.Service
             bool isRuntimeReady = false;
             if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
             {
-                isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
+                isRuntimeReady = PerformOnConfigChangeAsync(app, runtimeConfigProvider).Result;
             }
             else
             {
                 runtimeConfigProvider.RuntimeConfigLoaded += async (sender, newConfig) =>
                 {
-                    isRuntimeReady = await PerformOnConfigChangeAsync(app);
+                    isRuntimeReady = await PerformOnConfigChangeAsync(app, runtimeConfigProvider);
                 };
             }
 
@@ -380,7 +380,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         /// <param name="app"></param>
         /// <returns>Indicates if the runtime is ready to accept requests.</returns>
-        private async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app)
+        private async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app, RuntimeConfigProvider runtimeConfigProvider)
         {
             try
             {
@@ -405,7 +405,7 @@ namespace Azure.DataApiBuilder.Service
 
                 if (sqlMetadataProvider is not null)
                 {
-                    await sqlMetadataProvider.InitializeAsync();
+                    await sqlMetadataProvider.InitializeAsync(runtimeConfigProvider);
                 }
 
                 _logger.LogInformation($"Successfully completed runtime initialization.");

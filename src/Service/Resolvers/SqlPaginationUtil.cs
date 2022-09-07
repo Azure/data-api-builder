@@ -316,9 +316,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     e is NotSupportedException
                     )
                 {
-                    // save the actual error message for the dev
-                    // otherwise return a generic error to the user to maintain
-                    // consistency in using the pagination token opaquely
                     string errorMessage = sqlMetadataProvider.DeveloperMode ? $"{e.Message}\n{e.StackTrace}" :
                         $"{afterJsonString} is not a valid pagination token.";
                     throw new DataApiBuilderException(

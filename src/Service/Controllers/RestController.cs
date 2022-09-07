@@ -171,7 +171,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
             {
                 (string entityName, string primaryKeyRoute) =
                     _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
-                // Utilizes C#8 using syntax which does not require brackets.
+
                 IActionResult? result
                     = await _restService.ExecuteAsync(
                             entityName,

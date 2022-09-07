@@ -365,7 +365,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
             // Loop through each entity in the config and verify its relationship.
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
-                if (entity.Relationships is null)
+                // Skipping relationship validation if entity has no relationship
+                // or if graphQL is disabled.
+                if (entity.Relationships is null || false.Equals(entity.GraphQL))
                 {
                     continue;
                 }
@@ -398,14 +400,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     // check to look for foreignKey pair definition between entity and linking object
                     // as linkingSourceFields and linkingTargetFields are null.
                     if (relationship.LinkingObject is not null
-                        && (relationship.LinkingSourceFields is null && relationship.LinkingTargetFields is null))
+                        && (relationship.LinkingSourceFields is null || relationship.LinkingTargetFields is null))
                     {
-                        (string sourceSchemaName, string sourceDbObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(entity.GetSourceName())!;
-                        (string targetSchemaName, string targetDbObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(runtimeConfig.Entities[relationship.TargetEntity].GetSourceName())!;
                         (string linkingObjectSchema, string linkingObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(relationship.LinkingObject)!;
 
-                        DatabaseObject sourceDatabaseObject = new(sourceSchemaName, sourceDbObjectName);
-                        DatabaseObject targetDatabaseObject = new(targetSchemaName, targetDbObjectName);
+                        DatabaseObject sourceDatabaseObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
+                        DatabaseObject targetDatabaseObject = sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity];
                         DatabaseObject linkingDatabaseObject = new(linkingObjectSchema, linkingObjectName);
 
                         RelationShipPair linkingObjectSourceEntityPair = new(linkingDatabaseObject, sourceDatabaseObject);
@@ -421,17 +421,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         }
                     }
 
-                    // if linking.object is null , and sourceFields and targetFields are not provided,
+                    // if linking.object is null , and sourceFields or targetFields are not provided,
                     // then there should be a relationship defined between source and target entity in the DB.
                     if (relationship.LinkingObject is null
                         && (relationship.SourceFields is null || relationship.TargetFields is null))
                     {
-                        // Parsing schema and DbObjectName to create relationshipPair and searching in relationshipPairFromDatabase
-                        (string sourceSchemaName, string sourceDbObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(entity.GetSourceName())!;
-                        (string targetSchemaName, string targetDbObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(runtimeConfig.Entities[relationship.TargetEntity].GetSourceName())!;
-
-                        DatabaseObject sourceDatabaseObject = new(sourceSchemaName, sourceDbObjectName);
-                        DatabaseObject targetDatabaseObject = new(targetSchemaName, targetDbObjectName);
+                        DatabaseObject sourceDatabaseObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
+                        DatabaseObject targetDatabaseObject = sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity];
 
                         RelationShipPair SourceAndTargetEntityPair = new(sourceDatabaseObject, targetDatabaseObject);
                         RelationShipPair TargetAndSourceEntityPair = new(targetDatabaseObject, sourceDatabaseObject);

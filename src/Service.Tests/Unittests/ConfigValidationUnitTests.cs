@@ -227,6 +227,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
                 x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
 
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
+            mockDictionaryForEntityDatabaseObject.Add(
+                "SampleEntity1",
+                new DatabaseObject("dbo", "TEST_SOURCE1")
+            );
+
+            mockDictionaryForEntityDatabaseObject.Add(
+                "SampleEntity2",
+                new DatabaseObject("dbo", "TEST_SOURCE2")
+            );
+
+            _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
+                x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
+
+            // To mock the schema name and dbObjectName for creating RelationshipPair
+            _sqlMetadataProvider.Setup<(string, string)>(x =>
+                x.ParseSchemaAndDbObjectName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
+
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                 configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
             Assert.AreEqual($"Could not find relationship between Linking Object: TEST_SOURCE_LINK"
@@ -241,6 +259,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ForeignKeyDefinition fd1 = new();
             foreignKeyPair.Add(rp1, fd1);
 
+            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
+                x.GetPairToFkDefinition()).Returns(foreignKeyPair);
+
+            // Exception thrown when only one pair either {linkingObject, source} or {linkingObject, target} is present
+            ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+            Assert.AreEqual($"Could not find relationship between Linking Object: TEST_SOURCE_LINK"
+                + $" with entities: SampleEntity2 and SampleEntity1.", ex.Message);
+
+            // When both pairs {linkingObject, source} or {linkingObject, target} is present
             RelationShipPair rp2 = new(new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE2"));
             ForeignKeyDefinition fd2 = new();
             foreignKeyPair.Add(rp2, fd2);
@@ -248,16 +276,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // To mock the return for foreign key pair from DB
             _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
                 x.GetPairToFkDefinition()).Returns(foreignKeyPair);
-
-            // To mock the schema name and dbObjectName for creating RelationshipPair
-            _sqlMetadataProvider.Setup<(string, string)>(x =>
-                x.ParseSchemaAndDbObjectName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
-
-            _sqlMetadataProvider.Setup<(string, string)>(x =>
-                x.ParseSchemaAndDbObjectName("TEST_SOURCE1")).Returns(("dbo", "TEST_SOURCE1"));
-
-            _sqlMetadataProvider.Setup<(string, string)>(x =>
-                x.ParseSchemaAndDbObjectName("TEST_SOURCE2")).Returns(("dbo", "TEST_SOURCE2"));
 
             // now, even if the LinkingSourceFields and LinkingTargetFields was not provided,
             // the engine was able to find foreign key relation in the DB and validation will pass.
@@ -298,6 +316,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
             _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
                 x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
+
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
+            mockDictionaryForEntityDatabaseObject.Add(
+                "SampleEntity1",
+                new DatabaseObject("dbo", "TEST_SOURCE1")
+            );
+
+            mockDictionaryForEntityDatabaseObject.Add(
+                "SampleEntity2",
+                new DatabaseObject("dbo", "TEST_SOURCE2")
+            );
+
+            _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
+                x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
 
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                 configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
@@ -351,13 +383,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // this will mock the return for foreign key pair from DB
             _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
                 x.GetPairToFkDefinition()).Returns(foreignKeyPair);
-
-            // To mock the schema name and dbObjectName for creating RelationshipPair
-            _sqlMetadataProvider.Setup<(string, string)>(x =>
-                x.ParseSchemaAndDbObjectName("TEST_SOURCE1")).Returns(("dbo", "TEST_SOURCE1"));
-
-            _sqlMetadataProvider.Setup<(string, string)>(x =>
-                x.ParseSchemaAndDbObjectName("TEST_SOURCE2")).Returns(("dbo", "TEST_SOURCE2"));
 
             // now, even if the SourceFields and TargetFields was not provided,
             // the engine was able to find foreign key relation in the DB and validation will pass.

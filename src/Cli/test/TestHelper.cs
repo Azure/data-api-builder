@@ -293,5 +293,26 @@ namespace Cli.Tests
             }";
             }
         }
+
+        /// <summary>
+        /// Helper method to create json string for runtime settings
+        /// for json comparison in tests.
+        /// </summary>
+        public static string GetDefaultTestRuntimeSettingString(
+            DatabaseType databaseType,
+            HostModeType hostModeType = HostModeType.Production,
+            IEnumerable<string>? corsOrigins = null
+        )
+        {
+            Dictionary<string, object> runtimeSettingDict = new();
+            Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(
+                dbType: databaseType,
+                hostMode: hostModeType,
+                corsOrigin: corsOrigins);
+
+            runtimeSettingDict.Add("runtime", defaultGlobalSetting);
+
+            return JsonSerializer.Serialize(runtimeSettingDict, GetSerializationOptions());
+        }
     }
 }

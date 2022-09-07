@@ -33,7 +33,8 @@ namespace Cli
             string? graphQLSchemaPath,
             HostModeType hostMode,
             IEnumerable<string>? corsOrigin,
-            string config)
+            string config,
+            string? devModeDefaultAuth)
             : base(config)
         {
             DatabaseType = databaseType;
@@ -43,6 +44,7 @@ namespace Cli
             GraphQLSchemaPath = graphQLSchemaPath;
             HostMode = hostMode;
             CorsOrigin = corsOrigin;
+            DevModeDefaultAuth = devModeDefaultAuth;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmos, mysql, postgresql")]
@@ -65,6 +67,10 @@ namespace Cli
 
         [Option("cors-origin", Separator = ',', Required = false, HelpText = "Specify the list of allowed origins.")]
         public IEnumerable<string>? CorsOrigin { get; }
+
+        [Option("authenticate-devmode-requests", Default = null, Required = false,
+            HelpText = "Default Authentication mode for requests in development mode")]
+        public string? DevModeDefaultAuth { get; }
     }
 
     /// <summary>

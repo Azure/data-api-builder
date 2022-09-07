@@ -276,7 +276,8 @@ namespace Cli
         /// </summary>
         public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(DatabaseType dbType,
                                                                                         HostModeType hostMode,
-                                                                                        IEnumerable<string>? corsOrigin)
+                                                                                        IEnumerable<string>? corsOrigin,
+                                                                                        bool? devModeDefaultAuth)
         {
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
             if (DatabaseType.cosmos.Equals(dbType))
@@ -289,7 +290,9 @@ namespace Cli
             }
 
             defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
-            defaultGlobalSettings.Add(GlobalSettingsType.Host, GetDefaultHostGlobalSettings(hostMode, corsOrigin));
+            defaultGlobalSettings.Add(
+                GlobalSettingsType.Host,
+                GetDefaultHostGlobalSettings(hostMode, corsOrigin, devModeDefaultAuth));
             return defaultGlobalSettings;
         }
 
@@ -308,12 +311,19 @@ namespace Cli
         //     }
         // }
         /// </summary>
-        public static HostGlobalSettings GetDefaultHostGlobalSettings(HostModeType hostMode, IEnumerable<string>? corsOrigin)
+        public static HostGlobalSettings GetDefaultHostGlobalSettings(
+            HostModeType hostMode,
+            IEnumerable<string>? corsOrigin,
+            bool? devModeDefaultAuth)
         {
             string[]? corsOriginArray = corsOrigin is null ? new string[] { } : corsOrigin.ToArray();
             Cors cors = new(Origins: corsOriginArray);
             AuthenticationConfig authenticationConfig = new(Provider: EasyAuthType.StaticWebApps.ToString());
-            return new HostGlobalSettings(hostMode, IsDevModeDefaultRequestAuthenticated: null, cors, authenticationConfig);
+            return new HostGlobalSettings(
+                Mode: hostMode,
+                IsDevModeDefaultRequestAuthenticated: devModeDefaultAuth,
+                Cors: cors,
+                Authentication: authenticationConfig);
         }
 
         /// <summary>

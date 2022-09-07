@@ -10,10 +10,12 @@ const parameters = {
 }
 
 
-// The batch and batchPerHost options override the default number of parallel requests and connections
+// The batch and batchPerHost options is used to configure the 
+// number of parallel requests and connections respectively
+// To ensure all the requests run in parallel, the value is set to number of requests performed.
 // The thresholds property declares the condition to determine success or failure of the test.
-// As this test is intended to validate the API responses, all the checks must succeed to declare 
-// the test successful.
+// As this test is intended to validate the correctness ofAPI responses, 
+// all the checks must succeed to declare the test successful.
 export const options = {
   batch: 5,
   batchPerHost: 5,
@@ -54,7 +56,7 @@ export default function () {
     'authorQuery1': { "data": { "author_by_pk": { "id": 124, "name": "Aniruddh" } } },
     'authorQuery2': { "value": [{ "id": 125, "name": "Aniruddh", "birthdate": "2001-01-01" }] }
   };
-
+ 
   const requests = {
     'bookQuery1': {
       method: 'POST',

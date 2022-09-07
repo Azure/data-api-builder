@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -184,7 +185,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IDictionary<string, object?> queryParams,
             PaginationMetadata paginationMetadata,
             ISqlMetadataProvider sqlMetadataProvider,
-            string EntityName)
+            string EntityName,
+            RuntimeConfigProvider runtimeConfigProvider)
         {
             if (queryParams.TryGetValue(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME, out object? continuationObject))
             {
@@ -195,7 +197,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         afterPlainText,
                         paginationMetadata,
                         sqlMetadataProvider,
-                        EntityName);
+                        EntityName,
+                        runtimeConfigProvider);
                 }
             }
 
@@ -209,7 +212,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public static IEnumerable<PaginationColumn> ParseAfterFromJsonString(string afterJsonString,
                                                                              PaginationMetadata paginationMetadata,
                                                                              ISqlMetadataProvider sqlMetadataProvider,
-                                                                             string entityName
+                                                                             string entityName,
+                                                                             RuntimeConfigProvider runtimeConfigProvider
                                                                              )
         {
             IEnumerable<PaginationColumn>? after;

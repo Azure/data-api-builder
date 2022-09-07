@@ -22,8 +22,7 @@ namespace Cli
                 Console.WriteLine($"Creating a new config file: {runtimeConfigFile}");
             }
 
-            // Throwing error when initializing the config file if it already exists,
-            // to avoid overwriting/wiping-out the existing configuration.
+            // File existence checked to avoid overwriting the existing configuration.
             if (File.Exists(runtimeConfigFile))
             {
                 Console.Error.Write($"Config file: {runtimeConfigFile} already exists. " +
@@ -31,6 +30,7 @@ namespace Cli
                 return false;
             }
 
+            // Creating a new json file with runtime configuration
             if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
             {
                 Console.Error.Write($"Failed to create the runtime config file.");

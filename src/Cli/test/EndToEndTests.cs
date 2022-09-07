@@ -254,9 +254,9 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Method to clean up the generated test config file
-    /// to avoid error while initializing the existing config file
-    /// as all the tests are generating config with the same name.
+    /// Removes the generated configuration file after each test
+    /// to avoid file name conflicts on subsequent test runs because the
+    /// file is statically named.
     /// </summary>
     [TestCleanup]
     public void CleanUp()

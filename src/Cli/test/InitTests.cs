@@ -145,7 +145,7 @@ namespace Cli.Tests
 
         /// <summary>
         /// Test to verify that an error is thrown when user tries to
-        /// initialize a config that already exists.
+        /// initialize a config with a file name that already exists.
         /// </summary>
         [TestMethod]
         public void EnsureFailureOnReInitializingExistingConfig()

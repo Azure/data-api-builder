@@ -1,4 +1,5 @@
 using System;
+using System.IdentityModel.Tokens.Jwt;
 using System.IO.Abstractions;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -297,6 +298,9 @@ namespace Azure.DataApiBuilder.Service
                     context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
                 }
             });
+
+            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
             app.UseAuthentication();
 
             // Add authentication middleware to the pipeline.

@@ -39,8 +39,6 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private const int NUMBER_OF_RESTRICTIONS = 4;
 
-        public bool DeveloperMode { get; }
-
         protected string ConnectionString { get; init; }
 
         protected IQueryBuilder SqlQueryBuilder { get; init; }
@@ -76,7 +74,6 @@ namespace Azure.DataApiBuilder.Service.Services
                 entity.TryPopulateSourceFields();
             }
 
-            DeveloperMode = runtimeConfigProvider.IsDeveloperMode();
             ConnectionString = runtimeConfig.ConnectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;

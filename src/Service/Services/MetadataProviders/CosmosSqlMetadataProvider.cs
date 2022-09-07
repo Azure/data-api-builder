@@ -153,8 +153,6 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
-        public bool DeveloperMode => throw new NotImplementedException();
-
         /// <inheritdoc />
         public string? GetPartitionKeyPath(string database, string container)
         {

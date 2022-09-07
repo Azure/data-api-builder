@@ -36,15 +36,13 @@ namespace Cli.Tests
       ""path"": ""/api""
     },
     ""graphql"": {
-      ""allow-introspection"": true,
       ""enabled"": true,
       ""path"": ""/graphql""
     },
     ""host"": {
       ""mode"": ""development"",
       ""cors"": {
-        ""origins"": [""http://localhost:3000"", ""http://nolocalhost:80""],
-        ""allow-credentials"": false
+        ""origins"": [""http://localhost:3000"", ""http://nolocalhost:80""]
       },
       ""authentication"": {
         ""provider"": ""StaticWebApps""
@@ -90,15 +88,13 @@ namespace Cli.Tests
       ""path"": ""/api""
     },
     ""graphql"": {
-      ""allow-introspection"": true,
       ""enabled"": true,
       ""path"": ""/graphql""
     },
     ""host"": {
       ""mode"": ""production"",
       ""cors"": {
-        ""origins"": [],
-        ""allow-credentials"": false
+        ""origins"": []
       },
       ""authentication"": {
         ""provider"": ""StaticWebApps""

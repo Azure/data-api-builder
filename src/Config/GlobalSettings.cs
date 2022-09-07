@@ -46,6 +46,7 @@ namespace Azure.DataApiBuilder.Config
         (bool Enabled = true,
          string Path = "/graphql",
          [property: JsonPropertyName("allow-introspection")]
+         [property: JsonIgnore]
          bool AllowIntrospection = true)
         : ApiSettings(Enabled, Path);
 
@@ -71,6 +72,7 @@ namespace Azure.DataApiBuilder.Config
         [property: JsonPropertyName("origins")]
         string[]? Origins,
         [property: JsonPropertyName("allow-credentials")]
+        [property: JsonIgnore]
         bool AllowCredentials = false);
 
     /// <summary>

@@ -256,15 +256,13 @@ namespace Cli.Tests
                   ""path"": ""/api""
                 },
                 ""graphql"": {
-                  ""allow-introspection"": true,
                   ""enabled"": true,
                   ""path"": ""/graphql""
                 },
                 ""host"": {
                   ""mode"": ""production"",
                   ""cors"": {
-                    ""origins"": [],
-                    ""allow-credentials"": false
+                    ""origins"": []
                   },
                   ""authentication"": {
                     ""provider"": ""StaticWebApps""

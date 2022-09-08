@@ -77,7 +77,7 @@ jobs:
       projects: '**/*Tests/*.csproj'
 
   - script: |
-      k6 run .\src\Service.Tests\ConcurrentTests\ParallelRestAndGraphQLQueries.js
+      k6 run ./src/Service.Tests/ConcurrentTests/ParallelRestAndGraphQLQueries.js
     displayName: Run k6 test
 
   - task: PublishCodeCoverageResults@1

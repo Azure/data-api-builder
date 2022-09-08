@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Service.Services
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
             new(StringComparer.InvariantCulture);
 
-        protected ILogger<ISqlMetadataProvider> SqlMetadataProviderLogger { get; }
+        private readonly ILogger<ISqlMetadataProvider> _logger;
 
         public SqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Services
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             QueryExecutor = queryExecutor;
-            SqlMetadataProviderLogger = logger;
+            _logger = logger;
         }
 
         /// <inheritdoc />

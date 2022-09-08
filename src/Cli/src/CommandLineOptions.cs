@@ -69,7 +69,7 @@ namespace Cli
         public IEnumerable<string>? CorsOrigin { get; }
 
         [Option("authenticate-devmode-requests", Default = null, Required = false,
-            HelpText = "Default Authentication mode for requests in development mode")]
+            HelpText = "boolean. Optional. Use when host-mode = Development. Treats all requests as authenticated in devmode when set to true.")]
         public string? DevModeDefaultAuth { get; }
     }
 

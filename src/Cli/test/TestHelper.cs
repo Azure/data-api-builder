@@ -301,14 +301,16 @@ namespace Cli.Tests
         public static string GetDefaultTestRuntimeSettingString(
             DatabaseType databaseType,
             HostModeType hostModeType = HostModeType.Production,
-            IEnumerable<string>? corsOrigins = null
+            IEnumerable<string>? corsOrigins = null,
+            bool? authenticateDevModeRequest = null
         )
         {
             Dictionary<string, object> runtimeSettingDict = new();
             Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(
                 dbType: databaseType,
                 hostMode: hostModeType,
-                corsOrigin: corsOrigins);
+                corsOrigin: corsOrigins,
+                devModeDefaultAuth: authenticateDevModeRequest);
 
             runtimeSettingDict.Add("runtime", defaultGlobalSetting);
 

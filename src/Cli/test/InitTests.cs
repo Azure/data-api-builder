@@ -23,7 +23,8 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: "outputfile");
+                config: "outputfile",
+                devModeDefaultAuth: "true");
 
             _basicRuntimeConfig =
             @"{
@@ -43,7 +44,8 @@ namespace Cli.Tests
                 _basicRuntimeConfig,
                 GetDefaultTestRuntimeSettingString(DatabaseType.mssql,
                     HostModeType.Development,
-                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" })
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                    authenticateDevModeRequest: true)
             );
             RunTest(options, expectedRuntimeConfig);
         }
@@ -63,7 +65,8 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: "outputfile");
+                config: "outputfile",
+                devModeDefaultAuth: "false");
 
             _basicRuntimeConfig =
             @"{
@@ -83,7 +86,8 @@ namespace Cli.Tests
                 _basicRuntimeConfig,
                 GetDefaultTestRuntimeSettingString(DatabaseType.mssql,
                     HostModeType.Development,
-                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" })
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                    authenticateDevModeRequest: false)
             );
             RunTest(options, expectedRuntimeConfig);
         }
@@ -102,7 +106,8 @@ namespace Cli.Tests
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: "outputfile");
+                config: "outputfile",
+                devModeDefaultAuth: null);
 
             _basicRuntimeConfig = @"{
                 ""$schema"": ""dab.draft-01.schema.json"",
@@ -149,7 +154,9 @@ namespace Cli.Tests
                 graphQLSchemaPath: graphQLSchema,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: "outputfile");
+                config: "outputfile",
+                devModeDefaultAuth: null
+                );
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }

@@ -242,13 +242,13 @@ namespace Azure.DataApiBuilder.Service
             bool isRuntimeReady = false;
             if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
             {
-                isRuntimeReady = PerformOnConfigChangeAsync(app, runtimeConfigProvider).Result;
+                isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
             }
             else
             {
                 runtimeConfigProvider.RuntimeConfigLoaded += async (sender, newConfig) =>
                 {
-                    isRuntimeReady = await PerformOnConfigChangeAsync(app, runtimeConfigProvider);
+                    isRuntimeReady = await PerformOnConfigChangeAsync(app);
                 };
             }
 
@@ -380,18 +380,19 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         /// <param name="app"></param>
         /// <returns>Indicates if the runtime is ready to accept requests.</returns>
-        private async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app, RuntimeConfigProvider runtimeConfigProvider)
+        private async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app)
         {
             try
             {
-                RuntimeConfig runtimeConfig = app.ApplicationServices.GetService<RuntimeConfigProvider>()!.GetRuntimeConfiguration();
+                RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
+                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
 
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
                 runtimeConfigValidator.ValidateConfig();
 
-                if (app.ApplicationServices.GetService<RuntimeConfigProvider>()!.IsDeveloperMode())
+                if (runtimeConfigProvider.IsDeveloperMode())
                 {
                     // Perform semantic validation in development mode only.
                     runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);

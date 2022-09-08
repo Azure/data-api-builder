@@ -49,6 +49,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
             _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
             SetUpSQLMetadataProvider();
             await ResetDbStateAsync();

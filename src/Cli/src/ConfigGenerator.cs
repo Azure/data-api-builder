@@ -42,10 +42,14 @@ namespace Cli
             runtimeConfigJson = string.Empty;
 
             DatabaseType dbType = options.DatabaseType;
-            DataSource dataSource = new(dbType)
+            DataSource dataSource = new(dbType);
+
+            // default value of connection-string should be used, i.e Empty-string
+            // if not explicitly provided by the user
+            if (options.ConnectionString is not null)
             {
-                ConnectionString = options.ConnectionString
-            };
+                dataSource.ConnectionString = options.ConnectionString;
+            }
 
             CosmosDbOptions? cosmosDbOptions = null;
             MsSqlOptions? msSqlOptions = null;

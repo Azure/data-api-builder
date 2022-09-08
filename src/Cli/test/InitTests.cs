@@ -193,7 +193,7 @@ namespace Cli.Tests
         /// but with different case.
         /// </summary>
         [DataRow("test-config.json", true, DisplayName = "FileName with all lowercase character.")]
-        [DataRow("test-config.json", false, DisplayName = "FileName with all uppercase character.")]
+        [DataRow("TEST-CONFIG.json", false, DisplayName = "FileName with all uppercase character.")]
         [DataTestMethod]
         public void EnsureFailureReInitializingExistingConfigWithDifferentCase(string fileName, bool isSuccess)
         {

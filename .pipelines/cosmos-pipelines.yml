@@ -49,6 +49,7 @@ steps:
 
 - script: |
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    brew install k6
     k6 version
   condition: eq( variables['Agent.OS'], 'Darwin' )
   displayName: Install k6 tool
@@ -59,6 +60,7 @@ steps:
     targetType: 'inline'
     script: |
       Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+      choco install k6
       k6 version
   condition: eq( variables['Agent.OS'], 'Windows_NT' )
 

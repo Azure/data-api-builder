@@ -44,11 +44,6 @@ jobs:
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu SQL Server Image Docker
 
-  - script: |
-      docker pull grafana/k6
-      docker run --rm -i grafana/k6 version
-    displayName: Install k6 tool
-
   - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.MsSql.json'
     inputs:
@@ -111,12 +106,6 @@ jobs:
       feedsToUse: config
       nugetConfigPath: Nuget.config
 
-  - task: DockerInstaller@0
-    displayName: Docker Installer
-    inputs:
-      dockerVersion: 17.09.0-ce
-      releaseType: stable
-
   - task: PowerShell@2
     displayName: Install SQL LocalDB
     inputs:
@@ -139,11 +128,6 @@ jobs:
       script: |
         SqlLocalDb.exe start MSSQLLocalDB
         SqlLocalDb.exe info "MSSQLLocalDB"
-
-  - script: |
-      docker pull grafana/k6
-      docker run --rm -i grafana/k6 version
-    displayName: Install k6 tool
 
   - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.MsSql.json'

@@ -44,6 +44,11 @@ jobs:
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu SQL Server Image Docker
 
+  - script: |
+      docker pull grafana/k6
+      docker run --rm -i grafana/k6 version
+    displayName: Install k6 tool
+
   - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.MsSql.json'
     inputs:
@@ -128,6 +133,11 @@ jobs:
       script: |
         SqlLocalDb.exe start MSSQLLocalDB
         SqlLocalDb.exe info "MSSQLLocalDB"
+
+  - script: |
+      winget install k6 
+      k6 version
+    displayName: Install k6 tool
 
   - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.MsSql.json'

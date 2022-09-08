@@ -41,16 +41,26 @@ steps:
     feedsToUse: config
     nugetConfigPath: Nuget.config
 
-- task: DockerInstaller@0
-  displayName: Docker Installer
-  inputs:
-    dockerVersion: 17.09.0-ce
-    releaseType: stable
+- script: |
+      docker pull grafana/k6
+      docker run --rm -i grafana/k6 version
+    condition: eq( variables['Agent.OS'], 'Linux' )
+    displayName: Install k6 tool
 
 - script: |
-    docker pull grafana/k6
-    docker run --rm -i grafana/k6 version
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      k6 version
+    condition: eq( variables['Agent.OS'], 'Darwin' )
+    displayName: Install k6 tool
+
+task: PowerShell@2
   displayName: Install k6 tool
+  inputs:
+    targetType: 'inline'
+    script: |
+      Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+      k6 version
+  condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
 - task: FileTransform@1.206.0
   displayName: 'Generate dab-config.Cosmos.json'

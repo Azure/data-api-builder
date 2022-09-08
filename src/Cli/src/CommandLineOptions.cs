@@ -27,7 +27,7 @@ namespace Cli
     {
         public InitOptions(
             DatabaseType databaseType,
-            string connectionString,
+            string? connectionString,
             string? cosmosDatabase,
             string? cosmosContainer,
             string? graphQLSchemaPath,

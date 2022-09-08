@@ -9,7 +9,6 @@ public class EndToEndTests
     /// <summary>
     /// Initializing config for cosmos DB.
     /// </summary>
-    private static string _testRuntimeConfig = "dab-config-test";
     [TestMethod]
     public void TestInitForCosmosDB()
     {
@@ -260,6 +259,20 @@ public class EndToEndTests
         }
 
         return runtimeConfig;
+    }
+
+    /// <summary>
+    /// Removes the generated configuration file after each test
+    /// to avoid file name conflicts on subsequent test runs because the
+    /// file is statically named.
+    /// </summary>
+    [TestCleanup]
+    public void CleanUp()
+    {
+        if (File.Exists(_testRuntimeConfig))
+        {
+            File.Delete(_testRuntimeConfig);
+        }
     }
 
 }

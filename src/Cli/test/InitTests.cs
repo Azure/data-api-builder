@@ -6,6 +6,8 @@ namespace Cli.Tests
     [TestClass]
     public class InitTests
     {
+        private string _basicRuntimeConfig = string.Empty;
+
         /// <summary>
         /// Test the simple init config for mssql database. PG and MySQL should be similar.
         /// There is no need for a separate test.
@@ -23,7 +25,7 @@ namespace Cli.Tests
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 config: "outputfile");
 
-            string basicRuntimeConfig =
+            _basicRuntimeConfig =
             @"{
                 ""$schema"": ""dab.draft-01.schema.json"",
                 ""data-source"": {
@@ -38,7 +40,7 @@ namespace Cli.Tests
 
             // Adding runtime settings to the above basic config
             string expectedRuntimeConfig = AddPropertiesToJson(
-                basicRuntimeConfig,
+                _basicRuntimeConfig,
                 GetDefaultTestRuntimeSettingString(DatabaseType.mssql,
                     HostModeType.Development,
                     new List<string>() { "http://localhost:3000", "http://nolocalhost:80" })
@@ -63,7 +65,7 @@ namespace Cli.Tests
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 config: "outputfile");
 
-            string basicRuntimeConfig =
+            _basicRuntimeConfig =
             @"{
                 ""$schema"": ""dab.draft-01.schema.json"",
                 ""data-source"": {
@@ -78,7 +80,7 @@ namespace Cli.Tests
 
             // Adding runtime settings to the above basic config
             string expectedRuntimeConfig = AddPropertiesToJson(
-                basicRuntimeConfig,
+                _basicRuntimeConfig,
                 GetDefaultTestRuntimeSettingString(DatabaseType.mssql,
                     HostModeType.Development,
                     new List<string>() { "http://localhost:3000", "http://nolocalhost:80" })
@@ -102,7 +104,7 @@ namespace Cli.Tests
                 corsOrigin: null,
                 config: "outputfile");
 
-            string basicRuntimeConfig = @"{
+            _basicRuntimeConfig = @"{
                 ""$schema"": ""dab.draft-01.schema.json"",
                 ""data-source"": {
                     ""database-type"": ""cosmos"",
@@ -118,7 +120,7 @@ namespace Cli.Tests
 
             // Adding runtime settings to the above basic config
             string expectedRuntimeConfig = AddPropertiesToJson(
-                basicRuntimeConfig,
+                _basicRuntimeConfig,
                 GetDefaultTestRuntimeSettingString(DatabaseType.cosmos));
             RunTest(options, expectedRuntimeConfig);
         }

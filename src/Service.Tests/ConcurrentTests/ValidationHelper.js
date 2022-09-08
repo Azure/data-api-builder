@@ -1,29 +1,32 @@
+
+// Function to determine if two objects which can contain nested objects are equal
+// in terms of the values present in each field within the objects.
 export const isDeepEqual = (expectedResponseJson, actualResponseJson) => {
 
-    const objKeys1 = Object.keys(expectedResponseJson);
-    const objKeys2 = Object.keys(actualResponseJson);
+  const keysInExpectedResponseJson = Object.keys(expectedResponseJson);
+  const keysInActualResponseJson = Object.keys(actualResponseJson);
+
+  if (keysInExpectedResponseJson.length != keysInActualResponseJson.length){
+      return false;
+  } 
+
+  for (var key of keysInExpectedResponseJson) {
+    const expectedResponseValueForCurrentKey = expectedResponseJson[key];
+    const actualResponseValueForCurrentKey = actualResponseJson[key];
+
+    const isObjects = isObject(expectedResponseValueForCurrentKey) && isObject(actualResponseValueForCurrentKey);
   
-    console.log(objKeys1);
-    console.log(objKeys2);
-    if (objKeys1.length !== objKeys2.length) return false;
-    
-    for (var key of objKeys1) {
-    
-      const value1 = expectedResponseJson[key];
-      const value2 = actualResponseJson[key];
-      console.log(key);    
-      console.log(value1);
-      console.log(value2);
-      const isObjects = isObject(value1) && isObject(value2);
-        console.log(isObjects);
-      if ((isObjects && !isDeepEqual(value1, value2)) || (!isObjects && value1 != value2)) {
-        return false;
-      }
+    // If the values for the current key are objects, a recursive check is performed 
+    // on all the fields present within the object. Otherwise, the values are compared. 
+    if ((isObjects && !isDeepEqual(expectedResponseValueForCurrentKey, actualResponseValueForCurrentKey)) 
+      || (!isObjects && expectedResponseValueForCurrentKey != actualResponseValueForCurrentKey)) {
+          return false;
     }
-    return true;
-  };
-  
+  }
+  return true;
+};
+
+// A helper function to check whether a given item is an object
 export const isObject = (object) => {
-    return object != null && typeof object == "object";
-  };
-  
+  return object != null && typeof object == "object";
+};

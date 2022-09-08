@@ -195,11 +195,11 @@ namespace Cli.Tests
         [TestMethod]
         public void EnsureFailureReInitializingExistingConfigWithDifferentCase()
         {
-            InitOptions initOptionsWithAllLowerCaseFileName = GetSampleInitOptionsWithFileName("case-test-config.json");
+            InitOptions initOptionsWithAllLowerCaseFileName = GetSampleInitOptionsWithFileName(_testRuntimeConfig);
             Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(initOptionsWithAllLowerCaseFileName));
 
             // Should FAIL - same file is used with different case
-            InitOptions initOptionsWithAllUpperCaseFileName = GetSampleInitOptionsWithFileName("CASE-TEST-CONFIG.json");
+            InitOptions initOptionsWithAllUpperCaseFileName = GetSampleInitOptionsWithFileName(_testRuntimeConfig.ToUpper());
             Assert.AreEqual(false, ConfigGenerator.TryGenerateConfig(initOptionsWithAllUpperCaseFileName));
         }
 

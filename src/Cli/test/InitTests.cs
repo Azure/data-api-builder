@@ -192,24 +192,15 @@ namespace Cli.Tests
         /// initialize a config with a file name that already exists
         /// but with different case.
         /// </summary>
-        [DataRow("test-config.json", true, DisplayName = "FileName with all lowercase character.")]
-        [DataRow("TEST-CONFIG.json", false, DisplayName = "FileName with all uppercase character.")]
-        [DataTestMethod]
-        public void EnsureFailureReInitializingExistingConfigWithDifferentCase(string fileName, bool isSuccess)
+        [TestMethod]
+        public void EnsureFailureReInitializingExistingConfigWithDifferentCase()
         {
-            InitOptions options = new(
-                databaseType: DatabaseType.mssql,
-                connectionString: "testconnectionstring",
-                cosmosDatabase: null,
-                cosmosContainer: null,
-                graphQLSchemaPath: null,
-                hostMode: HostModeType.Production,
-                corsOrigin: new List<string>() { },
-                config: fileName,
-                devModeDefaultAuth: null);
+            InitOptions initOptionsWithAllLowerCaseFileName = GetSampleInitOptionsWithFileName("test-config.json");
+            Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(initOptionsWithAllLowerCaseFileName));
 
-            // Verify config generation.
-            Assert.AreEqual(isSuccess, ConfigGenerator.TryGenerateConfig(options));
+            // Should FAIL - same file is used with different case
+            InitOptions initOptionsWithAllUpperCaseFileName = GetSampleInitOptionsWithFileName("TEST-CONFIG.json");
+            Assert.AreEqual(false, ConfigGenerator.TryGenerateConfig(initOptionsWithAllUpperCaseFileName));
         }
 
         /// <summary>
@@ -226,6 +217,27 @@ namespace Cli.Tests
             JObject actualJson = JObject.Parse(runtimeConfigJson);
 
             Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
+        }
+
+        /// <summary>
+        /// Returns an InitOptions object with sample database and connection-string
+        /// for a specified fileName.
+        /// </summary>
+        /// <param name="fileName">Name of the config file.</param>
+        private static InitOptions GetSampleInitOptionsWithFileName(string fileName)
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: "testconnectionstring",
+                cosmosDatabase: null,
+                cosmosContainer: null,
+                graphQLSchemaPath: null,
+                hostMode: HostModeType.Production,
+                corsOrigin: new List<string>() { },
+                config: fileName,
+                devModeDefaultAuth: null);
+
+            return options;
         }
 
         /// <summary>

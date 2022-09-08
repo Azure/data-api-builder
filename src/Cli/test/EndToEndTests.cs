@@ -9,10 +9,11 @@ public class EndToEndTests
     /// <summary>
     /// Initializing config for cosmos DB.
     /// </summary>
+    private static string _testRuntimeConfig = "dab-config-test";
     [TestMethod]
     public void TestInitForCosmosDB()
     {
-        string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmos",
+        string[] args = { "init", "-c", "dab-config-test", "--database-type", "cosmos",
                           "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "True", "--cosmos-database",
                           "graphqldb", "--cosmos-container", "planet", "--graphql-schema", "schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
@@ -48,7 +49,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestAddEntity()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--host-mode", "Development", "--database-type", "mssql", "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "false" };
+        string[] initArgs = { "init", "-c", "dab-config-test", "--host-mode", "Development", "--database-type", "mssql", "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "false" };
         Program.Main(initArgs);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -61,7 +62,7 @@ public class EndToEndTests
         Assert.AreEqual(HostModeType.Development, runtimeConfig.HostGlobalSettings.Mode);
         Assert.AreEqual(false, runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated);
 
-        string[] addArgs = {"add", "todo", "-c", _testRuntimeConfig, "--source", "s001.todo",
+        string[] addArgs = {"add", "todo", "-c", "dab-config-test", "--source", "s001.todo",
                             "--rest", "todo", "--graphql", "todo", "--permissions", "anonymous:*"};
         Program.Main(addArgs);
 
@@ -84,7 +85,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestAddEntityWithoutIEnumerables()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        string[] initArgs = { "init", "-c", "dab-config-test", "--database-type", "mssql", "--connection-string", "localhost:5000" };
         Program.Main(initArgs);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -92,7 +93,7 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
 
-        string[] addArgs = { "add", "book", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:*" };
+        string[] addArgs = { "add", "book", "-c", "dab-config-test", "--source", "s001.book", "--permissions", "anonymous:*" };
         Program.Main(addArgs);
 
         runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -117,12 +118,12 @@ public class EndToEndTests
     [TestMethod]
     public void TestConfigGeneratedAfterAddingEntityWithoutIEnumerables()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        string[] initArgs = { "init", "-c", "dab-config-test", "--database-type", "mssql", "--connection-string", "localhost:5000" };
         Program.Main(initArgs);
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
-        string[] addArgs = { "add", "book", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:*" };
+        string[] addArgs = { "add", "book", "-c", "dab-config-test", "--source", "s001.book", "--permissions", "anonymous:*" };
         Program.Main(addArgs);
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(GetCompleteConfigAfterAddingEntity), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
     }
@@ -134,7 +135,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestUpdateEntity()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type",
+        string[] initArgs = { "init", "-c", "dab-config-test", "--database-type",
                               "mssql", "--connection-string", "localhost:5000" };
         Program.Main(initArgs);
 
@@ -143,7 +144,7 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
 
-        string[] addArgs = {"add", "todo", "-c", _testRuntimeConfig,
+        string[] addArgs = {"add", "todo", "-c", "dab-config-test",
                             "--source", "s001.todo", "--rest", "todo",
                             "--graphql", "todo", "--permissions", "anonymous:*"};
         Program.Main(addArgs);
@@ -154,7 +155,7 @@ public class EndToEndTests
 
         // Adding another entity
         //
-        string[] addArgs_2 = {"add", "books", "-c", _testRuntimeConfig,
+        string[] addArgs_2 = {"add", "books", "-c", "dab-config-test",
                             "--source", "s001.books", "--rest", "books",
                             "--graphql", "books", "--permissions", "anonymous:*"};
         Program.Main(addArgs_2);
@@ -163,7 +164,7 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(2, runtimeConfig.Entities.Count()); // 1 more entity added
 
-        string[] updateArgs = {"update", "todo", "-c", _testRuntimeConfig,
+        string[] updateArgs = {"update", "todo", "-c", "dab-config-test",
                                 "--source", "s001.todos","--graphql", "true",
                                 "--permissions", "anonymous:create,delete",
                                 "--fields.include", "id,content", "--fields.exclude", "rating,level",
@@ -259,20 +260,6 @@ public class EndToEndTests
         }
 
         return runtimeConfig;
-    }
-
-    /// <summary>
-    /// Removes the generated configuration file after each test
-    /// to avoid file name conflicts on subsequent test runs because the
-    /// file is statically named.
-    /// </summary>
-    [TestCleanup]
-    public void CleanUp()
-    {
-        if (File.Exists(_testRuntimeConfig))
-        {
-            File.Delete(_testRuntimeConfig);
-        }
     }
 
 }

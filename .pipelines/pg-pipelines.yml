@@ -44,6 +44,17 @@ jobs:
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu Postgres Image Docker
 
+  - script: |
+      sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+      echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+      sudo apt-get update
+      sudo apt-get install k6
+    displayName: Install k6 tool
+
+  - script: |
+      k6 version
+    displayName: Check if k6 is installed
+
   - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.PostgreSql.json'
     inputs:
@@ -64,6 +75,10 @@ jobs:
       command: test
       arguments: '--filter "TestCategory=PostgreSql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
       projects: '**/*Tests/*.csproj'
+
+  - script: |
+      k6 run .\src\Service.Tests\ConcurrentTests\ParallelRestAndGraphQLQueries.js
+    displayName: Run k6 test
 
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish code coverage'

@@ -65,7 +65,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: "outputfile",
+                config: _testRuntimeConfig,
                 devModeDefaultAuth: "false");
 
             _basicRuntimeConfig =
@@ -195,11 +195,11 @@ namespace Cli.Tests
         [TestMethod]
         public void EnsureFailureReInitializingExistingConfigWithDifferentCase()
         {
-            InitOptions initOptionsWithAllLowerCaseFileName = GetSampleInitOptionsWithFileName("test-config.json");
+            InitOptions initOptionsWithAllLowerCaseFileName = GetSampleInitOptionsWithFileName("case-test-config.json");
             Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(initOptionsWithAllLowerCaseFileName));
 
             // Should FAIL - same file is used with different case
-            InitOptions initOptionsWithAllUpperCaseFileName = GetSampleInitOptionsWithFileName("TEST-CONFIG.json");
+            InitOptions initOptionsWithAllUpperCaseFileName = GetSampleInitOptionsWithFileName("CASE-TEST-CONFIG.json");
             Assert.AreEqual(false, ConfigGenerator.TryGenerateConfig(initOptionsWithAllUpperCaseFileName));
         }
 

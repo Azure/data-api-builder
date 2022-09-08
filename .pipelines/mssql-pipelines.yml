@@ -111,6 +111,12 @@ jobs:
       feedsToUse: config
       nugetConfigPath: Nuget.config
 
+  - task: DockerInstaller@0
+    displayName: Docker Installer
+    inputs:
+      dockerVersion: 17.09.0-ce
+      releaseType: stable
+
   - task: PowerShell@2
     displayName: Install SQL LocalDB
     inputs:
@@ -135,8 +141,8 @@ jobs:
         SqlLocalDb.exe info "MSSQLLocalDB"
 
   - script: |
-      winget install k6 
-      k6 version
+      docker pull grafana/k6
+      docker run --rm -i grafana/k6 version
     displayName: Install k6 tool
 
   - task: FileTransform@1.206.0

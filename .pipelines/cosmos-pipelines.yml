@@ -42,18 +42,18 @@ steps:
     nugetConfigPath: Nuget.config
 
 - script: |
-      docker pull grafana/k6
-      docker run --rm -i grafana/k6 version
-    condition: eq( variables['Agent.OS'], 'Linux' )
-    displayName: Install k6 tool
+    docker pull grafana/k6
+    docker run --rm -i grafana/k6 version
+  condition: eq( variables['Agent.OS'], 'Linux' )
+  displayName: Install k6 tool
 
 - script: |
-      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-      k6 version
-    condition: eq( variables['Agent.OS'], 'Darwin' )
-    displayName: Install k6 tool
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    k6 version
+  condition: eq( variables['Agent.OS'], 'Darwin' )
+  displayName: Install k6 tool
 
-task: PowerShell@2
+- task: PowerShell@2
   displayName: Install k6 tool
   inputs:
     targetType: 'inline'

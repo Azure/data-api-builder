@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataApiBuilder.Service.AuthenticationHelpers.StaticWebAppsAuthentication;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication
 {
@@ -75,6 +77,89 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Assert.AreEqual(expected: AuthorizationType.Authenticated.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
+        }
+
+        /// <summary>
+        /// Ensures SWA token payload claims are processed by
+        /// validating that those claims are present
+        /// on the authenticated .NET ClaimsPrincipal object.
+        /// Demonstrates using the immutable claim values tid and oid
+        /// as a combined key for uniquely identifying the API's data
+        /// and determining whether a user should be granted access to that data.
+        /// </summary>
+        /// <seealso cref="https://docs.microsoft.com/azure/active-directory/develop/access-tokens#validate-user-permission"/>
+        [TestMethod]
+        public async Task TestStaticWebAppsEasyAuthTokenClaims()
+        {
+            string objectIdClaimType = "oid";
+            string objectId = "f35eaa76-b8e6-4c7c-99a2-5aeeeee9ba58";
+
+            string tenantIdClaimType = "tid";
+            string tenantId = "8f902aef-2c06-42c9-a3d0-bc31f04a3dca";
+
+            List<SWAPrincipalClaim> payloadClaims = new();
+            payloadClaims.Add(new SWAPrincipalClaim() { Typ = objectIdClaimType, Val = objectId });
+            payloadClaims.Add(new SWAPrincipalClaim() { Typ = tenantIdClaimType, Val = tenantId });
+
+            string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(
+                addAuthenticated: true,
+                claims: payloadClaims
+                );
+
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
+                generatedToken,
+                EasyAuthType.StaticWebApps);
+
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(expected: true, actual: postMiddlewareContext.User.HasClaim(type: objectIdClaimType, value: objectId));
+            Assert.AreEqual(expected: true, actual: postMiddlewareContext.User.HasClaim(type: tenantIdClaimType, value: tenantId));
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+        }
+
+        /// <summary>
+        /// Validates that null claim type and/or null claim value
+        /// are not processed claims on the .NET ClaimsPrincipal object,
+        /// due lack of null claim type/ claim value support on the ClaimsPrincipal.
+        /// Validates that empty string for claim type and/or value
+        /// is processed successfully.
+        /// </summary>
+        /// <param name="claimType">string representation of claim type</param>
+        /// <param name="claimValue">string representation of claim value</param>
+        /// <seealso cref="https://docs.microsoft.com/dotnet/api/system.security.claims.claim.type?view=net-6.0"/>
+        /// <seealso cref="https://docs.microsoft.com/dotnet/api/system.security.claims.claim.value?view=net-6.0"/>
+        [DataTestMethod]
+        [DataRow(null, null, false, DisplayName = "Claim type/value null - not processed")]
+        [DataRow("tid", null, false, DisplayName = "Claim value null -  not processed")]
+        [DataRow(null, "8f902aef-2c06-42c9-a3d0-bc31f04a3dca", false, DisplayName = "Claim type null - not processed")]
+        [DataRow("", "8f902aef-2c06-42c9-a3d0-bc31f04a3dca", true, DisplayName = "Claim type empty string - will process")]
+        [DataRow("tid", "", true, DisplayName = "Claim value empty string - will process")]
+        [DataRow("", "", true, DisplayName = "Claim type/value empty string -  will process")]
+
+        public async Task TestStaticWebAppsEasyAuth_IncompleteTokenClaims(string? claimType, string? claimValue, bool expectProcessedClaim)
+        {
+            List<SWAPrincipalClaim> payloadClaims = new();
+            payloadClaims.Add(new SWAPrincipalClaim() { Typ = claimType, Val = claimValue });
+
+            string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(
+                addAuthenticated: true,
+                claims: payloadClaims
+                );
+
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
+                generatedToken,
+                EasyAuthType.StaticWebApps);
+
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
+
+            Assert.AreEqual(
+                expected: expectProcessedClaim,
+                actual: postMiddlewareContext.User.Claims
+                    .Where(claim => claim.Type == claimType && claim.Value == claimValue)
+                    .Any());
+
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
         }
 
         /// <summary>

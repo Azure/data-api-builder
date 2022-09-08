@@ -8,8 +8,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
+    /// <summary>
+    /// Specialized QueryExecutor for MsSql mainly providing methods to
+    /// handle connecting to the database with a managed identity.
+    /// /// </summary>
     public class MsSqlQueryExecutor : QueryExecutor<SqlConnection>
     {
+        // This is the same scope for any Azure SQL database that is
+        // required to request a default azure credential access token
+        // for a managed identity.
         public const string DATABASE_SCOPE = @"https://database.windows.net/.default";
 
         /// <summary>
@@ -62,7 +69,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private bool IsDefaultAccessTokenValid()
         {
             return _defaultAccessToken is not null &&
-                ((AccessToken)_defaultAccessToken!).ExpiresOn.CompareTo(System.DateTimeOffset.Now) > 0;
+                ((AccessToken)_defaultAccessToken).ExpiresOn.CompareTo(System.DateTimeOffset.Now) > 0;
         }
 
         /// <summary>
@@ -85,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     await AzureCredential.GetTokenAsync(
                         new TokenRequestContext(new[] { DATABASE_SCOPE }));
 
-                return ((AccessToken)_defaultAccessToken!).Token;
+                return _defaultAccessToken?.Token;
             }
 
             return null;

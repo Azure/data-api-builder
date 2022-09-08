@@ -806,7 +806,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Using a data adapter, obtains the schema of the given table name
         /// and adds the corresponding entity in the data set.
         /// </summary>
-        protected async Task<DataTable> FillSchemaForTableAsync(
+        private async Task<DataTable> FillSchemaForTableAsync(
             string schemaName,
             string tableName)
         {
@@ -861,7 +861,7 @@ namespace Azure.DataApiBuilder.Service.Services
             return dataTable[0];
         }
 
-        protected string GetTablePrefix(string databaseName, string schemaName)
+        private string GetTablePrefix(string databaseName, string schemaName)
         {
             StringBuilder tablePrefix = new(SqlQueryBuilder.QuoteIdentifier(databaseName));
             if (!string.IsNullOrEmpty(schemaName))

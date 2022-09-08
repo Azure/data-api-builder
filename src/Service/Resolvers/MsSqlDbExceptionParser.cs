@@ -8,13 +8,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     {
         public MsSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
         {
-            badRequestErrorCodes = new() { 515, 547 };
+            // For details about error codes please refer to:
+            // https://docs.microsoft.com/en-us/sql/relational-databases/errors-events/database-engine-events-and-errors?view=sql-server-ver16
+            badRequestErrorCodes = new() { "513", "515", "544", "545", "547", "548" };
         }
 
         /// <inheritdoc/>
         protected override bool IsBadRequestException(DbException e)
         {
-            int errorNumber = ((SqlException)e).Number;
+            string errorNumber = ((SqlException)e).Number.ToString();
             return badRequestErrorCodes!.Contains(errorNumber);
         }
     }

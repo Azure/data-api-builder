@@ -6,7 +6,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     {
         public MySqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
         {
-            badRequestErrorCodes = new() { 23000 };
+            // For details about error codes please refer to: https://mariadb.com/kb/en/mariadb-error-codes/
+            badRequestErrorCodes = new() { "23000" };
         }
     }
 }

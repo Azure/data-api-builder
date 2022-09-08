@@ -176,6 +176,32 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Test to verify that error is thrown when user tries to
+        /// initialize a config with a file name that already exists
+        /// but with different case.
+        /// </summary>
+        [DataRow("test-config.json", DisplayName = "FileName with all lowercase character.")]
+        [DataRow("TEST-CONFIG.json", DisplayName = "FileName with all uppercase character.")]
+        [DataTestMethod]
+        public void EnsureFailureReInitializingExistingConfigWithDifferentCase(string fileName)
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: "testconnectionstring",
+                cosmosDatabase: null,
+                cosmosContainer: null,
+                graphQLSchemaPath: null,
+                hostMode: HostModeType.Production,
+                corsOrigin: new List<string>() { },
+                config: fileName,
+                devModeDefaultAuth: null);
+
+            // Unable to generate the config as it already exists
+            // with same name possibly in a different case.
+            Assert.AreEqual(false, ConfigGenerator.TryGenerateConfig(options));
+        }
+
+        /// <summary>
         /// Call ConfigGenerator.TryCreateRuntimeConfig and verify json result.
         /// </summary>
         /// <param name="options">InitOptions.</param>
@@ -190,5 +216,19 @@ namespace Cli.Tests
 
             Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
         }
+
+    /// <summary>
+    /// Removes the generated configuration file after each test
+    /// to avoid file name conflicts on subsequent test runs because the
+    /// file is statically named.
+    /// </summary>
+    [TestCleanup]
+    public void CleanUp()
+    {
+        if (File.Exists(_testRuntimeConfig))
+        {
+            File.Delete(_testRuntimeConfig);
+        }
+    }
     }
 }

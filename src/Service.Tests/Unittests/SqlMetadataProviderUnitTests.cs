@@ -50,10 +50,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DatabaseEngine = TestCategory.POSTGRESQL;
             _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             SetUpSQLMetadataProvider();
             await ResetDbStateAsync();
-            await _sqlMetadataProvider.InitializeAsync(_runtimeConfigProvider);
+            await _sqlMetadataProvider.InitializeAsync();
         }
 
         /// <summary>
@@ -113,7 +112,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             try
             {
-                await _sqlMetadataProvider.InitializeAsync(_runtimeConfigProvider);
+                await _sqlMetadataProvider.InitializeAsync();
             }
             catch (DataApiBuilderException ex)
             {

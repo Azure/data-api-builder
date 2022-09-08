@@ -45,6 +45,8 @@ namespace Azure.DataApiBuilder.Service.Services
 
         protected DataSet EntitiesDataSet { get; init; }
 
+        private RuntimeConfigProvider _runtimeConfigProvider;
+
         private Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
 
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
@@ -66,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Services
             ILogger<ISqlMetadataProvider> logger)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
-
+            _runtimeConfigProvider = runtimeConfigProvider;
             _databaseType = runtimeConfig.DatabaseType;
             _entities = runtimeConfig.Entities;
             foreach (Entity entity in _entities.Values)
@@ -171,11 +173,11 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        public async Task InitializeAsync(RuntimeConfigProvider runtimeConfigProvider)
+        public async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
             GenerateDatabaseObjectForEntities();
-            await PopulateObjectDefinitionForEntities(runtimeConfigProvider);
+            await PopulateObjectDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();
             GenerateRestPathToEntityMap();
             InitODataParser();
@@ -616,7 +618,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Populates table definition for entities specified as tables or views
         /// Populates procedure definition for entities specified as stored procedures
         /// </summary>
-        private async Task PopulateObjectDefinitionForEntities(RuntimeConfigProvider runtimeConfigProvider)
+        private async Task PopulateObjectDefinitionForEntities()
         {
             foreach ((string entityName, Entity procedureEntity) in _entities)
             {
@@ -639,7 +641,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
             }
 
-            await PopulateForeignKeyDefinitionAsync(runtimeConfigProvider);
+            await PopulateForeignKeyDefinitionAsync();
 
         }
 
@@ -934,7 +936,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="schemaName">Name of the default schema.</param>
         /// <param name="tables">Dictionary of all tables.</param>
-        private async Task PopulateForeignKeyDefinitionAsync(RuntimeConfigProvider runtimeConfigProvider)
+        private async Task PopulateForeignKeyDefinitionAsync()
         {
             // For each database object, that has a relationship metadata,
             // build the array storing all the schemaNames(for now the defaultSchemaName)
@@ -952,7 +954,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =
-                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tableNames.Count(), runtimeConfigProvider.IsDeveloperMode());
+                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tableNames.Count(), _runtimeConfigProvider.IsDeveloperMode());
 
             // Build the parameters dictionary for the foreign key info query
             // consisting of all schema names and table names.

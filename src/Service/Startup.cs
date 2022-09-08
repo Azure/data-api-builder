@@ -406,7 +406,7 @@ namespace Azure.DataApiBuilder.Service
 
                 if (sqlMetadataProvider is not null)
                 {
-                    await sqlMetadataProvider.InitializeAsync(runtimeConfigProvider);
+                    await sqlMetadataProvider.InitializeAsync();
                 }
 
                 _logger.LogInformation($"Successfully completed runtime initialization.");

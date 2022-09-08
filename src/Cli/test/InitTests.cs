@@ -192,10 +192,10 @@ namespace Cli.Tests
         /// initialize a config with a file name that already exists
         /// but with different case.
         /// </summary>
-        [DataRow("test-config.json", DisplayName = "FileName with all lowercase character.")]
-        [DataRow("TEST-CONFIG.json", DisplayName = "FileName with all uppercase character.")]
+        [DataRow("test-config.json", true, DisplayName = "FileName with all lowercase character.")]
+        [DataRow("TEST-CONFIG.json", false, DisplayName = "FileName with all uppercase character.")]
         [DataTestMethod]
-        public void EnsureFailureReInitializingExistingConfigWithDifferentCase(string fileName)
+        public void EnsureFailureReInitializingExistingConfigWithDifferentCase(string fileName, bool isSuccess)
         {
             InitOptions options = new(
                 databaseType: DatabaseType.mssql,
@@ -210,7 +210,7 @@ namespace Cli.Tests
 
             // Unable to generate the config as it already exists
             // with same name possibly in a different case.
-            Assert.AreEqual(false, ConfigGenerator.TryGenerateConfig(options));
+            Assert.AreEqual(isSuccess, ConfigGenerator.TryGenerateConfig(options));
         }
 
         /// <summary>

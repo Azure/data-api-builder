@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
+using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -20,10 +21,12 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     public class AuthenticationMiddleware
     {
         private readonly RequestDelegate _nextMiddleware;
+        private readonly RuntimeConfigProvider _runtimeConfigurationProvider;
 
-        public AuthenticationMiddleware(RequestDelegate next)
+        public AuthenticationMiddleware(RequestDelegate next, RuntimeConfigProvider runtimeConfigurationProvider)
         {
             _nextMiddleware = next;
+            _runtimeConfigurationProvider = runtimeConfigurationProvider;
         }
 
         /// <summary>
@@ -45,7 +48,13 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             // authentication result.
             httpContext.User = authNResult.Principal!;
 
-            string clientRoleHeader = authNResult.Succeeded
+            // A request can be authenticated in 2 cases:
+            // 1. When the request has a valid jwt/easyauth token,
+            // 2. When in development mode, we want the default state of request as authenticated.
+            bool isAuthenticatedRequest = authNResult.Succeeded ||
+                _runtimeConfigurationProvider.IsAuthenticatedDevModeRequest();
+
+            string clientRoleHeader = isAuthenticatedRequest
                 ? AuthorizationType.Authenticated.ToString()
                 : AuthorizationType.Anonymous.ToString();
 
@@ -58,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     clientRoleHeader))
             {
                 // if we are unable to add the role, it means it already exists.
-                if (authNResult.Succeeded)
+                if (isAuthenticatedRequest)
                 {
                     // honor and pick up the existing role value.
                     clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];

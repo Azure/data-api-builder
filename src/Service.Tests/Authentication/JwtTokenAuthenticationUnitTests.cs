@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.Authorization;
+using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -20,6 +21,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication
 {
@@ -50,10 +52,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// library(Microsoft.AspNetCore.Authentication.JwtBearer) validation methods
         /// </summary>
         [DataTestMethod]
-        [DataRow(false, null, DisplayName = "Authenticated role - X-MS-API-ROLE is not sent")]
-        [DataRow(true, "author", DisplayName = "Authenticated role - existing X-MS-API-ROLE is honored")]
+        [DataRow(null, DisplayName = "Authenticated role - X-MS-API-ROLE is not sent")]
+        [DataRow("author", DisplayName = "Authenticated role - existing X-MS-API-ROLE is honored")]
         [TestMethod]
-        public async Task TestValidToken(bool sendClientRoleHeader, string clientRoleHeader)
+        public async Task TestValidToken(string clientRoleHeader)
         {
             RsaSecurityKey key = new(RSA.Create(2048));
             string token = CreateJwt(
@@ -68,11 +70,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 await SendRequestAndGetHttpContextState(
                     key,
                     token,
-                    sendClientRoleHeader,
                     clientRoleHeader);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
-            Assert.AreEqual(expected: sendClientRoleHeader ? clientRoleHeader : AuthorizationType.Authenticated.ToString(),
+            Assert.AreEqual(
+                expected: (int)HttpStatusCode.OK,
+                actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(
+                expected: clientRoleHeader is not null ? clientRoleHeader : AuthorizationType.Authenticated.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -83,18 +87,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// </summary>
         /// <returns></returns>
         [DataTestMethod]
-        [DataRow(false, null, DisplayName = "Anonymous role - X-MS-API-ROLE is not sent")]
-        [DataRow(true, "author", DisplayName = "Anonymous role - existing X-MS-API-ROLE is not honored")]
+        [DataRow(null, DisplayName = "Anonymous role - X-MS-API-ROLE is not sent")]
+        [DataRow("author", DisplayName = "Anonymous role - existing X-MS-API-ROLE is not honored")]
         [TestMethod]
-        public async Task TestMissingJwtToken(bool sendClientRoleHeader, string clientRoleHeader)
+        public async Task TestMissingJwtToken(string clientRoleHeader)
         {
             RsaSecurityKey key = new(RSA.Create(2048));
             string token = null;
             HttpContext postMiddlewareContext
-                = await SendRequestAndGetHttpContextState(key, token, sendClientRoleHeader, clientRoleHeader);
+                = await SendRequestAndGetHttpContextState(key, token, clientRoleHeader);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
+            Assert.AreEqual(
+                expected: (int)HttpStatusCode.OK,
+                actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(
+                expected: AuthorizationType.Anonymous.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -115,9 +122,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 );
 
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(
+                expected: (int)HttpStatusCode.OK,
+                actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
+            Assert.AreEqual(
+                expected: AuthorizationType.Anonymous.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -141,7 +151,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
+            Assert.AreEqual(
+                expected: AuthorizationType.Anonymous.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -159,7 +170,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
+            Assert.AreEqual(
+                expected: AuthorizationType.Anonymous.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -177,7 +189,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
+            Assert.AreEqual(
+                expected: AuthorizationType.Anonymous.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -265,6 +278,45 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 ignoreCase: true);
         }
 
+        /// <summary>
+        /// Test to validate that the request is appropriately treated as anonymous/authenticated
+        /// in development mode depending on the value feature switch we have in config file.
+        /// </summary>
+        /// <param name="treatDevModeRequestAsAuthenticated">Boolean value indicating whether to treat the
+        /// request as authenticated by default.</param>
+        /// <param name="expectedClientRoleHeader">Expected value of X-MS-API-ROLE header.</param>
+        /// <param name="clientRoleHeader">Value of X-MS-API-ROLE header specified in request.</param>
+        /// <returns></returns>
+        [DataTestMethod]
+        [DataRow(true, "Authenticated", null,
+            DisplayName = "Jwt- Treat request as authenticated in development mode")]
+        [DataRow(false, "Anonymous", null,
+            DisplayName = "Jwt- Treat request as anonymous in development mode")]
+        [DataRow(true, "author", "author",
+            DisplayName = "Jwt- Treat request as authenticated in development mode " +
+            "and honor the clienRoleHeader")]
+        [DataRow(true, "Anonymous", "Anonymous",
+            DisplayName = "Jwt- Treat request as authenticated in development mode " +
+            "and honor the clienRoleHeader even when specified as anonymous")]
+        public async Task TestAuthenticatedRequestInDevelopmentModeJwt(
+            bool treatDevModeRequestAsAuthenticated,
+            string expectedClientRoleHeader,
+            string clientRoleHeader)
+        {
+            RsaSecurityKey key = new(RSA.Create(2048));
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(key: key,
+                    token: null,
+                    clientRoleHeader: clientRoleHeader,
+                    treatDevModeRequestAsAuthenticated: treatDevModeRequestAsAuthenticated);
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.AreEqual(
+                expected: (int)HttpStatusCode.OK,
+                actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(
+                expected: expectedClientRoleHeader,
+                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString());
+        }
         #endregion
 
         #region Helper Methods
@@ -274,8 +326,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// </summary>
         /// <param name="key"></param>
         /// <returns>IHost</returns>
-        private static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key)
+        private static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key,
+            bool treatDevModeRequestAsAuthenticated)
         {
+            // Setup RuntimeConfigProvider object for the pipeline.
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            Mock<RuntimeConfigPath> runtimeConfigPath = new();
+            Mock<RuntimeConfigProvider> runtimeConfigProvider = new(runtimeConfigPath.Object,
+                configProviderLogger.Object);
+            runtimeConfigProvider.Setup(x => x.IsAuthenticatedDevModeRequest()).
+                Returns(treatDevModeRequestAsAuthenticated);
+
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>
                 {
@@ -306,6 +367,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                                     };
                                 });
                             services.AddAuthorization();
+                            services.AddSingleton(runtimeConfigProvider.Object);
                         })
                         .ConfigureLogging(o =>
                         {
@@ -342,10 +404,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         private static async Task<HttpContext> SendRequestAndGetHttpContextState(
             SecurityKey key,
             string token,
-            bool sendClientRoleHeader = false,
-            string? clientRoleHeader = null)
+            string? clientRoleHeader = null,
+            bool treatDevModeRequestAsAuthenticated = false)
         {
-            using IHost host = await CreateWebHostCustomIssuer(key);
+            using IHost host = await CreateWebHostCustomIssuer(key, treatDevModeRequestAsAuthenticated);
             TestServer server = host.GetTestServer();
 
             return await server.SendAsync(context =>
@@ -357,7 +419,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                     context.Request.Headers.Add(authHeader);
                 }
 
-                if (sendClientRoleHeader)
+                if (clientRoleHeader is not null)
                 {
                     KeyValuePair<string, StringValues> easyAuthHeader =
                         new(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader);

@@ -27,13 +27,14 @@ namespace Cli
     {
         public InitOptions(
             DatabaseType databaseType,
-            string connectionString,
+            string? connectionString,
             string? cosmosDatabase,
             string? cosmosContainer,
             string? graphQLSchemaPath,
             HostModeType hostMode,
             IEnumerable<string>? corsOrigin,
-            string config)
+            string config,
+            string? devModeDefaultAuth)
             : base(config)
         {
             DatabaseType = databaseType;
@@ -43,13 +44,14 @@ namespace Cli
             GraphQLSchemaPath = graphQLSchemaPath;
             HostMode = hostMode;
             CorsOrigin = corsOrigin;
+            DevModeDefaultAuth = devModeDefaultAuth;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmos, mysql, postgresql")]
         public DatabaseType DatabaseType { get; }
 
-        [Option("connection-string", Required = true, HelpText = "Connection details to connect to the database.")]
-        public string ConnectionString { get; }
+        [Option("connection-string", Required = false, HelpText = "(Default: '') Connection details to connect to the database.")]
+        public string? ConnectionString { get; }
 
         [Option("cosmos-database", Required = false, HelpText = "Database name for Cosmos DB.")]
         public string? CosmosDatabase { get; }
@@ -65,6 +67,10 @@ namespace Cli
 
         [Option("cors-origin", Separator = ',', Required = false, HelpText = "Specify the list of allowed origins.")]
         public IEnumerable<string>? CorsOrigin { get; }
+
+        [Option("authenticate-devmode-requests", Default = null, Required = false,
+            HelpText = "boolean. Optional. Use when host-mode = Development. Treats all requests as authenticated in devmode when set to true.")]
+        public string? DevModeDefaultAuth { get; }
     }
 
     /// <summary>

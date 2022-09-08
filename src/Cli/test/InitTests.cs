@@ -193,7 +193,7 @@ namespace Cli.Tests
         /// but with different case.
         /// </summary>
         [DataRow("test-config.json", true, DisplayName = "FileName with all lowercase character.")]
-        [DataRow("TEST-CONFIG.json", false, DisplayName = "FileName with all uppercase character.")]
+        [DataRow("test-config.json", false, DisplayName = "FileName with all uppercase character.")]
         [DataTestMethod]
         public void EnsureFailureReInitializingExistingConfigWithDifferentCase(string fileName, bool isSuccess)
         {
@@ -208,8 +208,7 @@ namespace Cli.Tests
                 config: fileName,
                 devModeDefaultAuth: null);
 
-            // Unable to generate the config as it already exists
-            // with same name possibly in a different case.
+            // Verify config generation.
             Assert.AreEqual(isSuccess, ConfigGenerator.TryGenerateConfig(options));
         }
 

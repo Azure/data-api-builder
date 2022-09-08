@@ -127,7 +127,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (!string.IsNullOrEmpty(runtimeConfigJson) &&
                 RuntimeConfig.TryGetDeserializedConfig(
                     runtimeConfigJson,
-                    out runtimeConfig))
+                    out runtimeConfig,
+                    ConfigProviderLogger!))
             {
                 runtimeConfig!.DetermineGlobalSettings();
                 runtimeConfig!.DetermineGraphQLEntityNames();
@@ -217,7 +218,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             if (RuntimeConfig.TryGetDeserializedConfig(
                     configuration,
-                    out RuntimeConfig? runtimeConfig))
+                    out RuntimeConfig? runtimeConfig,
+                    ConfigProviderLogger!))
             {
                 RuntimeConfiguration = runtimeConfig;
                 RuntimeConfiguration!.DetermineGlobalSettings();

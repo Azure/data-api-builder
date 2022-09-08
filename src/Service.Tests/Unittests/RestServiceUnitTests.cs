@@ -125,6 +125,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Mock<ILogger<ISqlMetadataProvider>> sqlMetadataLogger = new();
             Mock<ILogger<SqlQueryEngine>> queryEngineLogger = new();
             Mock<ILogger<SqlMutationEngine>> mutationEngingLogger = new();
+            Mock<ILogger<AuthorizationResolver>> authLogger = new();
 
             QueryExecutor<SqlConnection> queryExecutor = new(
                 runtimeConfigProvider,
@@ -145,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             DefaultHttpContext context = new();
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
-            AuthorizationResolver authorizationResolver = new(runtimeConfigProvider, sqlMetadataProvider.Object);
+            AuthorizationResolver authorizationResolver = new(runtimeConfigProvider, sqlMetadataProvider.Object, authLogger.Object);
 
             SqlQueryEngine queryEngine = new(
                 queryExecutor,
@@ -153,7 +154,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                 sqlMetadataProvider.Object,
                 httpContextAccessor.Object,
                 authorizationResolver,
-                queryEngineLogger.Object);
+                queryEngineLogger.Object,
+                runtimeConfigProvider);
 
             SqlMutationEngine mutationEngine =
                 new(

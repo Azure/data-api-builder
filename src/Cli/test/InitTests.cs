@@ -21,7 +21,8 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                devModeDefaultAuth: "true");
 
             string expectedRuntimeConfig =
             @"{
@@ -45,6 +46,7 @@ namespace Cli.Tests
     },
     ""host"": {
       ""mode"": ""development"",
+      ""authenticate-devmode-requests"": true,
       ""cors"": {
         ""origins"": [""http://localhost:3000"", ""http://nolocalhost:80""],
         ""allow-credentials"": false
@@ -74,7 +76,8 @@ namespace Cli.Tests
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                devModeDefaultAuth: "false");
 
             string expectedRuntimeConfig = @"{
   ""$schema"": ""dab.draft-01.schema.json"",
@@ -99,6 +102,7 @@ namespace Cli.Tests
     },
     ""host"": {
       ""mode"": ""production"",
+      ""authenticate-devmode-requests"": false,
       ""cors"": {
         ""origins"": [],
         ""allow-credentials"": false
@@ -138,7 +142,9 @@ namespace Cli.Tests
                 graphQLSchemaPath: graphQLSchema,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                devModeDefaultAuth: null
+                );
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }
@@ -158,7 +164,8 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                devModeDefaultAuth: null);
 
             // Config generated successfully for the first time.
             Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(options));

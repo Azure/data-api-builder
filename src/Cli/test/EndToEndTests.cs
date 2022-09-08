@@ -13,11 +13,13 @@ public class EndToEndTests
     public void TestInitForCosmosDB()
     {
         string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmos",
-                          "--connection-string", "localhost:5000", "--cosmos-database",
+                          "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "True", "--cosmos-database",
                           "graphqldb", "--cosmos-container", "planet", "--graphql-schema", "schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+        runtimeConfig!.DetermineGlobalSettings();
+        runtimeConfig!.DetermineGraphQLEntityNames();
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(DatabaseType.cosmos, runtimeConfig.DatabaseType);
@@ -26,6 +28,7 @@ public class EndToEndTests
         Assert.AreEqual("planet", runtimeConfig.CosmosDb.Container);
         Assert.AreEqual("schema.gql", runtimeConfig.CosmosDb.GraphQLSchemaPath);
         Assert.IsNotNull(runtimeConfig.RuntimeSettings);
+        Assert.AreEqual(true, runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated);
         JsonElement jsonRestSettings = (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Rest];
 
         RestGlobalSettings? restGlobalSettings = JsonSerializer.Deserialize<RestGlobalSettings>(jsonRestSettings, RuntimeConfig.SerializerOptions);
@@ -45,13 +48,18 @@ public class EndToEndTests
     [TestMethod]
     public void TestAddEntity()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--host-mode", "Development", "--database-type", "mssql", "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "false" };
         Program.Main(initArgs);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+        runtimeConfig!.DetermineGlobalSettings();
+        runtimeConfig!.DetermineGraphQLEntityNames();
 
+        // Perform assertions on various properties.
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
+        Assert.AreEqual(HostModeType.Development, runtimeConfig.HostGlobalSettings.Mode);
+        Assert.AreEqual(false, runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated);
 
         string[] addArgs = {"add", "todo", "-c", _testRuntimeConfig, "--source", "s001.todo",
                             "--rest", "todo", "--graphql", "todo", "--permissions", "anonymous:*"};
@@ -243,7 +251,7 @@ public class EndToEndTests
             return null;
         }
 
-        RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(jsonString, RuntimeConfig.SerializerOptions);
+        RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig? runtimeConfig);
 
         if (runtimeConfig is null)
         {

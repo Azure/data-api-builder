@@ -105,7 +105,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotSupportedException("Cosmos backends (probably) don't support direct stored procedure definitions, either.");
         }
 
-        public Task InitializeAsync(RuntimeConfigProvider runtimeConfigProvider)
+        public Task InitializeAsync()
         {
             return Task.CompletedTask;
         }

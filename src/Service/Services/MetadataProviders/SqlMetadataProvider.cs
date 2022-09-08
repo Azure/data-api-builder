@@ -954,7 +954,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =
-                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tableNames.Count(), _runtimeConfigProvider.IsDeveloperMode());
+                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tableNames.Count(), _runtimeConfigProvider.IsDeveloperMode(), _logger);
 
             // Build the parameters dictionary for the foreign key info query
             // consisting of all schema names and table names.

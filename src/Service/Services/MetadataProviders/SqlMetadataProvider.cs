@@ -180,7 +180,7 @@ namespace Azure.DataApiBuilder.Service.Services
             GenerateRestPathToEntityMap();
             InitODataParser();
             timer.Stop();
-            SqlMetadataProviderLogger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
+            _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
         }
 
         /// <summary>

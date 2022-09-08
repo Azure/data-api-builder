@@ -27,7 +27,7 @@ namespace Cli
     {
         public InitOptions(
             DatabaseType databaseType,
-            string connectionString,
+            string? connectionString,
             string? cosmosDatabase,
             string? cosmosContainer,
             string? graphQLSchemaPath,
@@ -50,8 +50,8 @@ namespace Cli
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmos, mysql, postgresql")]
         public DatabaseType DatabaseType { get; }
 
-        [Option("connection-string", Required = true, HelpText = "Connection details to connect to the database.")]
-        public string ConnectionString { get; }
+        [Option("connection-string", Required = false, HelpText = "(Default: '') Connection details to connect to the database.")]
+        public string? ConnectionString { get; }
 
         [Option("cosmos-database", Required = false, HelpText = "Database name for Cosmos DB.")]
         public string? CosmosDatabase { get; }

@@ -42,15 +42,15 @@ steps:
     nugetConfigPath: Nuget.config
 
 - task: DockerInstaller@0
-    displayName: Docker Installer
-    inputs:
-      dockerVersion: 17.09.0-ce
-      releaseType: stable
+  displayName: Docker Installer
+  inputs:
+    dockerVersion: 17.09.0-ce
+    releaseType: stable
 
 - script: |
-      docker pull grafana/k6
-      docker run --rm -i grafana/k6 version
-    displayName: Install k6 tool
+    docker pull grafana/k6
+    docker run --rm -i grafana/k6 version
+  displayName: Install k6 tool
 
 - task: FileTransform@1.206.0
   displayName: 'Generate dab-config.Cosmos.json'

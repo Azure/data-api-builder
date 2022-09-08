@@ -229,18 +229,18 @@ namespace Cli.Tests
             Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
         }
 
-    /// <summary>
-    /// Removes the generated configuration file after each test
-    /// to avoid file name conflicts on subsequent test runs because the
-    /// file is statically named.
-    /// </summary>
-    [TestCleanup]
-    public void CleanUp()
-    {
-        if (File.Exists(_testRuntimeConfig))
+        /// <summary>
+        /// Removes the generated configuration file after each test
+        /// to avoid file name conflicts on subsequent test runs because the
+        /// file is statically named.
+        /// </summary>
+        [TestCleanup]
+        public void CleanUp()
         {
-            File.Delete(_testRuntimeConfig);
+            if (File.Exists(_testRuntimeConfig))
+            {
+                File.Delete(_testRuntimeConfig);
+            }
         }
-    }
     }
 }

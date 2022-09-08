@@ -15,6 +15,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class SqlQueryExecutorUnitTests
     {
+        /// <summary>
+        /// Validates managed identity token issued ONLY when connection string does not specify
+        /// User, Password, and Authentication method.
+        /// </summary>
         [DataTestMethod]
         [DataRow("Server =<>;Database=<>;User=xyz;", false, false,
             DisplayName = "No managed identity access token when connection string specifies User only.")]
@@ -51,7 +55,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             const string DEFAULT_TOKEN = "Default access token";
             const string CONFIG_TOKEN = "Configuration controller access token";
-            AccessToken testValidToken = new(DEFAULT_TOKEN, DateTimeOffset.MaxValue);
+            AccessToken testValidToken = new(accessToken: DEFAULT_TOKEN, expiresOn: DateTimeOffset.MaxValue);
             if (expectManagedIdentityAccessToken)
             {
                 if (isDefaultAzureCredential)
@@ -92,7 +96,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 Assert.AreEqual(expected: default, actual: conn.AccessToken);
             }
-
         }
     }
 }

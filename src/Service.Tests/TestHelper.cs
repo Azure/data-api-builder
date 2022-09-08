@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <summary>
         /// Given the environment, return the runtime config provider.
         /// </summary>
-        /// <param name="environment">The environment for which the test is being run.</param>
+        /// <param name="environment">The environment for which the test is being run. (e.g. TestCategory.COSMOS)</param>
         /// <returns></returns>
         public static RuntimeConfigProvider GetRuntimeConfigProvider(string environment)
         {

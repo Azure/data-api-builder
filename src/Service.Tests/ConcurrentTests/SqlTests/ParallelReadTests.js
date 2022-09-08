@@ -1,4 +1,5 @@
 import { check } from 'k6';
+import { isDeepEqual } from '../ValidationHelper.js';
 import http from 'k6/http';
 
 let headers = {
@@ -95,9 +96,13 @@ export default function () {
 
   // Validations for the API responses
   queryNames.forEach(queryName => {
+    var expectedResponseJson = expectedResponses[queryName];
+    var actualResponseJson = JSON.parse(responses[queryName].body);
+    console.log(expectedResponse);
+    console.log(actualResponseJson);
     check(responses[queryName], {
       'Validate no errors': responses[queryName].error.length == 0,
-      'Validate API response': JSON.stringify(expectedResponses[queryName]) == responses[queryName].body
+      'Validate API response': isDeepEqual(expectedResponseJson, actualResponseJson)
     });
   });
 

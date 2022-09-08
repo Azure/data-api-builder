@@ -21,7 +21,8 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: "outputfile");
+                config: "outputfile",
+                devModeDefaultAuth: "true");
 
             string expectedRuntimeConfig =
             @"{
@@ -45,6 +46,7 @@ namespace Cli.Tests
     },
     ""host"": {
       ""mode"": ""development"",
+      ""authenticate-devmode-requests"": true,
       ""cors"": {
         ""origins"": [""http://localhost:3000"", ""http://nolocalhost:80""],
         ""allow-credentials"": false
@@ -74,7 +76,8 @@ namespace Cli.Tests
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: "outputfile");
+                config: "outputfile",
+                devModeDefaultAuth: "false");
 
             string expectedRuntimeConfig = @"{
   ""$schema"": ""dab.draft-01.schema.json"",
@@ -99,6 +102,7 @@ namespace Cli.Tests
     },
     ""host"": {
       ""mode"": ""production"",
+      ""authenticate-devmode-requests"": false,
       ""cors"": {
         ""origins"": [],
         ""allow-credentials"": false
@@ -138,7 +142,9 @@ namespace Cli.Tests
                 graphQLSchemaPath: graphQLSchema,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: "outputfile");
+                config: "outputfile",
+                devModeDefaultAuth: null
+                );
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }

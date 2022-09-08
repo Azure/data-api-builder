@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.Authorization;
+using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -16,6 +17,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using static Azure.DataApiBuilder.Service.AuthenticationHelpers.StaticWebAppsAuthentication;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication
@@ -49,7 +51,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK,
                 actual: postMiddlewareContext.Response.StatusCode);
-            Assert.AreEqual(expected: AuthorizationType.Authenticated.ToString(),
+            Assert.AreEqual(
+                expected: AuthorizationType.Authenticated.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -73,8 +76,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 sendAuthorizationHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
-            Assert.AreEqual(expected: AuthorizationType.Authenticated.ToString(),
+            Assert.AreEqual(
+                expected: (int)HttpStatusCode.OK,
+                actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(
+                expected: AuthorizationType.Authenticated.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
@@ -169,7 +175,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         [TestMethod]
         public async Task TestValidStaticWebAppsEasyAuthTokenWithAnonymousRoleOnly()
         {
-            string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: false);
+            string generatedToken =
+                AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: false);
             HttpContext postMiddlewareContext =
                 await SendRequestAndGetHttpContextState(generatedToken, EasyAuthType.StaticWebApps);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
@@ -197,7 +204,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 await SendRequestAndGetHttpContextState(
                     generatedToken,
                     EasyAuthType.StaticWebApps,
-                    sendClientRoleHeader: true,
                     clientRoleHeader: clientRoleHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.AreEqual(expected: addAuthenticated, postMiddlewareContext.User.Identity.IsAuthenticated);
@@ -226,13 +232,53 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         public async Task TestInvalidEasyAuthToken(string token, bool sendAuthorizationHeader = false)
         {
             HttpContext postMiddlewareContext =
-                await SendRequestAndGetHttpContextState(token, EasyAuthType.StaticWebApps, sendAuthorizationHeader);
+                await SendRequestAndGetHttpContextState(
+                    token,
+                    EasyAuthType.StaticWebApps,
+                    sendAuthorizationHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
             Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
+        }
+
+        /// <summary>
+        /// Test to validate that the request is appropriately treated as anonymous/authenticated
+        /// in development mode depending on the value feature switch we have in the config file.
+        /// </summary>
+        /// <param name="treatRequestAsAuthenticated">Boolean value indicating whether to treat the
+        /// request as authenticated by default.</param>
+        /// <param name="expectedClientRoleHeader">Expected value of X-MS-API-ROLE header.</param>
+        /// <param name="clientRoleHeader">Value of X-MS-API-ROLE header specified in request.</param>
+        /// <returns></returns>
+        [DataTestMethod]
+        [DataRow(true, "Authenticated", null,
+            DisplayName = "EasyAuth- Treat request as authenticated in development mode")]
+        [DataRow(false, "Anonymous", null,
+            DisplayName = "EasyAuth- Treat request as anonymous in development mode")]
+        [DataRow(true, "author", "author",
+            DisplayName = "EasyAuth- Treat request as authenticated in development mode " +
+            "and honor the clienRoleHeader")]
+        [DataRow(true, "Anonymous", "Anonymous",
+            DisplayName = "EasyAuth- Treat request as authenticated in development mode " +
+            "and honor the clienRoleHeader even when specified as anonymous")]
+        public async Task TestAuthenticatedRequestInDevelopmentMode(
+            bool treatRequestAsAuthenticated,
+            string expectedClientRoleHeader,
+            string clientRoleHeader)
+        {
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(
+                    token: null,
+                    easyAuthType: EasyAuthType.StaticWebApps,
+                    clientRoleHeader: clientRoleHeader,
+                    treatRequestAsAuthenticated: treatRequestAsAuthenticated);
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: expectedClientRoleHeader,
+                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString());
         }
 
         #endregion
@@ -242,8 +288,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// Configures test server with bare minimum middleware
         /// </summary>
         /// <returns>IHost</returns>
-        private static async Task<IHost> CreateWebHostEasyAuth(EasyAuthType easyAuthType)
+        private static async Task<IHost> CreateWebHostEasyAuth(
+            EasyAuthType easyAuthType,
+            bool treatAsAuthenticatedRequest)
         {
+            // Setup RuntimeConfigProvider object for the pipeline.
+            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            Mock<RuntimeConfigPath> runtimeConfigPath = new();
+            Mock<RuntimeConfigProvider> runtimeConfigProvider = new(runtimeConfigPath.Object,
+                configProviderLogger.Object);
+            runtimeConfigProvider.Setup(x => x.IsAuthenticatedDevModeRequest()).
+                Returns(treatAsAuthenticatedRequest);
+
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>
                 {
@@ -253,7 +309,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                         {
                             services.AddAuthentication(defaultScheme: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                                     .AddEasyAuthAuthentication(easyAuthType);
-
+                            services.AddSingleton(runtimeConfigProvider.Object);
                             services.AddAuthorization();
                         })
                         .ConfigureLogging(o =>
@@ -292,10 +348,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             string? token,
             EasyAuthType easyAuthType,
             bool sendAuthorizationHeader = false,
-            bool sendClientRoleHeader = false,
-            string? clientRoleHeader = null)
+            string? clientRoleHeader = null,
+            bool treatRequestAsAuthenticated = false)
         {
-            using IHost host = await CreateWebHostEasyAuth(easyAuthType);
+            using IHost host = await CreateWebHostEasyAuth(easyAuthType, treatRequestAsAuthenticated);
             TestServer server = host.GetTestServer();
 
             return await server.SendAsync(context =>
@@ -313,7 +369,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                     context.Request.Headers.Add(easyAuthHeader);
                 }
 
-                if (sendClientRoleHeader)
+                if (clientRoleHeader is not null)
                 {
                     KeyValuePair<string, StringValues> easyAuthHeader =
                         new(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader);

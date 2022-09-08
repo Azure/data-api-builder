@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -292,10 +293,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             // Setup Mock and Stub Objects
             ClaimsPrincipal user = new(new ClaimsIdentity(authenticationType: "Bearer"));
             Mock<IHttpContextAccessor> httpContextAccessor = new();
+            Mock<ILogger<RestAuthorizationHandler>> logger = new();
             httpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
 
             AuthorizationHandlerContext context = new(new List<IAuthorizationRequirement> { requirement }, user, resource);
-            RestAuthorizationHandler handler = new(resolver, httpContextAccessor.Object);
+            RestAuthorizationHandler handler = new(resolver, httpContextAccessor.Object, logger.Object);
 
             await handler.HandleAsync(context);
 

@@ -195,6 +195,7 @@ namespace Cli.Tests
         [TestMethod]
         public void EnsureFailureReInitializingExistingConfigWithDifferentCase()
         {
+            // Should PASS, new file is being created
             InitOptions initOptionsWithAllLowerCaseFileName = GetSampleInitOptionsWithFileName(_testRuntimeConfig);
             Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(initOptionsWithAllLowerCaseFileName));
 

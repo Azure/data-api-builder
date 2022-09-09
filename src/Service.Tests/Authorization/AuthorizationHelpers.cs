@@ -5,6 +5,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Services;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
@@ -28,6 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         {
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(runtimeConfig);
             Mock<ISqlMetadataProvider> metadataProvider = new();
+            Mock<ILogger<AuthorizationResolver>> logger = new();
             TableDefinition sampleTable = CreateSampleTable();
             metadataProvider.Setup(x => x.GetTableDefinition(TEST_ENTITY)).Returns(sampleTable);
             metadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.mssql);
@@ -38,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                               .Callback(new metaDataCallback((string entity, string exposedField, out string backingColumn) => _ = _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn)))
                               .Returns((string entity, string exposedField, string backingColumn) => _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn));
 
-            return new AuthorizationResolver(runtimeConfigProvider, metadataProvider.Object);
+            return new AuthorizationResolver(runtimeConfigProvider, metadataProvider.Object, logger.Object);
         }
 
         /// <summary>

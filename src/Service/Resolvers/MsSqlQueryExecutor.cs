@@ -79,17 +79,20 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// Determines if managed identity access should be attempted or not.
-        /// It should only be attempted, if none of UserID, Password or Authentication
+        /// It should only be attempted,
+        /// 1. If none of UserID, Password or Authentication
         /// method are specified in the connection string since they have higher precedence
         /// and any attempt to use an access token in their presence would lead to
         /// a System.InvalidOperationException.
+        /// 2. It is NOT a Windows Integrated Security scenario.
         /// </summary>
         private static bool ShouldManagedIdentityAccessBeAttempted(string connString)
         {
             SqlConnectionStringBuilder connStringBuilder = new(connString);
             return string.IsNullOrEmpty(connStringBuilder.UserID) &&
                 string.IsNullOrEmpty(connStringBuilder.Password) &&
-                connStringBuilder.Authentication == SqlAuthenticationMethod.NotSpecified;
+                connStringBuilder.Authentication == SqlAuthenticationMethod.NotSpecified &&
+                !connStringBuilder.IntegratedSecurity;
         }
 
         /// <summary>

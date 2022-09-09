@@ -36,6 +36,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "No managed identity access token when connection string specifies both Password and Authentication method.")]
         [DataRow("Server =<>;Database=<>;User=xyz;Password=xxx;Authentication=SqlPassword", false, false,
             DisplayName = "No managed identity access token when connection string specifies User, Password and Authentication method.")]
+        [DataRow("Server =<>;Database=<>;Trusted_Connection=yes", false, false,
+            DisplayName = "No managed identity access token when connection string specifies Trusted Connection.")]
+        [DataRow("Server =<>;Database=<>;Integrated Security=true", false, false,
+            DisplayName = "No managed identity access token when connection string specifies Integrated Security.")]
         [DataRow("Server =<>;Database=<>;", true, false,
             DisplayName = "Managed identity access token from config used " +
                 "when connection string specifies none of User, Password and Authentication method.")]

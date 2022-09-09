@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// of a bad request issued by the client.
         /// </summary>
         /// <param name="e">The exception thrown as a result of execution of the request.</param>
-        /// <returns></returns>
+        /// <returns>true/false</returns>
         protected virtual bool IsBadRequestException(DbException e)
         {
             return e.SqlState is not null && badRequestErrorCodes!.Contains(e.SqlState);

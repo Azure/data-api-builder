@@ -23,7 +23,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: "outputfile",
+                config: _testRuntimeConfig,
                 devModeDefaultAuth: "true");
 
             _basicRuntimeConfig =
@@ -62,7 +62,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: "outputfile",
+                config: _testRuntimeConfig,
                 devModeDefaultAuth: "false");
 
             _basicRuntimeConfig =
@@ -100,7 +100,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: "outputfile",
+                config: _testRuntimeConfig,
                 devModeDefaultAuth: null);
 
             _basicRuntimeConfig = @"{
@@ -148,11 +148,59 @@ namespace Cli.Tests
                 graphQLSchemaPath: graphQLSchema,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: "outputfile",
+                config: _testRuntimeConfig,
                 devModeDefaultAuth: null
                 );
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
+        }
+
+        /// <summary>
+        /// Test to verify that an error is thrown when user tries to
+        /// initialize a config with a file name that already exists.
+        /// </summary>
+        [TestMethod]
+        public void EnsureFailureOnReInitializingExistingConfig()
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: "testconnectionstring",
+                cosmosDatabase: null,
+                cosmosContainer: null,
+                graphQLSchemaPath: null,
+                hostMode: HostModeType.Development,
+                corsOrigin: new List<string>() { },
+                config: _testRuntimeConfig,
+                devModeDefaultAuth: null);
+
+            // Config generated successfully for the first time.
+            Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(options));
+
+            // Error is thrown because the config file with the same name
+            // already exists.
+            Assert.AreEqual(false, ConfigGenerator.TryGenerateConfig(options));
+        }
+
+        /// <summary>
+        /// Test to verify that error is thrown when user tries to
+        /// initialize a config with a file name that already exists
+        /// but with different case.
+        /// </summary>
+        [TestMethod]
+        public void EnsureFailureReInitializingExistingConfigWithDifferentCase()
+        {
+            // Should PASS, new file is being created
+            InitOptions initOptionsWithAllLowerCaseFileName = GetSampleInitOptionsWithFileName(_testRuntimeConfig);
+            Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(initOptionsWithAllLowerCaseFileName));
+
+            // same file with all uppercase letters
+            InitOptions initOptionsWithAllUpperCaseFileName = GetSampleInitOptionsWithFileName(_testRuntimeConfig.ToUpper());
+            // Platform Dependent
+            // Windows,MacOs: Should FAIL - File Exists is Case insensitive
+            // Unix: Should PASS - File Exists is Case sensitive
+            Assert.AreEqual(
+                expected: PlatformID.Unix.Equals(Environment.OSVersion.Platform) ? true : false,
+                actual: ConfigGenerator.TryGenerateConfig(initOptionsWithAllUpperCaseFileName));
         }
 
         /// <summary>
@@ -169,6 +217,41 @@ namespace Cli.Tests
             JObject actualJson = JObject.Parse(runtimeConfigJson);
 
             Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
+        }
+
+        /// <summary>
+        /// Returns an InitOptions object with sample database and connection-string
+        /// for a specified fileName.
+        /// </summary>
+        /// <param name="fileName">Name of the config file.</param>
+        private static InitOptions GetSampleInitOptionsWithFileName(string fileName)
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: "testconnectionstring",
+                cosmosDatabase: null,
+                cosmosContainer: null,
+                graphQLSchemaPath: null,
+                hostMode: HostModeType.Production,
+                corsOrigin: new List<string>() { },
+                config: fileName,
+                devModeDefaultAuth: null);
+
+            return options;
+        }
+
+        /// <summary>
+        /// Removes the generated configuration file after each test
+        /// to avoid file name conflicts on subsequent test runs because the
+        /// file is statically named.
+        /// </summary>
+        [TestCleanup]
+        public void CleanUp()
+        {
+            if (File.Exists(_testRuntimeConfig))
+            {
+                File.Delete(_testRuntimeConfig);
+            }
         }
     }
 }

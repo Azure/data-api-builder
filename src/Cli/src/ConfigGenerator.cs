@@ -16,16 +16,25 @@ namespace Cli
         /// </summary>
         public static bool TryGenerateConfig(InitOptions options)
         {
-            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
-            {
-                Console.Error.Write($"Failed to create the runtime config file.");
-                return false;
-            }
-
             if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
             {
                 runtimeConfigFile = RuntimeConfigPath.DefaultName;
                 Console.WriteLine($"Creating a new config file: {runtimeConfigFile}");
+            }
+
+            // File existence checked to avoid overwriting the existing configuration.
+            if (File.Exists(runtimeConfigFile))
+            {
+                Console.Error.Write($"Config file: {runtimeConfigFile} already exists. " +
+                    "Please provide a different name or remove the existing config file.");
+                return false;
+            }
+
+            // Creating a new json file with runtime configuration
+            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
+            {
+                Console.Error.Write($"Failed to create the runtime config file.");
+                return false;
             }
 
             return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
@@ -451,7 +460,7 @@ namespace Cli
                 }
             }
 
-            // if the role we are trying to update is not found, we create a new one
+            // If the role we are trying to update is not found, we create a new one
             // and add it to permissionSettings list.
             if (!role_found)
             {
@@ -503,7 +512,7 @@ namespace Cli
             // Looping through existing operations
             foreach (KeyValuePair<Operation, PermissionOperation> operation in existingOperations)
             {
-                // if any existing operation doesn't require update, it is added as it is.
+                // If any existing operation doesn't require update, it is added as it is.
                 if (!updatedOperations.ContainsKey(operation.Key))
                 {
                     updatedOperations.Add(operation.Key, operation.Value);
@@ -613,7 +622,7 @@ namespace Cli
 
         /// <summary>
         /// This method will try starting the engine.
-        /// it will use the config provided by the user, else will look for the default config.
+        /// It will use the config provided by the user, else will look for the default config.
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options)
         {

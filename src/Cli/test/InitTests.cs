@@ -204,10 +204,8 @@ namespace Cli.Tests
             // Platform Dependent
             // Windows,MacOs: Should FAIL - File Exists is Case insensitive
             // Unix: Should PASS - File Exists is Case sensitive
-            Console.WriteLine(Environment.OSVersion);
-            Console.WriteLine(Environment.OSVersion.Platform);
             Assert.AreEqual(
-                expected: false,
+                expected: "Unix".Equals(Environment.OSVersion.Platform) ? true : false,
                 actual: ConfigGenerator.TryGenerateConfig(initOptionsWithAllUpperCaseFileName));
         }
 

@@ -491,12 +491,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         /// Validates request failure (HTTP 400) when an invalid foreign key is provided with an insertion.
         /// </summary>
         /// <returns></returns>
-        public virtual Task InsertOneTestViolatingForeignKeyConstraint()
-        {
-            // This method is overriden seperately in all the subclasses,
-            // and so this implementation would never be invoked.
-            return Task.CompletedTask;
-        }
+        public abstract Task InsertOneTestViolatingForeignKeyConstraint();
 
         #endregion
     }

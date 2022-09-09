@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Data.Common;
 using Azure.DataApiBuilder.Service.Configurations;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -10,10 +8,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public class PostgreSqlDbExceptionParser : DbExceptionParser
     {
-        private HashSet<string> _badRequestSqlStates;
         public PostgreSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
         {
-            _badRequestSqlStates = new() {
+            // HashSet of 'SqlState'(s) which are to be considered as bad requests.
+            badRequestErrorCodes = new() {
                 // integrity_constraint_violation, occurs when an insert/update/delete statement violates
                 // a foreign key,primary key, check or unique constraint.
                 "23000",
@@ -38,12 +36,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // or expression(s) using the specified operator(s), not all of these comparisons will return TRUE.
                 "23P01"
             };
-        }
-
-        /// <inheritdoc/>
-        public override bool IsBadRequestException(DbException e)
-        {
-            return e.SqlState is not null && _badRequestSqlStates.Contains(e.SqlState);
         }
     }
 }

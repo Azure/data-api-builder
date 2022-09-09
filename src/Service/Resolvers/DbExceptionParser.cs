@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Net;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -14,6 +15,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     {
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
         private readonly bool _developerMode;
+        protected HashSet<string> badRequestErrorCodes;
 
         public DbExceptionParser(RuntimeConfigProvider configProvider)
         {
@@ -39,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>true/false</returns>
         public virtual bool IsBadRequestException(DbException e)
         {
-            return false;
+            return e.SqlState is not null && badRequestErrorCodes.Contains(e.SqlState);
         }
     }
 }

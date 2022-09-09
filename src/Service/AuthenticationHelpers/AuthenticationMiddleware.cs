@@ -68,12 +68,6 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 return;
             }
 
-            // A request can be authenticated in 2 cases:
-            // 1. When the request has a valid jwt/easyauth token,
-            // 2. When the dev mode authenticate-devmode-requests config flag is true.
-            bool isAuthenticatedRequest = authNResult.Succeeded ||
-                _runtimeConfigurationProvider.IsAuthenticatedDevModeRequest();
-
             // Set the httpContext.user as the authNResult.Principal,
             // which is never null.
             // Only the properties of the Principal.Identity changes depending on the
@@ -81,6 +75,12 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             httpContext.User = authNResult.Principal!;
 
             string clientDefinedRole = AuthorizationType.Anonymous.ToString();
+
+            // A request can be authenticated in 2 cases:
+            // 1. When the request has a valid jwt/easyauth token,
+            // 2. When the dev mode authenticate-devmode-requests config flag is true.
+            bool isAuthenticatedRequest = authNResult.Succeeded ||
+                _runtimeConfigurationProvider.IsAuthenticatedDevModeRequest();
 
             if (isAuthenticatedRequest)
             {

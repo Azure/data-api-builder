@@ -199,12 +199,16 @@ namespace Cli.Tests
             InitOptions initOptionsWithAllLowerCaseFileName = GetSampleInitOptionsWithFileName(_testRuntimeConfig);
             Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(initOptionsWithAllLowerCaseFileName));
 
-            // Platform Dependent
-            // Windows: Should FAIL - File Exists
-            // Linux: Should PASS -
+            // same file with all uppercase letters
             InitOptions initOptionsWithAllUpperCaseFileName = GetSampleInitOptionsWithFileName(_testRuntimeConfig.ToUpper());
-            //
-            Assert.AreEqual(false, ConfigGenerator.TryGenerateConfig(initOptionsWithAllUpperCaseFileName));
+            // Platform Dependent
+            // Windows,MacOs: Should FAIL - File Exists is Case insensitive
+            // Unix: Should PASS - File Exists is Case sensitive
+            Console.WriteLine(Environment.OSVersion);
+            Console.WriteLine(Environment.OSVersion.Platform);
+            Assert.AreEqual(
+                expected: false,
+                actual: ConfigGenerator.TryGenerateConfig(initOptionsWithAllUpperCaseFileName));
         }
 
         /// <summary>

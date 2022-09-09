@@ -12,7 +12,29 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     {
         public MsSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
         {
-            badRequestErrorCodes = new() { "513", "515", "544", "545", "547", "548" };
+            badRequestErrorCodes = new() {
+                // A column insert or update conflicts with a rule imposed by a previous CREATE RULE statement. The statement was terminated.
+                // The conflict occurred in database '%.*ls', table '%.*ls', column '%.*ls'.
+                "513",
+
+                // Cannot insert the value NULL into column '%.*ls', table '%.*ls'; column does not allow nulls. %ls fails.
+                "515",
+
+                // Cannot insert explicit value for identity column in table '%.*ls' when IDENTITY_INSERT is set to OFF.
+                "544",
+
+                // Explicit value must be specified for identity column in table '%.*ls'
+                // either when IDENTITY_INSERT is set to ON or when a replication user is inserting into a NOT FOR REPLICATION identity column.
+                "545",
+
+                // The %ls statement conflicted with the %ls constraint "%.*ls".
+                // The conflict occurred in database "%.*ls", table "%.*ls"%ls%.*ls%ls.
+                "547",
+
+                // The insert failed. It conflicted with an identity range check constraint in database '%.*ls',
+                // replicated table '%.*ls'%ls%.*ls%ls.
+                "548"
+            };
         }
 
         /// <inheritdoc/>

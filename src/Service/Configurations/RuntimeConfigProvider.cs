@@ -122,7 +122,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (!string.IsNullOrEmpty(runtimeConfigJson) &&
                 RuntimeConfig.TryGetDeserializedConfig(
                     runtimeConfigJson,
-                    out runtimeConfig))
+                    out runtimeConfig,
+                    ConfigProviderLogger!))
             {
                 runtimeConfig!.DetermineGlobalSettings();
                 runtimeConfig!.DetermineGraphQLEntityNames();
@@ -208,7 +209,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             if (RuntimeConfig.TryGetDeserializedConfig(
                     configuration,
-                    out RuntimeConfig? runtimeConfig))
+                    out RuntimeConfig? runtimeConfig,
+                    ConfigProviderLogger!))
             {
                 RuntimeConfiguration = runtimeConfig;
                 RuntimeConfiguration!.DetermineGlobalSettings();
@@ -256,6 +258,23 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public virtual bool IsDeveloperMode()
         {
             return RuntimeConfiguration?.HostGlobalSettings.Mode is HostModeType.Development;
+        }
+
+        /// <summary>
+        /// When we are in development mode, we want to honor the default-request-authorization
+        /// feature switch value specified in the config file. This gives us the ability to
+        /// simulate a request's authenticated/anonymous authentication state in development mode.
+        /// </summary>
+        /// <returns></returns>
+        public virtual bool IsAuthenticatedDevModeRequest()
+        {
+            if (RuntimeConfiguration is null)
+            {
+                return false;
+            }
+
+            return IsDeveloperMode() &&
+                RuntimeConfiguration.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is true;
         }
     }
 }

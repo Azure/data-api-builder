@@ -9,8 +9,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
@@ -37,8 +39,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod]
         public void TestCorsConfigReadCorrectly()
         {
+            Mock<ILogger> logger = new();
             string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
-            RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig runtimeConfig);
+            RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
             HostGlobalSettings hostGlobalSettings =
                 JsonSerializer.Deserialize<HostGlobalSettings>(
                     (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Host],

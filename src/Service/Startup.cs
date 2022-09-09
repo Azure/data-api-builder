@@ -384,14 +384,15 @@ namespace Azure.DataApiBuilder.Service
         {
             try
             {
-                RuntimeConfig runtimeConfig = app.ApplicationServices.GetService<RuntimeConfigProvider>()!.GetRuntimeConfiguration();
+                RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
+                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
 
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
                 runtimeConfigValidator.ValidateConfig();
 
-                if (app.ApplicationServices.GetService<RuntimeConfigProvider>()!.IsDeveloperMode())
+                if (runtimeConfigProvider.IsDeveloperMode())
                 {
                     // Perform semantic validation in development mode only.
                     runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);

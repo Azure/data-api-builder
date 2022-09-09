@@ -6,6 +6,8 @@ namespace Cli.Tests
     [TestClass]
     public class InitTests
     {
+        private string _basicRuntimeConfig = string.Empty;
+
         /// <summary>
         /// Test the simple init config for mssql database. PG and MySQL should be similar.
         /// There is no need for a separate test.
@@ -21,37 +23,72 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: "outputfile");
+                config: "outputfile",
+                devModeDefaultAuth: "true");
 
-            string expectedRuntimeConfig =
+            _basicRuntimeConfig =
             @"{
-  ""$schema"": ""dab.draft-01.schema.json"",
-  ""data-source"": {
-    ""database-type"": ""mssql"",
-    ""connection-string"": ""testconnectionstring""
-  },
-  ""runtime"": {
-    ""rest"": {
-      ""enabled"": true,
-      ""path"": ""/api""
-    },
-    ""graphql"": {
-      ""enabled"": true,
-      ""path"": ""/graphql""
-    },
-    ""host"": {
-      ""mode"": ""development"",
-      ""cors"": {
-        ""origins"": [""http://localhost:3000"", ""http://nolocalhost:80""]
-      },
-      ""authentication"": {
-        ""provider"": ""StaticWebApps""
-      }
-    }
-  },
-  ""entities"": {}
-}";
+                ""$schema"": ""dab.draft-01.schema.json"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring""
+                },
+                ""mssql"": {
+                    ""set-session-context"": true
+                },
+                ""entities"": {}
+            }";
 
+            // Adding runtime settings to the above basic config
+            string expectedRuntimeConfig = AddPropertiesToJson(
+                _basicRuntimeConfig,
+                GetDefaultTestRuntimeSettingString(DatabaseType.mssql,
+                    HostModeType.Development,
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                    authenticateDevModeRequest: true)
+            );
+            RunTest(options, expectedRuntimeConfig);
+        }
+
+        /// <summary>
+        /// Test to verify creation of initial config without providing
+        /// connection-string
+        /// </summary>
+        [TestMethod]
+        public void TestInitializingConfigWithoutConnectionString()
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: null,
+                cosmosDatabase: null,
+                cosmosContainer: null,
+                graphQLSchemaPath: null,
+                hostMode: HostModeType.Development,
+                corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                config: "outputfile",
+                devModeDefaultAuth: "false");
+
+            _basicRuntimeConfig =
+            @"{
+                ""$schema"": ""dab.draft-01.schema.json"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": """"
+                },
+                ""mssql"": {
+                    ""set-session-context"": true
+                },
+                ""entities"": {}
+            }";
+
+            // Adding runtime settings to the above basic config
+            string expectedRuntimeConfig = AddPropertiesToJson(
+                _basicRuntimeConfig,
+                GetDefaultTestRuntimeSettingString(DatabaseType.mssql,
+                    HostModeType.Development,
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                    authenticateDevModeRequest: false)
+            );
             RunTest(options, expectedRuntimeConfig);
         }
 
@@ -69,41 +106,27 @@ namespace Cli.Tests
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: "outputfile");
+                config: "outputfile",
+                devModeDefaultAuth: null);
 
-            string expectedRuntimeConfig = @"{
-  ""$schema"": ""dab.draft-01.schema.json"",
-  ""data-source"": {
-    ""database-type"": ""cosmos"",
-    ""connection-string"": ""testconnectionstring""
-  },
-  ""cosmos"": {
-    ""database"": ""testdb"",
-    ""container"": ""testcontainer"",
-    ""schema"": ""schemafile""
-  },
-  ""runtime"": {
-    ""rest"": {
-      ""enabled"": false,
-      ""path"": ""/api""
-    },
-    ""graphql"": {
-      ""enabled"": true,
-      ""path"": ""/graphql""
-    },
-    ""host"": {
-      ""mode"": ""production"",
-      ""cors"": {
-        ""origins"": []
-      },
-      ""authentication"": {
-        ""provider"": ""StaticWebApps""
-      }
-    }
-  },
-  ""entities"": {}
-}";
+            _basicRuntimeConfig = @"{
+                ""$schema"": ""dab.draft-01.schema.json"",
+                ""data-source"": {
+                    ""database-type"": ""cosmos"",
+                    ""connection-string"": ""testconnectionstring""
+                },
+                ""cosmos"": {
+                    ""database"": ""testdb"",
+                    ""container"": ""testcontainer"",
+                    ""schema"": ""schemafile""
+                },
+                ""entities"": {}
+            }";
 
+            // Adding runtime settings to the above basic config
+            string expectedRuntimeConfig = AddPropertiesToJson(
+                _basicRuntimeConfig,
+                GetDefaultTestRuntimeSettingString(DatabaseType.cosmos));
             RunTest(options, expectedRuntimeConfig);
         }
 
@@ -131,7 +154,9 @@ namespace Cli.Tests
                 graphQLSchemaPath: graphQLSchema,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: "outputfile");
+                config: "outputfile",
+                devModeDefaultAuth: null
+                );
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }

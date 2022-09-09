@@ -2,6 +2,9 @@ namespace Cli.Tests
 {
     public static class TestHelper
     {
+        // Config file name for tests
+        public static string _testRuntimeConfig = "dab-config-test.json";
+
         /// <summary>
         /// Adds the entity properties to the configuration and returns the updated configuration json as a string.
         /// </summary>
@@ -26,9 +29,6 @@ namespace Cli.Tests
             ""data-source"": {
               ""database-type"": ""mssql"",
               ""connection-string"": ""testconnectionstring""
-            },
-            ""mssql"": {
-              ""set-session-context"": true
             },
             ""runtime"": {
               ""rest"": {
@@ -253,17 +253,11 @@ namespace Cli.Tests
                 ""database-type"": ""mssql"",
                 ""connection-string"": ""localhost:5000""
               },
-              ""mssql"": {
-                ""set-session-context"": true
-              },
               ""runtime"": {
                 ""rest"": {
-                  ""enabled"": true,
                   ""path"": ""/api""
                 },
                 ""graphql"": {
-                  ""allow-introspection"": true,
-                  ""enabled"": true,
                   ""path"": ""/graphql""
                 },
                 ""host"": {
@@ -307,7 +301,6 @@ namespace Cli.Tests
         {
             Dictionary<string, object> runtimeSettingDict = new();
             Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(
-                dbType: databaseType,
                 hostMode: hostModeType,
                 corsOrigin: corsOrigins,
                 devModeDefaultAuth: authenticateDevModeRequest);

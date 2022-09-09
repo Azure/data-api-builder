@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Data.Common;
 using Azure.DataApiBuilder.Service.Configurations;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -8,6 +10,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public class MySqlDbExceptionParser : DbExceptionParser
     {
+        private HashSet<string> _badRequestSqlStates;
         public MySqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
         {
             // For all the below conditions, we will get the SqlState as 23000 for MySql.
@@ -25,7 +28,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // 12. Foreign key constraint for table '%s', record '%s' would lead to a duplicate entry in a child table
             // 13. Duplicate entry for key '%s'
             // 14. CONSTRAINT %`s failed for %`-.192s.%`-.192s
-            badRequestErrorCodes = new() { "23000" };
+            _badRequestSqlStates = new() { "23000" };
+        }
+
+        /// <inheritdoc/>
+        public override bool IsBadRequestException(DbException e)
+        {
+            return e.SqlState is not null && _badRequestSqlStates.Contains(e.SqlState);
         }
     }
 }

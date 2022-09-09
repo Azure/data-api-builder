@@ -15,7 +15,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     {
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
         protected readonly bool _developerMode;
-        protected HashSet<string>? badRequestErrorCodes;
 
         public DbExceptionParser(RuntimeConfigProvider configProvider)
         {
@@ -39,9 +38,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="e">The exception thrown as a result of execution of the request.</param>
         /// <returns>true/false</returns>
-        protected virtual bool IsBadRequestException(DbException e)
+        public virtual bool IsBadRequestException(DbException e)
         {
-            return e.SqlState is not null && badRequestErrorCodes!.Contains(e.SqlState);
+            return true;
         }
     }
 }

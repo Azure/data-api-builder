@@ -1,9 +1,7 @@
 using System.Data.Common;
-using System.Net;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -30,6 +28,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private AccessToken? _defaultAccessToken;
 
+        private bool _attemptManagedIdentityAccess;
+
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
@@ -37,42 +37,54 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             : base(runtimeConfigProvider, dbExceptionParser, logger)
         {
             _managedIdentityAccessToken = runtimeConfigProvider.ManagedIdentityAccessToken;
+            _attemptManagedIdentityAccess =
+                ShouldManagedIdentityAccessBeAttempted(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString);
         }
 
         /// <summary>
         /// Modifies the properties of the supplied connection to support managed identity access.
         /// In the case of MsSql, gets access token if deemed necessary and sets it on the connection.
-        /// The supplied connection should already have a connection string.
+        /// The supplied connection is assumed to already have the same connection string
+        /// provided in the runtime configuration.
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
         public override async Task HandleManagedIdentityAccessIfAnyAsync(DbConnection conn)
         {
-            SqlConnection sqlConn = (SqlConnection)conn;
-
-            if (string.IsNullOrEmpty(conn.ConnectionString))
+            // Only attempt to get the access token if the connection string is in the appropriate format
+            if (_attemptManagedIdentityAccess)
             {
-                string errMessage = "Attempt to determine managed identity access " +
-                    "without supplying a connection string.";
-                QueryExecutorLogger.LogError(errMessage);
-                throw new DataApiBuilderException(errMessage,
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-            }
+                SqlConnection sqlConn = (SqlConnection)conn;
 
-            // If the configuration controller provided a managed identity access token use that,
-            // else use the default saved access token if still valid.
-            // Get a new token only if the saved token is null or expired.
-            string? accessToken = _managedIdentityAccessToken ??
-                (IsDefaultAccessTokenValid() ?
-                    ((AccessToken)_defaultAccessToken!).Token :
-                    await GetAccessTokenAsync(conn.ConnectionString));
+                // If the configuration controller provided a managed identity access token use that,
+                // else use the default saved access token if still valid.
+                // Get a new token only if the saved token is null or expired.
+                string? accessToken = _managedIdentityAccessToken ??
+                    (IsDefaultAccessTokenValid() ?
+                        ((AccessToken)_defaultAccessToken!).Token :
+                        await GetAccessTokenAsync());
 
-            if (accessToken is not null)
-            {
-                QueryExecutorLogger.LogTrace("Using access token obtained from " +
-                    "DefaultAzureCredential to connect to database.");
-                sqlConn.AccessToken = accessToken;
+                if (accessToken is not null)
+                {
+                    QueryExecutorLogger.LogTrace("Using access token obtained from " +
+                        "DefaultAzureCredential to connect to database.");
+                    sqlConn.AccessToken = accessToken;
+                }
             }
+        }
+
+        /// <summary>
+        /// Determines if managed identity access should be attempted or not.
+        /// It should only be attempted, if none of UserID, Password or Authentication
+        /// method are specified in the connection string since they have higher precedence
+        /// and any attempt to use an access token in their presence would lead to
+        /// a System.InvalidOperationException.
+        /// </summary>
+        private static bool ShouldManagedIdentityAccessBeAttempted(string connString)
+        {
+            SqlConnectionStringBuilder connStringBuilder = new(connString);
+            return string.IsNullOrEmpty(connStringBuilder.UserID) &&
+                string.IsNullOrEmpty(connStringBuilder.Password) &&
+                connStringBuilder.Authentication == SqlAuthenticationMethod.NotSpecified;
         }
 
         /// <summary>
@@ -86,30 +98,27 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Gets an access token using DefaultAzureCredentials
-        /// if none of UserID, Password or Authentication method are specified
-        /// in the connection string since they have higher precedence
-        /// and any attempt to use an access token in their presence would lead to
-        /// a System.InvalidOperationException.
+        /// Tries to get an access token using DefaultAzureCredentials.
+        /// Catches any CredentialUnavailableException and logs only a warning
+        /// since since this is best effort.
         /// </summary>
-        /// <param name="connString"></param>
-        /// <returns>The string representation of the access token if required and found,
+        /// <returns>The string representation of the access token if found,
         /// null otherwise.</returns>
-        private async Task<string?> GetAccessTokenAsync(string connString)
+        private async Task<string?> GetAccessTokenAsync()
         {
-            SqlConnectionStringBuilder connStringBuilder = new(connString);
-            if (string.IsNullOrEmpty(connStringBuilder.UserID) &&
-               string.IsNullOrEmpty(connStringBuilder.Password) &&
-               connStringBuilder.Authentication == SqlAuthenticationMethod.NotSpecified)
+            try
             {
                 _defaultAccessToken =
                     await AzureCredential.GetTokenAsync(
                         new TokenRequestContext(new[] { DATABASE_SCOPE }));
-
-                return _defaultAccessToken?.Token;
+            }
+            catch(CredentialUnavailableException ex)
+            {
+                QueryExecutorLogger.LogWarning($"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
+                    $" failed due to: \n{ex}");
             }
 
-            return null;
+             return _defaultAccessToken?.Token;
         }
     }
 }

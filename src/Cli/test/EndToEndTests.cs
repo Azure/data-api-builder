@@ -37,7 +37,6 @@ public class EndToEndTests
 
         RestGlobalSettings? restGlobalSettings = JsonSerializer.Deserialize<RestGlobalSettings>(jsonRestSettings, RuntimeConfig.SerializerOptions);
         Assert.IsNotNull(restGlobalSettings);
-        Assert.IsFalse(restGlobalSettings.Enabled);
         Assert.IsNotNull(runtimeConfig.HostGlobalSettings);
 
         Assert.IsTrue(runtimeConfig.RuntimeSettings.ContainsKey(GlobalSettingsType.Host));

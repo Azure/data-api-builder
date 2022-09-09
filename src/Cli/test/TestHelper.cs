@@ -252,17 +252,16 @@ namespace Cli.Tests
               },
               ""runtime"": {
                 ""rest"": {
-                  ""enabled"": true,
                   ""path"": ""/api""
                 },
                 ""graphql"": {
-                  ""enabled"": true,
                   ""path"": ""/graphql""
                 },
                 ""host"": {
                   ""mode"": ""production"",
                   ""cors"": {
-                    ""origins"": []
+                    ""origins"": [],
+                    ""allow-credentials"": false
                   },
                   ""authentication"": {
                     ""provider"": ""StaticWebApps""
@@ -299,7 +298,6 @@ namespace Cli.Tests
         {
             Dictionary<string, object> runtimeSettingDict = new();
             Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(
-                dbType: databaseType,
                 hostMode: hostModeType,
                 corsOrigin: corsOrigins,
                 devModeDefaultAuth: authenticateDevModeRequest);

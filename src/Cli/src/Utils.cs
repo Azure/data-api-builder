@@ -272,23 +272,14 @@ namespace Cli
         }
 
         /// <summary>
-        /// returns the default global settings based on dbType.
+        /// returns the default global settings.
         /// </summary>
-        public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(DatabaseType dbType,
-                                                                                        HostModeType hostMode,
-                                                                                        IEnumerable<string>? corsOrigin,
-                                                                                        bool? devModeDefaultAuth)
+        public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(HostModeType hostMode,
+                                                                                      IEnumerable<string>? corsOrigin,
+                                                                                      bool? devModeDefaultAuth)
         {
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
-            if (DatabaseType.cosmos.Equals(dbType))
-            {
-                defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(Enabled: false));
-            }
-            else
-            {
-                defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings());
-            }
-
+            defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings());
             defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
             defaultGlobalSettings.Add(
                 GlobalSettingsType.Host,

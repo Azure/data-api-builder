@@ -36,15 +36,13 @@ namespace Azure.DataApiBuilder.Config
                 "database-type": "mssql",
                 "connection-string": ""
             },
-            "mssql": {},
             "runtime": {
                 "host": {
                     "authentication": {
                         "provider": "",
                         "jwt": {
                             "audience": "",
-                            "issuer": "",
-                            "issuer-key": ""
+                            "issuer": ""
                         }
                     }
                 }

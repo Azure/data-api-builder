@@ -33,9 +33,6 @@ namespace Cli.Tests
                     ""database-type"": ""mssql"",
                     ""connection-string"": ""testconnectionstring""
                 },
-                ""mssql"": {
-                    ""set-session-context"": true
-                },
                 ""entities"": {}
             }";
 
@@ -74,9 +71,6 @@ namespace Cli.Tests
                 ""data-source"": {
                     ""database-type"": ""mssql"",
                     ""connection-string"": """"
-                },
-                ""mssql"": {
-                    ""set-session-context"": true
                 },
                 ""entities"": {}
             }";

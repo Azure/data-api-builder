@@ -55,13 +55,13 @@ steps:
     feedsToUse: config
     nugetConfigPath: Nuget.config
 
-- task: DotNetCoreCLI@2
-  displayName: Check formatting
-  inputs:
-    command: custom
-    custom: format
-    projects: '$(solution)'
-    arguments: '--verify-no-changes'
+# - task: DotNetCoreCLI@2
+#   displayName: Check formatting
+#   inputs:
+#     command: custom
+#     custom: format
+#     projects: '$(solution)'
+#     arguments: '--verify-no-changes'
 
 # Use dotnet pack command to build the project because we want to generate build output
 # in the correct location that pack command will be using. This build output location

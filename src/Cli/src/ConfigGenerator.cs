@@ -105,7 +105,6 @@ namespace Cli
                 PostgreSql: postgreSqlOptions,
                 MySql: mySqlOptions,
                 RuntimeSettings: GetDefaultGlobalSettings(
-                    dbType,
                     options.HostMode,
                     options.CorsOrigin,
                     devModeDefaultAuth: GetDevModeDefaultAuth(options.DevModeDefaultAuth)),

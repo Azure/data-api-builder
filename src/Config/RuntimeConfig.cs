@@ -36,15 +36,13 @@ namespace Azure.DataApiBuilder.Config
                 "database-type": "mssql",
                 "connection-string": ""
             },
-            "mssql": {},
             "runtime": {
                 "host": {
                     "authentication": {
                         "provider": "",
                         "jwt": {
                             "audience": "",
-                            "issuer": "",
-                            "issuer-key": ""
+                            "issuer": ""
                         }
                     }
                 }
@@ -58,10 +56,13 @@ namespace Azure.DataApiBuilder.Config
         [property: JsonPropertyName(CosmosDbOptions.JSON_PROPERTY_NAME)]
         CosmosDbOptions? CosmosDb,
         [property: JsonPropertyName(MsSqlOptions.JSON_PROPERTY_NAME)]
+        [property: JsonIgnore]
         MsSqlOptions? MsSql,
         [property: JsonPropertyName(PostgreSqlOptions.JSON_PROPERTY_NAME)]
+        [property: JsonIgnore]
         PostgreSqlOptions? PostgreSql,
         [property: JsonPropertyName(MySqlOptions.JSON_PROPERTY_NAME)]
+        [property: JsonIgnore]
         MySqlOptions? MySql,
         [property: JsonPropertyName(GlobalSettings.JSON_PROPERTY_NAME)]
         Dictionary<GlobalSettingsType, object>? RuntimeSettings,

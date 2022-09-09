@@ -112,13 +112,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     await AzureCredential.GetTokenAsync(
                         new TokenRequestContext(new[] { DATABASE_SCOPE }));
             }
-            catch(CredentialUnavailableException ex)
+            catch (CredentialUnavailableException ex)
             {
                 QueryExecutorLogger.LogWarning($"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
                     $" failed due to: \n{ex}");
             }
 
-             return _defaultAccessToken?.Token;
+            return _defaultAccessToken?.Token;
         }
     }
 }

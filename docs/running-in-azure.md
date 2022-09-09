@@ -34,7 +34,7 @@ Now clone the Data API builder repository if you haven't done yet, and from the 
 docker build . -t dabcr.azurecr.io/dab:M1.5
 ```
 
-### Publich the Docker image to the Azure Container Registry
+### Publish the Docker image to the Azure Container Registry
 
 Push the created image the container registry:
 

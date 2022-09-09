@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (accessToken is not null)
                 {
-                    QueryExecutorLogger.LogTrace("Using access token obtained from " +
+                    QueryExecutorLogger.LogInformation("Using access token obtained from " +
                         "DefaultAzureCredential to connect to database.");
                     sqlConn.AccessToken = accessToken;
                 }
@@ -79,9 +79,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// and any attempt to use an access token in their presence would lead to
         /// a System.InvalidOperationException.
         /// </summary>
-        private bool ShouldManagedIdentityAccessBeAttempted(string connString)
+        private static bool ShouldManagedIdentityAccessBeAttempted(string connString)
         {
-            QueryExecutorLogger.LogInformation($"Connection String is {connString}");
             SqlConnectionStringBuilder connStringBuilder = new(connString);
             return string.IsNullOrEmpty(connStringBuilder.UserID) &&
                 string.IsNullOrEmpty(connStringBuilder.Password) &&

@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     public abstract class DbExceptionParser
     {
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
-        protected readonly bool _developerMode;
+        private readonly bool _developerMode;
 
         public DbExceptionParser(RuntimeConfigProvider configProvider)
         {
@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>true/false</returns>
         public virtual bool IsBadRequestException(DbException e)
         {
-            return true;
+            return false;
         }
     }
 }

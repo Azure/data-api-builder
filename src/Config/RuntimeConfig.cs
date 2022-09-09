@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config
 {
@@ -135,7 +136,8 @@ namespace Azure.DataApiBuilder.Config
         /// <returns>True on success, false otherwise.</returns>
         public static bool TryGetDeserializedConfig<T>(
             string configJson,
-            out T? deserializedConfig)
+            out T? deserializedConfig,
+            ILogger logger)
         {
             try
             {
@@ -146,7 +148,7 @@ namespace Azure.DataApiBuilder.Config
             {
                 // until this function is refactored to exist in RuntimeConfigProvider
                 // we must use Console for logging.
-                Console.Error.WriteLine($"Deserialization of the configuration file failed.\n" +
+                logger.LogError($"Deserialization of the configuration file failed.\n" +
                     $"Message:\n {ex.Message}\n" +
                     $"Stack Trace:\n {ex.StackTrace}");
 

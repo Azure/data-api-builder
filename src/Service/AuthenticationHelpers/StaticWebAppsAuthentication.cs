@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
@@ -45,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         /// </summary>
         /// <param name="context"></param>
         /// <returns>ClaimsIdentity containing authentication metadata.</returns>
-        public static ClaimsIdentity? Parse(HttpContext context)
+        public static ClaimsIdentity? Parse(HttpContext context, ILogger logger)
         {
             ClaimsIdentity? identity = null;
             StaticWebAppsClientPrincipal principal = new();
@@ -88,13 +89,13 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 error is NotSupportedException ||
                 error is InvalidOperationException)
             {
-                // Log any SWA token processing failures to the console.
+                // Log any SWA token processing failures in the logger.
                 // Does not raise or rethrow a DataApiBuilder exception because
                 // the authentication handler caller will return a 401 unauthorized
                 // response to the client.
-                Console.Error.WriteLine("Failure processing the StaticWebApps EasyAuth header.");
-                Console.Error.WriteLine(error.Message);
-                Console.Error.WriteLine(error.StackTrace);
+                logger.LogError($"Failure processing the StaticWebApps EasyAuth header.\n" +
+                    $"{error.Message}\n" +
+                    $"{error.StackTrace}");
             }
 
             return identity;

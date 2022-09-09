@@ -228,6 +228,8 @@ namespace Azure.DataApiBuilder.Config
         private static bool DoesFileExistInCurrentDirectory(string fileName)
         {
             string currentDir = Directory.GetCurrentDirectory();
+            // Unable to use ILogger because this code is invoked before LoggerFactory
+            // is instantiated.
             if (File.Exists(Path.Combine(currentDir, fileName)))
             {
                 Console.WriteLine($"Using config file: {fileName}.");
@@ -235,6 +237,8 @@ namespace Azure.DataApiBuilder.Config
             }
             else
             {
+                // Unable to use ILogger because this code is invoked before LoggerFactory
+                // is instantiated.
                 Console.WriteLine($"Config file: {fileName} does not exist.");
                 return false;
             }

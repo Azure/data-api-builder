@@ -253,7 +253,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
-                    _queryExecutor = new QueryExecutor<SqlConnection>(
+                    _queryExecutor = new MsSqlQueryExecutor(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
                         msSqlQueryExecutorLogger.Object);

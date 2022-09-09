@@ -200,6 +200,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="configuration">The engine configuration.</param>
         /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
         /// <param name="connectionString">The connection string to the database.</param>
+        /// <param name="accessToken">The string representation of a managed identity access token
+        /// useful to connect to the database.</param>
         public void Initialize(
             string configuration,
             string? schema,

@@ -1,7 +1,9 @@
 using System.Data.Common;
+using System.Net;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -47,17 +49,28 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             SqlConnection sqlConn = (SqlConnection)conn;
 
+            if (string.IsNullOrEmpty(conn.ConnectionString))
+            {
+                string errMessage = "Attempt to determine managed identity access " +
+                    "without supplying a connection string.";
+                QueryExecutorLogger.LogError(errMessage);
+                throw new DataApiBuilderException(errMessage,
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
             // If the configuration controller provided a managed identity access token use that,
             // else use the default saved access token if still valid.
             // Get a new token only if the saved token is null or expired.
             string? accessToken = _managedIdentityAccessToken ??
                 (IsDefaultAccessTokenValid() ?
                     ((AccessToken)_defaultAccessToken!).Token :
-                    await TryGetAccessTokenAsync(conn.ConnectionString));
+                    await GetAccessTokenAsync(conn.ConnectionString));
 
             if (accessToken is not null)
             {
-                QueryExecutorLogger.LogTrace("Using access token obtained from DefaultAzureCredential to connect to database.");
+                QueryExecutorLogger.LogTrace("Using access token obtained from " +
+                    "DefaultAzureCredential to connect to database.");
                 sqlConn.AccessToken = accessToken;
             }
         }
@@ -80,8 +93,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// a System.InvalidOperationException.
         /// </summary>
         /// <param name="connString"></param>
-        /// <returns>True when access token should be obtained, false otherwise.</returns>
-        private async Task<string?> TryGetAccessTokenAsync(string connString)
+        /// <returns>The string representation of the access token if required and found,
+        /// null otherwise.</returns>
+        private async Task<string?> GetAccessTokenAsync(string connString)
         {
             SqlConnectionStringBuilder connStringBuilder = new(connString);
             if (string.IsNullOrEmpty(connStringBuilder.UserID) &&

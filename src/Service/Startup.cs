@@ -19,7 +19,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -105,7 +104,7 @@ namespace Azure.DataApiBuilder.Service
                     case DatabaseType.cosmos:
                         return null!;
                     case DatabaseType.mssql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<SqlConnection>>(serviceProvider);
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryExecutor>(serviceProvider);
                     case DatabaseType.postgresql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<NpgsqlConnection>>(serviceProvider);
                     case DatabaseType.mysql:

@@ -31,7 +31,8 @@ namespace Azure.DataApiBuilder.Service.Controllers
             _configurationProvider.Initialize(
                 configuration.Configuration,
                 configuration.Schema,
-                configuration.ConnectionString);
+                configuration.ConnectionString,
+                configuration.AccessToken);
 
             return new OkResult();
         }
@@ -43,9 +44,11 @@ namespace Azure.DataApiBuilder.Service.Controllers
     /// <param name="Configuration">The runtime configuration.</param>
     /// <param name="Schema">The GraphQL schema. Can be left empty for SQL databases.</param>
     /// <param name="ConnectionString">The database connection string.</param>
+    /// <param name="AccessToken">The managed identity access token (if any) used to connect to the database.</param>
     public record class ConfigurationPostParameters(
         string Configuration,
         string? Schema,
-        string ConnectionString)
+        string ConnectionString,
+        string? AccessToken)
     { }
 }

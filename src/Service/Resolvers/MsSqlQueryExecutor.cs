@@ -80,9 +80,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// and any attempt to use an access token in their presence would lead to
         /// a System.InvalidOperationException.
         /// </summary>
-        private static bool ShouldManagedIdentityAccessBeAttempted(string connString)
+        private bool ShouldManagedIdentityAccessBeAttempted(string connString)
         {
-            Console.WriteLine($"Connection String is {connString}");
+            QueryExecutorLogger.LogInformation($"Connection String is {connString}");
             SqlConnectionStringBuilder connStringBuilder = new(connString);
             return string.IsNullOrEmpty(connStringBuilder.UserID) &&
                 string.IsNullOrEmpty(connStringBuilder.Password) &&

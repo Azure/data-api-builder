@@ -106,9 +106,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         ""database-type"": ""notsupporteddb""
      }
 }";
+            Mock<ILogger<RuntimeConfigProvider>> logger = new();
             Assert.IsFalse(RuntimeConfig.TryGetDeserializedConfig
                              (configJson,
-                             out RuntimeConfig deserializedConfig));
+                             out RuntimeConfig deserializedConfig,
+                             logger.Object));
             Assert.IsNull(deserializedConfig);
         }
 

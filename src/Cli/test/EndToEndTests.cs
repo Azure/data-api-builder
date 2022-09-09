@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Logging;
+using Moq;
+
 namespace Cli.Tests;
 
 /// <summary>
@@ -244,6 +247,7 @@ public class EndToEndTests
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)
     {
+        ILogger logger = new Mock<ILogger>().Object;
         string jsonString;
 
         if (!TryReadRuntimeConfig(testRuntimeConfig, out jsonString))
@@ -251,7 +255,7 @@ public class EndToEndTests
             return null;
         }
 
-        RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig? runtimeConfig);
+        RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig? runtimeConfig, logger);
 
         if (runtimeConfig is null)
         {

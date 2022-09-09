@@ -199,8 +199,11 @@ namespace Cli.Tests
             InitOptions initOptionsWithAllLowerCaseFileName = GetSampleInitOptionsWithFileName(_testRuntimeConfig);
             Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(initOptionsWithAllLowerCaseFileName));
 
-            // Should FAIL - same file is used with different case
+            // Platform Dependent
+            // Windows: Should FAIL - File Exists
+            // Linux: Should PASS -
             InitOptions initOptionsWithAllUpperCaseFileName = GetSampleInitOptionsWithFileName(_testRuntimeConfig.ToUpper());
+            //
             Assert.AreEqual(false, ConfigGenerator.TryGenerateConfig(initOptionsWithAllUpperCaseFileName));
         }
 

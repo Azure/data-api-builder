@@ -44,6 +44,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         private const string ISSUER = "https://login.microsoftonline.com/291bf275-ea78-4cde-84ea-21309a43a567/v2.0";
         private const string LOCAL_ISSUER = "https://goodissuer.com";
         private const string BAD_ISSUER = "https://badactor.com";
+        private const string CHALLENGE_HEADER = "WWW-Authenticate";
 
         #region Positive Tests
 
@@ -123,13 +124,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
 
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
             Assert.AreEqual(
-                expected: (int)HttpStatusCode.OK,
+                expected: (int)HttpStatusCode.Unauthorized,
                 actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(
-                expected: AuthorizationType.Anonymous.ToString(),
-                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
-                ignoreCase: true);
+            StringValues headerValue = GetChallengeHeader(postMiddlewareContext);
+            Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The token expired at"));
         }
 
         /// <summary>
@@ -149,12 +148,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 );
 
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(
-                expected: AuthorizationType.Anonymous.ToString(),
-                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
-                ignoreCase: true);
+            StringValues headerValue = GetChallengeHeader(postMiddlewareContext);
+            Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The token is not valid before"));
         }
 
         /// <summary>
@@ -168,12 +165,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             string token = CreateJwt(audience: BAD_AUDIENCE, issuer: LOCAL_ISSUER, signingKey: key);
 
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(
-                expected: AuthorizationType.Anonymous.ToString(),
-                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
-                ignoreCase: true);
+            StringValues headerValue = GetChallengeHeader(postMiddlewareContext);
+            Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The audience '{BAD_AUDIENCE}' is invalid"));
         }
 
         /// <summary>
@@ -187,12 +182,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             string token = CreateJwt(audience: AUDIENCE, issuer: BAD_ISSUER, signingKey: key);
 
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(
-                expected: AuthorizationType.Anonymous.ToString(),
-                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
-                ignoreCase: true);
+            StringValues headerValue = GetChallengeHeader(postMiddlewareContext);
+            Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The issuer '{BAD_ISSUER}' is invalid"));
         }
 
         /// <summary>
@@ -211,15 +204,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             string token = CreateJwt(audience: AUDIENCE, issuer: LOCAL_ISSUER, signingKey: badKey);
 
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
-                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
-                ignoreCase: true);
+            StringValues headerValue = GetChallengeHeader(postMiddlewareContext);
+            Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The signature key was not found"));
         }
 
         /// <summary>
-        /// JWT with intentionally scrambled signature.
+        /// JWT with intentionally scrambled signature should result in failed authentication
+        /// characterized with an HTTP 401 Unauthorized response.
         /// JWT signed with RSASecurityKey, not a cert, so no KID (keyID) claim in token.
         /// </summary>
         [TestMethod("JWT signed with unrecognized/unconfigured key, results in signature key not found")]
@@ -230,11 +223,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             string tokenForgedSignature = ModifySignature(token, removeSig: false);
 
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, tokenForgedSignature);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
-                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
-                ignoreCase: true);
+            StringValues headerValue = GetChallengeHeader(postMiddlewareContext);
+            Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The signature is invalid"));
         }
 
         /// <summary>
@@ -252,11 +244,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             string tokenForgedSignature = ModifySignature(token, removeSig: false);
 
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, tokenForgedSignature);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
-                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
-                ignoreCase: true);
+            StringValues headerValue = GetChallengeHeader(postMiddlewareContext);
+            Assert.IsTrue(headerValue[0].Contains("invalid_token"));
         }
 
         /// <summary>
@@ -271,11 +262,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             string tokenNoSignature = ModifySignature(token, removeSig: true);
 
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, tokenNoSignature);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
-                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
-                ignoreCase: true);
+            StringValues headerValue = GetChallengeHeader(postMiddlewareContext);
+            Assert.IsTrue(headerValue[0].Contains("invalid_token"));
         }
 
         /// <summary>
@@ -294,10 +284,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             DisplayName = "Jwt- Treat request as anonymous in development mode")]
         [DataRow(true, "author", "author",
             DisplayName = "Jwt- Treat request as authenticated in development mode " +
-            "and honor the clienRoleHeader")]
+            "and honor the clientRoleHeader")]
         [DataRow(true, "Anonymous", "Anonymous",
             DisplayName = "Jwt- Treat request as authenticated in development mode " +
-            "and honor the clienRoleHeader even when specified as anonymous")]
+            "and honor the clientRoleHeader even when specified as anonymous")]
         public async Task TestAuthenticatedRequestInDevelopmentModeJwt(
             bool treatDevModeRequestAsAuthenticated,
             string expectedClientRoleHeader,
@@ -490,6 +480,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             {
                 return token.Insert(signatureBegin + 1, "abcdefg");
             }
+        }
+
+        /// <summary>
+        /// Returns the value of the challenge header
+        /// index[0] value:
+        /// "Bearer error=\"invalid_token\", error_description=\"The audience '1337-314159' is invalid\""
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        private static StringValues GetChallengeHeader(HttpContext context)
+        {
+            Assert.IsTrue(context.Response.Headers.ContainsKey(CHALLENGE_HEADER));
+            return context.Response.Headers[CHALLENGE_HEADER];
         }
 
         #endregion

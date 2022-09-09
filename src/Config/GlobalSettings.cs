@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Config
         [property: JsonIgnore]
         bool Enabled = true,
         string Path = ""
-        ): GlobalSettings();
+        ) : GlobalSettings();
 
     /// <summary>
     /// Holds the global settings used at runtime for REST Apis.
@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Config
     /// for all entities will be exposed.</param>
     public record RestGlobalSettings(
         string Path = "/api"
-        ): ApiSettings(Enabled: true, Path);
+        ) : ApiSettings(Enabled: true, Path);
 
     /// <summary>
     /// Holds the global settings used at runtime for GraphQL.

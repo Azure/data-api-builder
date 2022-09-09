@@ -471,7 +471,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             return new(
                 File.ReadAllText(cosmosFile),
                 File.ReadAllText("schema.gql"),
-                "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==");
+                "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",
+                AccessToken: null);
         }
 
         private static void ValidateCosmosDbSetup(TestServer server)

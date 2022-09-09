@@ -15,13 +15,13 @@ const parameters = {
 // number of parallel requests and connections respectively
 // To ensure all the requests run in parallel, the value is set to number of requests performed.
 // The thresholds property declares the condition to determine success or failure of the test.
-// As this test is intended to validate the correctness ofAPI responses, 
+// As this test is intended to validate the correctness of API responses, 
 // all the checks must succeed to declare the test successful.
 export const options = {
   batch: 5,
   batchPerHost: 5,
   thresholds: {
-    checks: ['rate>=1.00']
+    checks: ['rate >= 1.00']
   }
 }
 
@@ -46,7 +46,7 @@ export default function () {
     `;
 
   // Each REST or GraphQL request is created as a named request. Named requests are useful
-  // for validaing the responses.
+  // for validating the responses.
   const queryNames = ['bookQuery1', 'bookQuery2', 'notebookQuery', 'authorQuery1', 'authorQuery2'];
 
   // Expected respone body for each request
@@ -91,7 +91,7 @@ export default function () {
     }
   };
 
-  // Performs all the graphQL and REST requests in parallel
+  // Performs all the GraphQL and REST requests in parallel
   const responses = http.batch(requests);
 
   // Validations for the API responses

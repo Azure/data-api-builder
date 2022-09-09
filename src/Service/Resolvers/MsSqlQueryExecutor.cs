@@ -1,3 +1,4 @@
+using System;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -81,6 +82,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         private static bool ShouldManagedIdentityAccessBeAttempted(string connString)
         {
+            Console.WriteLine(connString);
             SqlConnectionStringBuilder connStringBuilder = new(connString);
             return string.IsNullOrEmpty(connStringBuilder.UserID) &&
                 string.IsNullOrEmpty(connStringBuilder.Password) &&

@@ -2,11 +2,14 @@ using Azure.DataApiBuilder.Service.Configurations;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
+    /// <summary>
+    /// Class to handle database specific logic for exception handling for PgSql.
+    /// <seealso cref="https://www.postgresql.org/docs/current/errcodes-appendix.html"/>
+    /// </summary>
     public class PostgreSqlDbExceptionParser : DbExceptionParser
     {
         public PostgreSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
         {
-            // For details about error codes please refer to: https://www.postgresql.org/docs/current/errcodes-appendix.html
             badRequestErrorCodes = new() {
                 "23000",    // integrity_constraint_violation
                 "23001",    // restrict_violation

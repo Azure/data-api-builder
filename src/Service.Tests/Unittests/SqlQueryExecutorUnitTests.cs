@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
 
             using SqlConnection conn = new(connectionString);
-            await msSqlQueryExecutor.HandleManagedIdentityAccessIfAnyAsync(conn);
+            await msSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
 
             if (expectManagedIdentityAccessToken)
             {

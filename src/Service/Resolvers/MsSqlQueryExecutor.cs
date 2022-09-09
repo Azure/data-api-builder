@@ -20,12 +20,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public const string DATABASE_SCOPE = @"https://database.windows.net/.default";
 
         /// <summary>
-        /// The Managed Identity Access Token string obtained from the configuration controller.
+        /// The managed identity Access Token string obtained
+        /// from the configuration controller.
         /// </summary>
-        private readonly string? _managedIdentityAccessToken;
+        private readonly string? _accessTokenFromController;
 
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
+        /// <summary>
+        /// The saved cached access token obtained from DefaultAzureCredentials
+        /// representing a managed identity. 
+        /// </summary>
         private AccessToken? _defaultAccessToken;
 
         private bool _attemptManagedIdentityAccess;
@@ -36,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ILogger<QueryExecutor<SqlConnection>> logger)
             : base(runtimeConfigProvider, dbExceptionParser, logger)
         {
-            _managedIdentityAccessToken = runtimeConfigProvider.ManagedIdentityAccessToken;
+            _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptManagedIdentityAccess =
                 ShouldManagedIdentityAccessBeAttempted(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString);
         }
@@ -48,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// provided in the runtime configuration.
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
-        public override async Task HandleManagedIdentityAccessIfAnyAsync(DbConnection conn)
+        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
         {
             // Only attempt to get the access token if the connection string is in the appropriate format
             if (_attemptManagedIdentityAccess)
@@ -58,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // If the configuration controller provided a managed identity access token use that,
                 // else use the default saved access token if still valid.
                 // Get a new token only if the saved token is null or expired.
-                string? accessToken = _managedIdentityAccessToken ??
+                string? accessToken = _accessTokenFromController ??
                     (IsDefaultAccessTokenValid() ?
                         ((AccessToken)_defaultAccessToken!).Token :
                         await GetAccessTokenAsync());

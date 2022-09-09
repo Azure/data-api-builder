@@ -34,6 +34,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Modified the properties of the supplied connection to support managed identity access.
         /// </summary>
-        public Task HandleManagedIdentityAccessIfAnyAsync(DbConnection conn);
+        public Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn);
     }
 }

@@ -193,7 +193,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
-            await QueryExecutor.HandleManagedIdentityAccessIfAnyAsync(conn);
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();
 
             string tablePrefix = GetTablePrefix(conn.Database, schemaName);
@@ -832,7 +832,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // for non-MySql DB types, this will throw an exception
                 // for malformed connection strings
                 conn.ConnectionString = ConnectionString;
-                await QueryExecutor.HandleManagedIdentityAccessIfAnyAsync(conn);
+                await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             }
             catch (Exception ex)
             {
@@ -885,7 +885,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
-            await QueryExecutor.HandleManagedIdentityAccessIfAnyAsync(conn);
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();
             // We can specify the Catalog, Schema, Table Name, Column Name to get
             // the specified column(s).

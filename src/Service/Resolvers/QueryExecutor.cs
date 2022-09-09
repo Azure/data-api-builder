@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 ConnectionString = ConnectionString,
             };
 
-            await HandleManagedIdentityAccessIfAnyAsync(conn);
+            await SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandText = sqltext;
@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual async Task HandleManagedIdentityAccessIfAnyAsync(DbConnection conn)
+        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
         {
             // no-op in the base class.
             await Task.Yield();

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -8,6 +9,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.Authorization
 {
@@ -20,14 +22,17 @@ namespace Azure.DataApiBuilder.Service.Authorization
     {
         private IAuthorizationResolver _authorizationResolver;
         private IHttpContextAccessor _contextAccessor;
+        private readonly ILogger<IAuthorizationHandler> _logger;
 
         public RestAuthorizationHandler(
             IAuthorizationResolver authorizationResolver,
-            IHttpContextAccessor httpContextAccessor
+            IHttpContextAccessor httpContextAccessor,
+            ILogger<IAuthorizationHandler> logger
             )
         {
             _authorizationResolver = authorizationResolver;
             _contextAccessor = httpContextAccessor;
+            _logger = logger;
         }
 
         /// <summary>
@@ -149,7 +154,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     }
 
                     // Attempts to get list of unique columns present in request metadata.
-                    restContext.CalculateCumulativeColumns();
+                    restContext.CalculateCumulativeColumns(_logger);
 
                     // Two operations must be checked when HTTP operation is PUT or PATCH,
                     // otherwise, just one operation is checked.

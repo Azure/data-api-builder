@@ -78,8 +78,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{DatabaseEngine}");
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            Mock<ILogger<AuthorizationResolver>> authLogger = new();
             RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
+            _runtimeConfigProvider = TestHelper.GetMockRuntimeConfigProvider(configPath, string.Empty);
 
             // Add magazines entity to the 
             if (TestCategory.MYSQL.Equals(DatabaseEngine))
@@ -120,7 +122,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             SetDatabaseNameFromConnectionString(_runtimeConfig.ConnectionString);
 
             //Initialize the authorization resolver object
-            _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
+            _authorizationResolver = new AuthorizationResolver(
+                _runtimeConfigProvider,
+                _sqlMetadataProvider,
+                authLogger.Object);
 
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
@@ -137,7 +142,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                 _sqlMetadataProvider,
                                 ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
                                 _authorizationResolver,
-                                _queryEngineLogger
+                                _queryEngineLogger,
+                                _runtimeConfigProvider
                                 );
                         });
                         services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>

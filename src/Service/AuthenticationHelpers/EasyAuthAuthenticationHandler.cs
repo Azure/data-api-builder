@@ -50,8 +50,8 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             {
                 ClaimsIdentity? identity = Options.EasyAuthProvider switch
                 {
-                    EasyAuthType.StaticWebApps => StaticWebAppsAuthentication.Parse(Context),
-                    EasyAuthType.AppService => AppServiceAuthentication.Parse(Context),
+                    EasyAuthType.StaticWebApps => StaticWebAppsAuthentication.Parse(Context, Logger),
+                    EasyAuthType.AppService => AppServiceAuthentication.Parse(Context, Logger),
                     _ => null
                 };
 

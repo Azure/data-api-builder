@@ -30,4 +30,3 @@ export const isDeepEqual = (expectedResponseJson, actualResponseJson) => {
 export const isObject = (object) => {
     return object != null && typeof object == "object";
   };
-  

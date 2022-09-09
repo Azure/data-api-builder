@@ -16,7 +16,7 @@ namespace Cli
         public const string WILDCARD = "*";
 
         /// <summary>
-        /// creates the rest object which can be either a boolean value
+        /// Creates the rest object which can be either a boolean value
         /// or a RestEntitySettings object containing api route based on the input
         /// </summary>
         public static object? GetRestDetails(string? rest)
@@ -42,7 +42,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// creates the graphql object which can be either a boolean value
+        /// Creates the graphql object which can be either a boolean value
         /// or a GraphQLEntitySettings object containing graphql type {singular, plural} based on the input
         /// </summary>
         public static object? GetGraphQLDetails(string? graphQL)
@@ -112,7 +112,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// creates an array of Operation element which contains one of the CRUD operation and
+        /// Creates an array of Operation element which contains one of the CRUD operation and
         /// fields to which this operation is allowed as permission setting based on the given input.
         /// </summary>
         public static object[] CreateOperations(string operations, Policy? policy, Field? fields)
@@ -209,7 +209,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// creates a single PermissionSetting Object based on role, operations, fieldsToInclude, and fieldsToExclude.
+        /// Creates a single PermissionSetting Object based on role, operations, fieldsToInclude, and fieldsToExclude.
         /// </summary>
         public static PermissionSetting CreatePermissions(string role, string operations, Policy? policy, Field? fields)
         {
@@ -246,8 +246,8 @@ namespace Cli
         }
 
         /// <summary>
-        /// return true on successful parsing of mappings Dictionary from IEnumerable list.
-        /// returns false in case the format of the input is not correct.
+        /// Returns true on successful parsing of mappings Dictionary from IEnumerable list.
+        /// Returns false in case the format of the input is not correct.
         /// </summary>
         /// <param name="mappingList">List of ':' separated values indicating exposed and backend names.</param>
         /// <param name="mappings">Output a Dictionary containing mapping from backend name to exposed name.</param>
@@ -272,7 +272,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// returns the default global settings based on dbType.
+        /// Returns the default global settings based on dbType.
         /// </summary>
         public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(DatabaseType dbType,
                                                                                         HostModeType hostMode,
@@ -297,9 +297,9 @@ namespace Cli
         }
 
         /// <summary>
-        /// returns the default host Global Settings
-        /// if the user doesn't specify host mode. Default value to be used is Production.
-        /// sample:
+        /// Returns the default host Global Settings
+        /// If the user doesn't specify host mode. Default value to be used is Production.
+        /// Sample:
         // "host": {
         //     "mode": "production",
         //     "cors": {
@@ -327,8 +327,8 @@ namespace Cli
         }
 
         /// <summary>
-        /// returns an object of type Policy
-        /// if policyRequest or policyDatabase is provided. Otherwise, returns null.
+        /// Returns an object of type Policy
+        /// If policyRequest or policyDatabase is provided. Otherwise, returns null.
         /// </summary>
         public static Policy? GetPolicyForOperation(string? policyRequest, string? policyDatabase)
         {
@@ -341,8 +341,8 @@ namespace Cli
         }
 
         /// <summary>
-        /// returns an object of type Field
-        /// if fieldsToInclude or fieldsToExclude is provided. Otherwise, returns null.
+        /// Returns an object of type Field
+        /// If fieldsToInclude or fieldsToExclude is provided. Otherwise, returns null.
         /// </summary>
         public static Field? GetFieldsForOperation(IEnumerable<string>? fieldsToInclude, IEnumerable<string>? fieldsToExclude)
         {
@@ -435,9 +435,9 @@ namespace Cli
         }
 
         /// <summary>
-        /// this method will parse role and operation from permission string.
+        /// This method will parse role and operation from permission string.
         /// A valid permission string will be of the form "<<role>>:<<actions>>"
-        /// it will return true if parsing is successful and add the parsed value
+        /// It will return true if parsing is successful and add the parsed value
         /// to the out params role and operations.
         /// </summary>
         public static bool TryGetRoleAndOperationFromPermission(IEnumerable<string> permissions, out string? role, out string? operations)
@@ -458,7 +458,7 @@ namespace Cli
 
         /// <summary>
         /// This method will try to find the config file based on the precedence.
-        /// if the config file is provided by user, it will return that.
+        /// If the config file is provided by user, it will return that.
         /// Else it will check the DAB_ENVIRONMENT variable.
         /// In case the environment variable is not set it will check for default config.
         /// If none of the files exists it will return false. Else true with output in runtimeConfigFile.
@@ -479,14 +479,14 @@ namespace Cli
             else
             {
                 Console.WriteLine("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
-                /// Need to reset to true explicitly so any that any reinvocations of this function
+                /// Need to reset to true explicitly so any that any re-invocations of this function
                 /// get simulated as being called for the first time specifically useful for tests.
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = true;
                 runtimeConfigFile = RuntimeConfigPath.GetFileNameForEnvironment(
                         hostingEnvironmentName: null,
                         considerOverrides: false);
 
-                /// so that the check doesn't run again when starting engine
+                /// So that the check doesn't run again when starting engine
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
             }
 
@@ -494,7 +494,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// this method will write all the json string in the given file.
+        /// This method will write all the json string in the given file.
         /// </summary>
         public static bool WriteJsonContentToFile(string file, string jsonContent)
         {

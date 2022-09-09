@@ -26,7 +26,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string initialConfiguration = GetInitialConfiguration;
             string expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
@@ -49,7 +49,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
             string configurationWithOneEntity = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
@@ -74,7 +74,7 @@ namespace Cli.Tests
                 fieldsToExclude: null,
                 policyRequest: null,
                 policyDatabase: null,
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
             Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref initialConfiguration));
@@ -97,7 +97,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: "outputfile"
+                config: _testRuntimeConfig
             );
 
             string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
@@ -129,7 +129,7 @@ namespace Cli.Tests
                 fieldsToExclude: fieldsToExclude,
                 policyRequest: policyRequest,
                 policyDatabase: policyDatabase,
-                config: "outputfile"
+                config: _testRuntimeConfig
             );
 
             string? expectedConfiguration = null;
@@ -177,7 +177,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { "level" },
                 policyRequest: null,
                 policyDatabase: null,
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string runtimeConfig = GetInitialConfiguration;
 

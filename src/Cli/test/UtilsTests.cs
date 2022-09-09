@@ -14,7 +14,7 @@ namespace Cli.Tests
         [TestMethod]
         public void TestGetRestDetails()
         {
-            // when the rest is a boolean object
+            // When the rest is a boolean object
             object? restDetails = GetRestDetails("true");
             Assert.IsNotNull(restDetails);
             Assert.IsInstanceOfType(restDetails, typeof(bool));
@@ -35,7 +35,7 @@ namespace Cli.Tests
             Assert.IsInstanceOfType(restDetails, typeof(bool));
             Assert.IsFalse((bool)restDetails);
 
-            // when rest is non-boolean string
+            // When rest is non-boolean string
             restDetails = GetRestDetails("book");
             Assert.AreEqual(new RestEntitySettings(Path: "/book"), restDetails);
         }
@@ -70,11 +70,11 @@ namespace Cli.Tests
             //when graphql is null
             Assert.IsNull(GetGraphQLDetails(null));
 
-            // when graphql is non-boolean string
+            // When graphql is non-boolean string
             graphQlDetails = GetGraphQLDetails("book");
             Assert.AreEqual(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "books")), graphQlDetails);
 
-            // when graphql is a pair of string for custom singular, plural string.
+            // When graphql is a pair of string for custom singular, plural string.
             graphQlDetails = GetGraphQLDetails("book:plural_books");
             Assert.AreEqual(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "plural_books")), graphQlDetails);
 

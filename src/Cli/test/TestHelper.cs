@@ -30,9 +30,6 @@ namespace Cli.Tests
               ""database-type"": ""mssql"",
               ""connection-string"": ""testconnectionstring""
             },
-            ""mssql"": {
-              ""set-session-context"": true
-            },
             ""runtime"": {
               ""rest"": {
                 ""enabled"": true,
@@ -256,17 +253,11 @@ namespace Cli.Tests
                 ""database-type"": ""mssql"",
                 ""connection-string"": ""localhost:5000""
               },
-              ""mssql"": {
-                ""set-session-context"": true
-              },
               ""runtime"": {
                 ""rest"": {
-                  ""enabled"": true,
                   ""path"": ""/api""
                 },
                 ""graphql"": {
-                  ""allow-introspection"": true,
-                  ""enabled"": true,
                   ""path"": ""/graphql""
                 },
                 ""host"": {
@@ -310,7 +301,6 @@ namespace Cli.Tests
         {
             Dictionary<string, object> runtimeSettingDict = new();
             Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(
-                dbType: databaseType,
                 hostMode: hostModeType,
                 corsOrigin: corsOrigins,
                 devModeDefaultAuth: authenticateDevModeRequest);

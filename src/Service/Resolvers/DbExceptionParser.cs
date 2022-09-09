@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     {
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
         protected readonly bool _developerMode;
-        protected List<string>? badRequestErrorCodes;
+        protected HashSet<string>? badRequestErrorCodes;
 
         public DbExceptionParser(RuntimeConfigProvider configProvider)
         {

@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             bool isDefaultAzureCredential)
         {
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
-
+            runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString = connectionString;
             DbExceptionParser dbExceptionParser = new(runtimeConfigProvider);
             Mock<ILogger<MsSqlQueryExecutor>> queryExecutorLogger = new();
             MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object);

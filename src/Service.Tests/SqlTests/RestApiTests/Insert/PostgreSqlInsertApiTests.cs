@@ -168,8 +168,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 ""publisher_id"": 12345
             }";
 
-            // The expected error message is different depending on what database the test is
-            // being executed upon.
             string expectedErrorMessage = "23503: insert or update on table \"books\" violates foreign key" +
                     " constraint \"book_publisher_fk\"";
 

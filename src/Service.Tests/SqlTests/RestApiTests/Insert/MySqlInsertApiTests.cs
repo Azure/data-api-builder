@@ -171,8 +171,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 ""publisher_id"": 12345
             }";
 
-            // The expected error message is different depending on what database the test is
-            // being executed upon.
             string expectedErrorMessage = "Cannot add or update a child row: a foreign key constraint fails " +
                     $"(`{DatabaseName}`.`books`, CONSTRAINT `book_publisher_fk` FOREIGN KEY (`publisher_id`) REFERENCES" +
                     " `publishers` (`id`) ON DELETE CASCADE)";

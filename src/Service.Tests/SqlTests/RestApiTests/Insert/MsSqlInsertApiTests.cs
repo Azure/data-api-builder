@@ -147,8 +147,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 ""publisher_id"": 12345
             }";
 
-            // The expected error message is different depending on what database the test is
-            // being executed upon.
             string expectedErrorMessage = "The INSERT statement conflicted with the FOREIGN KEY constraint" +
                     $" \"book_publisher_fk\". The conflict occurred in database \"{DatabaseName}\", table \"{_defaultSchemaName}.publishers\"" +
                     ", column 'id'.";

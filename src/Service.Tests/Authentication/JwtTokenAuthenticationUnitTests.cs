@@ -269,25 +269,33 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         }
 
         /// <summary>
-        /// Test to validate that the request is appropriately treated as anonymous/authenticated
-        /// in development mode depending on the value feature switch we have in config file.
+        /// Validates that a request is appropriately treated as anonymous/authenticated
+        /// in development mode depending on the runtime config flag: authenticate-devmode-requests,
+        /// referred to test display names as DevModeAuthNFlag
         /// </summary>
         /// <param name="treatDevModeRequestAsAuthenticated">Boolean value indicating whether to treat the
-        /// request as authenticated by default.</param>
+        /// request as authenticated by default.
+        /// Equivalent to setting the runtime config flag "authenticate-devmode-requests"</param>
         /// <param name="expectedClientRoleHeader">Expected value of X-MS-API-ROLE header.</param>
         /// <param name="clientRoleHeader">Value of X-MS-API-ROLE header specified in request.</param>
         /// <returns></returns>
         [DataTestMethod]
         [DataRow(true, "Authenticated", null,
-            DisplayName = "Jwt- Treat request as authenticated in development mode")]
-        [DataRow(false, "Anonymous", null,
-            DisplayName = "Jwt- Treat request as anonymous in development mode")]
+            DisplayName = "Jwt- Authenticated Request when DevModeAuthNFlag set and null client role header")]
+        [DataRow(true, "Authenticated", "Authenticated",
+            DisplayName = "Jwt- Authenticated Request when DevModeAuthNFlag set and sys role in client role header")]
         [DataRow(true, "author", "author",
-            DisplayName = "Jwt- Treat request as authenticated in development mode " +
+            DisplayName = "Jwt- Authenticated Request when DevModeAuthNFlag set " +
             "and honor the clientRoleHeader")]
         [DataRow(true, "Anonymous", "Anonymous",
-            DisplayName = "Jwt- Treat request as authenticated in development mode " +
-            "and honor the clientRoleHeader even when specified as anonymous")]
+            DisplayName = "Jwt- Authenticated Request when DevModeAuthNFlag set " +
+            "and honor the clientRoleHeader even when specified as sys role anonymous")]
+        [DataRow(false, "Anonymous", null,
+            DisplayName = "Jwt- Anonymous Request when DevModeAuthNFlag not set and no client role header")]
+        [DataRow(false, "Anonymous", "author",
+            DisplayName = "Jwt- Anonymous Request when DevModeAuthNFlag not set and ignore client role header")]
+        [DataRow(false, "Anonymous", "Authenticated",
+            DisplayName = "Jwt- Anonymous Request when DevModeAuthNFlag not set and ignore system role in client role header")]
         public async Task TestAuthenticatedRequestInDevelopmentModeJwt(
             bool treatDevModeRequestAsAuthenticated,
             string expectedClientRoleHeader,

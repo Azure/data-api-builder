@@ -428,7 +428,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
-                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: $"{DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed}"
             );
         }

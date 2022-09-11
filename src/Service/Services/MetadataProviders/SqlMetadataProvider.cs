@@ -32,10 +32,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private readonly Dictionary<string, Entity> _entities;
 
-        // nullable since Mock tests do not need it.
-        // TODO: Refactor the Mock tests to remove the nullability here
-        // once the runtime config is implemented tracked by #353.
-        private readonly IQueryExecutor? _queryExecutor;
+        protected IQueryExecutor QueryExecutor { get; }
 
         private const int NUMBER_OF_RESTRICTIONS = 4;
 
@@ -79,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Services
             ConnectionString = runtimeConfig.ConnectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
-            _queryExecutor = queryExecutor;
+            QueryExecutor = queryExecutor;
             _logger = logger;
         }
 
@@ -196,6 +193,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();
 
             string tablePrefix = GetTablePrefix(conn.Database, schemaName);
@@ -834,6 +832,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // for non-MySql DB types, this will throw an exception
                 // for malformed connection strings
                 conn.ConnectionString = ConnectionString;
+                await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             }
             catch (Exception ex)
             {
@@ -886,6 +885,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();
             // We can specify the Catalog, Schema, Table Name, Column Name to get
             // the specified column(s).
@@ -1042,11 +1042,11 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             // Execute the foreign key info query.
             using DbDataReader reader =
-                await _queryExecutor!.ExecuteQueryAsync(queryForForeignKeyInfo, parameters);
+                await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters);
 
             // Extract the first row from the result.
             Dictionary<string, object?>? foreignKeyInfo =
-                await _queryExecutor!.ExtractRowFromDbDataReader(reader);
+                await QueryExecutor.ExtractRowFromDbDataReader(reader);
 
             Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition = new();
             while (foreignKeyInfo != null)
@@ -1076,7 +1076,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 foreignKeyDefinition.ReferencingColumns.Add(
                     (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencingColumns)]!);
 
-                foreignKeyInfo = await _queryExecutor.ExtractRowFromDbDataReader(reader);
+                foreignKeyInfo = await QueryExecutor.ExtractRowFromDbDataReader(reader);
             }
 
             return pairToFkDefinition;

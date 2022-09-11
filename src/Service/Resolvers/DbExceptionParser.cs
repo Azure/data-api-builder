@@ -15,33 +15,38 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     {
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
         private readonly bool _developerMode;
-        protected HashSet<string> badRequestErrorCodes;
+        protected HashSet<string> BadRequestErrorCodes;
 
         public DbExceptionParser(RuntimeConfigProvider configProvider)
         {
             _developerMode = configProvider.IsDeveloperMode();
         }
 
+        /// <summary>
+        /// Helper method to parse the exception occurred as a result of executing the request against database
+        /// and return our custom exception (with the error message depending on the host mode of operation). 
+        /// </summary>
+        /// <param name="e">Exception occurred in the database.</param>
+        /// <returns>Custom exception to be returned to the user.</returns>
         public Exception Parse(DbException e)
         {
             string message = _developerMode ? e.Message : GENERIC_DB_EXCEPTION_MESSAGE;
-            HttpStatusCode statusCode = IsBadRequestException(e) ? HttpStatusCode.BadRequest : HttpStatusCode.InternalServerError;
             return new DataApiBuilderException(
                 message: message,
-                statusCode: statusCode,
+                statusCode: GetHttpSTatusCodeForException(e),
                 subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed
             );
         }
 
         /// <summary>
-        /// Helper method to check whether the exception is considered to have occurred because
-        /// of a bad request issued by the client.
+        /// Helper method to get the HttpStatusCode for the exception based on the SqlState of the exception.
         /// </summary>
         /// <param name="e">The exception thrown as a result of execution of the request.</param>
-        /// <returns>true/false</returns>
-        public virtual bool IsBadRequestException(DbException e)
+        /// <returns>status code to be returned in the response.</returns>
+        public virtual HttpStatusCode GetHttpSTatusCodeForException(DbException e)
         {
-            return e.SqlState is not null && badRequestErrorCodes.Contains(e.SqlState);
+            return e.SqlState is not null && BadRequestErrorCodes.Contains(e.SqlState) ? 
+                HttpStatusCode.BadRequest : HttpStatusCode.InternalServerError;
         }
     }
 }

@@ -11,15 +11,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public PostgreSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
         {
             // HashSet of 'SqlState'(s) which are to be considered as bad requests.
-            badRequestErrorCodes = new() {
+            BadRequestErrorCodes = new() {
                 // integrity_constraint_violation, occurs when an insert/update/delete statement violates
-                // a foreign key,primary key, check or unique constraint.
+                // a foreign key, primary key, check or unique constraint.
                 "23000",
 
                 // restrict_violation
                 "23001",
 
-                // not_null_violation, occurs when we try to null out a field in table which is declared as non-nullable.
+                // not_null_violation, occurs when attempting to null out a field in table which is declared as non-nullable.
                 "23502",
 
                 // foreign_key_violation, occurs when an insertion violates foreign key constraint.
@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 "23505",
 
                 // check_violation,The CHECK constraint ensures that all values in a column satisfy certain conditions.
-                // Check violation occurs when a check constraint fails. For eg. name like '.dab' when name = 'DAB' fails the check.
+                // Check violation occurs when a check constraint fails. e.g. name like '.dab' when name = 'DAB' fails the check.
                 "23514",
 
                 // exclusion_violation, The EXCLUDE constraint ensures that if any two rows are compared on the specified column(s)

@@ -4,7 +4,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 {
     /// <summary>
     /// Class to handle database specific logic for exception handling for MySql.
-    /// <seealso cref="https://mariadb.com/kb/en/mariadb-error-codes/"/>
+    /// <seealso cref="https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html"/>
     /// </summary>
     public class MySqlDbExceptionParser : DbExceptionParser
     {
@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // 15. ER_CONSTRAINT_FAILED: CONSTRAINT %`s failed for %`-.192s.%`-.192s
 
             // HashSet of 'SqlState'(s) which are to be considered as bad requests.
-            badRequestErrorCodes = new() { "23000" };
+            BadRequestErrorCodes = new() { "23000" };
         }
     }
 }

@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Net;
 using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.Data.SqlClient;
 
@@ -12,8 +13,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     {
         public MsSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
         {
-            // HashSet of 'Number'(s) which are to be considered as bad requests.
-            badRequestErrorCodes = new() {
+            // HashSet of Error codes ('Number') which are to be considered as bad requests.
+            BadRequestErrorCodes = new() {
                 // A column insert or update conflicts with a rule imposed by a previous CREATE RULE statement. The statement was terminated.
                 // The conflict occurred in database '%.*ls', table '%.*ls', column '%.*ls'.
                 "513",
@@ -39,10 +40,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc/>
-        public override bool IsBadRequestException(DbException e)
+        public override HttpStatusCode GetHttpSTatusCodeForException(DbException e)
         {
             string errorNumber = ((SqlException)e).Number.ToString();
-            return badRequestErrorCodes.Contains(errorNumber);
+            return BadRequestErrorCodes.Contains(errorNumber) ? HttpStatusCode.BadRequest : HttpStatusCode.InternalServerError;
         }
     }
 }

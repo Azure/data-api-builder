@@ -11,10 +11,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public class MsSqlDbExceptionParser : DbExceptionParser
     {
-        public MsSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
-        {
+        public MsSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider,
             // HashSet of Error codes ('Number') which are to be considered as bad requests.
-            BadRequestErrorCodes = new() {
+            new()
+            {
                 // A column insert or update conflicts with a rule imposed by a previous CREATE RULE statement. The statement was terminated.
                 // The conflict occurred in database '%.*ls', table '%.*ls', column '%.*ls'.
                 "513",
@@ -36,11 +36,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // The insert failed. It conflicted with an identity range check constraint in database '%.*ls',
                 // replicated table '%.*ls'%ls%.*ls%ls.
                 "548"
-            };
+            })
+        {
         }
 
         /// <inheritdoc/>
-        public override HttpStatusCode GetHttpSTatusCodeForException(DbException e)
+        public override HttpStatusCode GetHttpStatusCodeForException(DbException e)
         {
             string errorNumber = ((SqlException)e).Number.ToString();
             return BadRequestErrorCodes.Contains(errorNumber) ? HttpStatusCode.BadRequest : HttpStatusCode.InternalServerError;

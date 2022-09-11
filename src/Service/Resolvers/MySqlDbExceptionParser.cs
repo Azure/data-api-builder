@@ -8,7 +8,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public class MySqlDbExceptionParser : DbExceptionParser
     {
-        public MySqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
+        public MySqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider,
+            // HashSet of 'SqlState'(s) which are to be considered as bad requests.
+            new()
+            {
+                "23000"
+            })
         {
             // For all the below conditions, we will get the SqlState as 23000 for MySql.
             // 1.  ER_DUP_KEY : Can't write; duplicate key in table '%s'
@@ -29,9 +34,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // lead to a duplicate entry in a child table
             // 14. ER_DUP_UNKNOWN_IN_INDEX: Duplicate entry for key '%s'
             // 15. ER_CONSTRAINT_FAILED: CONSTRAINT %`s failed for %`-.192s.%`-.192s
-
-            // HashSet of 'SqlState'(s) which are to be considered as bad requests.
-            BadRequestErrorCodes = new() { "23000" };
         }
     }
 }

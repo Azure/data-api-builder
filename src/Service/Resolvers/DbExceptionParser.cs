@@ -17,9 +17,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly bool _developerMode;
         protected HashSet<string> BadRequestErrorCodes;
 
-        public DbExceptionParser(RuntimeConfigProvider configProvider)
+        public DbExceptionParser(RuntimeConfigProvider configProvider, HashSet<string> badRequestErrorCodes)
         {
             _developerMode = configProvider.IsDeveloperMode();
+            BadRequestErrorCodes = badRequestErrorCodes;
         }
 
         /// <summary>
@@ -33,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string message = _developerMode ? e.Message : GENERIC_DB_EXCEPTION_MESSAGE;
             return new DataApiBuilderException(
                 message: message,
-                statusCode: GetHttpSTatusCodeForException(e),
+                statusCode: GetHttpStatusCodeForException(e),
                 subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed
             );
         }
@@ -43,9 +44,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="e">The exception thrown as a result of execution of the request.</param>
         /// <returns>status code to be returned in the response.</returns>
-        public virtual HttpStatusCode GetHttpSTatusCodeForException(DbException e)
+        public virtual HttpStatusCode GetHttpStatusCodeForException(DbException e)
         {
-            return e.SqlState is not null && BadRequestErrorCodes.Contains(e.SqlState) ? 
+            return e.SqlState is not null && BadRequestErrorCodes.Contains(e.SqlState) ?
                 HttpStatusCode.BadRequest : HttpStatusCode.InternalServerError;
         }
     }

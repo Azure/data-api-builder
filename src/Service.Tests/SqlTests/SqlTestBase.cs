@@ -236,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Mock<ILogger<QueryExecutor<NpgsqlConnection>>> pgQueryExecutorLogger = new();
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
-                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
+                    _dbExceptionParser = new PostgreSqlDbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
@@ -252,7 +252,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Mock<ILogger<QueryExecutor<SqlConnection>>> msSqlQueryExecutorLogger = new();
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
-                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
+                    _dbExceptionParser = new MsSqlDbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new MsSqlQueryExecutor(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
@@ -267,7 +267,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Mock<ILogger<QueryExecutor<MySqlConnection>>> mySqlQueryExecutorLogger = new();
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
-                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
+                    _dbExceptionParser = new MySqlDbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<MySqlConnection>(
                         _runtimeConfigProvider,
                         _dbExceptionParser,

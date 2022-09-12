@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -53,9 +54,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
             runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString = connectionString;
-            DbExceptionParser dbExceptionParser = new(runtimeConfigProvider);
+            Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider, new HashSet<string>());
             Mock<ILogger<MsSqlQueryExecutor>> queryExecutorLogger = new();
-            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object);
+            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object);
 
             const string DEFAULT_TOKEN = "Default access token";
             const string CONFIG_TOKEN = "Configuration controller access token";
@@ -78,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         schema: null,
                         connectionString: connectionString,
                         accessToken: CONFIG_TOKEN);
-                    msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object);
+                    msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object);
                 }
             }
 

@@ -487,6 +487,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 );
         }
 
+        /// <summary>
+        /// Abstract method overriden in each of the child class as each database has its own specific error message.
+        /// Validates request failure (HTTP 400) when an invalid foreign key is provided with an insertion.
+        /// </summary>
+        public abstract Task InsertOneTestViolatingForeignKeyConstraint();
+
         #endregion
     }
 }

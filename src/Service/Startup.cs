@@ -155,7 +155,7 @@ namespace Azure.DataApiBuilder.Service
                 }
             });
 
-            services.AddSingleton(implementationFactory: (serviceProvider) =>
+            services.AddSingleton<DbExceptionParser>(implementationFactory: (serviceProvider) =>
             {
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
@@ -165,9 +165,11 @@ namespace Azure.DataApiBuilder.Service
                     case DatabaseType.cosmos:
                         return null!;
                     case DatabaseType.mssql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlDbExceptionParser>(serviceProvider);
                     case DatabaseType.postgresql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlDbExceptionParser>(serviceProvider);
                     case DatabaseType.mysql:
-                        return new DbExceptionParser(configProvider);
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider);
                     default:
                         throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
                 }

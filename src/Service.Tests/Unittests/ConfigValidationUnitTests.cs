@@ -265,12 +265,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// Test method to check that NO exception is thrown when LinkingObject is provided
         /// while either LinkingSourceField or SourceField is null, and either targetFields or LinkingTargetField is null.
-        /// But the relationship between linkingObject and SourceEntity or TargetEntity is not defined in the database.
+        /// But the relationship between linkingObject and SourceEntity or TargetEntity is defined in the database.
         /// </summary>
-        [DataRow(new string[] { "id" }, null, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", DisplayName = "LinkingSourceField is null")]
-        [DataRow(null, new string[] { "token_id" }, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", DisplayName = "SourceField is null")]
-        [DataRow(new string[] { "id" }, new string[] { "token_id" }, new string[] { "num" }, null, "SampleEntity2", DisplayName = "LinkingTargetField is null")]
-        [DataRow(new string[] { "id" }, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", DisplayName = "LinkingSourceField is null")]
+        [DataRow(new string[] { "id" }, null, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", DisplayName = "LinkingSourceFields is null")]
+        [DataRow(null, new string[] { "token_id" }, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", DisplayName = "SourceFields is null")]
+        [DataRow(new string[] { "id" }, new string[] { "token_id" }, new string[] { "num" }, null, "SampleEntity2", DisplayName = "LinkingTargetFields is null")]
+        [DataRow(new string[] { "id" }, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", DisplayName = "TargetFields is null")]
         [DataTestMethod]
         public void TestRelationshipWithLinkingObjectNotHavingEitherSourceFieldOrLinkingSourceFieldGood(
             string[]? sourceFields,
@@ -407,7 +407,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 x.ParseSchemaAndDbObjectName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
 
             // Exception is thrown as foreignKey pair is not specified in the config, nor defined
-            // in the database as well.
+            // in the database.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                 configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
             Assert.AreEqual($"Could not find relationship between entities:"
@@ -430,7 +430,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string? linkingObject
         )
         {
-            // Adding linking object without LinkingSourceFields and LinkingTargetFields
+            // Creating an EntityMap with two sample entity
             Dictionary<string, Entity> entityMap = GetSampleEntityMap(
                 sourceEntity: "SampleEntity1",
                 targetEntity: "SampleEntity2",
@@ -482,6 +482,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
                 x.GetPairToFkDefinition()).Returns(foreignKeyPair);
 
+            // No Exception is thrown as foreignKey Pair was found in the DB between
+            // source and target entity.
             configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object);
         }
 

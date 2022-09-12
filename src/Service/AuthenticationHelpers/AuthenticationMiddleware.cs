@@ -56,8 +56,10 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             // 3. None - No token provided, no auth result.
             AuthenticateResult authNResult = await httpContext.AuthenticateAsync();
 
-            // Reject request with HTTP 401 Unauthorized when an invalid token is provided
-            // and authenticate-devmode-requests config flag is false or not set.
+            // Reject request by terminating the AuthenticationMiddleware
+            // when an invalid token is provided and rites challenge response
+            // metadata (HTTP 401 Unauthorized response code
+            // and www-authenticate headers) to the HTTP Context.
             if (authNResult.Failure is not null)
             {
                 IActionResult result = new ChallengeResult();
@@ -65,6 +67,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 {
                     HttpContext = httpContext
                 });
+
                 return;
             }
 

@@ -363,11 +363,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// in the runtime configuration.
         /// Validating Cases:
         /// 1. entity not defined in config cannot be used in relationship.
-        /// 2. entity with graphQL disabled cannot be used in a relationship with another entity
-        /// having graphQL enabled.
-        /// 3. if config doesn't contain LinkingSourceFields and LinkingTargetFields for the
+        /// 2. entity with graphQL disabled cannot be used in a relationship with another entity.
+        /// 3. if config doesn't contain LinkingSourceFields or sourceFields and LinkingTargetFields or targetFields for the
         /// the given linkingObject, then the underlying database should contain a foreign key relationship
         /// between source and target entity.
+        /// 4. If linkingObject is null, and either of SourceFields or targetFields is null, then foreignKey pair
+        /// between source and target entity must be defined in the DB.
         /// </summary>
         /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
         public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)

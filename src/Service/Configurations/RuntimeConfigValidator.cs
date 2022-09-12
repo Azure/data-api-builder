@@ -395,49 +395,51 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                     // linking.object can be provided without linking.source.fields and linking.target.fields
                     // in the config only when foreign key relation is defined in the database.
-                    Dictionary<RelationShipPair, ForeignKeyDefinition> relationshipPairFromDatabase = sqlMetadataProvider.GetPairToFkDefinition();
+                    Dictionary<RelationShipPair, ForeignKeyDefinition> ForeignKeyPairFromDatabase = sqlMetadataProvider.GetPairToFkDefinition();
 
-                    // check to look for foreignKey pair definition between entity and linking object
-                    // as linkingSourceFields and linkingTargetFields are null.
-                    if (relationship.LinkingObject is not null
-                        && (relationship.LinkingSourceFields is null || relationship.LinkingTargetFields is null))
+                    if (relationship.LinkingObject is not null)
                     {
                         (string linkingObjectSchema, string linkingObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(relationship.LinkingObject)!;
-
-                        DatabaseObject sourceDatabaseObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
-                        DatabaseObject targetDatabaseObject = sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity];
                         DatabaseObject linkingDatabaseObject = new(linkingObjectSchema, linkingObjectName);
 
-                        RelationShipPair linkingObjectSourceEntityPair = new(linkingDatabaseObject, sourceDatabaseObject);
-                        RelationShipPair linkingObjectTargetEntityPair = new(linkingDatabaseObject, targetDatabaseObject);
-
-                        if (!(relationshipPairFromDatabase.ContainsKey(linkingObjectSourceEntityPair) && relationshipPairFromDatabase.ContainsKey(linkingObjectTargetEntityPair)))
+                        if (relationship.LinkingSourceFields is null || relationship.SourceFields is null)
                         {
-                            throw new DataApiBuilderException(
+                            if (!VerifyForeignKeyExists(ForeignKeyPairFromDatabase, linkingDatabaseObject,
+                                sqlMetadataProvider.EntityToDatabaseObject[entityName]))
+                            {
+                                throw new DataApiBuilderException(
                                 message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
-                                    $" with entities: {relationship.TargetEntity} and {entityName}.",
+                                    $" and entity: {entityName}.",
                                 statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            }
+                        }
+
+                        if (relationship.LinkingTargetFields is null || relationship.TargetFields is null)
+                        {
+                            if (!VerifyForeignKeyExists(ForeignKeyPairFromDatabase, linkingDatabaseObject,
+                                sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity]))
+                            {
+                                throw new DataApiBuilderException(
+                                message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
+                                    $" and entity: {relationship.TargetEntity}.",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            }
                         }
                     }
 
-                    // if linking.object is null , and sourceFields or targetFields are not provided,
-                    // then there should be a relationship defined between source and target entity in the DB.
                     if (relationship.LinkingObject is null
                         && (relationship.SourceFields is null || relationship.TargetFields is null))
                     {
-                        DatabaseObject sourceDatabaseObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
-                        DatabaseObject targetDatabaseObject = sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity];
-
-                        RelationShipPair SourceAndTargetEntityPair = new(sourceDatabaseObject, targetDatabaseObject);
-                        RelationShipPair TargetAndSourceEntityPair = new(targetDatabaseObject, sourceDatabaseObject);
-
-                        if (!(relationshipPairFromDatabase.ContainsKey(SourceAndTargetEntityPair) || relationshipPairFromDatabase.ContainsKey(TargetAndSourceEntityPair)))
+                        if (!VerifyForeignKeyExists(ForeignKeyPairFromDatabase,
+                                sqlMetadataProvider.EntityToDatabaseObject[entityName],
+                                sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity]))
                         {
                             throw new DataApiBuilderException(
-                                message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",
-                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
                     }
                 }
@@ -626,6 +628,22 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public static bool IsValidPermissionAction(Operation action)
         {
             return action is Operation.All || PermissionOperation.ValidPermissionOperations.Contains(action);
+        }
+
+        private static bool VerifyForeignKeyExists(
+            Dictionary<RelationShipPair, ForeignKeyDefinition> ForeignKeyPairFromDatabase,
+            DatabaseObject databaseObjectA,
+            DatabaseObject databaseObjectB)
+        {
+            RelationShipPair pairAB = new(databaseObjectA, databaseObjectB);
+            RelationShipPair pairBA = new(databaseObjectB, databaseObjectA);
+
+            if (ForeignKeyPairFromDatabase.ContainsKey(pairAB) || ForeignKeyPairFromDatabase.ContainsKey(pairBA))
+            {
+                return true;
+            }
+
+            return false;
         }
     }
 }

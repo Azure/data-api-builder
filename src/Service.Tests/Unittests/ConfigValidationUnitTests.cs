@@ -193,22 +193,102 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Test method to check that an exception is thrown when LinkingObject was provided
-        /// without LinkingSourceField and LinkingTargetField. And the relationship is not defined in the database.
-        /// Also checks that after adding the foreign key pair from the database, no exception should be thrown.
+        /// while either LinkingSourceField or SourceField is null, and either targetFields or LinkingTargetField is null.
+        /// And the relationship is not defined in the database.
         /// </summary>
-        [TestMethod]
-        public void TestRelationshipWithLinkingObjectNotHavingForeignKeyPairDefinedInDB()
+        [DataRow(new string[] { "id" }, null, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", DisplayName = "LinkingSourceField is null")]
+        [DataRow(null, new string[] { "token_id" }, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", DisplayName = "SourceField is null")]
+        [DataRow(new string[] { "id" }, new string[] { "token_id" }, new string[] { "num" }, null, "SampleEntity2", DisplayName = "LinkingTargetField is null")]
+        [DataRow(new string[] { "id" }, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", DisplayName = "LinkingSourceField is null")]
+        [DataTestMethod]
+        public void TestRelationshipWithLinkingObjectNotHavingEitherSourceFieldOrLinkingSourceField(
+            string[]? sourceFields,
+            string[]? linkingSourceFields,
+            string[]? targetFields,
+            string[]? linkingTargetFields,
+            string relationshipEntity
+        )
         {
-            Dictionary<string, Relationship> relationshipMap = new();
-
-            // adding linking object without LinkingSourceFields and LinkingTargetFields
-            // Linking object doesn't have a defined primary-foreign key relation in the DB.
+            // Creating an EntityMap with two sample entity
             Dictionary<string, Entity> entityMap = GetSampleEntityMap(
                 sourceEntity: "SampleEntity1",
                 targetEntity: "SampleEntity2",
-                sourceFields: null,
-                targetFields: null,
-                linkingObject: "TEST_SOURCE_LINK"
+                sourceFields: sourceFields,
+                targetFields: targetFields,
+                linkingObject: "TEST_SOURCE_LINK",
+                linkingSourceFields: linkingSourceFields,
+                linkingTargetFields: linkingTargetFields
+            );
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                MsSql: null,
+                CosmosDb: null,
+                PostgreSql: null,
+                MySql: null,
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                Entities: entityMap
+                );
+
+            // Mocking EntityToDatabaseObject
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
+                x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
+
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
+            mockDictionaryForEntityDatabaseObject.Add(
+                "SampleEntity1",
+                new DatabaseObject("dbo", "TEST_SOURCE1")
+            );
+
+            mockDictionaryForEntityDatabaseObject.Add(
+                "SampleEntity2",
+                new DatabaseObject("dbo", "TEST_SOURCE2")
+            );
+
+            _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
+                x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
+
+            // To mock the schema name and dbObjectName for linkingObject
+            _sqlMetadataProvider.Setup<(string, string)>(x =>
+                x.ParseSchemaAndDbObjectName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
+
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+            Assert.AreEqual($"Could not find relationship between Linking Object: TEST_SOURCE_LINK"
+                + $" and entity: {relationshipEntity}.", ex.Message);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+        }
+
+        /// <summary>
+        /// Test method to check that NO exception is thrown when LinkingObject is provided
+        /// while either LinkingSourceField or SourceField is null, and either targetFields or LinkingTargetField is null.
+        /// But the relationship between linkingObject and SourceEntity or TargetEntity is not defined in the database.
+        /// </summary>
+        [DataRow(new string[] { "id" }, null, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", DisplayName = "LinkingSourceField is null")]
+        [DataRow(null, new string[] { "token_id" }, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", DisplayName = "SourceField is null")]
+        [DataRow(new string[] { "id" }, new string[] { "token_id" }, new string[] { "num" }, null, "SampleEntity2", DisplayName = "LinkingTargetField is null")]
+        [DataRow(new string[] { "id" }, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", DisplayName = "LinkingSourceField is null")]
+        [DataTestMethod]
+        public void TestRelationshipWithLinkingObjectNotHavingEitherSourceFieldOrLinkingSourceFieldGood(
+            string[]? sourceFields,
+            string[]? linkingSourceFields,
+            string[]? targetFields,
+            string[]? linkingTargetFields,
+            string relationshipEntity
+        )
+        {
+            // Creating an EntityMap with two sample entity
+            Dictionary<string, Entity> entityMap = GetSampleEntityMap(
+                sourceEntity: "SampleEntity1",
+                targetEntity: "SampleEntity2",
+                sourceFields: sourceFields,
+                targetFields: targetFields,
+                linkingObject: "TEST_SOURCE_LINK",
+                linkingSourceFields: linkingSourceFields,
+                linkingTargetFields: linkingTargetFields
             );
 
             RuntimeConfig runtimeConfig = new(
@@ -245,12 +325,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _sqlMetadataProvider.Setup<(string, string)>(x =>
                 x.ParseSchemaAndDbObjectName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
 
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
-            Assert.AreEqual($"Could not find relationship between Linking Object: TEST_SOURCE_LINK"
-                + $" with entities: SampleEntity2 and SampleEntity1.", ex.Message);
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-
             // Adding ForeignKey relation for LinkingObject and the other related entities.
             // and mocking the foreignKey pair value of sqlMetadataProvider.
             Dictionary<RelationShipPair, ForeignKeyDefinition> foreignKeyPair = new();
@@ -259,16 +333,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ForeignKeyDefinition fd1 = new();
             foreignKeyPair.Add(rp1, fd1);
 
-            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
-                x.GetPairToFkDefinition()).Returns(foreignKeyPair);
-
-            // Exception thrown when only one pair either {linkingObject, source} or {linkingObject, target} is present
-            ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
-            Assert.AreEqual($"Could not find relationship between Linking Object: TEST_SOURCE_LINK"
-                + $" with entities: SampleEntity2 and SampleEntity1.", ex.Message);
-
-            // When both pairs {linkingObject, source} or {linkingObject, target} is present
             RelationShipPair rp2 = new(new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE2"));
             ForeignKeyDefinition fd2 = new();
             foreignKeyPair.Add(rp2, fd2);
@@ -277,28 +341,35 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
                 x.GetPairToFkDefinition()).Returns(foreignKeyPair);
 
-            // now, even if the LinkingSourceFields and LinkingTargetFields was not provided,
-            // the engine was able to find foreign key relation in the DB and validation will pass.
+            // Since, we have defined the relationship in Database,
+            // the engine was able to find foreign key relation and validation will pass.
             configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object);
         }
 
         /// <summary>
-        /// Test method to ensure exception is thrown when LinkingObject is null
-        /// along with source or target fields, and the relationship is not defined in the database.
-        /// Also checks that after adding the foreign key pair from the database, no exception should be thrown.
+        /// Test method to check that an exception is thrown when LinkingObject is null
+        /// and either of SourceFields and TargetFields is null in the config.
+        /// And the foreignKey pair between source and target is not defined in the database as well.
         /// </summary>
-        [TestMethod]
-        public void EnsureFailure_RelationshipBetweenSourceAndTargetEntityNotDefinedInConfigAndDB()
+        [DataRow(null, new string[] { "das" }, null, DisplayName = "SourceFields is null")]
+        [DataRow(new string[] { "id" }, null, null, DisplayName = "TargetFields is null")]
+        [DataRow(null, null, null, DisplayName = "both source and targetFields are null")]
+        [DataTestMethod]
+        public void TestRelationshipWithLinkingObjectNotHavingEitherSourceFieldOrLinkingSourceField2(
+            string[]? sourceFields,
+            string[]? targetFields,
+            string? linkingObject
+        )
         {
-            Dictionary<string, Relationship> relationshipMap = new();
-
-            // creating relationship with linkingObject, sourceFields, and targetFields as NULL.
+            // Creating an EntityMap with two sample entity
             Dictionary<string, Entity> entityMap = GetSampleEntityMap(
                 sourceEntity: "SampleEntity1",
                 targetEntity: "SampleEntity2",
-                sourceFields: null,
-                targetFields: null,
-                linkingObject: null
+                sourceFields: sourceFields,
+                targetFields: targetFields,
+                linkingObject: linkingObject,
+                linkingSourceFields: null,
+                linkingTargetFields: null
             );
 
             RuntimeConfig runtimeConfig = new(
@@ -331,21 +402,46 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
                 x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
 
+            // To mock the schema name and dbObjectName for creating RelationshipPair
+            _sqlMetadataProvider.Setup<(string, string)>(x =>
+                x.ParseSchemaAndDbObjectName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
+
+            // Exception is thrown as foreignKey pair is not specified in the config, nor defined
+            // in the database as well.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                 configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
-            Assert.AreEqual($"Could not find relationship between entities: SampleEntity1 and SampleEntity2.", ex.Message);
+            Assert.AreEqual($"Could not find relationship between entities:"
+                + $" SampleEntity1 and SampleEntity2.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+        }
 
-            // creating relationship with linkingObject is NULL, while either sourceFields, or targetFields is not NULL.
-            entityMap = GetSampleEntityMap(
+        /// <summary>
+        /// Test method to check that NO exception is thrown when LinkingObject is null
+        /// and either of SourceFields and TargetFields is null.
+        /// And the relationship is defined in the database.
+        /// </summary>
+        [DataRow(null, new string[] { "das" }, null, DisplayName = "SourceFields is null")]
+        [DataRow(new string[] { "id" }, null, null, DisplayName = "TargetFields is null")]
+        [DataRow(null, null, null, DisplayName = "both source and targetFields are null")]
+        [DataTestMethod]
+        public void TestRelationshipWithLinkingObjectNotHavingEitherSourceFieldOrLinkingSourceField22(
+            string[]? sourceFields,
+            string[]? targetFields,
+            string? linkingObject
+        )
+        {
+            // Adding linking object without LinkingSourceFields and LinkingTargetFields
+            Dictionary<string, Entity> entityMap = GetSampleEntityMap(
                 sourceEntity: "SampleEntity1",
                 targetEntity: "SampleEntity2",
-                sourceFields: new string[] { "id" },
-                targetFields: null,
-                linkingObject: null
+                sourceFields: sourceFields,
+                targetFields: targetFields,
+                linkingObject: linkingObject,
+                linkingSourceFields: null,
+                linkingTargetFields: null
             );
 
-            runtimeConfig = new(
+            RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
                 MsSql: null,
                 CosmosDb: null,
@@ -356,36 +452,36 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: entityMap
                 );
 
-            runtimeConfig = new(
-                Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
-                Entities: entityMap
-                );
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
+                x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
 
-            ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
-            Assert.AreEqual($"Could not find relationship between entities: SampleEntity1 and SampleEntity2.", ex.Message);
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
+            mockDictionaryForEntityDatabaseObject.Add(
+                "SampleEntity1",
+                new DatabaseObject("dbo", "TEST_SOURCE1")
+            );
 
-            // Adding ForeignKey relation for source and target entity.
-            // and mocking the foreignKey pair value of sqlMetadataProvider.
+            mockDictionaryForEntityDatabaseObject.Add(
+                "SampleEntity2",
+                new DatabaseObject("dbo", "TEST_SOURCE2")
+            );
+
+            _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
+                x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
+
+            // Adding ForeignKey relation between source and target entity.
+            // by mocking the foreignKey pair value of sqlMetadataProvider.
             Dictionary<RelationShipPair, ForeignKeyDefinition> foreignKeyPair = new();
 
             RelationShipPair rp1 = new(new DatabaseObject("dbo", "TEST_SOURCE1"), new DatabaseObject("dbo", "TEST_SOURCE2"));
             ForeignKeyDefinition fd1 = new();
             foreignKeyPair.Add(rp1, fd1);
 
-            // this will mock the return for foreign key pair from DB
             _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
                 x.GetPairToFkDefinition()).Returns(foreignKeyPair);
 
-            // now, even if the SourceFields and TargetFields was not provided,
-            // the engine was able to find foreign key relation in the DB and validation will pass.
             configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object);
         }
 
@@ -942,7 +1038,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string targetEntity,
             string[]? sourceFields,
             string[]? targetFields,
-            string linkingObject
+            string linkingObject,
+            string[]? linkingSourceFields,
+            string[]? linkingTargetFields
         )
         {
             Dictionary<string, Relationship> relationshipMap = new();
@@ -954,8 +1052,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 SourceFields: sourceFields,
                 TargetFields: targetFields,
                 LinkingObject: linkingObject,
-                LinkingSourceFields: null,
-                LinkingTargetFields: null
+                LinkingSourceFields: linkingSourceFields,
+                LinkingTargetFields: linkingTargetFields
             );
 
             relationshipMap.Add("rname1", sampleRelationship);
@@ -972,8 +1070,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 SourceFields: targetFields,
                 TargetFields: sourceFields,
                 LinkingObject: linkingObject,
-                LinkingSourceFields: null,
-                LinkingTargetFields: null
+                LinkingSourceFields: linkingTargetFields,
+                LinkingTargetFields: linkingSourceFields
             );
 
             relationshipMap = new();

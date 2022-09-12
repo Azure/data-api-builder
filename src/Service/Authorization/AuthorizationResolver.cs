@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
@@ -24,6 +25,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
     public class AuthorizationResolver : IAuthorizationResolver
     {
         private ISqlMetadataProvider _metadataProvider;
+        private ILogger<AuthorizationResolver> _logger;
         public const string WILDCARD = "*";
         public const string CLAIM_PREFIX = "@claims.";
         public const string FIELD_PREFIX = "@item.";
@@ -36,10 +38,12 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
         public AuthorizationResolver(
             RuntimeConfigProvider runtimeConfigProvider,
-            ISqlMetadataProvider sqlMetadataProvider
+            ISqlMetadataProvider sqlMetadataProvider,
+            ILogger<AuthorizationResolver> logger
             )
         {
             _metadataProvider = sqlMetadataProvider;
+            _logger = logger;
             if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
             {
                 // Datastructure constructor will pull required properties from metadataprovider.
@@ -237,7 +241,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         {
                             // If not a string, the operationObj is expected to be an object that can be deserialised into PermissionOperation
                             // object. We will put validation checks later to make sure this is the case.
-                            if (RuntimeConfig.TryGetDeserializedConfig(operationElement.ToString(), out PermissionOperation? operationObj)
+                            if (RuntimeConfig.TryGetDeserializedConfig(operationElement.ToString(), out PermissionOperation? operationObj, _logger)
                                 && operationObj is not null)
                             {
                                 operation = operationObj.Name;

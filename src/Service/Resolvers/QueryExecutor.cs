@@ -15,9 +15,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     public class QueryExecutor<TConnection> : IQueryExecutor
         where TConnection : DbConnection, new()
     {
-        private readonly string _connectionString;
-        private readonly DbExceptionParser _dbExceptionParser;
-        private readonly ILogger<QueryExecutor<TConnection>> _logger;
+        protected string ConnectionString { get; }
+        protected DbExceptionParser DbExceptionParser { get; }
+        protected ILogger<QueryExecutor<TConnection>> QueryExecutorLogger { get; }
 
         public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider,
                              DbExceptionParser dbExceptionParser,
@@ -25,9 +25,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
-            _connectionString = runtimeConfig.ConnectionString;
-            _dbExceptionParser = dbExceptionParser;
-            _logger = logger;
+            ConnectionString = runtimeConfig.ConnectionString;
+            DbExceptionParser = dbExceptionParser;
+            QueryExecutorLogger = logger;
         }
 
         /// <summary>
@@ -36,12 +36,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="sqltext">Sql text to be executed.</param>
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <returns>DbDataReader object for reading the result set.</returns>
-        public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
+        public virtual async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
         {
             TConnection conn = new()
             {
-                ConnectionString = _connectionString
+                ConnectionString = ConnectionString,
             };
+
+            await SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandText = sqltext;
@@ -63,10 +65,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             catch (DbException e)
             {
-                _logger.LogError(e.Message);
-                _logger.LogError(e.StackTrace);
-                throw _dbExceptionParser.Parse(e);
+                QueryExecutorLogger.LogError(e.Message);
+                QueryExecutorLogger.LogError(e.StackTrace);
+                throw DbExceptionParser.Parse(e);
             }
+        }
+
+        /// <inheritdoc />
+        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
+        {
+            // no-op in the base class.
+            await Task.Yield();
         }
 
         /// <inheritdoc />
@@ -78,9 +87,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             catch (DbException e)
             {
-                _logger.LogError(e.Message);
-                _logger.LogError(e.StackTrace);
-                throw _dbExceptionParser.Parse(e);
+                QueryExecutorLogger.LogError(e.Message);
+                QueryExecutorLogger.LogError(e.StackTrace);
+                throw DbExceptionParser.Parse(e);
             }
         }
 

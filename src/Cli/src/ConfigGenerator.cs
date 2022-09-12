@@ -16,16 +16,25 @@ namespace Cli
         /// </summary>
         public static bool TryGenerateConfig(InitOptions options)
         {
-            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
-            {
-                Console.Error.Write($"Failed to create the runtime config file.");
-                return false;
-            }
-
             if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
             {
                 runtimeConfigFile = RuntimeConfigPath.DefaultName;
                 Console.WriteLine($"Creating a new config file: {runtimeConfigFile}");
+            }
+
+            // File existence checked to avoid overwriting the existing configuration.
+            if (File.Exists(runtimeConfigFile))
+            {
+                Console.Error.Write($"Config file: {runtimeConfigFile} already exists. " +
+                    "Please provide a different name or remove the existing config file.");
+                return false;
+            }
+
+            // Creating a new json file with runtime configuration
+            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
+            {
+                Console.Error.Write($"Failed to create the runtime config file.");
+                return false;
             }
 
             return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
@@ -42,10 +51,14 @@ namespace Cli
             runtimeConfigJson = string.Empty;
 
             DatabaseType dbType = options.DatabaseType;
-            DataSource dataSource = new(dbType)
+            DataSource dataSource = new(dbType);
+
+            // default value of connection-string should be used, i.e Empty-string
+            // if not explicitly provided by the user
+            if (options.ConnectionString is not null)
             {
-                ConnectionString = options.ConnectionString
-            };
+                dataSource.ConnectionString = options.ConnectionString;
+            }
 
             CosmosDbOptions? cosmosDbOptions = null;
             MsSqlOptions? msSqlOptions = null;
@@ -91,11 +104,36 @@ namespace Cli
                 MsSql: msSqlOptions,
                 PostgreSql: postgreSqlOptions,
                 MySql: mySqlOptions,
-                RuntimeSettings: GetDefaultGlobalSettings(dbType, options.HostMode, options.CorsOrigin),
+                RuntimeSettings: GetDefaultGlobalSettings(
+                    options.HostMode,
+                    options.CorsOrigin,
+                    devModeDefaultAuth: GetDevModeDefaultAuth(options.DevModeDefaultAuth)),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
             return true;
+        }
+
+        /// <summary>
+        /// Helper method to parse the devModeDefaultAuth string into its corresponding boolean representation.
+        /// </summary>
+        /// <param name="devModeDefaultAuth">string to be parsed into bool value.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception">throws exception if string is not null and cannot be parsed into a bool value.</exception>
+        private static bool? GetDevModeDefaultAuth(string? devModeDefaultAuth)
+        {
+            if (devModeDefaultAuth is null)
+            {
+                return null;
+            }
+
+            if (bool.TryParse(devModeDefaultAuth, out bool parsedBoolVar))
+            {
+                return parsedBoolVar;
+            }
+
+            throw new Exception($"{devModeDefaultAuth} is an invalid value for the property authenticate-devmode-requests." +
+                $" It can only assume boolean values true/false.");
         }
 
         /// <summary>
@@ -427,7 +465,7 @@ namespace Cli
                 }
             }
 
-            // if the role we are trying to update is not found, we create a new one
+            // If the role we are trying to update is not found, we create a new one
             // and add it to permissionSettings list.
             if (!role_found)
             {
@@ -479,7 +517,7 @@ namespace Cli
             // Looping through existing operations
             foreach (KeyValuePair<Operation, PermissionOperation> operation in existingOperations)
             {
-                // if any existing operation doesn't require update, it is added as it is.
+                // If any existing operation doesn't require update, it is added as it is.
                 if (!updatedOperations.ContainsKey(operation.Key))
                 {
                     updatedOperations.Add(operation.Key, operation.Value);
@@ -608,7 +646,7 @@ namespace Cli
 
         /// <summary>
         /// This method will try starting the engine.
-        /// it will use the config provided by the user, else will look for the default config.
+        /// It will use the config provided by the user, else will look for the default config.
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options)
         {

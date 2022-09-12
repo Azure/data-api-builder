@@ -1,5 +1,8 @@
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
@@ -156,6 +159,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 "
             }
         };
+
+        #region Overriden tests
+        /// <inheritdoc/>
+        [TestMethod]
+        public override async Task InsertOneTestViolatingForeignKeyConstraint()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 12345
+            }";
+
+            string expectedErrorMessage = "Cannot add or update a child row: a foreign key constraint fails " +
+                    $"(`{DatabaseName}`.`books`, CONSTRAINT `book_publisher_fk` FOREIGN KEY (`publisher_id`) REFERENCES" +
+                    " `publishers` (`id`) ON DELETE CASCADE)";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: string.Empty,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: expectedErrorMessage,
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+            );
+        }
+        #endregion
 
         #region Test Fixture Setup
 

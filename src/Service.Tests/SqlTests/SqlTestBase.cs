@@ -78,8 +78,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{DatabaseEngine}");
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            Mock<ILogger<AuthorizationResolver>> authLogger = new();
             RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
+            _runtimeConfigProvider = TestHelper.GetMockRuntimeConfigProvider(configPath, string.Empty);
 
             // Add magazines entity to the 
             if (TestCategory.MYSQL.Equals(DatabaseEngine))
@@ -120,7 +122,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             SetDatabaseNameFromConnectionString(_runtimeConfig.ConnectionString);
 
             //Initialize the authorization resolver object
-            _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
+            _authorizationResolver = new AuthorizationResolver(
+                _runtimeConfigProvider,
+                _sqlMetadataProvider,
+                authLogger.Object);
 
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
@@ -137,7 +142,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                 _sqlMetadataProvider,
                                 ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
                                 _authorizationResolver,
-                                _queryEngineLogger
+                                _queryEngineLogger,
+                                _runtimeConfigProvider
                                 );
                         });
                         services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
@@ -230,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Mock<ILogger<QueryExecutor<NpgsqlConnection>>> pgQueryExecutorLogger = new();
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
-                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
+                    _dbExceptionParser = new PostgreSqlDbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
@@ -246,8 +252,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Mock<ILogger<QueryExecutor<SqlConnection>>> msSqlQueryExecutorLogger = new();
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
-                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
-                    _queryExecutor = new QueryExecutor<SqlConnection>(
+                    _dbExceptionParser = new MsSqlDbExceptionParser(_runtimeConfigProvider);
+                    _queryExecutor = new MsSqlQueryExecutor(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
                         msSqlQueryExecutorLogger.Object);
@@ -261,7 +267,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Mock<ILogger<QueryExecutor<MySqlConnection>>> mySqlQueryExecutorLogger = new();
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
-                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
+                    _dbExceptionParser = new MySqlDbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<MySqlConnection>(
                         _runtimeConfigProvider,
                         _dbExceptionParser,

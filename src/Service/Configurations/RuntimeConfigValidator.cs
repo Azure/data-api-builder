@@ -364,7 +364,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// Validating Cases:
         /// 1. entity not defined in config cannot be used in relationship.
         /// 2. entity with graphQL disabled cannot be used in a relationship with another entity.
-        /// 3. if config doesn't contain LinkingSourceFields or sourceFields and LinkingTargetFields or targetFields for the
+        /// 3. if config doesn't contain LinkingSourceFields or sourceFields and LinkingTargetFields or targetFields for
         /// the given linkingObject, then the underlying database should contain a foreign key relationship
         /// between source and target entity.
         /// 4. If linkingObject is null, and either of SourceFields or targetFields is null, then foreignKey pair
@@ -644,19 +644,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         private static bool VerifyForeignKeyExists(
-            Dictionary<RelationShipPair, ForeignKeyDefinition> ForeignKeyPairFromDatabase,
+            Dictionary<RelationShipPair, ForeignKeyDefinition> foreignKeyPairFromDatabase,
             DatabaseObject databaseObjectA,
             DatabaseObject databaseObjectB)
         {
             RelationShipPair pairAB = new(databaseObjectA, databaseObjectB);
             RelationShipPair pairBA = new(databaseObjectB, databaseObjectA);
 
-            if (ForeignKeyPairFromDatabase.ContainsKey(pairAB) || ForeignKeyPairFromDatabase.ContainsKey(pairBA))
-            {
-                return true;
-            }
-
-            return false;
+            return (foreignKeyPairFromDatabase.ContainsKey(pairAB) || foreignKeyPairFromDatabase.ContainsKey(pairBA));
         }
     }
 }

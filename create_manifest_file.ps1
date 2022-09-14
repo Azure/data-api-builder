@@ -5,7 +5,7 @@ param (
 )
 
 $versionId = $DabVersion # should be picked up from pipeline
-$releaseType = "released"
+$releaseType = "development"
 $releaseDate = (Get-Date).ToUniversalTime().ToString('u')
 $download_url_win = "https://github.com/data-api-builder/releases/$versionId/win-file.zip"
 $download_url_linux = "https://github.com/data-api-builder/releases/$versionId/linux-file.zip"

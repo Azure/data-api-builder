@@ -65,15 +65,15 @@ $latestBlock = @'
 $latestBlock = $ExecutionContext.InvokeCommand.ExpandString($latestBlock) | ConvertFrom-Json 
 
 # # Adding new block to the top of the list of released versions. 
-# $versionArray = '[]' | ConvertFrom-Json 
-# $versionArray += $latestBlock 
-# $versionArray += $currentData 
+$versionArray = '[]' | ConvertFrom-Json 
+$versionArray += $latestBlock 
+$versionArray += $currentData 
 
 # # Removing the oldest version if total count exceeds the max permissible count 
-# if($versionArray.Length -gt $maxVersionCount){ 
-#     $versionArray = [System.Collections.ArrayList]$versionArray 
-#     $versionArray.RemoveAt($versionArray.Count-1)
-# } 
+if($versionArray.Length -gt $maxVersionCount){ 
+    $versionArray = [System.Collections.ArrayList]$versionArray 
+    $versionArray.RemoveAt($versionArray.Count-1)
+} 
 
 # # Updating the manifest file 
-# $versionArray | ConvertTo-Json -Depth 4 | Out-File manifest.json 
+$versionArray | ConvertTo-Json -Depth 4 | Out-File manifest.json 

@@ -25,7 +25,7 @@ dotnet --list-sdks
 
 ## Installing DAB CLI
 
-Data API Builder provides a CLI tool to simplify configuration and execution of the engine. You can install the `dab` CLI using [.NET tools](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools):
+Data API Builder provides a CLI tool to simplify configuration and execution of the engine. You can install the DAB CLI using [.NET tools](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools):
 
 - Download the latest version of the package: [dab.<version_number>.nupkg](https://github.com/Azure/data-api-builder/releases/)
 - Navigate to the folder where the package file is downloaded.
@@ -59,7 +59,7 @@ Where `0.1.5` should match your version of DAB CLI.
 
 ## Azure Database
 
-As the Data API builder for Azure Databases generates REST and GraphQL endpoints for database objects, you need to have a database ready for the tutorial. You can choose either a relational or non-relational database. This getting started guide documents the process to have Data API builder set up for Azure SQL or Azure Cosmos DB.
+As the Data API builder for Azure Databases generates REST and GraphQL endpoints for database objects, you need to have a database ready for the tutorial. You can choose either a relational or non-relational database. This getting started guide documents the process to set up Data API builder for Azure SQL or Azure Cosmos DB.
 
 It's time for you to choose which database you want to use, so you can continue the getting started guide from there:
 

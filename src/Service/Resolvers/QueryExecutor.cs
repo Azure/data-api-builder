@@ -24,6 +24,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private static TimeSpan _maxBackOffTime = TimeSpan.FromSeconds(Math.Pow(2, _maxRetryCount));
 
+        private Polly.Retry.AsyncRetryPolicy _retryPolicy;
+
         public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider,
                              DbExceptionParser dbExceptionParser,
                              ILogger<QueryExecutor<TConnection>> logger)
@@ -33,17 +35,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ConnectionString = runtimeConfig.ConnectionString;
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
-        }
-
-        /// <summary>
-        /// Executes sql text that return result set.
-        /// </summary>
-        /// <param name="sqltext">Sql text to be executed.</param>
-        /// <param name="parameters">The parameters used to execute the SQL text.</param>
-        /// <returns>DbDataReader object for reading the result set.</returns>
-        public virtual async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
-        {
-            Polly.Retry.AsyncRetryPolicy retryPolicy = Polly.Policy
+            _retryPolicy = Polly.Policy
             .Handle<DbException>(DbExceptionParser.IsTransientException)
             .WaitAndRetryAsync(
                 retryCount: _maxRetryCount,
@@ -57,14 +49,23 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         throw DbExceptionParser.Parse((DbException)exception);
                     }
                 });
+        }
 
+        /// <summary>
+        /// Executes sql text that return result set.
+        /// </summary>
+        /// <param name="sqltext">Sql text to be executed.</param>
+        /// <param name="parameters">The parameters used to execute the SQL text.</param>
+        /// <returns>DbDataReader object for reading the result set.</returns>
+        public virtual async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
+        {
             TConnection conn = new()
             {
                 ConnectionString = ConnectionString,
             };
             await SetManagedIdentityAccessTokenIfAnyAsync(conn);
 
-            return await retryPolicy.ExecuteAsync(async () =>
+            return await _retryPolicy.ExecuteAsync(async () =>
             {
                 await conn.OpenAsync();
                 DbCommand cmd = conn.CreateCommand();
@@ -85,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
                 }
-                catch(DbException e)
+                catch (DbException e)
                 {
                     if (DbExceptionParser.IsTransientException((DbException)e))
                     {

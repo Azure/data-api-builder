@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Azure.DataApiBuilder.Service.Configurations;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -35,6 +36,64 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     "23P01"
                 })
         {
+            TransientErrorCodes = new()
+            {
+                // insufficient_resources
+                "53000",
+
+                // disk_full
+                "53100",
+
+                // out_of_memory
+                "53200",
+
+                // too_many_connections
+                "53300",
+
+                // configuration_limit_exceeded
+                "53400",
+
+                // cannot_connect_now
+                "57P03",
+
+                // system_error
+                "58000",
+
+                // io_error
+                "58030",
+
+                // lock_not_available
+                "55P03",
+
+                // object_in_use
+                "55006",
+
+                // object_not_in_prerequisite_state
+                "55000",
+
+                // connection_exception
+                "08000",
+
+                // connection_does_not_exist
+                "08003",
+
+                // connection_failure
+                "08006",
+
+                // sqlclient_unable_to_establish_sqlconnection
+                "08001",
+
+                // sqlserver_rejected_establishment_of_sqlconnection
+                "08004",
+
+                // transaction_resolution_unknown
+                "08007"
+            };
+        }
+
+        public override bool IsTransientException(DbException e)
+        {
+            return e.SqlState is not null && TransientErrorCodes!.Contains(e.SqlState);
         }
     }
 }

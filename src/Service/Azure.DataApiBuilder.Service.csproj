@@ -78,6 +78,7 @@
     <PackageReference Include="Npgsql" Version="$(PostgresVersion)" />
     <PackageReference Include="Microsoft.OData.Edm" Version="$(ODataVersion)" />
     <PackageReference Include="Microsoft.OData.Core" Version="$(ODataVersion)" />
+    <PackageReference Include="Polly" Version="7.2.3" />
     <PackageReference Include="StyleCop.Analyzers" Version="$(StyleCopAnalyzerVersion)">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

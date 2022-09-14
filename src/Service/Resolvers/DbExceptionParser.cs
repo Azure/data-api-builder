@@ -16,6 +16,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
         private readonly bool _developerMode;
         protected HashSet<string> BadRequestErrorCodes;
+        protected HashSet<string>? TransientErrorCodes;
 
         public DbExceptionParser(RuntimeConfigProvider configProvider, HashSet<string> badRequestErrorCodes)
         {
@@ -38,6 +39,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed
             );
         }
+
+        public abstract bool IsTransientException(DbException e);
 
         /// <summary>
         /// Helper method to get the HttpStatusCode for the exception based on the SqlState of the exception.

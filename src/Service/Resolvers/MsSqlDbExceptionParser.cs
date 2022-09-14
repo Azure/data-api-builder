@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Net;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -38,6 +39,31 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 "548"
             })
         {
+            TransientErrorCodes = new(){
+                // Transient error codes compiled from:
+                // https://github.com/dotnet/efcore/blob/main/src/EFCore.SqlServer/Storage/Internal/SqlServerTransientExceptionDetector.cs
+                "20", "64", "121", "233", "601", "617", "669", "921", "997", "1203", "1204", "1205", "1221", "1807", "3935", "3960",
+                "3966", "4060", "4221", "8628", "8645", "8651", "9515", "10053", "10054", "10060", "10922", "10928", "10929", "10936",
+                "14355", "17197", "20041", "40197", "40501", "40613", "41301", "41302", "41305", "41325", "41839", "49918", "49919", "49920",
+
+                // Transient error codes compiled from:
+                // https://docs.microsoft.com/en-us/dotnet/api/microsoft.data.sqlclient.sqlconfigurableretryfactory?view=sqlclient-dotnet-standard-4.1
+                "1222", "40143", "40540",
+
+                // Transient error codes compiled from:
+                // https://docs.microsoft.com/en-us/azure/azure-sql/database/troubleshoot-common-errors-issues?view=azuresql
+                "615", "926",
+
+                // Manually added
+                "0", // Cannot connect to SQL Server
+           
+                 /*"53", "258",
+                 "4891",
+                 "10051", "10065",
+                 "11001",
+
+                 "18456",*/
+            };
         }
 
         /// <inheritdoc/>
@@ -45,6 +71,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             string errorNumber = ((SqlException)e).Number.ToString();
             return BadRequestErrorCodes.Contains(errorNumber) ? HttpStatusCode.BadRequest : HttpStatusCode.InternalServerError;
+        }
+
+        /// <inheritdoc/>
+        public override bool IsTransientException(DbException e)
+        {
+            string errorNumber = ((SqlException)e).Number.ToString();
+            return TransientErrorCodes is not null && TransientErrorCodes.Contains(errorNumber);
         }
     }
 }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.Extensions.Logging;
+using Polly;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -18,6 +19,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         protected string ConnectionString { get; }
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<QueryExecutor<TConnection>> QueryExecutorLogger { get; }
+
+        private static int _maxRetryCount = 5;
+
+        private static TimeSpan _maxBackOffTime = TimeSpan.FromSeconds(Math.Pow(2,_maxRetryCount));
 
         public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider,
                              DbExceptionParser dbExceptionParser,
@@ -38,37 +43,47 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>DbDataReader object for reading the result set.</returns>
         public virtual async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
         {
+            Polly.Retry.AsyncRetryPolicy retryPolicy = Polly.Policy
+            .Handle<DbException>(DbExceptionParser.IsTransientException)
+            .WaitAndRetryAsync(
+                retryCount: _maxRetryCount,
+                sleepDurationProvider: (attempt) => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+                onRetry: (exception, backOffTime) =>
+                {
+                    if (backOffTime == _maxBackOffTime)
+                    {
+                        QueryExecutorLogger.LogError(exception.Message);
+                        QueryExecutorLogger.LogError(exception.StackTrace);
+                        throw DbExceptionParser.Parse((DbException)exception);
+                    }
+                });
+
             TConnection conn = new()
             {
                 ConnectionString = ConnectionString,
             };
-
             await SetManagedIdentityAccessTokenIfAnyAsync(conn);
-            await conn.OpenAsync();
-            DbCommand cmd = conn.CreateCommand();
-            cmd.CommandText = sqltext;
-            cmd.CommandType = CommandType.Text;
-            if (parameters != null)
-            {
-                foreach (KeyValuePair<string, object?> parameterEntry in parameters)
-                {
-                    DbParameter parameter = cmd.CreateParameter();
-                    parameter.ParameterName = "@" + parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value ?? DBNull.Value;
-                    cmd.Parameters.Add(parameter);
-                }
-            }
 
-            try
+            return await retryPolicy.ExecuteAsync(async () =>
             {
+                await conn.OpenAsync();
+                DbCommand cmd = conn.CreateCommand();
+                cmd.CommandText = sqltext;
+                cmd.CommandType = CommandType.Text;
+                if (parameters != null)
+                {
+                    foreach (KeyValuePair<string, object?> parameterEntry in parameters)
+                    {
+                        DbParameter parameter = cmd.CreateParameter();
+                        parameter.ParameterName = "@" + parameterEntry.Key;
+                        parameter.Value = parameterEntry.Value ?? DBNull.Value;
+                        cmd.Parameters.Add(parameter);
+                    }
+                }
+
+                Console.WriteLine("Tried....");
                 return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
-            }
-            catch (DbException e)
-            {
-                QueryExecutorLogger.LogError(e.Message);
-                QueryExecutorLogger.LogError(e.StackTrace);
-                throw DbExceptionParser.Parse(e);
-            }
+            });
         }
 
         /// <inheritdoc />

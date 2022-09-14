@@ -77,4 +77,4 @@ if($versionArray.Length -gt $maxVersionCount){
 $x = $versionArray | ConvertTo-Json -Depth 4
 Write-Host $x
 # # Updating the manifest file 
-$versionArray | ConvertTo-Json -Depth 4 | Out-File manifest.json 
+$versionArray | ConvertTo-Json -Depth 4 | Out-File $BuildOutputDir/manifest.json 

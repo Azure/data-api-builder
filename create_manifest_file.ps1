@@ -74,6 +74,7 @@ if($versionArray.Length -gt $maxVersionCount){
     $versionArray = [System.Collections.ArrayList]$versionArray 
     $versionArray.RemoveAt($versionArray.Count-1)
 } 
-
+$x = $versionArray | ConvertTo-Json -Depth 4
+Write-Host $x
 # # Updating the manifest file 
 $versionArray | ConvertTo-Json -Depth 4 | Out-File manifest.json 

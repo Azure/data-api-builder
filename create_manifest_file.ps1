@@ -25,6 +25,10 @@ foreach ($RID in $RIDs) {
     }
 }
 
+Write-Host $win_file_hash
+Write-Host $linux_file_hash
+Write-Host $osx_file_hash
+
 # Get file content and convert to powershell object
 #$currentData = Get-Content D:/dab/manifest.json -raw | ConvertFrom-Json 
 
@@ -39,41 +43,41 @@ foreach ($RID in $RIDs) {
 # } 
 
 # Creating new block to insert latest version 
-$latestBlock = @'
-{
-    "version": "latest",
-    "versionId": "${versionId}",
-    "releaseType": "${releaseType}",
-    "releaseDate": "${releaseDate}",
-    "files": {
-        "linux-x64":{
-            "url": "${download_url_linux}",
-            "sha": "${linux_file_hash}"
-        },
-        "win-x64":{
-            "url": "${download_url_win}",
-            "sha": "${win_file_hash}"
-        },
-        "osx-x64":{
-            "url": "${download_url_osx}",
-            "sha": "${osx_file_hash}"
-        }
-    }
-}
-'@ 
+# $latestBlock = @'
+# {
+#     "version": "latest",
+#     "versionId": "${versionId}",
+#     "releaseType": "${releaseType}",
+#     "releaseDate": "${releaseDate}",
+#     "files": {
+#         "linux-x64":{
+#             "url": "${download_url_linux}",
+#             "sha": "${linux_file_hash}"
+#         },
+#         "win-x64":{
+#             "url": "${download_url_win}",
+#             "sha": "${win_file_hash}"
+#         },
+#         "osx-x64":{
+#             "url": "${download_url_osx}",
+#             "sha": "${osx_file_hash}"
+#         }
+#     }
+# }
+# '@ 
 
-$latestBlock = $ExecutionContext.InvokeCommand.ExpandString($latestBlock) | ConvertFrom-Json 
+# $latestBlock = $ExecutionContext.InvokeCommand.ExpandString($latestBlock) | ConvertFrom-Json 
 
-# Adding new block to the top of the list of released versions. 
-$versionArray = '[]' | ConvertFrom-Json 
-$versionArray += $latestBlock 
-$versionArray += $currentData 
+# # Adding new block to the top of the list of released versions. 
+# $versionArray = '[]' | ConvertFrom-Json 
+# $versionArray += $latestBlock 
+# $versionArray += $currentData 
 
-# Removing the oldest version if total count exceeds the max permissible count 
-if($versionArray.Length -gt $maxVersionCount){ 
-    $versionArray = [System.Collections.ArrayList]$versionArray 
-    $versionArray.RemoveAt($versionArray.Count-1)
-} 
+# # Removing the oldest version if total count exceeds the max permissible count 
+# if($versionArray.Length -gt $maxVersionCount){ 
+#     $versionArray = [System.Collections.ArrayList]$versionArray 
+#     $versionArray.RemoveAt($versionArray.Count-1)
+# } 
 
-# Updating the manifest file 
-$versionArray | ConvertTo-Json -Depth 4 | Out-File manifest.json 
+# # Updating the manifest file 
+# $versionArray | ConvertTo-Json -Depth 4 | Out-File manifest.json 

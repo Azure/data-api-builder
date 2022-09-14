@@ -49,19 +49,19 @@ steps:
 
 - task: NuGetToolInstaller@1
 
-- task: NuGetCommand@2
-  inputs:
-    restoreSolution: '$(solution)'
-    feedsToUse: config
-    nugetConfigPath: Nuget.config
+# - task: NuGetCommand@2
+#   inputs:
+#     restoreSolution: '$(solution)'
+#     feedsToUse: config
+#     nugetConfigPath: Nuget.config
 
-- task: DotNetCoreCLI@2
-  displayName: Check formatting
-  inputs:
-    command: custom
-    custom: format
-    projects: '$(solution)'
-    arguments: '--verify-no-changes'
+# - task: DotNetCoreCLI@2
+#   displayName: Check formatting
+#   inputs:
+#     command: custom
+#     custom: format
+#     projects: '$(solution)'
+#     arguments: '--verify-no-changes'
 
 # Use dotnet pack command to build the project because we want to generate build output
 # in the correct location that pack command will be using. This build output location
@@ -88,13 +88,13 @@ steps:
     path: '$(Build.SourcesDirectory)/src/out/cli/$(buildConfiguration)/net6.0/publish' 
 
 # Create nuget package after the binaries are signed. So that the binaries inside nuget package are signed.
-- task: DotNetCoreCLI@2
-  displayName: 'Creating Nuget Package'
-  inputs:
-    command: custom
-    custom: pack
-    projects: '**/Cli.csproj'
-    arguments: '--configuration $(buildConfiguration) --no-build -p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
+# - task: DotNetCoreCLI@2
+#   displayName: 'Creating Nuget Package'
+#   inputs:
+#     command: custom
+#     custom: pack
+#     projects: '**/Cli.csproj'
+#     arguments: '--configuration $(buildConfiguration) --no-build -p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
 
 # Now sign the nuget package itself.
 - template: templates/code-signing.yml

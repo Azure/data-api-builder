@@ -42,7 +42,7 @@ The command will generate a config file called `dab-config.json` looking like th
   "$schema": "dab.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=\u003CPassword\u003E;TrustServerCertificate=true"
+    "connection-string": "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=ReplaceMe;TrustServerCertificate=true"
   },
   "mssql": {
     "set-session-context": true

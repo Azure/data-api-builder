@@ -138,7 +138,9 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
-        public Dictionary<RelationShipPair, ForeignKeyDefinition> GetPairToFkDefinition()
+        public bool VerifyForeignKeyExistsInDB(
+            DatabaseObject databaseObjectA,
+            DatabaseObject databaseObjectB)
         {
             throw new NotImplementedException();
         }

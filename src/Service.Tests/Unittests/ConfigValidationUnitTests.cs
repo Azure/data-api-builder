@@ -120,8 +120,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
-            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
-                x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
 
             // Assert that expected exception is thrown. Entity used in relationship is Invalid
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -181,8 +179,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
-            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
-                x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
 
             // Exception should be thrown as we cannot use an entity (with graphQL disabled) in a relationship.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -235,8 +231,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Mocking EntityToDatabaseObject
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
-            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
-                x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
 
             Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
             mockDictionaryForEntityDatabaseObject.Add(
@@ -263,25 +257,127 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 + $" and entity: {relationshipEntity}.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
 
-            // Adding ForeignKey relation for LinkingObject and the other related entities.
-            // and mocking the foreignKey pair value of sqlMetadataProvider.
-            Dictionary<RelationShipPair, ForeignKeyDefinition> foreignKeyPair = new();
+            // Mocking ForeignKeyPair to be defined In DB
+            _sqlMetadataProvider.Setup<bool>(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE1")
+                )).Returns(true);
 
-            RelationShipPair rp1 = new(new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE1"));
-            ForeignKeyDefinition fd1 = new();
-            foreignKeyPair.Add(rp1, fd1);
-
-            RelationShipPair rp2 = new(new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE2"));
-            ForeignKeyDefinition fd2 = new();
-            foreignKeyPair.Add(rp2, fd2);
-
-            // To mock the return for foreign key pair from DB
-            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
-                x.GetPairToFkDefinition()).Returns(foreignKeyPair);
+            _sqlMetadataProvider.Setup<bool>(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE2")
+                )).Returns(true);
 
             // Since, we have defined the relationship in Database,
             // the engine was able to find foreign key relation and validation will pass.
             configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object);
+        }
+
+        /// <summary>
+        /// Test method to check that an exception is thrown when relationship exists between the wrong pair. i.e.,
+        /// LinkingSourceField OR SourceFields are null and relationship between target and linking object exists, no relationship between source and linking object
+        /// LinkingTargetField OR TargetField are null but relationship between source and linking object exists, no relationship between target and linking object
+        /// Also Test when the foreignKeyPair exist for correct pair, no exception is thrown. i.e.,
+        /// LinkingSourceField OR SourceFields are null but relationship between source and linking object exists, no relationship between target and linking object
+        /// LinkingTargetField OR TargetField are null but relationship between target and linking object exists, no relationship between source and linking object
+        /// </summary>
+        [DataRow(new string[] { "id" }, null, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", false, true, false,
+            DisplayName = "LinkingSourceField is null, only ForeignKeyPair between LinkingObject and target is present. Invalid Case.")]
+        [DataRow(null, new string[] { "token_id" }, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", false, true, false,
+            DisplayName = "SourceField is null, only ForeignKeyPair between LinkingObject and target is present.  Invalid Case.")]
+        [DataRow(new string[] { "id" }, new string[] { "token_id" }, new string[] { "num" }, null, "SampleEntity2", true, false, false,
+            DisplayName = "LinkingTargetField is null, only ForeignKeyPair between LinkingObject and source is present. Invalid Case.")]
+        [DataRow(new string[] { "id" }, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", true, false, false,
+            DisplayName = "TargetField is null, , only ForeignKeyPair between LinkingObject and source is present. Invalid Case.")]
+        [DataRow(new string[] { "id" }, null, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", true, false, true,
+            DisplayName = "LinkingSourceField is null, only ForeignKeyPair between LinkingObject and target is present. Valid Case.")]
+        [DataRow(null, new string[] { "token_id" }, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", true, false, true,
+            DisplayName = "SourceField is null, only ForeignKeyPair between LinkingObject and target is present. Valid Case.")]
+        [DataRow(new string[] { "id" }, new string[] { "token_id" }, new string[] { "num" }, null, "SampleEntity2", false, true, true,
+            DisplayName = "LinkingTargetField is null, only ForeignKeyPair between LinkingObject and source is present. Valid Case.")]
+        [DataRow(new string[] { "id" }, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", false, true, true,
+            DisplayName = "TargetField is null, , only ForeignKeyPair between LinkingObject and source is present. Valid Case.")]
+        [DataTestMethod]
+        public void TestRelationshipForCorrectPairingOfLinkingObjectWithSourceAndTarget(
+            string[]? sourceFields,
+            string[]? linkingSourceFields,
+            string[]? targetFields,
+            string[]? linkingTargetFields,
+            string relationshipEntity,
+            bool isForeignKeyPairBetSourceAndLinkingObject,
+            bool isForeignKeyPairBetTargetAndLinkingObject,
+            bool isValidScenario
+        )
+        {
+            // Creating an EntityMap with two sample entity
+            Dictionary<string, Entity> entityMap = GetSampleEntityMap(
+                sourceEntity: "SampleEntity1",
+                targetEntity: "SampleEntity2",
+                sourceFields: sourceFields,
+                targetFields: targetFields,
+                linkingObject: "TEST_SOURCE_LINK",
+                linkingSourceFields: linkingSourceFields,
+                linkingTargetFields: linkingTargetFields
+            );
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                MsSql: null,
+                CosmosDb: null,
+                PostgreSql: null,
+                MySql: null,
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                Entities: entityMap
+                );
+
+            // Mocking EntityToDatabaseObject
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
+            mockDictionaryForEntityDatabaseObject.Add(
+                "SampleEntity1",
+                new DatabaseObject("dbo", "TEST_SOURCE1")
+            );
+
+            mockDictionaryForEntityDatabaseObject.Add(
+                "SampleEntity2",
+                new DatabaseObject("dbo", "TEST_SOURCE2")
+            );
+
+            _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
+                x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
+
+            // To mock the schema name and dbObjectName for linkingObject
+            _sqlMetadataProvider.Setup<(string, string)>(x =>
+                x.ParseSchemaAndDbObjectName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
+
+            // Mocking ForeignKeyPair to be defined In DB
+            _sqlMetadataProvider.Setup<bool>(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE1")
+                )).Returns(isForeignKeyPairBetSourceAndLinkingObject);
+
+            _sqlMetadataProvider.Setup<bool>(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE2")
+                )).Returns(isForeignKeyPairBetTargetAndLinkingObject);
+
+            if (isValidScenario)
+            {
+                // No Exception will be thrown as the relationship exists where it's needed.
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object);
+            }
+            else
+            {
+                // Exception thrown as foreignKeyPair is not present for the correct pair.
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                    configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+                Assert.AreEqual($"Could not find relationship between Linking Object: TEST_SOURCE_LINK"
+                    + $" and entity: {relationshipEntity}.", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            }
         }
 
         /// <summary>
@@ -324,8 +420,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
-            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
-                x.GetPairToFkDefinition()).Returns(new Dictionary<RelationShipPair, ForeignKeyDefinition>());
 
             Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
             mockDictionaryForEntityDatabaseObject.Add(
@@ -349,16 +443,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 + $" SampleEntity1 and SampleEntity2.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
 
-            // Adding ForeignKey relation between source and target entity.
-            // by mocking the foreignKey pair value of sqlMetadataProvider.
-            Dictionary<RelationShipPair, ForeignKeyDefinition> foreignKeyPair = new();
+            // Mocking ForeignKeyPair to be defined In DB
+            _sqlMetadataProvider.Setup<bool>(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    new DatabaseObject("dbo", "TEST_SOURCE1"), new DatabaseObject("dbo", "TEST_SOURCE2")
+                )).Returns(true);
 
-            RelationShipPair rp1 = new(new DatabaseObject("dbo", "TEST_SOURCE1"), new DatabaseObject("dbo", "TEST_SOURCE2"));
-            ForeignKeyDefinition fd1 = new();
-            foreignKeyPair.Add(rp1, fd1);
-
-            _sqlMetadataProvider.Setup<Dictionary<RelationShipPair, ForeignKeyDefinition>>(x =>
-                x.GetPairToFkDefinition()).Returns(foreignKeyPair);
+            _sqlMetadataProvider.Setup<bool>(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    new DatabaseObject("dbo", "TEST_SOURCE2"), new DatabaseObject("dbo", "TEST_SOURCE1")
+                )).Returns(true);
 
             // No Exception is thrown as foreignKey Pair was found in the DB between
             // source and target entity.

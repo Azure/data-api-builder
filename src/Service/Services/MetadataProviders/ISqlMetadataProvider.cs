@@ -22,10 +22,9 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         string GetSchemaName(string entityName);
 
-        /// <summary>
-        /// Get the foreign key pair from the underlying database.
-        /// </summary>
-        Dictionary<RelationShipPair, ForeignKeyDefinition> GetPairToFkDefinition();
+        bool VerifyForeignKeyExistsInDB(
+            DatabaseObject databaseObjectA,
+            DatabaseObject databaseObjectB);
 
         /// <summary>
         /// Obtains the underlying source object's name (SQL table or Cosmos container).

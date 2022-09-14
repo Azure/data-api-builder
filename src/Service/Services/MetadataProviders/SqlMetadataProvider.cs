@@ -105,12 +105,6 @@ namespace Azure.DataApiBuilder.Service.Services
             return SqlQueryBuilder;
         }
 
-        /// <inheritdoc/>
-        public Dictionary<RelationShipPair, ForeignKeyDefinition> GetPairToFkDefinition()
-        {
-            return _pairToFkDefinition;
-        }
-
         /// <inheritdoc />
         public virtual string GetSchemaName(string entityName)
         {
@@ -1153,6 +1147,20 @@ namespace Azure.DataApiBuilder.Service.Services
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// For given two database objects, Returns true if a foreignKey exist between them.
+        /// Else return false.
+        /// </summary>
+        public bool VerifyForeignKeyExistsInDB(
+            DatabaseObject databaseObjectA,
+            DatabaseObject databaseObjectB)
+        {
+            RelationShipPair pairAB = new(databaseObjectA, databaseObjectB);
+            RelationShipPair pairBA = new(databaseObjectB, databaseObjectA);
+
+            return (_pairToFkDefinition.ContainsKey(pairAB) || _pairToFkDefinition.ContainsKey(pairBA));
         }
 
         /// <summary>

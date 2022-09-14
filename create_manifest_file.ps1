@@ -67,7 +67,7 @@ $latestBlock = $ExecutionContext.InvokeCommand.ExpandString($latestBlock) | Conv
 # # Adding new block to the top of the list of released versions. 
 $versionArray = '[]' | ConvertFrom-Json 
 $versionArray += $latestBlock 
-$versionArray += $currentData 
+# $versionArray += $currentData 
 
 # # Removing the oldest version if total count exceeds the max permissible count 
 if($versionArray.Length -gt $maxVersionCount){ 

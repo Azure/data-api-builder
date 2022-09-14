@@ -17,7 +17,7 @@ $RIDs = "win-x64", "linux-x64", "osx-x64"
 foreach ($RID in $RIDs) {
     $filePath = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab_$DabVersion.zip";
     $fileHashInfo = Get-FileHash $filePath
-    $hash = '"' + $fileHashInfo.Hash + '"'
+    $hash = $fileHashInfo.Hash
     switch ($RID) {
         "win-x64"{ $win_file_hash = $hash}
         "linux-x64"{ $linux_file_hash = $hash}

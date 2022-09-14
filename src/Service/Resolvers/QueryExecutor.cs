@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private static int _maxRetryCount = 5;
 
-        private static TimeSpan _maxBackOffTime = TimeSpan.FromSeconds(Math.Pow(2,_maxRetryCount));
+        private static TimeSpan _maxBackOffTime = TimeSpan.FromSeconds(Math.Pow(2, _maxRetryCount));
 
         public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider,
                              DbExceptionParser dbExceptionParser,
@@ -81,8 +81,23 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
                 }
 
-                Console.WriteLine("Tried....");
-                return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+                try
+                {
+                    return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+                }
+                catch(DbException e)
+                {
+                    if (DbExceptionParser.IsTransientException((DbException)e))
+                    {
+                        throw e;
+                    }
+                    else
+                    {
+                        QueryExecutorLogger.LogError(e.Message);
+                        QueryExecutorLogger.LogError(e.StackTrace);
+                        throw DbExceptionParser.Parse((DbException)e);
+                    }
+                }
             });
         }
 

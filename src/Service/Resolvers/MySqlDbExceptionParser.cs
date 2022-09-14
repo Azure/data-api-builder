@@ -41,6 +41,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 "1158", "1159", "1160", "1161", "1192", "1202", "1203", "1205", "1206", "1213", "1223", "1412" };
         }
 
+        /// <inheritdoc/>
         public override bool IsTransientException(DbException e)
         {
             MySqlException ex = (MySqlException)e;

@@ -40,6 +40,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             );
         }
 
+        /// <summary>
+        /// Helper method to determine whether an exception thrown by database is to be considered as transient.
+        /// Each of the databases have their own way of classifying exception as transient and hence the method will
+        /// be overriden in each of the subclasses.
+        /// </summary>
+        /// <param name="e">Exception to be classified as transient/non-transient.</param>
+        /// <returns></returns>
         public abstract bool IsTransientException(DbException e);
 
         /// <summary>

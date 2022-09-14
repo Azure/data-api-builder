@@ -91,6 +91,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             };
         }
 
+        /// <inheritdoc/>
         public override bool IsTransientException(DbException e)
         {
             return e.SqlState is not null && TransientErrorCodes!.Contains(e.SqlState);

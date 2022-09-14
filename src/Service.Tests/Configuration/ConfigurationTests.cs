@@ -136,6 +136,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
         }
 
+        [TestMethod("Validates setting the SQL configuration post-startup during runtime.")]
+        public async Task TestSqlSettingPostStartupConfigurations()
+        {
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            HttpClient httpClient = server.CreateClient();
+
+            ConfigurationPostParameters config = GetSqlConfigurationParameters();
+
+            HttpResponseMessage postResult =
+                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
+        }
+
         [TestMethod("Validates that local cosmos settings can be loaded and the correct classes are in the service provider.")]
         public void TestLoadingLocalCosmosSettings()
         {
@@ -472,6 +485,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 File.ReadAllText(cosmosFile),
                 File.ReadAllText("schema.gql"),
                 "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",
+                AccessToken: null);
+        }
+
+        private static ConfigurationPostParameters GetSqlConfigurationParameters()
+        {
+            string sqlFile = $"{CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{CONFIG_EXTENSION}";
+            return new ConfigurationPostParameters(
+                Configuration: File.ReadAllText(sqlFile),
+                Schema: null,
+                ConnectionString: "Server=SELEONARANTON\\MSSQLSERVER22;Database=DataGatewayFeatureDev;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;",
                 AccessToken: null);
         }
 

@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -169,6 +170,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
 
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, token);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(
                 expected: AuthorizationType.Anonymous.ToString(),
@@ -378,7 +380,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                         .Configure(app =>
                         {
                             app.UseAuthentication();
-                            app.UseMiddleware<AuthenticationMiddleware>();
+                            app.UseMiddleware<DABAuthenticationMiddleware>();
 
                             // app.Run acts as terminating middleware to return 200 if we reach it. Without this,
                             // the Middleware pipeline will return 404 by default.
@@ -444,7 +446,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             string issuer = ISSUER,
             DateTime? notBefore = null,
             DateTime? expirationTime = null,
-            SecurityKey signingKey = null)
+            SecurityKey? signingKey = null)
         {
             JwtSecurityTokenHandler tokenHandler = new();
             SecurityTokenDescriptor tokenDescriptor = new()

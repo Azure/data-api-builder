@@ -18,12 +18,12 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     /// AuthZ decisions nor does it terminate requests.
     /// https://github.com/aspnet/Security/issues/1613#issuecomment-358843214
     /// </summary>
-    public class AuthenticationMiddleware
+    public class ClientRoleHeaderMiddleware
     {
         private readonly RequestDelegate _nextMiddleware;
         private readonly RuntimeConfigProvider _runtimeConfigurationProvider;
 
-        public AuthenticationMiddleware(RequestDelegate next, RuntimeConfigProvider runtimeConfigurationProvider)
+        public ClientRoleHeaderMiddleware(RequestDelegate next, RuntimeConfigProvider runtimeConfigurationProvider)
         {
             _nextMiddleware = next;
             _runtimeConfigurationProvider = runtimeConfigurationProvider;
@@ -39,19 +39,10 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         /// <param name="httpContext"></param>
         public async Task InvokeAsync(HttpContext httpContext)
         {
-            // When calling parameterless version of AddAuthentication()
-            // the default scheme is used to hydrate the httpContext.User object.
-            AuthenticateResult authNResult = await httpContext.AuthenticateAsync();
-
-            // Set the httpContext.user as the authNResult.Principal, which is never null.
-            // Only the properties of the Principal.Identity changes depending on the
-            // authentication result.
-            httpContext.User = authNResult.Principal!;
-
             // A request can be authenticated in 2 cases:
             // 1. When the request has a valid jwt/easyauth token,
             // 2. When in development mode, we want the default state of request as authenticated.
-            bool isAuthenticatedRequest = authNResult.Succeeded ||
+            bool isAuthenticatedRequest = httpContext.User.Identity?.IsAuthenticated ?? false ||
                 _runtimeConfigurationProvider.IsAuthenticatedDevModeRequest();
 
             string clientRoleHeader = isAuthenticatedRequest
@@ -98,11 +89,11 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     }
 
     // Extension method used to add the middleware to the HTTP request pipeline.
-    public static class AuthenticationMiddlewareExtensions
+    public static class ClientRoleHeaderMiddlewareExtensions
     {
-        public static IApplicationBuilder UseAuthenticationMiddleware(this IApplicationBuilder builder)
+        public static IApplicationBuilder UseClientRoleHeaderMiddleware(this IApplicationBuilder builder)
         {
-            return builder.UseMiddleware<AuthenticationMiddleware>();
+            return builder.UseMiddleware<ClientRoleHeaderMiddleware>();
         }
     }
 }

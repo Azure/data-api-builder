@@ -13,12 +13,14 @@ using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Services.MetadataProviders;
 using HotChocolate.AspNetCore;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -300,11 +302,7 @@ namespace Azure.DataApiBuilder.Service
 
             app.UseAuthentication();
 
-            // Add authentication middleware to the pipeline.
-            if (runtimeConfig is not null)
-            {
-                app.UseAuthenticationMiddleware();
-            }
+            app.UseClientRoleHeaderMiddleware();
 
             app.UseAuthorization();
 
@@ -314,10 +312,7 @@ namespace Azure.DataApiBuilder.Service
             // - {X-MS-CLIENT-PRINCIPAL + Client role header for EasyAuth}
             // When enabled, the middleware will prevent Banana Cake Pop(GraphQL client) from loading
             // without proper authorization headers.
-            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production)
-            {
-                app.UseAuthorizationEngineMiddleware();
-            }
+            //app.UseAuthorizationEngineMiddleware();
 
             app.UseEndpoints(endpoints =>
             {
@@ -336,16 +331,15 @@ namespace Azure.DataApiBuilder.Service
         /// Add services necessary for Authentication Middleware and based on the loaded
         /// runtime configuration set the AuthenticationOptions to be either
         /// EasyAuth based (by default) or JwtBearerOptions.
+        /// When no runtime configuration is set on engine startup, set the
+        /// default authentication scheme to EasyAuth.
         /// </summary>
         /// <param name="services">The service collection to add authentication services to.</param>
-        /// <param name="runtimeConfig">The loaded runtime configuration.</param>
+        /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
         private static void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
         {
             if (runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
             {
-                // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
-                // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
-                // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
                 if (runtimeConfig!.AuthNConfig != null &&
                     !runtimeConfig.IsEasyAuthAuthenticationProvider())
                 {
@@ -354,6 +348,14 @@ namespace Azure.DataApiBuilder.Service
                     {
                         options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
                         options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
+                        options.Events = new JwtBearerEvents
+                        {
+                            OnChallenge = context =>
+                            {
+                                context.Response.StatusCode = 401;
+                                return Task.CompletedTask;
+                            }
+                        };
                     });
                 }
                 else if (runtimeConfig!.AuthNConfig != null)
@@ -365,11 +367,19 @@ namespace Azure.DataApiBuilder.Service
                                 ignoreCase: true));
                 }
                 else
-                // If no authentication configuration section specified, defaults to StaticWebApps EasyAuth.
                 {
+                    // Set default authentication scheme when runtime configuration
+                    // does not contain authentication settings.
                     services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddEasyAuthAuthentication(EasyAuthType.StaticWebApps);
                 }
+            }
+            else
+            {
+                // Sets EasyAuth as the default authentication scheme when runtime configuration
+                // is not present.
+                services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                    .AddEasyAuthAuthentication(EasyAuthType.StaticWebApps);
             }
         }
 

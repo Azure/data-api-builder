@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             AuthenticateResult authNResult = await httpContext.AuthenticateAsync();
 
             // Reject request by terminating the AuthenticationMiddleware
-            // when an invalid token is provided and rites challenge response
+            // when an invalid token is provided and writes challenge response
             // metadata (HTTP 401 Unauthorized response code
             // and www-authenticate headers) to the HTTP Context.
             if (authNResult.Failure is not null)
@@ -91,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             }
 
             // Attempt to inject CLIENT_ROLE_HEADER:clientDefinedRole into the httpContext
-            // to accomodate client requests that do not include such header.
+            // to accommodate client requests that do not include such header.
             // otherwise honor existing CLIENT_ROLE_HEADER:Value
             if (!httpContext.Request.Headers.TryAdd(AuthorizationResolver.CLIENT_ROLE_HEADER, clientDefinedRole))
             {
@@ -109,11 +109,10 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 }
             }
 
-            // Add a role claim to the ClaimsIdentity using the X-MS-API-ROLE header value.
-            // Only applicable when the header value matches the system roles
-            // Anonymous and Authenticated
-            if (clientDefinedRole.Equals(AuthorizationType.Authenticated.ToString(), StringComparison.OrdinalIgnoreCase) ||
-                clientDefinedRole.Equals(AuthorizationType.Anonymous.ToString(), StringComparison.OrdinalIgnoreCase))
+            // When the client role header is resolved to a system role (anonymous, authenticated),
+            // try to add the matching system role name as a role claim to the ClaimsIdentity using
+            // the X-MS-API-ROLE header value.
+            if (IsSystemRole(clientDefinedRole) && !httpContext.User.IsInRole(clientDefinedRole))
             {
                 Claim claim = new(ClaimTypes.Role, clientDefinedRole, ClaimValueTypes.String);
 
@@ -124,6 +123,19 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             }
 
             await _nextMiddleware(httpContext);
+        }
+
+        /// <summary>
+        /// Determines whether the given role name matches one of the reserved system role names:
+        /// 1. Anonymous
+        /// 2. Authenticated
+        /// </summary>
+        /// <param name="roleName">Name of role to evaluate</param>
+        /// <returns>True if roleName is a system role.</returns>
+        public static bool IsSystemRole(string roleName)
+        {
+            return roleName.Equals(AuthorizationType.Authenticated.ToString(), StringComparison.OrdinalIgnoreCase) ||
+                    roleName.Equals(AuthorizationType.Anonymous.ToString(), StringComparison.OrdinalIgnoreCase);
         }
     }
 

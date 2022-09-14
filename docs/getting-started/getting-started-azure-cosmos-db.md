@@ -103,7 +103,7 @@ The command will generate a config file called `dab-config.json` looking like th
 }
 ```
 
-That's all you need at the moment. Let's work now in defining the entities exposed by the API.
+That's all you need at the moment. Let's work now on defining the entities exposed by the API.
 
 ## Add Book and Author entities
 

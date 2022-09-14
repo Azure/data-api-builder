@@ -29,6 +29,10 @@ Write-Host $win_file_hash
 Write-Host $linux_file_hash
 Write-Host $osx_file_hash
 
+Write-Host $download_url_win
+Write-Host $download_url_linux
+Write-Host $download_url_osx
+
 # Get file content and convert to powershell object
 #$currentData = Get-Content D:/dab/manifest.json -raw | ConvertFrom-Json 
 

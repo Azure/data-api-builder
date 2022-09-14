@@ -17,7 +17,7 @@ Once the containers are created, you can import the sample data which are placed
 
 ## Add Book and Author schema files
 
-We need to expose the books and the authors collections so that they can be used via Graphql. Cosmos DB, being schema agnostic, we need to provide the schema definition for the collections. These schema definitions need to be added in the `schema.gql` file.
+We need to expose the books and the authors collections so that they can be used via GraphQL. Cosmos DB, being schema agnostic, requires us to provide the schema definition for the collections. These schema definitions need to be added in the `schema.gql` file.
 
 Start by adding the `author` and `book` schema:
 

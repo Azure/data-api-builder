@@ -55,11 +55,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 // Manually added
                 "0", // Cannot connect to SQL Server
+
+                // This error mainly occurs when the SQL Server client can't connect to the server.
+                // This may happen when the client cannot resolve the name of the server or the name of the server is incorrect.
+                "11001"
            
                  /*"53", "258",
                  "4891",
                  "10051", "10065",
-                 "11001",
+                 ,
 
                  "18456",*/
             };

@@ -22,8 +22,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private static int _maxRetryCount = 5;
 
-        private static TimeSpan _maxBackOffTime = TimeSpan.FromSeconds(Math.Pow(2, _maxRetryCount));
-
         private Polly.Retry.AsyncRetryPolicy _retryPolicy;
 
         public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider,
@@ -42,12 +40,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 sleepDurationProvider: (attempt) => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
                 onRetry: (exception, backOffTime) =>
                 {
-                    if (backOffTime == _maxBackOffTime)
-                    {
-                        QueryExecutorLogger.LogError(exception.Message);
-                        QueryExecutorLogger.LogError(exception.StackTrace);
-                        throw DbExceptionParser.Parse((DbException)exception);
-                    }
+                    QueryExecutorLogger.LogError(exception.Message);
+                    QueryExecutorLogger.LogError(exception.StackTrace);
                 });
         }
 
@@ -59,6 +53,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>DbDataReader object for reading the result set.</returns>
         public virtual async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
         {
+            int retryAttempt = 0;
             TConnection conn = new()
             {
                 ConnectionString = ConnectionString,
@@ -67,28 +62,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             return await _retryPolicy.ExecuteAsync(async () =>
             {
-                await conn.OpenAsync();
-                DbCommand cmd = conn.CreateCommand();
-                cmd.CommandText = sqltext;
-                cmd.CommandType = CommandType.Text;
-                if (parameters != null)
-                {
-                    foreach (KeyValuePair<string, object?> parameterEntry in parameters)
-                    {
-                        DbParameter parameter = cmd.CreateParameter();
-                        parameter.ParameterName = "@" + parameterEntry.Key;
-                        parameter.Value = parameterEntry.Value ?? DBNull.Value;
-                        cmd.Parameters.Add(parameter);
-                    }
-                }
-
+                retryAttempt++;
                 try
                 {
-                    return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+                    return await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters);
                 }
                 catch (DbException e)
                 {
-                    if (DbExceptionParser.IsTransientException((DbException)e))
+                    if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
                     {
                         throw e;
                     }
@@ -96,10 +77,37 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     {
                         QueryExecutorLogger.LogError(e.Message);
                         QueryExecutorLogger.LogError(e.StackTrace);
-                        throw DbExceptionParser.Parse((DbException)e);
+                        throw DbExceptionParser.Parse(e);
                     }
                 }
             });
+        }
+
+        /// <summary>
+        /// Method to execute sql query against the database.
+        /// </summary>
+        /// <param name="conn">Connection object used to connect to database.</param>
+        /// <param name="sqltext">Sql text to be executed.</param>
+        /// <param name="parameters">The parameters used to execute the SQL text.</param>
+        /// <returns>DbDataReader object for reading the result set.</returns>
+        public virtual async Task<DbDataReader> ExecuteQueryAgainstDbAsync(TConnection conn, string sqltext, IDictionary<string, object?> parameters)
+        {
+            await conn.OpenAsync();
+            DbCommand cmd = conn.CreateCommand();
+            cmd.CommandText = sqltext;
+            cmd.CommandType = CommandType.Text;
+            if (parameters != null)
+            {
+                foreach (KeyValuePair<string, object?> parameterEntry in parameters)
+                {
+                    DbParameter parameter = cmd.CreateParameter();
+                    parameter.ParameterName = "@" + parameterEntry.Key;
+                    parameter.Value = parameterEntry.Value ?? DBNull.Value;
+                    cmd.Parameters.Add(parameter);
+                }
+            }
+
+            return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
         }
 
         /// <inheritdoc />

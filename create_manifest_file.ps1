@@ -26,7 +26,7 @@ foreach ($RID in $RIDs) {
 }
 
 # Get file content and convert to powershell object
-#$currentData = Get-Content D:/dab/manifest.json -raw | ConvertFrom-Json 
+#$currentData = Get-Content manifest.json -raw | ConvertFrom-Json 
 
 # Updating the most recent latest as old
 # foreach($data in $currentData)
@@ -77,4 +77,4 @@ if($versionArray.Length -gt $maxVersionCount){
 $x = $versionArray | ConvertTo-Json -Depth 4
 Write-Host $x
 # # Updating the manifest file 
-$versionArray | ConvertTo-Json -Depth 4 | Out-File $BuildOutputDir/manifest.json 
+$versionArray | ConvertTo-Json -Depth 4 | Out-File $BuildOutputDir/dab-manifest.json

@@ -123,10 +123,10 @@ steps:
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -CreateZip
 
 # Generating Manifest for Dab files
-# - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-#   displayName: 'SBOM Generation Task'
-#   inputs:
-#       BuildDropPath: '$(Build.ArtifactStagingDirectory)'
+- task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+  displayName: 'SBOM Generation Task'
+  inputs:
+      BuildDropPath: '$(Build.ArtifactStagingDirectory)'
 
 # Generating Manifest File for generated Zip package
 - task: PowerShell@2

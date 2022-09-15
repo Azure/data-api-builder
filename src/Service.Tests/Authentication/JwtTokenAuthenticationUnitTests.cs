@@ -314,6 +314,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Assert.AreEqual(
                 expected: expectedClientRoleHeader,
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString());
+
+            // Validates that AuthenticationMiddleware adds the clientRoleHeader as a role claim
+            // ONLY when the DevModeAuthNFlag is set.
+            if (clientRoleHeader is not null)
+            {
+                Assert.AreEqual(
+                    expected: treatDevModeRequestAsAuthenticated,
+                    actual: postMiddlewareContext.User.IsInRole(clientRoleHeader));
+            }
         }
         #endregion
 

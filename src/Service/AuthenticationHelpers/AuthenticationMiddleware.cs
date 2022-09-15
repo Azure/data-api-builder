@@ -109,10 +109,13 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 }
             }
 
-            // When the client role header is resolved to a system role (anonymous, authenticated),
-            // try to add the matching system role name as a role claim to the ClaimsIdentity using
-            // the X-MS-API-ROLE header value.
-            if (IsSystemRole(clientDefinedRole) && !httpContext.User.IsInRole(clientDefinedRole))
+            // When the user is not in the clientDefinedRole AND either
+            // 1. The client role header is resolved to a system role (anonymous, authenticated)
+            // -> Add the matcching system role name as a role claim to the ClaimsIdentity.
+            // 2. The dev mode authenticate-devmode-requests config flag is true (CRITICAL)
+            // -> Add the clientDefinedRole as a role claim to the ClaimsIdentity.
+            if (!httpContext.User.IsInRole(clientDefinedRole) &&
+                (IsSystemRole(clientDefinedRole) || _runtimeConfigurationProvider.IsAuthenticatedDevModeRequest()))
             {
                 Claim claim = new(ClaimTypes.Role, clientDefinedRole, ClaimValueTypes.String);
 

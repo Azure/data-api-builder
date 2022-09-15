@@ -265,7 +265,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             DisplayName = "EasyAuth- Treat request as authenticated in development mode " +
             "and honor the clienRoleHeader even when specified as anonymous")]
         public async Task TestAuthenticatedRequestInDevelopmentMode(
-            bool treatRequestAsAuthenticated,
+            bool treatDevModeRequestAsAuthenticated,
             string expectedClientRoleHeader,
             string clientRoleHeader)
         {
@@ -274,11 +274,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                     token: null,
                     easyAuthType: EasyAuthType.StaticWebApps,
                     clientRoleHeader: clientRoleHeader,
-                    treatRequestAsAuthenticated: treatRequestAsAuthenticated);
+                    treatRequestAsAuthenticated: treatDevModeRequestAsAuthenticated);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
             Assert.AreEqual(expected: expectedClientRoleHeader,
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString());
+
+            // Validates that AuthenticationMiddleware adds the clientRoleHeader as a role claim
+            // ONLY when the DevModeAuthNFlag is set.
+            if (clientRoleHeader is not null)
+            {
+                Assert.AreEqual(
+                    expected: treatDevModeRequestAsAuthenticated,
+                    actual: postMiddlewareContext.User.IsInRole(clientRoleHeader));
+            }
         }
 
         #endregion

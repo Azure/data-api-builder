@@ -197,7 +197,7 @@ steps:
   inputs:
     connection: Azure (1)
     userRepository: Azure/data-api-builder
-    #defaultVersionType: 'latest' # Options: latest, specificVersion, specificTag
+    defaultVersionType: 'latest' # Options: latest, specificVersion, specificTag
     #version: # Required when defaultVersionType != Latest
     #itemPattern: '**' # Optional
     #downloadPath: '$(System.ArtifactsDirectory)' 

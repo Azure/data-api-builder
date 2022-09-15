@@ -1,17 +1,15 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System;
-using Azure.DataApiBuilder.Config;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using System.Threading.Tasks;
-using System.Data.Common;
-using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {

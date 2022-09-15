@@ -32,6 +32,10 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private readonly Dictionary<string, Entity> _entities;
 
+        // Contains all the referencing and referenced columns for each pair
+        // of referencing and referenced tables.
+        private Dictionary<RelationShipPair, ForeignKeyDefinition> _pairToFkDefinition;
+
         protected IQueryExecutor QueryExecutor { get; }
 
         private const int NUMBER_OF_RESTRICTIONS = 4;
@@ -965,10 +969,9 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Gather all the referencing and referenced columns for each pair
             // of referencing and referenced tables.
-            Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition
-                = await ExecuteAndSummarizeFkMetadata(queryForForeignKeyInfo, parameters);
+            _pairToFkDefinition = await ExecuteAndSummarizeFkMetadata(queryForForeignKeyInfo, parameters);
 
-            FillInferredFkInfo(pairToFkDefinition, tablesToBePopulatedWithFK);
+            FillInferredFkInfo(_pairToFkDefinition, tablesToBePopulatedWithFK);
 
             ValidateAllFkHaveBeenInferred(tablesToBePopulatedWithFK);
         }
@@ -1144,6 +1147,20 @@ namespace Azure.DataApiBuilder.Service.Services
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// For the given two database objects, returns true if a foreignKey exists between them.
+        /// Else returns false.
+        /// </summary>
+        public bool VerifyForeignKeyExistsInDB(
+            DatabaseObject databaseObjectA,
+            DatabaseObject databaseObjectB)
+        {
+            RelationShipPair pairAB = new(databaseObjectA, databaseObjectB);
+            RelationShipPair pairBA = new(databaseObjectB, databaseObjectA);
+
+            return (_pairToFkDefinition.ContainsKey(pairAB) || _pairToFkDefinition.ContainsKey(pairBA));
         }
 
         /// <summary>

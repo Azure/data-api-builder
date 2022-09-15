@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Service
                 }
             });
 
-            services.AddSingleton(implementationFactory: (serviceProvider) =>
+            services.AddSingleton<DbExceptionParser>(implementationFactory: (serviceProvider) =>
             {
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
@@ -167,9 +167,11 @@ namespace Azure.DataApiBuilder.Service
                     case DatabaseType.cosmos:
                         return null!;
                     case DatabaseType.mssql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlDbExceptionParser>(serviceProvider);
                     case DatabaseType.postgresql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlDbExceptionParser>(serviceProvider);
                     case DatabaseType.mysql:
-                        return new DbExceptionParser(configProvider);
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider);
                     default:
                         throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
                 }
@@ -403,7 +405,7 @@ namespace Azure.DataApiBuilder.Service
 
                 if (runtimeConfigProvider.IsDeveloperMode())
                 {
-                    // Perform semantic validation in development mode only.
+                    // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 }
 
@@ -416,6 +418,12 @@ namespace Azure.DataApiBuilder.Service
                 if (sqlMetadataProvider is not null)
                 {
                     await sqlMetadataProvider.InitializeAsync();
+                }
+
+                if (app.ApplicationServices.GetService<RuntimeConfigProvider>()!.IsDeveloperMode())
+                {
+                    // Running only in developer mode to ensure fast and smooth startup in production.
+                    runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProvider!);
                 }
 
                 _logger.LogInformation($"Successfully completed runtime initialization.");

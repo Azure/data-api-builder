@@ -321,12 +321,17 @@ namespace Cli
 
             object updatedSource = options.Source is null ? entity!.Source : options.Source;
             object? updatedRestDetails = options.RestRoute is null ? entity!.Rest : GetRestDetails(options.RestRoute);
-            object? updatedGraphqlDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
+            object? updatedGraphQLDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
             PermissionSetting[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, Relationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;
             Policy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             Field? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
+
+            if (false.Equals(updatedGraphQLDetails))
+            {
+                Console.WriteLine("WARNING: Disabling GraphQL for this entity will restrict it's usage in relationships");
+            }
 
             if (options.Permissions is not null && options.Permissions.Any())
             {
@@ -389,7 +394,7 @@ namespace Cli
 
             runtimeConfig.Entities[options.Entity] = new Entity(updatedSource,
                                                                 updatedRestDetails,
-                                                                updatedGraphqlDetails,
+                                                                updatedGraphQLDetails,
                                                                 updatedPermissions,
                                                                 updatedRelationships,
                                                                 updatedMappings);
@@ -556,15 +561,28 @@ namespace Cli
             }
 
             // Checking if both cardinality and targetEntity is provided.
-            //
             if (cardinality is null || targetEntity is null)
             {
                 Console.WriteLine("cardinality and target entity is mandatory to update/add a relationship.");
                 return false;
             }
 
+            // Add/Update of relationship is not allowed when GraphQL is disabled in Global Runtime Settings
+            if (runtimeConfig.RuntimeSettings!.TryGetValue(GlobalSettingsType.GraphQL, out object? graphQLRuntimeSetting))
+            {
+                GraphQLGlobalSettings? graphQLGlobalSettings = JsonSerializer.Deserialize<GraphQLGlobalSettings>(
+                    (JsonElement)graphQLRuntimeSetting
+                );
+
+                if (graphQLGlobalSettings is not null && !graphQLGlobalSettings.Enabled)
+                {
+                    Console.WriteLine("Cannot add/update relationship as GraphQL is disabled in the" +
+                    " global runtime settings of the config.");
+                    return false;
+                }
+            }
+
             // Both the source entity and target entity needs to present in config to establish relationship.
-            //
             if (!runtimeConfig.Entities.ContainsKey(targetEntity))
             {
                 Console.WriteLine($"Entity:{targetEntity} is not present. Relationship cannot be added.");
@@ -572,11 +590,17 @@ namespace Cli
             }
 
             // Check if provided value of cardinality is present in the enum.
-            //
             if (!string.Equals(cardinality, Cardinality.One.ToString(), StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(cardinality, Cardinality.Many.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine($"Failed to parse the given cardinality : {cardinality}. Supported values are one/many.");
+                return false;
+            }
+
+            // If GraphQL is disabled, entity cannot be used in relationship
+            if (false.Equals(runtimeConfig.Entities[targetEntity].GraphQL))
+            {
+                Console.WriteLine($"Entity: {targetEntity} cannot be used in relationship as it is disabled for GraphQL.");
                 return false;
             }
 

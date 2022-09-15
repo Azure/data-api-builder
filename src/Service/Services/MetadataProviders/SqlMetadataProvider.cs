@@ -1150,8 +1150,8 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// For given two database objects, Returns true if a foreignKey exist between them.
-        /// Else return false.
+        /// For the given two database objects, returns true if a foreignKey exists between them.
+        /// Else returns false.
         /// </summary>
         public bool VerifyForeignKeyExistsInDB(
             DatabaseObject databaseObjectA,

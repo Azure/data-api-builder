@@ -362,11 +362,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// Validates the semantic correctness of an Entity's relationship metadata
         /// in the runtime configuration.
         /// Validating Cases:
-        /// 1. entity not defined in config cannot be used in relationship.
-        /// 2. entity with graphQL disabled cannot be used in a relationship with another entity.
-        /// 3. if config doesn't contain LinkingSourceFields or sourceFields and LinkingTargetFields or targetFields for
-        /// the given linkingObject, then the underlying database should contain a foreign key relationship
-        /// between source and target entity.
+        /// 1. Entities not defined in the config cannot be used in a relationship.
+        /// 2. Entities with graphQL disabled cannot be used in a relationship with another entity.
+        /// 3. If the LinkingSourceFields or sourceFields and LinkingTargetFields or targetFields are not
+        /// specified in the config for the given linkingObject, then the underlying database should
+        /// contain a foreign key relationship between the source and target entity.
         /// 4. If linkingObject is null, and either of SourceFields or targetFields is null, then foreignKey pair
         /// between source and target entity must be defined in the DB.
         /// </summary>
@@ -387,7 +387,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                 foreach ((string relationshipName, Relationship relationship) in entity.Relationships)
                 {
-                    // entity referenced in relationship is not defined in the config.
+                    // Validate if entity referenced in relationship is defined in the config.
                     if (!runtimeConfig.Entities.ContainsKey(relationship.TargetEntity))
                     {
                         throw new DataApiBuilderException(
@@ -396,7 +396,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                     }
 
-                    // if graphQL is disabled for an entity it can't be referenced by other entity.
+                    // Validation to ensure that an entity with graphQL disabled cannot be referenced in a relationship by other entities
                     object? targetEntityGraphQLDetails = runtimeConfig.Entities[relationship.TargetEntity].GraphQL;
                     if (false.Equals(targetEntityGraphQLDetails))
                     {

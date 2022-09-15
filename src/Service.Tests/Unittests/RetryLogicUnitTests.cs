@@ -50,10 +50,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<string>(),
                 It.IsAny<IDictionary<string, object>>())).CallBase();
 
-            await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () =>
+            try
             {
                 await queryExecutor.Object.ExecuteQueryAsync(sqltext: string.Empty, parameters: new Dictionary<string, object>());
-            });
+            }
+            catch (DataApiBuilderException ex)
+            {
+
+            }
         }
     }
 

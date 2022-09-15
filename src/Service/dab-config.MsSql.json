@@ -498,7 +498,7 @@
     "Comic": {
       "source": "comics",
       "rest": true,
-      "graphql": false,
+      "graphql": true,
       "permissions": [
         {
           "role": "anonymous",

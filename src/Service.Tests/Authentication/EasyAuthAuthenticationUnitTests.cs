@@ -280,7 +280,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Assert.AreEqual(expected: expectedClientRoleHeader,
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString());
         }
-
         #endregion
 
         #region Helper Methods
@@ -321,7 +320,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                         .Configure(app =>
                         {
                             app.UseAuthentication();
-                            app.UseMiddleware<AuthenticationMiddleware>();
+                            app.UseMiddleware<ClientRoleHeaderMiddleware>();
+                            app.UseMiddleware<ClientRoleHeaderAuthorizationMiddleware>();
 
                             // app.Run acts as terminating middleware to return 200 if we reach it. Without this,
                             // the Middleware pipeline will return 404 by default.

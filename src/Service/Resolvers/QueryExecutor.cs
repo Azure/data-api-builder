@@ -102,9 +102,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public async Task<Dictionary<string, object?>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader, List<string>? onlyExtract = null)
+        public async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
+            ExtractRowFromDbDataReader(DbDataReader dbDataReader, List<string>? onlyExtract = null)
         {
             Dictionary<string, object?> row = new();
+
+            Dictionary<string, object> propertiesOfResult = new();
+
+            propertiesOfResult.Add(nameof(dbDataReader.RecordsAffected), dbDataReader.RecordsAffected);
 
             if (await ReadAsync(dbDataReader))
             {
@@ -140,10 +145,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // no row was read
             if (row.Count == 0)
             {
-                return null;
+                return new Tuple<Dictionary<string, object?>?, Dictionary<string, object>>(null, propertiesOfResult);
             }
 
-            return row;
+            return new Tuple<Dictionary<string, object?>?, Dictionary<string, object>>(row, propertiesOfResult);
         }
 
         /// <inheritdoc />

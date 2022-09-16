@@ -94,38 +94,36 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // If authorization fails, an exception will be thrown and request execution halts.
             AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
 
-            using DbDataReader dbDataReader =
+            Tuple<Dictionary<string, object?>?, Dictionary<string, object>> resultRowAndProperties =
                 await PerformMutationOperation(
                     entityName,
                     mutationOperation,
                     parameters,
                     context: context);
 
-            if (!context.Selection.Type.IsScalarType() && mutationOperation is not Operation.Delete)
+            if (resultRowAndProperties.Item1 is not null)
             {
-                TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
-
-                // only extract pk columns
-                // since non pk columns can be null
-                // and the subsequent query would search with:
-                // nullParamName = NULL
-                // which would fail to get the mutated entry from the db
-                Dictionary<string, object?>? searchParams = await _queryExecutor.ExtractRowFromDbDataReader(
-                    dbDataReader,
-                    onlyExtract: tableDefinition.PrimaryKey);
-
-                if (searchParams == null)
+                if (!context.Selection.Type.IsScalarType() && mutationOperation is not Operation.Delete)
                 {
-                    string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
-                    throw new DataApiBuilderException(
-                        message: $"Could not find entity with {searchedPK}",
-                        statusCode: HttpStatusCode.NotFound,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                    result = await _queryEngine.ExecuteAsync(
+                                context,
+                                resultRowAndProperties.Item1);
                 }
-
-                result = await _queryEngine.ExecuteAsync(
-                    context,
-                    searchParams);
+                else
+                {
+                    // If the number of records affected by the mutation were zero,
+                    // and yet the result.Item1 was not null, the DELETE was part of
+                    // a concurrent request race and lost it.
+                    // Hence, empty the result since otherwise it would indicate a stale value.
+                    if (resultRowAndProperties.Item2.TryGetValue(nameof(DbDataReader.RecordsAffected), out object? value)
+                        && Convert.ToInt32(value) == 0
+                        && result is not null && result.Item1 is not null)
+                    {
+                        result = new Tuple<JsonDocument, IMetadata>(
+                            JsonDocument.Parse("{}"),
+                            PaginationMetadata.MakeEmptyPaginationMetadata());
+                    }
+                }
             }
 
             if (result is null)
@@ -151,8 +149,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string queryText = _queryBuilder.Build(executeQueryStructure);
             _logger.LogInformation(queryText);
 
-            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, executeQueryStructure.Parameters);
-            Dictionary<string, object?>? resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
+            Tuple<Dictionary<string, object?>?, Dictionary<string, object>> resultRecordAndProperties =
+                await _queryExecutor.ExecuteQueryAsync(
+                    queryText,
+                    executeQueryStructure.Parameters,
+                    _queryExecutor.ExtractRowFromDbDataReader);
 
             // A note on returning stored procedure results:
             // We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes
@@ -219,16 +220,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             Dictionary<string, object?> parameters = PrepareParameters(context);
 
-            using DbDataReader dbDataReader =
-            await PerformMutationOperation(
-                context.EntityName,
-                context.OperationType,
-                parameters);
+            Dictionary<string, object?>? resultRecord =
+                await PerformMutationOperation(
+                    context.EntityName,
+                    context.OperationType,
+                    parameters);
 
             string primaryKeyRoute;
-            Dictionary<string, object?>? resultRecord = new();
-            resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
-
             switch (context.OperationType)
             {
                 case Operation.Delete:
@@ -335,11 +333,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Performs the given REST and GraphQL mutation operation type
         /// on the table and returns result as JSON object asynchronously.
         /// </summary>
-        private async Task<DbDataReader> PerformMutationOperation(
-            string entityName,
-            Operation operationType,
-            IDictionary<string, object?> parameters,
-            IMiddlewareContext? context = null)
+        private async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>>
+            PerformMutationOperation(
+                string entityName,
+                Operation operationType,
+                IDictionary<string, object?> parameters,
+                IMiddlewareContext? context = null)
         {
             string queryString;
             Dictionary<string, object?> queryParameters;
@@ -431,7 +430,41 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             _logger.LogInformation(queryString);
 
-            return await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
+            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRecord = null;
+
+            if (context is not null && !context.Selection.Type.IsScalarType() && operationType is not Operation.Delete)
+            {
+                TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
+
+                // only extract pk columns
+                // since non pk columns can be null
+                // and the subsequent query would search with:
+                // nullParamName = NULL
+                // which would fail to get the mutated entry from the db
+                resultRecord =
+                    await _queryExecutor.ExecuteQueryAsync(
+                        queryString,
+                        queryParameters,
+                        _queryExecutor.ExtractRowFromDbDataReader,
+                        tableDefinition.PrimaryKey);
+
+                if (resultRecord is null)
+                {
+                    string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                    throw new DataApiBuilderException(
+                        message: $"Could not find entity with {searchedPK}",
+                        statusCode: HttpStatusCode.NotFound,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                }
+            }
+            else
+            {
+                // only perform the mutation operation
+                resultRecord =
+                    _queryExecutor.ExecuteQueryAsync(queryString, queryParameters, _queryExecutor.GetNumberOfRecordsAffected);
+            }
+
+            return resultRecord;
         }
 
         /// <summary>

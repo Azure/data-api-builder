@@ -193,7 +193,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             {
                 foreach (string query in customQueries)
                 {
-                    await _queryExecutor.ExecuteQueryAsync(query, parameters: null);
+                    await _queryExecutor.ExecuteQueryForJsonDocumentAsync(query, parameters: null);
                 }
             }
         }
@@ -284,7 +284,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
         protected static async Task ResetDbStateAsync()
         {
-            using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{DatabaseEngine}Books.sql"), parameters: null);
+            using DbDataReader _ = await _queryExecutor.ExecuteQueryForJsonDocumentAsync(File.ReadAllText($"{DatabaseEngine}Books.sql"), parameters: null);
         }
 
         /// <summary>
@@ -299,7 +299,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         {
             string result;
 
-            using DbDataReader reader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters: null);
+            using DbDataReader reader = await _queryExecutor.ExecuteQueryForJsonDocumentAsync(queryText, parameters: null);
 
             // An empty result will cause an error with the json parser
             if (!reader.HasRows)

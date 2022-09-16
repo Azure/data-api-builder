@@ -132,7 +132,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestBootstrapTests
         public async Task TestCleanup()
         {
             string dropViewQuery = $"DROP VIEW IF EXISTS {_compositeViewName}";
-            await _queryExecutor.ExecuteQueryAsync(dropViewQuery, parameters: null);
+            await _queryExecutor.ExecuteQueryForJsonDocumentAsync(dropViewQuery, parameters: null);
         }
     }
 }

@@ -1042,7 +1042,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             // Execute the foreign key info query.
             using DbDataReader reader =
-                await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters);
+                await QueryExecutor.ExecuteQueryForJsonDocumentAsync(queryForForeignKeyInfo, parameters);
 
             // Extract the first row from the result.
             Dictionary<string, object?>? foreignKeyInfo =

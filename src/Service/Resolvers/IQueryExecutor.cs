@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
@@ -49,8 +48,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="dbDataReader">A Db data reader</param>
         /// <param name="onlyExtract">List of columns to extract. Extracts all if unspecified.</param>
-        ///<returns>A dictionary representing the row in <c>ColumnName: Value</c> format, null if no row was found</returns>
-        public Task<Dictionary<string, object?>?> ExtractRowFromDbDataReader(DbDataReader dbDataReader, List<string>? onlyExtract = null);
+        ///<returns>A tuple of 2 dictionaries:
+        /// 1. A dictionary representing the row in <c>ColumnName: Value</c> format, null if no row was found
+        /// 2. A dictionary of properties of the Db Data Reader to indicate the characteristics of the result.</returns>
+        public Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
+            ExtractRowFromDbDataReader(DbDataReader dbDataReader, List<string>? onlyExtract = null);
 
         /// <summary>
         /// Wrapper for DbDataReader.ReadAsync.

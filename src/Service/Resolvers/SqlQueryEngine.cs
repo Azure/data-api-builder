@@ -86,11 +86,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider, _authorizationResolver, _runtimeConfigProvider);
             string queryString = _queryBuilder.Build(structure);
             _logger.LogInformation(queryString);
-           List<JsonDocument> jsonListResult =
-                await _queryExecutor.ExecuteQueryAsync<List<JsonDocument>>(
-                    queryString,
-                    structure.Parameters,
-                    _queryExecutor.GetJsonResultAsync<List<JsonDocument>>);
+            List<JsonDocument> jsonListResult =
+                 await _queryExecutor.ExecuteQueryAsync(
+                     queryString,
+                     structure.Parameters,
+                     _queryExecutor.GetJsonResultAsync<List<JsonDocument>>);
 
             if (jsonListResult is null)
             {

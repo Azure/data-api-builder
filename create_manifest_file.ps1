@@ -4,7 +4,8 @@ param (
     [Parameter (Mandatory=$true)][string] $DabVersion
 )
 
-$versionId = $DabVersion # should be picked up from pipeline
+# TODO: To update the URL dynamically
+$versionId = $DabVersion
 $releaseType = "development"
 $releaseDate = (Get-Date).ToUniversalTime().ToString('u')
 $download_url_win = "https://github.com/data-api-builder/releases/$versionId/win-file.zip"
@@ -24,19 +25,6 @@ foreach ($RID in $RIDs) {
         "osx-x64"{ $osx_file_hash = $hash}
     }
 }
-
-# Get file content and convert to powershell object
-#$currentData = Get-Content manifest.json -raw | ConvertFrom-Json 
-
-# Updating the most recent latest as old
-# foreach($data in $currentData)
-# {
-#     if($data.version -eq "latest")
-#     {
-#         $data.version = "old"
-#     }
-#     break
-# } 
 
 # Creating new block to insert latest version 
 $latestBlock = @'
@@ -64,17 +52,17 @@ $latestBlock = @'
 
 $latestBlock = $ExecutionContext.InvokeCommand.ExpandString($latestBlock) | ConvertFrom-Json 
 
-# # Adding new block to the top of the list of released versions. 
+# Adding new block to the top of the list of released versions.
+# TODO: To use the data from the current manifest file and update it.
 $versionArray = '[]' | ConvertFrom-Json 
-$versionArray += $latestBlock 
-# $versionArray += $currentData 
+$versionArray += $latestBlock
 
-# # Removing the oldest version if total count exceeds the max permissible count 
+# Removing the oldest version if total count exceeds the max permissible count 
 if($versionArray.Length -gt $maxVersionCount){ 
     $versionArray = [System.Collections.ArrayList]$versionArray 
     $versionArray.RemoveAt($versionArray.Count-1)
 } 
-$x = $versionArray | ConvertTo-Json -Depth 4
-Write-Host $x
-# # Updating the manifest file 
+
+# Updating the manifest file 
+# Keeping Depth as 4, as by default ConvertTo-Json only support copnversion till depth 2.
 $versionArray | ConvertTo-Json -Depth 4 | Out-File $BuildOutputDir/dab-manifest.json

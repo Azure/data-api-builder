@@ -1,4 +1,3 @@
-#nullable enable
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -452,7 +451,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             string issuer = ISSUER,
             DateTime? notBefore = null,
             DateTime? expirationTime = null,
-            SecurityKey? signingKey = null)
+            SecurityKey signingKey = null)
         {
             JwtSecurityTokenHandler tokenHandler = new();
             SecurityTokenDescriptor tokenDescriptor = new()

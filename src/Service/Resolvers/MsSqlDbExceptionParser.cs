@@ -69,7 +69,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             };
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Helper method to get the HttpStatusCode for the exception based on the 'Number' of the exception.
+        /// </summary>
+        /// <param name="e">The exception thrown as a result of execution of the request.</param>
+        /// <returns>status code to be returned in the response.</returns>
         public override HttpStatusCode GetHttpStatusCodeForException(DbException e)
         {
             string errorNumber = ((SqlException)e).Number.ToString();

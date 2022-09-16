@@ -185,14 +185,25 @@ namespace Azure.DataApiBuilder.Service.Tests
             Exception? innerEx = null;
             ConstructorInfo[] c = typeof(SqlErrorCollection).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
             SqlErrorCollection errors = (c[0].Invoke(null) as SqlErrorCollection)!;
-            List<object> errorList = (errors.GetType().GetField("_errors", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(errors) as List<object>)!;
+            List<object> errorList =
+                (errors.GetType().GetField("_errors", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(errors) as List<object>)!;
             c = typeof(SqlError).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
             ConstructorInfo nineC = c.FirstOrDefault(f => f.GetParameters().Length == 9)!;
+
+            // Create SqlError object.
             SqlError sqlError = (nineC.Invoke(new object?[] { number, (byte)0, (byte)0, "", "", "", (int)0, (uint)0, innerEx }) as SqlError)!;
             errorList.Add(sqlError);
-            SqlException ex = (Activator.CreateInstance(typeof(SqlException), BindingFlags.NonPublic | BindingFlags.Instance, null, new object?[] { message, errors,
-            innerEx, Guid.NewGuid() }, null) as SqlException)!;
-            return ex;
+
+            // Create SqlException object
+            SqlException e =
+                (Activator.CreateInstance(
+                    typeof(SqlException),
+                    BindingFlags.NonPublic | BindingFlags.Instance,
+                    null,
+                    new object[] { message, errors, innerEx, Guid.NewGuid() },
+                    null)
+                as SqlException)!;
+            return e;
         }
     }
 }

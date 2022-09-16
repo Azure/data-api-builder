@@ -55,10 +55,10 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             // 3. None - No token provided, no auth result.
             AuthenticateResult authNResult = await httpContext.AuthenticateAsync();
 
-            // Reject request by terminating the AuthenticationMiddleware
-            // when an invalid token is provided and writes challenge response
-            // metadata (HTTP 401 Unauthorized response code
-            // and www-authenticate headers) to the HTTP Context.
+            // Reject and terminate the request when an invalid token is provided
+            // Write challenge response metadata (HTTP 401 Unauthorized response code
+            // and www-authenticate headers) to the HTTP Context via JwtBearerHandler code
+            // https://github.com/dotnet/aspnetcore/blob/3fe12b935c03138f76364dc877a7e069e254b5b2/src/Security/Authentication/JwtBearer/src/JwtBearerHandler.cs#L217
             if (authNResult.Failure is not null)
             {
                 await httpContext.ChallengeAsync();

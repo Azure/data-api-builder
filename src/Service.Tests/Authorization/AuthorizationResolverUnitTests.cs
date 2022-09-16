@@ -954,9 +954,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         public void ParseValidDbPolicy(string policy, string expectedParsedPolicy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                TEST_ENTITY,
-                TEST_ROLE,
-                TEST_OPERATION,
+                entityName: TEST_ENTITY,
+                roleName: TEST_ROLE,
+                operation: TEST_OPERATION,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );
@@ -992,9 +992,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         public void ParseInvalidDbPolicyWithUserNotPossessingAllClaims(string policy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                TEST_ENTITY,
-                TEST_ROLE,
-                TEST_OPERATION,
+                entityName: TEST_ENTITY,
+                roleName: TEST_ROLE,
+                operation: TEST_OPERATION,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );
@@ -1039,9 +1039,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             string policy = $"@claims.guid eq 1";
             string defaultClaimValue = "unimportant";
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                TEST_ENTITY,
-                TEST_ROLE,
-                TEST_OPERATION,
+                entityName: TEST_ENTITY,
+                roleName: TEST_ROLE,
+                operation: TEST_OPERATION,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );
@@ -1110,9 +1110,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             bool expectPolicy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                TEST_ENTITY,
-                configuredRole,
-                configuredOperation,
+                entityName: TEST_ENTITY,
+                roleName: configuredRole,
+                operation: configuredOperation,
                 databasePolicy: policy
                 );
 

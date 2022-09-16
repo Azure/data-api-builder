@@ -106,11 +106,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test to validate that the expected number of attempts are being made to execute the query against the database
-        /// when the database returns a transient error.
+        /// Test to validate that the maximum number of retries are being made to execute the query against the database
+        /// when the database keeps returning a transient error.
         /// </summary>
         [TestMethod, TestCategory(TestCategory.MSSQL)]
-        public async Task TestRetryPolicyAsync()
+        public async Task TestRetryPolicyExhaustingMaxAttempts()
         {
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
@@ -139,6 +139,38 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // For each attempt logger is invoked twice. Currently we have hardcoded the number of attempts.
             // Once we have number of retry attempts specified in config, we will make it dynamic.
             Assert.AreEqual(2 * 6, queryExecutorLogger.Invocations.Count);
+        }
+
+        /// <summary>
+        /// Test to validate that when a query succcessfully executes within allowed number of retries, we get back the result
+        /// without giving anymore retries.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task TestRetryPolicySuccessfullyExecutingQueryAfterNAttempts()
+        {
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+            Mock<MsSqlQueryExecutor> queryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object);
+
+            // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
+            queryExecutor.SetupSequence(x => x.ExecuteQueryAgainstDbAsync(
+                It.IsAny<SqlConnection>(),
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, object>>()))
+            .Throws(TestHelper.CreateSqlException(121))
+            .Throws(TestHelper.CreateSqlException(121))
+            .CallBase();
+
+            // Call the actual ExecuteQueryAsync method.
+            queryExecutor.Setup(x => x.ExecuteQueryAsync(
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, object>>())).CallBase();
+
+            string sqltext = "SELECT * from books";
+            await queryExecutor.Object.ExecuteQueryAsync(sqltext: sqltext, parameters: new Dictionary<string, object>());
+            // For each attempt logger is invoked twice. The query executes successfully in 2nd retry.
+            Assert.AreEqual(2 * 2, queryExecutorLogger.Invocations.Count);
         }
     }
 }

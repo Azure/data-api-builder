@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(expected, dbExceptionParser.IsTransientException(SqlExceptionCreator.Create(number)));
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task TestRetryPolicyAsync()
         {
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);

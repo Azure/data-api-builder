@@ -450,7 +450,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             _logger.LogInformation(queryString);
 
             Dictionary<string, object>?
-                resultProperties =  await _queryExecutor.ExecuteQueryAsync(
+                resultProperties = await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     queryParameters,
                     _queryExecutor.GetResultProperties);
@@ -497,7 +497,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                        queryString,
                        queryParameters,
                        _queryExecutor.GetMultipleResultIfAnyAsync,
-                       new List<string>{ prettyPrintPk, entityName });
+                       new List<string> { prettyPrintPk, entityName });
         }
 
         /// <summary>

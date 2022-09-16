@@ -410,6 +410,23 @@ namespace Azure.DataApiBuilder.Service
                     await sqlMetadataProvider.InitializeAsync();
                 }
 
+                // Manually trigger DI service instantiation of GraphQLSchemaCreator and RestService
+                // to attempt to reduce chances that the first received client request
+                // triggers instantiation and encounters undesired instantiation latency.
+                // In their constructors, those services consequentially inject
+                // other required services, triggering instantiation. Such recursive nature of DI and
+                // service instantiation results in the activation of all required services.
+                GraphQLSchemaCreator graphQLSchemaCreator =
+                    app.ApplicationServices.GetRequiredService<GraphQLSchemaCreator>();
+
+                RestService restService =
+                    app.ApplicationServices.GetRequiredService<RestService>();
+
+                if (graphQLSchemaCreator is null || restService is null)
+                {
+                    _logger.LogError($"Endpoint service initialization failed");
+                }
+
                 if (app.ApplicationServices.GetService<RuntimeConfigProvider>()!.IsDeveloperMode())
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.

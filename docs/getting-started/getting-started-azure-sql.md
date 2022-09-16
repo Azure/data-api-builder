@@ -7,7 +7,7 @@ As mentioned before, this tutorial assumes that you already have a SQL Server or
 ## Get the database connection string
 
 There are several ways to get an Azure SQL database connection string. More details here:
-https://docs.microsoft.com/en-us/azure/azure-sql/database/connect-query-content-reference-guide?view=azuresql
+https://learn.microsoft.com/azure/azure-sql/database/connect-query-content-reference-guide?view=azuresql
 
 If you are connecting to Azure SQL DB, Azure SQL MI, or SQL Server, the connection string look like:
 
@@ -21,7 +21,7 @@ To connect to a local SQL Server, for example:
 Server=localhost;Database=Library;User ID=dab_user;Password=<password>;TrustServerCertificate=true
 ```
 
-More details on Azure SQL and SQL Server connection strings can be found here: https://docs.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax
+More details on Azure SQL and SQL Server connection strings can be found here: https://learn.microsoft.com/sql/connect/ado-net/connection-string-syntax
 
 Once you have your connection string, add it to the configuration file you have created before. It will look like the following (if you are using a local SQL Server):
 

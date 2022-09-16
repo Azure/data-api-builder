@@ -36,6 +36,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<SqlMutationEngine> _logger;
+        public const string IS_FIRST_RESULT_SET = "IsFirstResultSet";
 
         /// <summary>
         /// Constructor
@@ -243,23 +244,36 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else if (context.OperationType is Operation.Upsert || context.OperationType is Operation.UpsertIncremental)
             {
-                Dictionary<string, object?>? resultRecord =
+                Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRowAndProperties =
                     await PerformUpsertOperation(
                         parameters,
                         context);
 
-                // postgress may be an insert op here, if so, return CreatedResult
-                if (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&
-                    resultRecord is not null &&
-                    PostgresQueryBuilder.IsInsert(resultRecord))
+                if (resultRowAndProperties is not null &&
+                    resultRowAndProperties.Item1 is not null)
                 {
-                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRecord);
-                    // location will be updated in rest controller where httpcontext is available
-                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRecord).Value);
-                }
+                    Dictionary<string, object?> resultRow = resultRowAndProperties.Item1;
+                   
+                    bool isFirstResultSet = false;
+                    if (resultRowAndProperties.Item2.TryGetValue(IS_FIRST_RESULT_SET, out object? isFirstResultSetValue))
+                    {
+                        isFirstResultSet = Convert.ToBoolean(isFirstResultSetValue);
+                    }
 
-                // Valid REST updates return OkObjectResult
-                return OkMutationResponse(resultRecord);
+                    // For MsSql, Myql, if its not the first result, the upsert resulted in an INSERT operation.
+                    // Even if its first result, postgresql may still be an insert op here, if so, return CreatedResult
+                    if (!isFirstResultSet ||
+                        (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&
+                        PostgresQueryBuilder.IsInsert(resultRow)))
+                    {
+                        string primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRow);
+                        // location will be updated in rest controller where httpcontext is available
+                        return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value);
+                    }
+
+                    // Valid REST updates return OkObjectResult
+                    return OkMutationResponse(resultRow);
+                }
             }
             else
             {
@@ -278,16 +292,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         throw new Exception();
                     }
 
-                    Dictionary<string, object?> resultRecord = resultRowAndProperties.Item1;
-                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRecord);
+                    Dictionary<string, object?> resultRow = resultRowAndProperties.Item1;
+                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRow);
                     // location will be updated in rest controller where httpcontext is available
-                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRecord).Value);
+                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value);
                 }
 
                 if (context.OperationType is Operation.Update || context.OperationType is Operation.UpdateIncremental)
                 {
                     // Nothing to update means we throw Exception
-                    if (resultRowAndProperties is null || resultRowAndProperties.Item1 is null)
+                    if (resultRowAndProperties is null ||
+                        resultRowAndProperties.Item1 is null ||
+                        resultRowAndProperties.Item1.Count == 0)
                     {
                         throw new DataApiBuilderException(message: "No Update could be performed, record not found",
                                                            statusCode: HttpStatusCode.PreconditionFailed,
@@ -418,6 +434,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
+                // This is the scenario for all REST mutation operations covered by this function
+                // and the case when the Selection Type is a scalar for GraphQL.
                 resultRecord =
                     await _queryExecutor.ExecuteQueryAsync(
                         queryString,
@@ -458,7 +476,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return resultProperties;
         }
 
-        private async Task<Dictionary<string, object?>?>
+        private async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
             PerformUpsertOperation(
                 IDictionary<string, object?> parameters,
                 RestRequestContext context)

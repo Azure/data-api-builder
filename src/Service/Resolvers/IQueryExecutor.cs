@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 DbDataReader dbDataReader,
                 List<string>? columnNames = null);
 
-        public Task<Dictionary<string, object?>?>
+        public Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
             GetMultipleResultIfAnyAsync(
                 DbDataReader dbDataReader,
                 List<string>? columnNames = null);

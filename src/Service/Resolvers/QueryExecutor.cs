@@ -195,7 +195,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return jsonDocument;
         }
 
-        public async Task<Dictionary<string, object?>?>
+        public async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
             GetMultipleResultIfAnyAsync(DbDataReader dbDataReader, List<string>? args = null)
         {
             Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?
@@ -207,13 +207,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             /// result set #2: result of the INSERT operation.
             if (resultRecordWithProperties is not null && resultRecordWithProperties.Item1 is not null)
             {
-                return resultRecordWithProperties.Item1;
+                resultRecordWithProperties.Item2.Add(SqlMutationEngine.IS_FIRST_RESULT_SET, true);
+                return new Tuple<Dictionary<string, object?>?, Dictionary<string, object>>
+                    (resultRecordWithProperties.Item1, resultRecordWithProperties.Item2);
             }
             else if (await dbDataReader.NextResultAsync())
             {
                 // Since no first result set exists, we overwrite Dictionary here.
-                resultRecordWithProperties = await ExtractRowFromDbDataReader(dbDataReader);
-                return resultRecordWithProperties is not null ? resultRecordWithProperties.Item1 : null;
+                return await ExtractRowFromDbDataReader(dbDataReader);
             }
             else
             {

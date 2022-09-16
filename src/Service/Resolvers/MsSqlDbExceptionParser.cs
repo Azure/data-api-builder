@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public override bool IsTransientException(DbException e)
         {
             string errorNumber = ((SqlException)e).Number.ToString();
-            return TransientErrorCodes is not null && TransientErrorCodes.Contains(errorNumber);
+            return TransientErrorCodes!.Contains(errorNumber);
         }
     }
 }

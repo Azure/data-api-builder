@@ -175,7 +175,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         }
 
         /// <summary>
-        /// Need to create our custom exception of type SqlException which is a sealed class.
+        /// Method to create our custom exception of type SqlException which is a sealed class.
         /// </summary>
         /// <param name="number">Number to be populated in SqlException.Number</param>
         /// <param name="message">Message to be populated in SqlException.Message</param>

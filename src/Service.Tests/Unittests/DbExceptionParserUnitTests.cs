@@ -36,6 +36,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(expected, actual);
         }
 
+        /// <summary>
+        /// Method to validate the functioning of the DbExceptionParser.IsTransientException method.
+        /// </summary>
+        /// <param name="expected">boolean value indicating if exception is expected to be transient or not.</param>
+        /// <param name="number">number to be populated in SqlException.Number field</param>
         [DataTestMethod]
         [DataRow(true, 121, DisplayName = "Transient exception error code #1")]
         [DataRow(true, 8628, DisplayName = "Transient exception error code #2")]

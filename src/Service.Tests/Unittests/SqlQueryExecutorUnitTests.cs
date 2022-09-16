@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.Identity;
 using Microsoft.Data.SqlClient;
@@ -101,6 +103,42 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 Assert.AreEqual(expected: default, actual: conn.AccessToken);
             }
+        }
+
+        /// <summary>
+        /// Test to validate that the expected number of attempts are being made to execute the query against the database
+        /// when the database returns a transient error.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task TestRetryPolicyAsync()
+        {
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+            Mock<MsSqlQueryExecutor> queryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object);
+
+            // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
+            queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
+                It.IsAny<SqlConnection>(),
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, object>>()))
+            .Throws(TestHelper.CreateSqlException(121));
+
+            // Call the actual ExecuteQueryAsync method.
+            queryExecutor.Setup(x => x.ExecuteQueryAsync(
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, object>>())).CallBase();
+
+            DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () =>
+            {
+                await queryExecutor.Object.ExecuteQueryAsync(sqltext: string.Empty, parameters: new Dictionary<string, object>());
+            });
+
+            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+
+            // For each attempt logger is invoked twice. Currently we have hardcoded the number of attempts.
+            // Once we have number of retry attempts specified in config, we will make it dynamic.
+            Assert.AreEqual(2 * 6, queryExecutorLogger.Invocations.Count);
         }
     }
 }

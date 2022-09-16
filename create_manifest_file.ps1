@@ -66,3 +66,4 @@ if($versionArray.Length -gt $maxVersionCount){
 # Updating the manifest file 
 # Keeping Depth as 4, as by default ConvertTo-Json only support copnversion till depth 2.
 $versionArray | ConvertTo-Json -Depth 4 | Out-File $BuildOutputDir/dab-manifest.json
+

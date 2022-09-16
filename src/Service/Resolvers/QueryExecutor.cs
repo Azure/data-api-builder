@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -107,9 +109,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             Dictionary<string, object?> row = new();
 
-            Dictionary<string, object> propertiesOfResult = new();
-
-            propertiesOfResult.Add(nameof(dbDataReader.RecordsAffected), dbDataReader.RecordsAffected);
+            Dictionary<string, object>? propertiesOfResult = GetResultProperties(dbDataReader).Result;
 
             if (await ReadAsync(dbDataReader))
             {
@@ -193,6 +193,53 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return jsonDocument;
+        }
+
+        public async Task<Dictionary<string, object?>?>
+            GetMultipleResultIfAnyAsync(DbDataReader dbDataReader, List<string>? args = null)
+        {
+            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?
+                resultRecordWithProperties = await ExtractRowFromDbDataReader(dbDataReader);
+
+            /// Processes a second result set from DbDataReader if it exists.
+            /// In MsSQL upsert:
+            /// result set #1: result of the UPDATE operation.
+            /// result set #2: result of the INSERT operation.
+            if (resultRecordWithProperties is not null && resultRecordWithProperties.Item1 is not null)
+            {
+                return resultRecordWithProperties.Item1;
+            }
+            else if (await dbDataReader.NextResultAsync())
+            {
+                // Since no first result set exists, we overwrite Dictionary here.
+                resultRecordWithProperties = await ExtractRowFromDbDataReader(dbDataReader);
+                return resultRecordWithProperties is not null ? resultRecordWithProperties.Item1 : null;
+            }
+            else
+            {
+                if (args is not null && args.Count == 2)
+                {
+                    string prettyPrintPk = args[0];
+                    string entityName = args[1];
+
+                    throw new DataApiBuilderException(
+                        message: $"Cannot perform INSERT and could not find {entityName} " +
+                        $"with primary key {prettyPrintPk} to perform UPDATE on.",
+                            statusCode: HttpStatusCode.NotFound,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                }
+            }
+
+            return null;
+        }
+
+        public Task<Dictionary<string, object>?>
+            GetResultProperties(DbDataReader dbDataReader, List<string>? columnNames = null)
+        {
+            Dictionary<string, object>? propertiesOfResult = new();
+            propertiesOfResult.Add(nameof(dbDataReader.RecordsAffected), dbDataReader.RecordsAffected);
+            propertiesOfResult.Add(nameof(dbDataReader.HasRows), dbDataReader.HasRows);
+            return Task.FromResult((Dictionary<string, object>?)propertiesOfResult);
         }
 
         private async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)

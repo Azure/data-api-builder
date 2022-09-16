@@ -54,7 +54,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <param name="excludedCols"></param>
         /// <returns></returns>
         public static RuntimeConfig InitRuntimeConfig(
-            string entityName = "SampleEntity",
+            string entityName = TEST_ENTITY,
+            string entitySource = TEST_ENTITY,
             string roleName = "Reader",
             Operation operation = Operation.Create,
             HashSet<string>? includedCols = null,
@@ -85,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
-                Source: TEST_ENTITY,
+                Source: entitySource,
                 Rest: null,
                 GraphQL: null,
                 Permissions: new PermissionSetting[] { permissionForEntity },

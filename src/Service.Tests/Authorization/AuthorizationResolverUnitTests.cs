@@ -109,7 +109,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Operation operation,
             bool expected)
         {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(AuthorizationHelpers.TEST_ENTITY, configRole, configOperation);
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: configRole,
+                operation: configOperation);
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
             // Mock Request Values
@@ -126,9 +129,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             List<string> expectedRoles = new() { AuthorizationHelpers.TEST_ROLE };
 
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                Operation.All);
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE,
+                operation: Operation.All);
 
             // Override the permission operations to be a list of operations for wildcard
             // instead of a list of objects created by InitRuntimeConfig()
@@ -297,7 +300,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationResolver.ROLE_ANONYMOUS,
-                Operation.Create);
+                operation: Operation.Create);
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -371,9 +374,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         public void TestAuthenticatedRoleWhenAnonymousRoleIsNotDefined()
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                Operation.Create);
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE,
+                operation: Operation.Create);
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -522,7 +525,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             string roleNameToCheck
             )
         {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(AuthorizationHelpers.TEST_ENTITY, configRole, operation);
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(AuthorizationHelpers.TEST_ENTITY, configRole, operation: operation);
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
             // Assert that the roleName is case insensitive.
@@ -546,7 +549,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 includedCols: includedColumns
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
@@ -593,7 +596,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 includedCols: includeColumns,
                 excludedCols: excludeColumns
                 );
@@ -640,7 +643,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 includedCols: includedColumns,
                 excludedCols: excludedColumns
                 );
@@ -651,7 +654,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Assert.IsTrue(authZResolver.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 new List<string> { "col2" }));
 
             // Col1 should NOT to included since it is in exclusion list.
@@ -659,13 +662,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Assert.IsFalse(authZResolver.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 new List<string> { "col1" }));
 
             Assert.IsFalse(authZResolver.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 excludedColumns));
         }
 
@@ -678,7 +681,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 includedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
@@ -688,7 +691,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Assert.IsTrue(authZResolver.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 includedColumns));
         }
 
@@ -705,7 +708,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 includedCols: new HashSet<string> { AuthorizationResolver.WILDCARD },
                 excludedCols: excludedColumns
                 );
@@ -714,12 +717,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Assert.IsTrue(authZResolver.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 includedColumns));
             Assert.IsFalse(authZResolver.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 excludedColumns));
         }
 
@@ -734,7 +737,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 excludedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
@@ -742,7 +745,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Assert.IsFalse(authZResolver.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 excludedColumns));
         }
 
@@ -759,7 +762,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 includedCols: includedColumns,
                 excludedCols: new HashSet<string> { AuthorizationResolver.WILDCARD }
                 );
@@ -768,12 +771,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Assert.IsFalse(authZResolver.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 includedColumns));
             Assert.IsFalse(authZResolver.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                operation: Operation.Create,
                 excludedColumns));
         }
 
@@ -791,7 +794,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.All,
+                operation: Operation.All,
                 includedCols: includeColumns,
                 excludedCols: excludeColumns
                 );
@@ -829,7 +832,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create
+                operation: Operation.Create
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -863,7 +866,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationResolver.ROLE_ANONYMOUS,
-                Operation.All,
+                operation: Operation.All,
                 includedCols: new HashSet<string>(includeCols),
                 excludedCols: new HashSet<string>(excludeCols));
 
@@ -909,7 +912,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 AuthorizationHelpers.TEST_ENTITY,
                 configRole,
-                operation,
+                operation: operation,
                 includedCols: new(columnsToInclude),
                 excludedCols: new(columnsToExclude)
                 );

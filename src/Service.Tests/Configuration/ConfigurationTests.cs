@@ -154,6 +154,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// 4. Validate that request to protected entity with required role membership passes authorization requirements
         /// and succeeds with HTTP 200 OK.
         /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
         [TestMethod("Validates setting the SQL configuration post-startup during runtime.")]
         public async Task TestSqlSettingPostStartupConfigurations()
         {

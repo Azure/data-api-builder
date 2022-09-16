@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 
@@ -48,6 +49,23 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         /// <param name="httpContext">Request metadata</param>
         public async Task InvokeAsync(HttpContext httpContext)
         {
+            // authNResult will be one of:
+            // 1. Succeeded - Authenticated
+            // 2. Failure - Token issue
+            // 3. None - No token provided, no auth result.
+            AuthenticateResult authNResult = await httpContext.AuthenticateAsync();
+
+            // Reject request by terminating the AuthenticationMiddleware
+            // when an invalid token is provided and writes challenge response
+            // metadata (HTTP 401 Unauthorized response code
+            // and www-authenticate headers) to the HTTP Context.
+            if (authNResult.Failure is not null)
+            {
+                await httpContext.ChallengeAsync();
+
+                return;
+            }
+
             string clientDefinedRole = AuthorizationType.Anonymous.ToString();
 
             // A request can be authenticated in 2 cases:

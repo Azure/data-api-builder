@@ -348,14 +348,6 @@ namespace Azure.DataApiBuilder.Service
                     {
                         options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
                         options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
-                        options.Events = new JwtBearerEvents
-                        {
-                            OnChallenge = context =>
-                            {
-                                context.Response.StatusCode = 401;
-                                return Task.CompletedTask;
-                            }
-                        };
                     });
                 }
                 else if (runtimeConfig!.AuthNConfig != null)

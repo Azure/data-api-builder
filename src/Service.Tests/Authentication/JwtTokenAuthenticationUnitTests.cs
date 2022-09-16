@@ -387,7 +387,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                         {
                             app.UseAuthentication();
                             app.UseMiddleware<ClientRoleHeaderMiddleware>();
-                            app.UseMiddleware<ClientRoleHeaderAuthorizationMiddleware>();
 
                             // app.Run acts as terminating middleware to return 200 if we reach it. Without this,
                             // the Middleware pipeline will return 404 by default.

@@ -494,7 +494,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             return new ConfigurationPostParameters(
                 Configuration: File.ReadAllText(sqlFile),
                 Schema: null,
-                ConnectionString: "Server=SELEONARANTON\\MSSQLSERVER22;Database=DataGatewayFeatureDev;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;",
+                ConnectionString: "",
                 AccessToken: null);
         }
 

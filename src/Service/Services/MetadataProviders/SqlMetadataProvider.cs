@@ -965,10 +965,13 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Gather all the referencing and referenced columns for each pair
             // of referencing and referenced tables.
-            Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition
-                = await ExecuteAndSummarizeFkMetadata(queryForForeignKeyInfo, parameters);
+            Dictionary<RelationShipPair, ForeignKeyDefinition>? pairToFkDefinition
+                = await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters, SummarizeFkMetadata);
 
-            FillInferredFkInfo(pairToFkDefinition, tablesToBePopulatedWithFK);
+            if (pairToFkDefinition is not null)
+            {
+                FillInferredFkInfo(pairToFkDefinition, tablesToBePopulatedWithFK);
+            }
 
             ValidateAllFkHaveBeenInferred(tablesToBePopulatedWithFK);
         }
@@ -1035,22 +1038,17 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="queryForForeignKeyInfo"></param>
         /// <param name="parameters"></param>
         /// <returns></returns>
-        private async Task<Dictionary<RelationShipPair, ForeignKeyDefinition>>
-            ExecuteAndSummarizeFkMetadata(
-                string queryForForeignKeyInfo,
-                Dictionary<string, object?> parameters)
+        private async Task<Dictionary<RelationShipPair, ForeignKeyDefinition>?>
+            SummarizeFkMetadata(DbDataReader reader, List<string>? args = null)
         {
-            // Execute the foreign key info query.
-            using DbDataReader reader =
-                await QueryExecutor.ExecuteQueryForJsonDocumentAsync(queryForForeignKeyInfo, parameters);
-
             // Extract the first row from the result.
-            Dictionary<string, object?>? foreignKeyInfo =
+            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? foreignKeyInfoWithProperties =
                 await QueryExecutor.ExtractRowFromDbDataReader(reader);
 
             Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition = new();
-            while (foreignKeyInfo != null)
+            while (foreignKeyInfoWithProperties is not null && foreignKeyInfoWithProperties.Item1 is not null)
             {
+                Dictionary<string, object?> foreignKeyInfo = foreignKeyInfoWithProperties.Item1;
                 string referencingSchemaName =
                     (string)foreignKeyInfo[$"Referencing{nameof(DatabaseObject.SchemaName)}"]!;
                 string referencingTableName = (string)foreignKeyInfo[$"Referencing{nameof(TableDefinition)}"]!;
@@ -1076,7 +1074,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 foreignKeyDefinition.ReferencingColumns.Add(
                     (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencingColumns)]!);
 
-                foreignKeyInfo = await QueryExecutor.ExtractRowFromDbDataReader(reader);
+                foreignKeyInfoWithProperties = await QueryExecutor.ExtractRowFromDbDataReader(reader);
             }
 
             return pairToFkDefinition;

@@ -101,9 +101,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         parameters);
 
                 // If the number of records affected by DELETE were zero,
-                // and yet the result was not null previously, it indicates this DELETE was part of
-                // a concurrent request race and lost the race.
-                // Hence, empty the result since otherwise it would indicate a stale value.
+                // and yet the result was not null previously, it indicates this DELETE lost
+                // a concurrent request race. Hence, empty the non-null result.
                 if (resultProperties is not null
                     && resultProperties.TryGetValue(nameof(DbDataReader.RecordsAffected), out object? value)
                     && Convert.ToInt32(value) == 0
@@ -340,9 +339,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Performs the given REST and GraphQL mutation operation type
-        /// on the table and returns result as JSON object asynchronously.
+        /// Performs the given REST and GraphQL mutation operation of type
+        /// Insert, Create, Update, UpdateIncremental, UpdateGraphQL
+        /// on the source backing the given entity.
         /// </summary>
+        /// <param name="entityName">The name of the entity on which mutation is to be performed.</param>
+        /// <param name="operationType">The type of mutation operation.
+        /// This cannot be Delete, Upsert or UpsertIncremental since those operations have dedicated functions.</param>
+        /// <param name="parameters">The parameters of the mutation query.</param>
+        /// <param name="context">In the case of GraphQL, the HotChocolate library's middleware context.</param>
+        /// <returns>A tuple of 2 dictionaries:
+        /// 1. A dictionary representing the row in <c>ColumnName: Value</c> format, null if no row is mutated.
+        /// 2. A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
         private async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
             PerformMutationOperation(
                 string entityName,
@@ -448,6 +456,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return resultRecord;
         }
 
+        /// <summary>
+        /// Perform the DELETE operation on the given entity.
+        /// To determine the correct response, uses QueryExecutor's GetResultProperties handler for
+        /// obtaining the db data reader properties like RecordsAffected, HasRows.
+        /// </summary>
+        /// <param name="entityName">The name of the entity.</param>
+        /// <param name="parameters">The parameters for the DELETE operation.</param>
+        /// <returns>A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
         private async Task<Dictionary<string, object>?>
             PerformDeleteOperation(
                 string entityName,
@@ -478,6 +494,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return resultProperties;
         }
 
+        /// <summary>
+        /// Perform an Upsert or UpsertIncremental operation on the given entity.
+        /// Since Upsert operations could simply be an update or result in an insert,
+        /// uses QueryExecutor's GetMultipleResultIfAnyAsync as the data reader handler.
+        /// </summary>
+        /// <param name="parameters">The parameters for the mutation query.</param>
+        /// <param name="context">The REST request context.</param>
+        /// <returns>A tuple of 2 dictionaries:
+        /// 1. A dictionary representing the row in <c>ColumnName: Value</c> format, null if no row was found
+        /// 2. A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
         private async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
             PerformUpsertOperation(
                 IDictionary<string, object?> parameters,
@@ -582,6 +608,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return parameters;
         }
 
+        /// <summary>
+        /// Checks if the given dictionary has a property named `HasRows`
+        /// and if its true.
+        /// </summary>
+        /// <param name="properties">A dictionary of properties of a Db Data Reader like RecordsAffected, HasRows.</param>
+        /// <returns>True if HasRows is true, false otherwise.</returns>
         private static bool DoesResultHaveRows(Dictionary<string, object> properties)
         {
             return properties.TryGetValue(nameof(DbDataReader.HasRows), out object? hasRows) &&

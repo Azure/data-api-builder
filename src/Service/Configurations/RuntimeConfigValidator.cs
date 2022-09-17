@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.Services;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
@@ -108,13 +109,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// Validate that the entities that have graphQL exposed do not generate queries with the 
+        /// Validate that the entities that have graphQL exposed do not generate queries with the
         /// same name.
         /// For example: Consider the entity definitions
         /// "Book": {
         ///   "graphql": true
         /// }
-        ///  
+        ///
         /// "book": {
         ///     "graphql": true
         /// }
@@ -358,7 +359,105 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// Method to do the pre-processing needed in the permissions section of the runtimeconfig object.
+        /// Validates the semantic correctness of an Entity's relationship metadata
+        /// in the runtime configuration.
+        /// Validating Cases:
+        /// 1. Entities not defined in the config cannot be used in a relationship.
+        /// 2. Entities with graphQL disabled cannot be used in a relationship with another entity.
+        /// 3. If the LinkingSourceFields or sourceFields and LinkingTargetFields or targetFields are not
+        /// specified in the config for the given linkingObject, then the underlying database should
+        /// contain a foreign key relationship between the source and target entity.
+        /// 4. If linkingObject is null, and either of SourceFields or targetFields is null, then foreignKey pair
+        /// between source and target entity must be defined in the DB.
+        /// </summary>
+        /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
+        public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            _logger.LogInformation("Validating Relationship Section in Config...");
+
+            // Loop through each entity in the config and verify its relationship.
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+            {
+                // Skipping relationship validation if entity has no relationship
+                // or if graphQL is disabled.
+                if (entity.Relationships is null || false.Equals(entity.GraphQL))
+                {
+                    continue;
+                }
+
+                foreach ((string relationshipName, Relationship relationship) in entity.Relationships)
+                {
+                    // Validate if entity referenced in relationship is defined in the config.
+                    if (!runtimeConfig.Entities.ContainsKey(relationship.TargetEntity))
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"entity: {relationship.TargetEntity} used for relationship is not defined in the config.",
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    }
+
+                    // Validation to ensure that an entity with graphQL disabled cannot be referenced in a relationship by other entities
+                    object? targetEntityGraphQLDetails = runtimeConfig.Entities[relationship.TargetEntity].GraphQL;
+                    if (false.Equals(targetEntityGraphQLDetails))
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"entity: {relationship.TargetEntity} is disabled for GraphQL.",
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    }
+
+                    if (relationship.LinkingObject is not null)
+                    {
+                        (string linkingObjectSchema, string linkingObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(relationship.LinkingObject)!;
+                        DatabaseObject linkingDatabaseObject = new(linkingObjectSchema, linkingObjectName);
+
+                        if (relationship.LinkingSourceFields is null || relationship.SourceFields is null)
+                        {
+                            if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject,
+                                sqlMetadataProvider.EntityToDatabaseObject[entityName]))
+                            {
+                                throw new DataApiBuilderException(
+                                message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
+                                    $" and entity: {entityName}.",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            }
+                        }
+
+                        if (relationship.LinkingTargetFields is null || relationship.TargetFields is null)
+                        {
+                            if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject,
+                                sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity]))
+                            {
+                                throw new DataApiBuilderException(
+                                message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
+                                    $" and entity: {relationship.TargetEntity}.",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            }
+                        }
+                    }
+
+                    if (relationship.LinkingObject is null
+                        && (relationship.SourceFields is null || relationship.TargetFields is null))
+                    {
+                        if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(
+                                sqlMetadataProvider.EntityToDatabaseObject[entityName],
+                                sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity])
+                            )
+                        {
+                            throw new DataApiBuilderException(
+                            message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Pre-processes the permissions section of the runtime config object.
         /// For eg. removing the @item. directives, checking for invalid characters in claimTypes etc.
         /// </summary>
         /// <param name="runtimeConfig">The deserialised config object obtained from the json config supplied.</param>

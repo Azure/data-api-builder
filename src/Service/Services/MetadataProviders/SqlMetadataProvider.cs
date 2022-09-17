@@ -32,6 +32,10 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private readonly Dictionary<string, Entity> _entities;
 
+        // Contains all the referencing and referenced columns for each pair
+        // of referencing and referenced tables.
+        private Dictionary<RelationShipPair, ForeignKeyDefinition>? _pairToFkDefinition;
+
         protected IQueryExecutor QueryExecutor { get; }
 
         private const int NUMBER_OF_RESTRICTIONS = 4;
@@ -965,12 +969,11 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Gather all the referencing and referenced columns for each pair
             // of referencing and referenced tables.
-            Dictionary<RelationShipPair, ForeignKeyDefinition>? pairToFkDefinition
-                = await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters, SummarizeFkMetadata);
+            _pairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters, SummarizeFkMetadata);
 
-            if (pairToFkDefinition is not null)
+            if (_pairToFkDefinition is not null)
             {
-                FillInferredFkInfo(pairToFkDefinition, tablesToBePopulatedWithFK);
+                FillInferredFkInfo(_pairToFkDefinition, tablesToBePopulatedWithFK);
             }
 
             ValidateAllFkHaveBeenInferred(tablesToBePopulatedWithFK);
@@ -1084,10 +1087,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Fills the table definition with the inferred foreign key metadata
         /// about the referencing and referenced columns.
         /// </summary>
-        /// <param name="pairToFkDefinition"></param>
         /// <param name="tablesToBePopulatedWithFK"></param>
         private static void FillInferredFkInfo(
-            Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition,
             IEnumerable<TableDefinition> tablesToBePopulatedWithFK)
         {
             // For each table definition that has to be populated with the inferred
@@ -1121,7 +1122,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                             // Add the referencing and referenced columns for this foreign key definition
                             // for the target.
-                            if (pairToFkDefinition.TryGetValue(
+                            if (_pairToFkDefinition is not null && _pairToFkDefinition.TryGetValue(
                                     fk.Pair, out ForeignKeyDefinition? inferredDefinition))
                             {
                                 // Only add the referencing columns if they have not been
@@ -1142,6 +1143,20 @@ namespace Azure.DataApiBuilder.Service.Services
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// For the given two database objects, returns true if a foreignKey exists between them.
+        /// Else returns false.
+        /// </summary>
+        public bool VerifyForeignKeyExistsInDB(
+            DatabaseObject databaseObjectA,
+            DatabaseObject databaseObjectB)
+        {
+            RelationShipPair pairAB = new(databaseObjectA, databaseObjectB);
+            RelationShipPair pairBA = new(databaseObjectB, databaseObjectA);
+
+            return (_pairToFkDefinition.ContainsKey(pairAB) || _pairToFkDefinition.ContainsKey(pairBA));
         }
 
         /// <summary>

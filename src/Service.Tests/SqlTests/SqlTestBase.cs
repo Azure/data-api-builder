@@ -297,42 +297,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <returns>string in JSON format</returns>
         protected static async Task<string> GetDatabaseResultAsync(
             string queryText,
-            bool expectJson = true,
-            Operation operationType = Operation.Read)
+            bool expectJson = true)
         {
             string result;
 
-            using DbDataReader reader = await _queryExecutor.ExecuteQueryForJsonDocumentAsync(queryText, parameters: null);
-
-            // An empty result will cause an error with the json parser
-            if (!reader.HasRows)
+            if (expectJson)
             {
-                // Find and Delete queries have empty result sets.
-                // Delete operation will return number of records affected.
-                result = null;
+                using JsonDocument sqlResult =
+                    await _queryExecutor.ExecuteQueryAsync(
+                        queryText,
+                        parameters: null,
+                        _queryExecutor.GetJsonResultAsync<JsonDocument>);
+
+                result = sqlResult is not null ? sqlResult.RootElement.ToString() : null;
             }
             else
             {
-                if (expectJson)
-                {
-                    using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader, _queryExecutor));
-                    result = sqlResult.RootElement.ToString();
-                }
-                else
-                {
-                    JsonArray resultArray = new();
-                    Dictionary<string, object> row;
-
-                    while ((row = await _queryExecutor.ExtractRowFromDbDataReader(reader)) is not null)
-                    {
-                        JsonElement jsonRow = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(row));
-                        resultArray.Add(jsonRow);
-                    }
-
-                    using JsonDocument sqlResult = JsonDocument.Parse(resultArray.ToJsonString());
-                    result = sqlResult.RootElement.ToString();
-                }
-
+                JsonArray resultArray =
+                    await _queryExecutor.ExecuteQueryAsync(
+                        queryText,
+                        parameters: null,
+                        _queryExecutor.GetJsonArrayAsync);
+                using JsonDocument sqlResult = resultArray is not null ? JsonDocument.Parse(resultArray.ToJsonString()) : null;
+                result = sqlResult is not null ? sqlResult.RootElement.ToString() : null;
             }
 
             return result;

@@ -973,7 +973,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             if (_pairToFkDefinition is not null)
             {
-                FillInferredFkInfo(_pairToFkDefinition, tablesToBePopulatedWithFK);
+                FillInferredFkInfo(tablesToBePopulatedWithFK);
             }
 
             ValidateAllFkHaveBeenInferred(tablesToBePopulatedWithFK);
@@ -1088,7 +1088,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// about the referencing and referenced columns.
         /// </summary>
         /// <param name="tablesToBePopulatedWithFK"></param>
-        private static void FillInferredFkInfo(
+        private void FillInferredFkInfo(
             IEnumerable<TableDefinition> tablesToBePopulatedWithFK)
         {
             // For each table definition that has to be populated with the inferred

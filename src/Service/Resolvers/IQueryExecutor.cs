@@ -18,57 +18,77 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="sqltext">SQL text to be executed.</param>
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
-        /// <param name="columnNames">List of columns to extract. Extracts all if unspecified.</param>
+        /// <param name="dataReaderHandler">The function to invoke to handle the results
+        /// in the db data reader obtained after executing the query.</param>
+        /// <param name="args">List of string arguments to the db data reader handler.</param>
         ///<returns>An object formed using the results of the query as returned by the given handler.</returns>
         public Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
             IDictionary<string, object?> parameters,
-            Func<DbDataReader, List<string>?, Task<TResult?>> dataReaderHandler,
-            List<string>? columnNames = null);
+            Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
+            List<string>? args = null);
 
         /// <summary>
         /// Extract the rows from the given db data reader to populate
         /// the JsonArray to be returned.
         /// </summary>
         /// <param name="dbDataReader">A Db data reader.</param>
-        /// <param name="columnNames">List of columns to extract. Extracts all if unspecified.</param>
+        /// <param name="args">List of string arguments if any.</param>
         /// <returns>A JsonArray with each element corresponding to the row in the dbDataReader.</returns>
         public Task<JsonArray?> GetJsonArrayAsync(
             DbDataReader dbDataReader,
-            List<string>? columnNames = null);
+            List<string>? args = null);
 
         /// <summary>
         /// Extract the rows from the given db data reader to deserialize into
         /// a Json object of type TResult to be returned.
         /// </summary>
         /// <param name="dbDataReader">A Db data reader.</param>
+        /// <param name="args">List of string arguments if any.</param>
         /// <returns>A Json object of type TResult.</returns>
         public Task<TResult?> GetJsonResultAsync<TResult>(
             DbDataReader dbDataReader,
-            List<string>? columnNames = null);
+            List<string>? args = null);
 
         /// <summary>
         /// Extracts a single row from DbDataReader and format it so it can be used as a parameter to a query execution
         /// </summary>
         /// <param name="dbDataReader">A Db data reader</param>
-        /// <param name="columnNames">List of columns to extract. Extracts all if unspecified.</param>
+        /// <param name="args">List of columns to extract. Extracts all if unspecified.</param>
         ///<returns>A tuple of 2 dictionaries:
         /// 1. A dictionary representing the row in <c>ColumnName: Value</c> format, null if no row was found
-        /// 2. A dictionary of properties of the Db Data Reader to indicate the characteristics of the result.</returns>
+        /// 2. A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
         public Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
             ExtractRowFromDbDataReader(
                 DbDataReader dbDataReader,
-                List<string>? columnNames = null);
+                List<string>? args = null);
 
+        /// <summary>
+        /// Extracts first result set and returns it immediately if it has > 0 rows.
+        /// If no rows, tries to get the subsequent result set if any.
+        /// Throws and exception if the second result is null as well.
+        /// </summary>
+        /// <param name="dbDataReader">A Db Data Reader.</param>
+        /// <param name="args">The arguments to this handler - args[0] = primary key in pretty format, args[1] entity name.</param>
+        /// <returns>A tuple of 2 dictionaries:
+        /// 1. A dictionary representing the row in <c>ColumnName: Value</c> format.
+        /// 2. A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.
+        /// If the first result set is being returned, has the property "IsFirstResultSet" set to true in this dictionary.</returns>
         public Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
             GetMultipleResultIfAnyAsync(
                 DbDataReader dbDataReader,
-                List<string>? columnNames = null);
+                List<string>? args = null);
 
+        /// <summary>
+        /// Gets the result properties like RecordsAffected, HasRows in a dictionary.
+        /// </summary>
+        /// <param name="dbDataReader">A Db Data Reader.</param>
+        /// <param name="args">List of string arguments if any.</param>
+        /// <returns>A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
         public Task<Dictionary<string, object>?>
             GetResultProperties(
                 DbDataReader dbDataReader,
-                List<string>? columnNames = null);
+                List<string>? args = null);
 
         /// <summary>
         /// Wrapper for DbDataReader.ReadAsync.

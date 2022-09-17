@@ -147,7 +147,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Executes the REST mutation query and returns IActionResult asynchronously.
         /// Result error cases differ for Stored Procedure requests than normal mutation requests
         /// QueryStructure built does not depend on Operation enum, thus not useful to use
-        /// PerformMutationOperation method
+        /// PerformMutationOperation method.
         /// </summary>
         public async Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context)
         {
@@ -155,7 +155,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string queryText = _queryBuilder.Build(executeQueryStructure);
             _logger.LogInformation(queryText);
 
-            Tuple<Dictionary<string, object?>?, Dictionary<string, object>> resultRecordAndProperties =
+            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRowAndProperties =
                 await _queryExecutor.ExecuteQueryAsync(
                     queryText,
                     executeQueryStructure.Parameters,
@@ -174,9 +174,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 case Operation.Insert:
                     // Returns a 201 Created with whatever the first result set is returned from the procedure
                     // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the first and only result set
-                    if (dbDataReader.HasRows)
+                    if (resultRowAndProperties is not null &&
+                        DoesResultHaveRows(resultRowAndProperties.Item2))
                     {
-                        return new CreatedResult(location: context.EntityName, OkMutationResponse(resultRecord).Value);
+                        return new CreatedResult(location: context.EntityName, OkMutationResponse(resultRowAndProperties.Item1).Value);
                     }
                     else
                     {   // If no result set returned, just return a 201 Created with empty array instead of array with single null value
@@ -194,9 +195,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 case Operation.UpsertIncremental:
                     // Since we cannot check if anything was created, just return a 200 Ok response with first result set output
                     // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the first and only result set
-                    if (dbDataReader.HasRows)
+                    if (resultRowAndProperties is not null &&
+                        DoesResultHaveRows(resultRowAndProperties.Item2))
                     {
-                        return OkMutationResponse(resultRecord);
+                        return OkMutationResponse(resultRowAndProperties.Item1);
                     }
                     else
                     {
@@ -253,7 +255,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     resultRowAndProperties.Item1 is not null)
                 {
                     Dictionary<string, object?> resultRow = resultRowAndProperties.Item1;
-                   
+
                     bool isFirstResultSet = false;
                     if (resultRowAndProperties.Item2.TryGetValue(IS_FIRST_RESULT_SET, out object? isFirstResultSetValue))
                     {
@@ -578,6 +580,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return parameters;
+        }
+
+        private static bool DoesResultHaveRows(Dictionary<string, object> properties)
+        {
+            return properties.TryGetValue(nameof(DbDataReader.HasRows), out object? hasRows) &&
+                   Convert.ToBoolean(hasRows);
         }
 
         /// <summary>

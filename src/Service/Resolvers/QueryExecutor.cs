@@ -39,14 +39,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public async Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
             IDictionary<string, object?> parameters,
-            Func<DbDataReader, List<string>?, Task<TResult?>> dataReaderHandler,
-            List<string>? onlyExtract = null)
+            Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
+            List<string>? args = null)
         {
-            if (dataReaderHandler is null)
-            {
-                throw new ArgumentNullException(nameof(dataReaderHandler));
-            }
-
             using TConnection conn = new()
             {
                 ConnectionString = ConnectionString,
@@ -71,7 +66,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             try
             {
                 using DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
-                return await dataReaderHandler(dbDataReader, onlyExtract);
+                if (dataReaderHandler is not null && dbDataReader is not null)
+                {
+                    return await dataReaderHandler(dbDataReader, args);
+                }
+                else
+                {
+                    return default(TResult);
+                }
             }
             catch (DbException e)
             {
@@ -105,11 +107,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <inheritdoc />
         public async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
-            ExtractRowFromDbDataReader(DbDataReader dbDataReader, List<string>? onlyExtract = null)
+            ExtractRowFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null)
         {
             Dictionary<string, object?> row = new();
 
-            Dictionary<string, object>? propertiesOfResult = GetResultProperties(dbDataReader).Result;
+            Dictionary<string, object> propertiesOfResult = GetResultProperties(dbDataReader).Result ?? new();
 
             if (await ReadAsync(dbDataReader))
             {
@@ -123,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         {
                             string columnName = (string)schemaRow["ColumnName"];
 
-                            if (onlyExtract != null && !onlyExtract.Contains(columnName))
+                            if (args != null && !args.Contains(columnName))
                             {
                                 continue;
                             }
@@ -152,19 +154,21 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        /// <Note>The parameter onlyExtract
+        /// <Note>The parameter args
         /// is not used but is added to conform to the signature of the db data reader handler
         /// function argument of ExecuteQueryAsync.</Note>
         public async Task<JsonArray?> GetJsonArrayAsync(
             DbDataReader dbDataReader,
-            List<string>? onlyExtract = null)
+            List<string>? args = null)
         {
-            Dictionary<string, object?>? resultRecord;
+            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRowAndProperties;
             JsonArray resultArray = new();
 
-            while ((resultRecord = await ExtractRowFromDbDataReader(dbDataReader)) is not null)
+            while ((resultRowAndProperties = await ExtractRowFromDbDataReader(dbDataReader)) is not null &&
+                resultRowAndProperties.Item1 is not null)
             {
-                JsonElement result = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(resultRecord));
+                JsonElement result =
+                    JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(resultRowAndProperties.Item1));
                 resultArray.Add(result);
             }
 
@@ -174,7 +178,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc />
         public async Task<TResult?> GetJsonResultAsync<TResult>(
             DbDataReader dbDataReader,
-            List<string>? onlyExtract = null)
+            List<string>? args = null)
         {
             TResult? jsonDocument = default;
 
@@ -195,6 +199,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return jsonDocument;
         }
 
+        /// <inheritdoc />
         public async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
             GetMultipleResultIfAnyAsync(DbDataReader dbDataReader, List<string>? args = null)
         {
@@ -213,7 +218,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else if (await dbDataReader.NextResultAsync())
             {
-                // Since no first result set exists, we overwrite Dictionary here.
+                // Since no first result set exists, we return the second result set.
                 return await ExtractRowFromDbDataReader(dbDataReader);
             }
             else
@@ -234,6 +239,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return null;
         }
 
+        /// <inheritdoc />
         public Task<Dictionary<string, object>?>
             GetResultProperties(DbDataReader dbDataReader, List<string>? columnNames = null)
         {

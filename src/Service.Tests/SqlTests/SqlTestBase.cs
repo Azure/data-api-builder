@@ -193,7 +193,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             {
                 foreach (string query in customQueries)
                 {
-                    await _queryExecutor.ExecuteQueryForJsonDocumentAsync(query, parameters: null);
+                    await _queryExecutor.ExecuteQueryAsync<object>(query, parameters: null, dataReaderHandler: null);
                 }
             }
         }
@@ -284,7 +284,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
         protected static async Task ResetDbStateAsync()
         {
-            using DbDataReader _ = await _queryExecutor.ExecuteQueryForJsonDocumentAsync(File.ReadAllText($"{DatabaseEngine}Books.sql"), parameters: null);
+            await _queryExecutor.ExecuteQueryAsync<object>(
+                File.ReadAllText($"{DatabaseEngine}Books.sql"),
+                parameters: null,
+                dataReaderHandler: null);
         }
 
         /// <summary>

@@ -206,7 +206,7 @@ steps:
 # Create, edit, or delete a GitHub release.
 - task: GitHubRelease@1
   inputs:
-    gitHubConnection: 'Azure' # string. Required. GitHub connection (OAuth or PAT). 
+    gitHubConnection: 'DataApiBuilder' # string. Required. GitHub connection (OAuth or PAT). 
     repositoryName: '$(Build.Repository.Name)' # string. Required. Repository. Default: '$(Build.Repository.Name)'.
     action: 'create' # 'create' | 'edit' | 'delete'. Required. Action. Default: 'create'.
     #target: '$(Build.SourceVersion)' # string. Required when action = create || action = edit. Target. Default: '$(Build.SourceVersion)'.

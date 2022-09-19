@@ -65,6 +65,22 @@ jobs:
       arguments: '--filter "TestCategory=MsSql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
       projects: '**/*Tests/*.csproj'
 
+  - script: |
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      brew install k6
+      k6 version
+    displayName: Install k6 tool
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'run'
+      arguments: '--no-build --project .\src\Service\ --ConfigFileName dab-config.MsSql.json'
+    displayName: 'Starting DAB'
+
+  - script: |
+      k6 run .\src\Service.Tests\ConcurrentTests\SqlTests\test.js
+    displayName: Run k6 tests
+
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish code coverage'
     inputs:
@@ -149,6 +165,23 @@ jobs:
       command: test
       arguments: '--filter "TestCategory=MsSql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
       projects: '**/*Tests/*.csproj'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'run'
+      arguments: '--no-build --project .\src\Service\ --ConfigFileName dab-config.MsSql.json'
+    displayName: 'Starting DAB'
+
+  - task: PowerShell@2
+    displayName: Install k6 and run k6 tests
+    inputs:
+      targetType: 'inline'
+      script: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        choco install k6
+        k6 version
+        k6 run .\src\Service.Tests\ConcurrentTests\SqlTests\test.js
+    condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish code coverage'

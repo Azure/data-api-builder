@@ -4,7 +4,7 @@ Make sure you have read the [Getting Started](getting-started.md) document.
 
 As mentioned before, this tutorial assumes that you already have a SQL Server or an Azure SQL database that can be used as playground.
 
-## Get the database connection string
+### Get the database connection string
 
 There are several ways to get an Azure SQL database connection string. More details here:
 https://docs.microsoft.com/en-us/azure/azure-sql/database/connect-query-content-reference-guide?view=azuresql
@@ -21,34 +21,62 @@ To connect to a local SQL Server, for example:
 Server=localhost;Database=Library;User ID=dab_user;Password=<password>;TrustServerCertificate=true
 ```
 
-More details on Azure SQL and SQL Server connection strings can be found here: https://docs.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax
+>More details on Azure SQL and SQL Server connection strings can be found here: https://docs.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax
 
-Once you have your connection string, add it to the configuration file you have created before. It will look like the following (if you are using a local SQL Server):
+Now that you have all the required pieces in place, it's time to create the configuration file for DAB.
+
+## Creating a configuration file for DAB
+
+The Data API builder for Azure Databases engine needs a [configuration file](../configuration-file.md). There you'll define which database DAB connects to, and which entities are to be exposed by the API, together with their properties.
+
+For this getting started guide you will use DAB CLI to initialize your configuration file. Run the following command:
+
+```bash
+dab init --database-type "mssql" --connection-string "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=<Password>;TrustServerCertificate=true" --host-mode "Development"
+```
+
+The command will generate a config file called `dab-config.json` looking like this:
 
 ```json
-"data-source": {
+{
+  "$schema": "dab.draft-01.schema.json",
+  "data-source": {
     "database-type": "mssql",
-    "connection-string": "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=<Password>;TrustServerCertificate=true"
+    "connection-string": "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=ReplaceMe;TrustServerCertificate=true"
+  },
+  "mssql": {
+    "set-session-context": true
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api"
+    },
+    "graphql": {
+      "allow-introspection": true,
+      "enabled": true,
+      "path": "/graphql"
+    },
+    "host": {
+      "mode": "development",
+      "cors": {
+        "origins": [],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "StaticWebApps"
+      }
+    }
+  },
+  "entities": {}
 }
 ```
 
-if you haven't created your configuration file yet, you can do it right now, for example, below command will generate a config with name `dab-config.json`, use --config otherwise to specify the name:
+As you can see there the `data-source` property specifies that our chosen `database-type` is `mssql`, with the `connection-string` we passed to DAB CLI.
 
-```bash
-dab init --database-type "mssql" --connection-string "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=<Password>;TrustServerCertificate=true"
-```
+>Take a look at the [DAB Configuration File Guide](../configuration-file.md) document to learn more.
 
-if you already have created the configuration file, you can just open it with an editor like VS Code and manually update the `connection-string` and the `database-type` in the `data-source` section.
-
-## Create the database objects
-
-Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `libray.azure-sql.sql` script in the `azure-sql-db` folder in the GitHub repo. You can use it to create three tables, along with sample data:
-
-- `dbo.authors`: Table containing authors
-- `dbo.books`: Table containing books
-- `dbo.books_authors`: Table associating books with respective authors
-
-Execute the script in the SQL Server or Azure SQL database you decided to use, so that the tables with samples data are created and populated.
+With the configuration file in place, then it's time to start defining which entities you want to expose via the API.
 
 ## Add Book and Author entities
 
@@ -109,7 +137,7 @@ You can also add the `book` entity now, applying the same concepts you just lear
 
 that's all is needed at the moment. Data API builder is ready to be run.
 
-> **BEST PRACTICE**: It is recommeneded to use the *singular* form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a *list* of entity items will be returned. More on this behaviour in the [GraphQL documentation](./../graphql.md).
+> **BEST PRACTICE**: It is recommended to use the *singular* form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a *list* of entity items will be returned. More on this behaviour in the [GraphQL documentation](./../graphql.md).
 
 ## Start Data API builder for Azure SQL Database
 
@@ -136,7 +164,7 @@ you'll be good to go, Data API Builder is up and running, ready to serve your re
 
 ## Query the endpoints
 
-Now that Data API builder engine is running, you can use your favourite REST client (Postman or Insomnia, for example) to query the REST or the GraphQL endpoints.
+Now that Data API builder engine is running, you can use your favorite REST client (Postman or Insomnia, for example) to query the REST or the GraphQL endpoints.
 
 ### REST Endpoint
 
@@ -159,7 +187,7 @@ The following HTTP verbs are supported:
 - `PUT` `PATCH`: update or create an item
 - `DELETE`: delete an item
 
-Whenver you need to access a single item, you can get the item you want by specifying its primary key:
+Whenever you need to access a single item, you can get the item you want by specifying its primary key:
 
 ```
 GET /api/book/id/1000
@@ -205,7 +233,7 @@ Everything is now up and working, and now you probably want to take advantage as
 
 Stop the engine (`Ctrl+C`).
 
-Relationships are also defined in the configuration file, via the `relationships` section. Relationships must be defined on each entity where you want to have them. For example to create a relationshop between a Book and its Authors, you can use the following DAB CLI command:
+Relationships are also defined in the configuration file, via the `relationships` section. Relationships must be defined on each entity where you want to have them. For example to create a relationship between a Book and its Authors, you can use the following DAB CLI command:
 
 ```bash
 dab update author --relationship "books" --cardinality "many" --target.entity "book" --linking.object "dbo.books_authors"
@@ -229,7 +257,7 @@ The element under `relationship` is used to add a field - `books` in the sample 
 - `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample is `book` as we are creating the relationship on the `author` entity.
 - `linking.object`: the database table used to support the many-to-many relationship. That table is the `dbo.books_authors`.
 
-Data API Builder will automatically figure out what are the columns that are used to support the relationship between all the involved parts by analyzing the forieng keys constratins that exist between the involved tables. For this reason the configuration is done! (If you don't have foreign keys you can always manually specify the columns you want to use to navigate from one table to another. More on this in the [relationships documentation](../relationships.md))
+Data API Builder will automatically figure out what are the columns that are used to support the relationship between all the involved parts by analyzing the foreign keys constraints that exist between the involved tables. For this reason, the configuration is done! (If you don't have foreign keys you can always manually specify the columns you want to use to navigate from one table to another. More on this in the [relationships documentation](../relationships.md))
 
 The `author` entity should now look like the following:
 

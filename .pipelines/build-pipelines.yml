@@ -205,8 +205,8 @@ steps:
   inputs:
     connection: 'DataApiBuilder'
     userRepository: '$(Build.Repository.Name)'
-    defaultVersionType: 'latest' # Options: latest, specificVersion, specificTag
-    # version: '0.1.5-alpha' # Required when defaultVersionType != Latest
+    defaultVersionType: 'specificTag' # Options: latest, specificVersion, specificTag
+    version: 'v0.1.5-alpha' # Required when defaultVersionType != Latest
     #itemPattern: '**' # Optional
     downloadPath: '$(System.ArtifactsDirectory)'
 

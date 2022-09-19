@@ -151,7 +151,15 @@ steps:
 #     codeCoverageTool: Cobertura
 #     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
-# # This task gets the current date and saves it to a variable so the docker task can use the build's
+# # Generating Manifest File for generated Zip package
+# - task: PowerShell@2
+#   displayName: "Generate Manifest File"
+#   inputs:
+#     targetType: 'filePath'
+#     filePath: $(System.DefaultWorkingDirectory)/create_manifest_file.ps1
+#     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion)
+
+# This task gets the current date and saves it to a variable so the docker task can use the build's
 # # date and time as a tag.
 # - task: PowerShell@2
 #   displayName: "Get date for Docker image Tag"
@@ -210,9 +218,9 @@ steps:
     repositoryName: '$(Build.Repository.Name)' # string. Required. Repository. Default: '$(Build.Repository.Name)'.
     action: 'create' # 'create' | 'edit' | 'delete'. Required. Action. Default: 'create'.
     #target: '$(Build.SourceVersion)' # string. Required when action = create || action = edit. Target. Default: '$(Build.SourceVersion)'.
-    tagSource: 'gitTag' # 'gitTag' | 'userSpecifiedTag'. Required when action = create. Tag source. Default: 'gitTag'.
+    tagSource: 'userSpecifiedTag' # 'gitTag' | 'userSpecifiedTag'. Required when action = create. Tag source. Default: 'gitTag'.
     #tagPattern: # string. Optional. Use when tagSource = gitTag. Tag Pattern. 
-    #tag: # string. Required when action = edit || action = delete || tagSource = userSpecifiedTag. Tag. 
+    tag: 'testingRelease' # string. Required when action = edit || action = delete || tagSource = userSpecifiedTag. Tag. 
     #title: # string. Optional. Use when action = create || action = edit. Release title. 
     #releaseNotesSource: 'filePath' # 'filePath' | 'inline'. Optional. Use when action = create || action = edit. Release notes source. Default: 'filePath'.
     #releaseNotesFilePath: # string. Optional. Use when releaseNotesSource = filePath. Release notes file path. 

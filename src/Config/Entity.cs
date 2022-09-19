@@ -1,3 +1,4 @@
+using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -5,7 +6,7 @@ namespace Azure.DataApiBuilder.Config
 {
     /// <summary>
     /// Defines the Entities that are exposed.
-    /// </summary>   
+    /// </summary>
     /// <param name="Source">The underlying database object to which
     /// the exposed entity is connected to.</param>
     /// <param name="Rest">Can be a bool or RestEntitySettings type.
@@ -201,15 +202,18 @@ namespace Azure.DataApiBuilder.Config
             string Name,
         Dictionary<string, object>? Parameters,
         [property: JsonPropertyName("key-fields")]
-            Array KeyFields);
+            string[]? KeyFields);
 
     /// <summary>
     /// Supported source types as defined by json schema
     /// </summary>
     public enum SourceType
     {
+        [EnumMember(Value = "table")]
         Table,
+        [EnumMember(Value = "view")]
         View,
+        [EnumMember(Value = "stored-procedure")]
         StoredProcedure
     }
 

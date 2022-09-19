@@ -206,10 +206,19 @@ namespace Cli
                 return false;
             }
 
+            // Try to get the source object as string or DatabaseObjectSource
+            if (!TryGetSourceObject(
+                options.Source, options.SourceType, options.SourceParameters,
+                options.SourceKeyFields, out object? source))
+            {
+                Console.Error.WriteLine("Unable to parse the given source.");
+                return false;
+            }
+
             // Create new entity.
             //
             Entity entity = new(
-                options.Source,
+                source!,
                 GetRestDetails(options.RestRoute),
                 GetGraphQLDetails(options.GraphQLType),
                 permissionSettings,

@@ -14,6 +14,7 @@ namespace Cli
     public class Utils
     {
         public const string WILDCARD = "*";
+        public static readonly string[] SUPPORTED_SOURCE_TYPES = { "table", "view", "stored-procedure" };
 
         /// <summary>
         /// Creates the rest object which can be either a boolean value
@@ -482,6 +483,84 @@ namespace Cli
             }
 
             return !string.IsNullOrEmpty(runtimeConfigFile);
+        }
+
+        /// <summary>
+        /// Returns true on successful parsing of source object from name, type,
+        /// parameters, and key Fields.
+        /// Returns false otherwise.
+        /// </summary>
+        public static bool TryGetSourceObject(
+            string name,
+            string? type,
+            IEnumerable<string>? parameters,
+            IEnumerable<string>? keyFields,
+            out object? sourceObject
+        )
+        {
+            if (type is null
+                && (parameters is null || !parameters.Any())
+                && (keyFields is null || !keyFields.Any()))
+            {
+                sourceObject = name;
+                return true;
+            }
+
+            sourceObject = null;
+            // Verify the given source type is valid.
+            if (type is not null && !SUPPORTED_SOURCE_TYPES.Contains(type.ToLowerInvariant()))
+            {
+                Console.Error.WriteLine("Source type must be one of: [table, view, stored-procedure]");
+                return false;
+            }
+
+            if (!TryParseSourceParameterDictionary(parameters, out Dictionary<string, object>? parametersDictionary))
+            {
+                return false;
+            }
+
+            sourceObject = new DatabaseObjectSource(
+                Type: type is null ? "table" : type,
+                Name: name,
+                Parameters: parametersDictionary,
+                KeyFields: keyFields is null ? null : keyFields.ToArray()
+            );
+
+            return true;
+        }
+
+        /// <summary>
+        /// Returns true on successful parsing of source parameters Dictionary from IEnumerable list.
+        /// Returns false in case the format of the input is not correct.
+        /// </summary>
+        /// <param name="parametersList">List of ':' separated values indicating key and value.</param>
+        /// <param name="mappings">Output a Dictionary of parameters and their values.</param>
+        /// <returns> Returns true when successful else on failure, returns false.</returns>
+        public static bool TryParseSourceParameterDictionary(
+            IEnumerable<string>? parametersList,
+            out Dictionary<string, object>? sourceParameters)
+        {
+            if (parametersList is null)
+            {
+                sourceParameters = null;
+                return true;
+            }
+
+            sourceParameters = new();
+            foreach (string param in parametersList)
+            {
+                string[] items = param.Split(":");
+                if (items.Length != 2)
+                {
+                    Console.Error.WriteLine("Invalid format for --source.params");
+                    Console.WriteLine("It should be in this format --source.params \"key1:value1,key2:value2,...\".");
+                    return false;
+                }
+
+                sourceParameters.Add(items[0], items[1]);
+            }
+
+            return true;
         }
 
         /// <summary>

@@ -20,9 +20,9 @@ variables:
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
   isReleaseBuild: $(isNugetRelease)
 
-steps:
-- task: NuGetAuthenticate@0
-  displayName: 'NuGet Authenticate'
+# steps:
+# - task: NuGetAuthenticate@0
+#   displayName: 'NuGet Authenticate'
 
 # If this is a release, do not append the build number at the end as it will 
 # generate the prerelease nuget version.
@@ -201,14 +201,14 @@ steps:
 
 # Download GitHub Release
 # Downloads a GitHub Release from a repository
-# - task: DownloadGitHubRelease@0
-#   inputs:
-#     connection: 'Azure'
-#     userRepository: 'Azure/data-api-builder'
-#     defaultVersionType: 'latest' # Options: latest, specificVersion, specificTag
-#     # version: '0.1.5-alpha' # Required when defaultVersionType != Latest
-#     #itemPattern: '**' # Optional
-#     downloadPath: '$(System.ArtifactsDirectory)'
+- task: DownloadGitHubRelease@0
+  inputs:
+    connection: 'DataApiBuilder'
+    userRepository: '$(Build.Repository.Name)'
+    defaultVersionType: 'latest' # Options: latest, specificVersion, specificTag
+    # version: '0.1.5-alpha' # Required when defaultVersionType != Latest
+    #itemPattern: '**' # Optional
+    downloadPath: '$(System.ArtifactsDirectory)'
 
 # GitHub Release v1
 # Create, edit, or delete a GitHub release.
@@ -216,9 +216,9 @@ steps:
   inputs:
     gitHubConnection: 'DataApiBuilder' # string. Required. GitHub connection (OAuth or PAT). 
     repositoryName: '$(Build.Repository.Name)' # string. Required. Repository. Default: '$(Build.Repository.Name)'.
-    action: 'create' # 'create' | 'edit' | 'delete'. Required. Action. Default: 'create'.
+    action: 'edit' # 'create' | 'edit' | 'delete'. Required. Action. Default: 'create'.
     #target: '$(Build.SourceVersion)' # string. Required when action = create || action = edit. Target. Default: '$(Build.SourceVersion)'.
-    tagSource: 'userSpecifiedTag' # 'gitTag' | 'userSpecifiedTag'. Required when action = create. Tag source. Default: 'gitTag'.
+    # tagSource: 'userSpecifiedTag' # 'gitTag' | 'userSpecifiedTag'. Required when action = create. Tag source. Default: 'gitTag'.
     #tagPattern: # string. Optional. Use when tagSource = gitTag. Tag Pattern. 
     tag: 'testingRelease' # string. Required when action = edit || action = delete || tagSource = userSpecifiedTag. Tag. 
     #title: # string. Optional. Use when action = create || action = edit. Release title. 
@@ -229,9 +229,9 @@ steps:
     #assetUploadMode: 'delete' # 'delete' | 'replace'. Optional. Use when action = edit. Asset upload mode. Default: 'delete'.
     isDraft: true # boolean. Optional. Use when action = create || action = edit. Draft release. Default: false.
     isPreRelease: true # boolean. Optional. Use when action = create || action = edit. Pre-release. Default: false.
-    #addChangeLog: true # boolean. Optional. Use when action = create || action = edit. Add changelog. Default: true.
+    addChangeLog: false # boolean. Optional. Use when action = create || action = edit. Add changelog. Default: true.
   # Changelog configuration
-    changeLogCompareToRelease: 'lastFullRelease' # 'lastFullRelease' | 'lastNonDraftRelease' | 'lastNonDraftReleaseByTag'. Required when addChangeLog = true. Compare to. Default: 'lastFullRelease'.
+    # changeLogCompareToRelease: 'lastFullRelease' # 'lastFullRelease' | 'lastNonDraftRelease' | 'lastNonDraftReleaseByTag'. Required when addChangeLog = true. Compare to. Default: 'lastFullRelease'.
     #changeLogCompareToReleaseTag: # string. Required when changeLogCompareToRelease = lastNonDraftReleaseByTag. Release Tag. 
-    changeLogType: 'commitBased' # 'commitBased' | 'issueBased'. Required when addChangeLog = true. Changelog type. Default: 'commitBased'.
+    # changeLogType: 'commitBased' # 'commitBased' | 'issueBased'. Required when addChangeLog = true. Changelog type. Default: 'commitBased'.
     #changeLogLabels: '[{ "label" : "bug", "displayName" : "Bugs", "state" : "closed" }]' # string. Optional. Use when changeLogType = issueBased. Categories. Default: '[{ "label" : "bug", "displayName" : "Bugs", "state" : "closed" }]'.

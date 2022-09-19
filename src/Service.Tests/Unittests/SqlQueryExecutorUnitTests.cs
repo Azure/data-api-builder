@@ -7,6 +7,7 @@ using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
+using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Azure.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -122,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<SqlConnection>(),
                 It.IsAny<string>(),
                 It.IsAny<IDictionary<string, object>>()))
-            .Throws(TestHelper.CreateSqlException(121));
+            .Throws(SqlTestHelper.CreateSqlException(121));
 
             // Call the actual ExecuteQueryAsync method.
             queryExecutor.Setup(x => x.ExecuteQueryAsync(
@@ -158,8 +159,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<SqlConnection>(),
                 It.IsAny<string>(),
                 It.IsAny<IDictionary<string, object>>()))
-            .Throws(TestHelper.CreateSqlException(121))
-            .Throws(TestHelper.CreateSqlException(121))
+            .Throws(SqlTestHelper.CreateSqlException(121))
+            .Throws(SqlTestHelper.CreateSqlException(121))
             .CallBase();
 
             // Call the actual ExecuteQueryAsync method.

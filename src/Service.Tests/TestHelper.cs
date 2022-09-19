@@ -1,13 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -172,38 +168,6 @@ namespace Azure.DataApiBuilder.Service.Tests
 
             Entity entity = JsonSerializer.Deserialize<Entity>(entityJsonString, options);
             config.Entities.Add(entityKey, entity);
-        }
-
-        /// <summary>
-        /// Method to create our custom exception of type SqlException which is a sealed class.
-        /// </summary>
-        /// <param name="number">Number to be populated in SqlException.Number</param>
-        /// <param name="message">Message to be populated in SqlException.Message</param>
-        /// <returns>custom SqlException</returns>
-        public static SqlException CreateSqlException(int number, string message = "")
-        {
-            Exception? innerEx = null;
-            ConstructorInfo[] c = typeof(SqlErrorCollection).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
-            SqlErrorCollection errors = (c[0].Invoke(null) as SqlErrorCollection)!;
-            List<object> errorList =
-                (errors.GetType().GetField("_errors", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(errors) as List<object>)!;
-            c = typeof(SqlError).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
-            ConstructorInfo nineC = c.FirstOrDefault(f => f.GetParameters().Length == 9)!;
-
-            // Create SqlError object.
-            SqlError sqlError = (nineC.Invoke(new object?[] { number, (byte)0, (byte)0, "", "", "", (int)0, (uint)0, innerEx }) as SqlError)!;
-            errorList.Add(sqlError);
-
-            // Create SqlException object
-            SqlException e =
-                (Activator.CreateInstance(
-                    typeof(SqlException),
-                    BindingFlags.NonPublic | BindingFlags.Instance,
-                    null,
-                    new object[] { message, errors, innerEx, Guid.NewGuid() },
-                    null)
-                as SqlException)!;
-            return e;
         }
     }
 }

@@ -7,6 +7,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.Extensions.Logging;
 using Polly;
+using Polly.Retry;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -20,9 +21,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<QueryExecutor<TConnection>> QueryExecutorLogger { get; }
 
+        // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
+        // So to say in case of transient exceptions, the query will be executed (_maxRetryCount + 1) times at max.
         private static int _maxRetryCount = 5;
 
-        private Polly.Retry.AsyncRetryPolicy _retryPolicy;
+        private AsyncRetryPolicy _retryPolicy;
 
         public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider,
                              DbExceptionParser dbExceptionParser,

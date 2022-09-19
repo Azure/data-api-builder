@@ -3,6 +3,7 @@ using System.Data.Common;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Resolvers;
+using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -31,7 +32,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<RuntimeConfigProvider> provider = new(configPath.Object, configProviderLogger.Object);
             provider.Setup(x => x.IsDeveloperMode()).Returns(isDeveloperMode);
             Mock<DbExceptionParser> parser = new(provider.Object, new HashSet<string>());
-            DbException e = TestHelper.CreateSqlException(53, expected);
+            DbException e = SqlTestHelper.CreateSqlException(53, expected);
             string actual = (parser.Object).Parse(e).Message;
             Assert.AreEqual(expected, actual);
         }
@@ -52,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
 
-            Assert.AreEqual(expected, dbExceptionParser.IsTransientException(TestHelper.CreateSqlException(number)));
+            Assert.AreEqual(expected, dbExceptionParser.IsTransientException(SqlTestHelper.CreateSqlException(number)));
         }
     }
 }

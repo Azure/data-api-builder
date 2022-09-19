@@ -20,7 +20,7 @@ variables:
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
   isReleaseBuild: $(isNugetRelease)
 
-# steps:
+steps:
 # - task: NuGetAuthenticate@0
 #   displayName: 'NuGet Authenticate'
 

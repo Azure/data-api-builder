@@ -157,7 +157,7 @@ steps:
   inputs:
     targetType: 'filePath'
     filePath: $(System.DefaultWorkingDirectory)/create_manifest_file.ps1
-    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) $(variables.isReleaseBuild)
+    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) $(isReleaseBuild)
 
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.

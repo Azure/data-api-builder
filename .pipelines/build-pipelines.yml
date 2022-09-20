@@ -122,10 +122,19 @@ steps:
     filePath: $(System.DefaultWorkingDirectory)/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -CreateZip
 
+# Generating SBOM manifest for Dab files
 - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
   displayName: 'SBOM Generation Task'
   inputs:
       BuildDropPath: '$(Build.ArtifactStagingDirectory)'
+
+# Generating Manifest File for generated Zip package
+- task: PowerShell@2
+  displayName: "Generate Manifest File"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/create_manifest_file.ps1
+    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion)
 
 # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
 - task: PublishPipelineArtifact@1

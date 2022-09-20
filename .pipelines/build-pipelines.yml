@@ -63,9 +63,9 @@ steps:
     projects: '$(solution)'
     arguments: '--verify-no-changes'
 
-# # Use dotnet pack command to build the project because we want to generate build output
-# # in the correct location that pack command will be using. This build output location
-# # will be used to do code signing so we need to this first.
+# Use dotnet pack command to build the project because we want to generate build output
+# in the correct location that pack command will be using. This build output location
+# will be used to do code signing so we need to this first.
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
@@ -122,10 +122,19 @@ steps:
     filePath: $(System.DefaultWorkingDirectory)/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -CreateZip
 
+# Generating SBOM manifest for Dab files
 - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
   displayName: 'SBOM Generation Task'
   inputs:
       BuildDropPath: '$(Build.ArtifactStagingDirectory)'
+
+# Generating Manifest File for generated Zip package
+- task: PowerShell@2
+  displayName: "Generate Manifest File"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/create_manifest_file.ps1
+    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) $(isReleaseBuild)
 
 # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
 - task: PublishPipelineArtifact@1
@@ -151,13 +160,25 @@ steps:
     codeCoverageTool: Cobertura
     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
-# Generating Manifest File for generated Zip package
-- task: PowerShell@2
-  displayName: "Generate Manifest File"
+# Create a draft release with Assets
+- task: GitHubRelease@1
+  displayName: "Draft Github Release"
+  condition: eq(variables.isReleaseBuild, 'true')
   inputs:
-    targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/create_manifest_file.ps1
-    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) $(isReleaseBuild)
+    gitHubConnection: 'DataApiBuilder'
+    repositoryName: '$(Build.Repository.Name)'
+    action: 'create'
+    target: '$(Build.SourceVersion)'
+    tagSource: 'userSpecifiedTag'
+    tag: 'v$(dabVersion)-alpha'
+    title: 'New Release: Data API Builder for Azure Databases'
+    assets: |
+      $(Build.ArtifactStagingDirectory)/**/*.nupkg
+      $(Build.ArtifactStagingDirectory)/**/*.zip
+      $(Build.ArtifactStagingDirectory)/**/dab-manifest.json
+    isDraft: true
+    isPreRelease: true
+    addChangeLog: false
 
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.
@@ -198,22 +219,3 @@ steps:
       $(releaseName)
       $(dabVersion)
 
-# Create a draft release with Assets
-- task: GitHubRelease@1
-  displayName: "Draft Github Release"
-  condition: eq(variables.isReleaseBuild, 'true')
-  inputs:
-    gitHubConnection: 'DataApiBuilder'
-    repositoryName: '$(Build.Repository.Name)'
-    action: 'create'
-    target: '$(Build.SourceVersion)'
-    tagSource: 'userSpecifiedTag'
-    tag: 'v$(dabVersion)-alpha'
-    title: 'New Release: Data API Builder for Azure Databases'
-    assets: |
-      $(Build.ArtifactStagingDirectory)/**/*.nupkg
-      $(Build.ArtifactStagingDirectory)/**/*.zip
-      $(Build.ArtifactStagingDirectory)/**/dab-manifest.json
-    isDraft: true
-    isPreRelease: true
-    addChangeLog: false

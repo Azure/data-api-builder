@@ -22,7 +22,7 @@ if ($Package)
 if ($CreateZip)
 {
     foreach ($RID in $RIDs) {
-        $cmd = "Compress-Archive -Force -Path $BuildOutputDir/publish/$BuildConfiguration/$RID/dab/* -DestinationPath $BuildOutputDir/publish/$BuildConfiguration/$RID/dab_$DabVersion.zip"
+        $cmd = "Compress-Archive -Force -Path $BuildOutputDir/publish/$BuildConfiguration/$RID/dab/* -DestinationPath $BuildOutputDir/publish/$BuildConfiguration/$RID/dab_$RID-$DabVersion.zip"
         Write-Host $cmd
         Invoke-Expression $cmd
     }

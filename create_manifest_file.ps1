@@ -1,28 +1,33 @@
 param (
     [Parameter (Mandatory=$true)][string] $BuildConfiguration,
     [Parameter (Mandatory=$true)][string] $BuildOutputDir,
-    [Parameter (Mandatory=$true)][string] $DabVersion
+    [Parameter (Mandatory=$true)][string] $DabVersion,
+    [Parameter (Mandatory=$true)][string] $isReleaseBuild
 )
 
-# TODO: To update the URL dynamically
 $versionId = $DabVersion
+$versionTag = "xxx" #untagged. non release build will have no tag
 $releaseType = "development"
 $releaseDate = (Get-Date).ToUniversalTime().ToString('u')
-$download_url_win = "https://github.com/data-api-builder/releases/$versionId/win-file.zip"
-$download_url_linux = "https://github.com/data-api-builder/releases/$versionId/linux-file.zip"
-$download_url_osx = "https://github.com/data-api-builder/releases/$versionId/osx-file.zip"
 $maxVersionCount = 3
+
+if ($isReleaseBuild -eq 'true')
+{
+    $versionTag = "v"+ $versionId + "-alpha"
+    $releaseType = "released"
+}
 
 # Generating hash for DAB packages
 $RIDs = "win-x64", "linux-x64", "osx-x64"
 foreach ($RID in $RIDs) {
-    $filePath = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab_$DabVersion.zip";
+    $filePath = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab_$RID-$DabVersion.zip";
+    $download_url = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/dab_$RID-$DabVersion.zip"
     $fileHashInfo = Get-FileHash $filePath
     $hash = $fileHashInfo.Hash
     switch ($RID) {
-        "win-x64"{ $win_file_hash = $hash}
-        "linux-x64"{ $linux_file_hash = $hash}
-        "osx-x64"{ $osx_file_hash = $hash}
+        "win-x64"{ $win_file_hash = $hash, $download_url_win = $download_url}
+        "linux-x64"{ $linux_file_hash = $hash, $download_url_linux = $download_url}
+        "osx-x64"{ $osx_file_hash = $hash, $download_url_osx = $download_url}
     }
 }
 

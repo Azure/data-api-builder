@@ -201,7 +201,7 @@ steps:
 # Create a draft release with Assets
 - task: GitHubRelease@1
   displayName: "Draft Github Release"
-  # condition: eq(variables.isReleaseBuild, 'true')
+  condition: eq(variables.isReleaseBuild, 'true')
   inputs:
     gitHubConnection: 'DataApiBuilder'
     repositoryName: '$(Build.Repository.Name)'
@@ -210,7 +210,9 @@ steps:
     tagSource: 'userSpecifiedTag'
     tag: 'v$(dabVersion)-alpha'
     title: 'New Release: Data API Builder for Azure Databases'
-    assets: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;$(Build.ArtifactStagingDirectory)/**/*.zip'
+    assets: |
+      $(Build.ArtifactStagingDirectory)/**/*.nupkg
+      $(Build.ArtifactStagingDirectory)/**/*.zip
     isDraft: true
     isPreRelease: true
     addChangeLog: false

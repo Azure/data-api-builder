@@ -198,6 +198,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             List<object> errorList =
                 (errors.GetType().GetField("_errors", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(errors) as List<object>)!;
             c = typeof(SqlError).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
+
+            // At this point the ConstructorInfo[] for SqlError has 2 entries: One constructor with 8 parameters,
+            // and one with 9 parameters. We can choose either of them to create an object of SqlError type.
             ConstructorInfo nineC = c.FirstOrDefault(f => f.GetParameters().Length == 9)!;
 
             // Create SqlError object.

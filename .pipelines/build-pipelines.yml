@@ -21,7 +21,7 @@ variables:
   isReleaseBuild: $(isNugetRelease)
 
 steps:
-- task: NuGetAuthenticate@0
+- task: NuGetAuthenticate@1
   displayName: 'NuGet Authenticate'
 
 # If this is a release, do not append the build number at the end as it will 
@@ -47,21 +47,21 @@ steps:
     version: 6.0.x
     installationPath: $(Agent.ToolsDirectory)/dotnet
 
-- task: NuGetToolInstaller@1
+# - task: NuGetToolInstaller@1
 
-- task: NuGetCommand@2
-  inputs:
-    restoreSolution: '$(solution)'
-    feedsToUse: config
-    nugetConfigPath: Nuget.config
+# - task: NuGetCommand@2
+#   inputs:
+#     restoreSolution: '$(solution)'
+#     feedsToUse: config
+#     nugetConfigPath: Nuget.config
 
-- task: DotNetCoreCLI@2
-  displayName: Check formatting
-  inputs:
-    command: custom
-    custom: format
-    projects: '$(solution)'
-    arguments: '--verify-no-changes'
+# - task: DotNetCoreCLI@2
+#   displayName: Check formatting
+#   inputs:
+#     command: custom
+#     custom: format
+#     projects: '$(solution)'
+#     arguments: '--verify-no-changes'
 
 # # Use dotnet pack command to build the project because we want to generate build output
 # # in the correct location that pack command will be using. This build output location
@@ -74,12 +74,12 @@ steps:
     projects: '**/*.sln'
     arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion)' 
 
-- task: DotNetCoreCLI@2
-  displayName: "Run Unit Tests"
-  inputs:
-    command: test
-    projects: '**/*Tests*.csproj'
-    arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+# - task: DotNetCoreCLI@2
+#   displayName: "Run Unit Tests"
+#   inputs:
+#     command: test
+#     projects: '**/*Tests*.csproj'
+#     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
 - template: templates/code-signing.yml
   parameters:
@@ -122,10 +122,10 @@ steps:
     filePath: $(System.DefaultWorkingDirectory)/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -CreateZip
 
-- task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-  displayName: 'SBOM Generation Task'
-  inputs:
-      BuildDropPath: '$(Build.ArtifactStagingDirectory)'
+# - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+#   displayName: 'SBOM Generation Task'
+#   inputs:
+#       BuildDropPath: '$(Build.ArtifactStagingDirectory)'
 
 # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
 - task: PublishPipelineArtifact@1
@@ -133,23 +133,23 @@ steps:
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)' 
 
-- task: NuGetCommand@2
-  displayName: 'Publish Nuget to Internal Feed'
-  condition: eq(variables.isReleaseBuild, 'true')
-  inputs:
-    command: 'push'
-    feedsToUse: 'select'
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
-    nuGetFeedType: 'internal'
-    publishVstsFeed: CosmosDB/DataApiBuilder
-    versioningScheme: 'off'
-    allowPackageConflicts: false
+# - task: NuGetCommand@2
+#   displayName: 'Publish Nuget to Internal Feed'
+#   condition: eq(variables.isReleaseBuild, 'true')
+#   inputs:
+#     command: 'push'
+#     feedsToUse: 'select'
+#     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+#     nuGetFeedType: 'internal'
+#     publishVstsFeed: CosmosDB/DataApiBuilder
+#     versioningScheme: 'off'
+#     allowPackageConflicts: false
 
-- task: PublishCodeCoverageResults@1
-  displayName: 'Publish code coverage'
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+# - task: PublishCodeCoverageResults@1
+#   displayName: 'Publish code coverage'
+#   inputs:
+#     codeCoverageTool: Cobertura
+#     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
 # Generating Manifest File for generated Zip package
 - task: PowerShell@2
@@ -161,42 +161,42 @@ steps:
 
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.
-- task: PowerShell@2
-  displayName: "Get date for Docker image Tag"
-  inputs:
-    targetType: 'inline'
-    script: |
-      Write-Host "Setting up the date and time as a build variable for the Docker tag"
-      $date=$(Get-Date -format yyyyMMdd-HHmmss)
-      Write-Host "##vso[task.setvariable variable=BuildDate]$date"
+# - task: PowerShell@2
+#   displayName: "Get date for Docker image Tag"
+#   inputs:
+#     targetType: 'inline'
+#     script: |
+#       Write-Host "Setting up the date and time as a build variable for the Docker tag"
+#       $date=$(Get-Date -format yyyyMMdd-HHmmss)
+#       Write-Host "##vso[task.setvariable variable=BuildDate]$date"
 
 # Build a docker image and push it to the container registry.
-- task: Docker@2
-  displayName: "Build and push docker image to Azure Container Registry"
-  condition: eq(variables.isReleaseBuild, 'false')
-  inputs:
-    containerRegistry: 'CosmosDB GraphQL/Hawaii'
-    repository: 'dab/$(Build.SourceBranch)'
-    command: 'buildAndPush'
-    Dockerfile: '**/Dockerfile'
-    tags: |
-      $(BuildDate)-$(Build.SourceVersion)
-      latest
+# - task: Docker@2
+#   displayName: "Build and push docker image to Azure Container Registry"
+#   condition: eq(variables.isReleaseBuild, 'false')
+#   inputs:
+#     containerRegistry: 'CosmosDB GraphQL/Hawaii'
+#     repository: 'dab/$(Build.SourceBranch)'
+#     command: 'buildAndPush'
+#     Dockerfile: '**/Dockerfile'
+#     tags: |
+#       $(BuildDate)-$(Build.SourceVersion)
+#       latest
 
 # Build a docker image and push it to the container registry.
 # Tag the image with the value of the releaseName variable and nuget release version.
-- task: Docker@2
-  displayName: "Build and push docker image to Azure Container Registry tagged with releaseName and nuget release version"
-  condition: eq(variables.isReleaseBuild, 'true')
-  inputs:
-    containerRegistry: 'CosmosDB GraphQL/Hawaii'
-    repository: 'dab'
-    command: 'buildAndPush'
-    Dockerfile: '**/Dockerfile'
-    tags: |
-      $(BuildDate)-$(Build.SourceVersion)
-      $(releaseName)
-      $(dabVersion)
+# - task: Docker@2
+#   displayName: "Build and push docker image to Azure Container Registry tagged with releaseName and nuget release version"
+#   condition: eq(variables.isReleaseBuild, 'true')
+#   inputs:
+#     containerRegistry: 'CosmosDB GraphQL/Hawaii'
+#     repository: 'dab'
+#     command: 'buildAndPush'
+#     Dockerfile: '**/Dockerfile'
+#     tags: |
+#       $(BuildDate)-$(Build.SourceVersion)
+#       $(releaseName)
+#       $(dabVersion)
 
 # Create a draft release with Assets
 - task: GitHubRelease@1
@@ -207,6 +207,7 @@ steps:
     repositoryName: '$(Build.Repository.Name)'
     action: 'create'
     target: '$(Build.SourceVersion)'
+    tagSource: 'manual'
     tag: 'v$(dabVersion)-alpha'
     title: 'New Release: Data API Builder for Azure Databases'
     assets: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;$(Build.ArtifactStagingDirectory)/**/*.zip'

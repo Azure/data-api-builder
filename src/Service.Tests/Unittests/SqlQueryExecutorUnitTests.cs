@@ -113,6 +113,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task TestRetryPolicyExhaustingMaxAttempts()
         {
+            int maxRetries = 5;
+            int maxAttempts = maxRetries + 1; // because of the original attempt to execute the query in addition to retries.
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
@@ -139,7 +141,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // For each attempt logger is invoked twice. Currently we have hardcoded the number of attempts.
             // Once we have number of retry attempts specified in config, we will make it dynamic.
-            Assert.AreEqual(2 * 6, queryExecutorLogger.Invocations.Count);
+            Assert.AreEqual(2 * maxAttempts, queryExecutorLogger.Invocations.Count);
         }
 
         /// <summary>
@@ -170,7 +172,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             string sqltext = "SELECT * from books";
             await queryExecutor.Object.ExecuteQueryAsync(sqltext: sqltext, parameters: new Dictionary<string, object>());
-            // For each attempt logger is invoked twice. The query executes successfully in 2nd retry.
+            // For each attempt logger is invoked twice. The query executes successfully in in 1st retry .i.e. 2nd attempt of execution.
             Assert.AreEqual(2 * 2, queryExecutorLogger.Invocations.Count);
         }
     }

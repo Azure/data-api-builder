@@ -6,7 +6,7 @@ param (
 )
 
 $versionId = $DabVersion
-$versionTag = "xxx" #untagged. non release build will have no tag
+$versionTag = "untagged" #untagged. non-release build will have no tag
 $releaseType = "development"
 $releaseDate = (Get-Date).ToUniversalTime().ToString('u')
 $maxVersionCount = 3
@@ -16,10 +16,6 @@ if ($isReleaseBuild -eq 'true')
     $versionTag = "v"+ $versionId + "-alpha"
     $releaseType = "released"
 }
-
-Write-Host $isReleaseBuild
-Write-Host $versionTag
-Write-Host $releaseType
 
 # Generating hash for DAB packages
 $RIDs = "win-x64", "linux-x64", "osx-x64"

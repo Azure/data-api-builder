@@ -213,6 +213,7 @@ steps:
     assets: |
       $(Build.ArtifactStagingDirectory)/**/*.nupkg
       $(Build.ArtifactStagingDirectory)/**/*.zip
+      $(Build.ArtifactStagingDirectory)/**/dab-manifest.json
     isDraft: true
     isPreRelease: true
     addChangeLog: false

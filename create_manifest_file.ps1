@@ -17,6 +17,10 @@ if ($isReleaseBuild -eq 'true')
     $releaseType = "released"
 }
 
+Write-Host $isReleaseBuild
+Write-Host $versionTag
+Write-Host $releaseType
+
 # Generating hash for DAB packages
 $RIDs = "win-x64", "linux-x64", "osx-x64"
 foreach ($RID in $RIDs) {
@@ -25,9 +29,18 @@ foreach ($RID in $RIDs) {
     $fileHashInfo = Get-FileHash $filePath
     $hash = $fileHashInfo.Hash
     switch ($RID) {
-        "win-x64"{ $win_file_hash = $hash, $download_url_win = $download_url}
-        "linux-x64"{ $linux_file_hash = $hash, $download_url_linux = $download_url}
-        "osx-x64"{ $osx_file_hash = $hash, $download_url_osx = $download_url}
+        "win-x64"{
+            $win_file_hash = $hash
+            $download_url_win = $download_url
+        }
+        "linux-x64"{
+            $linux_file_hash = $hash
+            $download_url_linux = $download_url
+        }
+        "osx-x64"{ 
+            $osx_file_hash = $hash
+            $download_url_osx = $download_url
+        }
     }
 }
 

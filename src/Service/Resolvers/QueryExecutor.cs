@@ -125,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         {
                             string columnName = (string)schemaRow["ColumnName"];
 
-                            if (args != null && !args.Contains(columnName))
+                            if (args is not null && !args.Contains(columnName))
                             {
                                 continue;
                             }
@@ -183,7 +183,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             TResult? jsonDocument = default;
 
             // Parse Results into Json and return
-            //
             if (dbDataReader.HasRows)
             {
                 // Make sure to get the complete json string in case of large document.
@@ -230,7 +229,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                     throw new DataApiBuilderException(
                         message: $"Cannot perform INSERT and could not find {entityName} " +
-                        $"with primary key {prettyPrintPk} to perform UPDATE on.",
+                            $"with primary key {prettyPrintPk} to perform UPDATE on.",
                             statusCode: HttpStatusCode.NotFound,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
                 }

@@ -1035,12 +1035,16 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Executes the given foreign key query with parameters
-        /// and summarizes the results for each referencing and referenced table pair.
+        /// Each row in the results of the given data reader represents one column from one foreign key
+        /// between an ordered pair of referencing and referenced database objects.
+        /// This data reader handler summarizes this foreign key metadata so that
+        /// for each referencing and referenced table pair, there is exactly one foreign key definition
+        /// containing the list of all referencing columns and referenced columns.
         /// </summary>
-        /// <param name="queryForForeignKeyInfo"></param>
-        /// <param name="parameters"></param>
-        /// <returns></returns>
+        /// <param name="reader">The Db Data Reader.</param>
+        /// <param name="args">Arguments to this function.</param>
+        /// <returns>A dictionary mapping ordered relationship pairs to
+        /// foreign key definition between them.</returns>
         private async Task<Dictionary<RelationShipPair, ForeignKeyDefinition>?>
             SummarizeFkMetadata(DbDataReader reader, List<string>? args = null)
         {

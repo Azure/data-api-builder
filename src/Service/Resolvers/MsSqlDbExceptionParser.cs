@@ -56,16 +56,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // Manually added
                 "0", // Cannot connect to SQL Server
 
-                // This error mainly occurs when the SQL Server client can't connect to the server.
+                // These errors mainly occur when the SQL Server client can't connect to the server.
                 // This may happen when the client cannot resolve the name of the server or the name of the server is incorrect.
-                "11001"
-           
-                 /*"53", "258",
-                 "4891",
-                 "10051", "10065",
-                 ,
+                "53", "11001",
 
-                 "18456",*/
+                // Transient error codes compiled from:
+                // https://learn.microsoft.com/en-us/host-integration-server/core/tcpip-network-client-errors1
+                "18456",
+
+                // Errors that may occur because of operation timeout like login timeout.
+                // Reference: https://social.technet.microsoft.com/Forums/en-US/aa4150df-5b3b-412b-b4c6-dad9f0709bc8/sql-server-error-258?forum=sqlsecurity
+                "258"
             };
         }
 

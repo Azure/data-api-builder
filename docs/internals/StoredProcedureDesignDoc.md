@@ -64,7 +64,7 @@ However, the behavior of **column/field-level permissions** and **database polic
 
 Justification **against** supporting all CRUD operations:
 - `POST` request is the only HTTP method that specifies a client can "submit a command" per [Microsoft API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md#741-post)
-- Other solutions usually limit to `POST`: https://docs.microsoft.com/en-us/rest/api/cosmos-db/execute-a-stored-procedure
+- Other solutions usually limit to `POST`: https://learn.microsoft.com/rest/api/cosmos-db/execute-a-stored-procedure
     - [PostgREST](https://postgrest.org/en/stable/api.html#stored-procedures) support `POST` and `GET` if marked `IMMUTABLE` or `STABLE`
 - Proposed permission:
 ```
@@ -109,7 +109,7 @@ Implementation was segmented into 5 main sections:
 > ### `SqlMetadataProvider.cs`
 > - Problem: when we draw metadata from the database schema, we implicitly check if each entity specified in config exists in the database. Path: in `Startup.cs`, the `PerformOnConfigChangeAsync()` method invokes `InitializeAsync()` of the metadata provider bound at runtime, which then invokes `PopulateTableDefinitionForEntities()`. Several steps down the stack `FillSchemaForTableAsync()` is called, which performs a `SELECT * FROM {table_name}` for the given entity and adds the resulting `DataTable` object to the `EntitiesDataSet` class variable. Unfortunately, stored procedure metadata cannot be queried using the same syntax. As such, running the select statement on a stored procedure source name will cause a Sql exception to surface and result in runtime initialization failure.
 > - Instead, we introduce the `PopulateStoredProcedureDefinitionForEntities()` method, which iterates over only entites labeled as stored procedures to fill their metadata, and we simply skip over entities labeled as Stored Procedures in the `PopulateTableDefinitionForEntities()` method.
-> - We use the ADO.NET `GetSchemaAsync` method to retrieve procedure metadata and parameter metadata from the Procedures and Procedure Parameters collections respectively: https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/sql-server-schema-collections. These collections are listed as SQL Server-specific, so this implementation might not be extensible to MySQL and Postgres.
+> - We use the ADO.NET `GetSchemaAsync` method to retrieve procedure metadata and parameter metadata from the Procedures and Procedure Parameters collections respectively: https://learn.microsoft.com/dotnet/framework/data/adonet/sql-server-schema-collections. These collections are listed as SQL Server-specific, so this implementation might not be extensible to MySQL and Postgres.
 >     - In this case, we should just directly access the ANSI-standard information_schema and retrieve metadata using:
 >        - `SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE SPECIFIC_NAME = {procedure_name}`
 >        - `SELECT * FROM INFORMATION_SCHEMA.PARAMETERS WHERE SPECIFIC_NAME = {procedure_name}`

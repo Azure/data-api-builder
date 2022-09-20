@@ -2,7 +2,7 @@
 
 Make sure you have read the [Getting Started](getting-started.md) document.
 
-This tutorial assumes that you have already a [Cosmos DB SQL API database account](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/create-cosmosdb-resources-portal#create-an-azure-cosmos-db-account) that can be used as a playground.
+This tutorial assumes that you have already a [Cosmos DB SQL API database account](https://learn.microsoft.com/azure/cosmos-db/sql/create-cosmosdb-resources-portal#create-an-azure-cosmos-db-account) that can be used as a playground.
 
 ## Get the Cosmos DB Account connection string
 
@@ -10,7 +10,7 @@ You can obtain the connection string by navigating to your Azure Cosmos DB accou
 
 ![Cosmos DB connection string](../media/cosmos-connection.png)
 
-You can also use Azure Cosmos DB emulator connection string if you are testing locally. The Azure Cosmos DB Emulator supports a [single fixed account and a well-known authentication key](https://docs.microsoft.com/en-us/azure/azure-sql/database/connect-query-content-reference-guide?view=azuresql)
+You can also use Azure Cosmos DB emulator connection string if you are testing locally. The Azure Cosmos DB Emulator supports a [single fixed account and a well-known authentication key](https://learn.microsoft.com/azure/azure-sql/database/connect-query-content-reference-guide?view=azuresql)
 
 The connection string looks like,
 
@@ -42,16 +42,16 @@ Create the necessary database containers needed to represent Authors and Books.
 -   `authors`: Collection containing authors with 'id' as the partition key
 -   `books`: Collection containing books with 'id' as the partition key
 
-Read more about [choosing partition key](https://docs.microsoft.com/en-us/azure/cosmos-db/partitioning-overview#choose-partitionkey) and [data modelling](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/modeling-data)
+Read more about [choosing partition key](https://learn.microsoft.com/azure/cosmos-db/partitioning-overview#choose-partitionkey) and [data modelling](https://learn.microsoft.com/azure/cosmos-db/sql/modeling-data)
 
-Once the containers are created, you can import the sample data which are placed in the 'azure-cosmos-db' folder to the respective collections by using the [Data Import Tool](https://docs.microsoft.com/en-us/azure/cosmos-db/import-data#JSON).
+Once the containers are created, you can import the sample data which are placed in the 'azure-cosmos-db' folder to the respective collections by using the [Data Import Tool](https://learn.microsoft.com/azure/cosmos-db/import-data#JSON).
 
 ## Add Book and Author entities
 
 We want to expose the books and the authors collections so that they can be used via GraphQL. For doing that, all we need is to add the related information to the entities section of the configuration file.
 
 > **NOTE**: REST operations are not supported for Cosmos DB via the
-> Data API Builder, You can use the existing [REST API](https://docs.microsoft.com/en-us/rest/api/cosmos-db/)
+> Data API Builder, You can use the existing [REST API](https://learn.microsoft.com/rest/api/cosmos-db/)
 
 Start by adding the `author` entity:
 
@@ -156,7 +156,7 @@ Now that the Data API builder engine is running, you can use your favourite REST
 
 ### REST Endpoint
 
-Unlike other databases, Data API Builder for Azure Cosmos DB does not support generating REST endpoints because there is already a[REST API endpoint](https://docs.microsoft.com/en-us/rest/api/cosmos-db/) capability built-in to the Azure Cosmos DB service.
+Unlike other databases, Data API Builder for Azure Cosmos DB does not support generating REST endpoints because there is already a[REST API endpoint](https://learn.microsoft.com/rest/api/cosmos-db/) capability built-in to the Azure Cosmos DB service.
 
 ### GraphQL endpoint
 
@@ -209,4 +209,3 @@ Using GraphQL you can now execute queries like:
 This query will return List of books and its Authors.
 
 Congratulations, you have just created a fully working backend to support your modern applications!
-

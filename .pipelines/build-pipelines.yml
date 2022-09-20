@@ -207,7 +207,7 @@ steps:
     repositoryName: '$(Build.Repository.Name)'
     action: 'create'
     target: '$(Build.SourceVersion)'
-    tagSource: 'manual'
+    tagSource: 'userSpecifiedTag'
     tag: 'v$(dabVersion)-alpha'
     title: 'New Release: Data API Builder for Azure Databases'
     assets: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;$(Build.ArtifactStagingDirectory)/**/*.zip'

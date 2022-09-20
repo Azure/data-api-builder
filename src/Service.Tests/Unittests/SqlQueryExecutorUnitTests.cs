@@ -19,6 +19,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class SqlQueryExecutorUnitTests
     {
+        private static int _semaphoreTimedOutErrorCode = 121; // Error code for semaphore timeout in MsSql.
         /// <summary>
         /// Validates managed identity token issued ONLY when connection string does not specify
         /// User, Password, and Authentication method.
@@ -125,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<SqlConnection>(),
                 It.IsAny<string>(),
                 It.IsAny<IDictionary<string, object>>()))
-            .Throws(SqlTestHelper.CreateSqlException(121));
+            .Throws(SqlTestHelper.CreateSqlException(_semaphoreTimedOutErrorCode));
 
             // Call the actual ExecuteQueryAsync method.
             queryExecutor.Setup(x => x.ExecuteQueryAsync(
@@ -161,8 +162,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<SqlConnection>(),
                 It.IsAny<string>(),
                 It.IsAny<IDictionary<string, object>>()))
-            .Throws(SqlTestHelper.CreateSqlException(121))
-            .Throws(SqlTestHelper.CreateSqlException(121))
+            .Throws(SqlTestHelper.CreateSqlException(_semaphoreTimedOutErrorCode))
+            .Throws(SqlTestHelper.CreateSqlException(_semaphoreTimedOutErrorCode))
             .CallBase();
 
             // Call the actual ExecuteQueryAsync method.

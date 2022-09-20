@@ -31,7 +31,8 @@ namespace Azure.DataApiBuilder.Service.Controllers
             _configurationProvider.Initialize(
                 configuration.Configuration,
                 configuration.Schema,
-                configuration.ConnectionString);
+                configuration.ConnectionString,
+                configuration.AccessToken);
 
             return new OkResult();
         }
@@ -46,6 +47,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
     public record class ConfigurationPostParameters(
         string Configuration,
         string? Schema,
-        string ConnectionString)
+        string ConnectionString,
+        string? AccessToken)
     { }
 }

@@ -53,14 +53,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 ConfigProviderLogger = logger;
             }
 
-            if (TryLoadRuntimeConfigValue())
-            {
-                ConfigProviderLogger.LogInformation("Runtime config loaded from file.");
-            }
-            else
-            {
-                ConfigProviderLogger.LogInformation("Runtime config provided didn't load config at construction.");
-            }
+            //if (TryLoadRuntimeConfigValue())
+            //{
+            //    ConfigProviderLogger.LogInformation("Runtime config loaded from file.");
+            //}
+            //else
+            //{
+            //    ConfigProviderLogger.LogInformation("Runtime config provided didn't load config at construction.");
+            //}
         }
 
         /// <summary>
@@ -194,7 +194,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="configuration">The engine configuration.</param>
         /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
         /// <param name="connectionString">The connection string to the database.</param>
-        public void Initialize(string configuration, string? schema, string connectionString)
+        /// <param name="accessToken">The access token used to connect to the database if not part of the connection string.</param>
+        public void Initialize(string configuration, string? schema, string connectionString, string? accessToken)
         {
             if (string.IsNullOrEmpty(connectionString))
             {
@@ -214,6 +215,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 RuntimeConfiguration!.DetermineGlobalSettings();
                 RuntimeConfiguration!.DetermineGraphQLEntityNames();
                 RuntimeConfiguration!.ConnectionString = connectionString;
+                RuntimeConfiguration!.AccessToken = accessToken;
 
                 if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmos)
                 {
@@ -230,7 +232,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             EventHandler<RuntimeConfig>? handlers = RuntimeConfigLoaded;
             if (handlers != null)
             {
-                handlers(this, RuntimeConfiguration);
+                handlers(this, RuntimeConfiguration!);
             }
         }
 

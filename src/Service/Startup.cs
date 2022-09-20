@@ -319,11 +319,21 @@ namespace Azure.DataApiBuilder.Service
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+<<<<<<< Updated upstream:src/Service/Startup.cs
                 //if (runtimeConfig is not null && runtimeConfig.GraphQLGlobalSettings.Enabled)
                 //{
                 endpoints.MapGraphQL("/graphql");
                 endpoints.MapBananaCakePop();
                 //}
+=======
+                // TODO: Figure out how to make this work when config is loaded at runtime.
+
+                endpoints.MapGraphQL("/graphql"/*runtimeConfig.GraphQLGlobalSettings.Path*/);
+                if (runtimeConfig is not null && runtimeConfig.GraphQLGlobalSettings.Enabled)
+                {
+                    endpoints.MapBananaCakePop();
+                }
+>>>>>>> Stashed changes:DataGateway.Service/Startup.cs
 
                 endpoints.MapHealthChecks("/");
             });

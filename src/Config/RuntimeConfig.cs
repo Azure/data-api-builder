@@ -196,6 +196,10 @@ namespace Azure.DataApiBuilder.Config
         }
 
         [JsonIgnore]
+        // Used when connecting through a managed identity.
+        public string? AccessToken { get; set; }
+
+        [JsonIgnore]
         public AuthenticationConfig? AuthNConfig
         {
             get

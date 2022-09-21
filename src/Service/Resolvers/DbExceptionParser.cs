@@ -16,8 +16,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
         private readonly bool _developerMode;
         protected HashSet<string> BadRequestErrorCodes;
-        protected HashSet<string>? TransientErrorCodes;
 
+        /*A transient error, also known as a transient fault, has an underlying cause that soon resolves itself.
+         * An occasional cause of transient errors can be reconfiguration events. Most of these reconfiguration
+         * events finish in less than 60 seconds. During this reconfiguration time span, we might have issues with
+         * connecting to your database in SQL Database.*/
+        protected HashSet<string>? TransientErrorCodes;
         public DbExceptionParser(RuntimeConfigProvider configProvider, HashSet<string> badRequestErrorCodes)
         {
             _developerMode = configProvider.IsDeveloperMode();

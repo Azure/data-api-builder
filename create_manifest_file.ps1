@@ -13,15 +13,18 @@ $maxVersionCount = 3
 
 if ($isReleaseBuild -eq 'true')
 {
-    $versionTag = "v"+ $versionId + "-alpha"
+    $versionTag = "v" + $versionId + "-alpha"
     $releaseType = "released"
 }
 
 # Generating hash for DAB packages
 $RIDs = "win-x64", "linux-x64", "osx-x64"
 foreach ($RID in $RIDs) {
-    $filePath = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab_$RID-$DabVersion.zip";
-    $download_url = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/dab_$RID-$DabVersion.zip"
+    $fileName = "dab_$RID-$DabVersion.zip"
+    $filePath = "$BuildOutputDir/publish/$BuildConfiguration/$RID/$fileName"
+    $download_url = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/$fileName"
+    Write-Host $fileName
+    Write-Host $filePath
     $fileHashInfo = Get-FileHash $filePath
     $hash = $fileHashInfo.Hash
     switch ($RID) {

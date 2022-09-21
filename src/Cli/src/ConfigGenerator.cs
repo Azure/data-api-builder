@@ -206,10 +206,16 @@ namespace Cli
                 return false;
             }
 
+            if (!TryParseSourceParameterDictionary(options.SourceParameters, out Dictionary<string, object>? parametersDictionary))
+            {
+                return false;
+            }
+
             // Try to get the source object as string or DatabaseObjectSource
             if (!TryGetSourceObject(
-                options.Source, options.SourceType, options.SourceParameters,
-                options.SourceKeyFields, out object? source))
+                options.Source, options.SourceType, parametersDictionary,
+                options.SourceKeyFields is null || !options.SourceKeyFields.Any() ? null : options.SourceKeyFields.ToArray(),
+                out object? source))
             {
                 Console.Error.WriteLine("Unable to parse the given source.");
                 return false;
@@ -328,7 +334,12 @@ namespace Cli
                 return false;
             }
 
-            object updatedSource = options.Source is null ? entity!.Source : options.Source;
+            if (!TryGetUpdatedSourceObjectWithOptions(options, entity, out object? updatedSource))
+            {
+                Console.Error.WriteLine("Failed to update the source object.");
+                return false;
+            }
+
             object? updatedRestDetails = options.RestRoute is null ? entity!.Rest : GetRestDetails(options.RestRoute);
             object? updatedGraphQLDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
             PermissionSetting[]? updatedPermissions = entity!.Permissions;
@@ -401,7 +412,7 @@ namespace Cli
                 }
             }
 
-            runtimeConfig.Entities[options.Entity] = new Entity(updatedSource,
+            runtimeConfig.Entities[options.Entity] = new Entity(updatedSource!,
                                                                 updatedRestDetails,
                                                                 updatedGraphQLDetails,
                                                                 updatedPermissions,
@@ -551,6 +562,35 @@ namespace Cli
             }
 
             return updatedOperationArray.ToArray();
+        }
+
+        private static bool TryGetUpdatedSourceObjectWithOptions(UpdateOptions options, Entity entity, out object? updatedSourceObject)
+        {
+            // populate Source object fields
+            entity.TryPopulateSourceFields();
+            string updatedSourceName = options.Source is null ? entity!.SourceName : options.Source;
+            Dictionary<string, object>? updatedSourceParameters;
+            if (options.SourceParameters is null)
+            {
+                updatedSourceParameters = entity!.Parameters;
+            }
+            else if (!TryParseSourceParameterDictionary(options.SourceParameters, out updatedSourceParameters))
+            {
+                updatedSourceObject = null;
+                return false;
+            }
+
+            string[]? updatedKeyFields = options.SourceKeyFields is null ? entity!.KeyFields : options.SourceKeyFields.ToArray();
+            string? updatedSourceType = options.SourceType is null ? entity!.SourceTypeName : options.SourceType;
+
+            // Try Creating Source Object with the updated values.
+            if (!TryGetSourceObject(updatedSourceName, updatedSourceType,
+                updatedSourceParameters, updatedKeyFields, out updatedSourceObject))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>

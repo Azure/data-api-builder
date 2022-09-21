@@ -44,10 +44,13 @@ namespace Azure.DataApiBuilder.Config
         public string SourceName { get; private set; } = string.Empty;
 
         [JsonIgnore]
+        public string SourceTypeName { get; private set; } = string.Empty;
+
+        [JsonIgnore]
         public Dictionary<string, object>? Parameters { get; private set; }
 
         [JsonIgnore]
-        public Array? KeyFields { get; private set; }
+        public string[]? KeyFields { get; private set; }
 
         [property: JsonPropertyName("graphql")]
         public object? GraphQL { get; set; } = GraphQL;
@@ -156,6 +159,7 @@ namespace Azure.DataApiBuilder.Config
                 else
                 {
                     ObjectType = ConvertSourceType(objectSource.Type);
+                    SourceTypeName = objectSource.Type;
                     SourceName = objectSource.Name;
                     Parameters = objectSource.Parameters;
                     KeyFields = objectSource.KeyFields;
@@ -171,7 +175,7 @@ namespace Azure.DataApiBuilder.Config
         /// Tries to convert the given string sourceType into one of the supported SourceType enums
         /// Throws an exception if not a case-insensitive match
         /// </summary>
-        private static SourceType ConvertSourceType(string? sourceType)
+        public static SourceType ConvertSourceType(string? sourceType)
         {
             // If sourceType is not explicitly specified, we assume it is a Table
             return sourceType is null ? SourceType.Table

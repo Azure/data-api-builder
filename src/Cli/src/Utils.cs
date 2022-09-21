@@ -493,20 +493,26 @@ namespace Cli
         public static bool TryGetSourceObject(
             string name,
             string? type,
-            IEnumerable<string>? parameters,
-            IEnumerable<string>? keyFields,
+            Dictionary<string, object>? parameters,
+            string[]? keyFields,
             out object? sourceObject
         )
         {
-            if (type is null
-                && (parameters is null || !parameters.Any())
-                && (keyFields is null || !keyFields.Any()))
+            type = (string.Empty).Equals(type)? null : type;
+            sourceObject = null;
+
+            if (!VerifySourceObjectFields(name, type, parameters, keyFields))
+            {
+                Console.Error.WriteLine("Invalid Fields for Source.");
+                return false;
+            }
+
+            if (type is null && parameters is null && keyFields is null)
             {
                 sourceObject = name;
                 return true;
             }
 
-            sourceObject = null;
             // Verify the given source type is valid.
             if (type is not null && !SUPPORTED_SOURCE_TYPES.Contains(type.ToLowerInvariant()))
             {
@@ -514,17 +520,67 @@ namespace Cli
                 return false;
             }
 
-            if (!TryParseSourceParameterDictionary(parameters, out Dictionary<string, object>? parametersDictionary))
+            sourceObject = new DatabaseObjectSource(
+                Type: type is null ? "table" : type,    //If sourceType is not explicitly specified, we assume it is a Table
+                Name: name,
+                Parameters: parameters,
+                KeyFields: keyFields
+            );
+
+            return true;
+        }
+
+        /// <summary>
+        /// Verifies whether a valid source object can be created from the given source fields.
+        /// </summary>
+        public static bool VerifySourceObjectFields(
+            string? name,
+            string? type,
+            Dictionary<string, object>? parameters,
+            string[]? keyFields
+        )
+        {
+            if (name is null)
             {
                 return false;
             }
 
-            sourceObject = new DatabaseObjectSource(
-                Type: type is null ? "table" : type,
-                Name: name,
-                Parameters: parametersDictionary,
-                KeyFields: keyFields is null ? null : keyFields.ToArray()
-            );
+            SourceType? objectType = null;
+            if (type is not null)
+            {
+                try
+                {
+                    objectType = Entity.ConvertSourceType(type);
+                }
+                catch (Exception e)
+                {
+                    // Invalid SourceType provided.
+                    Console.Error.WriteLine(e.Message);
+                    return false;
+                }
+            }
+            else
+            {
+                // If sourceType is not explicitly specified, we assume it is a Table
+                objectType = SourceType.Table;
+            }
+
+            if ((SourceType.StoredProcedure).Equals(objectType))
+            {
+                if (keyFields is not null)
+                {
+                    Console.Error.WriteLine("KeyFields is only supported for Table and Views.");
+                    return false;
+                }
+            }
+            else
+            {
+                if (parameters is not null)
+                {
+                    Console.Error.WriteLine("parameters are only supported for Stored Procedure.");
+                    return false;
+                }
+            }
 
             return true;
         }
@@ -540,9 +596,9 @@ namespace Cli
             IEnumerable<string>? parametersList,
             out Dictionary<string, object>? sourceParameters)
         {
+            sourceParameters = null;
             if (parametersList is null)
             {
-                sourceParameters = null;
                 return true;
             }
 
@@ -552,12 +608,18 @@ namespace Cli
                 string[] items = param.Split(":");
                 if (items.Length != 2)
                 {
+                    sourceParameters = null;
                     Console.Error.WriteLine("Invalid format for --source.params");
                     Console.WriteLine("It should be in this format --source.params \"key1:value1,key2:value2,...\".");
                     return false;
                 }
 
                 sourceParameters.Add(items[0], items[1]);
+            }
+
+            if (!sourceParameters.Any())
+            {
+                sourceParameters = null;
             }
 
             return true;

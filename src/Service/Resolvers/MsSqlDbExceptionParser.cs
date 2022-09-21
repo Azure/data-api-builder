@@ -62,11 +62,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 // Transient error codes compiled from:
                 // https://learn.microsoft.com/en-us/host-integration-server/core/tcpip-network-client-errors1
-                "18456",
-
-                // Errors that may occur because of operation timeout like login timeout.
-                // Reference: https://social.technet.microsoft.com/Forums/en-US/aa4150df-5b3b-412b-b4c6-dad9f0709bc8/sql-server-error-258?forum=sqlsecurity
-                "258"
+                "18456"
             };
         }
 

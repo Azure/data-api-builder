@@ -27,18 +27,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(false, "While processing your request the database ran into an error.")]
         public void VerifyCorrectErrorMessage(bool isDeveloperMode, string expected)
         {
+            int connectionEstablishmentError = 53;
             Mock<RuntimeConfigPath> configPath = new();
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             Mock<RuntimeConfigProvider> provider = new(configPath.Object, configProviderLogger.Object);
             provider.Setup(x => x.IsDeveloperMode()).Returns(isDeveloperMode);
             Mock<DbExceptionParser> parser = new(provider.Object, new HashSet<string>());
-            DbException e = SqlTestHelper.CreateSqlException(53, expected);
+            DbException e = SqlTestHelper.CreateSqlException(connectionEstablishmentError, expected);
             string actual = (parser.Object).Parse(e).Message;
             Assert.AreEqual(expected, actual);
         }
 
         /// <summary>
-        /// Method to validate the functioning of the DbExceptionParser.IsTransientException method.
+        /// Method to validate usage of the DbExceptionParser.IsTransientException method.
         /// </summary>
         /// <param name="expected">boolean value indicating if exception is expected to be transient or not.</param>
         /// <param name="number">number to be populated in SqlException.Number field</param>

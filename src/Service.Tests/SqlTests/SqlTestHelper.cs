@@ -185,26 +185,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Method to create our custom exception of type SqlException which is a sealed class.
+        /// Method to create our custom exception of type SqlException (which is a sealed class).
+        /// using Reflection.
         /// </summary>
         /// <param name="number">Number to be populated in SqlException.Number</param>
         /// <param name="message">Message to be populated in SqlException.Message</param>
         /// <returns>custom SqlException</returns>
         public static SqlException CreateSqlException(int number, string message = "")
         {
-            Exception? innerEx = null;
-            ConstructorInfo[] c = typeof(SqlErrorCollection).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
-            SqlErrorCollection errors = (c[0].Invoke(null) as SqlErrorCollection)!;
+            Exception innerException = null;
+            ConstructorInfo[] constructorsArray = typeof(SqlErrorCollection).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
+            SqlErrorCollection errors = (constructorsArray[0].Invoke(null) as SqlErrorCollection)!;
             List<object> errorList =
-                (errors.GetType().GetField("_errors", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(errors) as List<object>)!;
-            c = typeof(SqlError).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
+                (errors
+                .GetType()
+                .GetField("_errors", BindingFlags.Instance | BindingFlags.NonPublic)
+                .GetValue(errors) as List<object>)!;
+            constructorsArray = typeof(SqlError).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
 
             // At this point the ConstructorInfo[] for SqlError has 2 entries: One constructor with 8 parameters,
             // and one with 9 parameters. We can choose either of them to create an object of SqlError type.
-            ConstructorInfo nineC = c.FirstOrDefault(f => f.GetParameters().Length == 9)!;
+            ConstructorInfo nineC = constructorsArray.FirstOrDefault(f => f.GetParameters().Length == 9)!;
 
             // Create SqlError object.
-            SqlError sqlError = (nineC.Invoke(new object?[] { number, (byte)0, (byte)0, "", "", "", (int)0, (uint)0, innerEx }) as SqlError)!;
+            // For details on what the parameters stand for please refer:
+            // https://learn.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlerror.number?view=dotnet-plat-ext-6.0#examples
+            SqlError sqlError = (nineC.Invoke(new object[] { number, (byte)0, (byte)0, "", "", "", (int)0, (uint)0, innerException }) as SqlError)!;
             errorList.Add(sqlError);
 
             // Create SqlException object
@@ -213,7 +219,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     typeof(SqlException),
                     BindingFlags.NonPublic | BindingFlags.Instance,
                     null,
-                    new object[] { message, errors, innerEx, Guid.NewGuid() },
+                    new object[] { message, errors, innerException, Guid.NewGuid() },
                     null)
                 as SqlException)!;
             return e;

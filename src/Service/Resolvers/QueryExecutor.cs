@@ -80,6 +80,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     {
                         QueryExecutorLogger.LogError(e.Message);
                         QueryExecutorLogger.LogError(e.StackTrace);
+
+                        // Throw custom DABException
                         throw DbExceptionParser.Parse(e);
                     }
                 }

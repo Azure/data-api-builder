@@ -19,7 +19,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class SqlQueryExecutorUnitTests
     {
-        private const int ERRORCODE_SEMAPHORE_TIMEOUT = 121; // Error code for semaphore timeout in MsSql.
+        // Error code for semaphore timeout in MsSql.
+        private const int ERRORCODE_SEMAPHORE_TIMEOUT = 121;
         /// <summary>
         /// Validates managed identity token issued ONLY when connection string does not specify
         /// User, Password, and Authentication method.
@@ -108,14 +109,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test to validate that the maximum number of retries are being made to execute the query against the database
-        /// when the database keeps returning a transient error.
+        /// Test to validate that when a query successfully executes within the allowed number of retries, a result is returned
+        /// and no further retries occur.
         /// </summary>
         [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task TestRetryPolicyExhaustingMaxAttempts()
         {
             int maxRetries = 5;
-            int maxAttempts = maxRetries + 1; // because of the original attempt to execute the query in addition to retries.
+            int maxAttempts = maxRetries + 1; // 1 represents the original attempt to execute the query in addition to retries.
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);

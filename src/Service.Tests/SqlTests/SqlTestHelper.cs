@@ -193,35 +193,40 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <returns>custom SqlException</returns>
         public static SqlException CreateSqlException(int number, string message = "")
         {
-            Exception innerException = null;
+            // Get all the available non-public,non-static constructors for SqlErrorCollection class.
             ConstructorInfo[] constructorsArray = typeof(SqlErrorCollection).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
-            SqlErrorCollection errors = (constructorsArray[0].Invoke(null) as SqlErrorCollection)!;
+
+            // Invoke the only constructor to create an object of SqlErrorCollection class.
+            SqlErrorCollection errors = constructorsArray[0].Invoke(null) as SqlErrorCollection;
             List<object> errorList =
-                (errors
+                errors
                 .GetType()
                 .GetField("_errors", BindingFlags.Instance | BindingFlags.NonPublic)
-                .GetValue(errors) as List<object>)!;
+                .GetValue(errors) as List<object>;
+
+            // Get all the available non-public,non-static constructors for SqlError class.
             constructorsArray = typeof(SqlError).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
 
             // At this point the ConstructorInfo[] for SqlError has 2 entries: One constructor with 8 parameters,
             // and one with 9 parameters. We can choose either of them to create an object of SqlError type.
-            ConstructorInfo nineC = constructorsArray.FirstOrDefault(f => f.GetParameters().Length == 9)!;
+            ConstructorInfo nineParamsConstructor = constructorsArray.FirstOrDefault(c => c.GetParameters().Length == 9);
 
             // Create SqlError object.
             // For details on what the parameters stand for please refer:
             // https://learn.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlerror.number?view=dotnet-plat-ext-6.0#examples
-            SqlError sqlError = (nineC.Invoke(new object[] { number, (byte)0, (byte)0, "", "", "", (int)0, (uint)0, innerException }) as SqlError)!;
+            SqlError sqlError = (nineParamsConstructor
+                .Invoke(new object[] { number, (byte)0, (byte)0, "", "", "", (int)0, (uint)0, null }) as SqlError)!;
             errorList.Add(sqlError);
 
             // Create SqlException object
             SqlException e =
-                (Activator.CreateInstance(
+                Activator.CreateInstance(
                     typeof(SqlException),
                     BindingFlags.NonPublic | BindingFlags.Instance,
                     null,
-                    new object[] { message, errors, innerException, Guid.NewGuid() },
+                    new object[] { message, errors, null, Guid.NewGuid() },
                     null)
-                as SqlException)!;
+                as SqlException;
             return e;
         }
 

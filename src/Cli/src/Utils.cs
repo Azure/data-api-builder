@@ -498,7 +498,7 @@ namespace Cli
             out object? sourceObject
         )
         {
-            type = (string.Empty).Equals(type)? null : type;
+            type = (string.Empty).Equals(type) ? null : type;
             sourceObject = null;
 
             if (!VerifySourceObjectFields(name, type, parameters, keyFields))
@@ -545,7 +545,7 @@ namespace Cli
                 return false;
             }
 
-            SourceType? objectType = null;
+            SourceType? objectType;
             if (type is not null)
             {
                 try

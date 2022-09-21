@@ -180,13 +180,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             DbDataReader dbDataReader,
             List<string>? args = null)
         {
-            TResult? jsonDocument = default;
+            TResult? jsonResult = default;
 
             // Parse Results into Json and return
             if (dbDataReader.HasRows)
             {
                 // Make sure to get the complete json string in case of large document.
-                jsonDocument =
+                jsonResult =
                     JsonSerializer.Deserialize<TResult>(
                         await GetJsonStringFromDbReader(dbDataReader));
             }
@@ -195,7 +195,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 QueryExecutorLogger.LogInformation("Did not return enough rows in the JSON result.");
             }
 
-            return jsonDocument;
+            return jsonResult;
         }
 
         /// <inheritdoc />

@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             List<string>? args = null);
 
         /// <summary>
-        /// Extract the rows from the given db data reader to populate
+        /// Extracts the rows from the given db data reader to populate
         /// the JsonArray to be returned.
         /// </summary>
         /// <param name="dbDataReader">A Db data reader.</param>
@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             List<string>? args = null);
 
         /// <summary>
-        /// Extract the rows from the given db data reader to deserialize into
+        /// Extracts the rows from the given db data reader to deserialize into
         /// a Json object of type TResult to be returned.
         /// </summary>
         /// <param name="dbDataReader">A Db data reader.</param>
@@ -66,7 +66,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Extracts first result set and returns it immediately if it has > 0 rows.
         /// If no rows, tries to get the subsequent result set if any.
-        /// Throws and exception if the second result is null as well.
+        /// Throws an exception if the second result is null as well.
         /// </summary>
         /// <param name="dbDataReader">A Db Data Reader.</param>
         /// <param name="args">The arguments to this handler - args[0] = primary key in pretty format, args[1] entity name.</param>

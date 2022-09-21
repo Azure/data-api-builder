@@ -23,8 +23,6 @@ foreach ($RID in $RIDs) {
     $fileName = "dab_$RID-$DabVersion.zip"
     $filePath = "$BuildOutputDir/publish/$BuildConfiguration/$RID/$fileName"
     $download_url = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/$fileName"
-    Write-Host $fileName
-    Write-Host $filePath
     $fileHashInfo = Get-FileHash $filePath
     $hash = $fileHashInfo.Hash
     switch ($RID) {

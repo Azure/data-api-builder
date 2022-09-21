@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 "53", "11001",
 
                 // Transient error codes compiled from:
-                // https://learn.microsoft.com/en-us/host-integration-server/core/tcpip-network-client-errors1
+                // https://docs.microsoft.com/en-us/sql/relational-databases/errors-events/database-engine-events-and-errors?view=sql-server-ver16
                 "18456"
             };
         }

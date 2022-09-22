@@ -173,9 +173,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<IDictionary<string, object>>())).CallBase();
 
             string sqltext = "SELECT * from books";
+
             await queryExecutor.Object.ExecuteQueryAsync(sqltext: sqltext, parameters: new Dictionary<string, object>());
             // For each attempt logger is invoked twice. The query executes successfully in in 1st retry .i.e. 2nd attempt of execution.
-            Assert.AreEqual(2 * 2, queryExecutorLogger.Invocations.Count);
+            // An additional information log is added when the query executes successfully in a retry attempt.
+            Assert.AreEqual(2 * 2 + 1, queryExecutorLogger.Invocations.Count);
         }
     }
 }

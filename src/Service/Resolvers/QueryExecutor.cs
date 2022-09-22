@@ -68,7 +68,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 retryAttempt++;
                 try
                 {
-                    return await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters);
+                    DbDataReader dbReader = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters);
+                    if (retryAttempt > 1)
+                    {
+                        // This implies that the request got successfully executed during one of retry attempts.
+                        QueryExecutorLogger.LogInformation($"Request executed successfully in {retryAttempt} attempt of" +
+                            $"{_maxRetryCount + 1} available attempts.");
+                    }
+
+                    return dbReader;
                 }
                 catch (DbException e)
                 {

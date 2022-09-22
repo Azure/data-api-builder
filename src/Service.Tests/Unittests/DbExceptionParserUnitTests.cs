@@ -27,6 +27,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(false, "While processing your request the database ran into an error.")]
         public void VerifyCorrectErrorMessage(bool isDeveloperMode, string expected)
         {
+            // We can use any other error code here, doesn't really matter.
             int connectionEstablishmentError = 53;
             Mock<RuntimeConfigPath> configPath = new();
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();

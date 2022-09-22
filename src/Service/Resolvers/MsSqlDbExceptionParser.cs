@@ -53,9 +53,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // https://docs.microsoft.com/en-us/azure/azure-sql/database/troubleshoot-common-errors-issues?view=azuresql
                 "615", "926",
 
-                // Manually added
-                "0", // Cannot connect to SQL Server
-
                 // These errors mainly occur when the SQL Server client can't connect to the server.
                 // This may happen when the client cannot resolve the name of the server or the name of the server is incorrect.
                 "53", "11001",

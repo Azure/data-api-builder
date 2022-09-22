@@ -47,9 +47,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // out_of_memory
                 "53200",
 
-                // too_many_connections
-                "53300",
-
                 // configuration_limit_exceeded
                 "53400",
 

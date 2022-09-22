@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             TransientErrorCodes = new() {
                 // List compiled from: https://mariadb.com/kb/en/mariadb-error-codes/
                 "1020", "1021", "1037", "1038", "1040", "1041", "1150", "1151", "1156", "1157",
-                "1158", "1159", "1160", "1161", "1192", "1203", "1205", "1206", "1213", "1223" };
+                "1158", "1159", "1160", "1161", "1192", "1203", "1205", "1206", "1223" };
         }
 
         /// <inheritdoc/>

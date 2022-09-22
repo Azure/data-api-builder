@@ -710,7 +710,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Entity relationshipEntity = GenerateEmptyEntity();
 
             DatabaseObject dbObject = new()
-                { SchemaName = SCHEMA_NAME, Name = TABLE_NAME, TableDefinition = table };
+            { SchemaName = SCHEMA_NAME, Name = TABLE_NAME, TableDefinition = table };
 
             return SchemaConverter.FromDatabaseObject(
                 SOURCE_ENTITY,

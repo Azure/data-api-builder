@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     Entity referencedEntity = entities[targetEntityName];
 
                     bool isNullableRelationship = false;
-                    if (tableDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata ? relationshipInfo)
+                    if (tableDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
                         && relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
                             out List<ForeignKeyDefinition>? listOfForeignKeys))
                     {

@@ -35,18 +35,20 @@ export const isObject = (object) => {
 
 // A helper function to validate the responses for each REST and GraphQL call
 export const validateResponses = (queryNames, responses, expectedStatusCodes, expectedResponses) => {
-  queryNames.forEach(queryName => {
-    var expectedResponseJson = expectedResponses[queryName];
-    var actualResponseBody = responses[queryName].body;
-    var actualResponseJson = {};
-    if(Object.keys(actualResponseBody).length){
-      actualResponseJson = JSON.parse(responses[queryName].body);
-    }
-    check(responses[queryName], {
-      'Validate no errors': responses[queryName].error.length == 0,
-      'Validate expected status code': expectedStatusCodes[queryName] == responses[queryName].status,
-      'Validate API response': isDeepEqual(expectedResponseJson, actualResponseJson)
-    });
+
+  // Validates no errors in the responses
+  check(responses, {
+    'Validate no errors': validateNoErrorsInResponse(queryNames, responses)
+  });
+
+  // Validates the status codes
+  check(responses, {
+    'Validate expected status code': validateStatusCode(queryNames, responses, expectedStatusCodes), 
+  });
+
+  // Validates the response bodies
+  check(responses, {
+    'Validate API response': validateResponseBody(queryNames, responses, expectedResponses)
   });
 }
 
@@ -65,4 +67,57 @@ export const generateEasyAuthToken = () => {
   let serialzedToken = JSON.stringify(tokenInformation);
   let encodedToken = encoding.b64encode(serialzedToken);
   return encodedToken;
+};
+
+// Helper method to validae no errors in the resposne
+export const validateNoErrorsInResponse = (queryNames, responses) => {
+  queryNames.forEach(
+    queryName => {
+      if(responses[queryName].error.length > 0)
+        return false;
+    });
+    return true;
+};
+
+
+// Helper method to validate the status codes of the requests are either one of the two expected 
+// status codes.
+export const validateStatusCodes = (queryNames, responses, expectedStatusCodes1, expectedStatusCodes2) => {
+  return validateStatusCode(queryNames, responses, expectedStatusCodes1)
+            || validateStatusCode(queryNames, responses, expectedStatusCodes2);
+};
+
+// Helper method to validate the status code
+export const validateStatusCode = (queryNames, responses, expectedStatusCodes) => {
+  queryNames.forEach( queryName => {
+    if(expectedStatusCodes[queryName] != responses[queryName].status)
+      return false;
+  });
+
+  return true;
+};
+
+// Helper methods to validate the response bodies when it could be either of the two expected 
+// values
+export const validateResposneBodies = (queryNames, responses, expectedResponseBody1, expectedResponseBody2) => {
+  return validateResponseBody(queryNames, responses, expectedResponseBody1) 
+          || validateResponseBody(queryNames, responses, expectedResponseBody2);
+};
+
+// Helper method to validate the response body
+export const validateResponseBody = (queryNames, responses, expectedResponseBody) => {
+  queryNames.forEach( queryName => {
+
+    console.log(responses[queryName]);
+    var expectedResponseJson = expectedResponseBody;
+    var actualResponseBody = responses[queryName].body;
+    var actualResponseJson = {};
+    if(Object.keys(actualResponseBody).length){
+      actualResponseJson = JSON.parse(responses[queryName].body);
+    }
+    
+    if(! isDeepEqual(expectedResponseJson, actualResponseJson))
+      return false;
+    });
+  return true;
 };

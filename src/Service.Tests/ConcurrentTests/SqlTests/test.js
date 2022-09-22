@@ -1,5 +1,8 @@
 import { validateParallelReadOperations } from './ParallelReadsTestCase.js';
 import { validateParallelCRUDOperations } from './ParallelCrudOperationsTestCase.js';
+import { validateParallelDeleteOperationsOnSameItem } from './ParallelDeleteOnSameItem.js';
+import { validateParallelUpdateOperationsOnSameItem } from './ParallelUpdatesOnSameItem.js';
+import { validateParallelUpdateAndReadOperationsOnSameItem } from './ParallelUpdateAndReadOnSameItem.js';
 
 // The batch and batchPerHost options is used to configure the 
 // number of parallel requests and connections respectively
@@ -11,7 +14,7 @@ export const options = {
   batch: 5,
   batchPerHost: 5,
   thresholds: {
-    checks: ['rate >= 1.00']
+    checks: ['rate == 1.00']
   }
 }
 
@@ -19,4 +22,7 @@ export const options = {
 export default function () {
   validateParallelReadOperations();
   validateParallelCRUDOperations();
+  validateParallelDeleteOperationsOnSameItem();
+  validateParallelUpdateOperationsOnSameItem();
+  validateParallelUpdateAndReadOperationsOnSameItem();
 };

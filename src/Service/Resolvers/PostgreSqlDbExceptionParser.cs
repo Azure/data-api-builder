@@ -77,9 +77,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // connection_failure
                 "08006",
 
-                // sqlclient_unable_to_establish_sqlconnection
-                "08001",
-
                 // sqlserver_rejected_establishment_of_sqlconnection
                 "08004",
 

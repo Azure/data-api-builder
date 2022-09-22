@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS aow;
 DROP TABLE IF EXISTS notebooks;
 DROP TABLE IF EXISTS journals;
 
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 DROP SCHEMA IF EXISTS foo;
 
@@ -113,7 +114,8 @@ CREATE TABLE type_table(
     decimal_types decimal,
     boolean_types boolean,
     datetime_types timestamp,
-    bytearray_types bytea
+    bytearray_types bytea,
+    guid_types uuid DEFAULT uuid_generate_v4 ()
 );
 
 CREATE TABLE trees (

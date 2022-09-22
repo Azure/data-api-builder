@@ -60,6 +60,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BYTEARRAY_TYPE, 2)]
         [DataRow(BYTEARRAY_TYPE, 3)]
         [DataRow(BYTEARRAY_TYPE, 4)]
+        [DataRow(GUID_TYPE, 1)]
+        [DataRow(GUID_TYPE, 2)]
+        [DataRow(GUID_TYPE, 3)]
+        [DataRow(GUID_TYPE, 4)]
         public async Task QueryTypeColumn(string type, int id)
         {
             if (!IsSupportedType(type))
@@ -208,6 +212,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
         [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
         [DataRow(BYTEARRAY_TYPE, "null")]
+        [DataRow(GUID_TYPE, "\"3a1483a5-9ac2-4998-bcf3-78a28078c6ac\"")]
+        [DataRow(GUID_TYPE, "null")]
         public async Task UpdateTypeColumn(string type, string value)
         {
             if (!IsSupportedType(type))
@@ -240,6 +246,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, true)]
         [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54+8:00")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
+        [DataRow(GUID_TYPE, "\"3a1483a5-9ac2-4998-bcf3-78a28078c6ac\"")]
+        [DataRow(GUID_TYPE, "null")]
         public async Task UpdateTypeColumnWithArgument(string type, object value)
         {
             if (!IsSupportedType(type))
@@ -249,7 +257,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "updateSupportedType";
-            string gqlQuery = "mutation($param: " + type + "){ updateSupportedType (id: 1, item: {" + field + ": $param }){ " + field + " } }";
+            string gqlQuery = "mutation($param: " + TypeNameToGraphQLType(type) + "){ updateSupportedType (id: 1, item: {" + field + ": $param }){ " + field + " } }";
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
 
@@ -346,6 +354,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 Assert.AreEqual(DateTimeOffset.Parse(expectedDateTime), DateTimeOffset.Parse(actualDateTime));
             }
+        }
+
+        /// <summary>
+        /// Needed to map the type name to a graphql type in argument tests
+        /// where the argument type need to be specified.
+        /// </summary>
+        private static string TypeNameToGraphQLType(string typeName)
+        {
+            if(typeName == GUID_TYPE)
+            {
+                return STRING_TYPE;
+            }
+
+            return typeName;
         }
 
         protected abstract string MakeQueryOnTypeTable(List<string> columnsToQuery, int id);

@@ -334,7 +334,7 @@ namespace Azure.DataApiBuilder.Service
         /// When no runtime configuration is set on engine startup, set the
         /// default authentication scheme to EasyAuth.
         /// </summary>
-        /// <param name="services">The service collection to add authentication services to.</param>
+        /// <param name="services">The service collection where authentication services are added.</param>
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
         private static void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
         {
@@ -362,17 +362,25 @@ namespace Azure.DataApiBuilder.Service
                 {
                     // Set default authentication scheme when runtime configuration
                     // does not contain authentication settings.
-                    services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                        .AddEasyAuthAuthentication(EasyAuthType.StaticWebApps);
+                    SetStaticWebAppsAuthentication(services);
                 }
             }
             else
             {
                 // Sets EasyAuth as the default authentication scheme when runtime configuration
                 // is not present.
-                services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                    .AddEasyAuthAuthentication(EasyAuthType.StaticWebApps);
+                SetStaticWebAppsAuthentication(services);
             }
+        }
+
+        /// <summary>
+        /// Sets Static Web Apps EasyAuth as the authentication scheme for the engine.
+        /// </summary>
+        /// <param name="services">The service collection where authentication services are added.</param>
+        private static void SetStaticWebAppsAuthentication(IServiceCollection services)
+        {
+            services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                    .AddEasyAuthAuthentication(EasyAuthType.StaticWebApps);
         }
 
         /// <summary>

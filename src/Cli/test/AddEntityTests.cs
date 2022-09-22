@@ -175,7 +175,7 @@ namespace Cli.Tests
                 permissions: new string[] { "anonymous", "*" },
                 entity: "MyEntity",
                 sourceType: "stored-procedure",
-                sourceParameters: new string[] {"param1:123","param2:hello","param3:true"},
+                sourceParameters: new string[] { "param1:123", "param2:hello", "param3:true" },
                 sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
@@ -195,7 +195,7 @@ namespace Cli.Tests
         /// </summary>
         [DataTestMethod]
         [DataRow(null, null, null, DisplayName = "Both KeyFields and Parameters provided for source.")]
-        [DataRow("stored-procedure", new string[] {"param1:value1"}, null, DisplayName = "SourceParameters with stored procedure.")]
+        [DataRow("stored-procedure", new string[] { "param1:value1" }, null, DisplayName = "SourceParameters with stored procedure.")]
         [DataRow("view", null, new string[] { "col1", "col2" }, DisplayName = "Source KeyFields with View")]
         [DataRow("table", null, new string[] { "col1", "col2" }, DisplayName = "Source KeyFields with Table")]
         [DataRow(null, null, new string[] { "col1", "col2" }, DisplayName = "Source KeyFields with SourceType not provided")]
@@ -267,10 +267,10 @@ namespace Cli.Tests
         /// Simple test to verify failure on adding a new entity with source object for invalid fields.
         /// </summary>
         [DataTestMethod]
-        [DataRow(null, new string[] {"param1:value1"}, new string[] { "col1", "col2" }, DisplayName = "Both KeyFields and Parameters provided for source.")]
+        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, DisplayName = "Both KeyFields and Parameters provided for source.")]
         [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, DisplayName = "KeyFields with stored procedure.")]
-        [DataRow("view", new string[] {"param1:value1"}, null, DisplayName = "Source Parameters with View")]
-        [DataRow("table", new string[] {"param1:value1"}, null, DisplayName = "Source Parameters with Table")]
+        [DataRow("view", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with View")]
+        [DataRow("table", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with Table")]
         public void TestAddNewEntityWithSourceObjectForInvalidFields(
             string? sourceType,
             IEnumerable<string>? parameters,

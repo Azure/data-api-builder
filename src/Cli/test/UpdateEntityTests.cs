@@ -815,7 +815,7 @@ namespace Cli.Tests
         /// </summary>
         [DataTestMethod]
         [DataRow("s001.book", null, null, null, "UpdateSourceName", DisplayName = "Both KeyFields and Parameters provided for source.")]
-        [DataRow(null, "stored-procedure", new string[] {"param1:123", "param2:hello", "param3:true"}, null, "ConvertToStoredProcedure", DisplayName = "SourceParameters with stored procedure.")]
+        [DataRow(null, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" }, null, "ConvertToStoredProcedure", DisplayName = "SourceParameters with stored procedure.")]
         [DataRow(null, "view", null, new string[] { "id", "name" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
         [DataRow(null, "table", null, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
         [DataRow(null, null, null, new string[] { "id", "name" }, "ConvertToDefaultType", DisplayName = "Source KeyFields with SourceType not provided")]
@@ -853,7 +853,7 @@ namespace Cli.Tests
             );
 
             string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetBasicEntityWithAnonymousRole);
-            string? expectedConfiguration = null;
+            string? expectedConfiguration;
             switch (task)
             {
                 case "UpdateSourceName":
@@ -880,7 +880,7 @@ namespace Cli.Tests
         /// </summary>
         [DataTestMethod]
         [DataRow("newSourceName", null, null, "UpdateSourceName", DisplayName = "Update Source Name of the source object.")]
-        [DataRow(null, new string[] {"param1:dab", "param2:false"}, null, "UpdateParameters", DisplayName = "update Parameters of stored procedure.")]
+        [DataRow(null, new string[] { "param1:dab", "param2:false" }, null, "UpdateParameters", DisplayName = "update Parameters of stored procedure.")]
         [DataRow(null, null, new string[] { "col1", "col2" }, "UpdateKeyFields", DisplayName = "update KeyFields for table/view.")]
         public void TestUpdateSourceStringToDatabaseSourceObject2(
             string? source,
@@ -926,8 +926,8 @@ namespace Cli.Tests
                         "newSourceName",
                         "stored-procedure",
                         "stored-procedure",
-                        new Dictionary<string,object>() { {"param1", 123}, {"param2", "hello"}, {"param3", true}},
-                        new Dictionary<string,object>() { {"param1", 123}, {"param2", "hello"}, {"param3", true}},
+                        new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
+                        new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
                         null,
                         null
                     );
@@ -942,8 +942,8 @@ namespace Cli.Tests
                         "s001.book",
                         "stored-procedure",
                         "stored-procedure",
-                        new Dictionary<string,object>() { {"param1", 123}, {"param2", "hello"}, {"param3", true}},
-                        new Dictionary<string,object>() { {"param1", "dab"}, {"param2", false}},
+                        new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
+                        new Dictionary<string, object>() { { "param1", "dab" }, { "param2", false } },
                         null,
                         null
                     );
@@ -970,7 +970,7 @@ namespace Cli.Tests
 
         private static Entity GetEntityObjectFromRuntimeConfigJson(string runtimeConfigJson, string entityName)
         {
-            RuntimeConfig? runtimeConfig= JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigJson, GetSerializationOptions());
+            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigJson, GetSerializationOptions());
             Assert.IsTrue(runtimeConfig!.Entities.ContainsKey(entityName));
             return runtimeConfig!.Entities[entityName];
         }
@@ -981,7 +981,7 @@ namespace Cli.Tests
             string entityName,
             string oldSourceName, string updatedSourceName,
             string oldSourceType, string updatedSourceType,
-            Dictionary<string,object>? oldParameters, Dictionary<string,object>? updatedParameters,
+            Dictionary<string, object>? oldParameters, Dictionary<string, object>? updatedParameters,
             string[]? oldKeyFields, string[]? updatedKeyFields
         )
         {

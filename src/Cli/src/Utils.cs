@@ -1,8 +1,8 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.Unicode;
 using System.Text.RegularExpressions;
+using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
 using Humanizer;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
@@ -18,7 +18,7 @@ namespace Cli
         public static readonly string SEPARATOR = ":";
         public static readonly string[] SUPPORTED_SOURCE_TYPES = { "table", "view", "stored-procedure" };
 
-        private static readonly Regex regex = new Regex(@"^[-]?\d+$");
+        private static readonly Regex _numeric_regex = new(@"^[-]?\d+$");
 
         /// <summary>
         /// Creates the rest object which can be either a boolean value
@@ -617,6 +617,7 @@ namespace Cli
                     Console.WriteLine("It should be in this format --source.params \"key1:value1,key2:value2,...\".");
                     return false;
                 }
+
                 string paramKey = items[0];
                 object paramValue = ParseParamValue(items[1]);
 
@@ -634,7 +635,7 @@ namespace Cli
         private static object ParseParamValue(string stringValue)
         {
             object paramValue;
-            if (regex.IsMatch(stringValue))
+            if (_numeric_regex.IsMatch(stringValue))
             {
                 paramValue = int.Parse(stringValue);
             }

@@ -179,12 +179,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Retry request RETRY_COUNT times in 1 second increments to allow required services
             // time to instantiate and hydrate permissions.
             int retryCount = RETRY_COUNT;
+            HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
             while (retryCount > 0)
             {
                 // Spot test authorization resolver utilization to ensure configuration is used.
-                // Authorization will fail because no auth headers are present.
                 HttpResponseMessage postConfigHydradtionResult =
                     await httpClient.GetAsync($"api/{POST_STARTUP_CONFIG_ENTITY}");
+                responseCode = postConfigHydradtionResult.StatusCode;
 
                 if (postConfigHydradtionResult.StatusCode == HttpStatusCode.ServiceUnavailable)
                 {
@@ -193,12 +194,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     continue;
                 }
 
-                Assert.AreEqual(
-                    expected: HttpStatusCode.Forbidden,
-                    actual: postConfigHydradtionResult.StatusCode,
-                    message: "Configuration not yet hydrated after retry attempts..");
                 break;
             }
+
+            // When the authorization resolver is properly configured, authorization will havefailed
+            // because no auth headers are present.
+            Assert.AreEqual(
+                expected: HttpStatusCode.Forbidden,
+                actual: responseCode,
+                message: "Configuration not yet hydrated after retry attempts..");
 
             // Sends a GET request to a protected entity which requires a specific role to access.
             // Authorization will pass because proper auth headers are present.

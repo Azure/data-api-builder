@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow("Test1", "Test1")]
         public void EntityNameBecomesObjectName(string entityName, string expected)
         {
-            DatabaseObject dbObject = new();
+            DatabaseObject dbObject = new() { TableDefinition = new() };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 entityName,
@@ -291,10 +291,10 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Assert.IsTrue(QueryBuilder.IsPaginationType(field.Type.NamedType()));
         }
 
-        [DataRow(true, "Test relationship field is nullable.")]
-        [DataRow(true, "Test relationship field is not nullable.")]
+        [DataRow(true, DisplayName = "Test relationship field is nullable.")]
+        [DataRow(true, DisplayName = "Test relationship field is not nullable.")]
         [TestMethod]
-        public void ForeignKeyFieldNullability(bool isNullable)
+        public void ForeignKeyFieldHasCorrectNullability(bool isNullable)
         {
             ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.Many, isNullableRelationship: isNullable);
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == FIELD_NAME_FOR_TARGET);

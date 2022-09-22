@@ -18,12 +18,12 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     /// AuthZ decisions nor does it terminate requests.
     /// https://github.com/aspnet/Security/issues/1613#issuecomment-358843214
     /// </summary>
-    public class ClientRoleHeaderMiddleware
+    public class ClientRoleHeaderAuthenticationMiddleware
     {
         private readonly RequestDelegate _nextMiddleware;
         private readonly RuntimeConfigProvider _runtimeConfigurationProvider;
 
-        public ClientRoleHeaderMiddleware(RequestDelegate next, RuntimeConfigProvider runtimeConfigurationProvider)
+        public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next, RuntimeConfigProvider runtimeConfigurationProvider)
         {
             _nextMiddleware = next;
             _runtimeConfigurationProvider = runtimeConfigurationProvider;
@@ -134,9 +134,9 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     // Extension method used to add the middleware to the HTTP request pipeline.
     public static class ClientRoleHeaderMiddlewareExtensions
     {
-        public static IApplicationBuilder UseClientRoleHeaderMiddleware(this IApplicationBuilder builder)
+        public static IApplicationBuilder UseClientRoleHeaderAuthenticationMiddleware(this IApplicationBuilder builder)
         {
-            return builder.UseMiddleware<ClientRoleHeaderMiddleware>();
+            return builder.UseMiddleware<ClientRoleHeaderAuthenticationMiddleware>();
         }
     }
 }

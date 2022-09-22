@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
         public static bool IsValidRoleContext(HttpContext httpContext)
         {
-            StringValues clientRoleHeader = httpContext.Request.Headers["X-MS-API-ROLE"];
+            StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
 
             if (clientRoleHeader.Count != 1)
             {

@@ -336,7 +336,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                         .Configure(app =>
                         {
                             app.UseAuthentication();
-                            app.UseClientRoleHeaderMiddleware();
+                            app.UseClientRoleHeaderAuthenticationMiddleware();
 
                             if (useAuthorizationMiddleware)
                             {

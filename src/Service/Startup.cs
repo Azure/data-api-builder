@@ -302,7 +302,7 @@ namespace Azure.DataApiBuilder.Service
 
             app.UseAuthentication();
 
-            app.UseClientRoleHeaderMiddleware();
+            app.UseClientRoleHeaderAuthenticationMiddleware();
 
             app.UseAuthorization();
 

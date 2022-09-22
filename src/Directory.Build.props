@@ -19,5 +19,6 @@
     <NewtonsoftJsonVersion>13.0.1</NewtonsoftJsonVersion>
     <StyleCopAnalyzerVersion>1.1.118</StyleCopAnalyzerVersion>
     <CommandLineParserVersion>2.9.1</CommandLineParserVersion>
+    <PollyVersion>7.2.3</PollyVersion>
  </PropertyGroup>
 </Project>

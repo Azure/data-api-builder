@@ -197,7 +197,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 break;
             }
 
-            // When the authorization resolver is properly configured, authorization will havefailed
+            // When the authorization resolver is properly configured, authorization will have failed
             // because no auth headers are present.
             Assert.AreEqual(
                 expected: HttpStatusCode.Forbidden,

@@ -99,14 +99,44 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         [TestMethod]
-        public async Task QueryWithMultileColumnPrimaryKey()
+        public async Task QueryWithMultipleColumnPrimaryKey()
         {
             string msSqlQuery = @"
                 SELECT TOP 1 content FROM reviews
                 WHERE id = 568 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
             ";
 
-            await QueryWithMultileColumnPrimaryKey(msSqlQuery);
+            await QueryWithMultipleColumnPrimaryKey(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task QueryWithNullableForeignKey()
+        {
+            string msSqlQuery = @"
+                SELECT 
+                  TOP 1 [table0].[title] AS [title], 
+                  JSON_QUERY ([table1_subq].[data]) AS [series] 
+                FROM 
+                  [dbo].[books] AS [table0] OUTER APPLY (
+                    SELECT 
+                      TOP 1 [table1].[name] AS [name] 
+                    FROM 
+                      [dbo].[series] AS [table1] 
+                    WHERE 
+                      [table0].[series_id] = [table1].[id] 
+                    ORDER BY 
+                      [table1].[id] ASC FOR JSON PATH, 
+                      INCLUDE_NULL_VALUES, 
+                      WITHOUT_ARRAY_WRAPPER
+                  ) AS [table1_subq]([data]) 
+                WHERE 
+                  [table0].[id] = 1
+                ORDER BY 
+                  [table0].[id] ASC FOR JSON PATH, 
+                  INCLUDE_NULL_VALUES, 
+                  WITHOUT_ARRAY_WRAPPER";
+
+            await QueryWithNullableForeignKey(msSqlQuery);
         }
 
         /// <summary>

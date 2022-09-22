@@ -477,7 +477,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         [TestMethod]
-        public async Task QueryWithMultileColumnPrimaryKey(string dbQuery)
+        public async Task QueryWithMultipleColumnPrimaryKey(string dbQuery)
         {
             string graphQLQueryName = "review_by_pk";
             string graphQLQuery = @"{
@@ -505,6 +505,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
 
             Assert.IsNull(actual.GetString());
+        }
+
+        [TestMethod]
+        public async Task QueryWithNullableForeignKey(string dbQuery)
+        {
+            string graphQLQueryName = "book_by_pk";
+            string graphQLQuery = @"{
+                book_by_pk(id: 1) {
+                    title
+                    series {
+                        name
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <sumary>

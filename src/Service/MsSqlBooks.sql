@@ -23,6 +23,7 @@ DROP TABLE IF EXISTS empty_table;
 DROP TABLE IF EXISTS notebooks;
 DROP TABLE IF EXISTS journals;
 DROP TABLE IF EXISTS aow;
+DROP TABLE IF EXISTS series;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -161,10 +162,24 @@ CREATE TABLE aow (
     StrategicAttack varchar(max)
 );
 
+CREATE TABLE series (
+    id int NOT NULL IDENTITY(5001, 1) PRIMARY KEY,
+    [name] nvarchar(1000) NOT NULL
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
 REFERENCES publishers (id)
+ON DELETE CASCADE;
+
+ALTER TABLE books 
+ADD series_id int NULL;
+
+ALTER TABLE books
+ADD CONSTRAINT book_series_fk
+FOREIGN KEY (series_id)
+REFERENCES series(id)
 ON DELETE CASCADE;
 
 ALTER TABLE book_website_placements
@@ -211,8 +226,24 @@ SET IDENTITY_INSERT authors ON
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
 SET IDENTITY_INSERT authors OFF
 
+SET IDENTITY_INSERT series ON
+INSERT INTO series(id, [name]) VALUES (3001, 'Foundation'), (3002, 'Hyperion Cantos');
+SET IDENTITY_INSERT series OFF
+
 SET IDENTITY_INSERT books ON
-INSERT INTO books(id, title, publisher_id) VALUES (1, 'Awesome book', 1234), (2, 'Also Awesome book', 1234), (3, 'Great wall of china explained', 2345), (4, 'US history in a nutshell', 2345), (5, 'Chernobyl Diaries', 2323), (6, 'The Palace Door', 2324), (7, 'The Groovy Bar', 2324), (8, 'Time to Eat', 2324), (9, 'Policy-Test-01', 1940), (10, 'Policy-Test-02', 1940), (11, 'Policy-Test-04', 1941), (12, 'Time to Eat 2', 1941);
+INSERT INTO books(id, title, publisher_id, series_id)
+VALUES (1, 'Awesome book', 1234, NULL),
+(2, 'Also Awesome book', 1234, 3002),
+(3, 'Great wall of china explained', 2345, 3001),
+(4, 'US history in a nutshell', 2345, NULL),
+(5, 'Chernobyl Diaries', 2323, NULL),
+(6, 'The Palace Door', 2324, NULL),
+(7, 'The Groovy Bar', 2324, 3001),
+(8, 'Time to Eat', 2324, 3002),
+(9, 'Policy-Test-01', 1940, 3002),
+(10, 'Policy-Test-02', 1940, 3001),
+(11, 'Policy-Test-04', 1941, NULL),
+(12, 'Time to Eat 2', 1941, NULL);
 SET IDENTITY_INSERT books OFF
 
 SET IDENTITY_INSERT book_website_placements ON

@@ -200,7 +200,7 @@ that's all is needed at the moment. Data API builder is ready to be run.
 
 ## Start Data API builder for Azure Cosmos DB
 
-You are ready to serve your API. Run the below command (this will start the engine with default config `dab-config.json`, use option --config otherwise):
+Run the below command (this will start the engine with default config `dab-config.json`, use option --config otherwise):
 
 ```
 dab start

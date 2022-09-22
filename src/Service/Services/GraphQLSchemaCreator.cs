@@ -139,40 +139,45 @@ namespace Azure.DataApiBuilder.Service.Services
                     continue;
                 }
 
-                TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
-
-                // Collection of role names allowed to access entity, to be added to the authorize directive
-                // of the objectTypeDefinitionNode. The authorize Directive is one of many directives created.
-                IEnumerable<string> rolesAllowedForEntity = _authorizationResolver.GetRolesForEntity(entityName);
-                Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
-                foreach (string column in tableDefinition.Columns.Keys)
+                if (_sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(entityName, out DatabaseObject? databaseObject))
                 {
-                    IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Operation.Read);
-                    if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
+                    // Collection of role names allowed to access entity, to be added to the authorize directive
+                    // of the objectTypeDefinitionNode. The authorize Directive is one of many directives created.
+                    IEnumerable<string> rolesAllowedForEntity = _authorizationResolver.GetRolesForEntity(entityName);
+                    Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
+                    foreach (string column in databaseObject.TableDefinition.Columns.Keys)
                     {
-                        throw new DataApiBuilderException(
-                            message: "Column already processed for building ObjectTypeDefinition authorization definition.",
-                            statusCode: System.Net.HttpStatusCode.InternalServerError,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
-                            );
+                        IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Operation.Read);
+                        if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
+                        {
+                            throw new DataApiBuilderException(
+                                message: "Column already processed for building ObjectTypeDefinition authorization definition.",
+                                statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
+                                );
+                        }
+                    }
+
+                    // The roles allowed for Fields are the roles allowed to READ the fields, so any role that has a read definition for the field.
+                    // Only add objectTypeDefinition for GraphQL if it has a role definition defined for access.
+                    if (rolesAllowedForEntity.Any())
+                    {
+                        ObjectTypeDefinitionNode node = SchemaConverter.FromDatabaseObject(
+                            entityName,
+                            databaseObject,
+                            entity,
+                            entities,
+                            rolesAllowedForEntity,
+                            rolesAllowedForFields
+                        );
+
+                        InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
+                        objectTypes.Add(entityName, node);
                     }
                 }
-
-                // The roles allowed for Fields are the roles allowed to READ the fields, so any role that has a read definition for the field.
-                // Only add objectTypeDefinition for GraphQL if it has a role definition defined for access.
-                if (rolesAllowedForEntity.Any())
+                else
                 {
-                    ObjectTypeDefinitionNode node = SchemaConverter.FromTableDefinition(
-                        entityName,
-                        tableDefinition,
-                        entity,
-                        entities,
-                        rolesAllowedForEntity,
-                        rolesAllowedForFields
-                    );
-
-                    InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
-                    objectTypes.Add(entityName, node);
+                    throw new InvalidCastException($"Database Object definition for {entityName} has not been inferred.");
                 }
             }
 

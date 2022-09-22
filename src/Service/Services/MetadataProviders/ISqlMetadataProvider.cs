@@ -93,11 +93,10 @@ namespace Azure.DataApiBuilder.Service.Services
         IQueryBuilder GetQueryBuilder();
 
         /// <summary>
-        /// Returns a collection of (EntityName, DatabaseObject) without
-        /// exposing the internal representation.
+        /// Returns a dictionary of (EntityName, DatabaseObject).
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntityNamesAndDbObjects();
+        public Dictionary<string, DatabaseObject> GetEntityNamesAndDbObjects();
 
         /// <summary>
         /// Gets Partition Key Path of a database container.

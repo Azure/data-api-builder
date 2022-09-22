@@ -64,7 +64,7 @@ export const validateParallelDeleteOperationsOnSameItem = () => {
     const responses = http.batch(requests);
 
     // Validations for the API responses
-    check(responses, {        
+    check(responses, {
         'Validate expected status code': validateStatusCodes(queryNames, responses, expectedStatusCodesWhenRestDeleteExecutesFirst, expectedStatusCodesWhenGraphQLDeleteExecutesFirst)
     });
 };

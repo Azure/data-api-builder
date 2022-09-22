@@ -18,7 +18,6 @@ export const options = {
   }
 }
 
-
 export default function () {
   validateParallelReadOperations();
   validateParallelCRUDOperations();

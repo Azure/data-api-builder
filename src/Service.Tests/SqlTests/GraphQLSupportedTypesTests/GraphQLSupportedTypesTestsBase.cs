@@ -362,7 +362,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// </summary>
         private static string TypeNameToGraphQLType(string typeName)
         {
-            if(typeName == GUID_TYPE)
+            if (typeName == GUID_TYPE)
             {
                 return STRING_TYPE;
             }

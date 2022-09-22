@@ -27,7 +27,7 @@ export const validateParallelUpdateAndReadOperationsOnSameItem = () => {
         "id": 1
       };
 
-    let udpateComicMutation = `mutation updateComicById($id: Int!, $item: UpdateComicInput!){
+    let updateComicMutation = `mutation updateComicById($id: Int!, $item: UpdateComicInput!){
         updateComic (id: $id, item: $item){
           id
           title
@@ -43,12 +43,12 @@ export const validateParallelUpdateAndReadOperationsOnSameItem = () => {
 
     // Each REST or GraphQL request is created as a named request. Named requests are useful
     // for validating the responses.
-    const queryNames = ['comicQuery', 'udpateComicMutation'];
+    const queryNames = ['comicQuery', 'updateComicMutation'];
 
     // Expected status codes for each request
     const expectedStatusCodes = {
         'comicQuery': 200,
-        'udpateComicMutation': 200
+        'updateComicMutation': 200
     };
 
     // Expected response when the read query executes before the update mutation
@@ -78,10 +78,10 @@ export const validateParallelUpdateAndReadOperationsOnSameItem = () => {
             body: JSON.stringify({ query: comicQuery, variables: comicQueryVariable }),
             params: parameters
         },
-        'udpateComicMutation': {
+        'updateComicMutation': {
             method: 'POST',
             url: 'https://localhost:5001/graphql/',
-            body: JSON.stringify({ query: udpateComicMutation, variables: updateComicMutationVariable }),
+            body: JSON.stringify({ query: updateComicMutation, variables: updateComicMutationVariable }),
             params: parameters
         }
     };

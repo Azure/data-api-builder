@@ -15,91 +15,102 @@ export const validateParallelCRUDOperations = () => {
         headers: headers
     }
 
-    let authorQuery = `
-        query getAuthorById($id : Int!){
-          author_by_pk(id: $id) {
-            id
-            name
-          }
-        }
-      `;
-
-    let deleteNotebookMutation = `mutation deleteNotebookById($id: Int!){
-        deleteNotebook (id: $id){
-          id
-          notebookname
-        }
-      }`;
-
-    let createComicMutation = `mutation createComic($comic: CreateComicInput!) {
-        createComic(item: $comic) {
-          title
-          categoryName
+    let createAuthor = `mutation createAuthor($author: CreateAuthorInput!) {
+        createAuthor(item: $author) {
+          name
+          birthdate
         }
       }
       `;
-    let createComicVariable = {
-        "comic": {
-            "id": 5,
-            "title": "Calvin and Hobbes",
-            "categoryName": "Comic Strip"
+    let createAuthorVaraible = {
+        "author": {
+          "name": "JK Rowling",
+          "birthdate": "1965-07-31"
         }
-    };
+      };
 
-    let updateNotebookRequestBody = `{
-        "color": "green"
+    let readAuthor = `query getAuthorById($id: Int!) {
+        author_by_pk(id: $id) {
+          id
+          name
+        }
+      }
+      `;
+
+    let readAuthorVaraible = {"id": 126};
+
+    let updateAuthor = "https://localhost:5001/api/Author/id/124";
+
+    let updateAuthorRequestBody = `{
+        "name": "Dan Brown"
     }`;
+
+    let deleteAuthor = "https://localhost:5001/api/Author/id/125";
 
     // Each REST or GraphQL request is created as a named request. Named requests are useful
     // for validating the responses.
-    const queryNames = ['deleteNotebookMutation', 'deleteAuthor', 'readAuthorQuery', 'createComic', 'updateNotebook'];
+    const queryNames = ['createAuthor', 'readAuthor', 'updateAuthor','deleteAuthor'];
 
     // Expected respone body for each request
     const expectedResponses = {
-        'deleteNotebookMutation': { "data": { "deleteNotebook": { "id": 2, "notebookname": "Notebook2" } } },
-        'deleteAuthor': "",
-        'readAuthorQuery': { "data": { "author_by_pk": { "id": 126, "name": "Aaron" } } },
-        'createComic': { "data": { "createComic": { "title": "Calvin and Hobbes", "categoryName": "Comic Strip" } } },
-        'updateNotebook': { "value": [{ "id": 4, "notebookname": "Notebook4", "color": "green", "ownername": "Aaron" }] }
+        'createAuthor': {
+            "data": {
+              "createAuthor": {
+                "name": "JK Rowling",
+                "birthdate": "1965-07-31"
+              }
+            }
+          },
+        'readAuthor': {
+            "data": {
+              "author_by_pk": {
+                "id": 126,
+                "name": "Aaron"
+              }
+            }
+          },
+        'updateAuthor': {
+            "value": [
+                {
+                    "id": 124,
+                    "name": "Dan Brown",
+                    "birthdate": "2002-02-02"
+                }
+            ]
+        },
+        'deleteAuthor': {}
     };
 
     const expectedStatusCodes = {
-        'deleteNotebookMutation': 200,
-        'deleteAuthor': 204,
-        'readAuthorQuery': 200,
-        'createComic': 200,
-        'updateNotebook': 200
+        'createAuthor': 200,
+        'readAuthor': 200,
+        'updateAuthor': 200,
+        'deleteAuthor': 204
     };
 
     const requests = {
-        'deleteNotebookMutation': {
+        'createAuthor': {
             method: 'POST',
             url: 'https://localhost:5001/graphql/',
-            body: JSON.stringify({ query: deleteNotebookMutation, variables: { "id": 2 } }),
+            body: JSON.stringify({ query: createAuthor , variables: createAuthorVaraible }),
+            params: parameters
+        },
+        'readAuthor': {
+            method: 'POST',
+            url: 'https://localhost:5001/graphql/',
+            body: JSON.stringify({ query: readAuthor , variables: readAuthorVaraible }),
+            params: parameters
+        },
+        'updateAuthor': {
+            method: 'PATCH',
+            url: updateAuthor ,
+            body: updateAuthorRequestBody,
             params: parameters
         },
         'deleteAuthor': {
             method: 'DELETE',
-            url: 'https://localhost:5001/api/Author/id/123',
+            url: deleteAuthor,
             body: null,
-            params: parameters
-        },
-        'readAuthorQuery': {
-            method: 'POST',
-            url: 'https://localhost:5001/graphql/',
-            body: JSON.stringify({ query: authorQuery, variables: { "id": 126 } }),
-            params: parameters
-        },
-        'createComic': {
-            method: 'POST',
-            url: 'https://localhost:5001/graphql/',
-            body: JSON.stringify({ query: createComicMutation, variables: createComicVariable }),
-            params: parameters
-        },
-        'updateNotebook': {
-            method: 'PATCH',
-            url: 'https://localhost:5001/api/Notebook/id/4',
-            body: updateNotebookRequestBody,
             params: parameters
         }
     };
@@ -109,5 +120,4 @@ export const validateParallelCRUDOperations = () => {
 
     // Validations for the API responses
     validateResponses(queryNames, responses, expectedStatusCodes, expectedResponses);
-
 };

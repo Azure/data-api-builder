@@ -22,7 +22,7 @@ export const options = {
 export default function () {
   validateParallelReadOperations();
   validateParallelCRUDOperations();
-  validateParallelDeleteOperationsOnSameItem();
   validateParallelUpdateOperationsOnSameItem();
   validateParallelUpdateAndReadOperationsOnSameItem();
+  validateParallelDeleteOperationsOnSameItem();
 };

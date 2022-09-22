@@ -108,7 +108,6 @@ export const validateResposneBodies = (queryNames, responses, expectedResponseBo
 export const validateResponseBody = (queryNames, responses, expectedResponseBody) => {
   queryNames.forEach( queryName => {
 
-    console.log(responses[queryName]);
     var expectedResponseJson = expectedResponseBody;
     var actualResponseBody = responses[queryName].body;
     var actualResponseJson = {};

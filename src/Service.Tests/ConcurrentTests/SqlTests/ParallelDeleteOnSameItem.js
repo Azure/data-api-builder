@@ -16,7 +16,7 @@ export const validateParallelDeleteOperationsOnSameItem = () => {
         headers: headers
     }
 
-    let deleteNotebookMutation = `mutation deleteNotebookById($id: Int!){
+    let deleteNotebookUsingGraphQLMutation = `mutation deleteNotebookById($id: Int!){
         deleteNotebook (id: $id){
           id
           notebookname
@@ -27,7 +27,7 @@ export const validateParallelDeleteOperationsOnSameItem = () => {
         "id": 4
     };
 
-    let deleteRestUrl = "https://localhost:5001/api/Notebook/id/4";
+    let deleteNotebookUsingRest = "https://localhost:5001/api/Notebook/id/4";
 
     // Each REST or GraphQL request is created as a named request. Named requests are useful
     // for validating the responses.
@@ -49,12 +49,12 @@ export const validateParallelDeleteOperationsOnSameItem = () => {
         'deleteNotebookUsingGraphQLMutation': {
             method: 'POST',
             url: 'https://localhost:5001/graphql/',
-            body: JSON.stringify({ query: deleteNotebookMutation, variables: deleteNotebookMutationVariable }),
+            body: JSON.stringify({ query: deleteNotebookUsingGraphQLMutation, variables: deleteNotebookMutationVariable }),
             params: parameters
         },
         'deleteNotebookUsingRest': {
             method: 'DELETE',
-            url: deleteRestUrl,
+            url: deleteNotebookUsingRest,
             body: null,
             params: parameters
         }

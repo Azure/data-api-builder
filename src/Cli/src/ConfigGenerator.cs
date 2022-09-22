@@ -255,7 +255,7 @@ namespace Cli
             string? role, operations;
             if (!TryGetRoleAndOperationFromPermission(permissions, out role, out operations))
             {
-                Console.Error.Write($"Failed to fetch the role and operation from the given permission string: {string.Join(":", permissions.ToArray())}.");
+                Console.Error.Write($"Failed to fetch the role and operation from the given permission string: {string.Join(SEPARATOR, permissions.ToArray())}.");
                 return null;
             }
 

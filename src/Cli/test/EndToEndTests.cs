@@ -130,6 +130,40 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Test the exact config json generated to verify adding a new Entity without IEnumerable options.
+    /// </summary>
+    [TestMethod]
+    public void TestConfigGeneratedAfterAddingEntityWithSourceAsStoredProcedure()
+    {
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--host-mode", "Development", "--connection-string", "testconnectionstring" };
+        Program.Main(initArgs);
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
+        string[] addArgs = { "add", "MyEntity", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:*", "--source.type", "stored-procedure", "--source.params", "param1:123,param2:hello,param3:true" };
+        Program.Main(addArgs);
+        string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceAsStoredProcedure);
+        Assert.IsTrue(JToken.DeepEquals(JObject.Parse(actualConfig), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
+    }
+
+    /// <summary>
+    /// Test the exact config json generated to verify adding a new Entity without IEnumerable options.
+    /// </summary>
+    [TestMethod]
+    public void TestConfigGeneratedAfterAddingEntityWithSourceWithDefaultType()
+    {
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--host-mode", "Development", "--connection-string", "testconnectionstring" };
+        Program.Main(initArgs);
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
+        string[] addArgs = { "add", "MyEntity", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:*", "--source.key-fields", "id,name" };
+        Program.Main(addArgs);
+        string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceWithDefaultType);
+        Assert.IsTrue(JToken.DeepEquals(JObject.Parse(actualConfig), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
+    }
+
+    /// <summary>
     /// Test to verify updating an existing Entity.
     /// It tests updating permissions as well as relationship
     /// </summary>

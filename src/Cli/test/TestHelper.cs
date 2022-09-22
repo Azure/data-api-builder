@@ -32,19 +32,16 @@ namespace Cli.Tests
             },
             ""runtime"": {
               ""rest"": {
-                ""enabled"": true,
                 ""path"": ""/api""
               },
               ""graphql"": {
-                ""allow-introspection"": true,
-                ""enabled"": true,
                 ""path"": ""/graphql""
               },
               ""host"": {
                 ""mode"": ""development"",
                 ""cors"": {
                   ""origins"": [],
-                  ""allow-credentials"": true
+                  ""allow-credentials"": false
                 },
                 ""authentication"": {
                   ""provider"": ""StaticWebApps""
@@ -73,6 +70,108 @@ namespace Cli.Tests
                     ]
                     }
                 }
+            }"; }
+        }
+
+        public static string GetBasicEntityWithAnonymousRole
+        {
+            get { return @"
+            {
+                ""entities"": {
+                    ""MyEntity"": {
+                    ""source"": ""s001.book"",
+                    ""permissions"": [
+                        {
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                            ""*""
+                        ]
+                        }
+                    ]
+                    }
+                }
+            }"; }
+        }
+
+        public static string GetSingleEntityWithSourceAsStoredProcedure
+        {
+            get { return @"
+            {
+                ""entities"": {
+                ""MyEntity"": {
+                  ""source"": {
+                    ""type"": ""stored-procedure"",
+                    ""object"": ""s001.book"",
+                    ""parameters"": {
+                        ""param1"": 123,
+                        ""param2"": ""hello"",
+                        ""param3"": true
+                    }
+                  },
+                  ""permissions"": [
+                    {
+                      ""role"": ""anonymous"",
+                      ""actions"": [
+                        ""*""
+                      ]
+                    }
+                  ]
+                }
+              }
+            }"; }
+        }
+
+        public static string GetSingleEntityWithSourceWithDefaultType
+        {
+            get { return @"
+            {
+                ""entities"": {
+                ""MyEntity"": {
+                  ""source"": {
+                    ""type"": ""table"",
+                    ""object"": ""s001.book"",
+                    ""key-fields"": [
+                        ""id"",
+                        ""name""
+                    ]
+                  },
+                  ""permissions"": [
+                    {
+                      ""role"": ""anonymous"",
+                      ""actions"": [
+                        ""*""
+                      ]
+                    }
+                  ]
+                }
+              }
+            }"; }
+        }
+
+        public static string GetSingleEntityWithSourceForView
+        {
+            get { return @"
+            {
+                ""entities"": {
+                ""MyEntity"": {
+                  ""source"": {
+                    ""type"": ""view"",
+                    ""object"": ""s001.book"",
+                    ""key-fields"": [
+                        ""id"",
+                        ""name""
+                    ]
+                  },
+                  ""permissions"": [
+                    {
+                      ""role"": ""anonymous"",
+                      ""actions"": [
+                        ""*""
+                      ]
+                    }
+                  ]
+                }
+              }
             }"; }
         }
 

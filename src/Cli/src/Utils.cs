@@ -2,6 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config;
 using Humanizer;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
@@ -14,7 +15,10 @@ namespace Cli
     public class Utils
     {
         public const string WILDCARD = "*";
+        public static readonly string SEPARATOR = ":";
         public static readonly string[] SUPPORTED_SOURCE_TYPES = { "table", "view", "stored-procedure" };
+
+        private static readonly Regex regex = new Regex(@"^[-]?\d+$");
 
         /// <summary>
         /// Creates the rest object which can be either a boolean value
@@ -62,9 +66,9 @@ namespace Cli
             else
             {
                 string singular, plural;
-                if (graphQL.Contains(":"))
+                if (graphQL.Contains(SEPARATOR))
                 {
-                    string[] arr = graphQL.Split(":");
+                    string[] arr = graphQL.Split(SEPARATOR);
                     if (arr.Length != 2)
                     {
                         Console.Error.WriteLine($"Invalid format for --graphql. Accepted values are true/false," +
@@ -258,7 +262,7 @@ namespace Cli
             mappings = new();
             foreach (string item in mappingList)
             {
-                string[] map = item.Split(":");
+                string[] map = item.Split(SEPARATOR);
                 if (map.Length != 2)
                 {
                     Console.Error.WriteLine("Invalid format for --map");
@@ -516,7 +520,7 @@ namespace Cli
             // Verify the given source type is valid.
             if (type is not null && !SUPPORTED_SOURCE_TYPES.Contains(type.ToLowerInvariant()))
             {
-                Console.Error.WriteLine("Source type must be one of: [table, view, stored-procedure]");
+                Console.Error.WriteLine("Source type must be one of:" + SUPPORTED_SOURCE_TYPES.ToString());
                 return false;
             }
 
@@ -602,10 +606,10 @@ namespace Cli
                 return true;
             }
 
-            sourceParameters = new();
+            sourceParameters = new(StringComparer.InvariantCultureIgnoreCase);
             foreach (string param in parametersList)
             {
-                string[] items = param.Split(":");
+                string[] items = param.Split(SEPARATOR);
                 if (items.Length != 2)
                 {
                     sourceParameters = null;
@@ -613,8 +617,10 @@ namespace Cli
                     Console.WriteLine("It should be in this format --source.params \"key1:value1,key2:value2,...\".");
                     return false;
                 }
+                string paramKey = items[0];
+                object paramValue = ParseParamValue(items[1]);
 
-                sourceParameters.Add(items[0], items[1]);
+                sourceParameters.Add(paramKey, paramValue);
             }
 
             if (!sourceParameters.Any())
@@ -623,6 +629,25 @@ namespace Cli
             }
 
             return true;
+        }
+
+        private static object ParseParamValue(string stringValue)
+        {
+            object paramValue;
+            if (regex.IsMatch(stringValue))
+            {
+                paramValue = int.Parse(stringValue);
+            }
+            else if (Boolean.TryParse(stringValue, out bool booleanValue))
+            {
+                paramValue = booleanValue;
+            }
+            else
+            {
+                paramValue = stringValue;
+            }
+
+            return paramValue;
         }
 
         /// <summary>

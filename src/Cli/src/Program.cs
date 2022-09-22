@@ -1,4 +1,5 @@
 using CommandLine;
+using static Cli.Utils;
 
 namespace Cli
 {
@@ -33,12 +34,14 @@ namespace Cli
                     bool isSuccess = ConfigGenerator.TryAddEntityToConfigWithOptions(options);
                     if (isSuccess)
                     {
-                        Console.WriteLine($"Added new entity:{options.Entity} with source: {options.Source} to config: {options.Config} with permissions: {string.Join(":", options.Permissions.ToArray())}.");
+                        Console.WriteLine($"Added new entity:{options.Entity} with source: {options.Source} to config: {options.Config}" +
+                            $" with permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
                         Console.WriteLine($"SUGGESTION: Use 'dab update <options>' to update any entities in your config.");
                     }
                     else
                     {
-                        Console.WriteLine($"ERROR: Could not add entity:{options.Entity} source: {options.Source} to config: {options.Config} with permissions: {string.Join(":", options.Permissions.ToArray())}.");
+                        Console.WriteLine($"ERROR: Could not add entity:{options.Entity} source: {options.Source} to config: {options.Config}" +
+                            $" with permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
                     }
                 })
                 .WithParsed<UpdateOptions>(options =>

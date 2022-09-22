@@ -811,6 +811,196 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Simple test to verify success on updating a source from string to source object for valid fields.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("s001.book", null, null, null, "UpdateSourceName", DisplayName = "Both KeyFields and Parameters provided for source.")]
+        [DataRow(null, "stored-procedure", new string[] {"param1:123", "param2:hello", "param3:true"}, null, "ConvertToStoredProcedure", DisplayName = "SourceParameters with stored procedure.")]
+        [DataRow(null, "view", null, new string[] { "id", "name" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
+        [DataRow(null, "table", null, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
+        [DataRow(null, null, null, new string[] { "id", "name" }, "ConvertToDefaultType", DisplayName = "Source KeyFields with SourceType not provided")]
+        public void TestUpdateSourceStringToDatabaseSourceObject(
+            string? source,
+            string? sourceType,
+            IEnumerable<string>? parameters,
+            IEnumerable<string>? keyFields,
+            string task
+        )
+        {
+
+            UpdateOptions options = new(
+                source: source,
+                permissions: new string[] { "anonymous", "*" },
+                entity: "MyEntity",
+                sourceType: sourceType,
+                sourceParameters: parameters,
+                sourceKeyFields: keyFields,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                map: new string[] { },
+                config: _testRuntimeConfig
+            );
+
+            string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetBasicEntityWithAnonymousRole);
+            string? expectedConfiguration = null;
+            switch (task)
+            {
+                case "UpdateSourceName":
+                    actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntity);
+                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetBasicEntityWithAnonymousRole);
+                    break;
+                case "ConvertToStoredProcedure":
+                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceAsStoredProcedure);
+                    break;
+                case "ConvertToView":
+                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceForView);
+                    break;
+                default:
+                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceWithDefaultType);
+                    break;
+            }
+
+            Assert.IsTrue(TryUpdateExistingEntity(options, ref actualConfig));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration!), JObject.Parse(actualConfig)));
+        }
+
+        /// <summary>
+        /// Simple test to verify success on updating a source from string to source object for valid fields.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("newSourceName", null, null, "UpdateSourceName", DisplayName = "Update Source Name of the source object.")]
+        [DataRow(null, new string[] {"param1:dab", "param2:false"}, null, "UpdateParameters", DisplayName = "update Parameters of stored procedure.")]
+        [DataRow(null, null, new string[] { "col1", "col2" }, "UpdateKeyFields", DisplayName = "update KeyFields for table/view.")]
+        public void TestUpdateSourceStringToDatabaseSourceObject2(
+            string? source,
+            IEnumerable<string>? parameters,
+            IEnumerable<string>? keyFields,
+            string task
+        )
+        {
+
+            UpdateOptions options = new(
+                source: source,
+                permissions: new string[] { "anonymous", "*" },
+                entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: parameters,
+                sourceKeyFields: keyFields,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                map: new string[] { },
+                config: _testRuntimeConfig
+            );
+
+            string? initialConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceAsStoredProcedure);
+            switch (task)
+            {
+                case "UpdateSourceName":
+                    AssertOldAndUpdatedValuesForSourceObject(
+                        options,
+                        initialConfig,
+                        "MyEntity",
+                        "s001.book",
+                        "newSourceName",
+                        "stored-procedure",
+                        "stored-procedure",
+                        new Dictionary<string,object>() { {"param1", 123}, {"param2", "hello"}, {"param3", true}},
+                        new Dictionary<string,object>() { {"param1", 123}, {"param2", "hello"}, {"param3", true}},
+                        null,
+                        null
+                    );
+                    break;
+
+                case "UpdateParameters":
+                    AssertOldAndUpdatedValuesForSourceObject(
+                        options,
+                        initialConfig,
+                        "MyEntity",
+                        "s001.book",
+                        "s001.book",
+                        "stored-procedure",
+                        "stored-procedure",
+                        new Dictionary<string,object>() { {"param1", 123}, {"param2", "hello"}, {"param3", true}},
+                        new Dictionary<string,object>() { {"param1", "dab"}, {"param2", false}},
+                        null,
+                        null
+                    );
+                    break;
+
+                case "UpdateKeyFields":
+                    initialConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceWithDefaultType);
+                    AssertOldAndUpdatedValuesForSourceObject(
+                        options,
+                        initialConfig,
+                        "MyEntity",
+                        "s001.book",
+                        "s001.book",
+                        "table",
+                        "table",
+                        null,
+                        null,
+                        new string[] { "id", "name" },
+                        new string[] { "col1", "col2" }
+                    );
+                    break;
+            }
+        }
+
+        private static Entity GetEntityObjectFromRuntimeConfigJson(string runtimeConfigJson, string entityName)
+        {
+            RuntimeConfig? runtimeConfig= JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigJson, GetSerializationOptions());
+            Assert.IsTrue(runtimeConfig!.Entities.ContainsKey(entityName));
+            return runtimeConfig!.Entities[entityName];
+        }
+
+        private static void AssertOldAndUpdatedValuesForSourceObject(
+            UpdateOptions options,
+            string initialConfig,
+            string entityName,
+            string oldSourceName, string updatedSourceName,
+            string oldSourceType, string updatedSourceType,
+            Dictionary<string,object>? oldParameters, Dictionary<string,object>? updatedParameters,
+            string[]? oldKeyFields, string[]? updatedKeyFields
+        )
+        {
+            Entity entity = GetEntityObjectFromRuntimeConfigJson(initialConfig, entityName);
+            entity.TryPopulateSourceFields();
+            Assert.AreEqual(oldSourceName, entity.SourceName);
+            Assert.AreEqual(oldSourceType, entity.SourceTypeName);
+            CollectionAssert.AreEquivalent(oldParameters, entity.Parameters);
+            CollectionAssert.AreEquivalent(oldKeyFields, entity.KeyFields);
+            Assert.IsTrue(TryUpdateExistingEntity(options, ref initialConfig));
+            entity = GetEntityObjectFromRuntimeConfigJson(initialConfig, entityName);
+            entity.TryPopulateSourceFields();
+            Assert.AreEqual(updatedSourceName, entity.SourceName);
+            Assert.AreEqual(updatedSourceType, entity.SourceTypeName);
+            CollectionAssert.AreEquivalent(updatedParameters, entity.Parameters);
+            CollectionAssert.AreEquivalent(updatedKeyFields, entity.KeyFields);
+        }
+
+        /// <summary>
         /// Update Policy for an action
         /// </summary>
         [TestMethod]

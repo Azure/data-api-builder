@@ -164,6 +164,67 @@ namespace Cli.Tests
             RunTest(options, GetInitialConfiguration, expectedConfiguration!);
         }
 
+        /// <summary>
+        /// Simple test to add a new entity to json config where source is a stored procedure.
+        /// </summary>
+        [TestMethod]
+        public void AddNewEntityWhenEntitiesWithSourceAsStoredProcedure()
+        {
+            AddOptions options = new(
+                source: "s001.book",
+                permissions: new string[] { "anonymous", "*" },
+                entity: "MyEntity",
+                sourceType: "stored-procedure",
+                sourceParameters: new string[] {"param1:123","param2:hello","param3:true"},
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                config: _testRuntimeConfig);
+
+            string initialConfiguration = GetInitialConfiguration;
+            string expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceAsStoredProcedure);
+            RunTest(options, initialConfiguration, expectedConfiguration);
+        }
+
+        /// <summary>
+        /// Simple test to verify success on adding a new entity with source object for valid fields.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, null, null, DisplayName = "Both KeyFields and Parameters provided for source.")]
+        [DataRow("stored-procedure", new string[] {"param1:value1"}, null, DisplayName = "SourceParameters with stored procedure.")]
+        [DataRow("view", null, new string[] { "col1", "col2" }, DisplayName = "Source KeyFields with View")]
+        [DataRow("table", null, new string[] { "col1", "col2" }, DisplayName = "Source KeyFields with Table")]
+        [DataRow(null, null, new string[] { "col1", "col2" }, DisplayName = "Source KeyFields with SourceType not provided")]
+        public void TestAddNewEntityWithSourceObjectHavingValidFields(
+            string? sourceType,
+            IEnumerable<string>? parameters,
+            IEnumerable<string>? keyFields
+        )
+        {
+            AddOptions options = new(
+                source: "testSource",
+                permissions: new string[] { "anonymous", "*" },
+                entity: "book",
+                sourceType: sourceType,
+                sourceParameters: parameters,
+                sourceKeyFields: keyFields,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                config: _testRuntimeConfig);
+
+            string runtimeConfig = GetInitialConfiguration;
+
+            Assert.IsTrue(ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
+        }
+
         #endregion
 
         #region Negative Tests
@@ -193,6 +254,40 @@ namespace Cli.Tests
                 graphQLType: null,
                 fieldsToInclude: new string[] { "id", "rating" },
                 fieldsToExclude: new string[] { "level" },
+                policyRequest: null,
+                policyDatabase: null,
+                config: _testRuntimeConfig);
+
+            string runtimeConfig = GetInitialConfiguration;
+
+            Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
+        }
+
+        /// <summary>
+        /// Simple test to verify failure on adding a new entity with source object for invalid fields.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, new string[] {"param1:value1"}, new string[] { "col1", "col2" }, DisplayName = "Both KeyFields and Parameters provided for source.")]
+        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, DisplayName = "KeyFields with stored procedure.")]
+        [DataRow("view", new string[] {"param1:value1"}, null, DisplayName = "Source Parameters with View")]
+        [DataRow("table", new string[] {"param1:value1"}, null, DisplayName = "Source Parameters with Table")]
+        public void TestAddNewEntityWithSourceObjectForInvalidFields(
+            string? sourceType,
+            IEnumerable<string>? parameters,
+            IEnumerable<string>? keyFields
+        )
+        {
+            AddOptions options = new(
+                source: "testSource",
+                permissions: new string[] { "anonymous", "*" },
+                entity: "book",
+                sourceType: sourceType,
+                sourceParameters: parameters,
+                sourceKeyFields: keyFields,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
                 config: _testRuntimeConfig);

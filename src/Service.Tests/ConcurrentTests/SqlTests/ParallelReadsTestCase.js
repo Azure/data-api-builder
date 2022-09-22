@@ -1,5 +1,5 @@
 import http from 'k6/http';
-import { validateResponses } from '../Helper.js';
+import { validateResponses, graphQLEndPoint } from '../Helper.js';
 
 export const validateParallelReadOperations = () => {
 
@@ -54,13 +54,13 @@ export const validateParallelReadOperations = () => {
   const requests = {
     'bookQuery1': {
       method: 'POST',
-      url: 'https://localhost:5001/graphql/',
+      url: graphQLEndPoint,
       body: JSON.stringify({ query: bookQuery, variables: { "id": 1 } }),
       params: parameters
     },
     'bookQuery2': {
       method: 'POST',
-      url: 'https://localhost:5001/graphql/',
+      url: graphQLEndPoint,
       body: JSON.stringify({ query: bookQuery, variables: { "id": 2 } }),
       params: parameters
     },
@@ -72,7 +72,7 @@ export const validateParallelReadOperations = () => {
     },
     'authorQueryUsingRequestBody': {
       method: 'POST',
-      url: 'https://localhost:5001/graphql/',
+      url: graphQLEndPoint,
       body: JSON.stringify({ query: authorQuery, variables: { "id": 124 } }),
       params: parameters
     },

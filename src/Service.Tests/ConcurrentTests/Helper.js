@@ -1,7 +1,7 @@
 import encoding from 'k6/encoding';
 import { check } from 'k6';
 
-// Function to determine if two objects which can contain nested objects are equal
+// Helper function to determine if two objects which can contain nested objects are equal
 // in terms of the values present in each field within the objects.
 export const isDeepEqual = (expectedResponseJson, actualResponseJson) => {
 
@@ -33,7 +33,7 @@ export const isObject = (object) => {
   return object != null && typeof object == "object";
 };
 
-// A helper function to validate the responses for each REST and GraphQL call
+// A helper function to validate the responses for each REST and GraphQL requests
 export const validateResponses = (queryNames, responses, expectedStatusCodes, expectedResponses) => {
 
   // Validates no errors in the responses
@@ -69,7 +69,7 @@ export const generateEasyAuthToken = () => {
   return encodedToken;
 };
 
-// Helper method to validae no errors in the resposne
+// Helper method to validate no errors in the resposne
 export const validateNoErrorsInResponse = (queryNames, responses) => {
   queryNames.forEach(
     queryName => {
@@ -79,15 +79,15 @@ export const validateNoErrorsInResponse = (queryNames, responses) => {
   return true;
 };
 
-
-// Helper method to validate the status codes of the requests are either one of the two expected 
-// status codes.
+// Helper method to validate that the status code of all the respones
+// is either one of the two expected set of status codes
 export const validateStatusCodes = (queryNames, responses, expectedStatusCodes1, expectedStatusCodes2) => {
   return validateStatusCode(queryNames, responses, expectedStatusCodes1)
     || validateStatusCode(queryNames, responses, expectedStatusCodes2);
 };
 
-// Helper method to validate the status code
+// Helper method to validate the status code for all the responses against 
+// one set of expected status codes
 export const validateStatusCode = (queryNames, responses, expectedStatusCodes) => {
   queryNames.forEach(queryName => {
     if (expectedStatusCodes[queryName] != responses[queryName].status)
@@ -97,14 +97,14 @@ export const validateStatusCode = (queryNames, responses, expectedStatusCodes) =
   return true;
 };
 
-// Helper methods to validate the response bodies when it could be either of the two expected 
-// values
+// Helper methods to validate that the response bodies for all the reqeusts 
+// is one of the expected set of expected response bodies
 export const validateResposneBodies = (queryNames, responses, expectedResponseBody1, expectedResponseBody2) => {
   return validateResponseBody(queryNames, responses, expectedResponseBody1)
     || validateResponseBody(queryNames, responses, expectedResponseBody2);
 };
 
-// Helper method to validate the response body
+// Helper method to validate the response body againse one set of expected response body
 export const validateResponseBody = (queryNames, responses, expectedResponseBody) => {
   queryNames.forEach(queryName => {
 
@@ -120,3 +120,5 @@ export const validateResponseBody = (queryNames, responses, expectedResponseBody
   });
   return true;
 };
+
+export const graphQLEndPoint = 'https://localhost:5001/graphql/';

@@ -1,4 +1,4 @@
-import { validateResponses, generateEasyAuthToken } from '../Helper.js';
+import { validateResponses, generateEasyAuthToken, graphQLEndPoint } from '../Helper.js';
 import http from 'k6/http';
 
 export const validateParallelCRUDOperations = () => {
@@ -22,7 +22,7 @@ export const validateParallelCRUDOperations = () => {
         }
       }
       `;
-  let createAuthorVaraible = {
+  let createAuthorVariable = {
     "author": {
       "name": "JK Rowling",
       "birthdate": "1965-07-31"
@@ -37,7 +37,7 @@ export const validateParallelCRUDOperations = () => {
       }
       `;
 
-  let readAuthorVaraible = { "id": 126 };
+  let readAuthorVariable = { "id": 126 };
 
   let updateAuthor = "https://localhost:5001/api/Author/id/124";
 
@@ -91,14 +91,14 @@ export const validateParallelCRUDOperations = () => {
   const requests = {
     'createAuthor': {
       method: 'POST',
-      url: 'https://localhost:5001/graphql/',
-      body: JSON.stringify({ query: createAuthor, variables: createAuthorVaraible }),
+      url: graphQLEndPoint,
+      body: JSON.stringify({ query: createAuthor, variables: createAuthorVariable }),
       params: parameters
     },
     'readAuthor': {
       method: 'POST',
-      url: 'https://localhost:5001/graphql/',
-      body: JSON.stringify({ query: readAuthor, variables: readAuthorVaraible }),
+      url: graphQLEndPoint,
+      body: JSON.stringify({ query: readAuthor, variables: readAuthorVariable }),
       params: parameters
     },
     'updateAuthor': {

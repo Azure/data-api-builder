@@ -1,4 +1,4 @@
-import { generateEasyAuthToken, validateStatusCodes } from '../Helper.js';
+import { generateEasyAuthToken, validateStatusCodes, graphQLEndPoint } from '../Helper.js';
 import { check } from 'k6';
 import http from 'k6/http';
 
@@ -48,7 +48,7 @@ export const validateParallelDeleteOperationsOnSameItem = () => {
     const requests = {
         'deleteNotebookUsingGraphQLMutation': {
             method: 'POST',
-            url: 'https://localhost:5001/graphql/',
+            url: graphQLEndPoint,
             body: JSON.stringify({ query: deleteNotebookUsingGraphQLMutation, variables: deleteNotebookMutationVariable }),
             params: parameters
         },

@@ -1,4 +1,4 @@
-import { generateEasyAuthToken, validateResposneBodies, validateStatusCode, validateNoErrorsInResponse } from '../Helper.js';
+import { generateEasyAuthToken, validateResposneBodies, validateStatusCode, validateNoErrorsInResponse, graphQLEndPoint } from '../Helper.js';
 import { check } from 'k6';
 import http from 'k6/http';
 
@@ -72,13 +72,13 @@ export const validateParallelUpdateOperationsOnSameItem = () => {
   const requests = {
     'updateNotebookColorToCyan': {
       method: 'POST',
-      url: 'https://localhost:5001/graphql/',
+      url: graphQLEndPoint,
       body: JSON.stringify({ query: updateNoteBookMutation, variables: updateColorToCyanVariable }),
       params: parameters
     },
     'updateNotebookColorToMagenta': {
       method: 'POST',
-      url: 'https://localhost:5001/graphql/',
+      url: graphQLEndPoint,
       body: JSON.stringify({ query: updateNoteBookMutation, variables: updateColorToMagentaVariable }),
       params: parameters
     }

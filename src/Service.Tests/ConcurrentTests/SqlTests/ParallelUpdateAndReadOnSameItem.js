@@ -1,4 +1,4 @@
-import { generateEasyAuthToken, validateResposneBodies, validateStatusCode, validateNoErrorsInResponse } from '../Helper.js';
+import { generateEasyAuthToken, validateResposneBodies, validateStatusCode, validateNoErrorsInResponse, graphQLEndPoint } from '../Helper.js';
 import { check } from 'k6';
 import http from 'k6/http';
 
@@ -23,6 +23,7 @@ export const validateParallelUpdateAndReadOperationsOnSameItem = () => {
         }
       }
       `;
+  
   let comicQueryVariable = {
     "id": 1
   };
@@ -61,7 +62,7 @@ export const validateParallelUpdateAndReadOperationsOnSameItem = () => {
     }
   };
 
-  // Expected response when the udpate mutation executes before the read query.
+  // Expected response when the update mutation executes before the read query.
   const expectedResponse2 = {
     "data": {
       "updateComic": {
@@ -74,13 +75,13 @@ export const validateParallelUpdateAndReadOperationsOnSameItem = () => {
   const requests = {
     'comicQuery': {
       method: 'POST',
-      url: 'https://localhost:5001/graphql/',
+      url: graphQLEndPoint,
       body: JSON.stringify({ query: comicQuery, variables: comicQueryVariable }),
       params: parameters
     },
     'updateComicMutation': {
       method: 'POST',
-      url: 'https://localhost:5001/graphql/',
+      url: graphQLEndPoint,
       body: JSON.stringify({ query: updateComicMutation, variables: updateComicMutationVariable }),
       params: parameters
     }

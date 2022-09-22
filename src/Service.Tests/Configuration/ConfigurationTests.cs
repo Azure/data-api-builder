@@ -153,9 +153,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// to reject the request with HTTP 403 Forbidden.
         /// 4. Validate that request to protected entity with required role membership passes authorization requirements
         /// and succeeds with HTTP 200 OK.
+        /// Note: This test is database engine agnostic, though requires denoting a database environment to fetch a usable
+        /// connection string to complete the test. Most applicable to CI/CD test execution.
         /// </summary>
         [TestCategory(TestCategory.MSSQL)]
-        [TestMethod("Validates setting the SQL configuration post-startup during runtime.")]
+        [TestMethod("Validates setting the AuthN/Z configuration post-startup during runtime.")]
         public async Task TestSqlSettingPostStartupConfigurations()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);

@@ -45,27 +45,6 @@ export const validateParallelUpdateOperationsOnSameItem = () => {
     'updateNotebookColorToMagenta': 200
   };
 
-  // Expected response when the mutation that updates color to cyan runs last
-  const expectedResponse1 = {
-    "data": {
-      "updateNotebook": {
-        "id": 3,
-        "color": "cyan"
-      }
-    }
-  };
-
-  // Expected response when the mutation that updates color to magenta runs last
-  const expectedResponse2 = {
-    "data": {
-      "updateNotebook": {
-        "id": 3,
-        "color": "magenta"
-      }
-    }
-  };
-
-
   const requests = {
     'updateNotebookColorToCyan': {
       method: 'POST',
@@ -83,11 +62,10 @@ export const validateParallelUpdateOperationsOnSameItem = () => {
 
   // Performs all the GraphQL and REST requests in parallel
   const responses = http.batch(requests);
-
+  
   // Validations for the API responses
   check(responses, {
     'Validate no errors': validateNoErrorsInResponse(queryNames, responses),
-    'Validate expected status code': validateStatusCode(queryNames, responses, expectedStatusCodes),
-    'Validate API response': validateResposneBodies(queryNames, responses, expectedResponse1, expectedResponse2)
+    'Validate expected status code': validateStatusCode(queryNames, responses, expectedStatusCodes)
   });
 };

@@ -1,7 +1,7 @@
 # ASP.NET Core (.NET Framework)
 # Build and test ASP.NET Core projects targeting the full .NET Framework.
 # Add steps that publish symbols, save build artifacts, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+# https://learn.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
 trigger:
 - main
@@ -21,7 +21,7 @@ variables:
   isReleaseBuild: $(isNugetRelease)
 
 steps:
-- task: NuGetAuthenticate@0
+- task: NuGetAuthenticate@1
   displayName: 'NuGet Authenticate'
 
 # If this is a release, do not append the build number at the end as it will 
@@ -134,7 +134,7 @@ steps:
   inputs:
     targetType: 'filePath'
     filePath: $(System.DefaultWorkingDirectory)/create_manifest_file.ps1
-    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion)
+    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) $(isReleaseBuild)
 
 # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
 - task: PublishPipelineArtifact@1
@@ -159,6 +159,26 @@ steps:
   inputs:
     codeCoverageTool: Cobertura
     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+
+# Create a draft release with Assets
+- task: GitHubRelease@1
+  displayName: "Draft Github Release"
+  condition: eq(variables.isReleaseBuild, 'true')
+  inputs:
+    gitHubConnection: 'DataApiBuilder'
+    repositoryName: '$(Build.Repository.Name)'
+    action: 'create'
+    target: '$(Build.SourceVersion)'
+    tagSource: 'userSpecifiedTag'
+    tag: 'v$(dabVersion)-alpha'
+    title: 'New Release: Data API Builder for Azure Databases'
+    assets: |
+      $(Build.ArtifactStagingDirectory)/**/*.nupkg
+      $(Build.ArtifactStagingDirectory)/**/*.zip
+      $(Build.ArtifactStagingDirectory)/**/dab-manifest.json
+    isDraft: true
+    isPreRelease: true
+    addChangeLog: false
 
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.
@@ -198,3 +218,4 @@ steps:
       $(BuildDate)-$(Build.SourceVersion)
       $(releaseName)
       $(dabVersion)
+

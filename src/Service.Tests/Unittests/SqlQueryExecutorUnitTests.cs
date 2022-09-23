@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
+using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Azure.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -16,6 +19,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class SqlQueryExecutorUnitTests
     {
+        // Error code for semaphore timeout in MsSql.
+        private const int ERRORCODE_SEMAPHORE_TIMEOUT = 121;
         /// <summary>
         /// Validates managed identity token issued ONLY when connection string does not specify
         /// User, Password, and Authentication method.
@@ -101,6 +106,78 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 Assert.AreEqual(expected: default, actual: conn.AccessToken);
             }
+        }
+
+        /// <summary>
+        /// Test to validate that when a query successfully executes within the allowed number of retries, a result is returned
+        /// and no further retries occur.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task TestRetryPolicyExhaustingMaxAttempts()
+        {
+            int maxRetries = 5;
+            int maxAttempts = maxRetries + 1; // 1 represents the original attempt to execute the query in addition to retries.
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+            Mock<MsSqlQueryExecutor> queryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object);
+
+            // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
+            queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
+                It.IsAny<SqlConnection>(),
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, object>>()))
+            .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT));
+
+            // Call the actual ExecuteQueryAsync method.
+            queryExecutor.Setup(x => x.ExecuteQueryAsync(
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, object>>())).CallBase();
+
+            DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () =>
+            {
+                await queryExecutor.Object.ExecuteQueryAsync(sqltext: string.Empty, parameters: new Dictionary<string, object>());
+            });
+
+            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+
+            // For each attempt logger is invoked twice. Currently we have hardcoded the number of attempts.
+            // Once we have number of retry attempts specified in config, we will make it dynamic.
+            Assert.AreEqual(2 * maxAttempts, queryExecutorLogger.Invocations.Count);
+        }
+
+        /// <summary>
+        /// Test to validate that when a query succcessfully executes within allowed number of retries, we get back the result
+        /// without giving anymore retries.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task TestRetryPolicySuccessfullyExecutingQueryAfterNAttempts()
+        {
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+            Mock<MsSqlQueryExecutor> queryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object);
+
+            // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
+            queryExecutor.SetupSequence(x => x.ExecuteQueryAgainstDbAsync(
+                It.IsAny<SqlConnection>(),
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, object>>()))
+            .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT))
+            .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT))
+            .CallBase();
+
+            // Call the actual ExecuteQueryAsync method.
+            queryExecutor.Setup(x => x.ExecuteQueryAsync(
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, object>>())).CallBase();
+
+            string sqltext = "SELECT * from books";
+
+            await queryExecutor.Object.ExecuteQueryAsync(sqltext: sqltext, parameters: new Dictionary<string, object>());
+            // For each attempt logger is invoked twice. The query executes successfully in in 1st retry .i.e. 2nd attempt of execution.
+            // An additional information log is added when the query executes successfully in a retry attempt.
+            Assert.AreEqual(2 * 2 + 1, queryExecutorLogger.Invocations.Count);
         }
     }
 }

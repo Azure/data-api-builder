@@ -64,8 +64,10 @@ namespace Azure.DataApiBuilder.Service.Tests
             IEnumerable<SWAPrincipalClaim> claims = null)
         {
             // The anonymous role is present in all requests sent to Static Web Apps or AppService endpoints.
-            List<string> roles = new();
-            roles.Add("anonymous");
+            List<string> roles = new()
+            {
+                "anonymous"
+            };
 
             if (addAuthenticated)
             {

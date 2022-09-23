@@ -1,13 +1,13 @@
 using System;
-using Azure.Core;
-using System.Threading.Tasks;
+using System.Data.Common;
 using System.Threading;
+using System.Threading.Tasks;
+using Azure.Core;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.Identity;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
-using System.Data.Common;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {

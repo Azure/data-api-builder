@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc/>
-        public async Task<TResult?> ExecuteQueryAsync<TResult>(
+        public virtual async Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
             IDictionary<string, object?> parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,

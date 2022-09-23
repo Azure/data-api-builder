@@ -17,6 +17,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly bool _developerMode;
         protected HashSet<string> BadRequestErrorCodes;
 
+        /*A transient error, also known as a transient fault, has an underlying cause that soon resolves itself.
+         * An occasional cause of transient errors can be reconfiguration events. Most of these reconfiguration
+         * events finish in less than 60 seconds. During this reconfiguration time span, we might have issues with
+         * connecting to your database in SQL Database.*/
+        protected HashSet<string>? TransientErrorCodes;
         public DbExceptionParser(RuntimeConfigProvider configProvider, HashSet<string> badRequestErrorCodes)
         {
             _developerMode = configProvider.IsDeveloperMode();
@@ -38,6 +43,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed
             );
         }
+
+        /// <summary>
+        /// Helper method to determine whether an exception thrown by database is to be considered as transient.
+        /// Each of the databases has their own way of classifying an exception as transient and hence the method will
+        /// be overriden in each of the subclasses.
+        /// </summary>
+        /// <param name="e">Exception to be classified as transient/non-transient.</param>
+        /// <returns></returns>
+        public abstract bool IsTransientException(DbException e);
 
         /// <summary>
         /// Helper method to get the HttpStatusCode for the exception based on the SqlState of the exception.

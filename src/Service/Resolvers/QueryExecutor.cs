@@ -11,6 +11,8 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
+using Polly;
+using Polly.Retry;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -24,6 +26,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<QueryExecutor<TConnection>> QueryExecutorLogger { get; }
 
+        // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
+        // So to say in case of transient exceptions, the query will be executed (_maxRetryCount + 1) times at max.
+        private static int _maxRetryCount = 5;
+
+        private AsyncRetryPolicy _retryPolicy;
+
         public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider,
                              DbExceptionParser dbExceptionParser,
                              ILogger<QueryExecutor<TConnection>> logger)
@@ -33,6 +41,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ConnectionString = runtimeConfig.ConnectionString;
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
+            _retryPolicy = Polly.Policy
+            .Handle<DbException>(DbExceptionParser.IsTransientException)
+            .WaitAndRetryAsync(
+                retryCount: _maxRetryCount,
+                sleepDurationProvider: (attempt) => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+                onRetry: (exception, backOffTime) =>
+                {
+                    QueryExecutorLogger.LogError(exception.Message);
+                    QueryExecutorLogger.LogError(exception.StackTrace);
+                });
         }
 
         /// <inheritdoc/>
@@ -42,12 +60,55 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
             List<string>? args = null)
         {
+            int retryAttempt = 0;
             using TConnection conn = new()
             {
                 ConnectionString = ConnectionString,
             };
-
             await SetManagedIdentityAccessTokenIfAnyAsync(conn);
+
+            return await _retryPolicy.ExecuteAsync(async () =>
+            {
+                retryAttempt++;
+                try
+                {
+                    DbDataReader dbReader = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters);
+                    if (retryAttempt > 1)
+                    {
+                        // This implies that the request got successfully executed during one of retry attempts.
+                        QueryExecutorLogger.LogInformation($"Request executed successfully in {retryAttempt} attempt of" +
+                            $"{_maxRetryCount + 1} available attempts.");
+                    }
+
+                    return dbReader;
+                }
+                catch (DbException e)
+                {
+                    if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
+                    {
+                        throw e;
+                    }
+                    else
+                    {
+                        QueryExecutorLogger.LogError(e.Message);
+                        QueryExecutorLogger.LogError(e.StackTrace);
+
+                        // Throw custom DABException
+                        throw DbExceptionParser.Parse(e);
+                    }
+                }
+            });
+        }
+
+        /// <summary>
+        /// Method to execute sql query against the database.
+        /// </summary>
+        /// <param name="conn">Connection object used to connect to database.</param>
+        /// <param name="sqltext">Sql text to be executed.</param>
+        /// <param name="parameters">The parameters used to execute the SQL text.</param>
+        /// <returns>DbDataReader object for reading the result set.</returns>
+        public virtual async Task<DbDataReader> ExecuteQueryAgainstDbAsync(TConnection conn, string sqltext, IDictionary<string, object?> parameters)
+        {
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandText = sqltext;

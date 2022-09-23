@@ -39,7 +39,7 @@ using the minimum amount of code.
 
 ## Environments Support
 
-Data API builder configuration file will be able to support multiple environments, following the same behavior offered by ASP.NET Core for the `appSettings.json` file, as per: [Default Configuration](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/?view=aspnetcore-6.0#default-configuration). For example:
+Data API builder configuration file will be able to support multiple environments, following the same behavior offered by ASP.NET Core for the `appSettings.json` file, as per: [Default Configuration](https://learn.microsoft.com/aspnet/core/fundamentals/configuration/?view=aspnetcore-6.0#default-configuration). For example:
 
 1. dab-config.json
 2. dab-config.Development.json
@@ -420,4 +420,3 @@ The `policy` section contains detail about item-level security rules.
 - `database` policy: define a rule - a predicate - that will be injected in the query sent to the database
 
 In order for an request or item to be returned, the policies must be evaluated to `true`.
-

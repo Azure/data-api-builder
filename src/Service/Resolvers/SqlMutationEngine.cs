@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         entityName,
                         mutationOperation,
                         parameters,
-                        context: context);
+                        context);
 
                 if (resultRowAndProperties is not null && resultRowAndProperties.Item1 is not null
                     && !context.Selection.Type.IsScalarType())
@@ -261,7 +261,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         isFirstResultSet = Convert.ToBoolean(isFirstResultSetValue);
                     }
 
-                    // For MsSql, Myql, if its not the first result, the upsert resulted in an INSERT operation.
+                    // For MsSql, MySql, if it's not the first result, the upsert resulted in an INSERT operation.
                     // Even if its first result, postgresql may still be an insert op here, if so, return CreatedResult
                     if (!isFirstResultSet ||
                         (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&

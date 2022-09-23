@@ -1049,7 +1049,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// for each referencing and referenced table pair, there is exactly one foreign key definition
         /// containing the list of all referencing columns and referenced columns.
         /// </summary>
-        /// <param name="reader">The Db Data Reader.</param>
+        /// <param name="reader">The DbDataReader.</param>
         /// <param name="args">Arguments to this function.</param>
         /// <returns>A dictionary mapping ordered relationship pairs to
         /// foreign key definition between them.</returns>

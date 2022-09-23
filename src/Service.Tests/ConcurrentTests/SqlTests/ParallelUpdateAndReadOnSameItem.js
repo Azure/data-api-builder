@@ -20,7 +20,7 @@ export const validateParallelUpdateAndReadOperationsOnSameItem = () => {
         }
       }
       `;
-  
+
   let comicQueryVariable = {
     "id": 1
   };
@@ -51,22 +51,30 @@ export const validateParallelUpdateAndReadOperationsOnSameItem = () => {
 
   // Expected response when the read query executes before the update mutation
   const expectedResponse1 = {
-    "data": {
-      "updateComic": {
-        "id": 1,
-        "title": "Star Trek"
+    'updateComicMutation': {
+      "data": {
+        "updateComic": {
+          "id": 1,
+          "title": "Star Wars"
+        }
       }
-    }
+    },
+
+    'comicQuery': { "data": { "comic_by_pk": { "id": 1, "title": "Star Trek" } } }
   };
 
   // Expected response when the update mutation executes before the read query.
   const expectedResponse2 = {
-    "data": {
-      "updateComic": {
-        "id": 1,
-        "title": "Star Wars"
+    'updateComicMutation': {
+      "data": {
+        "updateComic": {
+          "id": 1,
+          "title": "Star Wars"
+        }
       }
-    }
+    },
+
+    'comicQuery': { "data": { "comic_by_pk": { "id": 1, "title": "Star Wars" } } }
   };
 
   const requests = {

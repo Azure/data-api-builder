@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
 using static Cli.Utils;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -656,11 +657,20 @@ namespace Cli
                 return false;
             }
 
-            /// This will start the runtime engine with project name and config file.
+            /// This will start the runtime engine with project name, config file and --verbose
+            /// set to either "True" or "False'. If a log level has been set then we add it as well.
             List<string> args = new()
             { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile, "--verbose", options.Verbose.ToString() };
             if (options.LogLevel is not null)
             {
+                if (options.LogLevel is < 0 or > 6)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"LogLevel range is 0 to 6, your value: {options.LogLevel}",
+                        statusCode: System.Net.HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
                 args.Add("--LogLevel");
                 args.Add(options.LogLevel.ToString()!);
             }

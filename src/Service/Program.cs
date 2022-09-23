@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;

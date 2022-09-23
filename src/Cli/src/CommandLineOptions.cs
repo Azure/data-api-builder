@@ -240,7 +240,18 @@ namespace Cli
     [Verb("start", isDefault: false, HelpText = "Start Data Api Builder Engine", Hidden = false)]
     public class StartOptions : Options
     {
-        public StartOptions(string config)
-            : base(config) { }
+        public StartOptions(bool verbose, int? logLevel, string config)
+            : base(config)
+        {
+            Verbose = verbose;
+            LogLevel = logLevel;
+        }
+
+        // SetNames define mutually exclusive sets, ie: can not have
+        // both verbose and LogLevel.
+        [Option("verbose", SetName = "verbose", Required = false, HelpText = "Specify logging level as informational.")]
+        public bool Verbose { get; }
+        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = "Specify logging level as value provided.")]
+        public int? LogLevel { get; }
     }
 }

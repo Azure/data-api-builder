@@ -657,8 +657,15 @@ namespace Cli
             }
 
             /// This will start the runtime engine with project name and config file.
-            string[] args = new string[] { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile };
-            return Azure.DataApiBuilder.Service.Program.StartEngine(args);
+            List<string> args = new()
+            { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile, "--verbose", options.Verbose.ToString() };
+            if (options.LogLevel is not null)
+            {
+                args.Add("--LogLevel");
+                args.Add(options.LogLevel.ToString()!);
+            }
+
+            return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
         }
     }
 }

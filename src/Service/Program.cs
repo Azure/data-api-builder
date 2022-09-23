@@ -49,6 +49,13 @@ namespace Azure.DataApiBuilder.Service
                     ILoggerFactory? loggerFactory = LoggerFactory
                         .Create(builder =>
                         {
+                            LogLevel logLevel = GetLogLevel(args);
+                            // Category defines the namespace we will log from,
+                            // including all sub-domains. ie: "Azure" includes
+                            // "Azure.DataApiBuilder.Service"
+                            builder.AddFilter(category: "Microsoft", logLevel);
+                            builder.AddFilter(category: "Azure", logLevel);
+                            builder.AddFilter(category: "Default", logLevel);
                             builder.AddConsole();
                         });
                     ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
@@ -58,6 +65,50 @@ namespace Azure.DataApiBuilder.Service
                         return new Startup(builder.Configuration, startupLogger, configProviderLogger);
                     });
                 });
+
+        /// <summary>
+        /// Iterate through args and based on values present
+        /// set the appropriate log level. If --verbose is present
+        /// the next value in args will be either "True" or "False",
+        /// if --LogLevel is present the next value in args will be
+        /// "0" through "6" and also we are guaranteed that --verbose
+        /// is "False."
+        /// </summary>
+        /// <param name="args">array that may contain log level information.</param>
+        /// <returns>Appropriate log level.</returns>
+        private static LogLevel GetLogLevel(string[] args)
+        {
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i].Equals("--verbose") && args[i+1].Equals("True"))
+                {
+                    return LogLevel.Information;
+                }
+
+                if (args[i].Equals("--LogLevel"))
+                {
+                    switch (args[i + 1])
+                    {
+                        case "0":
+                            return LogLevel.Trace;
+                        case "1":
+                            return LogLevel.Debug;
+                        case "2":
+                            return LogLevel.Information;
+                        case "3":
+                            return LogLevel.Warning;
+                        case "4":
+                            return LogLevel.Error;
+                        case "5":
+                            return LogLevel.Critical;
+                        case "6":
+                            return LogLevel.None;
+                    }
+                }
+            }
+
+            return LogLevel.Error;
+        }
 
         // This is used for testing purposes only. The test web server takes in a
         // IWebHostbuilder, instead of a IHostBuilder.

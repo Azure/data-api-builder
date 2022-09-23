@@ -135,7 +135,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Call the actual ExecuteQueryAsync method.
             queryExecutor.Setup(x => x.ExecuteQueryAsync(
                 It.IsAny<string>(),
-                It.IsAny<IDictionary<string, object>>()
+                It.IsAny<IDictionary<string, object>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
                 It.IsAny<List<string>>())).CallBase();
 
@@ -191,7 +191,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     sqltext: sqltext,
                     parameters: new Dictionary<string, object>(),
                     dataReaderHandler: null,
-                    args: null)
+                    args: null);
+
             // For each attempt logger is invoked twice. The query executes successfully in in 1st retry .i.e. 2nd attempt of execution.
             // An additional information log is added when the query executes successfully in a retry attempt.
             Assert.AreEqual(2 * 2 + 1, queryExecutorLogger.Invocations.Count);

@@ -134,7 +134,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             {
                 "PutOne_Insert_AutoGenNonPK_Test",
                 @"SELECT JSON_OBJECT('id', id, 'title', title, 'volume', volume, 'categoryName', categoryName,
-                    'series_id' series_id) AS data
+                    'series_id', series_id) AS data
                     FROM (
                         SELECT id, title, volume, categoryName
                         FROM " + _integration_AutoGenNonPK_TableName + @"

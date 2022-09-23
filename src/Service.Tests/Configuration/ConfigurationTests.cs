@@ -578,7 +578,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 File.ReadAllText(cosmosFile),
                 File.ReadAllText("schema.gql"),
                 "AccountEndpoint=https://localhost:8081/;",
-                AccessToken: "This is Managed Identity AAD Token");
+                // This is a valid fake JWT token for testing purposes
+                AccessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxMjMzNDQ1Nn0.1cdRZfqwndt67f-sHKgOfEgTfO9xDyGFl6_d-RRyf4U");
         }
 
         /// <summary>

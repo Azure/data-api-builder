@@ -85,9 +85,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // Returns AccessToken which can be used to authenticate service client calls
             public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken)
             {
-                JwtSecurityTokenHandler handler = new ();
-                JwtSecurityToken token = handler.ReadJwtToken(_aadToken);
-                return new AccessToken(_aadToken, new DateTimeOffset(token.ValidTo));
+                try
+                {
+                    JwtSecurityTokenHandler handler = new();
+                    JwtSecurityToken token = handler.ReadJwtToken(_aadToken);
+                    return new AccessToken(_aadToken, new DateTimeOffset(token.ValidTo));
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("Managed Identity Access Token is invalid." + ex.Message);
+                }
             }
 
             public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)

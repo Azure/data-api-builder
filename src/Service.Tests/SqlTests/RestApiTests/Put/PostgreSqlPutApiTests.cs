@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
-                        SELECT id, title, volume, ""categoryName""
+                        SELECT id, title, volume, ""categoryName"", series_id
                         FROM " + _integration_AutoGenNonPK_TableName + @"
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
                             AND title = 'Star Trek' AND volume IS NOT NULL

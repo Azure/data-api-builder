@@ -23,6 +23,7 @@ DROP TABLE IF EXISTS empty_table;
 DROP TABLE IF EXISTS notebooks;
 DROP TABLE IF EXISTS journals;
 DROP TABLE IF EXISTS aow;
+DROP TABLE IF EXISTS series;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -82,7 +83,8 @@ CREATE TABLE comics(
     id int PRIMARY KEY,
     title varchar(max) NOT NULL,
     volume int IDENTITY(5001,1),
-    categoryName varchar(100) NOT NULL UNIQUE
+    categoryName varchar(100) NOT NULL UNIQUE,
+    series_id int NULL,
 );
 
 CREATE TABLE stocks(
@@ -162,6 +164,11 @@ CREATE TABLE aow (
     StrategicAttack varchar(max)
 );
 
+CREATE TABLE series (
+    id int NOT NULL IDENTITY(5001, 1) PRIMARY KEY,
+    [name] nvarchar(1000) NOT NULL
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -204,6 +211,12 @@ FOREIGN KEY (categoryid, pieceid)
 REFERENCES stocks (categoryid, pieceid)
 ON DELETE CASCADE;
 
+ALTER TABLE comics
+ADD CONSTRAINT comics_series_fk
+FOREIGN KEY (series_id)
+REFERENCES series(id)
+ON DELETE CASCADE;
+
 SET IDENTITY_INSERT publishers ON
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02');
 SET IDENTITY_INSERT publishers OFF
@@ -213,7 +226,19 @@ INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (1
 SET IDENTITY_INSERT authors OFF
 
 SET IDENTITY_INSERT books ON
-INSERT INTO books(id, title, publisher_id) VALUES (1, 'Awesome book', 1234), (2, 'Also Awesome book', 1234), (3, 'Great wall of china explained', 2345), (4, 'US history in a nutshell', 2345), (5, 'Chernobyl Diaries', 2323), (6, 'The Palace Door', 2324), (7, 'The Groovy Bar', 2324), (8, 'Time to Eat', 2324), (9, 'Policy-Test-01', 1940), (10, 'Policy-Test-02', 1940), (11, 'Policy-Test-04', 1941), (12, 'Time to Eat 2', 1941);
+INSERT INTO books(id, title, publisher_id)
+VALUES (1, 'Awesome book', 1234),
+(2, 'Also Awesome book', 1234),
+(3, 'Great wall of china explained', 2345),
+(4, 'US history in a nutshell', 2345),
+(5, 'Chernobyl Diaries', 2323),
+(6, 'The Palace Door', 2324),
+(7, 'The Groovy Bar', 2324),
+(8, 'Time to Eat', 2324),
+(9, 'Policy-Test-01', 1940),
+(10, 'Policy-Test-02', 1940),
+(11, 'Policy-Test-04', 1941),
+(12, 'Time to Eat 2', 1941);
 SET IDENTITY_INSERT books OFF
 
 SET IDENTITY_INSERT book_website_placements ON
@@ -241,7 +266,13 @@ INSERT INTO journals(id, journalname, color, ownername) VALUES (1, 'Journal1', '
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
 INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
 INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
-INSERT INTO comics(id, title, categoryName) VALUES (1, 'Star Trek', 'SciFi'), (2, 'Cinderella', 'FairyTales'),(3,'Únknown',''), (4, 'Alexander the Great', 'Historical');
+
+SET IDENTITY_INSERT series ON
+INSERT INTO series(id, [name]) VALUES (3001, 'Foundation'), (3002, 'Hyperion Cantos');
+SET IDENTITY_INSERT series OFF
+
+INSERT INTO comics(id, title, categoryName, series_id) 
+VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'FairyTales', 3001),(3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');
 INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, 'instant1', 100.57, 1), (1, 1, 'instant2', 42.75, 0);
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');

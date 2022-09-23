@@ -47,14 +47,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// Creates a stub RuntimeConfig object with user/test defined values
         /// that set AuthorizationMetadata.
         /// </summary>
-        /// <param name="entityName"></param>
-        /// <param name="roleName"></param>
-        /// <param name="operation"></param>
-        /// <param name="includedCols"></param>
-        /// <param name="excludedCols"></param>
+        /// <param name="entityName">Top level entity name</param>
+        /// <param name="entitySource">Database name for entity</param>
+        /// <param name="roleName">Role permitted to access entity</param>
+        /// <param name="operation">Operation permitted for role</param>
+        /// <param name="includedCols">columns allowed for operation</param>
+        /// <param name="excludedCols">columns NOT allowed for operation</param>
+        /// <param name="databasePolicy">database policy for operation</param>
+        /// <param name="requestPolicy">request policy for operation</param>
         /// <returns></returns>
         public static RuntimeConfig InitRuntimeConfig(
-            string entityName = "SampleEntity",
+            string entityName = TEST_ENTITY,
+            string entitySource = TEST_ENTITY,
             string roleName = "Reader",
             Operation operation = Operation.Create,
             HashSet<string>? includedCols = null,
@@ -85,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
-                Source: TEST_ENTITY,
+                Source: entitySource,
                 Rest: null,
                 GraphQL: null,
                 Permissions: new PermissionSetting[] { permissionForEntity },

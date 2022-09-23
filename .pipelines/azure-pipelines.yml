@@ -5,11 +5,10 @@ trigger:
 variables:
 #  DebugArguments: ' --filter "TestCategory!=ABC" --verbosity normal '
 #  ReleaseArguments: ' --filter "TestCategory!=ABC" --verbosity normal '
-  VmImage: windows-2022 # https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/hosted?view=azure-devops
+  VmImage: windows-2022 # https://learn.microsoft.com/azure/devops/pipelines/agents/hosted?view=azure-devops
 
 jobs:
 - template:  templates/static-tools.yml
   parameters:
     BuildConfiguration: Release
     VmImage: $(VmImage)
-

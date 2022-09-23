@@ -271,6 +271,7 @@ namespace Cli.Tests
         [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, DisplayName = "KeyFields with stored procedure.")]
         [DataRow("view", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with View")]
         [DataRow("table", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with Table")]
+        [DataRow("table-view", new string[] { "param1:value1" }, null, DisplayName = "Invalid Source Type.")]
         public void TestAddNewEntityWithSourceObjectForInvalidFields(
             string? sourceType,
             IEnumerable<string>? parameters,

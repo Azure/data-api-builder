@@ -882,7 +882,7 @@ namespace Cli.Tests
         [DataRow("newSourceName", null, null, "UpdateSourceName", DisplayName = "Update Source Name of the source object.")]
         [DataRow(null, new string[] { "param1:dab", "param2:false" }, null, "UpdateParameters", DisplayName = "update Parameters of stored procedure.")]
         [DataRow(null, null, new string[] { "col1", "col2" }, "UpdateKeyFields", DisplayName = "update KeyFields for table/view.")]
-        public void TestUpdateSourceStringToDatabaseSourceObject2(
+        public void TestUpdateDatabaseSourceObject(
             string? source,
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields,
@@ -968,6 +968,9 @@ namespace Cli.Tests
             }
         }
 
+        /// <summary>
+        /// Deserialize the given json config and return the entity object for the provided entityName if present.
+        /// </summary>
         private static Entity GetEntityObjectFromRuntimeConfigJson(string runtimeConfigJson, string entityName)
         {
             RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigJson, GetSerializationOptions());
@@ -975,6 +978,9 @@ namespace Cli.Tests
             return runtimeConfig!.Entities[entityName];
         }
 
+        /// <summary>
+        /// Contains Assert to check only the intended values of source object is updated.
+        /// </summary>
         private static void AssertOldAndUpdatedValuesForSourceObject(
             UpdateOptions options,
             string initialConfig,
@@ -989,15 +995,35 @@ namespace Cli.Tests
             entity.TryPopulateSourceFields();
             Assert.AreEqual(oldSourceName, entity.SourceName);
             Assert.AreEqual(oldSourceType, entity.SourceTypeName);
-            CollectionAssert.AreEquivalent(oldParameters, entity.Parameters);
+            Assert.AreEqual(
+                ToAssertableStringFromDictionary(oldParameters),
+                ToAssertableStringFromDictionary(entity.Parameters)
+            );
             CollectionAssert.AreEquivalent(oldKeyFields, entity.KeyFields);
             Assert.IsTrue(TryUpdateExistingEntity(options, ref initialConfig));
             entity = GetEntityObjectFromRuntimeConfigJson(initialConfig, entityName);
             entity.TryPopulateSourceFields();
             Assert.AreEqual(updatedSourceName, entity.SourceName);
             Assert.AreEqual(updatedSourceType, entity.SourceTypeName);
-            CollectionAssert.AreEquivalent(updatedParameters, entity.Parameters);
+            Assert.AreEqual(
+                ToAssertableStringFromDictionary(updatedParameters),
+                ToAssertableStringFromDictionary(entity.Parameters)
+            );
             CollectionAssert.AreEquivalent(updatedKeyFields, entity.KeyFields);
+        }
+
+        /// <summary>
+        /// Converts Dictionary into a string that can be Asserted for Testing.
+        /// </summary>
+        private static string? ToAssertableStringFromDictionary(Dictionary<string,object>? dictionary) {
+            if (dictionary is null)
+            {
+                return null;
+            }
+
+            IEnumerable<string> pairStrings = dictionary.OrderBy(p => p.Key)
+                .Select(p => p.Key + ":" + p.Value);
+            return string.Join("; ", pairStrings);
         }
 
         /// <summary>
@@ -1299,6 +1325,49 @@ namespace Cli.Tests
                             }
                         }
                     }";
+
+            Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+        }
+
+        /// <summary>
+        /// Simple test to verify failure on updating source of an entity with invalid fields.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, DisplayName = "Both KeyFields and Parameters provided for source.")]
+        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, DisplayName = "KeyFields with stored procedure.")]
+        [DataRow("view", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with View")]
+        [DataRow("table", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with Table")]
+        [DataRow("table-view", new string[] { "param1:value1" }, null, DisplayName = "Invalid Source Type.")]
+        public void TestAddNewEntityWithSourceObjectForInvalidFields(
+            string? sourceType,
+            IEnumerable<string>? parameters,
+            IEnumerable<string>? keyFields
+        )
+        {
+            UpdateOptions options = new(
+                source: "MyTable",
+                permissions: new string[] { "anonymous", "*,create,read" },
+                entity: "MyEntity",
+                sourceType: sourceType,
+                sourceParameters: parameters,
+                sourceKeyFields: keyFields,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: new string[] { "id", "rating" },
+                fieldsToExclude: new string[] { "level" },
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                map: new string[] { },
+                config: _testRuntimeConfig);
+
+            string runtimeConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceAsStoredProcedure);
 
             Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
         }

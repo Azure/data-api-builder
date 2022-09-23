@@ -243,11 +243,11 @@ namespace Cli
         public StartOptions(bool verbose, int? logLevel, string config)
             : base(config)
         {
-            // when verbose is true we set LogLevel to informational which is 2.
+            // When verbose is true we set LogLevel to informational which is 2.
             LogLevel = verbose is true ? 2 : logLevel;
         }
 
-        // SetNames define mutually exclusive sets, ie: can not have
+        // SetName defines mutually exclusive sets, ie: can not have
         // both verbose and LogLevel.
         [Option("verbose", SetName = "verbose", Required = false, HelpText = "Specify logging level as informational.")]
         public bool Verbose { get; }

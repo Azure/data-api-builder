@@ -251,7 +251,7 @@ namespace Cli
         // both verbose and LogLevel.
         [Option("verbose", SetName = "verbose", Required = false, HelpText = "Specify logging level as informational.")]
         public bool Verbose { get; }
-        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = "Specify logging level as value provided.")]
+        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = "Specify logging level as provided value from 0-6.")]
         public int? LogLevel { get; }
     }
 }

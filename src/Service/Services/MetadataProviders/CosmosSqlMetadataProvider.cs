@@ -160,7 +160,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
-        public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntityNamesAndDbObjects()
+        public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
             throw new NotImplementedException();
         }

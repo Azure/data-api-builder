@@ -98,8 +98,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 ConnectionString = _connectionString
             };
-            _accountEndpoint = (string)dbConnectionStringBuilder["AccountEndpoint"];
-            _accountKey = (string)dbConnectionStringBuilder["AccountKey"];
+
+            _accountEndpoint = dbConnectionStringBuilder.ContainsKey("AccountEndpoint") ? (string)dbConnectionStringBuilder["AccountEndpoint"] : null;
+            _accountKey = dbConnectionStringBuilder.ContainsKey("AccountKey") ? (string)dbConnectionStringBuilder["AccountKey"] : null;
         }
     }
 }

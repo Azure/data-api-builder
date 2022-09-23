@@ -145,6 +145,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
+        [TestMethod("Validates access token is correctly loaded when Account Key is not present for Cosomos.")]
+        public async Task TestLoadingAccessTokenForCosmosClient()
+        {
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            HttpClient httpClient = server.CreateClient();
+
+            ConfigurationPostParameters config = GetCosmosConfigurationParametersWithAccessToken();
+
+            _ = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+
+            CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
+            Assert.IsNotNull(cosmosClientProvider);
+            Assert.IsNotNull(cosmosClientProvider.Client);
+        }
+
         [TestMethod("Validates that local MsSql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.MSSQL)]
         public void TestLoadingLocalMsSqlSettings()
         {
@@ -473,6 +488,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 File.ReadAllText("schema.gql"),
                 "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",
                 AccessToken: null);
+        }
+
+        private static ConfigurationPostParameters GetCosmosConfigurationParametersWithAccessToken()
+        {
+            string cosmosFile = $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}";
+            return new(
+                File.ReadAllText(cosmosFile),
+                File.ReadAllText("schema.gql"),
+                "AccountEndpoint=https://localhost:8081/;",
+                AccessToken: "This is Managed Identity AAD Token");
         }
 
         private static void ValidateCosmosDbSetup(TestServer server)

@@ -224,10 +224,6 @@ SET IDENTITY_INSERT authors ON
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
 SET IDENTITY_INSERT authors OFF
 
-SET IDENTITY_INSERT series ON
-INSERT INTO series(id, [name]) VALUES (3001, 'Foundation'), (3002, 'Hyperion Cantos');
-SET IDENTITY_INSERT series OFF
-
 SET IDENTITY_INSERT books ON
 INSERT INTO books(id, title, publisher_id)
 VALUES (1, 'Awesome book', 1234),
@@ -269,6 +265,11 @@ INSERT INTO journals(id, journalname, color, ownername) VALUES (1, 'Journal1', '
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
 INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
 INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
+
+SET IDENTITY_INSERT series ON
+INSERT INTO series(id, [name]) VALUES (3001, 'Foundation'), (3002, 'Hyperion Cantos');
+SET IDENTITY_INSERT series OFF
+
 INSERT INTO comics(id, title, categoryName, series_id) 
 VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'FairyTales', 3001),(3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');

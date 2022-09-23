@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO.Abstractions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
@@ -47,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         /// <inheritdoc />
         public string GetDatabaseObjectName(string entityName)
         {
-            Entity entity = _entities[entityName];
+            Entity entity = _entities[CultureInfo.CurrentCulture.TextInfo.ToTitleCase(entityName)];
 
             string entitySource = entity.GetSourceName();
 
@@ -72,7 +73,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         /// <inheritdoc />
         public string GetSchemaName(string entityName)
         {
-            Entity entity = _entities[entityName];
+            Entity entity = _entities[CultureInfo.CurrentCulture.TextInfo.ToTitleCase(entityName)];
 
             string entitySource = entity.GetSourceName();
 

@@ -325,7 +325,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             StringBuilder jsonString = new();
             // Even though we only return a single cell, we need this loop for
             // MS SQL. Sadly it splits FOR JSON PATH output across multiple
-            // cells if the JSON consists of more than 2033 bytes:
+            // rows if the JSON consists of more than 2033 bytes:
             // Sources:
             // 1. https://docs.microsoft.com/en-us/sql/relational-databases/json/format-query-results-as-json-with-for-json-sql-server?view=sql-server-2017#output-of-the-for-json-clause
             // 2. https://stackoverflow.com/questions/54973536/for-json-path-results-in-ssms-truncated-to-2033-characters/54973676

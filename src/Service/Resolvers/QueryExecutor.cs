@@ -264,7 +264,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                QueryExecutorLogger.LogInformation("Did not return enough rows in the JSON result.");
+                QueryExecutorLogger.LogInformation("Did not return any rows in the JSON result.");
             }
 
             return jsonResult;

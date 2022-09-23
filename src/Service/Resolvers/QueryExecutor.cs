@@ -230,7 +230,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <inheritdoc />
         /// <Note>This function is a DbDataReader handler of type Func<DbDataReader, List<string>?, Task<TResult?>>
-        /// The parameter args is not used but is added to conform to the signature of the db data reader handler
+        /// The parameter args is not used but is added to conform to the signature of the DbDataReader handler
         /// function argument of ExecuteQueryAsync.</Note>
         public async Task<JsonArray?> GetJsonArrayAsync(
             DbDataReader dbDataReader,

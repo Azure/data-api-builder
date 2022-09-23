@@ -434,6 +434,10 @@
           "linking.object": "book_author_link",
           "linking.source.fields": [ "book_id" ],
           "linking.target.fields": [ "author_id" ]
+        },
+        "series": {
+          "cardinality": "one",
+          "target.entity": "series"
         }
       },
       "mappings": {
@@ -843,6 +847,23 @@
         "WagingWar": "作戰",
         "StrategicAttack": "謀攻",
         "NoteNum": "┬─┬ノ( º _ ºノ)"
+      }
+    },
+    "series": {
+      "source": "series",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "target.entity": "Book"
+        }
       }
     }
   }

@@ -96,7 +96,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Returns a dictionary of (EntityName, DatabaseObject).
         /// </summary>
         /// <returns></returns>
-        public Dictionary<string, DatabaseObject> GetEntityNamesAndDbObjects();
+        public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects();
 
         /// <summary>
         /// Gets Partition Key Path of a database container.

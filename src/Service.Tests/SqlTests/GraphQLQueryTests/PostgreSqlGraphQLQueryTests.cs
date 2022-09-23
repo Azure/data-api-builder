@@ -1,4 +1,6 @@
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
+using Humanizer;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -115,7 +117,7 @@ FROM
         }
 
         [TestMethod]
-        public async Task QueryWithMultileColumnPrimaryKey()
+        public async Task QueryWithMultipleColumnPrimaryKey()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS data
@@ -128,7 +130,31 @@ FROM
                 ) AS subq
             ";
 
-            await QueryWithMultileColumnPrimaryKey(postgresQuery);
+            await QueryWithMultipleColumnPrimaryKey(postgresQuery);
+        }
+
+        [TestMethod]
+        public async Task QueryWithNullableForeignKey()
+        {
+            string postgresQuery = @"
+            SELECT to_jsonb(subq7) AS data
+            FROM
+              (SELECT table0.title AS title,
+                      table1_subq.data AS series
+               FROM public.books AS table0
+               LEFT OUTER JOIN LATERAL
+                 (SELECT to_jsonb(subq6) AS data
+                  FROM
+                    (SELECT table1.name AS name
+                     FROM public.series AS table1
+                     WHERE table0.series_id = table1.id
+                     ORDER BY table1.id ASC
+                     LIMIT 1) AS subq6) AS table1_subq ON TRUE
+               WHERE table0.id = @param5
+               ORDER BY table0.id ASC
+               LIMIT 1) AS subq7";
+
+            await QueryWithNullableForeignKey(postgresQuery);
         }
 
         /// <summary>

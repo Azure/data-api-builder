@@ -153,6 +153,11 @@ CREATE TABLE aow (
     "StrategicAttack" text
 );
 
+CREATE TABLE series (
+    id int PRIMARY KEY,
+    name text NOT NULL
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -163,6 +168,15 @@ ALTER TABLE book_website_placements
 ADD CONSTRAINT book_website_placement_book_fk
 FOREIGN KEY (book_id)
 REFERENCES books (id)
+ON DELETE CASCADE;
+
+ALTER TABLE books 
+ADD series_id int NULL;
+
+ALTER TABLE books
+ADD CONSTRAINT book_series_fk
+FOREIGN KEY (series_id)
+REFERENCES series(id)
 ON DELETE CASCADE;
 
 ALTER TABLE reviews

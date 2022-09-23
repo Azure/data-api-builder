@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        public Dictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
+        public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
             return EntityToDatabaseObject;
         }

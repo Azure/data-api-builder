@@ -571,6 +571,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 AccessToken: null);
         }
 
+        /// <summary>
+        /// With an invalid access token, when new an instance of CosmosClient with that token, it won't throw an exception.
+        /// But when a graphql request is coming in, that's when it throws an 401 exception.
+        /// To prevent this, CosmosClientProvider parses the token and retrieves the "exp" property from the token,
+        /// if it's not valid, then we will throw an exception from our code before it initiating a client.
+        /// </summary>
+        /// <returns>ConfigurationPostParameters object</returns>
         private static ConfigurationPostParameters GetCosmosConfigurationParametersWithAccessToken()
         {
             string cosmosFile = $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}";

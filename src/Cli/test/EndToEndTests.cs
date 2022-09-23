@@ -215,15 +215,24 @@ public class EndToEndTests
     // <summary>
     // Test to verify the engine gets started using start command
     // </summary>
-    [TestMethod]
-    public void TestStartEngine()
+    [DataTestMethod]
+    [DataRow("", DisplayName = "No logging from command line.")]
+    [DataRow("--verbose", DisplayName = "Verbose logging from command line.")]
+    [DataRow("--LogLevel 0", DisplayName = "LogLevel 0 from command line.")]
+    [DataRow("--LogLevel 1", DisplayName = "LogLevel 1 from command line.")]
+    [DataRow("--LogLevel 2", DisplayName = "LogLevel 2 from command line.")]
+    [DataRow("--LogLevel 3", DisplayName = "LogLevel 3 from command line.")]
+    [DataRow("--LogLevel 4", DisplayName = "LogLevel 4 from command line.")]
+    [DataRow("--LogLevel 5", DisplayName = "LogLevel 5 from command line.")]
+    [DataRow("--LogLevel 6", DisplayName = "LogLevel 6 from command line.")]
+    public void TestStartEngine(string logging)
     {
         Process process = new()
         {
             StartInfo =
                 {
                     FileName = @"./dab",
-                    Arguments = $"start --config {RuntimeConfigPath.DefaultName}",
+                    Arguments = $"start --config {RuntimeConfigPath.DefaultName} {logging}",
                     WindowStyle = ProcessWindowStyle.Hidden,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,

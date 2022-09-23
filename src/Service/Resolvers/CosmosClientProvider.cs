@@ -1,5 +1,6 @@
 using System;
 using System.Data.Common;
+using System.IdentityModel.Tokens.Jwt;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -16,7 +17,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private string? _connectionString;
         private string? _accountEndpoint;
         private string? _accountKey;
-        private string? _accessToken;
+        private readonly string? _accessToken;
 
         public CosmosClient? Client { get; private set; }
         public CosmosClientProvider(RuntimeConfigProvider runtimeConfigProvider)
@@ -81,9 +82,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 AADToken = aadToken;
             }
 
+            // Returns AccessToken which can be used to authenticate service client calls
             public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken)
             {
-                return new AccessToken(AADToken, DateTimeOffset.Now.Add(TimeSpan.FromHours(2)));
+                JwtSecurityTokenHandler handler = new ();
+                JwtSecurityToken token = handler.ReadJwtToken(AADToken);
+                return new AccessToken(AADToken, new DateTimeOffset(token.ValidTo));
             }
 
             public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)

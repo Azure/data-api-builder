@@ -188,8 +188,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         }
 
         /// <summary>
-        /// Tests we honor the presence of X-MS-API-ROLE header when role is authenticated
-        /// otherwise - replace it as anonymous.
+        /// Tests we honor the existing value of the X-MS-API-ROLE header when the ClaimsPrincipal
+        /// is a member of the role authenticated. Otherwise, ensure the X-MS-API-ROLE header is
+        /// set as 'anonymous'
         /// </summary>
         [DataTestMethod]
         [DataRow(false, "author",
@@ -260,10 +261,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             DisplayName = "EasyAuth- Treat request as anonymous in development mode")]
         [DataRow(true, "author", "author",
             DisplayName = "EasyAuth- Treat request as authenticated in development mode " +
-            "and honor the clienRoleHeader")]
+            "and honor the clientRoleHeader")]
         [DataRow(true, "Anonymous", "Anonymous",
             DisplayName = "EasyAuth- Treat request as authenticated in development mode " +
-            "and honor the clienRoleHeader even when specified as anonymous")]
+            "and honor the clientRoleHeader even when specified as anonymous")]
         public async Task TestAuthenticatedRequestInDevelopmentMode(
             bool treatDevModeRequestAsAuthenticated,
             string expectedClientRoleHeader,
@@ -275,6 +276,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                     easyAuthType: EasyAuthType.StaticWebApps,
                     clientRoleHeader: clientRoleHeader,
                     treatRequestAsAuthenticated: treatDevModeRequestAsAuthenticated);
+
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
             Assert.AreEqual(expected: expectedClientRoleHeader,
@@ -289,7 +291,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                     actual: postMiddlewareContext.User.IsInRole(clientRoleHeader));
             }
         }
-
         #endregion
 
         #region Helper Methods
@@ -297,9 +298,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// Configures test server with bare minimum middleware
         /// </summary>
         /// <returns>IHost</returns>
-        private static async Task<IHost> CreateWebHostEasyAuth(
+        public static async Task<IHost> CreateWebHostEasyAuth(
             EasyAuthType easyAuthType,
-            bool treatAsAuthenticatedRequest)
+            bool treatAsAuthenticatedRequest,
+            bool useAuthorizationMiddleware)
         {
             // Setup RuntimeConfigProvider object for the pipeline.
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
@@ -319,7 +321,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                             services.AddAuthentication(defaultScheme: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                                     .AddEasyAuthAuthentication(easyAuthType);
                             services.AddSingleton(runtimeConfigProvider.Object);
-                            services.AddAuthorization();
+
+                            if (useAuthorizationMiddleware)
+                            {
+                                services.AddAuthorization();
+                            }
                         })
                         .ConfigureLogging(o =>
                         {
@@ -330,8 +336,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                         .Configure(app =>
                         {
                             app.UseAuthentication();
-                            app.UseMiddleware<AuthenticationMiddleware>();
+                            app.UseClientRoleHeaderAuthenticationMiddleware();
 
+                            if (useAuthorizationMiddleware)
+                            {
+                                app.UseAuthorization();
+                                app.UseClientRoleHeaderAuthorizationMiddleware();
+                            }
                             // app.Run acts as terminating middleware to return 200 if we reach it. Without this,
                             // the Middleware pipeline will return 404 by default.
                             app.Run(async (context) =>
@@ -353,14 +364,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// <param name="token">The EasyAuth header value(base64 encoded token) to test against the TestServer</param>
         /// <param name="sendAuthorizationHeader">Whether to add authorization header to header dictionary</param>
         /// <returns></returns>
-        private static async Task<HttpContext> SendRequestAndGetHttpContextState(
+        public static async Task<HttpContext> SendRequestAndGetHttpContextState(
             string? token,
             EasyAuthType easyAuthType,
             bool sendAuthorizationHeader = false,
             string? clientRoleHeader = null,
-            bool treatRequestAsAuthenticated = false)
+            bool treatRequestAsAuthenticated = false,
+            bool useAuthorizationMiddleware = false)
         {
-            using IHost host = await CreateWebHostEasyAuth(easyAuthType, treatRequestAsAuthenticated);
+            using IHost host = await CreateWebHostEasyAuth(easyAuthType, treatRequestAsAuthenticated, useAuthorizationMiddleware);
             TestServer server = host.GetTestServer();
 
             return await server.SendAsync(context =>

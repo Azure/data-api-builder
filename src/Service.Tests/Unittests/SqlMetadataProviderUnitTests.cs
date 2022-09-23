@@ -124,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task CheckCorrectParsingForStoredProcedure()
         {
             _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(TestCategory.MSSQL);

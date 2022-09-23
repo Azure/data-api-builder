@@ -24,7 +24,7 @@ get the user name and the password you'll be using to allow the App Service to p
 az acr credential show --name dmdabcr --query "{username:username, password:passwords[0].value}"
 ```
 
-I'll be using the `username` and `password` values later. If you don't want to use username and password, you can switch to use Managed Identities for more security: [Use managed identity to pull image from Azure Container Registry](https://docs.microsoft.com/en-us/azure/app-service/configure-custom-container?pivots=container-linux#use-managed-identity-to-pull-image-from-azure-container-registry)
+I'll be using the `username` and `password` values later. If you don't want to use username and password, you can switch to use Managed Identities for more security: [Use managed identity to pull image from Azure Container Registry](https://learn.microsoft.com/azure/app-service/configure-custom-container?pivots=container-linux#use-managed-identity-to-pull-image-from-azure-container-registry)
 
 ### Build the Docker image
 
@@ -50,11 +50,11 @@ The easiest way to run Data API Builder in Azure so that it will be easily acces
 
 The steps to have Data API Builder running in an App Service are the following (don't worry a script will do everything for you. The list is reported so you know what's going to happen when you run the script):
 
-- Create an [App Service Plan](https://docs.microsoft.com/en-us/azure/app-service/app-service-plan-manage)
-- Create an App Service that uses the previously created Docker image (for reference: [Configure a custom container for Azure App Service](https://docs.microsoft.com/en-us/azure/app-service/configure-custom-container?pivots=container-linux))
-- [Create a Storage Account](https://docs.microsoft.com/en-us/azure/storage/common/storage-account-create?tabs=azure-portal) to host the Data API builder configuration file
+- Create an [App Service Plan](https://learn.microsoft.com/azure/app-service/app-service-plan-manage)
+- Create an App Service that uses the previously created Docker image (for reference: [Configure a custom container for Azure App Service](https://learn.microsoft.com/azure/app-service/configure-custom-container?pivots=container-linux))
+- [Create a Storage Account](https://learn.microsoft.com/azure/storage/common/storage-account-create?tabs=azure-portal) to host the Data API builder configuration file
 - Upload the configuration file
-- Mount the created Storage Account to the created App Service (for reference: [Mount storage to Linux container](https://docs.microsoft.com/en-us/azure/app-service/configure-connect-to-azure-storage?tabs=cli&pivots=container-linux#mount-storage-to-linux-container))
+- Mount the created Storage Account to the created App Service (for reference: [Mount storage to Linux container](https://learn.microsoft.com/azure/app-service/configure-connect-to-azure-storage?tabs=cli&pivots=container-linux#mount-storage-to-linux-container))
 - Update the App Service to tell Data API Builder to use the configuration file
 - Configure CORS to allow cross-origin calls from your frontends. *Please note that the provided script set CORS to allow ANY origin which is not a best pratice from a security standpoint. Only allow accepting request from trusted frontends.*
 

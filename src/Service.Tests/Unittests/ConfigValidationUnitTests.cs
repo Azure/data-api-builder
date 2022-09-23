@@ -32,9 +32,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void InaccessibleFieldRequestedByPolicy(string dbPolicy)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE,
+                operation: Operation.Create,
                 includedCols: new HashSet<string> { "*" },
                 excludedCols: new HashSet<string> { "id", "email" },
                 databasePolicy: dbPolicy
@@ -61,9 +61,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void InvalidActionSpecifiedForARole(string dbPolicy, Operation action)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                action,
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE,
+                operation: action,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy
                 );
@@ -470,9 +470,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void EmptyClaimTypeSuppliedInPolicy(string dbPolicy)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE,
+                operation: Operation.Create,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy
                 );
@@ -502,9 +502,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void ParseInvalidDbPolicyWithInvalidClaimTypeFormat(string policy)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                Operation.Create,
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE,
+                operation: Operation.Create,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );
@@ -525,9 +525,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void WildcardActionSpecifiedForARole()
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                Operation.All,
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE,
+                operation: Operation.All,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
@@ -546,9 +546,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void WildCardAndOtherFieldsPresentInIncludeSet(Operation actionOp)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                actionOp,
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE,
+                operation: actionOp,
                 includedCols: new HashSet<string> { "*", "col2" }
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
@@ -569,9 +569,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void WildCardAndOtherFieldsPresentInExcludeSet(Operation actionOp)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                AuthorizationHelpers.TEST_ENTITY,
-                AuthorizationHelpers.TEST_ROLE,
-                actionOp,
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE,
+                operation: actionOp,
                 excludedCols: new HashSet<string> { "*", "col1" }
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);

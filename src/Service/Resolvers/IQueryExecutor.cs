@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="dbDataReader">A Db data reader.</param>
         /// <param name="args">List of string arguments if any.</param>
-        /// <returns>A JsonArray with each element corresponding to the row in the dbDataReader.</returns>
+        /// <returns>A JsonArray with each element corresponding to the row (ColumnName : columnValue) in the dbDataReader.</returns>
         public Task<JsonArray?> GetJsonArrayAsync(
             DbDataReader dbDataReader,
             List<string>? args = null);

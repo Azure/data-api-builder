@@ -497,7 +497,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Perform an Upsert or UpsertIncremental operation on the given entity.
         /// Since Upsert operations could simply be an update or result in an insert,
-        /// uses QueryExecutor's GetMultipleResultIfAnyAsync as the data reader handler.
+        /// uses QueryExecutor's GetMultipleResultSetsIfAnyAsync as the data reader handler.
         /// </summary>
         /// <param name="parameters">The parameters for the mutation query.</param>
         /// <param name="context">The REST request context.</param>
@@ -542,7 +542,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return await _queryExecutor.ExecuteQueryAsync(
                        queryString,
                        queryParameters,
-                       _queryExecutor.GetMultipleResultIfAnyAsync,
+                       _queryExecutor.GetMultipleResultSetsIfAnyAsync,
                        new List<string> { prettyPrintPk, entityName });
         }
 

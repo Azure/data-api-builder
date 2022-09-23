@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// 1. A dictionary representing the row in <c>ColumnName: Value</c> format.
         /// 2. A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.
         /// If the first result set is being returned, has the property "IsFirstResultSet" set to true in this dictionary.</returns>
-        public Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?> GetMultipleResultIfAnyAsync(
+        public Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?> GetMultipleResultSetsIfAnyAsync(
                 DbDataReader dbDataReader,
                 List<string>? args = null);
 

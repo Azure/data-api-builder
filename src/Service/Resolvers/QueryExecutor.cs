@@ -112,7 +112,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="conn">Connection object used to connect to database.</param>
         /// <param name="sqltext">Sql text to be executed.</param>
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
-        /// <returns>DbDataReader object for reading the result set.</returns>
+        /// <param name="dataReaderHandler">The function to invoke to handle the results
+        /// in the db data reader obtained after executing the query.</param>
+        /// <param name="args">List of string arguments to the db data reader handler.</param>
+        /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
         public virtual async Task<TResult?> ExecuteQueryAgainstDbAsync<TResult>(
             TConnection conn,
             string sqltext,
@@ -226,8 +229,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        /// <Note>The parameter args
-        /// is not used but is added to conform to the signature of the db data reader handler
+        /// <Note>This function is a DbDataReader handler of type Func<DbDataReader, List<string>?, Task<TResult?>>
+        /// The parameter args is not used but is added to conform to the signature of the db data reader handler
         /// function argument of ExecuteQueryAsync.</Note>
         public async Task<JsonArray?> GetJsonArrayAsync(
             DbDataReader dbDataReader,
@@ -248,6 +251,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
+        /// <Note>This function is a DbDataReader handler of type Func<DbDataReader, List<string>?, Task<TResult?>>
+        /// The parameter args is not used but is added to conform to the signature of the db data reader handler
+        /// function argument of ExecuteQueryAsync.</Note>
         public async Task<TResult?> GetJsonResultAsync<TResult>(
             DbDataReader dbDataReader,
             List<string>? args = null)
@@ -271,11 +277,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
-            GetMultipleResultIfAnyAsync(DbDataReader dbDataReader, List<string>? args = null)
+        /// <Note>This function is a DbDataReader handler of type
+        /// Func<DbDataReader, List<string>?, Task<TResult?>></Note>
+        public async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?> GetMultipleResultSetsIfAnyAsync(
+            DbDataReader dbDataReader, List<string>? args = null)
         {
-            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?
-                resultRecordWithProperties = await ExtractRowFromDbDataReader(dbDataReader);
+            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRecordWithProperties
+                = await ExtractRowFromDbDataReader(dbDataReader);
 
             /// Processes a second result set from DbDataReader if it exists.
             /// In MsSQL upsert:
@@ -294,6 +302,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
+                // This is the case where UPDATE and INSERT both return no results.
+                // e.g. a situation where the item with the given PK doesn't exist so there's
+                // no update and PK is auto generated so no insert can happen.
                 if (args is not null && args.Count == 2)
                 {
                     string prettyPrintPk = args[0];
@@ -311,8 +322,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public Task<Dictionary<string, object>?>
-            GetResultProperties(DbDataReader dbDataReader, List<string>? columnNames = null)
+        /// <Note>This function is a DbDataReader handler of type
+        /// Func<DbDataReader, List<string>?, Task<TResult?>></Note>
+        public Task<Dictionary<string, object>?> GetResultProperties(
+            DbDataReader dbDataReader,
+            List<string>? columnNames = null)
         {
             Dictionary<string, object>? propertiesOfResult = new();
             propertiesOfResult.Add(nameof(dbDataReader.RecordsAffected), dbDataReader.RecordsAffected);

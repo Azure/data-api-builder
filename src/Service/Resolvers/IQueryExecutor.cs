@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// If no rows, tries to get the subsequent result set if any.
         /// Throws an exception if the second result is null as well.
         /// </summary>
-        /// <param name="dbDataReader">A Db Data Reader.</param>
+        /// <param name="dbDataReader">A DbDataReader.</param>
         /// <param name="args">The arguments to this handler - args[0] = primary key in pretty format, args[1] entity name.</param>
         /// <returns>A tuple of 2 dictionaries:
         /// 1. A dictionary representing the row in <c>ColumnName: Value</c> format.

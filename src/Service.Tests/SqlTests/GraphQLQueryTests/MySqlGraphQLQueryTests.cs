@@ -155,7 +155,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                           ) AS `subq6`
                       ) AS `table1_subq` ON TRUE 
                     WHERE 
-                      `table0`.`id` = @param5 
+                      `table0`.`id` = 1
                     ORDER BY 
                       `table0`.`id` ASC 
                     LIMIT 

@@ -148,7 +148,7 @@ FROM
                      WHERE table0.series_id = table1.id
                      ORDER BY table1.id ASC
                      LIMIT 1) AS subq6) AS table1_subq ON TRUE
-               WHERE table0.id = @param5
+               WHERE table0.id = 1
                ORDER BY table0.id ASC
                LIMIT 1) AS subq7";
 

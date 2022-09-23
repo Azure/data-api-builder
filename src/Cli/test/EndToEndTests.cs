@@ -130,7 +130,7 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test the exact config json generated to verify adding a new Entity without IEnumerable options.
+    /// Test the exact config json generated to verify adding source as stored-procedure.
     /// </summary>
     [TestMethod]
     public void TestConfigGeneratedAfterAddingEntityWithSourceAsStoredProcedure()
@@ -147,7 +147,7 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test the exact config json generated to verify adding a new Entity without IEnumerable options.
+    /// Test the exact config json generated to verify adding a new Entity with default source type and given key-fields.
     /// </summary>
     [TestMethod]
     public void TestConfigGeneratedAfterAddingEntityWithSourceWithDefaultType()

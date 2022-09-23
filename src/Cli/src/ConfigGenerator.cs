@@ -564,6 +564,10 @@ namespace Cli
             return updatedOperationArray.ToArray();
         }
 
+        /// <summary>
+        /// This method will parse update options and create updated sourceObject
+        /// of the given entity updating the source fields.
+        /// </summary>
         private static bool TryGetUpdatedSourceObjectWithOptions(UpdateOptions options, Entity entity, out object? updatedSourceObject)
         {
             // populate Source object fields

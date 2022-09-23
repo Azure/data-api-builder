@@ -65,6 +65,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 ConnectionString = ConnectionString,
             };
+
             await SetManagedIdentityAccessTokenIfAnyAsync(conn);
 
             return await _retryPolicy.ExecuteAsync(async () =>
@@ -72,7 +73,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 retryAttempt++;
                 try
                 {
-                    DbDataReader dbReader = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters);
+                    TResult? result =
+                        await ExecuteQueryAgainstDbAsync(conn,
+                            sqltext,
+                            parameters,
+                            dataReaderHandler,
+                            args: null);
                     if (retryAttempt > 1)
                     {
                         // This implies that the request got successfully executed during one of retry attempts.
@@ -80,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             $"{_maxRetryCount + 1} available attempts.");
                     }
 
-                    return dbReader;
+                    return result;
                 }
                 catch (DbException e)
                 {
@@ -107,7 +113,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="sqltext">Sql text to be executed.</param>
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <returns>DbDataReader object for reading the result set.</returns>
-        public virtual async Task<DbDataReader> ExecuteQueryAgainstDbAsync(TConnection conn, string sqltext, IDictionary<string, object?> parameters)
+        public virtual async Task<TResult?> ExecuteQueryAgainstDbAsync<TResult>(
+            TConnection conn,
+            string sqltext,
+            IDictionary<string, object?> parameters,
+            Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
+            List<string>? args = null)
         {
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();

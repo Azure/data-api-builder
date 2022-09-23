@@ -136,7 +136,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                       `table0`.`title` AS `title`, 
                       `table1_subq`.`data` AS `series` 
                     FROM 
-                      `books` AS `table0` 
+                      `comics` AS `table0` 
                       LEFT OUTER JOIN LATERAL (
                         SELECT 
                           JSON_OBJECT(@param2, `subq6`.`name`) AS `data` 

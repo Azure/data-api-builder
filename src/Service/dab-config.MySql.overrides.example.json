@@ -434,10 +434,6 @@
           "linking.object": "book_author_link",
           "linking.source.fields": [ "book_id" ],
           "linking.target.fields": [ "author_id" ]
-        },
-        "series": {
-          "cardinality": "one",
-          "target.entity": "series"
         }
       },
       "mappings": {
@@ -539,7 +535,13 @@
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
-      ]
+      ],
+      "relationships": {
+        "series": {
+          "cardinality": "one",
+          "target.entity": "series"
+        }
+      }
     },
     "Broker": {
       "source": "brokers",
@@ -860,9 +862,9 @@
         }
       ],
       "relationships": {
-        "books": {
+        "comics": {
           "cardinality": "many",
-          "target.entity": "Book"
+          "target.entity": "Comic"
         }
       }
     }

@@ -510,9 +510,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task QueryWithNullableForeignKey(string dbQuery)
         {
-            string graphQLQueryName = "book_by_pk";
+            string graphQLQueryName = "comic_by_pk";
             string graphQLQuery = @"{
-                book_by_pk(id: 1) {
+                comic_by_pk(id: 1) {
                     title
                     series {
                         name

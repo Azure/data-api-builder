@@ -117,7 +117,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                   TOP 1 [table0].[title] AS [title], 
                   JSON_QUERY ([table1_subq].[data]) AS [series] 
                 FROM 
-                  [dbo].[books] AS [table0] OUTER APPLY (
+                  [dbo].[comics] AS [table0] OUTER APPLY (
                     SELECT 
                       TOP 1 [table1].[name] AS [name] 
                     FROM 

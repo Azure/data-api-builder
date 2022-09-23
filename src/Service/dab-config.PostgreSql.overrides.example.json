@@ -539,7 +539,13 @@
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
-      ]
+      ],
+      "relationships": {
+        "series": {
+          "cardinality": "one",
+          "target.entity": "series"
+        }
+      }
     },
     "Broker": {
       "source": "brokers",
@@ -809,9 +815,9 @@
         }
       ],
       "relationships": {
-        "books": {
+        "comics": {
           "cardinality": "many",
-          "target.entity": "Book"
+          "target.entity": "Comic"
         }
       }
     }

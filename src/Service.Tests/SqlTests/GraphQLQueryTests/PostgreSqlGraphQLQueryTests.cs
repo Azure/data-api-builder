@@ -139,7 +139,7 @@ FROM
             FROM
               (SELECT table0.title AS title,
                       table1_subq.data AS series
-               FROM public.books AS table0
+               FROM public.comics AS table0
                LEFT OUTER JOIN LATERAL
                  (SELECT to_jsonb(subq6) AS data
                   FROM

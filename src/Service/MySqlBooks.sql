@@ -75,7 +75,8 @@ CREATE TABLE comics(
     id int PRIMARY KEY,
     title text NOT NULL,
     volume int AUTO_INCREMENT UNIQUE KEY,
-    categoryName varchar(100) NOT NULL UNIQUE
+    categoryName varchar(100) NOT NULL UNIQUE,
+    series_id int NULL
 );
 
 CREATE TABLE stocks(
@@ -171,15 +172,6 @@ FOREIGN KEY (book_id)
 REFERENCES books (id)
 ON DELETE CASCADE;
 
-ALTER TABLE books 
-ADD series_id int NULL;
-
-ALTER TABLE books
-ADD CONSTRAINT book_series_fk
-FOREIGN KEY (series_id)
-REFERENCES series(id)
-ON DELETE CASCADE;
-
 ALTER TABLE reviews
 ADD CONSTRAINT review_book_fk
 FOREIGN KEY (book_id)
@@ -210,6 +202,12 @@ FOREIGN KEY (categoryid, pieceid)
 REFERENCES stocks (categoryid, pieceid)
 ON DELETE CASCADE;
 
+ALTER TABLE comics
+ADD CONSTRAINT comics_series_fk
+FOREIGN KEY (series_id)
+REFERENCES series(id)
+ON DELETE CASCADE;
+
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02');
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
 INSERT INTO books(id, title, publisher_id) VALUES (1, 'Awesome book', 1234), (2, 'Also Awesome book', 1234), (3, 'Great wall of china explained', 2345), (4, 'US history in a nutshell', 2345), (5, 'Chernobyl Diaries', 2323), (6, 'The Palace Door', 2324), (7, 'The Groovy Bar', 2324), (8, 'Time to Eat', 2324), (9, 'Policy-Test-01', 1940), (10, 'Policy-Test-02', 1940), (11, 'Policy-Test-04', 1941), (12, 'Time to Eat 2', 1941);
@@ -218,8 +216,8 @@ INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, '')
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124);
 INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
 INSERT INTO magazines(id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
-INSERT INTO comics(id, title, categoryName) VALUES (1, 'Star Trek', 'SciFi'), (2, 'Cinderella', 'FairyTales'),(3,'Únknown',''), (4, 'Alexander the Great', 'Historical');
-INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');
+INSERT INTO comics(id, title, categoryName, series_id) 
+VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'FairyTales', 3001),(3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');
 INSERT INTO brokers(`ID Number`, `First Name`, `Last Name`) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
 INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, 'instant1', 100.57, true), (1, 1, 'instant2', 42.75, false);
 INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types, datetime_types, bytearray_types) VALUES

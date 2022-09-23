@@ -1,6 +1,8 @@
 import http from 'k6/http';
 import { validateResponses, graphQLEndPoint } from '../Helper.js';
 
+// This test performs graphQL queries and REST GET requests in parallel on different items
+// The response status and bodies for each request are validated.
 export const validateParallelReadOperations = () => {
 
   let headers = {

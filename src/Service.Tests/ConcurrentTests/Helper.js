@@ -121,4 +121,15 @@ export const validateResponseBody = (queryNames, responses, expectedResponseBody
   return true;
 };
 
+// Helper function to generate a header with the specified role and EasyAuth token
+export const generateEasyAuthHeader = (role) => {
+  let accessToken = generateEasyAuthToken();
+  let header = {
+    'X-MS-CLIENT-PRINCIPAL': accessToken,
+    'X-MS-API-ROLE': role,
+    'content-type': 'application/json'
+  };
+  return header;
+};
+
 export const graphQLEndPoint = 'https://localhost:5001/graphql/';

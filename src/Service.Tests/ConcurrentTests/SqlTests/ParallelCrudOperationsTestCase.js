@@ -1,15 +1,13 @@
-import { validateResponses, generateEasyAuthToken, graphQLEndPoint } from '../Helper.js';
+import { validateResponses, generateEasyAuthHeader, graphQLEndPoint } from '../Helper.js';
 import http from 'k6/http';
 
+// This test performs all CRUD operations through GraphQL and REST 
+// on different items of the author entity in parallel 
+// and validates the responses.
+// Response status codes and bodies are validated. 
 export const validateParallelCRUDOperations = () => {
 
-  let accessToken = generateEasyAuthToken();
-
-  let headers = {
-    'X-MS-CLIENT-PRINCIPAL': accessToken,
-    'X-MS-API-ROLE': 'authenticated',
-    'content-type': 'application/json'
-  };
+  let headers = generateEasyAuthHeader('authenticated');
 
   const parameters = {
     headers: headers

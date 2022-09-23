@@ -1,16 +1,13 @@
-import { generateEasyAuthToken, validateResposneBodies, validateStatusCode, validateNoErrorsInResponse, graphQLEndPoint } from '../Helper.js';
+import { generateEasyAuthHeader, validateResposneBodies, validateStatusCode, validateNoErrorsInResponse, graphQLEndPoint } from '../Helper.js';
 import { check } from 'k6';
 import http from 'k6/http';
 
+// This test performs an update mutation and read query that act on the same item
+// The response for these requests depends on the execution order of the requests.
+// So, the responses are validated against two sets of possible responses.
 export const validateParallelUpdateAndReadOperationsOnSameItem = () => {
 
-  let accessToken = generateEasyAuthToken();
-
-  let headers = {
-    'X-MS-CLIENT-PRINCIPAL': accessToken,
-    'X-MS-API-ROLE': 'authenticated',
-    'content-type': 'application/json'
-  };
+  let headers = generateEasyAuthHeader('authenticated');
 
   const parameters = {
     headers: headers

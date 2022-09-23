@@ -1,16 +1,13 @@
-import { generateEasyAuthToken, validateResposneBodies, validateStatusCode, validateNoErrorsInResponse, graphQLEndPoint } from '../Helper.js';
+import { generateEasyAuthHeader, validateResposneBodies, validateStatusCode, validateNoErrorsInResponse, graphQLEndPoint } from '../Helper.js';
 import { check } from 'k6';
 import http from 'k6/http';
 
+// This test performs graphQL update mutations on the same item in parallel.
+// Since,the responses for each request depend on the execution order, the responses
+// are validated against a set of possible values. 
 export const validateParallelUpdateOperationsOnSameItem = () => {
 
-  let accessToken = generateEasyAuthToken();
-
-  let headers = {
-    'X-MS-CLIENT-PRINCIPAL': accessToken,
-    'X-MS-API-ROLE': 'authenticated',
-    'content-type': 'application/json'
-  };
+  let headers = generateEasyAuthHeader('authenticated');
 
   const parameters = {
     headers: headers

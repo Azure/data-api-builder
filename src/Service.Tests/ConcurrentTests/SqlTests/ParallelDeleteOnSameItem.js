@@ -1,16 +1,13 @@
-import { generateEasyAuthToken, validateStatusCodes, graphQLEndPoint } from '../Helper.js';
+import { generateEasyAuthHeader, validateStatusCodes, graphQLEndPoint } from '../Helper.js';
 import { check } from 'k6';
 import http from 'k6/http';
 
+// This test performs delete operations through GraphQL delete mutation and REST DELETE
+// on the same item in parallel. The responses for each request could be different depending
+// on the execution order. So, the response codes are checked against two sets of possible values.
 export const validateParallelDeleteOperationsOnSameItem = () => {
 
-    let accessToken = generateEasyAuthToken();
-
-    let headers = {
-        'X-MS-CLIENT-PRINCIPAL': accessToken,
-        'X-MS-API-ROLE': 'authenticated',
-        'content-type': 'application/json'
-    };
+    let headers = generateEasyAuthHeader('authenticated');
 
     const parameters = {
         headers: headers

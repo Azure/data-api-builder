@@ -1,7 +1,9 @@
+using System;
 using System.Collections;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Humanizer;
 using static Cli.Utils;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -665,10 +667,8 @@ namespace Cli
             {
                 if (options.LogLevel is < 0 or > 6)
                 {
-                    throw new DataApiBuilderException(
-                        message: $"LogLevel range is 0 to 6, your value: {options.LogLevel}",
-                        statusCode: System.Net.HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    Console.WriteLine($"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}");
+                    return false;
                 }
 
                 args.Add("--LogLevel");

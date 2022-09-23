@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             sqltext,
                             parameters,
                             dataReaderHandler,
-                            args: null);
+                            args: args);
                     if (retryAttempt > 1)
                     {
                         // This implies that the request got successfully executed during one of retry attempts.

@@ -201,7 +201,7 @@ dab update book_author --relationship book --target.entity book --cardinality on
 dab update book_author --relationship author --target.entity author --cardinality one --relationship.fields "author_id:id"
 ```
 
-to add the relationships from `book_author` to `book` and `authors`. With the provided configuration DAB will be able to handle nested queryies like the following:
+to add the relationships from `book_author` to `book` and `authors`. With the provided configuration DAB will be able to handle nested queries like the following:
 
 ```graphql
 {

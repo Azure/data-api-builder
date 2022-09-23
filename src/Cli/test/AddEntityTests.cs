@@ -26,7 +26,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string initialConfiguration = GetInitialConfiguration;
             string expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
@@ -49,7 +49,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
             string configurationWithOneEntity = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
@@ -74,7 +74,7 @@ namespace Cli.Tests
                 fieldsToExclude: null,
                 policyRequest: null,
                 policyDatabase: null,
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
             Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref initialConfiguration));
@@ -97,7 +97,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: "outputfile"
+                config: _testRuntimeConfig
             );
 
             string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
@@ -129,7 +129,7 @@ namespace Cli.Tests
                 fieldsToExclude: fieldsToExclude,
                 policyRequest: policyRequest,
                 policyDatabase: policyDatabase,
-                config: "outputfile"
+                config: _testRuntimeConfig
             );
 
             string? expectedConfiguration = null;
@@ -154,17 +154,17 @@ namespace Cli.Tests
         #region Negative Tests
 
         /// <summary>
-        /// Check failure when adding an entity with permission containing invalid actions
+        /// Check failure when adding an entity with permission containing invalid operations
         /// </summary>
         [DataTestMethod]
-        [DataRow(new string[] { "anonymous", "*,create,read" }, DisplayName = "Permission With Wildcard And Other CRUD Actions")]
-        [DataRow(new string[] { "anonymous", "create,create,read" }, DisplayName = "Permission With duplicate CRUD Actions")]
-        [DataRow(new string[] { "anonymous", "fetch" }, DisplayName = "Invalid CRUD action: fetch")]
-        [DataRow(new string[] { "anonymous", "fetch,*" }, DisplayName = "WILDCARD combined with other actions")]
-        [DataRow(new string[] { "anonymous", "fetch,create" }, DisplayName = "Mix of invalid and valid CRUD action")]
-        [DataRow(new string[] { "anonymous", "reads,create" }, DisplayName = "Misspelled CRUD actions")]
+        [DataRow(new string[] { "anonymous", "*,create,read" }, DisplayName = "Permission With Wildcard And Other CRUD operations")]
+        [DataRow(new string[] { "anonymous", "create,create,read" }, DisplayName = "Permission With duplicate CRUD operations")]
+        [DataRow(new string[] { "anonymous", "fetch" }, DisplayName = "Invalid CRUD operation: fetch")]
+        [DataRow(new string[] { "anonymous", "fetch,*" }, DisplayName = "WILDCARD combined with other operations")]
+        [DataRow(new string[] { "anonymous", "fetch,create" }, DisplayName = "Mix of invalid and valid CRUD operations")]
+        [DataRow(new string[] { "anonymous", "reads,create" }, DisplayName = "Misspelled CRUD operations")]
         [DataRow(new string[] { }, DisplayName = "No permissions entered")]
-        public void TestAddEntityPermissionWithInvalidAction(IEnumerable<string> permissions)
+        public void TestAddEntityPermissionWithInvalidOperation(IEnumerable<string> permissions)
         {
 
             AddOptions options = new(
@@ -177,7 +177,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { "level" },
                 policyRequest: null,
                 policyDatabase: null,
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string runtimeConfig = GetInitialConfiguration;
 

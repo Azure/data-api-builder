@@ -91,9 +91,20 @@ namespace Azure.DataApiBuilder.Service.Tests
             mockRuntimeConfigProvider.Setup(x => x.RestPath).Returns(path);
             mockRuntimeConfigProvider.Setup(x => x.TryLoadRuntimeConfigValue()).Returns(true);
             string configJson = RuntimeConfigProvider.GetRuntimeConfigJsonString(configPath.ConfigFileName);
-            RuntimeConfig.TryGetDeserializedConfig(configJson, out RuntimeConfig runtimeConfig);
+            RuntimeConfig.TryGetDeserializedConfig(configJson, out RuntimeConfig runtimeConfig, configProviderLogger.Object);
             mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
             return mockRuntimeConfigProvider.Object;
+        }
+
+        /// <summary>
+        /// Given the environment, return the runtime config provider.
+        /// </summary>
+        /// <param name="environment">The environment for which the test is being run. (e.g. TestCategory.COSMOS)</param>
+        /// <returns></returns>
+        public static RuntimeConfigProvider GetRuntimeConfigProvider(string environment)
+        {
+            RuntimeConfigPath configPath = GetRuntimeConfigPath(environment);
+            return GetRuntimeConfigProvider(configPath);
         }
 
         /// <summary>
@@ -129,8 +140,12 @@ namespace Azure.DataApiBuilder.Service.Tests
                     ""permissions"": [
                       {
                         ""role"": ""anonymous"",
-                        ""actions"": [ ""read"" ]
-                      },
+                        ""actions"": [" +
+                        $" \"{Operation.Create.ToString().ToLower()}\"," +
+                        $" \"{Operation.Read.ToString().ToLower()}\"," +
+                        $" \"{Operation.Delete.ToString().ToLower()}\"," +
+                        $" \"{Operation.Update.ToString().ToLower()}\" ]" +
+                      @"},
                       {
                         ""role"": ""authenticated"",
                         ""actions"": [" +

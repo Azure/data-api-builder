@@ -2,7 +2,7 @@ using System.Collections;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using static Cli.Utils;
-using Action = Azure.DataApiBuilder.Config.Action;
+using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Cli
 {
@@ -16,16 +16,25 @@ namespace Cli
         /// </summary>
         public static bool TryGenerateConfig(InitOptions options)
         {
-            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
-            {
-                Console.Error.Write($"Failed to create the runtime config file.");
-                return false;
-            }
-
             if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
             {
                 runtimeConfigFile = RuntimeConfigPath.DefaultName;
                 Console.WriteLine($"Creating a new config file: {runtimeConfigFile}");
+            }
+
+            // File existence checked to avoid overwriting the existing configuration.
+            if (File.Exists(runtimeConfigFile))
+            {
+                Console.Error.Write($"Config file: {runtimeConfigFile} already exists. " +
+                    "Please provide a different name or remove the existing config file.");
+                return false;
+            }
+
+            // Creating a new json file with runtime configuration
+            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
+            {
+                Console.Error.Write($"Failed to create the runtime config file.");
+                return false;
             }
 
             return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
@@ -42,10 +51,14 @@ namespace Cli
             runtimeConfigJson = string.Empty;
 
             DatabaseType dbType = options.DatabaseType;
-            DataSource dataSource = new(dbType)
+            DataSource dataSource = new(dbType);
+
+            // default value of connection-string should be used, i.e Empty-string
+            // if not explicitly provided by the user
+            if (options.ConnectionString is not null)
             {
-                ConnectionString = options.ConnectionString
-            };
+                dataSource.ConnectionString = options.ConnectionString;
+            }
 
             CosmosDbOptions? cosmosDbOptions = null;
             MsSqlOptions? msSqlOptions = null;
@@ -91,7 +104,10 @@ namespace Cli
                 MsSql: msSqlOptions,
                 PostgreSql: postgreSqlOptions,
                 MySql: mySqlOptions,
-                RuntimeSettings: GetDefaultGlobalSettings(dbType, options.HostMode, options.CorsOrigin),
+                RuntimeSettings: GetDefaultGlobalSettings(
+                    options.HostMode,
+                    options.CorsOrigin,
+                    devModeDefaultAuth: GetDevModeDefaultAuth(options.DevModeDefaultAuth)),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
@@ -99,8 +115,30 @@ namespace Cli
         }
 
         /// <summary>
+        /// Helper method to parse the devModeDefaultAuth string into its corresponding boolean representation.
+        /// </summary>
+        /// <param name="devModeDefaultAuth">string to be parsed into bool value.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception">throws exception if string is not null and cannot be parsed into a bool value.</exception>
+        private static bool? GetDevModeDefaultAuth(string? devModeDefaultAuth)
+        {
+            if (devModeDefaultAuth is null)
+            {
+                return null;
+            }
+
+            if (bool.TryParse(devModeDefaultAuth, out bool parsedBoolVar))
+            {
+                return parsedBoolVar;
+            }
+
+            throw new Exception($"{devModeDefaultAuth} is an invalid value for the property authenticate-devmode-requests." +
+                $" It can only assume boolean values true/false.");
+        }
+
+        /// <summary>
         /// This method will add a new Entity with the given REST and GraphQL endpoints, source, and permissions.
-        /// It also supports fields that needs to be included or excluded for a given role and action.
+        /// It also supports fields that needs to be included or excluded for a given role and operation.
         /// </summary>
         public static bool TryAddEntityToConfigWithOptions(AddOptions options)
         {
@@ -158,8 +196,8 @@ namespace Cli
                 return false;
             }
 
-            Policy? policy = GetPolicyForAction(options.PolicyRequest, options.PolicyDatabase);
-            Field? field = GetFieldsForAction(options.FieldsToInclude, options.FieldsToExclude);
+            Policy? policy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
+            Field? field = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
 
             PermissionSetting[]? permissionSettings = ParsePermission(options.Permissions, policy, field);
             if (permissionSettings is null)
@@ -198,24 +236,23 @@ namespace Cli
         /// <returns></returns>
         public static PermissionSetting[]? ParsePermission(IEnumerable<string> permissions, Policy? policy, Field? fields)
         {
-            // Getting Role and Actions from permission string
-            //
-            string? role, actions;
-            if (!TryGetRoleAndActionFromPermission(permissions, out role, out actions))
+            // Getting Role and Operations from permission string
+            string? role, operations;
+            if (!TryGetRoleAndOperationFromPermission(permissions, out role, out operations))
             {
-                Console.Error.Write($"Failed to fetch the role and action from the given permission string: {string.Join(":", permissions.ToArray())}.");
+                Console.Error.Write($"Failed to fetch the role and operation from the given permission string: {string.Join(":", permissions.ToArray())}.");
                 return null;
             }
 
-            // Check if provided actions are valid
-            if (!VerifyActions(actions!.Split(",")))
+            // Check if provided operations are valid
+            if (!VerifyOperations(operations!.Split(",")))
             {
                 return null;
             }
 
             PermissionSetting[] permissionSettings = new PermissionSetting[]
             {
-                CreatePermissions(role!, actions!, policy, fields)
+                CreatePermissions(role!, operations!, policy, fields)
             };
 
             return permissionSettings;
@@ -223,7 +260,7 @@ namespace Cli
 
         /// <summary>
         /// This method will update an existing Entity with the given REST and GraphQL endpoints, source, and permissions.
-        /// It also supports updating fields that need to be included or excluded for a given role and action.
+        /// It also supports updating fields that need to be included or excluded for a given role and operation.
         /// </summary>
         public static bool TryUpdateEntityWithOptions(UpdateOptions options)
         {
@@ -284,12 +321,17 @@ namespace Cli
 
             object updatedSource = options.Source is null ? entity!.Source : options.Source;
             object? updatedRestDetails = options.RestRoute is null ? entity!.Rest : GetRestDetails(options.RestRoute);
-            object? updatedGraphqlDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
+            object? updatedGraphQLDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
             PermissionSetting[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, Relationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;
-            Policy? updatedPolicy = GetPolicyForAction(options.PolicyRequest, options.PolicyDatabase);
-            Field? updatedFields = GetFieldsForAction(options.FieldsToInclude, options.FieldsToExclude);
+            Policy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
+            Field? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
+
+            if (false.Equals(updatedGraphQLDetails))
+            {
+                Console.WriteLine("WARNING: Disabling GraphQL for this entity will restrict it's usage in relationships");
+            }
 
             if (options.Permissions is not null && options.Permissions.Any())
             {
@@ -352,7 +394,7 @@ namespace Cli
 
             runtimeConfig.Entities[options.Entity] = new Entity(updatedSource,
                                                                 updatedRestDetails,
-                                                                updatedGraphqlDetails,
+                                                                updatedGraphQLDetails,
                                                                 updatedPermissions,
                                                                 updatedRelationships,
                                                                 updatedMappings);
@@ -368,27 +410,27 @@ namespace Cli
         /// <param name="entityToUpdate">entity whose permission needs to be updated</param>
         /// <param name="permissions">New permission to be applied.</param>
         /// <param name="policy">policy to added for this permission</param>
-        /// <param name="fields">fields to be included and excluded from the action permission.</param>
+        /// <param name="fields">fields to be included and excluded from the operation permission.</param>
         /// <returns> On failure, returns null. Else updated PermissionSettings array will be returned.</returns>
         private static PermissionSetting[]? GetUpdatedPermissionSettings(Entity entityToUpdate,
                                                                         IEnumerable<string> permissions,
                                                                         Policy? policy,
                                                                         Field? fields)
         {
-            string? newRole, newActions;
+            string? newRole, newOperations;
 
-            // Parse role and actions from the permissions string
+            // Parse role and operations from the permissions string
             //
-            if (!TryGetRoleAndActionFromPermission(permissions, out newRole, out newActions))
+            if (!TryGetRoleAndOperationFromPermission(permissions, out newRole, out newOperations))
             {
-                Console.Error.Write($"Failed to fetch the role and action from the given permission string: {permissions}.");
+                Console.Error.Write($"Failed to fetch the role and operation from the given permission string: {permissions}.");
                 return null;
             }
 
             List<PermissionSetting> updatedPermissionsList = new();
-            string[] newActionArray = newActions!.Split(",");
+            string[] newOperationArray = newOperations!.Split(",");
 
-            if (!VerifyActions(newActionArray))
+            if (!VerifyOperations(newOperationArray))
             {
                 return null;
             }
@@ -401,21 +443,20 @@ namespace Cli
                 if (permission.Role.Equals(newRole!))
                 {
                     role_found = true;
-                    if (newActionArray.Length is 1 && WILDCARD.Equals(newActionArray[0]))
+                    if (newOperationArray.Length is 1 && WILDCARD.Equals(newOperationArray[0]))
                     {
-                        // If the user inputs WILDCARD as actions, we overwrite the existing actions.
-                        //
+                        // If the user inputs WILDCARD as operation, we overwrite the existing operations.
                         updatedPermissionsList.Add(CreatePermissions(newRole!, WILDCARD, policy, fields));
                     }
                     else
                     {
-                        // User didn't use WILDCARD, and wants to update some of the actions.
-                        IDictionary<Operation, Action> existingActions = ConvertActionArrayToIEnumerable(permission.Actions);
+                        // User didn't use WILDCARD, and wants to update some of the operations.
+                        IDictionary<Operation, PermissionOperation> existingOperations = ConvertOperationArrayToIEnumerable(permission.Operations);
 
-                        // Merge existing actions with new actions
-                        object[] updatedActionArray = GetUpdatedActionArray(newActionArray, policy, fields, existingActions);
+                        // Merge existing operations with new operations
+                        object[] updatedOperationArray = GetUpdatedOperationArray(newOperationArray, policy, fields, existingOperations);
 
-                        updatedPermissionsList.Add(new PermissionSetting(newRole, updatedActionArray));
+                        updatedPermissionsList.Add(new PermissionSetting(newRole, updatedOperationArray));
                     }
                 }
                 else
@@ -424,83 +465,83 @@ namespace Cli
                 }
             }
 
-            // if the role we are trying to update is not found, we create a new one
+            // If the role we are trying to update is not found, we create a new one
             // and add it to permissionSettings list.
             if (!role_found)
             {
-                updatedPermissionsList.Add(CreatePermissions(newRole!, newActions!, policy, fields));
+                updatedPermissionsList.Add(CreatePermissions(newRole!, newOperations!, policy, fields));
             }
 
             return updatedPermissionsList.ToArray();
         }
 
         /// <summary>
-        /// Merge old and new actions into a new list. Take all new updated actions.
-        /// Only add existing actions to the merged list if there is no update.
+        /// Merge old and new operations into a new list. Take all new updated operations.
+        /// Only add existing operations to the merged list if there is no update.
         /// </summary>
-        /// <param name="newActions">action items to update received from user.</param>
-        /// <param name="fieldsToInclude">fields to allow the action permission</param>
-        /// <param name="fieldsToExclude">fields that will be excluded form the action permission.</param>
-        /// <param name="existingActions">action items present in the config.</param>
-        /// <returns>Array of updated action objects</returns>
-        private static object[] GetUpdatedActionArray(string[] newActions,
+        /// <param name="newOperations">operation items to update received from user.</param>
+        /// <param name="fieldsToInclude">fields that are included for the operation permission</param>
+        /// <param name="fieldsToExclude">fields that are excluded from the operation permission.</param>
+        /// <param name="existingOperations">operation items present in the config.</param>
+        /// <returns>Array of updated operation objects</returns>
+        private static object[] GetUpdatedOperationArray(string[] newOperations,
                                                         Policy? newPolicy,
                                                         Field? newFields,
-                                                        IDictionary<Operation, Action> existingActions)
+                                                        IDictionary<Operation, PermissionOperation> existingOperations)
         {
-            Dictionary<Operation, Action> updatedActions = new();
+            Dictionary<Operation, PermissionOperation> updatedOperations = new();
 
             Policy? existingPolicy = null;
             Field? existingFields = null;
 
-            // Adding the new Actions in the updatedActionList
-            foreach (string action in newActions)
+            // Adding the new operations in the updatedOperationList
+            foreach (string operation in newOperations)
             {
                 // Getting existing Policy and Fields
-                if (TryConvertActionNameToOperation(action, out Operation op))
+                if (TryConvertOperationNameToOperation(operation, out Operation op))
                 {
-                    if (existingActions.ContainsKey(op))
+                    if (existingOperations.ContainsKey(op))
                     {
-                        existingPolicy = existingActions[op].Policy;
-                        existingFields = existingActions[op].Fields;
+                        existingPolicy = existingOperations[op].Policy;
+                        existingFields = existingOperations[op].Fields;
                     }
 
                     // Checking if Policy and Field update is required
                     Policy? updatedPolicy = newPolicy is null ? existingPolicy : newPolicy;
                     Field? updatedFields = newFields is null ? existingFields : newFields;
 
-                    updatedActions.Add(op, new Action(op, updatedPolicy, updatedFields));
+                    updatedOperations.Add(op, new PermissionOperation(op, updatedPolicy, updatedFields));
                 }
             }
 
-            // Looping through existing actions
-            foreach (KeyValuePair<Operation, Action> action in existingActions)
+            // Looping through existing operations
+            foreach (KeyValuePair<Operation, PermissionOperation> operation in existingOperations)
             {
-                // if any existing action doesn't require update, it is added as it is.
-                if (!updatedActions.ContainsKey(action.Key))
+                // If any existing operation doesn't require update, it is added as it is.
+                if (!updatedOperations.ContainsKey(operation.Key))
                 {
-                    updatedActions.Add(action.Key, action.Value);
+                    updatedOperations.Add(operation.Key, operation.Value);
                 }
             }
 
-            // Convert action object to an array.
-            // If there is no policy or field for this action, it will be converted to a string.
-            // Otherwise, it is added as action object.
+            // Convert operation object to an array.
+            // If there is no policy or field for this operation, it will be converted to a string.
+            // Otherwise, it is added as operation object.
             //
-            ArrayList updatedActionArray = new();
-            foreach (Action updatedAction in updatedActions.Values)
+            ArrayList updatedOperationArray = new();
+            foreach (PermissionOperation updatedOperation in updatedOperations.Values)
             {
-                if (updatedAction.Policy is null && updatedAction.Fields is null)
+                if (updatedOperation.Policy is null && updatedOperation.Fields is null)
                 {
-                    updatedActionArray.Add(updatedAction.Name.ToString());
+                    updatedOperationArray.Add(updatedOperation.Name.ToString());
                 }
                 else
                 {
-                    updatedActionArray.Add(updatedAction);
+                    updatedOperationArray.Add(updatedOperation);
                 }
             }
 
-            return updatedActionArray.ToArray();
+            return updatedOperationArray.ToArray();
         }
 
         /// <summary>
@@ -520,15 +561,28 @@ namespace Cli
             }
 
             // Checking if both cardinality and targetEntity is provided.
-            //
             if (cardinality is null || targetEntity is null)
             {
                 Console.WriteLine("cardinality and target entity is mandatory to update/add a relationship.");
                 return false;
             }
 
+            // Add/Update of relationship is not allowed when GraphQL is disabled in Global Runtime Settings
+            if (runtimeConfig.RuntimeSettings!.TryGetValue(GlobalSettingsType.GraphQL, out object? graphQLRuntimeSetting))
+            {
+                GraphQLGlobalSettings? graphQLGlobalSettings = JsonSerializer.Deserialize<GraphQLGlobalSettings>(
+                    (JsonElement)graphQLRuntimeSetting
+                );
+
+                if (graphQLGlobalSettings is not null && !graphQLGlobalSettings.Enabled)
+                {
+                    Console.WriteLine("Cannot add/update relationship as GraphQL is disabled in the" +
+                    " global runtime settings of the config.");
+                    return false;
+                }
+            }
+
             // Both the source entity and target entity needs to present in config to establish relationship.
-            //
             if (!runtimeConfig.Entities.ContainsKey(targetEntity))
             {
                 Console.WriteLine($"Entity:{targetEntity} is not present. Relationship cannot be added.");
@@ -536,11 +590,17 @@ namespace Cli
             }
 
             // Check if provided value of cardinality is present in the enum.
-            //
             if (!string.Equals(cardinality, Cardinality.One.ToString(), StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(cardinality, Cardinality.Many.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine($"Failed to parse the given cardinality : {cardinality}. Supported values are one/many.");
+                return false;
+            }
+
+            // If GraphQL is disabled, entity cannot be used in relationship
+            if (false.Equals(runtimeConfig.Entities[targetEntity].GraphQL))
+            {
+                Console.WriteLine($"Entity: {targetEntity} cannot be used in relationship as it is disabled for GraphQL.");
                 return false;
             }
 
@@ -586,7 +646,7 @@ namespace Cli
 
         /// <summary>
         /// This method will try starting the engine.
-        /// it will use the config provided by the user, else will look for the default config.
+        /// It will use the config provided by the user, else will look for the default config.
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options)
         {

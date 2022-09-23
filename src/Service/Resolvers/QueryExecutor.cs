@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.Extensions.Logging;
+using Polly;
+using Polly.Retry;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -15,9 +17,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     public class QueryExecutor<TConnection> : IQueryExecutor
         where TConnection : DbConnection, new()
     {
-        private readonly string _connectionString;
-        private readonly DbExceptionParser _dbExceptionParser;
-        private readonly ILogger<QueryExecutor<TConnection>> _logger;
+        protected string ConnectionString { get; }
+        protected DbExceptionParser DbExceptionParser { get; }
+        protected ILogger<QueryExecutor<TConnection>> QueryExecutorLogger { get; }
+
+        // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
+        // So to say in case of transient exceptions, the query will be executed (_maxRetryCount + 1) times at max.
+        private static int _maxRetryCount = 5;
+
+        private AsyncRetryPolicy _retryPolicy;
 
         public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider,
                              DbExceptionParser dbExceptionParser,
@@ -25,9 +33,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
-            _connectionString = runtimeConfig.ConnectionString;
-            _dbExceptionParser = dbExceptionParser;
-            _logger = logger;
+            ConnectionString = runtimeConfig.ConnectionString;
+            DbExceptionParser = dbExceptionParser;
+            QueryExecutorLogger = logger;
+            _retryPolicy = Polly.Policy
+            .Handle<DbException>(DbExceptionParser.IsTransientException)
+            .WaitAndRetryAsync(
+                retryCount: _maxRetryCount,
+                sleepDurationProvider: (attempt) => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+                onRetry: (exception, backOffTime) =>
+                {
+                    QueryExecutorLogger.LogError(exception.Message);
+                    QueryExecutorLogger.LogError(exception.StackTrace);
+                });
         }
 
         /// <summary>
@@ -36,12 +54,57 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="sqltext">Sql text to be executed.</param>
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <returns>DbDataReader object for reading the result set.</returns>
-        public async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
+        public virtual async Task<DbDataReader> ExecuteQueryAsync(string sqltext, IDictionary<string, object?> parameters)
         {
+            int retryAttempt = 0;
             TConnection conn = new()
             {
-                ConnectionString = _connectionString
+                ConnectionString = ConnectionString,
             };
+            await SetManagedIdentityAccessTokenIfAnyAsync(conn);
+
+            return await _retryPolicy.ExecuteAsync(async () =>
+            {
+                retryAttempt++;
+                try
+                {
+                    DbDataReader dbReader = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters);
+                    if (retryAttempt > 1)
+                    {
+                        // This implies that the request got successfully executed during one of retry attempts.
+                        QueryExecutorLogger.LogInformation($"Request executed successfully in {retryAttempt} attempt of" +
+                            $"{_maxRetryCount + 1} available attempts.");
+                    }
+
+                    return dbReader;
+                }
+                catch (DbException e)
+                {
+                    if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
+                    {
+                        throw e;
+                    }
+                    else
+                    {
+                        QueryExecutorLogger.LogError(e.Message);
+                        QueryExecutorLogger.LogError(e.StackTrace);
+
+                        // Throw custom DABException
+                        throw DbExceptionParser.Parse(e);
+                    }
+                }
+            });
+        }
+
+        /// <summary>
+        /// Method to execute sql query against the database.
+        /// </summary>
+        /// <param name="conn">Connection object used to connect to database.</param>
+        /// <param name="sqltext">Sql text to be executed.</param>
+        /// <param name="parameters">The parameters used to execute the SQL text.</param>
+        /// <returns>DbDataReader object for reading the result set.</returns>
+        public virtual async Task<DbDataReader> ExecuteQueryAgainstDbAsync(TConnection conn, string sqltext, IDictionary<string, object?> parameters)
+        {
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandText = sqltext;
@@ -57,16 +120,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
             }
 
-            try
-            {
-                return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
-            }
-            catch (DbException e)
-            {
-                _logger.LogError(e.Message);
-                _logger.LogError(e.StackTrace);
-                throw _dbExceptionParser.Parse(e);
-            }
+            return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+        }
+
+        /// <inheritdoc />
+        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
+        {
+            // no-op in the base class.
+            await Task.Yield();
         }
 
         /// <inheritdoc />
@@ -78,9 +139,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             catch (DbException e)
             {
-                _logger.LogError(e.Message);
-                _logger.LogError(e.StackTrace);
-                throw _dbExceptionParser.Parse(e);
+                QueryExecutorLogger.LogError(e.Message);
+                QueryExecutorLogger.LogError(e.StackTrace);
+                throw DbExceptionParser.Parse(e);
             }
         }
 

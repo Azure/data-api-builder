@@ -22,13 +22,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Then, the OData clause is processed for the passed in SqlQueryStructure
         /// by calling OData visitor helpers.
         /// </summary>
-        /// <param name="actionType">Action to provide the authorizationResolver during policy lookup.</param>
+        /// <param name="operationType">Action to provide the authorizationResolver during policy lookup.</param>
         /// <param name="queryStructure">SqlQueryStructure object, could be a subQueryStucture which is of the same type.</param>
         /// <param name="context">The GraphQL Middleware context with request metadata like HttpContext.</param>
         /// <param name="authorizationResolver">Used to lookup authorization policies.</param>
         /// <param name="sqlMetadataProvider">Provides helper method to process ODataFilterClause.</param>
         public static void ProcessAuthorizationPolicies(
-            Operation actionType,
+            Operation operationType,
             BaseSqlQueryStructure queryStructure,
             HttpContext context,
             IAuthorizationResolver authorizationResolver,
@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string dbQueryPolicy = authorizationResolver.TryProcessDBPolicy(
                 queryStructure.EntityName,
                 clientRoleHeader,
-                actionType,
+                operationType,
                 context);
 
             FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(

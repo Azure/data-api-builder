@@ -20,7 +20,7 @@ for example, if:
 
 the command to run is the following:
 
-```
+```bash
 docker run -it -v "c:\data-api-builder\samples://App/samples" -p 5000:5000 hawaiiacr.azurecr.io/dab:M1.5 --ConfigFileName ./samples/my-sample-dab-config.json
 ```
 
@@ -30,4 +30,4 @@ There is also the option to use one of the provided Docker compose files, availa
 docker compose -f "./docker-compose.yml" up
 ```
 
-In this case, also make sure to change the docker-compose file configuration so that the volume will point to the configuration file you want to use
+In this case, also make sure to change the docker-compose file configuration so that the volume will point to the configuration file you want to use.

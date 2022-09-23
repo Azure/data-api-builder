@@ -110,7 +110,9 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new InvalidCastException($"Table Definition for {entityName} has not been inferred.");
+                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
             return databaseObject!.SchemaName;
@@ -121,7 +123,9 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new InvalidCastException($"Table Definition for {entityName} has not been inferred.");
+                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
             return databaseObject!.Name;
@@ -132,7 +136,9 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new InvalidCastException($"Table Definition for {entityName} has not been inferred.");
+                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
             return databaseObject!.TableDefinition;
@@ -143,7 +149,9 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new InvalidCastException($"Stored Procedure definition for {entityName} has not been inferred.");
+                throw new DataApiBuilderException(message: $"Stored Procedure Definition for {entityName} has not been inferred.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
             return databaseObject!.StoredProcedureDefinition;

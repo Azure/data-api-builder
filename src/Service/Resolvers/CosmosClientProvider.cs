@@ -75,19 +75,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private class AADTokenCredential : ManagedIdentityCredential
         {
-            public string AADToken { get; set; }
+            private readonly string _aadToken;
 
             public AADTokenCredential(string aadToken)
             {
-                AADToken = aadToken;
+                _aadToken = aadToken;
             }
 
             // Returns AccessToken which can be used to authenticate service client calls
             public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken)
             {
                 JwtSecurityTokenHandler handler = new ();
-                JwtSecurityToken token = handler.ReadJwtToken(AADToken);
-                return new AccessToken(AADToken, new DateTimeOffset(token.ValidTo));
+                JwtSecurityToken token = handler.ReadJwtToken(_aadToken);
+                return new AccessToken(_aadToken, new DateTimeOffset(token.ValidTo));
             }
 
             public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)

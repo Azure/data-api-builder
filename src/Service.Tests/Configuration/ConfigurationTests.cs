@@ -225,7 +225,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
-        [TestMethod("Validates access token is correctly loaded when Account Key is not present for Cosomos.")]
+        [TestMethod("Validates access token is correctly loaded when Account Key is not present for Cosmos.")]
         public async Task TestLoadingAccessTokenForCosmosClient()
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
@@ -233,8 +233,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             ConfigurationPostParameters config = GetCosmosConfigurationParametersWithAccessToken();
 
-            _ = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            HttpResponseMessage authorizedResponse = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
 
+            Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
             CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
             Assert.IsNotNull(cosmosClientProvider);
             Assert.IsNotNull(cosmosClientProvider.Client);

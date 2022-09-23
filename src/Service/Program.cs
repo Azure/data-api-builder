@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -68,11 +70,12 @@ namespace Azure.DataApiBuilder.Service
 
         /// <summary>
         /// Iterate through args and based on values present
-        /// set the appropriate log level. If --verbose is present
-        /// the next value in args will be either "True" or "False",
-        /// if --LogLevel is present the next value in args will be
-        /// "0" through "6" and also we are guaranteed that --verbose
-        /// is "False."
+        /// set the appropriate log level. If --LogLevel is present
+        /// the next value in args must be "0" through "6", or
+        /// --LogLevel must be the last element in args. In any other
+        /// case we throw an exception. If --LogLevel is the last element
+        /// in args then we ignore it to maintain engine's behavior prior
+        /// to this change.
         /// </summary>
         /// <param name="args">array that may contain log level information.</param>
         /// <returns>Appropriate log level.</returns>
@@ -82,6 +85,11 @@ namespace Azure.DataApiBuilder.Service
             {
                 if (args[i].Equals("--LogLevel"))
                 {
+                    if (args.Length <= i + 1)
+                    {
+                        break;
+                    }
+
                     switch (args[i + 1])
                     {
                         case "0":
@@ -98,6 +106,11 @@ namespace Azure.DataApiBuilder.Service
                             return LogLevel.Critical;
                         case "6":
                             return LogLevel.None;
+                        default:
+                            throw new DataApiBuilderException(
+                                message: $"LogLevel's valid range is 0 to 6, your value: {args[i]}",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
                 }
             }

@@ -292,7 +292,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         }
 
         [DataRow(true, DisplayName = "Test relationship field is nullable.")]
-        [DataRow(true, DisplayName = "Test relationship field is not nullable.")]
+        [DataRow(false, DisplayName = "Test relationship field is not nullable.")]
         [TestMethod]
         public void ForeignKeyFieldHasCorrectNullability(bool isNullable)
         {

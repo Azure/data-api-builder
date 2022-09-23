@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -177,7 +178,9 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
                 else
                 {
-                    throw new InvalidCastException($"Database Object definition for {entityName} has not been inferred.");
+                    throw new DataApiBuilderException(message: $"Database Object definition for {entityName} has not been inferred.",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                 }
             }
 

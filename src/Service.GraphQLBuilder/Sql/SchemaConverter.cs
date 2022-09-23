@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Azure.DataApiBuilder.Config;
@@ -115,11 +116,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     Entity referencedEntity = entities[targetEntityName];
 
                     bool isNullableRelationship = false;
-                    if (tableDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
-                        && relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
+
+                    if (// Retrieve all the relationship information for the source entity which is backed by this table definition
+                        tableDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
+                        &&
+                        // From the relationship information, obtain the foreign key definition for the given target entity
+                        relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
                             out List<ForeignKeyDefinition>? listOfForeignKeys))
                     {
                         ForeignKeyDefinition? foreignKeyInfo = listOfForeignKeys.FirstOrDefault();
+
+                        // Determine whether the relationship should be nullable by obtaining the nullability
+                        // of the referencing(if source entity is the referencing object in the pair)
+                        // or referenced columns (if source entity is the referenced object in the pair).
                         if (foreignKeyInfo is not null)
                         {
                             RelationShipPair pair = foreignKeyInfo.Pair;
@@ -133,6 +142,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                             {
                                 isNullableRelationship = tableDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencedColumns);
                             }
+                        }
+                        else
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"No relationship exists between {entityName} and {targetEntityName}",
+                                statusCode: HttpStatusCode.InternalServerError,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping);
                         }
                     }
 

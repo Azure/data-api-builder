@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Azure.DataApiBuilder.Config;

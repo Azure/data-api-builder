@@ -659,7 +659,7 @@ namespace Cli
             /// This will start the runtime engine with project name, config file and --verbose
             /// set to either "True" or "False'. If a log level has been set then we add it as well.
             List<string> args = new()
-            { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile, "--verbose", options.Verbose.ToString() };
+            { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile };
             if (options.LogLevel is not null)
             {
                 if (options.LogLevel is < 0 or > 6)

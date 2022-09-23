@@ -80,11 +80,6 @@ namespace Azure.DataApiBuilder.Service
         {
             for (int i = 0; i < args.Length; i++)
             {
-                if (args[i].Equals("--verbose") && args[i + 1].Equals("True"))
-                {
-                    return LogLevel.Information;
-                }
-
                 if (args[i].Equals("--LogLevel"))
                 {
                     switch (args[i + 1])

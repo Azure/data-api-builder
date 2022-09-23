@@ -243,8 +243,8 @@ namespace Cli
         public StartOptions(bool verbose, int? logLevel, string config)
             : base(config)
         {
-            Verbose = verbose;
-            LogLevel = logLevel;
+            // when verbose is true we set LogLevel to informational which is 2.
+            LogLevel = verbose is true ? 2 : logLevel;
         }
 
         // SetNames define mutually exclusive sets, ie: can not have

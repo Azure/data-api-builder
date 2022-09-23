@@ -269,6 +269,7 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, DisplayName = "Both KeyFields and Parameters provided for source.")]
         [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, DisplayName = "KeyFields with stored procedure.")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, DisplayName = "Parameters with duplicate keys for stored procedure.")]
         [DataRow("view", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with View")]
         [DataRow("table", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with Table")]
         [DataRow("table-view", new string[] { "param1:value1" }, null, DisplayName = "Invalid Source Type.")]

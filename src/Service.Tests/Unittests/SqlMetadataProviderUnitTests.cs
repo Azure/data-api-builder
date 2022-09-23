@@ -123,5 +123,23 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
             }
         }
+
+        [TestMethod]
+        public async Task CheckCorrectParsingForStoredProcedure()
+        {
+            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(TestCategory.MSSQL);
+            _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
+
+            _sqlMetadataProvider =
+                new MsSqlMetadataProvider(_runtimeConfigProvider,
+                    _queryExecutor,
+                    _queryBuilder,
+                    _sqlMetadataLogger);
+
+            await _sqlMetadataProvider.InitializeAsync();
+
+            _ = _sqlMetadataProvider.GetStoredProcedureDefinition("GetBooks");
+        }
     }
 }

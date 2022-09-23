@@ -1,6 +1,4 @@
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
-using Humanizer;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests

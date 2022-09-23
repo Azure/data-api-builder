@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -81,7 +80,7 @@ namespace Azure.DataApiBuilder.Service
         {
             for (int i = 0; i < args.Length; i++)
             {
-                if (args[i].Equals("--verbose") && args[i+1].Equals("True"))
+                if (args[i].Equals("--verbose") && args[i + 1].Equals("True"))
                 {
                     return LogLevel.Information;
                 }

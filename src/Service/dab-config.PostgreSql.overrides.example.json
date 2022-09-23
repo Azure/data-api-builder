@@ -434,10 +434,6 @@
           "linking.object": "book_author_link",
           "linking.source.fields": [ "book_id" ],
           "linking.target.fields": [ "author_id" ]
-        },
-        "series": {
-          "cardinality": "one",
-          "target.entity": "series"
         }
       },
       "mappings": {
@@ -529,7 +525,7 @@
     "Comic": {
       "source": "comics",
       "rest": true,
-      "graphql": false,
+      "graphql": true,
       "permissions": [
         {
           "role": "anonymous",

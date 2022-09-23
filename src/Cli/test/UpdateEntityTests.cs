@@ -1015,7 +1015,8 @@ namespace Cli.Tests
         /// <summary>
         /// Converts Dictionary into a string that can be Asserted for Testing.
         /// </summary>
-        private static string? ToAssertableStringFromDictionary(Dictionary<string,object>? dictionary) {
+        private static string? ToAssertableStringFromDictionary(Dictionary<string, object>? dictionary)
+        {
             if (dictionary is null)
             {
                 return null;

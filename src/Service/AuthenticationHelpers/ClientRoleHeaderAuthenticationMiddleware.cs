@@ -8,7 +8,6 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 {
@@ -19,12 +18,12 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     /// AuthZ decisions nor does it terminate requests.
     /// https://github.com/aspnet/Security/issues/1613#issuecomment-358843214
     /// </summary>
-    public class AuthenticationMiddleware
+    public class ClientRoleHeaderAuthenticationMiddleware
     {
         private readonly RequestDelegate _nextMiddleware;
         private readonly RuntimeConfigProvider _runtimeConfigurationProvider;
 
-        public AuthenticationMiddleware(RequestDelegate next, RuntimeConfigProvider runtimeConfigurationProvider)
+        public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next, RuntimeConfigProvider runtimeConfigurationProvider)
         {
             _nextMiddleware = next;
             _runtimeConfigurationProvider = runtimeConfigurationProvider;
@@ -56,33 +55,23 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             // 3. None - No token provided, no auth result.
             AuthenticateResult authNResult = await httpContext.AuthenticateAsync();
 
-            // Reject request by terminating the AuthenticationMiddleware
-            // when an invalid token is provided and writes challenge response
-            // metadata (HTTP 401 Unauthorized response code
-            // and www-authenticate headers) to the HTTP Context.
+            // Reject and terminate the request when an invalid token is provided
+            // Write challenge response metadata (HTTP 401 Unauthorized response code
+            // and www-authenticate headers) to the HTTP Context via JwtBearerHandler code
+            // https://github.com/dotnet/aspnetcore/blob/3fe12b935c03138f76364dc877a7e069e254b5b2/src/Security/Authentication/JwtBearer/src/JwtBearerHandler.cs#L217
             if (authNResult.Failure is not null)
             {
-                IActionResult result = new ChallengeResult();
-                await result.ExecuteResultAsync(new ActionContext
-                {
-                    HttpContext = httpContext
-                });
+                await httpContext.ChallengeAsync();
 
                 return;
             }
-
-            // Set the httpContext.user as the authNResult.Principal,
-            // which is never null.
-            // Only the properties of the Principal.Identity changes depending on the
-            // authentication result.
-            httpContext.User = authNResult.Principal!;
 
             string clientDefinedRole = AuthorizationType.Anonymous.ToString();
 
             // A request can be authenticated in 2 cases:
             // 1. When the request has a valid jwt/easyauth token,
             // 2. When the dev mode authenticate-devmode-requests config flag is true.
-            bool isAuthenticatedRequest = authNResult.Succeeded ||
+            bool isAuthenticatedRequest = (httpContext.User.Identity?.IsAuthenticated ?? false) ||
                 _runtimeConfigurationProvider.IsAuthenticatedDevModeRequest();
 
             if (isAuthenticatedRequest)
@@ -143,11 +132,11 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     }
 
     // Extension method used to add the middleware to the HTTP request pipeline.
-    public static class AuthenticationMiddlewareExtensions
+    public static class ClientRoleHeaderMiddlewareExtensions
     {
-        public static IApplicationBuilder UseAuthenticationMiddleware(this IApplicationBuilder builder)
+        public static IApplicationBuilder UseClientRoleHeaderAuthenticationMiddleware(this IApplicationBuilder builder)
         {
-            return builder.UseMiddleware<AuthenticationMiddleware>();
+            return builder.UseMiddleware<ClientRoleHeaderAuthenticationMiddleware>();
         }
     }
 }

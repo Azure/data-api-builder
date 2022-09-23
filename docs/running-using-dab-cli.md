@@ -4,7 +4,7 @@ The easiest option that doesn't require cloning the repo is to use the `dab` [CL
 
 ## Install `dab` CLI
 
-You can install the `dab` CLI using [.NET tools](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools):
+You can install the `dab` CLI using [.NET tools](https://learn.microsoft.com/dotnet/core/tools/global-tools):
 
 - Download the latest version of the package: [dab.<version_number>.nupkg](https://github.com/Azure/data-api-builder/releases/)
 - Navigate to the folder where the package file is downloaded.

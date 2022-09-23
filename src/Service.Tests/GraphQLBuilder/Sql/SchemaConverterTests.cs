@@ -298,7 +298,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         {
             ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.Many, isNullableRelationship: isNullable);
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == FIELD_NAME_FOR_TARGET);
-            Assert.IsTrue(field.Type is INullableTypeNode);
+            Assert.AreEqual(expected: isNullable, actual: field.Type is INullableTypeNode);
         }
 
         [TestMethod]

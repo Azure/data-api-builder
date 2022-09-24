@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     && result is not null && result.Item1 is not null)
                 {
                     result = new Tuple<JsonDocument, IMetadata>(
-                        JsonDocument.Parse("{}"),
+                        default(JsonDocument)!,
                         PaginationMetadata.MakeEmptyPaginationMetadata());
                 }
             }

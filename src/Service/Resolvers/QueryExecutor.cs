@@ -113,8 +113,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="sqltext">Sql text to be executed.</param>
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <param name="dataReaderHandler">The function to invoke to handle the results
-        /// in the db data reader obtained after executing the query.</param>
-        /// <param name="args">List of string arguments to the db data reader handler.</param>
+        /// in the DbDataReader obtained after executing the query.</param>
+        /// <param name="args">List of string arguments to the DbDataReader handler.</param>
         /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
         public virtual async Task<TResult?> ExecuteQueryAgainstDbAsync<TResult>(
             TConnection conn,
@@ -252,7 +252,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <inheritdoc />
         /// <Note>This function is a DbDataReader handler of type Func<DbDataReader, List<string>?, Task<TResult?>>
-        /// The parameter args is not used but is added to conform to the signature of the db data reader handler
+        /// The parameter args is not used but is added to conform to the signature of the DbDataReader handler
         /// function argument of ExecuteQueryAsync.</Note>
         public async Task<TResult?> GetJsonResultAsync<TResult>(
             DbDataReader dbDataReader,

@@ -1058,7 +1058,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             // Gets a tuple of 2 dictionaries:
             // 1. the first row extracted from the result
-            // 2. Dictionary of the db data reader properties like RecordsAffected, HasRows.
+            // 2. Dictionary of the DbDataReader properties like RecordsAffected, HasRows.
             // This function only requires the result row i.e. Item1 from the tuple.
             Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? foreignKeyInfoWithProperties =
                 await QueryExecutor.ExtractRowFromDbDataReader(reader);

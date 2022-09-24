@@ -572,7 +572,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// With an invalid access token, when new an instance of CosmosClient with that token, it won't throw an exception.
+        /// With an invalid access token, when a new instance of CosmosClient is created with that token, it won't throw an exception.
         /// But when a graphql request is coming in, that's when it throws an 401 exception.
         /// To prevent this, CosmosClientProvider parses the token and retrieves the "exp" property from the token,
         /// if it's not valid, then we will throw an exception from our code before it initiating a client.

@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         // Contains all the referencing and referenced columns for each pair
         // of referencing and referenced tables.
-        private Dictionary<RelationShipPair, ForeignKeyDefinition> _pairToFkDefinition;
+        private Dictionary<RelationShipPair, ForeignKeyDefinition>? _pairToFkDefinition;
 
         protected IQueryExecutor QueryExecutor { get; }
 
@@ -977,9 +977,12 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Gather all the referencing and referenced columns for each pair
             // of referencing and referenced tables.
-            _pairToFkDefinition = await ExecuteAndSummarizeFkMetadata(queryForForeignKeyInfo, parameters);
+            _pairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters, SummarizeFkMetadata);
 
-            FillInferredFkInfo(_pairToFkDefinition, tablesToBePopulatedWithFK);
+            if (_pairToFkDefinition is not null)
+            {
+                FillInferredFkInfo(tablesToBePopulatedWithFK);
+            }
 
             ValidateAllFkHaveBeenInferred(tablesToBePopulatedWithFK);
         }
@@ -1040,28 +1043,30 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Executes the given foreign key query with parameters
-        /// and summarizes the results for each referencing and referenced table pair.
+        /// Each row in the results of the given data reader represents one column from one foreign key
+        /// between an ordered pair of referencing and referenced database objects.
+        /// This data reader handler summarizes this foreign key metadata so that
+        /// for each referencing and referenced table pair, there is exactly one foreign key definition
+        /// containing the list of all referencing columns and referenced columns.
         /// </summary>
-        /// <param name="queryForForeignKeyInfo"></param>
-        /// <param name="parameters"></param>
-        /// <returns></returns>
-        private async Task<Dictionary<RelationShipPair, ForeignKeyDefinition>>
-            ExecuteAndSummarizeFkMetadata(
-                string queryForForeignKeyInfo,
-                Dictionary<string, object?> parameters)
+        /// <param name="reader">The DbDataReader.</param>
+        /// <param name="args">Arguments to this function.</param>
+        /// <returns>A dictionary mapping ordered relationship pairs to
+        /// foreign key definition between them.</returns>
+        private async Task<Dictionary<RelationShipPair, ForeignKeyDefinition>?>
+            SummarizeFkMetadata(DbDataReader reader, List<string>? args = null)
         {
-            // Execute the foreign key info query.
-            using DbDataReader reader =
-                await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters);
-
-            // Extract the first row from the result.
-            Dictionary<string, object?>? foreignKeyInfo =
+            // Gets a tuple of 2 dictionaries:
+            // 1. the first row extracted from the result
+            // 2. Dictionary of the DbDataReader properties like RecordsAffected, HasRows.
+            // This function only requires the result row i.e. Item1 from the tuple.
+            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? foreignKeyInfoWithProperties =
                 await QueryExecutor.ExtractRowFromDbDataReader(reader);
 
             Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition = new();
-            while (foreignKeyInfo != null)
+            while (foreignKeyInfoWithProperties is not null && foreignKeyInfoWithProperties.Item1 is not null)
             {
+                Dictionary<string, object?> foreignKeyInfo = foreignKeyInfoWithProperties.Item1;
                 string referencingSchemaName =
                     (string)foreignKeyInfo[$"Referencing{nameof(DatabaseObject.SchemaName)}"]!;
                 string referencingTableName = (string)foreignKeyInfo[$"Referencing{nameof(TableDefinition)}"]!;
@@ -1081,13 +1086,13 @@ namespace Azure.DataApiBuilder.Service.Services
                     pairToFkDefinition.Add(pair, foreignKeyDefinition);
                 }
 
-                // add the referenced and referencing columns to the foreign key definition.
+                // Add the referenced and referencing columns to the foreign key definition.
                 foreignKeyDefinition.ReferencedColumns.Add(
                     (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedColumns)]!);
                 foreignKeyDefinition.ReferencingColumns.Add(
                     (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencingColumns)]!);
 
-                foreignKeyInfo = await QueryExecutor.ExtractRowFromDbDataReader(reader);
+                foreignKeyInfoWithProperties = await QueryExecutor.ExtractRowFromDbDataReader(reader);
             }
 
             return pairToFkDefinition;
@@ -1097,10 +1102,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Fills the table definition with the inferred foreign key metadata
         /// about the referencing and referenced columns.
         /// </summary>
-        /// <param name="pairToFkDefinition"></param>
         /// <param name="tablesToBePopulatedWithFK"></param>
-        private static void FillInferredFkInfo(
-            Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition,
+        private void FillInferredFkInfo(
             IEnumerable<TableDefinition> tablesToBePopulatedWithFK)
         {
             // For each table definition that has to be populated with the inferred
@@ -1134,7 +1137,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                             // Add the referencing and referenced columns for this foreign key definition
                             // for the target.
-                            if (pairToFkDefinition.TryGetValue(
+                            if (_pairToFkDefinition is not null && _pairToFkDefinition.TryGetValue(
                                     fk.Pair, out ForeignKeyDefinition? inferredDefinition))
                             {
                                 // Only add the referencing columns if they have not been

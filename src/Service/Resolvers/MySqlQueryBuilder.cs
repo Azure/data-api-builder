@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Models;
+using Microsoft.Extensions.Logging;
 using MySqlConnector;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -141,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public override string BuildForeignKeyInfoQuery(int numberOfParameters)
+        public override string BuildForeignKeyInfoQuery(int numberOfParameters, bool developerMode, ILogger logger)
         {
             string[] databaseNameParams = CreateParams(DATABASE_NAME_PARAM, numberOfParameters);
             string[] tableNameParams = CreateParams(TABLE_NAME_PARAM, numberOfParameters);
@@ -172,7 +173,12 @@ WHERE
     (REFERENCED_TABLE_SCHEMA IN (@{tableSchemaParamsForInClause}) AND
     REFERENCED_TABLE_NAME IN (@{tableNameParamsForInClause}))";
 
-            Console.WriteLine($"Foreign Key Query is : {foreignKeyQuery}");
+            // only display foreign key query information in dev mode
+            if (developerMode)
+            {
+                logger.LogInformation($"Foreign Key Query is : {foreignKeyQuery}");
+            }
+
             return foreignKeyQuery;
         }
 

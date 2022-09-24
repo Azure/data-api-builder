@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Data.Common;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -78,8 +77,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{DatabaseEngine}");
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
+            Mock<ILogger<AuthorizationResolver>> authLogger = new();
             RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
+            _runtimeConfigProvider = TestHelper.GetMockRuntimeConfigProvider(configPath, string.Empty);
 
             // Add magazines entity to the 
             if (TestCategory.MYSQL.Equals(DatabaseEngine))
@@ -120,7 +121,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             SetDatabaseNameFromConnectionString(_runtimeConfig.ConnectionString);
 
             //Initialize the authorization resolver object
-            _authorizationResolver = new AuthorizationResolver(_runtimeConfigProvider, _sqlMetadataProvider);
+            _authorizationResolver = new AuthorizationResolver(
+                _runtimeConfigProvider,
+                _sqlMetadataProvider,
+                authLogger.Object);
 
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
@@ -137,7 +141,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                 _sqlMetadataProvider,
                                 ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
                                 _authorizationResolver,
-                                _queryEngineLogger
+                                _queryEngineLogger,
+                                _runtimeConfigProvider
                                 );
                         });
                         services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
@@ -187,7 +192,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             {
                 foreach (string query in customQueries)
                 {
-                    await _queryExecutor.ExecuteQueryAsync(query, parameters: null);
+                    await _queryExecutor.ExecuteQueryAsync<object>(query, parameters: null, dataReaderHandler: null);
                 }
             }
         }
@@ -230,7 +235,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Mock<ILogger<QueryExecutor<NpgsqlConnection>>> pgQueryExecutorLogger = new();
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
-                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
+                    _dbExceptionParser = new PostgreSqlDbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<NpgsqlConnection>(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
@@ -246,8 +251,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Mock<ILogger<QueryExecutor<SqlConnection>>> msSqlQueryExecutorLogger = new();
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
-                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
-                    _queryExecutor = new QueryExecutor<SqlConnection>(
+                    _dbExceptionParser = new MsSqlDbExceptionParser(_runtimeConfigProvider);
+                    _queryExecutor = new MsSqlQueryExecutor(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
                         msSqlQueryExecutorLogger.Object);
@@ -261,7 +266,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Mock<ILogger<QueryExecutor<MySqlConnection>>> mySqlQueryExecutorLogger = new();
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
-                    _dbExceptionParser = new DbExceptionParser(_runtimeConfigProvider);
+                    _dbExceptionParser = new MySqlDbExceptionParser(_runtimeConfigProvider);
                     _queryExecutor = new QueryExecutor<MySqlConnection>(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
@@ -278,7 +283,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
         protected static async Task ResetDbStateAsync()
         {
-            using DbDataReader _ = await _queryExecutor.ExecuteQueryAsync(File.ReadAllText($"{DatabaseEngine}Books.sql"), parameters: null);
+            await _queryExecutor.ExecuteQueryAsync<object>(
+                File.ReadAllText($"{DatabaseEngine}Books.sql"),
+                parameters: null,
+                dataReaderHandler: null);
         }
 
         /// <summary>
@@ -288,42 +296,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <returns>string in JSON format</returns>
         protected static async Task<string> GetDatabaseResultAsync(
             string queryText,
-            bool expectJson = true,
-            Operation operationType = Operation.Read)
+            bool expectJson = true)
         {
             string result;
 
-            using DbDataReader reader = await _queryExecutor.ExecuteQueryAsync(queryText, parameters: null);
-
-            // An empty result will cause an error with the json parser
-            if (!reader.HasRows)
+            if (expectJson)
             {
-                // Find and Delete queries have empty result sets.
-                // Delete operation will return number of records affected.
-                result = null;
+                using JsonDocument sqlResult =
+                    await _queryExecutor.ExecuteQueryAsync(
+                        queryText,
+                        parameters: null,
+                        _queryExecutor.GetJsonResultAsync<JsonDocument>);
+
+                result = sqlResult is not null ? sqlResult.RootElement.ToString() : null;
             }
             else
             {
-                if (expectJson)
-                {
-                    using JsonDocument sqlResult = JsonDocument.Parse(await SqlQueryEngine.GetJsonStringFromDbReader(reader, _queryExecutor));
-                    result = sqlResult.RootElement.ToString();
-                }
-                else
-                {
-                    JsonArray resultArray = new();
-                    Dictionary<string, object> row;
-
-                    while ((row = await _queryExecutor.ExtractRowFromDbDataReader(reader)) is not null)
-                    {
-                        JsonElement jsonRow = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(row));
-                        resultArray.Add(jsonRow);
-                    }
-
-                    using JsonDocument sqlResult = JsonDocument.Parse(resultArray.ToJsonString());
-                    result = sqlResult.RootElement.ToString();
-                }
-
+                JsonArray resultArray =
+                    await _queryExecutor.ExecuteQueryAsync(
+                        queryText,
+                        parameters: null,
+                        _queryExecutor.GetJsonArrayAsync);
+                using JsonDocument sqlResult = resultArray is not null ? JsonDocument.Parse(resultArray.ToJsonString()) : null;
+                result = sqlResult is not null ? sqlResult.RootElement.ToString() : null;
             }
 
             return result;
@@ -336,7 +331,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// </summary>
         /// <param name="primaryKeyRoute">string represents the primary key route</param>
         /// <param name="queryString">string represents the query string provided in URL</param>
-        /// <param name="entity">string represents the name of the entity</param>
+        /// <param name="entityNameOrPath">string represents the name/path of the entity</param>
         /// <param name="sqlQuery">string represents the query to be executed</param>
         /// <param name="operationType">The operation type to be tested.</param>
         /// <param name="requestBody">string represents JSON data used in mutation operations</param>
@@ -349,10 +344,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static async Task SetupAndRunRestApiTest(
             string primaryKeyRoute,
             string queryString,
-            string entity,
+            string entityNameOrPath,
             string sqlQuery,
             Operation operationType = Operation.Read,
-            string path = "api",
+            string restPath = "api",
             IHeaderDictionary headers = null,
             string requestBody = null,
             bool exceptionExpected = false,
@@ -366,7 +361,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             bool expectJson = true)
         {
             // Create the rest endpoint using the path and entity name.
-            string restEndPoint = path + "/" + entity;
+            string restEndPoint = restPath + "/" + entityNameOrPath;
 
             // Append primaryKeyRoute to the endpoint if it is not empty.
             if (!string.IsNullOrEmpty(primaryKeyRoute))
@@ -449,7 +444,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 }
                 else
                 {
-                    string baseUrl = HttpClient.BaseAddress.ToString() + path + "/" + entity;
+                    string baseUrl = HttpClient.BaseAddress.ToString() + restPath + "/" + entityNameOrPath;
                     if (!string.IsNullOrEmpty(queryString))
                     {
                         baseUrl = baseUrl + "?" + HttpUtility.ParseQueryString(queryString).ToString();

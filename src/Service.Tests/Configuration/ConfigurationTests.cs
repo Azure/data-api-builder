@@ -6,8 +6,10 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -15,6 +17,7 @@ using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Services.MetadataProviders;
+using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +38,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const string MSSQL_ENVIRONMENT = TestCategory.MSSQL;
         private const string MYSQL_ENVIRONMENT = TestCategory.MYSQL;
         private const string POSTGRESQL_ENVIRONMENT = TestCategory.POSTGRESQL;
+        private const string POST_STARTUP_CONFIG_ENTITY = "Book";
+        private const string POST_STARTUP_CONFIG_ENTITY_SOURCE = "books";
+        private const string POST_STARTUP_CONFIG_ROLE = "PostStartupConfigRole";
+        private const int RETRY_COUNT = 5;
+        private const int RETRY_WAIT_SECONDS = 1;
 
         public TestContext TestContext { get; set; }
 
@@ -134,6 +142,78 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             HttpResponseMessage postResult =
                 await httpClient.PostAsync("/configuration", JsonContent.Create(config));
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
+        }
+
+        /// <summary>
+        /// Tests that sending configuration to the DAB engine post-startup will properly hydrate
+        /// the AuthorizationResolver by:
+        /// 1. Validate that pre-configuration hydration requests result in 503 Service Unavailable
+        /// 2. Validate that custom configuration hydration succeeds.
+        /// 3. Validate that request to protected entity without role membership triggers Authorization Resolver
+        /// to reject the request with HTTP 403 Forbidden.
+        /// 4. Validate that request to protected entity with required role membership passes authorization requirements
+        /// and succeeds with HTTP 200 OK.
+        /// Note: This test is database engine agnostic, though requires denoting a database environment to fetch a usable
+        /// connection string to complete the test. Most applicable to CI/CD test execution.
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [TestMethod("Validates setting the AuthN/Z configuration post-startup during runtime.")]
+        public async Task TestSqlSettingPostStartupConfigurations()
+        {
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
+
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            HttpClient httpClient = server.CreateClient();
+
+            ConfigurationPostParameters config = GetPostStartupConfigParams(MSSQL_ENVIRONMENT);
+
+            HttpResponseMessage preConfigHydradtionResult =
+                await httpClient.GetAsync($"/{POST_STARTUP_CONFIG_ENTITY}");
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, preConfigHydradtionResult.StatusCode);
+
+            // Hydrate configuration post-startup
+            HttpResponseMessage postResult =
+                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
+
+            // Retry request RETRY_COUNT times in 1 second increments to allow required services
+            // time to instantiate and hydrate permissions.
+            int retryCount = RETRY_COUNT;
+            HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
+            while (retryCount > 0)
+            {
+                // Spot test authorization resolver utilization to ensure configuration is used.
+                HttpResponseMessage postConfigHydradtionResult =
+                    await httpClient.GetAsync($"api/{POST_STARTUP_CONFIG_ENTITY}");
+                responseCode = postConfigHydradtionResult.StatusCode;
+
+                if (postConfigHydradtionResult.StatusCode == HttpStatusCode.ServiceUnavailable)
+                {
+                    retryCount--;
+                    Thread.Sleep(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
+                    continue;
+                }
+
+                break;
+            }
+
+            // When the authorization resolver is properly configured, authorization will have failed
+            // because no auth headers are present.
+            Assert.AreEqual(
+                expected: HttpStatusCode.Forbidden,
+                actual: responseCode,
+                message: "Configuration not yet hydrated after retry attempts..");
+
+            // Sends a GET request to a protected entity which requires a specific role to access.
+            // Authorization will pass because proper auth headers are present.
+            HttpRequestMessage message = new(method: HttpMethod.Get, requestUri: $"api/{POST_STARTUP_CONFIG_ENTITY}");
+            string swaTokenPayload = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(
+                addAuthenticated: true,
+                specificRole: POST_STARTUP_CONFIG_ROLE);
+            message.Headers.Add(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, swaTokenPayload);
+            message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, POST_STARTUP_CONFIG_ROLE);
+            HttpResponseMessage authorizedResponse = await httpClient.SendAsync(message);
+            Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
         }
 
         [TestMethod("Validates that local cosmos settings can be loaded and the correct classes are in the service provider.")]
@@ -275,8 +355,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of new runtime config format succeeds.")]
         public void TestReadingRuntimeConfig()
         {
+            Mock<ILogger> logger = new();
             string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
-            RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig runtimeConfig);
+            RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
             Assert.IsNotNull(runtimeConfig.Schema);
             Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
             Assert.IsTrue(runtimeConfig.CosmosDb == null
@@ -303,13 +384,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 {
                     RestEntitySettings rest =
                         ((JsonElement)entity.Rest).Deserialize<RestEntitySettings>(RuntimeConfig.SerializerOptions);
-                    Assert.IsTrue(
-                        ((JsonElement)rest.Route).ValueKind == JsonValueKind.String
-                        || ((JsonElement)rest.Route).ValueKind == JsonValueKind.Object);
-                    if (((JsonElement)rest.Route).ValueKind == JsonValueKind.Object)
-                    {
-                        SingularPlural route = ((JsonElement)rest.Route).Deserialize<SingularPlural>(RuntimeConfig.SerializerOptions);
-                    }
+                    Assert.IsTrue(((JsonElement)rest.Path).ValueKind == JsonValueKind.String);
                 }
 
                 Assert.IsTrue(entity.GraphQL == null
@@ -422,8 +497,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// Set the connection string to an invalid value and expect the service to be unavailable
-        // since without this env var, it would be available - guaranteeing this env variable
-        // has highest precedence irrespective of what the connection string is in the config file.
+        /// since without this env var, it would be available - guaranteeing this env variable
+        /// has highest precedence irrespective of what the connection string is in the config file.
         /// </summary>
         [TestMethod("Validates that environment variable DAB_CONNSTRING has highest precedence.")]
         public void TestConnectionStringEnvVarHasHighestPrecedence()
@@ -476,7 +551,50 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             return new(
                 File.ReadAllText(cosmosFile),
                 File.ReadAllText("schema.gql"),
-                "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==");
+                "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",
+                AccessToken: null);
+        }
+
+        /// <summary>
+        /// Helper used to create the post-startup configuration payload sent to configuration controller.
+        /// Adds entity used to hydrate authorization resolver post-startup and validate that hydration succeeds.
+        /// Additional pre-processing performed acquire database connection string from a local file.
+        /// </summary>
+        /// <returns>ConfigurationPostParameters object.</returns>
+        private static ConfigurationPostParameters GetPostStartupConfigParams(string environment)
+        {
+            string connectionString = GetConnectionStringFromEnvironmentConfig(environment);
+
+            RuntimeConfig configuration = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: POST_STARTUP_CONFIG_ENTITY,
+                entitySource: POST_STARTUP_CONFIG_ENTITY_SOURCE,
+                roleName: POST_STARTUP_CONFIG_ROLE,
+                operation: Operation.Read,
+                includedCols: new HashSet<string>() { "*" });
+            string serializedConfiguration = JsonSerializer.Serialize(configuration);
+
+            return new ConfigurationPostParameters(
+                Configuration: serializedConfiguration,
+                Schema: null,
+                ConnectionString: connectionString,
+                AccessToken: null);
+        }
+
+        /// <summary>
+        /// Reads configuration file for defined environment to acquire the connection string.
+        /// CI/CD Pipelines and local environments may not have connection string set as environment variable.
+        /// </summary>
+        /// <param name="environment">Environment such as TestCategory.MSSQL</param>
+        /// <returns>Connection string</returns>
+        private static string GetConnectionStringFromEnvironmentConfig(string environment)
+        {
+            string sqlFile = GetFileNameForEnvironment(environment, considerOverrides: true);
+            string configPayload = File.ReadAllText(sqlFile);
+
+            Mock<ILogger> logger = new();
+            RuntimeConfig.TryGetDeserializedConfig(configPayload, out RuntimeConfig runtimeConfig, logger.Object);
+
+            return runtimeConfig.ConnectionString;
         }
 
         private static void ValidateCosmosDbSetup(TestServer server)

@@ -9,16 +9,15 @@
   },
   "runtime": {
     "rest": {
-      "enabled": true,
       "path": "/api"
     },
     "graphql": {
-      "enabled": true,
       "path": "/graphql",
       "allow-introspection": true
     },
     "host": {
       "mode": "development",
+      "authenticate-devmode-requests": false,
       "cors": {
         "origins": [ "http://localhost:5000" ],
         "allow-credentials": false
@@ -162,7 +161,9 @@
     },
     "Stock": {
       "source": "stocks",
-      "rest": true,
+      "rest": {
+        "path": "commodities"
+      },
       "graphql": true,
       "permissions": [
         {
@@ -495,7 +496,7 @@
     "Comic": {
       "source": "comics",
       "rest": true,
-      "graphql": false,
+      "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
@@ -505,7 +506,13 @@
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
-      ]
+      ],
+      "relationships": {
+        "series": {
+          "cardinality": "one",
+          "target.entity": "series"
+        }
+      }
     },
     "Broker": {
       "source": "brokers",
@@ -589,7 +596,9 @@
     },
     "Shrub": {
       "source": "trees",
-      "rest": true,
+      "rest": {
+        "path": "plants"
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -811,6 +820,23 @@
         "WagingWar": "作戰",
         "StrategicAttack": "謀攻",
         "NoteNum": "┬─┬ノ( º _ ºノ)"
+      }
+    },
+    "series": {
+      "source": "series",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "relationships": {
+        "comics": {
+          "cardinality": "many",
+          "target.entity": "Comic"
+        }
       }
     },
     "GetBooks": {

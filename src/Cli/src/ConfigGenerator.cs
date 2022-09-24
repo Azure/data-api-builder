@@ -16,16 +16,25 @@ namespace Cli
         /// </summary>
         public static bool TryGenerateConfig(InitOptions options)
         {
-            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
-            {
-                Console.Error.Write($"Failed to create the runtime config file.");
-                return false;
-            }
-
             if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
             {
                 runtimeConfigFile = RuntimeConfigPath.DefaultName;
                 Console.WriteLine($"Creating a new config file: {runtimeConfigFile}");
+            }
+
+            // File existence checked to avoid overwriting the existing configuration.
+            if (File.Exists(runtimeConfigFile))
+            {
+                Console.Error.Write($"Config file: {runtimeConfigFile} already exists. " +
+                    "Please provide a different name or remove the existing config file.");
+                return false;
+            }
+
+            // Creating a new json file with runtime configuration
+            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
+            {
+                Console.Error.Write($"Failed to create the runtime config file.");
+                return false;
             }
 
             return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
@@ -42,10 +51,14 @@ namespace Cli
             runtimeConfigJson = string.Empty;
 
             DatabaseType dbType = options.DatabaseType;
-            DataSource dataSource = new(dbType)
+            DataSource dataSource = new(dbType);
+
+            // default value of connection-string should be used, i.e Empty-string
+            // if not explicitly provided by the user
+            if (options.ConnectionString is not null)
             {
-                ConnectionString = options.ConnectionString
-            };
+                dataSource.ConnectionString = options.ConnectionString;
+            }
 
             CosmosDbOptions? cosmosDbOptions = null;
             MsSqlOptions? msSqlOptions = null;
@@ -91,11 +104,36 @@ namespace Cli
                 MsSql: msSqlOptions,
                 PostgreSql: postgreSqlOptions,
                 MySql: mySqlOptions,
-                RuntimeSettings: GetDefaultGlobalSettings(dbType, options.HostMode, options.CorsOrigin),
+                RuntimeSettings: GetDefaultGlobalSettings(
+                    options.HostMode,
+                    options.CorsOrigin,
+                    devModeDefaultAuth: GetDevModeDefaultAuth(options.DevModeDefaultAuth)),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
             return true;
+        }
+
+        /// <summary>
+        /// Helper method to parse the devModeDefaultAuth string into its corresponding boolean representation.
+        /// </summary>
+        /// <param name="devModeDefaultAuth">string to be parsed into bool value.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception">throws exception if string is not null and cannot be parsed into a bool value.</exception>
+        private static bool? GetDevModeDefaultAuth(string? devModeDefaultAuth)
+        {
+            if (devModeDefaultAuth is null)
+            {
+                return null;
+            }
+
+            if (bool.TryParse(devModeDefaultAuth, out bool parsedBoolVar))
+            {
+                return parsedBoolVar;
+            }
+
+            throw new Exception($"{devModeDefaultAuth} is an invalid value for the property authenticate-devmode-requests." +
+                $" It can only assume boolean values true/false.");
         }
 
         /// <summary>
@@ -283,12 +321,17 @@ namespace Cli
 
             object updatedSource = options.Source is null ? entity!.Source : options.Source;
             object? updatedRestDetails = options.RestRoute is null ? entity!.Rest : GetRestDetails(options.RestRoute);
-            object? updatedGraphqlDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
+            object? updatedGraphQLDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
             PermissionSetting[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, Relationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;
             Policy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             Field? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
+
+            if (false.Equals(updatedGraphQLDetails))
+            {
+                Console.WriteLine("WARNING: Disabling GraphQL for this entity will restrict it's usage in relationships");
+            }
 
             if (options.Permissions is not null && options.Permissions.Any())
             {
@@ -351,7 +394,7 @@ namespace Cli
 
             runtimeConfig.Entities[options.Entity] = new Entity(updatedSource,
                                                                 updatedRestDetails,
-                                                                updatedGraphqlDetails,
+                                                                updatedGraphQLDetails,
                                                                 updatedPermissions,
                                                                 updatedRelationships,
                                                                 updatedMappings);
@@ -422,7 +465,7 @@ namespace Cli
                 }
             }
 
-            // if the role we are trying to update is not found, we create a new one
+            // If the role we are trying to update is not found, we create a new one
             // and add it to permissionSettings list.
             if (!role_found)
             {
@@ -474,7 +517,7 @@ namespace Cli
             // Looping through existing operations
             foreach (KeyValuePair<Operation, PermissionOperation> operation in existingOperations)
             {
-                // if any existing operation doesn't require update, it is added as it is.
+                // If any existing operation doesn't require update, it is added as it is.
                 if (!updatedOperations.ContainsKey(operation.Key))
                 {
                     updatedOperations.Add(operation.Key, operation.Value);
@@ -518,15 +561,28 @@ namespace Cli
             }
 
             // Checking if both cardinality and targetEntity is provided.
-            //
             if (cardinality is null || targetEntity is null)
             {
                 Console.WriteLine("cardinality and target entity is mandatory to update/add a relationship.");
                 return false;
             }
 
+            // Add/Update of relationship is not allowed when GraphQL is disabled in Global Runtime Settings
+            if (runtimeConfig.RuntimeSettings!.TryGetValue(GlobalSettingsType.GraphQL, out object? graphQLRuntimeSetting))
+            {
+                GraphQLGlobalSettings? graphQLGlobalSettings = JsonSerializer.Deserialize<GraphQLGlobalSettings>(
+                    (JsonElement)graphQLRuntimeSetting
+                );
+
+                if (graphQLGlobalSettings is not null && !graphQLGlobalSettings.Enabled)
+                {
+                    Console.WriteLine("Cannot add/update relationship as GraphQL is disabled in the" +
+                    " global runtime settings of the config.");
+                    return false;
+                }
+            }
+
             // Both the source entity and target entity needs to present in config to establish relationship.
-            //
             if (!runtimeConfig.Entities.ContainsKey(targetEntity))
             {
                 Console.WriteLine($"Entity:{targetEntity} is not present. Relationship cannot be added.");
@@ -534,11 +590,17 @@ namespace Cli
             }
 
             // Check if provided value of cardinality is present in the enum.
-            //
             if (!string.Equals(cardinality, Cardinality.One.ToString(), StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(cardinality, Cardinality.Many.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine($"Failed to parse the given cardinality : {cardinality}. Supported values are one/many.");
+                return false;
+            }
+
+            // If GraphQL is disabled, entity cannot be used in relationship
+            if (false.Equals(runtimeConfig.Entities[targetEntity].GraphQL))
+            {
+                Console.WriteLine($"Entity: {targetEntity} cannot be used in relationship as it is disabled for GraphQL.");
                 return false;
             }
 
@@ -584,7 +646,7 @@ namespace Cli
 
         /// <summary>
         /// This method will try starting the engine.
-        /// it will use the config provided by the user, else will look for the default config.
+        /// It will use the config provided by the user, else will look for the default config.
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options)
         {

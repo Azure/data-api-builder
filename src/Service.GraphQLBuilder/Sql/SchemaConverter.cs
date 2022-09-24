@@ -19,16 +19,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// Generate a GraphQL object type from a SQL table definition, combined with the runtime config entity information
         /// </summary>
         /// <param name="entityName">Name of the entity in the runtime config to generate the GraphQL object type for.</param>
-        /// <param name="tableDefinition">SQL table definition information.</param>
+        /// <param name="databaseObject">SQL database object information.</param>
         /// <param name="configEntity">Runtime config information for the table.</param>
         /// <param name="entities">Key/Value Collection mapping entity name to the entity object,
         /// currently used to lookup relationship metadata.</param>
         /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
         /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level (applies to mutations).</param>
         /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
-        public static ObjectTypeDefinitionNode FromTableDefinition(
+        public static ObjectTypeDefinitionNode FromDatabaseObject(
             string entityName,
-            TableDefinition tableDefinition,
+            DatabaseObject databaseObject,
             [NotNull] Entity configEntity,
             Dictionary<string, Entity> entities,
             IEnumerable<string> rolesAllowedForEntity,
@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
             List<DirectiveNode> objectTypeDirectives = new();
-
+            TableDefinition tableDefinition = databaseObject.TableDefinition;
             foreach ((string columnName, ColumnDefinition column) in tableDefinition.Columns)
             {
                 List<DirectiveNode> directives = new();
@@ -114,6 +114,43 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     string targetEntityName = relationship.TargetEntity.Split('.').Last();
                     Entity referencedEntity = entities[targetEntityName];
 
+                    bool isNullableRelationship = false;
+
+                    if (// Retrieve all the relationship information for the source entity which is backed by this table definition
+                        tableDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
+                        &&
+                        // From the relationship information, obtain the foreign key definition for the given target entity
+                        relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
+                            out List<ForeignKeyDefinition>? listOfForeignKeys))
+                    {
+                        ForeignKeyDefinition? foreignKeyInfo = listOfForeignKeys.FirstOrDefault();
+
+                        // Determine whether the relationship should be nullable by obtaining the nullability
+                        // of the referencing(if source entity is the referencing object in the pair)
+                        // or referenced columns (if source entity is the referenced object in the pair).
+                        if (foreignKeyInfo is not null)
+                        {
+                            RelationShipPair pair = foreignKeyInfo.Pair;
+                            // The given entity may be the referencing or referenced database object in the foreign key
+                            // relationship. To determine this, compare with the entity's database object.
+                            if (pair.ReferencingDbObject.Equals(databaseObject))
+                            {
+                                isNullableRelationship = tableDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
+                            }
+                            else
+                            {
+                                isNullableRelationship = tableDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencedColumns);
+                            }
+                        }
+                        else
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"No relationship exists between {entityName} and {targetEntityName}",
+                                statusCode: HttpStatusCode.InternalServerError,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping);
+                        }
+                    }
+
                     INullableTypeNode targetField = relationship.Cardinality switch
                     {
                         Cardinality.One =>
@@ -132,8 +169,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         new NameNode(relationshipName),
                         description: null,
                         new List<InputValueDefinitionNode>(),
-                        // TODO: Check for whether it should be a nullable relationship based on the relationship fields
-                        new NonNullTypeNode(targetField),
+                        isNullableRelationship ? targetField : new NonNullTypeNode(targetField),
                         new List<DirectiveNode> {
                             new(RelationshipDirectiveType.DirectiveName,
                                 new ArgumentNode("target", GetDefinedSingularName(targetEntityName, referencedEntity)),

@@ -547,5 +547,12 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             string dbQuery = "SELECT c.name, c.age FROM c WHERE 1 != 1";
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
+
+        [ClassCleanup]
+        public static void TestFixtureTearDown()
+        {
+            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
+        }
     }
 }

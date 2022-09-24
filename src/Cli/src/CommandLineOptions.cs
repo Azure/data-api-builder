@@ -1,6 +1,5 @@
 using Azure.DataApiBuilder.Config;
 using CommandLine;
-using Microsoft.Extensions.Logging;
 
 namespace Cli
 {

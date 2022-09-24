@@ -65,6 +65,16 @@
             }
           }
         },
+        "graphql": {
+          "type": "object",
+          "description": "Global GraphQL endpoint configuration",
+          "properties": {
+            "path": {
+              "default": "/graphql",
+              "type": "string"
+            }
+          }
+        },
         "host": {
           "type": "object",
           "description": "Global hosting configuration",

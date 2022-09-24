@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -126,17 +127,25 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
                 It.IsAny<SqlConnection>(),
                 It.IsAny<string>(),
-                It.IsAny<IDictionary<string, object>>()))
+                It.IsAny<IDictionary<string, object>>(),
+                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<List<string>>()))
             .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT));
 
             // Call the actual ExecuteQueryAsync method.
             queryExecutor.Setup(x => x.ExecuteQueryAsync(
                 It.IsAny<string>(),
-                It.IsAny<IDictionary<string, object>>())).CallBase();
+                It.IsAny<IDictionary<string, object>>(),
+                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<List<string>>())).CallBase();
 
             DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () =>
             {
-                await queryExecutor.Object.ExecuteQueryAsync(sqltext: string.Empty, parameters: new Dictionary<string, object>());
+                await queryExecutor.Object.ExecuteQueryAsync<object>(
+                    sqltext: string.Empty,
+                    parameters: new Dictionary<string, object>(),
+                    dataReaderHandler: null,
+                    args: null);
             });
 
             Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
@@ -162,7 +171,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryExecutor.SetupSequence(x => x.ExecuteQueryAgainstDbAsync(
                 It.IsAny<SqlConnection>(),
                 It.IsAny<string>(),
-                It.IsAny<IDictionary<string, object>>()))
+                It.IsAny<IDictionary<string, object>>(),
+                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<List<string>>()))
             .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT))
             .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT))
             .CallBase();
@@ -170,11 +181,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Call the actual ExecuteQueryAsync method.
             queryExecutor.Setup(x => x.ExecuteQueryAsync(
                 It.IsAny<string>(),
-                It.IsAny<IDictionary<string, object>>())).CallBase();
+                It.IsAny<IDictionary<string, object>>(),
+                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<List<string>>())).CallBase();
 
             string sqltext = "SELECT * from books";
 
-            await queryExecutor.Object.ExecuteQueryAsync(sqltext: sqltext, parameters: new Dictionary<string, object>());
+            await queryExecutor.Object.ExecuteQueryAsync<object>(
+                    sqltext: sqltext,
+                    parameters: new Dictionary<string, object>(),
+                    dataReaderHandler: null,
+                    args: null);
+
             // For each attempt logger is invoked twice. The query executes successfully in in 1st retry .i.e. 2nd attempt of execution.
             // An additional information log is added when the query executes successfully in a retry attempt.
             Assert.AreEqual(2 * 2 + 1, queryExecutorLogger.Invocations.Count);

@@ -656,8 +656,7 @@ namespace Cli
                 return false;
             }
 
-            /// This will start the runtime engine with project name, config file and --verbose
-            /// set to either "True" or "False'. If a log level has been set then we add it as well.
+            /// This will start the runtime engine with project name, config file and a LogLevel from 0 to 6.
             List<string> args = new()
             { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile };
             if (options.LogLevel is not null)

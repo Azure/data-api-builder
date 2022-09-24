@@ -1,5 +1,6 @@
 using Azure.DataApiBuilder.Config;
 using CommandLine;
+using Microsoft.Extensions.Logging;
 
 namespace Cli
 {
@@ -243,8 +244,8 @@ namespace Cli
         public StartOptions(bool verbose, int? logLevel, string config)
             : base(config)
         {
-            // When verbose is true we set LogLevel to informational which is 2.
-            LogLevel = verbose is true ? 2 : logLevel;
+            // When verbose is true we set LogLevel to information.
+            LogLevel = verbose is true ? (int)Microsoft.Extensions.Logging.LogLevel.Information : logLevel;
         }
 
         // SetName defines mutually exclusive sets, ie: can not have

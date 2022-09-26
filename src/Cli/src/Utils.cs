@@ -119,11 +119,11 @@ namespace Cli
         {
             // If sourceType is not explicitly specified, we assume it is a Table
             return hostMode.ToLowerInvariant() switch
-                {
-                    "production" => HostModeType.Production,
-                    "development" => HostModeType.Development,
-                    _ => throw new JsonException(message: "HostMode type must be production or development.")
-                };
+            {
+                "production" => HostModeType.Production,
+                "development" => HostModeType.Development,
+                _ => throw new JsonException(message: "HostMode type must be production or development.")
+            };
         }
 
         /// <summary>

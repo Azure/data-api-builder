@@ -225,6 +225,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
+        [TestMethod("Validates access token is correctly loaded when Account Key is not present for Cosmos.")]
+        public async Task TestLoadingAccessTokenForCosmosClient()
+        {
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            HttpClient httpClient = server.CreateClient();
+
+            ConfigurationPostParameters config = GetCosmosConfigurationParametersWithAccessToken();
+
+            HttpResponseMessage authorizedResponse = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+
+            Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
+            CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
+            Assert.IsNotNull(cosmosClientProvider);
+            Assert.IsNotNull(cosmosClientProvider.Client);
+        }
+
         [TestMethod("Validates that local MsSql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.MSSQL)]
         public void TestLoadingLocalMsSqlSettings()
         {
@@ -553,6 +569,24 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 File.ReadAllText("schema.gql"),
                 "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",
                 AccessToken: null);
+        }
+
+        /// <summary>
+        /// With an invalid access token, when a new instance of CosmosClient is created with that token, it won't throw an exception.
+        /// But when a graphql request is coming in, that's when it throws an 401 exception.
+        /// To prevent this, CosmosClientProvider parses the token and retrieves the "exp" property from the token,
+        /// if it's not valid, then we will throw an exception from our code before it initiating a client.
+        /// </summary>
+        /// <returns>ConfigurationPostParameters object</returns>
+        private static ConfigurationPostParameters GetCosmosConfigurationParametersWithAccessToken()
+        {
+            string cosmosFile = $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}";
+            return new(
+                File.ReadAllText(cosmosFile),
+                File.ReadAllText("schema.gql"),
+                "AccountEndpoint=https://localhost:8081/;",
+                // This is a valid fake JWT token for testing purposes
+                AccessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxMjMzNDQ1Nn0.1cdRZfqwndt67f-sHKgOfEgTfO9xDyGFl6_d-RRyf4U");
         }
 
         /// <summary>

@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         private AccessToken? _defaultAccessToken;
 
-        private bool _attemptManagedIdentityAccess;
+        private bool _attemptToSetAccessToken;
 
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             : base(runtimeConfigProvider, dbExceptionParser, logger)
         {
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
-            _attemptManagedIdentityAccess =
+            _attemptToSetAccessToken =
                 ShouldManagedIdentityAccessBeAttempted(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString);
         }
 
@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
         {
             // Only attempt to get the access token if the connection string is in the appropriate format
-            if (_attemptManagedIdentityAccess)
+            if (_attemptToSetAccessToken)
             {
                 SqlConnection sqlConn = (SqlConnection)conn;
 
@@ -70,8 +70,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (accessToken is not null)
                 {
-                    QueryExecutorLogger.LogInformation("Using access token obtained from " +
-                        "DefaultAzureCredential to connect to database.");
                     sqlConn.AccessToken = accessToken;
                 }
             }

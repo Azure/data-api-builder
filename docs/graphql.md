@@ -219,8 +219,86 @@ query {
 
 ## Mutations
 
-For each entity, mutations to support create, update and delete operations are automatically created. The mutation operations will be created using the following name pattern: `entity<operation>`. For example, for the `book` entity, the mutations would be:
+For each entity, mutations to support create, update and delete operations are automatically created. The mutation operation will be created using the following name pattern: `entity<operation>`. For example, for the `book` entity, the mutations would be:
 
 - `createbook`: create a new book
 - `updatebook`: update an existing book
 - `deletebook`: delete the specified book
+
+### Create
+
+To create a new element of the desired entity, the `create<entity>` mutation is provided. The create mutation requires the `item` parameter, where entity's mandatory fields values, to be used when creating the new item, are specified.
+
+```graphql
+create<entity>(item: <entity_fields>)
+{
+    <fields>
+}
+```
+
+for example:
+
+```graphql
+mutation {
+  createbook(item: {
+    id: 2000,
+    title: "Leviathan Wakes"    
+  }) {
+    id
+    title
+  }  
+}
+```
+
+### Update
+
+To create a new element of the desired entity, the `update<entity>` mutation is provided. The update mutation requires two parameters:
+
+- `<primary_key>`, the key-value list of primary key columns and related values to identify the element to be updated
+- `item`: parameter, with entity's mandatory fields values, to be used when updating the specified item
+
+```graphql
+update<entity>(<pk_colum>:<pk_value>, [<pk_colum>:<pk_value> ... <pk_colum>:<pk_value>,] item: <entity_fields>)
+{
+    <fields>
+}
+```
+
+for example:
+
+```graphql
+mutation {
+  updatebook(id: 2000, item: {
+    year: 2011,
+    pages: 577    
+  }) {
+    id
+    title
+    year
+    pages
+  }
+}
+```
+
+### Delete
+
+To delete a new element of the desired entity, the `delete<entity>` mutation is provided. The primary key of the element to be delete is the required parameter.
+
+```graphql
+delete<entity>(<pk_colum>:<pk_value>, [<pk_colum>:<pk_value> ... <pk_colum>:<pk_value>,])
+{
+    <fields>
+}
+```
+
+for example:
+
+```graphql
+mutation {
+  deletebook(id: 1234)
+  {
+    id
+    title
+  }  
+}
+```

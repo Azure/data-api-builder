@@ -1,4 +1,4 @@
-import { validateResponses, generateEasyAuthHeader, graphQLEndPoint } from '../Helper.js';
+import { validateResponses, generateEasyAuthHeader, graphQLEndPoint, statusCodes } from '../Helper.js';
 import http from 'k6/http';
 
 // This test performs all CRUD operations through GraphQL and REST 
@@ -80,10 +80,10 @@ export const validateParallelCRUDOperations = () => {
   };
 
   const expectedStatusCodes = {
-    'createAuthor': 200,
-    'readAuthor': 200,
-    'updateAuthor': 200,
-    'deleteAuthor': 204
+    'createAuthor': statusCodes.Ok,
+    'readAuthor': statusCodes.Ok,
+    'updateAuthor': statusCodes.Ok,
+    'deleteAuthor': statusCodes.NoContent
   };
 
   const requests = {

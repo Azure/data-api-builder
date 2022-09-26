@@ -1,4 +1,4 @@
-import { generateEasyAuthHeader, validateResposneBodies, validateStatusCode, validateNoErrorsInResponse, graphQLEndPoint } from '../Helper.js';
+import { generateEasyAuthHeader, validateStatusCode, validateNoErrorsInResponse, graphQLEndPoint, statusCodes } from '../Helper.js';
 import { check } from 'k6';
 import http from 'k6/http';
 
@@ -41,8 +41,8 @@ export const validateParallelUpdateOperationsOnSameItem = () => {
 
   // Expected status codes for each request
   const expectedStatusCodes = {
-    'updateNotebookColorToCyan': 200,
-    'updateNotebookColorToMagenta': 200
+    'updateNotebookColorToCyan': statusCodes.Ok,
+    'updateNotebookColorToMagenta': statusCodes.Ok
   };
 
   const requests = {
@@ -62,7 +62,7 @@ export const validateParallelUpdateOperationsOnSameItem = () => {
 
   // Performs all the GraphQL and REST requests in parallel
   const responses = http.batch(requests);
-  
+
   // Validations for the API responses
   check(responses, {
     'Validate no errors': validateNoErrorsInResponse(queryNames, responses),

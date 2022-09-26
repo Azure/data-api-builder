@@ -1,5 +1,5 @@
 import http from 'k6/http';
-import { validateResponses, graphQLEndPoint } from '../Helper.js';
+import { validateResponses, graphQLEndPoint, statusCodes } from '../Helper.js';
 
 // This test performs graphQL queries and REST GET requests in parallel on different items
 // The response status and bodies for each request are validated.
@@ -46,11 +46,11 @@ export const validateParallelReadOperations = () => {
 
   // Expected respone body for each request
   const expectedStatusCodes = {
-    'bookQuery1': 200,
-    'bookQuery2': 200,
-    'notebookQuery': 200,
-    'authorQueryUsingRequestBody': 200,
-    'authorQueryUsingUrl': 200
+    'bookQuery1': statusCodes.Ok,
+    'bookQuery2': statusCodes.Ok,
+    'notebookQuery': statusCodes.Ok,
+    'authorQueryUsingRequestBody': statusCodes.Ok,
+    'authorQueryUsingUrl': statusCodes.Ok
   };
 
   const requests = {

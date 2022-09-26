@@ -104,7 +104,7 @@ export const validateResposneBodies = (queryNames, responses, expectedResponseBo
     || validateResponseBody(queryNames, responses, expectedResponseBody2);
 };
 
-// Helper method to validate the response body againse one set of expected response body
+// Helper method to validate the response body against one set of expected response body
 export const validateResponseBody = (queryNames, responses, expectedResponseBody) => {
   queryNames.forEach(queryName => {
 
@@ -112,7 +112,7 @@ export const validateResponseBody = (queryNames, responses, expectedResponseBody
     var actualResponseBody = responses[queryName].body;
     var actualResponseJson = {};
     if (Object.keys(actualResponseBody).length) {
-      actualResponseJson = JSON.parse(responses[queryName].body);
+      actualResponseJson = JSON.parse(actualResponseBody);
     }
 
     if (!isDeepEqual(expectedResponseJson, actualResponseJson))
@@ -133,3 +133,9 @@ export const generateEasyAuthHeader = (role) => {
 };
 
 export const graphQLEndPoint = 'https://localhost:5001/graphql/';
+
+export const statusCodes = {
+   Ok : 200,
+   NoContent: 204,
+   NotFound: 404
+};

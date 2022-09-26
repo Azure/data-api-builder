@@ -1,4 +1,4 @@
-import { generateEasyAuthHeader, validateStatusCodes, graphQLEndPoint } from '../Helper.js';
+import { generateEasyAuthHeader, validateStatusCodes, graphQLEndPoint, statusCodes } from '../Helper.js';
 import { check } from 'k6';
 import http from 'k6/http';
 
@@ -32,14 +32,14 @@ export const validateParallelDeleteOperationsOnSameItem = () => {
 
     // Expected status codes for each request when REST runs first
     const expectedStatusCodesWhenRestDeleteExecutesFirst = {
-        'deleteNotebookUsingGraphQLMutation': 200,
-        'deleteNotebookUsingRest': 204
+        'deleteNotebookUsingGraphQLMutation': statusCodes.Ok,
+        'deleteNotebookUsingRest': statusCodes.NoContent
     };
 
     // Expected status codes for each request when REST runs second
     const expectedStatusCodesWhenGraphQLDeleteExecutesFirst = {
-        'deleteNotebookUsingGraphQLMutation': 200,
-        'deleteNotebookUsingRest': 404
+        'deleteNotebookUsingGraphQLMutation': statusCodes.Ok,
+        'deleteNotebookUsingRest': statusCodes.NotFound
     };
 
     const requests = {

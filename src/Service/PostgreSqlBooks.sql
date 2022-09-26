@@ -18,7 +18,6 @@ DROP TABLE IF EXISTS aow;
 DROP TABLE IF EXISTS notebooks;
 DROP TABLE IF EXISTS journals;
 DROP TABLE IF EXISTS series;
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 DROP SCHEMA IF EXISTS foo;
 
@@ -116,7 +115,7 @@ CREATE TABLE type_table(
     boolean_types boolean,
     datetime_types timestamp,
     bytearray_types bytea,
-    guid_types uuid DEFAULT uuid_generate_v4 ()
+    guid_types uuid DEFAULT gen_random_uuid ()
 );
 
 CREATE TABLE trees (
@@ -218,7 +217,7 @@ INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 
 INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
 INSERT INTO foo.magazines(id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
 INSERT INTO series(id, name) VALUES (3001, 'Foundation'), (3002, 'Hyperion Cantos');
-INSERT INTO comics(id, title, "categoryName", series_id) 
+INSERT INTO comics(id, title, "categoryName", series_id)
 VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'FairyTales', 3001),(3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);INSERT INTO stocks(categoryid, pieceid, "categoryName") VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');
 INSERT INTO brokers("ID Number", "First Name", "Last Name") VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
 INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, 'instant1', 100.57, True), (1, 1, 'instant2', 42.75, False);

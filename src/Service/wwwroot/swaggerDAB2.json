@@ -1,0 +1,374 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Azure.DataGateway.Service",
+    "version": "1.0"
+  },
+  "host": "localhost:5000",
+  "basePath": "/api",
+  "schemes": [ "http" ],
+  "paths": {
+    "/Book": {
+      "post": {
+        "operationId": "book_post",
+        "summary": "Add a new book.",
+        "tags": [
+          "Rest"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Book"
+              }
+            }
+          }
+        },
+        "x-codegen-request-body-name": "body",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BookResponse"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Book/id/{pk}": {
+      "get": {
+        "operationId": "book_get",
+        "parameters": [
+          {
+            "name": "pk",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "example": 1
+            }
+          }
+        ],
+        "tags": [
+          "Rest"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BookResponse"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "403": {
+            "description": "Unauthorized"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        },
+        "x-restler-annotations": [
+          {
+            "producer_resource_name": "/value/[0]/id",
+            "producer_method": "POST",
+            "consumer_param": "pk",
+            "producer_endpoint": "/Book"
+          }
+        ]
+      },
+      "patch": {
+        "summary": "Incremental book update",
+        "operationId": "book_patch",
+        "parameters": [
+          {
+            "name": "pk",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "example": 1
+            }
+          }
+        ],
+        "tags": [
+          "Rest"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Book"
+              },
+              "example": {
+                "title": "RESTLER BOOK PATCH DOPE",
+                "publisher_id": 1234
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BookResponse"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-restler-annotations": [
+          {
+            "producer_resource_name": "/value/[0]/id",
+            "producer_method": "POST",
+            "consumer_param": "pk",
+            "producer_endpoint": "/Book"
+          }
+        ]
+      },
+      "put": {
+        "summary": "Upsert book",
+        "operationId": "book_put",
+        "parameters": [
+          {
+            "name": "pk",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "example": 1
+            }
+          }
+        ],
+        "tags": [
+          "Rest"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Book"
+              },
+              "example": {
+                "title": "RESTLER BOOK PUT DOPE",
+                "publisher_id": 1234
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BookResponse"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BookResponse"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "book_delete",
+        "parameters": [
+          {
+            "name": "pk",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "example": 1
+            }
+          }
+        ],
+        "tags": [
+          "Rest"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "403": {
+            "description": "Unauthorized"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        },
+        "x-restler-annotations": [
+          {
+            "producer_resource_name": "/value/[0]/id",
+            "producer_method": "POST",
+            "consumer_param": "pk",
+            "producer_endpoint": "/Book"
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConfigurationPostParameters": {
+        "type": "object",
+        "properties": {
+          "configuration": {
+            "type": "string",
+            "nullable": true
+          },
+          "schema": {
+            "type": "string",
+            "nullable": true
+          },
+          "connectionString": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Book": {
+        "type": "object",
+        "required": [
+          "title",
+          "publisher_id"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "publisher_id": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "example": {
+          "title": "The Book of Restler",
+          "publisher_id": 1941
+        }
+      },
+      "BookResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "publisher_id": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "example": {
+          "id": 1,
+          "title": "Response Title",
+          "publisher_id": 1234
+        }
+      },
+      "BookManyResponse": {
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "title": {
+                "type": "string"
+              },
+              "publisher_id": {
+                "type": "integer",
+                "format": "int32"
+              }
+            }
+          }
+        },
+        "example": {
+          "values": [
+            {
+              "id": 1,
+              "title": "Response Title",
+              "publisher_id": 1234
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -250,6 +250,13 @@ namespace Azure.DataApiBuilder.Service
                     isRuntimeReady = await PerformOnConfigChangeAsync(app);
                 };
             }
+            app.UseStaticFiles();
+            app.UseSwagger();
+            app.UseSwaggerUI( c=>
+            {
+                c.SwaggerEndpoint("/swaggerDAB2.json", "DataAPIBuilderAlpha-Custom");
+            }
+            );
 
             if (env.IsDevelopment())
             {

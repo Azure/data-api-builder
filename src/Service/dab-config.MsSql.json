@@ -9,11 +9,9 @@
   },
   "runtime": {
     "rest": {
-      "enabled": true,
       "path": "/api"
     },
     "graphql": {
-      "enabled": true,
       "path": "/graphql",
       "allow-introspection": true
     },
@@ -508,7 +506,13 @@
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
-      ]
+      ],
+      "relationships": {
+        "series": {
+          "cardinality": "one",
+          "target.entity": "series"
+        }
+      }
     },
     "Broker": {
       "source": "brokers",
@@ -816,6 +820,23 @@
         "WagingWar": "作戰",
         "StrategicAttack": "謀攻",
         "NoteNum": "┬─┬ノ( º _ ºノ)"
+      }
+    },
+    "series": {
+      "source": "series",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "relationships": {
+        "comics": {
+          "cardinality": "many",
+          "target.entity": "Comic"
+        }
       }
     },
     "GetBooks": {

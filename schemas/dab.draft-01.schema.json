@@ -65,16 +65,6 @@
             }
           }
         },
-        "graphql": {
-          "type": "object",
-          "description": "Global GraphQL endpoint configuration",
-          "properties": {
-            "path": {
-              "default": "/graphql",
-              "type": "string"
-            }
-          }
-        },
         "host": {
           "type": "object",
           "description": "Global hosting configuration",
@@ -142,6 +132,24 @@
             "source": {
               "type": "string",
               "description": "The object in the backend database that is mapped to the entity"
+            },
+            "rest": {
+              "oneOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ]
+                }
+              ]
             },
             "graphql": {
               "oneOf": [

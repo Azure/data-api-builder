@@ -135,6 +135,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
+        /// Return the StoredProcedureDefinition associated with this database object
+        /// </summary>
+        protected StoredProcedureDefinition GetUnderlyingStoredProcedureDefinition()
+        {
+            return SqlMetadataProvider.GetStoredProcedureDefinition(EntityName);
+        }
+
+        /// <summary>
         /// Get primary key as list of string
         /// </summary>
         public List<string> PrimaryKey()
@@ -192,21 +200,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Type systemType = GetColumnSystemType(columnName);
             try
             {
-                return systemType.Name switch
-                {
-                    "String" => param,
-                    "Byte" => byte.Parse(param),
-                    "Byte[]" => Convert.FromBase64String(param),
-                    "Int16" => short.Parse(param),
-                    "Int32" => int.Parse(param),
-                    "Int64" => long.Parse(param),
-                    "Single" => float.Parse(param),
-                    "Double" => double.Parse(param),
-                    "Decimal" => decimal.Parse(param),
-                    "Boolean" => bool.Parse(param),
-                    "DateTime" => DateTimeOffset.Parse(param),
-                    _ => throw new NotSupportedException($"{systemType.Name} is not supported")
-                };
+                return ParseParamAsSystemType(param, systemType);
             }
             catch (Exception e)
             {
@@ -220,6 +214,34 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Tries to parse the string parameter to the given system type
+        /// Useful for inferring parameter types for columns or procedure parameters
+        /// </summary>
+        /// <param name="param"></param>
+        /// <param name="systemType"></param>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException"></exception>
+        protected object ParseParamAsSystemType(string param, Type systemType)
+        {
+            return systemType.Name switch
+            {
+                "String" => param,
+                "Byte" => byte.Parse(param),
+                "Byte[]" => Convert.FromBase64String(param),
+                "Int16" => short.Parse(param),
+                "Int32" => int.Parse(param),
+                "Int64" => long.Parse(param),
+                "Single" => float.Parse(param),
+                "Double" => double.Parse(param),
+                "Decimal" => decimal.Parse(param),
+                "Boolean" => bool.Parse(param),
+                "DateTime" => DateTimeOffset.Parse(param),
+                "Guid" => param is null ? Guid.Parse(param) : null,
+                _ => throw new NotSupportedException($"{systemType.Name} is not supported")
+            };
         }
 
         /// <summary>

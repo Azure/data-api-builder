@@ -1,7 +1,8 @@
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Service.Controllers;
-using Azure.DataApiBuilder.Service.Services;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
@@ -156,6 +157,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             }
         };
 
+        #region Overriden tests
+        /// <inheritdoc/>
+        [TestMethod]
+        public override async Task InsertOneTestViolatingForeignKeyConstraint()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 12345
+            }";
+
+            string expectedErrorMessage = "23503: insert or update on table \"books\" violates foreign key" +
+                    " constraint \"book_publisher_fk\"";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: string.Empty,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: expectedErrorMessage,
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+            );
+        }
+        #endregion
+
         #region Test Fixture Setup
 
         /// <summary>
@@ -168,15 +198,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
             await InitializeTestFixture(context);
-            _restService = new RestService(_queryEngine,
-                _mutationEngine,
-                _sqlMetadataProvider,
-                _httpContextAccessor.Object,
-                _authorizationService.Object,
-                _authorizationResolver,
-                _runtimeConfigProvider);
-            _restController = new RestController(_restService,
-                                                 _restControllerLogger);
         }
 
         #endregion

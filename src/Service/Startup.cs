@@ -1,4 +1,5 @@
 using System;
+using System.IdentityModel.Tokens.Jwt;
 using System.IO.Abstractions;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -18,7 +19,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Service
                     case DatabaseType.cosmos:
                         return null!;
                     case DatabaseType.mssql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<SqlConnection>>(serviceProvider);
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryExecutor>(serviceProvider);
                     case DatabaseType.postgresql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<NpgsqlConnection>>(serviceProvider);
                     case DatabaseType.mysql:
@@ -155,7 +155,7 @@ namespace Azure.DataApiBuilder.Service
                 }
             });
 
-            services.AddSingleton(implementationFactory: (serviceProvider) =>
+            services.AddSingleton<DbExceptionParser>(implementationFactory: (serviceProvider) =>
             {
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
@@ -165,9 +165,11 @@ namespace Azure.DataApiBuilder.Service
                     case DatabaseType.cosmos:
                         return null!;
                     case DatabaseType.mssql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlDbExceptionParser>(serviceProvider);
                     case DatabaseType.postgresql:
+                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlDbExceptionParser>(serviceProvider);
                     case DatabaseType.mysql:
-                        return new DbExceptionParser(configProvider);
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider);
                     default:
                         throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
                 }
@@ -302,13 +304,12 @@ namespace Azure.DataApiBuilder.Service
                     context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
                 }
             });
+
+            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
             app.UseAuthentication();
 
-            // Add authentication middleware to the pipeline.
-            if (runtimeConfig is not null)
-            {
-                app.UseAuthenticationMiddleware();
-            }
+            app.UseClientRoleHeaderAuthenticationMiddleware();
 
             app.UseAuthorization();
 
@@ -318,20 +319,13 @@ namespace Azure.DataApiBuilder.Service
             // - {X-MS-CLIENT-PRINCIPAL + Client role header for EasyAuth}
             // When enabled, the middleware will prevent Banana Cake Pop(GraphQL client) from loading
             // without proper authorization headers.
-            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production)
-            {
-                app.UseAuthorizationEngineMiddleware();
-            }
+            app.UseClientRoleHeaderAuthorizationMiddleware();
 
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                if (runtimeConfig is not null && runtimeConfig.GraphQLGlobalSettings.Enabled)
-                {
-                    endpoints.MapGraphQL(runtimeConfig.GraphQLGlobalSettings.Path);
-                    endpoints.MapBananaCakePop();
-                }
-
+                endpoints.MapGraphQL("/graphql");
+                endpoints.MapBananaCakePop();
                 endpoints.MapHealthChecks("/");
             });
         }
@@ -340,16 +334,15 @@ namespace Azure.DataApiBuilder.Service
         /// Add services necessary for Authentication Middleware and based on the loaded
         /// runtime configuration set the AuthenticationOptions to be either
         /// EasyAuth based (by default) or JwtBearerOptions.
+        /// When no runtime configuration is set on engine startup, set the
+        /// default authentication scheme to EasyAuth.
         /// </summary>
-        /// <param name="services">The service collection to add authentication services to.</param>
-        /// <param name="runtimeConfig">The loaded runtime configuration.</param>
+        /// <param name="services">The service collection where authentication services are added.</param>
+        /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
         private static void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
         {
             if (runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
             {
-                // Parameterless AddAuthentication() , i.e. No defaultScheme, allows the custom JWT middleware
-                // to manually call JwtBearerHandler.HandleAuthenticateAsync() and populate the User if successful.
-                // This also enables the custom middleware to send the AuthN failure reason in the challenge header.
                 if (runtimeConfig!.AuthNConfig != null &&
                     !runtimeConfig.IsEasyAuthAuthenticationProvider())
                 {
@@ -369,12 +362,28 @@ namespace Azure.DataApiBuilder.Service
                                 ignoreCase: true));
                 }
                 else
-                // If no authentication configuration section specified, defaults to StaticWebApps EasyAuth.
                 {
-                    services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                        .AddEasyAuthAuthentication(EasyAuthType.StaticWebApps);
+                    // Set default authentication scheme when runtime configuration
+                    // does not contain authentication settings.
+                    SetStaticWebAppsAuthentication(services);
                 }
             }
+            else
+            {
+                // Sets EasyAuth as the default authentication scheme when runtime configuration
+                // is not present.
+                SetStaticWebAppsAuthentication(services);
+            }
+        }
+
+        /// <summary>
+        /// Sets Static Web Apps EasyAuth as the authentication scheme for the engine.
+        /// </summary>
+        /// <param name="services">The service collection where authentication services are added.</param>
+        private static void SetStaticWebAppsAuthentication(IServiceCollection services)
+        {
+            services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                    .AddEasyAuthAuthentication(EasyAuthType.StaticWebApps);
         }
 
         /// <summary>
@@ -387,16 +396,17 @@ namespace Azure.DataApiBuilder.Service
         {
             try
             {
-                RuntimeConfig runtimeConfig = app.ApplicationServices.GetService<RuntimeConfigProvider>()!.GetRuntimeConfiguration();
+                RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
+                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
 
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
                 runtimeConfigValidator.ValidateConfig();
 
-                if (app.ApplicationServices.GetService<RuntimeConfigProvider>()!.IsDeveloperMode())
+                if (runtimeConfigProvider.IsDeveloperMode())
                 {
-                    // Perform semantic validation in development mode only.
+                    // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 }
 
@@ -409,6 +419,29 @@ namespace Azure.DataApiBuilder.Service
                 if (sqlMetadataProvider is not null)
                 {
                     await sqlMetadataProvider.InitializeAsync();
+                }
+
+                // Manually trigger DI service instantiation of GraphQLSchemaCreator and RestService
+                // to attempt to reduce chances that the first received client request
+                // triggers instantiation and encounters undesired instantiation latency.
+                // In their constructors, those services consequentially inject
+                // other required services, triggering instantiation. Such recursive nature of DI and
+                // service instantiation results in the activation of all required services.
+                GraphQLSchemaCreator graphQLSchemaCreator =
+                    app.ApplicationServices.GetRequiredService<GraphQLSchemaCreator>();
+
+                RestService restService =
+                    app.ApplicationServices.GetRequiredService<RestService>();
+
+                if (graphQLSchemaCreator is null || restService is null)
+                {
+                    _logger.LogError($"Endpoint service initialization failed");
+                }
+
+                if (app.ApplicationServices.GetService<RuntimeConfigProvider>()!.IsDeveloperMode())
+                {
+                    // Running only in developer mode to ensure fast and smooth startup in production.
+                    runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProvider!);
                 }
 
                 _logger.LogInformation($"Successfully completed runtime initialization.");

@@ -7,7 +7,7 @@
  <!-- Dependency versions -->
  <PropertyGroup>
     <HotChocolateVersion>12.8.2</HotChocolateVersion>
-    <CosmosVersion>3.18.0</CosmosVersion>
+    <CosmosVersion>3.20.0</CosmosVersion>
     <SqlVersion>3.0.0</SqlVersion>
     <ConfigVersion>6.0.0-preview.3.21201.4</ConfigVersion>
     <PostgresVersion>5.0.10</PostgresVersion>
@@ -19,5 +19,6 @@
     <NewtonsoftJsonVersion>13.0.1</NewtonsoftJsonVersion>
     <StyleCopAnalyzerVersion>1.1.118</StyleCopAnalyzerVersion>
     <CommandLineParserVersion>2.9.1</CommandLineParserVersion>
+    <PollyVersion>7.2.3</PollyVersion>
  </PropertyGroup>
 </Project>

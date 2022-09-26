@@ -5,9 +5,10 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Services;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Action = Azure.DataApiBuilder.Config.Action;
+using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authorization
 {
@@ -28,6 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         {
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(runtimeConfig);
             Mock<ISqlMetadataProvider> metadataProvider = new();
+            Mock<ILogger<AuthorizationResolver>> logger = new();
             TableDefinition sampleTable = CreateSampleTable();
             metadataProvider.Setup(x => x.GetTableDefinition(TEST_ENTITY)).Returns(sampleTable);
             metadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.mssql);
@@ -38,23 +40,27 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                               .Callback(new metaDataCallback((string entity, string exposedField, out string backingColumn) => _ = _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn)))
                               .Returns((string entity, string exposedField, string backingColumn) => _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn));
 
-            return new AuthorizationResolver(runtimeConfigProvider, metadataProvider.Object);
+            return new AuthorizationResolver(runtimeConfigProvider, metadataProvider.Object, logger.Object);
         }
 
         /// <summary>
         /// Creates a stub RuntimeConfig object with user/test defined values
         /// that set AuthorizationMetadata.
         /// </summary>
-        /// <param name="entityName"></param>
-        /// <param name="roleName"></param>
-        /// <param name="action"></param>
-        /// <param name="includedCols"></param>
-        /// <param name="excludedCols"></param>
+        /// <param name="entityName">Top level entity name</param>
+        /// <param name="entitySource">Database name for entity</param>
+        /// <param name="roleName">Role permitted to access entity</param>
+        /// <param name="operation">Operation permitted for role</param>
+        /// <param name="includedCols">columns allowed for operation</param>
+        /// <param name="excludedCols">columns NOT allowed for operation</param>
+        /// <param name="databasePolicy">database policy for operation</param>
+        /// <param name="requestPolicy">request policy for operation</param>
         /// <returns></returns>
         public static RuntimeConfig InitRuntimeConfig(
-            string entityName = "SampleEntity",
+            string entityName = TEST_ENTITY,
+            string entitySource = TEST_ENTITY,
             string roleName = "Reader",
-            Operation action = Operation.Create,
+            Operation operation = Operation.Create,
             HashSet<string>? includedCols = null,
             HashSet<string>? excludedCols = null,
             string? databasePolicy = null,
@@ -73,17 +79,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             Policy policy = new(requestPolicy, databasePolicy);
 
-            Action actionForRole = new(
-                Name: action,
+            PermissionOperation actionForRole = new(
+                Name: operation,
                 Fields: fieldsForRole,
                 Policy: policy);
 
             PermissionSetting permissionForEntity = new(
                 role: roleName,
-                actions: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
 
             Entity sampleEntity = new(
-                Source: TEST_ENTITY,
+                Source: entitySource,
                 Rest: null,
                 GraphQL: null,
                 Permissions: new PermissionSetting[] { permissionForEntity },

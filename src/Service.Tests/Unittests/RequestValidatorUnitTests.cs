@@ -132,6 +132,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             PerformTest(findRequestContext, _mockMetadataStore.Object, expectsException: false);
         }
 
+        /// <summary>
+        /// Ensures improper JSON included in a request body (i.e. for POST/PUT/PATCH requests)
+        /// is handled gracefully.
+        /// Gracefully means the client receives an HTTP 400 Bad Request response and not an
+        /// HTTP 5XX type response.
+        /// </summary>
+        /// <param name="requestBody">Request Body string</param>
+        /// <param name="expectsException">true/false</param>
         [DataTestMethod]
         [DataRow(@"{""title"":""Hello, World""}", false, DisplayName = "Request body is valid json")]
         [DataRow("", false, DisplayName = "Request body is empty, does not fail parser")]
@@ -143,7 +151,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (expectsException)
             {
                 DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RequestValidator.ParseRequestBodyContents(requestBody),
+                    action: () => RequestValidator.ParseRequestBody(requestBody),
                     message: RequestValidator.REQUEST_BODY_INVALID_JSON_ERR_MESSAGE);
 
                 Assert.AreEqual(expected: HttpStatusCode.BadRequest, actual: dabException.StatusCode);
@@ -151,54 +159,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             else
             {
-                RequestValidator.ParseRequestBodyContents(requestBody);
+                RequestValidator.ParseRequestBody(requestBody);
             }
         }
-
-        [DataTestMethod]
-        [DataRow(null, true, DisplayName = "PrimaryKey route null when not expected.")]
-        [DataRow("", true, DisplayName = "PrimaryKey route empty when not expected.")]
-        [DataRow(" ", true, DisplayName = "PrimaryKey route whitespace when not expected.")]
-        [DataRow("/Entity/id/1", false, DisplayName = "PrimaryKey route provided when expected.")]
-        public void PrimaryKeyRouteExpectedForHttpRequestType(string primaryKeyRoute, bool expectsException)
-        {
-            if (expectsException)
-            {
-                DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RequestValidator.ValidatePrimaryKeyRouteProvided(primaryKeyRoute),
-                    message: RequestValidator.REQUEST_BODY_INVALID_JSON_ERR_MESSAGE);
-
-                Assert.AreEqual(expected: HttpStatusCode.BadRequest, actual: dabException.StatusCode);
-                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.BadRequest, actual: dabException.SubStatusCode);
-            }
-            else
-            {
-                RequestValidator.ValidatePrimaryKeyRouteProvided(primaryKeyRoute);
-            }
-        }
-
-        [DataTestMethod]
-        [DataRow(null, false, DisplayName = "queryString null when expected.")]
-        [DataRow("", false, DisplayName = "queryString empty when expected.")]
-        [DataRow(" ", true, DisplayName = "queryString whitespace only when not expected.")]
-        [DataRow("$?select=id", true, DisplayName = "queryString provided when not expected.")]
-        public void QueryStringExpectedForHttpRequestType(string queryString, bool expectsException)
-        {
-            if (expectsException)
-            {
-                DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RequestValidator.ValidateQueryStringNotProvided(queryString),
-                    message: RequestValidator.QUERY_STRING_INVALID_USAGE_ERR_MESSAGE);
-
-                Assert.AreEqual(expected: HttpStatusCode.BadRequest, actual: dabException.StatusCode);
-                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.BadRequest, actual: dabException.SubStatusCode);
-            }
-            else
-            {
-                RequestValidator.ValidateQueryStringNotProvided(queryString);
-            }
-        }
-
         #endregion
         #region Negative Tests
         /// <summary>

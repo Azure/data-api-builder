@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.Services
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
-            await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleActionPermissionsRequirement());
+            await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleOperationPermissionsRequirement());
 
             QueryString? query = GetHttpContext().Request.QueryString;
             string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
@@ -77,66 +77,81 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             RestRequestContext context;
-            switch (operationType)
+            // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
+            if (dbObject.ObjectType is SourceType.StoredProcedure)
             {
-                case Operation.Read:
-                    context = new FindRequestContext(entityName,
-                                                     dbo: dbObject,
-                                                     isList: string.IsNullOrEmpty(primaryKeyRoute));
-                    break;
-                case Operation.Insert:
-                    RequestValidator.ValidateQueryStringNotProvided(queryString);
-                    JsonElement insertPayloadRoot = RequestValidator.ParseRequestBodyContents(requestBody);
-                    context = new InsertRequestContext(
-                        entityName,
-                        dbo: dbObject,
-                        insertPayloadRoot,
-                        operationType);
-                    RequestValidator.ValidateInsertRequestContext(
-                        (InsertRequestContext)context,
-                        _sqlMetadataProvider);
-                    break;
-                case Operation.Delete:
-                    RequestValidator.ValidatePrimaryKeyRouteProvided(primaryKeyRoute);
-                    context = new DeleteRequestContext(entityName,
-                                                       dbo: dbObject,
-                                                       isList: false);
-                    break;
-                case Operation.Update:
-                case Operation.UpdateIncremental:
-                case Operation.Upsert:
-                case Operation.UpsertIncremental:
-                    RequestValidator.ValidatePrimaryKeyRouteProvided(primaryKeyRoute);
-                    JsonElement upsertPayloadRoot = RequestValidator.ParseRequestBodyContents(requestBody);
-                    context = new UpsertRequestContext(entityName,
-                                                       dbo: dbObject,
-                                                       upsertPayloadRoot,
-                                                       operationType);
-                    RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
-                    break;
-                default:
-                    throw new DataApiBuilderException(message: "This operation is not supported.",
-                                                   statusCode: HttpStatusCode.BadRequest,
-                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                PopulateStoredProcedureContext(operationType,
+                    dbObject,
+                    entityName,
+                    queryString,
+                    primaryKeyRoute,
+                    requestBody,
+                    out context);
             }
-
-            if (!string.IsNullOrEmpty(primaryKeyRoute))
+            else
             {
-                // After parsing primary key, the Context will be populated with the
-                // correct PrimaryKeyValuePairs.
-                RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
-                RequestValidator.ValidatePrimaryKey(context, _sqlMetadataProvider);
-            }
+                switch (operationType)
+                {
+                    case Operation.Read:
+                        context = new FindRequestContext(
+                            entityName,
+                            dbo: dbObject,
+                            isList: string.IsNullOrEmpty(primaryKeyRoute));
+                        break;
+                    case Operation.Insert:
+                        JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
+                        context = new InsertRequestContext(
+                            entityName,
+                            dbo: dbObject,
+                            insertPayloadRoot,
+                            operationType);
+                        RequestValidator.ValidateInsertRequestContext(
+                            (InsertRequestContext)context,
+                            _sqlMetadataProvider);
+                        break;
+                    case Operation.Delete:
+                        RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
+                        context = new DeleteRequestContext(entityName,
+                                                           dbo: dbObject,
+                                                           isList: false);
+                        break;
+                    case Operation.Update:
+                    case Operation.UpdateIncremental:
+                    case Operation.Upsert:
+                    case Operation.UpsertIncremental:
+                        JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
+                        context = new UpsertRequestContext(
+                            entityName,
+                            dbo: dbObject,
+                            upsertPayloadRoot,
+                            operationType);
+                        RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
+                        break;
+                    default:
+                        throw new DataApiBuilderException(
+                            message: "This operation is not supported.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
 
-            if (!string.IsNullOrWhiteSpace(queryString))
-            {
-                context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
-                RequestParser.ParseQueryString(context, _sqlMetadataProvider);
+                if (!string.IsNullOrEmpty(primaryKeyRoute))
+                {
+                    // After parsing primary key, the Context will be populated with the
+                    // correct PrimaryKeyValuePairs.
+                    RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
+                    RequestValidator.ValidatePrimaryKey(context, _sqlMetadataProvider);
+                }
+
+                if (!string.IsNullOrWhiteSpace(queryString))
+                {
+                    context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
+                    RequestParser.ParseQueryString(context, _sqlMetadataProvider);
+                }
             }
 
             string role = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-            Operation action = HttpVerbToActions(GetHttpContext().Request.Method);
-            string dbPolicy = _authorizationResolver.TryProcessDBPolicy(entityName, role, action, GetHttpContext());
+            Operation operation = HttpVerbToOperations(GetHttpContext().Request.Method);
+            string dbPolicy = _authorizationResolver.TryProcessDBPolicy(entityName, role, operation, GetHttpContext());
             if (!string.IsNullOrEmpty(dbPolicy))
             {
                 // Since dbPolicy is nothing but filters to be added by virtue of database policy, we prefix it with
@@ -153,22 +168,118 @@ namespace Azure.DataApiBuilder.Service.Services
             RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
 
             // The final authorization check on columns occurs after the request is fully parsed and validated.
-            await AuthorizationCheckForRequirementAsync(resource: context, requirement: new ColumnsPermissionsRequirement());
+            // Stored procedures do not yet have semantics defined for column-level permissions
+            if (dbObject.ObjectType is not SourceType.StoredProcedure)
+            {
+                await AuthorizationCheckForRequirementAsync(resource: context, requirement: new ColumnsPermissionsRequirement());
+            }
 
             switch (operationType)
             {
                 case Operation.Read:
-                    return await _queryEngine.ExecuteAsync(context);
+                    return await DispatchQuery(context);
                 case Operation.Insert:
                 case Operation.Delete:
                 case Operation.Update:
                 case Operation.UpdateIncremental:
                 case Operation.Upsert:
                 case Operation.UpsertIncremental:
-                    return await _mutationEngine.ExecuteAsync(context);
+                    return await DispatchMutation(context);
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             };
+        }
+
+        /// <summary>
+        /// Dispatch execution of a request context to the query engine
+        /// The two overloads to ExecuteAsync take FindRequestContext and StoredProcedureRequestContext
+        /// </summary>
+        private Task<IActionResult> DispatchQuery(RestRequestContext context)
+        {
+            return context switch
+            {
+                FindRequestContext => _queryEngine.ExecuteAsync((FindRequestContext)context),
+                StoredProcedureRequestContext => _queryEngine.ExecuteAsync((StoredProcedureRequestContext)context),
+                _ => throw new NotSupportedException("This operation is not yet supported."),
+            };
+        }
+
+        /// <summary>
+        /// Dispatch execution of a request context to the mutation engine
+        /// The two overloads to ExecuteAsync take StoredProcedureRequestContext and RestRequestContext
+        /// </summary>
+        private Task<IActionResult?> DispatchMutation(RestRequestContext context)
+        {
+            return context switch
+            {
+                StoredProcedureRequestContext => _mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context),
+                _ => _mutationEngine.ExecuteAsync(context)
+            };
+        }
+
+        /// <summary>
+        /// Helper method to populate the context in case the database object for this request is a stored procedure
+        /// </summary>
+        private void PopulateStoredProcedureContext(Operation operationType,
+            DatabaseObject dbObject,
+            string entityName,
+            string queryString,
+            string? primaryKeyRoute,
+            string requestBody,
+            out RestRequestContext context)
+        {
+            switch (operationType)
+            {
+
+                case Operation.Read:
+                    // Parameters passed in query string, request body is ignored for find requests
+                    context = new StoredProcedureRequestContext(
+                        entityName,
+                        dbo: dbObject,
+                        requestPayloadRoot: null,
+                        operationType);
+
+                    // Don't want to use RequestParser.ParseQueryString here since for all non-sp requests,
+                    // arbitrary keys shouldn't be allowed/recognized in the querystring.
+                    // So, for the time being, filter, select, etc. fields aren't populated for sp requests
+                    // So, $filter will be treated as any other parameter (inevitably will raise a Bad Request)
+                    if (!string.IsNullOrWhiteSpace(queryString))
+                    {
+                        context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
+                    }
+
+                    break;
+                case Operation.Insert:
+                case Operation.Delete:
+                case Operation.Update:
+                case Operation.UpdateIncremental:
+                case Operation.Upsert:
+                case Operation.UpsertIncremental:
+                    // Stored procedure call is semantically identical for all methods except Find, so we can
+                    // effectively reuse the ValidateInsertRequest - throws error if query string is nonempty
+                    // and parses the body into json
+                    JsonElement requestPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
+                    context = new StoredProcedureRequestContext(
+                        entityName,
+                        dbo: dbObject,
+                        requestPayloadRoot,
+                        operationType);
+                    break;
+                default:
+                    throw new DataApiBuilderException(message: "This operation is not supported.",
+                                                   statusCode: HttpStatusCode.BadRequest,
+                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            // Throws bad request if primaryKeyRoute set
+            RequestValidator.ValidateStoredProcedureRequest(primaryKeyRoute);
+
+            // At this point, either query string or request body is populated with params, so resolve which will be passed
+            ((StoredProcedureRequestContext)context).PopulateResolvedParameters();
+
+            // Validate the request parameters
+            RequestValidator.ValidateStoredProcedureRequestContext(
+                (StoredProcedureRequestContext)context, _sqlMetadataProvider);
         }
 
         /// <summary>
@@ -176,41 +287,50 @@ namespace Azure.DataApiBuilder.Service.Services
         /// from the provided string that starts with the REST
         /// path. If the provided string does not start with
         /// the given REST path, we throw an exception. We then
-        /// return the entity name as the string up until the next
-        /// '/' if one exists, and the primary key as the substring
-        /// following the '/'.
+        /// return the entity name via a lookup using the string
+        /// up until the next '/' if one exists, and the primary
+        /// key as the substring following the '/'. For example
+        /// a request route shoud be of the form
+        /// {RESTPath}/{EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
         /// </summary>
-        /// <param name="route">String containing path + entity name
+        /// <param name="route">The request route, containing REST path + entity path
         /// (and optionally primary key).</param>
-        /// <returns>entity name after path.</returns>
+        /// <returns>entity name associated with entity path
+        /// and primary key route.</returns>
         /// <exception cref="DataApiBuilderException"></exception>
         public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string route)
         {
-            string path = _runtimeConfigProvider.RestPath.TrimStart('/');
-            if (!route.StartsWith(path))
+            // route will ignore leading '/' so we trim here to allow for restPath
+            // that start with '/'
+            string restPath = _runtimeConfigProvider.RestPath.TrimStart('/');
+            if (!route.StartsWith(restPath))
             {
-                throw new DataApiBuilderException(message: $"Invalid Path for route: {route}.",
-                                               statusCode: HttpStatusCode.BadRequest,
-                                               subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                throw new DataApiBuilderException(
+                    message: $"Invalid Path for route: {route}.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
-            // entity name comes after the path, so get substring starting from
-            // the end of path. If path is not empty we trim the '/' following the path.
-            string routeAfterPath = string.IsNullOrEmpty(path) ? route : route.Substring(path.Length).TrimStart('/');
-            string primaryKeyRoute = string.Empty;
-            string entityName;
-            // a '/' remaining in this substring means we have a primary key route
-            if (routeAfterPath.Contains('/'))
+            // entity's path comes after the restPath, so get substring starting from
+            // the end of restPath. If restPath is not empty we trim the '/' following the path.
+            string routeAfterPath = string.IsNullOrEmpty(restPath) ? route : route.Substring(restPath.Length).TrimStart('/');
+            // Split routeAfterPath on the first occurrence of '/', if we get back 2 elements
+            // this means we have a non empty primary key route which we save. Otherwise, save
+            // primary key route as empty string. Entity Path will always be the element at index 0.
+            // ie: {EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
+            // splits into [{EntityPath}] when there is an empty primary key route and into
+            // [{EntityPath}, {Primarykeyroute}] when there is a non empty primary key route.
+            int maxNumberOfElementsFromSplit = 2;
+            string[] entityPathAndPKRoute = routeAfterPath.Split(new[] { '/' }, maxNumberOfElementsFromSplit);
+            string entityPath = entityPathAndPKRoute[0];
+            string primaryKeyRoute = entityPathAndPKRoute.Length == maxNumberOfElementsFromSplit ? entityPathAndPKRoute[1] : string.Empty;
+
+            if (!_sqlMetadataProvider.TryGetEntityNameFromPath(entityPath, out string? entityName))
             {
-                // primary key route is what follows the first '/', we trim this an any
-                // additional '/'
-                primaryKeyRoute = routeAfterPath.Substring(routeAfterPath.IndexOf('/')).TrimStart('/');
-                // save entity name as string up until first '/'
-                entityName = routeAfterPath[..routeAfterPath.IndexOf('/')];
-            }
-            else
-            {
-                entityName = routeAfterPath;
+                throw new DataApiBuilderException(
+                    message: $"Invalid Entity path: {entityPath}.",
+                    statusCode: HttpStatusCode.NotFound,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
             return (entityName, primaryKeyRoute);
@@ -260,7 +380,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="httpVerb"></param>
         /// <returns>The CRUD operation for the given httpverb.</returns>
-        public static Operation HttpVerbToActions(string httpVerbName)
+        public static Operation HttpVerbToOperations(string httpVerbName)
         {
             switch (httpVerbName)
             {

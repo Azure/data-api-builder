@@ -38,6 +38,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
+        /// The access token representing a Managed Identity to connect to the database.
+        /// </summary>
+        public string? ManagedIdentityAccessToken { get; private set; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="RuntimeConfigProvider"/> class.
         /// </summary>
         /// <param name="runtimeConfigPath"></param>
@@ -122,7 +127,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (!string.IsNullOrEmpty(runtimeConfigJson) &&
                 RuntimeConfig.TryGetDeserializedConfig(
                     runtimeConfigJson,
-                    out runtimeConfig))
+                    out runtimeConfig,
+                    ConfigProviderLogger!))
             {
                 runtimeConfig!.DetermineGlobalSettings();
                 runtimeConfig!.DetermineGraphQLEntityNames();
@@ -194,7 +200,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="configuration">The engine configuration.</param>
         /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
         /// <param name="connectionString">The connection string to the database.</param>
-        public void Initialize(string configuration, string? schema, string connectionString)
+        /// <param name="accessToken">The string representation of a managed identity access token
+        /// useful to connect to the database.</param>
+        public void Initialize(
+            string configuration,
+            string? schema,
+            string connectionString,
+            string? accessToken)
         {
             if (string.IsNullOrEmpty(connectionString))
             {
@@ -208,7 +220,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             if (RuntimeConfig.TryGetDeserializedConfig(
                     configuration,
-                    out RuntimeConfig? runtimeConfig))
+                    out RuntimeConfig? runtimeConfig,
+                    ConfigProviderLogger!))
             {
                 RuntimeConfiguration = runtimeConfig;
                 RuntimeConfiguration!.DetermineGlobalSettings();
@@ -226,6 +239,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     RuntimeConfiguration = RuntimeConfiguration with { CosmosDb = cosmosDb };
                 }
             }
+
+            ManagedIdentityAccessToken = accessToken;
 
             EventHandler<RuntimeConfig>? handlers = RuntimeConfigLoaded;
             if (handlers != null)
@@ -256,6 +271,23 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public virtual bool IsDeveloperMode()
         {
             return RuntimeConfiguration?.HostGlobalSettings.Mode is HostModeType.Development;
+        }
+
+        /// <summary>
+        /// When we are in development mode, we want to honor the default-request-authorization
+        /// feature switch value specified in the config file. This gives us the ability to
+        /// simulate a request's authenticated/anonymous authentication state in development mode.
+        /// </summary>
+        /// <returns></returns>
+        public virtual bool IsAuthenticatedDevModeRequest()
+        {
+            if (RuntimeConfiguration is null)
+            {
+                return false;
+            }
+
+            return IsDeveloperMode() &&
+                RuntimeConfiguration.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is true;
         }
     }
 }

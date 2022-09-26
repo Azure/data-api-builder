@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Service.Controllers;
-using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
@@ -384,6 +382,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
+                "FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                       SELECT  ""treeId"", ""species"" AS ""fancyName"", ""region"", ""height""
+                        FROM " + _integrationMappingTable + @"
+                      ORDER BY ""species""
+                  ) AS subq"
+            },
+            {
                 "FindTestWithFirstAndSpacedColumnOrderBy",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data
@@ -649,15 +657,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
             await InitializeTestFixture(context);
-            _restService = new RestService(_queryEngine,
-                _mutationEngine,
-                _sqlMetadataProvider,
-                _httpContextAccessor.Object,
-                _authorizationService.Object,
-                _authorizationResolver,
-                _runtimeConfigProvider);
-            _restController = new RestController(_restService,
-                                                 _restControllerLogger);
         }
 
         #endregion
@@ -685,6 +684,42 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         [Ignore]
         public override Task FindTestWithInvalidFieldsInQueryStringOnViews()
+        {
+            throw new NotImplementedException();
+        }
+
+        // Pending Stored Procedure Support
+        [TestMethod]
+        [Ignore]
+        public override Task FindManyStoredProcedureTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindOneStoredProcedureTestUsingParameter()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindStoredProcedureWithNonEmptyPrimaryKeyRoute()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindStoredProcedureWithMissingParameter()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task FindStoredProcedureWithNonexistentParameter()
         {
             throw new NotImplementedException();
         }

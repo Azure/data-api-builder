@@ -7,6 +7,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.Models;
+using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.Exceptions.DataApiBuilderException;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -332,7 +333,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual string BuildForeignKeyInfoQuery(int numberOfParameters)
+        public virtual string BuildForeignKeyInfoQuery(int numberOfParameters, bool developerMode, ILogger logger)
         {
             string[] schemaNameParams =
                 CreateParams(kindOfParam: SCHEMA_NAME_PARAM, numberOfParameters);
@@ -374,7 +375,13 @@ FROM
 WHERE
     ReferencingColumnUsage.TABLE_SCHEMA IN (@{tableSchemaParamsForInClause})
     AND ReferencingColumnUsage.TABLE_NAME IN (@{tableNameParamsForInClause})";
-            Console.WriteLine($"Foreign Key Query is : {foreignKeyQuery}");
+
+            // only display foreign key query information in dev mode
+            if (developerMode)
+            {
+                logger.LogInformation($"Foreign Key Query is : {foreignKeyQuery}");
+            }
+
             return foreignKeyQuery;
         }
 

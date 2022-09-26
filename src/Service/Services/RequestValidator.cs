@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Service.Services
     public class RequestValidator
     {
         public const string REQUEST_BODY_INVALID_JSON_ERR_MESSAGE = "Request body contains invalid JSON.";
-        public const string BATCH_MUTATION_UNSUPPORTED_ERR_MESSAGE = "Mutation operation on many instances of an entity in a single request are not yet supported.";
+        public const string BATCH_MUTATION_UNSUPPORTED_ERR_MESSAGE = "A Mutation operation on more than one entity in a single request is not yet supported.";
         public const string QUERY_STRING_INVALID_USAGE_ERR_MESSAGE = "Query string for this HTTP request type is an invalid URL.";
         public const string PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE = "Primary Key for this HTTP request type is required.";
 
@@ -98,35 +98,74 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Validates the queryString is not present for mutation.
+        /// Validates a stored procedure request does not specify a primary key route.
+        /// Applies to all stored procedure requests, both Queries and Mutations
+        /// Mutations also validated using ValidateInsertRequestContext call in RestService
         /// </summary>
-        /// <param name="queryString">queryString e.g. "$?filter="</param>
-        /// <exception cref="DataApiBuilderException">Thrown when queryString provided or whitespace provided as querystring.</exception>
-        public static void ValidateQueryStringNotProvided(string? queryString)
+        /// <param name="primaryKeyRoute">Primary key route from the url.</param>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static void ValidateStoredProcedureRequest(string? primaryKeyRoute)
         {
-            if (!string.IsNullOrEmpty(queryString))
+            if (!string.IsNullOrWhiteSpace(primaryKeyRoute))
             {
                 throw new DataApiBuilderException(
-                    message: QUERY_STRING_INVALID_USAGE_ERR_MESSAGE,
+                    message: "Primary key route not supported for this entity.",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
         }
 
         /// <summary>
-        /// Validates the primaryKeyRoute is populated
+        /// Validates all required input parameters are supplied by request, and no extraneous parameters are provided
+        /// Checks query string for Find operations, body for all other operations
+        /// Defers type checking until parameterizing stage to prevent duplicating work
         /// </summary>
-        /// <param name="primaryKeyRoute">URL route e.g. "Entity/id/1"</param>
-        /// <exception cref="DataApiBuilderException">Thrown when primaryKeyRoute not provided.</exception>
-        public static void ValidatePrimaryKeyRouteProvided(string? primaryKeyRoute)
+        public static void ValidateStoredProcedureRequestContext(
+            StoredProcedureRequestContext spRequestCtx,
+            ISqlMetadataProvider sqlMetadataProvider)
         {
-            if (string.IsNullOrWhiteSpace(primaryKeyRoute))
+            StoredProcedureDefinition storedProcedureDefinition =
+                TryGetStoredProcedureDefinition(spRequestCtx.EntityName, sqlMetadataProvider);
+
+            HashSet<string> missingFields = new();
+            HashSet<string> extraFields = new(spRequestCtx.ResolvedParameters.Keys);
+            foreach ((string paramKey, ParameterDefinition paramDefinition) in storedProcedureDefinition.Parameters)
+            {
+                // If parameter not specified in request OR config
+                if (!spRequestCtx.ResolvedParameters!.ContainsKey(paramKey)
+                    && !paramDefinition.HasConfigDefault)
+                {
+                    // Ideally should check if a default is set in sql, but no easy way to do so - would have to parse procedure's object definition
+                    // See https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-parameters-transact-sql?view=sql-server-ver16#:~:text=cursor%2Dreference%20parameter.-,has_default_value,-bit
+                    // For SQL Server not populating this metadata for us; MySQL doesn't seem to allow parameter defaults so not relevant. 
+                    missingFields.Add(paramKey);
+                }
+                else
+                {
+                    extraFields.Remove(paramKey);
+                }
+            }
+
+            // If query string or body contains extra parameters that don't exist
+            // TO DO: If the request header contains x-ms-must-match custom header with value of "ignore"
+            // this should not throw any error. Tracked by issue #158.
+            if (extraFields.Count > 0)
             {
                 throw new DataApiBuilderException(
-                    message: PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
+                    message: $"Invalid request. Contained unexpected fields: {string.Join(", ", extraFields)}",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
+
+            // If missing a parameter in the request and do not have a default specified in config
+            if (missingFields.Count > 0)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Invalid request. Missing required procedure parameters: {string.Join(", ", missingFields)}",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
         }
 
         /// <summary>
@@ -136,13 +175,25 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <exception cref="DataApiBuilderException">Thrown when request body is invalid JSON
         /// or JSON is a batch request (mutation of more than one entity in a single request).</exception>
         /// <returns>JsonElement representing the body of the request.</returns>
-        public static JsonElement ParseRequestBodyContents(string requestBody)
+        public static JsonElement ParseRequestBody(string requestBody)
         {
             JsonElement mutationPayloadRoot = new();
 
             if (!string.IsNullOrEmpty(requestBody))
             {
-                mutationPayloadRoot = ParseRequestBody(requestBody);
+                try
+                {
+                    using JsonDocument payload = JsonDocument.Parse(requestBody);
+                    mutationPayloadRoot = payload.RootElement.Clone();
+                }
+                catch (JsonException)
+                {
+                    throw new DataApiBuilderException(
+                        message: REQUEST_BODY_INVALID_JSON_ERR_MESSAGE,
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                        );
+                }
 
                 if (mutationPayloadRoot.ValueKind is JsonValueKind.Array)
                 {
@@ -154,6 +205,60 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             return mutationPayloadRoot;
+        }
+
+        /// <summary>
+        /// Validates the request body and queryString with respect to an Insert operation.
+        /// </summary>
+        /// <param name="queryString">queryString e.g. "$?filter="</param>
+        /// <param name="requestBody">The string JSON body from the request.</param>
+        /// <exception cref="DataApiBuilderException">Raised when queryString is present or invalid JSON in requestBody is found.</exception>
+        public static JsonElement ValidateInsertRequest(string queryString, string requestBody)
+        {
+            if (!string.IsNullOrEmpty(queryString))
+            {
+                throw new DataApiBuilderException(
+                    message: QUERY_STRING_INVALID_USAGE_ERR_MESSAGE,
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            return ParseRequestBody(requestBody);
+        }
+
+        /// <summary>
+        /// Validates the primarykeyroute is populated with respect to an Update or Upsert operation.
+        /// </summary>
+        /// <param name="primaryKeyRoute">URL route e.g. "Entity/id/1"</param>
+        /// <param name="requestBody">The string JSON body from the request.</param>
+        /// <exception cref="DataApiBuilderException">Raised when either primary key route is absent or invalid JSON in requestBody is found.</exception>
+        public static JsonElement ValidateUpdateOrUpsertRequest(string? primaryKeyRoute, string requestBody)
+        {
+            if (string.IsNullOrWhiteSpace(primaryKeyRoute))
+            {
+                throw new DataApiBuilderException(
+                    message: PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            return ParseRequestBody(requestBody);
+        }
+
+        /// <summary>
+        /// Validates the primarykeyroute is populated with respect to a Delete operation.
+        /// </summary>
+        /// <param name="primaryKeyRoute">URL route e.g. "Entity/id/1"</param>
+        /// <exception cref="DataApiBuilderException">Raised when primary key route is absent</exception>
+        public static void ValidateDeleteRequest(string? primaryKeyRoute)
+        {
+            if (string.IsNullOrWhiteSpace(primaryKeyRoute))
+            {
+                throw new DataApiBuilderException(
+                    message: PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
         }
 
         /// <summary>
@@ -370,25 +475,22 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Creates a JsonElement object from JSON in request body.
+        /// Tries to get the stored procedure definition for the given entity
+        /// Throws a DataApiBuilderException to return Bad Request to client instead of Unexpected Error
+        /// Useful for accessing the definition within the request pipeline
         /// </summary>
-        /// <param name="requestBody">Request body content</param>
-        /// <returns>JsonElement from parsed request body.</returns>
-        /// <exception cref="DataApiBuilderException">Invalid Request Body JSON</exception>
-        private static JsonElement ParseRequestBody(string requestBody)
+        private static StoredProcedureDefinition TryGetStoredProcedureDefinition(string entityName, ISqlMetadataProvider sqlMetadataProvider)
         {
             try
             {
-                using JsonDocument insertPayload = JsonDocument.Parse(requestBody);
-                return insertPayload.RootElement.Clone();
+                return sqlMetadataProvider.GetStoredProcedureDefinition(entityName);
             }
-            catch (JsonException)
+            catch (InvalidCastException)
             {
                 throw new DataApiBuilderException(
-                    message: REQUEST_BODY_INVALID_JSON_ERR_MESSAGE,
+                    message: $"Underlying database object for entity {entityName} does not exist.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
-                    );
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
         }
 

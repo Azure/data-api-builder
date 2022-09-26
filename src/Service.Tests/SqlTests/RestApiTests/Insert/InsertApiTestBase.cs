@@ -29,9 +29,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _integrationEntityName,
+                entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(InsertOneTest)),
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
@@ -49,9 +48,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("InsertOneInCompositeNonAutoGenPKTest"),
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
@@ -78,9 +76,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _integrationUniqueCharactersEntity,
+                entityNameOrPath: _integrationUniqueCharactersEntity,
                 sqlQuery: GetQuery(nameof(InsertOneUniqueCharactersTest)),
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
@@ -106,9 +103,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _integrationMappingEntity,
+                entityNameOrPath: _integrationMappingEntity,
                 sqlQuery: GetQuery(nameof(InsertOneWithMappingTest)),
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
@@ -133,9 +129,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _entityWithCompositePrimaryKey,
+                entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(InsertOneInCompositeKeyTableTest)),
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
@@ -151,9 +146,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _entityWithCompositePrimaryKey,
+                entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery("InsertOneInDefaultTestTable"),
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
@@ -177,9 +171,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("InsertOneWithNullFieldValue"),
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
@@ -209,9 +202,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationEntityName,
+                entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(query),
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
@@ -235,12 +227,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?/id/5001",
-                entity: _integrationEntityName,
+                entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: RequestValidator.QUERY_STRING_INVALID_USAGE_ERR_MESSAGE,
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -261,13 +252,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationEntityName,
+                entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
-                expectedErrorMessage: "Mutation operation on many instances of an entity in a single request are not yet supported.",
+                exceptionExpected: true,
+                expectedErrorMessage: RequestValidator.BATCH_MUTATION_UNSUPPORTED_ERR_MESSAGE,
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
             );
@@ -282,19 +272,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             string requestBody = @"
             {
                 ""title"": [""My New Book"", ""Another new Book"", {""author"": ""unknown""}],
-                ""publisher_id"": [1234, 4321]
+                ""publisher_id"": [1234,4321]
             }";
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationEntityName,
+                entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
-                expectedErrorMessage: "Parameter \"[1234, 4321]\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
+                exceptionExpected: true,
+                expectedErrorMessage: "Parameter \"[1234,4321]\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
             );
@@ -312,12 +301,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationEntityName,
+                entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Missing field in body: title.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -338,12 +326,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationEntityName,
+                entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Field not allowed in body: id.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -364,12 +351,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integration_NonAutoGenPK_EntityName,
+                entityNameOrPath: _integration_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Missing field in body: id.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
@@ -392,12 +378,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integration_NonAutoGenPK_EntityName,
+                entityNameOrPath: _integration_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Missing field in body: title.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
@@ -412,12 +397,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
@@ -439,12 +423,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid value for field piecesRequired in request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -461,12 +444,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _Composite_NonAutoGenPK_EntityName,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                controller: _restController,
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                exception: true,
+                exceptionExpected: true,
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
@@ -493,11 +475,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entity: _integrationBrokenMappingEntity,
+                entityNameOrPath: _integrationBrokenMappingEntity,
                 sqlQuery: string.Empty,
-                controller: _restController,
                 operationType: Operation.Insert,
-                exception: true,
+                exceptionExpected: true,
                 requestBody: requestBody,
                 expectedErrorMessage: "Invalid request body. Contained unexpected fields in body: hazards",
                 expectedStatusCode: HttpStatusCode.BadRequest,
@@ -505,6 +486,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedLocationHeader: expectedLocationHeader
                 );
         }
+
+        /// <summary>
+        /// Abstract method overriden in each of the child class as each database has its own specific error message.
+        /// Validates request failure (HTTP 400) when an invalid foreign key is provided with an insertion.
+        /// </summary>
+        public abstract Task InsertOneTestViolatingForeignKeyConstraint();
 
         #endregion
     }

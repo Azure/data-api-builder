@@ -30,9 +30,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/5",
                     queryString: null,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: null,
-                    controller: _restController,
                     operationType: Operation.Delete,
                     requestBody: null,
                     expectedStatusCode: HttpStatusCode.NoContent
@@ -54,9 +53,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "treeId/1",
                     queryString: null,
-                    entity: _integrationMappingEntity,
+                    entityNameOrPath: _integrationMappingEntity,
                     sqlQuery: null,
-                    controller: _restController,
                     operationType: Operation.Delete,
                     requestBody: null,
                     expectedStatusCode: HttpStatusCode.NoContent
@@ -79,9 +77,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "┬─┬ノ( º _ ºノ)/1",
                     queryString: null,
-                    entity: _integrationUniqueCharactersEntity,
+                    entityNameOrPath: _integrationUniqueCharactersEntity,
                     sqlQuery: null,
-                    controller: _restController,
                     operationType: Operation.Delete,
                     requestBody: null,
                     expectedStatusCode: HttpStatusCode.NoContent
@@ -104,12 +101,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1000",
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
-                    controller: _restController,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: "Not Found",
                     expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
@@ -129,12 +125,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "title/7",
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
-                    controller: _restController,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
                     expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
@@ -153,12 +148,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: string.Empty,
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
-                    controller: _restController,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
@@ -185,12 +179,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: $"id/1{sqlInjection}",
                     queryString: string.Empty,
-                    entity: _integrationEntityName,
+                    entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
-                    controller: _restController,
                     operationType: Operation.Delete,
                     requestBody: string.Empty,
-                    exception: true,
+                    exceptionExpected: true,
                     expectedErrorMessage: message,
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()

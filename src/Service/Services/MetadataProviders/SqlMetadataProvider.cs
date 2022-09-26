@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -19,7 +21,7 @@ namespace Azure.DataApiBuilder.Service.Services
     /// Reads schema information from the database to make it
     /// available for the GraphQL/REST services.
     /// </summary>
-    public class SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT> : ISqlMetadataProvider
+    public abstract class SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT> : ISqlMetadataProvider
         where ConnectionT : DbConnection, new()
         where DataAdapterT : DbDataAdapter, new()
         where CommandT : DbCommand, new()
@@ -30,10 +32,11 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private readonly Dictionary<string, Entity> _entities;
 
-        // nullable since Mock tests do not need it.
-        // TODO: Refactor the Mock tests to remove the nullability here
-        // once the runtime config is implemented tracked by #353.
-        private readonly IQueryExecutor? _queryExecutor;
+        // Contains all the referencing and referenced columns for each pair
+        // of referencing and referenced tables.
+        private Dictionary<RelationShipPair, ForeignKeyDefinition>? _pairToFkDefinition;
+
+        protected IQueryExecutor QueryExecutor { get; }
 
         private const int NUMBER_OF_RESTRICTIONS = 4;
 
@@ -43,9 +46,13 @@ namespace Azure.DataApiBuilder.Service.Services
 
         protected DataSet EntitiesDataSet { get; init; }
 
+        private RuntimeConfigProvider _runtimeConfigProvider;
+
         private Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
 
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
+
+        private Dictionary<string, string> EntityPathToEntityName { get; } = new();
 
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
@@ -62,13 +69,18 @@ namespace Azure.DataApiBuilder.Service.Services
             ILogger<ISqlMetadataProvider> logger)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
-
+            _runtimeConfigProvider = runtimeConfigProvider;
             _databaseType = runtimeConfig.DatabaseType;
             _entities = runtimeConfig.Entities;
+            foreach (Entity entity in _entities.Values)
+            {
+                entity.TryPopulateSourceFields();
+            }
+
             ConnectionString = runtimeConfig.ConnectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
-            _queryExecutor = queryExecutor;
+            QueryExecutor = queryExecutor;
             _logger = logger;
         }
 
@@ -98,7 +110,9 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new InvalidCastException($"Table Definition for {entityName} has not been inferred.");
+                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
             return databaseObject!.SchemaName;
@@ -109,7 +123,9 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new InvalidCastException($"Table Definition for {entityName} has not been inferred.");
+                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
             return databaseObject!.Name;
@@ -120,10 +136,25 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new InvalidCastException($"Table Definition for {entityName} has not been inferred.");
+                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
             return databaseObject!.TableDefinition;
+        }
+
+        /// <inheritdoc />
+        public StoredProcedureDefinition GetStoredProcedureDefinition(string entityName)
+        {
+            if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
+            {
+                throw new DataApiBuilderException(message: $"Stored Procedure Definition for {entityName} has not been inferred.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+            }
+
+            return databaseObject!.StoredProcedureDefinition;
         }
 
         /// <inheritdoc />
@@ -139,9 +170,15 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntityNamesAndDbObjects()
+        public virtual bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
         {
-            return EntityToDatabaseObject.ToList();
+            return EntityPathToEntityName.TryGetValue(entityPathName, out entityName);
+        }
+
+        /// <inheritdoc />
+        public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
+        {
+            return EntityToDatabaseObject;
         }
 
         /// <inheritdoc />
@@ -149,11 +186,135 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
             GenerateDatabaseObjectForEntities();
-            await PopulateTableDefinitionForEntities();
+            await PopulateObjectDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();
+            GenerateRestPathToEntityMap();
             InitODataParser();
             timer.Stop();
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
+        }
+
+        /// <summary>
+        /// Verify that the stored procedure exists in the database schema, then populate its database object parameters accordingly
+        /// </summary>
+        private async Task FillSchemaForStoredProcedureAsync(
+            Entity procedureEntity,
+            string schemaName,
+            string storedProcedureName,
+            StoredProcedureDefinition storedProcedureDefinition)
+        {
+            using ConnectionT conn = new();
+            conn.ConnectionString = ConnectionString;
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await conn.OpenAsync();
+
+            string tablePrefix = GetTablePrefix(conn.Database, schemaName);
+
+            string[] procedureRestrictions = new string[NUMBER_OF_RESTRICTIONS];
+
+            // To restrict the parameters for the current stored procedure, specify its name
+            procedureRestrictions[0] = conn.Database;
+            procedureRestrictions[1] = schemaName;
+            procedureRestrictions[2] = storedProcedureName;
+
+            DataTable procedureMetadata = await conn.GetSchemaAsync(collectionName: "Procedures", restrictionValues: procedureRestrictions);
+
+            // Stored procedure does not exist in DB schema
+            if (procedureMetadata.Rows.Count == 0)
+            {
+                throw new DataApiBuilderException(
+                    message: $"No stored procedure definition found for the given database object {storedProcedureName}",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            // Each row in the procedureParams DataTable corresponds to a single parameter
+            DataTable parameterMetadata = await conn.GetSchemaAsync(collectionName: "ProcedureParameters", restrictionValues: procedureRestrictions);
+
+            // For each row/parameter, add an entry to StoredProcedureDefinition.Parameters dictionary
+            foreach (DataRow row in parameterMetadata.Rows)
+            {
+                // Add to parameters dictionary without the leading @ sign
+                storedProcedureDefinition.Parameters.TryAdd(((string)row["PARAMETER_NAME"])[1..],
+                    new()
+                    {
+                        SystemType = SqlToCLRType((string)row["DATA_TYPE"]),
+                    }
+                );
+            }
+
+            // Loop through parameters specified in config, throw error if not found in schema
+            // else set runtime config defined default values.
+            // Note: we defer type checking of parameters specified in config until request time
+            Dictionary<string, object>? configParameters = procedureEntity.Parameters;
+            if (configParameters is not null)
+            {
+                foreach ((string configParamKey, object configParamValue) in configParameters)
+                {
+                    if (!storedProcedureDefinition.Parameters.TryGetValue(configParamKey, out ParameterDefinition? parameterDefinition))
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"Could not find parameter \"{configParamKey}\" specified in config for procedure \"{schemaName}.{storedProcedureName}\"",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+                    else
+                    {
+                        parameterDefinition.HasConfigDefault = true;
+                        parameterDefinition.ConfigDefaultValue = configParamValue is null ? null : configParamValue.ToString();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Takes a string version of a sql data type and returns its .NET common language runtime (CLR) counterpart
+        /// </summary>
+        public abstract Type SqlToCLRType(string sqlType);
+
+        /// <summary>
+        /// Generates the map used to find a given entity based
+        /// on the path that will be used for that entity.
+        /// </summary>
+        private void GenerateRestPathToEntityMap()
+        {
+            foreach (string entityName in _entities.Keys)
+            {
+                Entity entity = _entities[entityName];
+                string path = GetEntityPath(entity, entityName).TrimStart('/');
+
+                if (!string.IsNullOrEmpty(path))
+                {
+                    EntityPathToEntityName[path] = entityName;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Deserialize and return the entity's path.
+        /// </summary>
+        /// <param name="entity">Entity object to get the path of.</param>
+        /// <param name="entityName">name of the entity</param>
+        /// <returns>route for the given Entity.</returns>
+        private static string GetEntityPath(Entity entity, string entityName)
+        {
+            // if entity.Rest is null or true we just use entity name
+            if (entity.Rest is null || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.True)
+            {
+                return entityName;
+            }
+
+            // for false return empty string so we know not to add in caller
+            if (((JsonElement)entity.Rest).ValueKind is JsonValueKind.False)
+            {
+                return string.Empty;
+            }
+
+            // otherwise we have to convert each part of the Rest property we want into correct objects
+            // they are json element so this means deserializing at each step with case insensitivity
+            JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
+            RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)entity.Rest, options)!;
+            return JsonSerializer.Deserialize<string>((JsonElement)rest.Path, options)!;
         }
 
         /// <summary>
@@ -223,18 +384,28 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (!EntityToDatabaseObject.ContainsKey(entityName))
                 {
                     // Reuse the same Database object for multiple entities if they share the same source.
-                    if (!sourceObjects.TryGetValue(entity.GetSourceName(), out DatabaseObject? sourceObject))
+                    if (!sourceObjects.TryGetValue(entity.SourceName, out DatabaseObject? sourceObject))
                     {
                         // parse source name into a tuple of (schemaName, databaseObjectName)
-                        (schemaName, dbObjectName) = ParseSchemaAndDbObjectName(entity.GetSourceName())!;
+                        (schemaName, dbObjectName) = ParseSchemaAndDbObjectName(entity.SourceName)!;
+
+                        // if specified as stored procedure in config, initialize DatabaseObject with StoredProcedureDefinition, else with TableDefinition
                         sourceObject = new()
                         {
                             SchemaName = schemaName,
                             Name = dbObjectName,
-                            TableDefinition = new()
+                            ObjectType = entity.ObjectType
                         };
+                        if (sourceObject.ObjectType is SourceType.StoredProcedure)
+                        {
+                            sourceObject.StoredProcedureDefinition = new();
+                        }
+                        else
+                        {
+                            sourceObject.TableDefinition = new();
+                        }
 
-                        sourceObjects.Add(entity.GetSourceName(), sourceObject);
+                        sourceObjects.Add(entity.SourceName, sourceObject);
                     }
 
                     EntityToDatabaseObject.Add(entityName, sourceObject);
@@ -285,7 +456,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     throw new InvalidOperationException($"Target Entity {targetEntityName} should be one of the exposed entities.");
                 }
 
-                (targetSchemaName, targetDbObjectName) = ParseSchemaAndDbObjectName(targetEntity.GetSourceName())!;
+                (targetSchemaName, targetDbObjectName) = ParseSchemaAndDbObjectName(targetEntity.SourceName)!;
                 DatabaseObject targetDbObject = new(targetSchemaName, targetDbObjectName);
                 // If a linking object is specified,
                 // give that higher preference and add two foreign keys for this targetEntity.
@@ -453,18 +624,31 @@ namespace Azure.DataApiBuilder.Service.Services
 
         /// <summary>
         /// Enrich the entities in the runtime config with the
-        /// table definition information needed by the runtime to serve requests.
+        /// object definition information needed by the runtime to serve requests.
+        /// Populates table definition for entities specified as tables or views
+        /// Populates procedure definition for entities specified as stored procedures
         /// </summary>
-        private async Task PopulateTableDefinitionForEntities()
+        private async Task PopulateObjectDefinitionForEntities()
         {
-            foreach (string entityName
-                in EntityToDatabaseObject.Keys)
+            foreach ((string entityName, Entity procedureEntity) in _entities)
             {
-                await PopulateTableDefinitionAsync(
-                    entityName,
-                    GetSchemaName(entityName),
-                    GetDatabaseObjectName(entityName),
-                    GetTableDefinition(entityName));
+                SourceType entitySourceType = procedureEntity.ObjectType;
+                if (entitySourceType is SourceType.StoredProcedure)
+                {
+                    await FillSchemaForStoredProcedureAsync(
+                        procedureEntity,
+                        GetSchemaName(entityName),
+                        GetDatabaseObjectName(entityName),
+                        GetStoredProcedureDefinition(entityName));
+                }
+                else
+                {
+                    await PopulateTableDefinitionAsync(
+                        entityName,
+                        GetSchemaName(entityName),
+                        GetDatabaseObjectName(entityName),
+                        GetTableDefinition(entityName));
+                }
             }
 
             await PopulateForeignKeyDefinitionAsync();
@@ -478,20 +662,27 @@ namespace Azure.DataApiBuilder.Service.Services
         /// the exposed names, and to translate between
         /// exposed name and backing column (or the reverse)
         /// when needed while processing the request.
+        ///
+        /// For now, only do this for tables/views as Stored Procedures do not have a TableDefinition
+        /// In the future, mappings for SPs could be used for parameter renaming.
         /// </summary>
         private void GenerateExposedToBackingColumnMapsForEntities()
         {
             foreach (string entityName in _entities.Keys)
             {
-                Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
-                EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
-                EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
-                foreach (string column in EntityToDatabaseObject[entityName].TableDefinition.Columns.Keys)
+                // Ensure we don't attempt for stored procedures, which have no TableDefinition, Columns, Keys, etc.
+                if (_entities[entityName].ObjectType is not SourceType.StoredProcedure)
                 {
-                    if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
+                    Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
+                    EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
+                    EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
+                    foreach (string column in EntityToDatabaseObject[entityName].TableDefinition.Columns.Keys)
                     {
-                        EntityBackingColumnsToExposedNames[entityName].Add(column, column);
-                        EntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
+                        if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
+                        {
+                            EntityBackingColumnsToExposedNames[entityName].Add(column, column);
+                            EntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
+                        }
                     }
                 }
             }
@@ -653,6 +844,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // for non-MySql DB types, this will throw an exception
                 // for malformed connection strings
                 conn.ConnectionString = ConnectionString;
+                await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             }
             catch (Exception ex)
             {
@@ -705,6 +897,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();
             // We can specify the Catalog, Schema, Table Name, Column Name to get
             // the specified column(s).
@@ -773,7 +966,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =
-                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tableNames.Count());
+                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tableNames.Count(), _runtimeConfigProvider.IsDeveloperMode(), _logger);
 
             // Build the parameters dictionary for the foreign key info query
             // consisting of all schema names and table names.
@@ -784,10 +977,12 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Gather all the referencing and referenced columns for each pair
             // of referencing and referenced tables.
-            Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition
-                = await ExecuteAndSummarizeFkMetadata(queryForForeignKeyInfo, parameters);
+            _pairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters, SummarizeFkMetadata);
 
-            FillInferredFkInfo(pairToFkDefinition, tablesToBePopulatedWithFK);
+            if (_pairToFkDefinition is not null)
+            {
+                FillInferredFkInfo(tablesToBePopulatedWithFK);
+            }
 
             ValidateAllFkHaveBeenInferred(tablesToBePopulatedWithFK);
         }
@@ -800,21 +995,25 @@ namespace Azure.DataApiBuilder.Service.Services
             Dictionary<string, TableDefinition> sourceNameToTableDefinition = new();
             foreach ((_, DatabaseObject dbObject) in EntityToDatabaseObject)
             {
-                if (!sourceNameToTableDefinition.ContainsKey(dbObject.Name))
+                // Ensure we're only doing this on tables, not stored procedures which have no table definition
+                if (dbObject.ObjectType is not SourceType.StoredProcedure)
                 {
-                    foreach ((_, RelationshipMetadata relationshipData)
-                        in dbObject.TableDefinition.SourceEntityRelationshipMap)
+                    if (!sourceNameToTableDefinition.ContainsKey(dbObject.Name))
                     {
-                        IEnumerable<List<ForeignKeyDefinition>> foreignKeysForAllTargetEntities
-                            = relationshipData.TargetEntityToFkDefinitionMap.Values;
-                        foreach (List<ForeignKeyDefinition> fkDefinitionsForTargetEntity
-                            in foreignKeysForAllTargetEntities)
+                        foreach ((_, RelationshipMetadata relationshipData)
+                            in dbObject.TableDefinition.SourceEntityRelationshipMap)
                         {
-                            foreach (ForeignKeyDefinition fk in fkDefinitionsForTargetEntity)
+                            IEnumerable<List<ForeignKeyDefinition>> foreignKeysForAllTargetEntities
+                                = relationshipData.TargetEntityToFkDefinitionMap.Values;
+                            foreach (List<ForeignKeyDefinition> fkDefinitionsForTargetEntity
+                                in foreignKeysForAllTargetEntities)
                             {
-                                schemaNames.Add(fk.Pair.ReferencingDbObject.SchemaName);
-                                tableNames.Add(fk.Pair.ReferencingDbObject.Name);
-                                sourceNameToTableDefinition.TryAdd(dbObject.Name, dbObject.TableDefinition);
+                                foreach (ForeignKeyDefinition fk in fkDefinitionsForTargetEntity)
+                                {
+                                    schemaNames.Add(fk.Pair.ReferencingDbObject.SchemaName);
+                                    tableNames.Add(fk.Pair.ReferencingDbObject.Name);
+                                    sourceNameToTableDefinition.TryAdd(dbObject.Name, dbObject.TableDefinition);
+                                }
                             }
                         }
                     }
@@ -844,28 +1043,30 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Executes the given foreign key query with parameters
-        /// and summarizes the results for each referencing and referenced table pair.
+        /// Each row in the results of the given data reader represents one column from one foreign key
+        /// between an ordered pair of referencing and referenced database objects.
+        /// This data reader handler summarizes this foreign key metadata so that
+        /// for each referencing and referenced table pair, there is exactly one foreign key definition
+        /// containing the list of all referencing columns and referenced columns.
         /// </summary>
-        /// <param name="queryForForeignKeyInfo"></param>
-        /// <param name="parameters"></param>
-        /// <returns></returns>
-        private async Task<Dictionary<RelationShipPair, ForeignKeyDefinition>>
-            ExecuteAndSummarizeFkMetadata(
-                string queryForForeignKeyInfo,
-                Dictionary<string, object?> parameters)
+        /// <param name="reader">The DbDataReader.</param>
+        /// <param name="args">Arguments to this function.</param>
+        /// <returns>A dictionary mapping ordered relationship pairs to
+        /// foreign key definition between them.</returns>
+        private async Task<Dictionary<RelationShipPair, ForeignKeyDefinition>?>
+            SummarizeFkMetadata(DbDataReader reader, List<string>? args = null)
         {
-            // Execute the foreign key info query.
-            using DbDataReader reader =
-                await _queryExecutor!.ExecuteQueryAsync(queryForForeignKeyInfo, parameters);
-
-            // Extract the first row from the result.
-            Dictionary<string, object?>? foreignKeyInfo =
-                await _queryExecutor!.ExtractRowFromDbDataReader(reader);
+            // Gets a tuple of 2 dictionaries:
+            // 1. the first row extracted from the result
+            // 2. Dictionary of the DbDataReader properties like RecordsAffected, HasRows.
+            // This function only requires the result row i.e. Item1 from the tuple.
+            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? foreignKeyInfoWithProperties =
+                await QueryExecutor.ExtractRowFromDbDataReader(reader);
 
             Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition = new();
-            while (foreignKeyInfo != null)
+            while (foreignKeyInfoWithProperties is not null && foreignKeyInfoWithProperties.Item1 is not null)
             {
+                Dictionary<string, object?> foreignKeyInfo = foreignKeyInfoWithProperties.Item1;
                 string referencingSchemaName =
                     (string)foreignKeyInfo[$"Referencing{nameof(DatabaseObject.SchemaName)}"]!;
                 string referencingTableName = (string)foreignKeyInfo[$"Referencing{nameof(TableDefinition)}"]!;
@@ -885,13 +1086,13 @@ namespace Azure.DataApiBuilder.Service.Services
                     pairToFkDefinition.Add(pair, foreignKeyDefinition);
                 }
 
-                // add the referenced and referencing columns to the foreign key definition.
+                // Add the referenced and referencing columns to the foreign key definition.
                 foreignKeyDefinition.ReferencedColumns.Add(
                     (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedColumns)]!);
                 foreignKeyDefinition.ReferencingColumns.Add(
                     (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencingColumns)]!);
 
-                foreignKeyInfo = await _queryExecutor.ExtractRowFromDbDataReader(reader);
+                foreignKeyInfoWithProperties = await QueryExecutor.ExtractRowFromDbDataReader(reader);
             }
 
             return pairToFkDefinition;
@@ -901,10 +1102,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Fills the table definition with the inferred foreign key metadata
         /// about the referencing and referenced columns.
         /// </summary>
-        /// <param name="pairToFkDefinition"></param>
         /// <param name="tablesToBePopulatedWithFK"></param>
-        private static void FillInferredFkInfo(
-            Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition,
+        private void FillInferredFkInfo(
             IEnumerable<TableDefinition> tablesToBePopulatedWithFK)
         {
             // For each table definition that has to be populated with the inferred
@@ -938,7 +1137,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                             // Add the referencing and referenced columns for this foreign key definition
                             // for the target.
-                            if (pairToFkDefinition.TryGetValue(
+                            if (_pairToFkDefinition is not null && _pairToFkDefinition.TryGetValue(
                                     fk.Pair, out ForeignKeyDefinition? inferredDefinition))
                             {
                                 // Only add the referencing columns if they have not been
@@ -959,6 +1158,20 @@ namespace Azure.DataApiBuilder.Service.Services
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// For the given two database objects, returns true if a foreignKey exists between them.
+        /// Else returns false.
+        /// </summary>
+        public bool VerifyForeignKeyExistsInDB(
+            DatabaseObject databaseObjectA,
+            DatabaseObject databaseObjectB)
+        {
+            RelationShipPair pairAB = new(databaseObjectA, databaseObjectB);
+            RelationShipPair pairBA = new(databaseObjectB, databaseObjectA);
+
+            return (_pairToFkDefinition.ContainsKey(pairAB) || _pairToFkDefinition.ContainsKey(pairBA));
         }
 
         /// <summary>

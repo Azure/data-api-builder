@@ -31,7 +31,7 @@ namespace Cli
             string? cosmosDatabase,
             string? cosmosContainer,
             string? graphQLSchemaPath,
-            HostModeType hostMode,
+            string? hostMode,
             IEnumerable<string>? corsOrigin,
             string config,
             string? devModeDefaultAuth)
@@ -62,8 +62,8 @@ namespace Cli
         [Option("graphql-schema", Required = false, HelpText = "GraphQL schema Path.")]
         public string? GraphQLSchemaPath { get; }
 
-        [Option("host-mode", Default = HostModeType.Production, Required = false, HelpText = "Specify the Host mode - Development or Production")]
-        public HostModeType HostMode { get; }
+        [Option("host-mode", Default = "production", Required = false, HelpText = "Specify the Host mode - Development or Production")]
+        public string? HostMode { get; }
 
         [Option("cors-origin", Separator = ',', Required = false, HelpText = "Specify the list of allowed origins.")]
         public IEnumerable<string>? CorsOrigin { get; }

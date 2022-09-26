@@ -108,6 +108,24 @@ namespace Cli.Tests
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, envValueBeforeTest);
         }
 
+        /// <summary>
+        /// Test to verify negative/postive string numerals are correctly parsed as integers
+        /// Boolean string is correctly parsed as boolean
+        /// everything else is parsed as string.
+        /// </summary>
+        [TestMethod]
+        public void TestTryParseSourceParameterDictionary()
+        {
+            IEnumerable<string>? parametersList = new string[] { "param1:123", "param2:-243", "param3:220.12", "param4:True", "param5:dab" };
+            Assert.IsTrue(TryParseSourceParameterDictionary(parametersList, out Dictionary<string, object>? sourceParameters));
+            Assert.IsNotNull(sourceParameters);
+            Assert.AreEqual(sourceParameters.GetValueOrDefault("param1"), 123);
+            Assert.AreEqual(sourceParameters.GetValueOrDefault("param2"), -243);
+            Assert.AreEqual(sourceParameters.GetValueOrDefault("param3"), "220.12");
+            Assert.AreEqual(sourceParameters.GetValueOrDefault("param4"), true);
+            Assert.AreEqual(sourceParameters.GetValueOrDefault("param5"), "dab");
+        }
+
         [ClassCleanup]
         public static void Cleanup()
         {

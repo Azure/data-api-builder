@@ -110,7 +110,7 @@ namespace Cli
         [Option("source.type", Required = false, HelpText = "Type of the database object.Must be one of: [table, view, stored-procedure]")]
         public string? SourceType { get; }
 
-        [Option("source.params", Required = false, Separator = ',', HelpText = "Dictionary of parameters and their values for Source object.")]
+        [Option("source.params", Required = false, Separator = ',', HelpText = "Dictionary of parameters and their values for Source object.\"param1:val1,param2:value2,..\"")]
         public IEnumerable<string>? SourceParameters { get; }
 
         [Option("source.key-fields", Required = false, Separator = ',', HelpText = "The field(s) to be used as primary keys.")]

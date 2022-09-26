@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         [TestMethod]
-        public async Task QueryWithMultileColumnPrimaryKey()
+        public async Task QueryWithMultipleColumnPrimaryKey()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('content', `subq3`.`content`) AS `data`
@@ -118,7 +118,51 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     ) AS `subq3`
             ";
 
-            await QueryWithMultileColumnPrimaryKey(mySqlQuery);
+            await QueryWithMultipleColumnPrimaryKey(mySqlQuery);
+        }
+
+        [TestMethod]
+        public async Task QueryWithNullableForeignKey()
+        {
+            string mySqlQuery = @"
+                SELECT 
+                  JSON_OBJECT(
+                    'title', `subq7`.`title`, 'series',
+                    `subq7`.`series`
+                  ) AS `data` 
+                FROM 
+                  (
+                    SELECT 
+                      `table0`.`title` AS `title`,
+                      `table1_subq`.`data` AS `series`
+                    FROM 
+                      `comics` AS `table0` 
+                      LEFT OUTER JOIN LATERAL (
+                        SELECT 
+                          JSON_OBJECT('name', `subq6`.`name`) AS `data` 
+                        FROM 
+                          (
+                            SELECT 
+                              `table1`.`name` AS `name` 
+                            FROM 
+                              `series` AS `table1` 
+                            WHERE 
+                              `table0`.`series_id` = `table1`.`id` 
+                            ORDER BY 
+                              `table1`.`id` ASC 
+                            LIMIT 
+                              1
+                          ) AS `subq6`
+                      ) AS `table1_subq` ON TRUE 
+                    WHERE 
+                      `table0`.`id` = 1
+                    ORDER BY 
+                      `table0`.`id` ASC 
+                    LIMIT 
+                      1
+                  ) AS `subq7`";
+
+            await QueryWithNullableForeignKey(mySqlQuery);
         }
 
         /// <summary>

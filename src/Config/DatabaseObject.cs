@@ -86,7 +86,20 @@ namespace Azure.DataApiBuilder.Config
         public Dictionary<string, RelationshipMetadata> SourceEntityRelationshipMap { get; private set; } =
             new(StringComparer.InvariantCultureIgnoreCase);
 
-        public Dictionary<string, AuthorizationRule> HttpVerbs { get; private set; } = new();
+        /// <summary>
+        /// Given the list of column names to check, evaluates
+        /// if any of them is a nullable column when matched with the columns in this table definition.
+        /// </summary>
+        /// <param name="columnsToCheck">List of column names.</param>
+        /// <returns>True if any of the columns is null, false otherwise.</returns>
+        public bool IsAnyColumnNullable(List<string> columnsToCheck)
+        {
+            // If any of the given columns are nullable, the relationship is nullable.
+            return columnsToCheck.Select(column =>
+                                         Columns.TryGetValue(column, out ColumnDefinition? definition) && definition.IsNullable)
+                                 .Where(isNullable => isNullable == true)
+                                 .Any();
+        }
     }
 
     /// <summary>

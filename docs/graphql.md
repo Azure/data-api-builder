@@ -2,7 +2,7 @@
 
 Entities configured to be available via GraphQL will be available at the path 
 
-```
+```text
 http://<dab-server>/graphql
 ```
 
@@ -39,7 +39,7 @@ Each entity has support for the following actions:
 
 Data API Builder, unless otherwise specified, will use the *singular* name of an entity whenever a single item is expected to be returned, and will use the *plural* name of an entity whenever a list of items is expected to be returned. For example the `book` entity will have:
 
-- `book_by_pk()`: to return zero or one entity 
+- `book_by_pk()`: to return zero or one entity
 - `books()`: to return a list of zero or more entities
 
 ### Pagination
@@ -67,7 +67,7 @@ All query types returning zero or more items support pagination:
 
 Every entity support retrieval of a specific item via its Primary Key, using the following query format:
 
-```
+```graphql
 <entity>_by_pk(<pk_colum>:<pk_value>)
 {
     <fields>
@@ -89,10 +89,10 @@ for example:
 Every entity also support a generic query pattern so that you can ask for  only the items you want, in the order you want, using the following parameters:
 
 - [`filter`](#filter): filters the returned items
-- [`orderBy`](#orderBy): defines how the returned data will be sorted
+- [`orderBy`](#orderby): defines how the returned data will be sorted
 - [`first` and `after`](#first-and-after): returns only the top `n` items
 
-for example: 
+for example:
 
 ```graphql
 {
@@ -219,14 +219,8 @@ query {
 
 ## Mutations
 
-### Create
+For each entity, mutations to support create, update and delete operations are automatically created. The mutation operations will be created using the following name pattern: `entity<operation>`. For example, for the `book` entity, the mutations would be:
 
-WIP
-
-### Update
-
-WIP
-
-### Delete
-
-WIP
+- `createbook`: create a new book
+- `updatebook`: update an existing book
+- `deletebook`: delete the specified book

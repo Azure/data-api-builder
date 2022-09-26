@@ -1,4 +1,4 @@
-import { generateEasyAuthHeader, validateResposneBodies, validateStatusCode, validateNoErrorsInResponse, graphQLEndPoint, statusCodes } from '../Helper.js';
+import { generateEasyAuthHeader, validateResponseBodies, validateStatusCode, validateNoErrorsInResponse, graphQLEndPoint, statusCodes } from '../Helper.js';
 import { check } from 'k6';
 import http from 'k6/http';
 
@@ -219,7 +219,7 @@ export const validateParallelUpdateAndReadOperationsOnSameItemUsingRest = () => 
   check(responses, {
     'Validate no errors': validateNoErrorsInResponse(queryNames, responses),
     'Validate expected status code': validateStatusCode(queryNames, responses, expectedStatusCodes),
-    'Validate API response': validateResposneBodies(queryNames, responses, expectedResponse1, expectedResponse2)
+    'Validate API response': validateResponseBodies(queryNames, responses, expectedResponse1, expectedResponse2)
   });
 
 };

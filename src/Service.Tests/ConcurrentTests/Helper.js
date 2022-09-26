@@ -99,7 +99,7 @@ export const validateStatusCode = (queryNames, responses, expectedStatusCodes) =
 
 // Helper methods to validate that the response bodies for all the reqeusts 
 // is one of the expected set of expected response bodies
-export const validateResposneBodies = (queryNames, responses, expectedResponseBody1, expectedResponseBody2) => {
+export const validateResponseBodies = (queryNames, responses, expectedResponseBody1, expectedResponseBody2) => {
   return validateResponseBody(queryNames, responses, expectedResponseBody1)
     || validateResponseBody(queryNames, responses, expectedResponseBody2);
 };
@@ -137,5 +137,6 @@ export const graphQLEndPoint = 'https://localhost:5001/graphql/';
 export const statusCodes = {
    Ok : 200,
    NoContent: 204,
+   Created: 201,
    NotFound: 404
 };

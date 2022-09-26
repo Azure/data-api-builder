@@ -3,6 +3,7 @@ import { validateParallelCRUDOperations } from './ParallelCrudOperationsTestCase
 import { validateParallelDeleteOperationsOnSameItem } from './ParallelDeleteOnSameItem.js';
 import { validateParallelUpdateOperationsOnSameItem } from './ParallelUpdatesOnSameItem.js';
 import { validateParallelUpdateAndReadOperationsOnSameItemUsingGraphQL, validateParallelUpdateAndReadOperationsOnSameItemUsingRest } from './ParallelUpdateAndReadOnSameItem.js';
+import { validateParallelCreateOperations } from './ParallelCreateOperations.js';
 
 // The batch and batchPerHost options is used to configure the 
 // number of parallel requests and connections respectively
@@ -24,5 +25,6 @@ export default function () {
   validateParallelUpdateOperationsOnSameItem();
   validateParallelUpdateAndReadOperationsOnSameItemUsingGraphQL();
   validateParallelUpdateAndReadOperationsOnSameItemUsingRest();
+  validateParallelCreateOperations();
   validateParallelDeleteOperationsOnSameItem();
 };

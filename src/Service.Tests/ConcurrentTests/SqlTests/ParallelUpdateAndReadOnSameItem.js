@@ -117,6 +117,9 @@ export const validateParallelUpdateAndReadOperationsOnSameItemUsingGraphQL = () 
   });
 };
 
+// This test performs a REST PATCH update and a GraphQL query on the same item in parallel.
+// The response for these requests depends on the execution order of the requests.
+// So, the responses are validated against two sets of possible responses.
 export const validateParallelUpdateAndReadOperationsOnSameItemUsingRest = () => {
   let headers = generateEasyAuthHeader('authenticated');
 
@@ -152,7 +155,7 @@ export const validateParallelUpdateAndReadOperationsOnSameItemUsingRest = () => 
     'updatePublisherUsingRest': statusCodes.Ok
   };
 
-  // Expected response when the read query executes before the update mutation
+  // Expected response when the REST update executes before the read query.  
   const expectedResponse1 = {
     'updatePublisherUsingRest': {
       "value": [
@@ -173,7 +176,7 @@ export const validateParallelUpdateAndReadOperationsOnSameItemUsingRest = () => 
     }
   };
 
-  // Expected response when the update mutation executes before the read query.
+  // Expected response when the read query executes before the REST update
   const expectedResponse2 = {
     'updatePublisherUsingRest': {
       "value": [

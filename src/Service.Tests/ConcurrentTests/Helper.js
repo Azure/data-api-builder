@@ -43,10 +43,10 @@ export const validateResponses = (queryNames, responses, expectedStatusCodes, ex
 
   // Validates the status codes
   check(responses, {
-    'Validate expected status code': validateStatusCode(queryNames, responses, expectedStatusCodes),
+    'Validate expected status code': validateStatusCode(queryNames, responses, expectedStatusCodes)
   });
 
-  // Validates the response bodies
+  // Validates the response bodies  
   check(responses, {
     'Validate API response': validateResponseBody(queryNames, responses, expectedResponses)
   });
@@ -71,12 +71,14 @@ export const generateEasyAuthToken = () => {
 
 // Helper method to validate no errors in the resposne
 export const validateNoErrorsInResponse = (queryNames, responses) => {
+  let validationResult = true;
   queryNames.forEach(
     queryName => {
-      if (responses[queryName].error.length > 0)
-        return false;
+      if (responses[queryName].error.length > 0) {
+        validationResult = validationResult && false;
+      }
     });
-  return true;
+  return validationResult;
 };
 
 // Helper method to validate that the status code of all the respones
@@ -89,12 +91,13 @@ export const validateStatusCodes = (queryNames, responses, expectedStatusCodes1,
 // Helper method to validate the status code for all the responses against 
 // one set of expected status codes
 export const validateStatusCode = (queryNames, responses, expectedStatusCodes) => {
+  let validationResult = true;
   queryNames.forEach(queryName => {
     if (expectedStatusCodes[queryName] != responses[queryName].status)
-      return false;
+      validationResult = validationResult && false;
   });
 
-  return true;
+  return validationResult;
 };
 
 // Helper methods to validate that the response bodies for all the reqeusts 
@@ -106,6 +109,7 @@ export const validateResponseBodies = (queryNames, responses, expectedResponseBo
 
 // Helper method to validate the response body against one set of expected response body
 export const validateResponseBody = (queryNames, responses, expectedResponseBody) => {
+  let validationResult = true;
   queryNames.forEach(queryName => {
 
     var expectedResponseJson = expectedResponseBody;
@@ -115,10 +119,12 @@ export const validateResponseBody = (queryNames, responses, expectedResponseBody
       actualResponseJson = JSON.parse(actualResponseBody);
     }
 
-    if (!isDeepEqual(expectedResponseJson, actualResponseJson))
-      return false;
+    if (!isDeepEqual(expectedResponseJson[queryName], actualResponseJson)) {
+      validationResult = validationResult && false;
+    }
+
   });
-  return true;
+  return validationResult;
 };
 
 // Helper function to generate a header with the specified role and EasyAuth token
@@ -135,8 +141,8 @@ export const generateEasyAuthHeader = (role) => {
 export const graphQLEndPoint = 'https://localhost:5001/graphql/';
 
 export const statusCodes = {
-   Ok : 200,
-   NoContent: 204,
-   Created: 201,
-   NotFound: 404
+  Ok: 200,
+  NoContent: 204,
+  Created: 201,
+  NotFound: 404
 };

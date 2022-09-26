@@ -113,7 +113,7 @@ export const validateParallelUpdateAndReadOperationsOnSameItemUsingGraphQL = () 
   check(responses, {
     'Validate no errors': validateNoErrorsInResponse(queryNames, responses),
     'Validate expected status code': validateStatusCode(queryNames, responses, expectedStatusCodes),
-    'Validate API response': validateResposneBodies(queryNames, responses, expectedResponse1, expectedResponse2)
+    'Validate API response': validateResponseBodies(queryNames, responses, expectedResponse1, expectedResponse2)
   });
 };
 

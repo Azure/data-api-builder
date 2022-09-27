@@ -536,6 +536,9 @@ namespace Cli
 
         /// <summary>
         /// Verifies whether a valid source object can be created from the given source fields.
+        /// It checks for valid source name, type is either table,views, or stored-procedure.
+        /// Verifies that parameter is only used with Stored Procedure, while key fields with
+        /// tables/views only.
         /// </summary>
         public static bool VerifySourceObjectFields(
             string? name,
@@ -544,16 +547,19 @@ namespace Cli
             string[]? keyFields
         )
         {
+            // Source name cannot be null.
             if (name is null)
             {
                 return false;
             }
 
+            // Converts Sourcetype string into SourceObjectType Enum.
             if (!TryGetSourceObjectType(type, out SourceType? objectType))
             {
                 return false;
             }
 
+            // Stored Procedure only supports Parameters.
             if ((SourceType.StoredProcedure).Equals(objectType))
             {
                 if (keyFields is not null)
@@ -564,6 +570,7 @@ namespace Cli
             }
             else
             {
+                // Table/Views only support key fields.
                 if (parameters is not null)
                 {
                     Console.Error.WriteLine("parameters are only supported for Stored Procedure.");

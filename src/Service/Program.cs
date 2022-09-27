@@ -89,27 +89,16 @@ namespace Azure.DataApiBuilder.Service
                         break;
                     }
 
-                    switch (args[i + 1])
+                    if (Enum.TryParse(args[i + 1], out LogLevel logLevel))
                     {
-                        case "0":
-                            return LogLevel.Trace;
-                        case "1":
-                            return LogLevel.Debug;
-                        case "2":
-                            return LogLevel.Information;
-                        case "3":
-                            return LogLevel.Warning;
-                        case "4":
-                            return LogLevel.Error;
-                        case "5":
-                            return LogLevel.Critical;
-                        case "6":
-                            return LogLevel.None;
-                        default:
-                            throw new DataApiBuilderException(
-                                message: $"LogLevel's valid range is 0 to 6, your value: {args[i]}",
-                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                        return logLevel;
+                    }
+                    else
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"LogLevel's valid range is 0 to 6, your value: {args[i]}",
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
                 }
             }

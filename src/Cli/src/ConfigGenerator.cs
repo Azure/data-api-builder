@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
+using Microsoft.Extensions.Logging;
 using static Cli.Utils;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -662,7 +663,7 @@ namespace Cli
             { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile };
             if (options.LogLevel is not null)
             {
-                if ((int)options.LogLevel is < 0 or > 6)
+                if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
                 {
                     Console.WriteLine($"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}");
                     return false;

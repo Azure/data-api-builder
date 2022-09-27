@@ -81,6 +81,26 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Test to verify that --host-mode is case insensitive.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("production", HostModeType.Production)]
+    [DataRow("Production", HostModeType.Production)]
+    [DataRow("development", HostModeType.Development)]
+    [DataRow("Development", HostModeType.Development)]
+    public void EnsureHostModeEnumIsCaseInsensitive(string hostMode, HostModeType hostModeEnumType)
+    {
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--host-mode", hostMode, "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        Program.Main(initArgs);
+
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+        runtimeConfig!.DetermineGlobalSettings();
+
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(hostModeEnumType, runtimeConfig.HostGlobalSettings.Mode);
+    }
+
+    /// <summary>
     /// Test to verify adding a new Entity without IEnumerable options.
     /// </summary>
     [TestMethod]
@@ -273,6 +293,7 @@ public class EndToEndTests
     [TestCleanup]
     public void CleanUp()
     {
+        Console.WriteLine("cleaning up.....");
         if (File.Exists(_testRuntimeConfig))
         {
             File.Delete(_testRuntimeConfig);

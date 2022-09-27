@@ -21,7 +21,7 @@ namespace Cli.Tests
                 cosmosDatabase: null,
                 cosmosContainer: null,
                 graphQLSchemaPath: null,
-                hostMode: "development",
+                hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 config: _testRuntimeConfig,
                 devModeDefaultAuth: "true");
@@ -60,7 +60,7 @@ namespace Cli.Tests
                 cosmosDatabase: null,
                 cosmosContainer: null,
                 graphQLSchemaPath: null,
-                hostMode: "development",
+                hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 config: _testRuntimeConfig,
                 devModeDefaultAuth: "false");
@@ -98,7 +98,7 @@ namespace Cli.Tests
                 cosmosDatabase: "testdb",
                 cosmosContainer: "testcontainer",
                 graphQLSchemaPath: "schemafile",
-                hostMode: "production",
+                hostMode: HostModeType.Production,
                 corsOrigin: null,
                 config: _testRuntimeConfig,
                 devModeDefaultAuth: null);
@@ -146,7 +146,7 @@ namespace Cli.Tests
                 cosmosDatabase: cosmosDatabase,
                 cosmosContainer: cosmosContainer,
                 graphQLSchemaPath: graphQLSchema,
-                hostMode: "production",
+                hostMode: HostModeType.Production,
                 corsOrigin: null,
                 config: _testRuntimeConfig,
                 devModeDefaultAuth: null
@@ -168,7 +168,7 @@ namespace Cli.Tests
                 cosmosDatabase: null,
                 cosmosContainer: null,
                 graphQLSchemaPath: null,
-                hostMode: "development",
+                hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { },
                 config: _testRuntimeConfig,
                 devModeDefaultAuth: null);
@@ -232,7 +232,7 @@ namespace Cli.Tests
                 cosmosDatabase: null,
                 cosmosContainer: null,
                 graphQLSchemaPath: null,
-                hostMode: "production",
+                hostMode: HostModeType.Production,
                 corsOrigin: new List<string>() { },
                 config: fileName,
                 devModeDefaultAuth: null);

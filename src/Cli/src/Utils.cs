@@ -112,21 +112,6 @@ namespace Cli
         }
 
         /// <summary>
-        /// Tries to convert the given string hostMode into one of the supported HostModeType enums
-        /// Throws an exception if not a case-insensitive match
-        /// </summary>
-        public static HostModeType GetHostModeEnumType(string hostMode)
-        {
-            // If sourceType is not explicitly specified, we assume it is a Table
-            return hostMode.ToLowerInvariant() switch
-            {
-                "production" => HostModeType.Production,
-                "development" => HostModeType.Development,
-                _ => throw new JsonException(message: "HostMode type must be production or development.")
-            };
-        }
-
-        /// <summary>
         /// Creates an array of Operation element which contains one of the CRUD operation and
         /// fields to which this operation is allowed as permission setting based on the given input.
         /// </summary>

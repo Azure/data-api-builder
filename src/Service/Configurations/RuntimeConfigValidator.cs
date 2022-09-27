@@ -297,12 +297,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             {
                                 configOperation = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
                             }
-                            catch
+                            catch(Exception e)
                             {
                                 throw new DataApiBuilderException(
                                     message: $"One of the action specified for entity:{entityName} is not well formed.",
                                     statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError,
+                                    exception: e);
                             }
 
                             actionOp = configOperation.Name;

@@ -186,12 +186,13 @@ namespace Azure.DataApiBuilder.Service.Services
                     using JsonDocument payload = JsonDocument.Parse(requestBody);
                     mutationPayloadRoot = payload.RootElement.Clone();
                 }
-                catch (JsonException)
+                catch (JsonException ex)
                 {
                     throw new DataApiBuilderException(
                         message: REQUEST_BODY_INVALID_JSON_ERR_MESSAGE,
                         statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                        exception: ex
                         );
                 }
 
@@ -465,12 +466,13 @@ namespace Azure.DataApiBuilder.Service.Services
                 TableDefinition tableDefinition = sqlMetadataProvider.GetTableDefinition(entityName);
                 return tableDefinition;
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException ex)
             {
                 throw new DataApiBuilderException(
                     message: $"TableDefinition for entity: {entityName} does not exist.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    exception: ex);
             }
         }
 
@@ -485,12 +487,13 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 return sqlMetadataProvider.GetStoredProcedureDefinition(entityName);
             }
-            catch (InvalidCastException)
+            catch (InvalidCastException ex)
             {
                 throw new DataApiBuilderException(
                     message: $"Underlying database object for entity {entityName} does not exist.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    exception: ex);
             }
         }
 

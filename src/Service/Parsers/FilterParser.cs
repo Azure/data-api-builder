@@ -49,7 +49,11 @@ namespace Azure.DataApiBuilder.Service.Parsers
             }
             catch (ODataException e)
             {
-                throw new DataApiBuilderException(e.Message, HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.BadRequest);
+                throw new DataApiBuilderException(
+                    e.Message,
+                    HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.BadRequest,
+                    exception: e);
             }
         }
 
@@ -63,7 +67,11 @@ namespace Azure.DataApiBuilder.Service.Parsers
             }
             catch (ODataException e)
             {
-                throw new DataApiBuilderException(e.Message, HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.BadRequest);
+                throw new DataApiBuilderException(
+                    e.Message,
+                    HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.BadRequest,
+                    exception: e);
             }
         }
     }

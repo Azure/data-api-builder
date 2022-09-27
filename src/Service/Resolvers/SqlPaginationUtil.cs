@@ -301,7 +301,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     throw new ArgumentException("After token contains extra columns not present in order by columns.");
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (
+                e is InvalidCastException ||
+                e is ArgumentException ||
+                e is ArgumentNullException ||
+                e is FormatException ||
+                e is System.Text.DecoderFallbackException ||
+                e is JsonException ||
+                e is NotSupportedException
+                )
             {
                 // Possible sources of exceptions:
                 // stringObject cannot be converted to string
@@ -310,27 +318,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // keys of afterDeserialized do not correspond to the primary key
                 // values given for the primary keys are of incorrect format
                 // duplicate column names in the after token and / or the orderby columns
-
-                if (e is InvalidCastException ||
-                    e is ArgumentException ||
-                    e is ArgumentNullException ||
-                    e is FormatException ||
-                    e is System.Text.DecoderFallbackException ||
-                    e is JsonException ||
-                    e is NotSupportedException
-                    )
-                {
-                    string errorMessage = runtimeConfigProvider.IsDeveloperMode() ? $"{e.Message}\n{e.StackTrace}" :
-                        $"{afterJsonString} is not a valid pagination token.";
-                    throw new DataApiBuilderException(
-                        message: errorMessage,
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                }
-                else
-                {
-                    throw;
-                }
+                string errorMessage = runtimeConfigProvider.IsDeveloperMode() ? $"{e.Message}\n{e.StackTrace}" :
+                    $"{afterJsonString} is not a valid pagination token.";
+                throw new DataApiBuilderException(
+                    message: errorMessage,
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    exception: e);
             }
 
             return after;

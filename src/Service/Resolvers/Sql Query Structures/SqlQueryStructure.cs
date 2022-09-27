@@ -201,11 +201,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     FilterPredicates = GetFilterPredicatesFromOdataClause(context.FilterClauseInUrl, visitor);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    throw new DataApiBuilderException(message: "$filter query parameter is not well formed.",
-                                                   statusCode: HttpStatusCode.BadRequest,
-                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    throw new DataApiBuilderException(
+                        message: "$filter query parameter is not well formed.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                        exception: ex);
                 }
             }
 
@@ -217,11 +219,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     ProcessOdataClause(context.DbPolicyClause);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    throw new DataApiBuilderException(message: "Policy query parameter is not well formed.",
-                                                   statusCode: HttpStatusCode.Forbidden,
-                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                    throw new DataApiBuilderException(
+                        message: "Policy query parameter is not well formed.",
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
+                        exception: ex);
                 }
             }
 
@@ -518,7 +522,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new DataApiBuilderException(
                   message: ex.Message,
                   statusCode: HttpStatusCode.BadRequest,
-                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                  exception: ex);
             }
 
             PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
@@ -560,7 +565,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new DataApiBuilderException(
                   message: ex.Message,
                   statusCode: HttpStatusCode.BadRequest,
-                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                  exception: ex);
             }
         }
 

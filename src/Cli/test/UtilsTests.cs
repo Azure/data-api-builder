@@ -109,7 +109,8 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to verify negative/postive string numerals are correctly parsed as integers
+        /// Test to verify negative/positive string numerals are correctly parsed as integers
+        /// Decimal values are parsed as double.
         /// Boolean string is correctly parsed as boolean
         /// everything else is parsed as string.
         /// </summary>
@@ -121,7 +122,7 @@ namespace Cli.Tests
             Assert.IsNotNull(sourceParameters);
             Assert.AreEqual(sourceParameters.GetValueOrDefault("param1"), 123);
             Assert.AreEqual(sourceParameters.GetValueOrDefault("param2"), -243);
-            Assert.AreEqual(sourceParameters.GetValueOrDefault("param3"), "220.12");
+            Assert.AreEqual(sourceParameters.GetValueOrDefault("param3"), 220.12);
             Assert.AreEqual(sourceParameters.GetValueOrDefault("param4"), true);
             Assert.AreEqual(sourceParameters.GetValueOrDefault("param5"), "dab");
         }

@@ -126,7 +126,7 @@ public class EndToEndTests
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
         string[] addArgs = { "add", "book", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:*" };
         Program.Main(addArgs);
-        Assert.IsTrue(JToken.DeepEquals(JObject.Parse(GetCompleteConfigAfterAddingEntity), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
+        Assert.IsTrue(JToken.DeepEquals(JObject.Parse(CompleteConfigAfterAddingEntity), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
     }
 
     /// <summary>
@@ -142,7 +142,7 @@ public class EndToEndTests
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
         string[] addArgs = { "add", "MyEntity", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:*", "--source.type", "stored-procedure", "--source.params", "param1:123,param2:hello,param3:true" };
         Program.Main(addArgs);
-        string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceAsStoredProcedure);
+        string? actualConfig = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceAsStoredProcedure);
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(actualConfig), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
     }
 
@@ -159,7 +159,7 @@ public class EndToEndTests
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
         string[] addArgs = { "add", "MyEntity", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:*", "--source.key-fields", "id,name" };
         Program.Main(addArgs);
-        string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceWithDefaultType);
+        string? actualConfig = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceWithDefaultType);
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(actualConfig), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
     }
 

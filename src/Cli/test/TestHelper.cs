@@ -22,7 +22,7 @@ namespace Cli.Tests
             return configurationJson.ToString();
         }
 
-        public static string GetInitialConfiguration
+        public static string InitialConfiguration
         {
             get { return @"{
             ""$schema"": ""dab.draft-01.schema.json"",
@@ -53,7 +53,7 @@ namespace Cli.Tests
 
         }
 
-        public static string GetSingleEntity
+        public static string SingleEntity
         {
             get { return @"
             {
@@ -73,7 +73,7 @@ namespace Cli.Tests
             }"; }
         }
 
-        public static string GetBasicEntityWithAnonymousRole
+        public static string BasicEntityWithAnonymousRole
         {
             get { return @"
             {
@@ -93,7 +93,7 @@ namespace Cli.Tests
             }"; }
         }
 
-        public static string GetSingleEntityWithSourceAsStoredProcedure
+        public static string SingleEntityWithSourceAsStoredProcedure
         {
             get { return @"
             {
@@ -121,7 +121,7 @@ namespace Cli.Tests
             }"; }
         }
 
-        public static string GetSingleEntityWithSourceWithDefaultType
+        public static string SingleEntityWithSourceWithDefaultType
         {
             get { return @"
             {
@@ -148,7 +148,7 @@ namespace Cli.Tests
             }"; }
         }
 
-        public static string GetSingleEntityWithSourceForView
+        public static string SingleEntityWithSourceForView
         {
             get { return @"
             {
@@ -175,7 +175,7 @@ namespace Cli.Tests
             }"; }
         }
 
-        public static string GetEntityConfigurationWithPolicy
+        public static string EntityConfigurationWithPolicy
         {
             get { return @"
               {
@@ -201,7 +201,7 @@ namespace Cli.Tests
             }"; }
         }
 
-        public static string GetEntityConfigurationWithFields
+        public static string EntityConfigurationWithFields
         {
             get { return @"
               {
@@ -227,7 +227,7 @@ namespace Cli.Tests
             }"; }
         }
 
-        public static string GetEntityConfigurationWithPolicyAndFields
+        public static string EntityConfigurationWithPolicyAndFields
         {
             get { return @"
               {
@@ -257,7 +257,7 @@ namespace Cli.Tests
             }"; }
         }
 
-        public static string GetEntityConfigurationWithPolicyAndFieldsGeneratedWithUpdateCommand
+        public static string EntityConfigurationWithPolicyAndFieldsGeneratedWithUpdateCommand
         {
             get { return @"
               {
@@ -288,7 +288,7 @@ namespace Cli.Tests
 
         }
 
-        public static string GetEntityConfigurationWithPolicyWithUpdateCommand
+        public static string EntityConfigurationWithPolicyWithUpdateCommand
         {
             get { return @"
               {
@@ -314,7 +314,7 @@ namespace Cli.Tests
             }"; }
         }
 
-        public static string GetEntityConfigurationWithFieldsGeneratedWithUpdateCommand
+        public static string EntityConfigurationWithFieldsGeneratedWithUpdateCommand
         {
             get { return @"
               {
@@ -341,7 +341,7 @@ namespace Cli.Tests
 
         }
 
-        public static string GetCompleteConfigAfterAddingEntity
+        public static string CompleteConfigAfterAddingEntity
         {
             get
             {

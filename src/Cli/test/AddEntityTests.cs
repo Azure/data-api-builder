@@ -6,8 +6,6 @@ namespace Cli.Tests
     [TestClass]
     public class AddEntityTests
     {
-        #region Positive Tests
-
         /// <summary>
         /// Simple test to add a new entity to json config when there is no existing entity.
         /// By Default an empty collection is generated during initialization
@@ -31,8 +29,8 @@ namespace Cli.Tests
                 policyDatabase: null,
                 config: _testRuntimeConfig);
 
-            string initialConfiguration = GetInitialConfiguration;
-            string expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
+            string initialConfiguration = InitialConfiguration;
+            string expectedConfiguration = AddPropertiesToJson(InitialConfiguration, GetFirstEntityConfiguration());
             RunTest(options, initialConfiguration, expectedConfiguration);
         }
 
@@ -57,8 +55,8 @@ namespace Cli.Tests
                 policyDatabase: null,
                 config: _testRuntimeConfig);
 
-            string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
-            string configurationWithOneEntity = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
+            string initialConfiguration = AddPropertiesToJson(InitialConfiguration, GetFirstEntityConfiguration());
+            string configurationWithOneEntity = AddPropertiesToJson(InitialConfiguration, GetFirstEntityConfiguration());
             string expectedConfiguration = AddPropertiesToJson(configurationWithOneEntity, GetSecondEntityConfiguration());
             RunTest(options, initialConfiguration, expectedConfiguration);
 
@@ -85,7 +83,7 @@ namespace Cli.Tests
                 policyDatabase: null,
                 config: _testRuntimeConfig);
 
-            string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
+            string initialConfiguration = AddPropertiesToJson(InitialConfiguration, GetFirstEntityConfiguration());
             Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref initialConfiguration));
         }
 
@@ -112,8 +110,8 @@ namespace Cli.Tests
                 config: _testRuntimeConfig
             );
 
-            string initialConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
-            string configurationWithOneEntity = AddPropertiesToJson(GetInitialConfiguration, GetFirstEntityConfiguration());
+            string initialConfiguration = AddPropertiesToJson(InitialConfiguration, GetFirstEntityConfiguration());
+            string configurationWithOneEntity = AddPropertiesToJson(InitialConfiguration, GetFirstEntityConfiguration());
             string expectedConfiguration = AddPropertiesToJson(configurationWithOneEntity, GetConfigurationWithCaseSensitiveEntityName());
             RunTest(options, initialConfiguration, expectedConfiguration);
         }
@@ -151,17 +149,17 @@ namespace Cli.Tests
             switch (check)
             {
                 case "PolicyAndFields":
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyAndFields);
+                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, EntityConfigurationWithPolicyAndFields);
                     break;
                 case "Policy":
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicy);
+                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, EntityConfigurationWithPolicy);
                     break;
                 case "Fields":
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithFields);
+                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, EntityConfigurationWithFields);
                     break;
             }
 
-            RunTest(options, GetInitialConfiguration, expectedConfiguration!);
+            RunTest(options, InitialConfiguration, expectedConfiguration!);
         }
 
         /// <summary>
@@ -185,8 +183,8 @@ namespace Cli.Tests
                 policyDatabase: null,
                 config: _testRuntimeConfig);
 
-            string initialConfiguration = GetInitialConfiguration;
-            string expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceAsStoredProcedure);
+            string initialConfiguration = InitialConfiguration;
+            string expectedConfiguration = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceAsStoredProcedure);
             RunTest(options, initialConfiguration, expectedConfiguration);
         }
 
@@ -194,15 +192,22 @@ namespace Cli.Tests
         /// Simple test to verify success on adding a new entity with source object for valid fields.
         /// </summary>
         [DataTestMethod]
-        [DataRow(null, null, null, DisplayName = "Both KeyFields and Parameters provided for source.")]
-        [DataRow("stored-procedure", new string[] { "param1:value1" }, null, DisplayName = "SourceParameters with stored procedure.")]
-        [DataRow("view", null, new string[] { "col1", "col2" }, DisplayName = "Source KeyFields with View")]
-        [DataRow("table", null, new string[] { "col1", "col2" }, DisplayName = "Source KeyFields with Table")]
-        [DataRow(null, null, new string[] { "col1", "col2" }, DisplayName = "Source KeyFields with SourceType not provided")]
+        [DataRow(null, null, null, true, DisplayName = "Both KeyFields and Parameters not provided for source.")]
+        [DataRow("stored-procedure", new string[] { "param1:value1" }, null, true, DisplayName = "SourceParameters with stored procedure.")]
+        [DataRow("view", null, new string[] { "col1", "col2" }, true, DisplayName = "Source KeyFields with View")]
+        [DataRow("table", null, new string[] { "col1", "col2" }, true, DisplayName = "Source KeyFields with Table")]
+        [DataRow(null, null, new string[] { "col1", "col2" }, true, DisplayName = "Source KeyFields with SourceType not provided")]
+        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, false, DisplayName = "Both KeyFields and Parameters provided for source.")]
+        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, false, DisplayName = "KeyFields with stored procedure.")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, false, DisplayName = "Parameters with duplicate keys for stored procedure.")]
+        [DataRow("view", new string[] { "param1:value1" }, null, false, DisplayName = "Source Parameters with View")]
+        [DataRow("table", new string[] { "param1:value1" }, null, false, DisplayName = "Source Parameters with Table")]
+        [DataRow("table-view", new string[] { "param1:value1" }, null, false, DisplayName = "Invalid Source Type.")]
         public void TestAddNewEntityWithSourceObjectHavingValidFields(
             string? sourceType,
             IEnumerable<string>? parameters,
-            IEnumerable<string>? keyFields
+            IEnumerable<string>? keyFields,
+            bool expectSuccess
         )
         {
             AddOptions options = new(
@@ -220,14 +225,10 @@ namespace Cli.Tests
                 policyDatabase: null,
                 config: _testRuntimeConfig);
 
-            string runtimeConfig = GetInitialConfiguration;
+            string runtimeConfig = InitialConfiguration;
 
-            Assert.IsTrue(ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
+            Assert.AreEqual(expectSuccess, ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
         }
-
-        #endregion
-
-        #region Negative Tests
 
         /// <summary>
         /// Check failure when adding an entity with permission containing invalid operations
@@ -258,48 +259,10 @@ namespace Cli.Tests
                 policyDatabase: null,
                 config: _testRuntimeConfig);
 
-            string runtimeConfig = GetInitialConfiguration;
+            string runtimeConfig = InitialConfiguration;
 
             Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
         }
-
-        /// <summary>
-        /// Simple test to verify failure on adding a new entity with source object for invalid fields.
-        /// </summary>
-        [DataTestMethod]
-        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, DisplayName = "Both KeyFields and Parameters provided for source.")]
-        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, DisplayName = "KeyFields with stored procedure.")]
-        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, DisplayName = "Parameters with duplicate keys for stored procedure.")]
-        [DataRow("view", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with View")]
-        [DataRow("table", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with Table")]
-        [DataRow("table-view", new string[] { "param1:value1" }, null, DisplayName = "Invalid Source Type.")]
-        public void TestAddNewEntityWithSourceObjectForInvalidFields(
-            string? sourceType,
-            IEnumerable<string>? parameters,
-            IEnumerable<string>? keyFields
-        )
-        {
-            AddOptions options = new(
-                source: "testSource",
-                permissions: new string[] { "anonymous", "*" },
-                entity: "book",
-                sourceType: sourceType,
-                sourceParameters: parameters,
-                sourceKeyFields: keyFields,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                config: _testRuntimeConfig);
-
-            string runtimeConfig = GetInitialConfiguration;
-
-            Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
-        }
-
-        #endregion
 
         /// <summary>
         /// Call ConfigGenerator.TryAddNewEntity and verify json result.

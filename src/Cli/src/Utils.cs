@@ -1,7 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
 using Humanizer;
@@ -16,9 +16,6 @@ namespace Cli
     {
         public const string WILDCARD = "*";
         public static readonly string SEPARATOR = ":";
-        public static readonly string[] SUPPORTED_SOURCE_TYPES = { "table", "view", "stored-procedure" };
-
-        private static readonly Regex _numeric_regex = new(@"^[-]?\d+$");
 
         /// <summary>
         /// Creates the rest object which can be either a boolean value
@@ -490,16 +487,21 @@ namespace Cli
         }
 
         /// <summary>
-        /// Returns true on successful parsing of source object from name, type,
-        /// parameters, and key Fields.
-        /// Returns false otherwise.
+        /// Creates source object by using valid type, params, and keyfields.
         /// </summary>
-        public static bool TryGetSourceObject(
+        /// <param name="name">Name of the source.</param>
+        /// <param name="type">Type of the soure. i.e, table,view, and stored-procedure.</param>
+        /// <param name="parameters">Dictionary for parameters if source is stored-procedure</param>
+        /// <param name="keyFields">Array of string containing key columns for table/view type.</param>
+        /// <param name="sourceObject">Outputs the created source object.
+        /// It can be null, string, or DatabaseObjectSource</param>
+        /// <returns>True in case of succesful creation of source object.</returns>
+        public static bool TryCreateSourceObject(
             string name,
             string? type,
             Dictionary<string, object>? parameters,
             string[]? keyFields,
-            out object? sourceObject
+            [NotNullWhen(true)] out object? sourceObject
         )
         {
             type = (string.Empty).Equals(type) ? null : type;
@@ -511,21 +513,15 @@ namespace Cli
                 return false;
             }
 
+            // If type, parameter, and keyfields is null then return the source as string.
             if (type is null && parameters is null && keyFields is null)
             {
                 sourceObject = name;
                 return true;
             }
 
-            // Verify the given source type is valid.
-            if (type is not null && !SUPPORTED_SOURCE_TYPES.Contains(type.ToLowerInvariant()))
-            {
-                Console.Error.WriteLine("Source type must be one of:" + SUPPORTED_SOURCE_TYPES.ToString());
-                return false;
-            }
-
             sourceObject = new DatabaseObjectSource(
-                Type: type is null ? "table" : type,    //If sourceType is not explicitly specified, we assume it is a Table
+                Type: type is null ? "table" : type,    // If sourceType is not explicitly specified, we assume it is a Table
                 Name: name,
                 Parameters: parameters,
                 KeyFields: keyFields
@@ -587,31 +583,25 @@ namespace Cli
         /// </summary>
         public static bool TryGetSourceObjectType(string? type, out SourceType? objectType)
         {
-            objectType=null;
-            if (type is not null)
+            try
             {
-                try
-                {
-                    objectType = Entity.ConvertSourceType(type);
-                }
-                catch (Exception e)
-                {
-                    // Invalid SourceType provided.
-                    Console.Error.WriteLine(e.Message);
-                    return false;
-                }
+                objectType = Entity.ConvertSourceType(type);
             }
-            else
+            catch (JsonException e)
             {
-                // If sourceType is not explicitly specified, we assume it is a Table
-                objectType = SourceType.Table;
+                // Invalid SourceType provided.
+                Console.Error.WriteLine(e.Message);
+                objectType = null;
+                return false;
             }
+
             return true;
         }
 
         /// <summary>
-        /// Returns true on successful parsing of source parameters Dictionary from IEnumerable list.
-        /// Returns false in case the format of the input is not correct.
+        /// This method tries to parse the source parameters Dictionary from IEnumerable list
+        /// by splitting each item of the list on ':', where first item is param name and the
+        /// and the second item is the value. for any other item it should fail.
         /// </summary>
         /// <param name="parametersList">List of ':' separated values indicating key and value.</param>
         /// <param name="mappings">Output a Dictionary of parameters and their values.</param>
@@ -626,7 +616,7 @@ namespace Cli
                 return true;
             }
 
-            sourceParameters = new(StringComparer.InvariantCultureIgnoreCase);
+            sourceParameters = new(StringComparer.OrdinalIgnoreCase);
             foreach (string param in parametersList)
             {
                 string[] items = param.Split(SEPARATOR);
@@ -634,12 +624,12 @@ namespace Cli
                 {
                     sourceParameters = null;
                     Console.Error.WriteLine("Invalid format for --source.params");
-                    Console.WriteLine("It should be in this format --source.params \"key1:value1,key2:value2,...\".");
+                    Console.WriteLine("Correct source parameter syntax: --source.params \"key1:value1,key2:value2,...\".");
                     return false;
                 }
 
                 string paramKey = items[0];
-                object paramValue = ParseParamValue(items[1]);
+                object paramValue = ParseStringValue(items[1]);
 
                 sourceParameters.Add(paramKey, paramValue);
             }
@@ -652,23 +642,26 @@ namespace Cli
             return true;
         }
 
-        private static object ParseParamValue(string stringValue)
+        /// <summary>
+        /// Converts string into either integer, double, or boolean value.
+        /// If the given string is neither of the above, it returns as string.
+        /// </summary>
+        private static object ParseStringValue(string stringValue)
         {
-            object paramValue;
-            if (_numeric_regex.IsMatch(stringValue))
+            if (int.TryParse(stringValue, out int integerValue))
             {
-                paramValue = int.Parse(stringValue);
+                return integerValue;
+            }
+            else if (double.TryParse(stringValue, out double floatingValue))
+            {
+                return floatingValue;
             }
             else if (Boolean.TryParse(stringValue, out bool booleanValue))
             {
-                paramValue = booleanValue;
-            }
-            else
-            {
-                paramValue = stringValue;
+                return booleanValue;
             }
 
-            return paramValue;
+            return stringValue;
         }
 
         /// <summary>

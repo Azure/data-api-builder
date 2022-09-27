@@ -791,18 +791,18 @@ namespace Cli.Tests
                 config: _testRuntimeConfig
             );
 
-            string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntity);
+            string? actualConfig = AddPropertiesToJson(InitialConfiguration, SingleEntity);
             string? expectedConfiguration = null;
             switch (check)
             {
                 case "PolicyAndFields":
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyAndFieldsGeneratedWithUpdateCommand);
+                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, EntityConfigurationWithPolicyAndFieldsGeneratedWithUpdateCommand);
                     break;
                 case "Policy":
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyWithUpdateCommand);
+                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, EntityConfigurationWithPolicyWithUpdateCommand);
                     break;
                 case "Fields":
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithFieldsGeneratedWithUpdateCommand);
+                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, EntityConfigurationWithFieldsGeneratedWithUpdateCommand);
                     break;
             }
 
@@ -852,22 +852,22 @@ namespace Cli.Tests
                 config: _testRuntimeConfig
             );
 
-            string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetBasicEntityWithAnonymousRole);
+            string? actualConfig = AddPropertiesToJson(InitialConfiguration, BasicEntityWithAnonymousRole);
             string? expectedConfiguration;
             switch (task)
             {
                 case "UpdateSourceName":
-                    actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntity);
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetBasicEntityWithAnonymousRole);
+                    actualConfig = AddPropertiesToJson(InitialConfiguration, SingleEntity);
+                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, BasicEntityWithAnonymousRole);
                     break;
                 case "ConvertToStoredProcedure":
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceAsStoredProcedure);
+                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceAsStoredProcedure);
                     break;
                 case "ConvertToView":
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceForView);
+                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceForView);
                     break;
                 default:
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceWithDefaultType);
+                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceWithDefaultType);
                     break;
             }
 
@@ -876,7 +876,7 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Simple test to verify success on updating a source from string to source object for valid fields.
+        /// Simple test to verify success on updating a source's value type from string to object.
         /// </summary>
         [DataTestMethod]
         [DataRow("newSourceName", null, null, "UpdateSourceName", DisplayName = "Update Source Name of the source object.")]
@@ -889,7 +889,6 @@ namespace Cli.Tests
             string task
         )
         {
-
             UpdateOptions options = new(
                 source: source,
                 permissions: new string[] { "anonymous", "*" },
@@ -914,11 +913,11 @@ namespace Cli.Tests
                 config: _testRuntimeConfig
             );
 
-            string? initialConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceAsStoredProcedure);
+            string? initialConfig = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceAsStoredProcedure);
             switch (task)
             {
                 case "UpdateSourceName":
-                    AssertOldAndUpdatedValuesForSourceObject(
+                    AssertUpdatedValuesForSourceObject(
                         options,
                         initialConfig,
                         entityName: "MyEntity",
@@ -934,7 +933,7 @@ namespace Cli.Tests
                     break;
 
                 case "UpdateParameters":
-                    AssertOldAndUpdatedValuesForSourceObject(
+                    AssertUpdatedValuesForSourceObject(
                         options,
                         initialConfig,
                         entityName: "MyEntity",
@@ -950,8 +949,8 @@ namespace Cli.Tests
                     break;
 
                 case "UpdateKeyFields":
-                    initialConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceWithDefaultType);
-                    AssertOldAndUpdatedValuesForSourceObject(
+                    initialConfig = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceWithDefaultType);
+                    AssertUpdatedValuesForSourceObject(
                         options,
                         initialConfig,
                         entityName: "MyEntity",
@@ -981,7 +980,7 @@ namespace Cli.Tests
         /// <summary>
         /// Contains Assert to check only the intended values of source object is updated.
         /// </summary>
-        private static void AssertOldAndUpdatedValuesForSourceObject(
+        private static void AssertUpdatedValuesForSourceObject(
             UpdateOptions options,
             string initialConfig,
             string entityName,
@@ -1057,7 +1056,7 @@ namespace Cli.Tests
                 config: _testRuntimeConfig
             );
 
-            string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyAndFields);
+            string? actualConfig = AddPropertiesToJson(InitialConfiguration, EntityConfigurationWithPolicyAndFields);
             string updatedEntityConfigurationWithPolicyAndFields = @"
               {
                 ""entities"": {
@@ -1084,7 +1083,7 @@ namespace Cli.Tests
                     }
                 }
             }";
-            string? expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, updatedEntityConfigurationWithPolicyAndFields);
+            string? expectedConfiguration = AddPropertiesToJson(InitialConfiguration, updatedEntityConfigurationWithPolicyAndFields);
             Assert.IsTrue(TryUpdateExistingEntity(options, ref actualConfig));
             Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration!), JObject.Parse(actualConfig)));
         }
@@ -1369,7 +1368,7 @@ namespace Cli.Tests
                 map: new string[] { },
                 config: _testRuntimeConfig);
 
-            string runtimeConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntityWithSourceAsStoredProcedure);
+            string runtimeConfig = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceAsStoredProcedure);
 
             Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
         }

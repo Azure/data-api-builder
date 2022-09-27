@@ -213,12 +213,12 @@ namespace Cli
 
             // Try to get the source object as string or DatabaseObjectSource
             string[]? sourceKeyFields = null;
-            if (options.SourceKeyFields is not null)
+            if (options.SourceKeyFields is not null && options.SourceKeyFields.Any())
             {
                 sourceKeyFields = options.SourceKeyFields.ToArray();
             }
 
-            if (!TryGetSourceObject(
+            if (!TryCreateSourceObject(
                 options.Source, options.SourceType, parametersDictionary,
                 sourceKeyFields,
                 out object? source))
@@ -571,12 +571,11 @@ namespace Cli
         }
 
         /// <summary>
-        /// This method will parse update options and create updated sourceObject
-        /// of the given entity updating the source fields.
+        /// Parses updated options and uses them to create a new sourceObject
+        /// for the given entity.
         /// </summary>
         private static bool TryGetUpdatedSourceObjectWithOptions(UpdateOptions options, Entity entity, out object? updatedSourceObject)
         {
-            // populate Source object fields
             entity.TryPopulateSourceFields();
             string updatedSourceName = options.Source is null ? entity!.SourceName : options.Source;
             Dictionary<string, object>? updatedSourceParameters;
@@ -594,7 +593,7 @@ namespace Cli
             string? updatedSourceType = options.SourceType is null ? entity.SourceTypeName : options.SourceType;
 
             // Try Creating Source Object with the updated values.
-            if (!TryGetSourceObject(updatedSourceName, updatedSourceType,
+            if (!TryCreateSourceObject(updatedSourceName, updatedSourceType,
                 updatedSourceParameters, updatedKeyFields, out updatedSourceObject))
             {
                 return false;

@@ -2,7 +2,7 @@
 
 ## Create Azure AD tenant
 
- 1. Create an Azure AD tenant in your Azure Subscription by following [this guide](https://docs.microsoft.com/azure/active-directory/fundamentals/active-directory-access-create-new-tenant).
+ 1. Create an Azure AD tenant in your Azure Subscription by following [this guide](https://learn.microsoft.com/azure/active-directory/fundamentals/active-directory-access-create-new-tenant).
  2. Make note of your tenantID which can be found on the Overview page of your newly created tenant resource in the Azure Portal.
 
 ## Create Client App Registration
@@ -41,10 +41,10 @@ Examples include a frontend webpage, or PostMan (this guide is for PostMan).
 
 ### Configure Server App Registration
 
-Note: The following steps can also be found in the Microsoft Doc: [QuickStart: Configure an application to expose a web API](https://docs.microsoft.com/azure/active-directory/develop/quickstart-configure-app-expose-web-apis).
+Note: The following steps can also be found in the Microsoft Doc: [QuickStart: Configure an application to expose a web API](https://learn.microsoft.com/azure/active-directory/develop/quickstart-configure-app-expose-web-apis).
 
 1. Navigate to `Expose an API` from your App Registration (`DataAPIBuilder`) overview page.
-2. Under *Scopes defined by this API*, select **Add a scope**. For more details on why scopes are defined, see this [Microsoft Identity Platform doc](https://docs.microsoft.com/azure/active-directory/develop/v2-permissions-and-consent#request-the-permissions-from-a-directory-admin).
+2. Under *Scopes defined by this API*, select **Add a scope**. For more details on why scopes are defined, see this [Microsoft Identity Platform doc](https://learn.microsoft.com/azure/active-directory/develop/v2-permissions-and-consent#request-the-permissions-from-a-directory-admin).
    1. Scope name: `EndpointAccess`
    2. Who can consent?: `Admins and users`
    3. Admin consent display name: `Execute requests against DataAPIBuilder`
@@ -69,7 +69,7 @@ Note: The following steps can also be found in the Microsoft Doc: [QuickStart: C
 
 ## Additional Client App Registration Configuration
 
-The following steps configure [delegated permissions](https://docs.microsoft.com/azure/active-directory/develop/v2-permissions-and-consent#permission-types) for the client app registration. This means that the client app will be delegated with the permission to act as a signed-in user when it makes calls to the target resource (DataAPIBuilder).
+The following steps configure [delegated permissions](https://learn.microsoft.com/azure/active-directory/develop/v2-permissions-and-consent#permission-types) for the client app registration. This means that the client app will be delegated with the permission to act as a signed-in user when it makes calls to the target resource (DataAPIBuilder).
 
 1. Navigate to your App Registration (`PostmanDataApiBuilderClient`) overview page.
 2. Under *API permissions*, select **Add a permission**

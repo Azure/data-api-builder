@@ -7,10 +7,12 @@
 system-commandline-sentinel-files/
 out/
 publish/
+log.txt
 
 # only include appsettings for a few default environments
 appsettings.*.json
 dab-config.*.json
+*.dab-config.json
 !dab-config.PostgreSql.json
 !dab-config.MsSql.json
 !dab-config.MySql.json
@@ -27,13 +29,12 @@ dab-config.*.json
 .localhistory/
 *.code-workspace
 
-# include some basic vscode config files
-!/src/Service/.vscode/launch.json
-!/src/Service/.vscode/tasks.json
-
 .fake
 .ionide
 *.orig
 
 # Nuget package
 **/nupkg
+
+# Local-Only files
+.env

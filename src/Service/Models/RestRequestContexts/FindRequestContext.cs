@@ -21,5 +21,6 @@ namespace Azure.DataApiBuilder.Service.Models
             IsMany = isList;
             OperationType = Operation.Read;
         }
+
     }
 }

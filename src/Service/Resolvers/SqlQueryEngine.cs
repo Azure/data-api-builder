@@ -1,12 +1,12 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Resolvers;
@@ -29,6 +29,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly ILogger<SqlQueryEngine> _logger;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         // <summary>
         // Constructor.
@@ -39,7 +40,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,
-            ILogger<SqlQueryEngine> logger)
+            ILogger<SqlQueryEngine> logger,
+            RuntimeConfigProvider runtimeConfigProvider)
         {
             _queryExecutor = queryExecutor;
             _queryBuilder = queryBuilder;
@@ -47,24 +49,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             _httpContextAccessor = httpContextAccessor;
             _authorizationResolver = authorizationResolver;
             _logger = logger;
-        }
-
-        public static async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader, IQueryExecutor executor)
-        {
-            StringBuilder jsonString = new();
-            // Even though we only return a single cell, we need this loop for
-            // MS SQL. Sadly it splits FOR JSON PATH output across multiple
-            // cells if the JSON consists of more than 2033 bytes:
-            // Sources:
-            // 1. https://docs.microsoft.com/en-us/sql/relational-databases/json/format-query-results-as-json-with-for-json-sql-server?view=sql-server-2017#output-of-the-for-json-clause
-            // 2. https://stackoverflow.com/questions/54973536/for-json-path-results-in-ssms-truncated-to-2033-characters/54973676
-            // 3. https://docs.microsoft.com/en-us/sql/relational-databases/json/use-for-json-output-in-sql-server-and-in-client-apps-sql-server?view=sql-server-2017#use-for-json-output-in-a-c-client-app
-            while (await executor.ReadAsync(dbDataReader))
-            {
-                jsonString.Append(dbDataReader.GetString(0));
-            }
-
-            return jsonString.ToString();
+            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         /// <summary>
@@ -76,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="parameters">GraphQL Query Parameters from schema retrieved from ResolverMiddleware.GetParametersFromSchemaAndQueryFields()</param>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider, _authorizationResolver);
+            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider, _authorizationResolver, _runtimeConfigProvider);
 
             if (structure.PaginationMetadata.IsPaginated)
             {
@@ -98,35 +83,50 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider, _authorizationResolver);
+            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider, _authorizationResolver, _runtimeConfigProvider);
             string queryString = _queryBuilder.Build(structure);
             _logger.LogInformation(queryString);
-            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
+            List<JsonDocument> jsonListResult =
+                 await _queryExecutor.ExecuteQueryAsync(
+                     queryString,
+                     structure.Parameters,
+                     _queryExecutor.GetJsonResultAsync<List<JsonDocument>>);
 
-            // Parse Results into Json and return
-            //
-            if (!dbDataReader.HasRows)
+            if (jsonListResult is null)
             {
                 return new Tuple<IEnumerable<JsonDocument>, IMetadata>(new List<JsonDocument>(), null);
             }
-
-            return new Tuple<IEnumerable<JsonDocument>, IMetadata>(
-                JsonSerializer.Deserialize<List<JsonDocument>>(await GetJsonStringFromDbReader(dbDataReader, _queryExecutor)),
-                structure.PaginationMetadata
-            );
+            else
+            {
+                return new Tuple<IEnumerable<JsonDocument>, IMetadata>(jsonListResult, structure.PaginationMetadata);
+            }
         }
 
         // <summary>
         // Given the FindRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         // </summary>
-        public async Task<IActionResult> ExecuteAsync(RestRequestContext context)
+        public async Task<IActionResult> ExecuteAsync(FindRequestContext context)
         {
-            SqlQueryStructure structure = new(context, _sqlMetadataProvider);
+            SqlQueryStructure structure = new(context, _sqlMetadataProvider, _runtimeConfigProvider);
             using JsonDocument queryJson = await ExecuteAsync(structure);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty table, return an empty json array
-            return queryJson is null ? FormatFindResult(JsonDocument.Parse("[]"), (FindRequestContext)context) :
-                                       FormatFindResult(queryJson, (FindRequestContext)context);
+            return queryJson is null ? FormatFindResult(JsonDocument.Parse("[]"), context) :
+                                       FormatFindResult(queryJson, context);
+        }
+
+        /// <summary>
+        /// Given the StoredProcedureRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
+        /// Only the first result set will be returned, regardless of the contents of the stored procedure.
+        /// </summary>
+        public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context)
+        {
+            SqlExecuteStructure structure = new(context.EntityName, _sqlMetadataProvider, context.ResolvedParameters);
+            using JsonDocument queryJson = await ExecuteAsync(structure);
+            // queryJson is null if dbreader had no rows to return
+            // If no rows/empty result set, return an empty json array
+            return queryJson is null ? OkResponse(JsonDocument.Parse("[]").RootElement.Clone()) :
+                                       OkResponse(queryJson.RootElement.Clone());
         }
 
         /// <summary>
@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
             string after = SqlPaginationUtil.MakeCursorFromJsonElement(
                                element: rootEnumerated.Last(),
-                               orderByColumns: context.OrderByClauseInUrl,
+                               orderByColumns: context.OrderByClauseOfBackingColumns,
                                primaryKey: _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
                                entityName: context.EntityName,
                                schemaName: context.DatabaseObject.SchemaName,
@@ -248,29 +248,47 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         // <summary>
-        // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend. Useful for REST API scenarios.
+        // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend.
         // </summary>
         private async Task<JsonDocument> ExecuteAsync(SqlQueryStructure structure)
         {
             // Open connection and execute query using _queryExecutor
-            //
             string queryString = _queryBuilder.Build(structure);
             _logger.LogInformation(queryString);
-            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryString, structure.Parameters);
+            JsonDocument jsonDocument =
+                await _queryExecutor.ExecuteQueryAsync(
+                    queryString,
+                    structure.Parameters,
+                    _queryExecutor.GetJsonResultAsync<JsonDocument>);
+            return jsonDocument;
+        }
+
+        // <summary>
+        // Given the SqlExecuteStructure structure, obtains the query text and executes it against the backend.
+        // Unlike a normal query, result from database may not be JSON. Instead we treat output as SqlMutationEngine does (extract by row).
+        // As such, this could feasibly be moved to the mutation engine. 
+        // </summary>
+        private async Task<JsonDocument> ExecuteAsync(SqlExecuteStructure structure)
+        {
+            string queryString = _queryBuilder.Build(structure);
+            _logger.LogInformation(queryString);
+
+            JsonArray resultArray =
+                await _queryExecutor.ExecuteQueryAsync(
+                    queryString,
+                    structure.Parameters,
+                    _queryExecutor.GetJsonArrayAsync);
+
             JsonDocument jsonDocument = null;
 
-            // Parse Results into Json and return
-            //
-            if (dbDataReader.HasRows)
+            // If result set is non-empty, parse rows from json array into JsonDocument
+            if (resultArray is not null && resultArray.Count > 0)
             {
-                // Make sure to get the complete json string in case of large document.
-                jsonDocument =
-                    JsonSerializer.Deserialize<JsonDocument>(
-                        await GetJsonStringFromDbReader(dbDataReader, _queryExecutor));
+                jsonDocument = JsonDocument.Parse(resultArray.ToJsonString());
             }
             else
             {
-                _logger.LogInformation("Did not return enough rows in the JSON result.");
+                _logger.LogInformation("Did not return enough rows.");
             }
 
             return jsonDocument;

@@ -44,12 +44,13 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 connectionStringBuilder = new(connectionString);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 throw new DataApiBuilderException(
                     message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
                     statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                    exception: ex);
             }
 
             schemaName = connectionStringBuilder.SearchPath is null ? string.Empty : connectionStringBuilder.SearchPath;
@@ -59,6 +60,15 @@ namespace Azure.DataApiBuilder.Service.Services
         protected override string GetDefaultSchemaName()
         {
             return "public";
+        }
+
+        /// <summary>
+        /// Takes a string version of a PostgreSql data type and returns its .NET common language runtime (CLR) counterpart
+        /// TODO: For PostgreSql stored procedure support, this needs to be implemented.
+        /// </summary>
+        public override Type SqlToCLRType(string sqlType)
+        {
+            throw new NotImplementedException();
         }
     }
 }

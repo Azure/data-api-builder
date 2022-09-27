@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
+using Microsoft.Extensions.Logging;
 using Microsoft.OData.UriParser;
 
 namespace Azure.DataApiBuilder.Service.Models
@@ -62,6 +64,12 @@ namespace Azure.DataApiBuilder.Service.Models
         public virtual List<OrderByColumn>? OrderByClauseInUrl { get; set; }
 
         /// <summary>
+        /// List of OrderBy Columns which represent the OrderByClause using backing columns.
+        /// Based on the operation type, this property may or may not be populated.
+        /// </summary>
+        public virtual List<OrderByColumn>? OrderByClauseOfBackingColumns { get; set; }
+
+        /// <summary>
         /// Dictionary of field names and their values given in the request body.
         /// Based on the operation type, this property may or may not be populated.
         /// </summary>
@@ -70,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <summary>
         /// NVC stores the query string parsed into a NameValueCollection.
         /// </summary>
-        public NameValueCollection? ParsedQueryString { get; set; } = new();
+        public NameValueCollection ParsedQueryString { get; set; } = new();
 
         /// <summary>
         /// String holds information needed for pagination.
@@ -111,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <returns>
         /// Returns true on success, false on failure.
         /// </returns>
-        public void CalculateCumulativeColumns()
+        public void CalculateCumulativeColumns(ILogger logger)
         {
             try
             {
@@ -146,13 +154,15 @@ namespace Azure.DataApiBuilder.Service.Models
             {
                 // Exception not rethrown as returning false here is gracefully handled by caller,
                 // which will result in a 403 Unauthorized response to the client.
-                Console.Error.WriteLine("ERROR IN ODATA_AST_COLUMN_VISITOR TRAVERSAL");
-                Console.Error.WriteLine(e.Message);
-                Console.Error.WriteLine(e.StackTrace);
+                logger.LogError($"ERROR IN ODATA_AST_COLUMN_VISITOR TRAVERSAL" +
+                    $"{e.Message}" +
+                    $"{e.StackTrace}");
+
                 throw new DataApiBuilderException(
-                    message: "Request content invalid.",
+                    message: "$filter query parameter is not well formed.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCumulativeColumnCheckFailed);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    exception: e);
             }
         }
 
@@ -164,6 +174,41 @@ namespace Azure.DataApiBuilder.Service.Models
         public void UpdateReturnFields(IEnumerable<string> fields)
         {
             FieldsToBeReturned = fields.ToList();
+        }
+
+        /// <summary>
+        /// Tries to parse the json request body into FieldValuePairsInBody dictionary
+        /// </summary>
+        public void PopulateFieldValuePairsInBody(JsonElement? jsonBody)
+        {
+            string? payload = jsonBody.ToString();
+            if (!string.IsNullOrEmpty(payload))
+            {
+                try
+                {
+                    Dictionary<string, object?>? fieldValuePairs = JsonSerializer.Deserialize<Dictionary<string, object?>>(payload);
+                    if (fieldValuePairs is not null)
+                    {
+                        FieldValuePairsInBody = fieldValuePairs;
+                    }
+                    else
+                    {
+                        throw new JsonException("Failed to deserialize the request body payload");
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    throw new DataApiBuilderException(
+                        message: "The request body is not in a valid JSON format.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                        exception: ex);
+                }
+            }
+            else
+            {
+                FieldValuePairsInBody = new();
+            }
         }
     }
 }

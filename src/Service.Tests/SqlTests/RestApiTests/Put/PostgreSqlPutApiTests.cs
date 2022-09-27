@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Service.Controllers;
-using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
@@ -141,7 +139,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
-                        SELECT id, title, volume, ""categoryName""
+                        SELECT id, title, volume, ""categoryName"", series_id
                         FROM " + _integration_AutoGenNonPK_TableName + @"
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
                             AND title = 'Star Trek' AND volume IS NOT NULL
@@ -258,15 +256,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
             await InitializeTestFixture(context);
-            _restService = new RestService(_queryEngine,
-                _mutationEngine,
-                _sqlMetadataProvider,
-                _httpContextAccessor.Object,
-                _authorizationService.Object,
-                _authorizationResolver,
-                _runtimeConfigProvider);
-            _restController = new RestController(_restService,
-                                                 _restControllerLogger);
         }
 
         #endregion

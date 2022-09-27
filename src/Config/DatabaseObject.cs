@@ -1,7 +1,7 @@
 namespace Azure.DataApiBuilder.Config
 {
     /// <summary>
-    /// Represents a database object - which could be a view or table.
+    /// Represents a database object - which could be a view, table, or stored procedure.
     /// </summary>
     public class DatabaseObject
     {
@@ -10,6 +10,10 @@ namespace Azure.DataApiBuilder.Config
         public string Name { get; set; } = null!;
 
         public TableDefinition TableDefinition { get; set; } = null!;
+
+        public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
+
+        public SourceType? ObjectType { get; set; } = null!;
 
         public DatabaseObject(string schemaName, string tableName)
         {
@@ -45,6 +49,22 @@ namespace Azure.DataApiBuilder.Config
         }
     }
 
+    public class StoredProcedureDefinition
+    {
+        /// <summary>
+        /// The list of input parameters
+        /// Key: parameter name, Value: ParameterDefinition object
+        /// </summary>
+        public Dictionary<string, ParameterDefinition> Parameters { get; set; } = new();
+    }
+
+    public class ParameterDefinition
+    {
+        public Type SystemType { get; set; } = null!;
+        public bool HasConfigDefault { get; set; }
+        public object? ConfigDefaultValue { get; set; }
+    }
+
     public class TableDefinition
     {
         /// <summary>
@@ -66,7 +86,20 @@ namespace Azure.DataApiBuilder.Config
         public Dictionary<string, RelationshipMetadata> SourceEntityRelationshipMap { get; private set; } =
             new(StringComparer.InvariantCultureIgnoreCase);
 
-        public Dictionary<string, AuthorizationRule> HttpVerbs { get; private set; } = new();
+        /// <summary>
+        /// Given the list of column names to check, evaluates
+        /// if any of them is a nullable column when matched with the columns in this table definition.
+        /// </summary>
+        /// <param name="columnsToCheck">List of column names.</param>
+        /// <returns>True if any of the columns is null, false otherwise.</returns>
+        public bool IsAnyColumnNullable(List<string> columnsToCheck)
+        {
+            // If any of the given columns are nullable, the relationship is nullable.
+            return columnsToCheck.Select(column =>
+                                         Columns.TryGetValue(column, out ColumnDefinition? definition) && definition.IsNullable)
+                                 .Where(isNullable => isNullable == true)
+                                 .Any();
+        }
     }
 
     /// <summary>

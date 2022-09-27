@@ -15,6 +15,9 @@ jobs:
       buildConfiguration: 'Release'
 
   steps:
+  - task: NuGetAuthenticate@0
+    displayName: 'NuGet Authenticate'
+
   - task: UseDotNet@2
     displayName: Setup .NET SDK v6.0.x
     inputs:
@@ -27,6 +30,8 @@ jobs:
     displayName: Restore NuGet packages
     inputs:
       restoreSolution: '$(solution)'
+      feedsToUse: config
+      nugetConfigPath: Nuget.config
 
   - task: DockerInstaller@0
     displayName: Docker Installer
@@ -39,7 +44,7 @@ jobs:
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu SQL Server Image Docker
 
-  - task: FileTransform@1
+  - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.MsSql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
@@ -83,6 +88,9 @@ jobs:
       SqlVersionCode: '15.0'
 
   steps:
+  - task: NuGetAuthenticate@0
+    displayName: 'NuGet Authenticate'
+  
   - task: UseDotNet@2
     displayName: Setup .NET SDK v6.0.x
     inputs:
@@ -95,6 +103,8 @@ jobs:
     displayName: Restore NuGet packages
     inputs:
       restoreSolution: '$(solution)'
+      feedsToUse: config
+      nugetConfigPath: Nuget.config
 
   - task: PowerShell@2
     displayName: Install SQL LocalDB
@@ -119,7 +129,7 @@ jobs:
         SqlLocalDb.exe start MSSQLLocalDB
         SqlLocalDb.exe info "MSSQLLocalDB"
 
-  - task: FileTransform@1
+  - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.MsSql.json'
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'

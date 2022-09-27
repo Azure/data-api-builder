@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
-  "$id": "urn:hawaii:config:schema:draft-01",
-  "title": "Hawaii",
-  "description": "Schema for Hawaii engine",
+  "$id": "urn:dab:config:schema:draft-01",
+  "title": "Data API Builder",
+  "description": "Schema for Data API Builder engine",
   "type": "object",
   "properties": {
     "data-source": {
@@ -16,7 +16,6 @@
             "mssql",
             "postgresql",
             "mysql",
-            "mariadb",
             "cosmos"
           ]
         },
@@ -30,16 +29,27 @@
         "connection-string"
       ]
     },
-    "mssql": {
+    "cosmos": {
       "type": "object",
-      "description": "Azure SQL and SQL Server related settings",
+      "description": "Azure Cosmos DB related settings",
       "properties": {
-        "set-session-context": {
-          "type": "boolean",
-          "default": true,
-          "description": "Inject JWT claims into session context"
+        "database": {
+          "type": "string",
+          "description": "Name of the database"
+        },
+        "container": {
+          "description": "Name of the container",
+          "type": "string"
+        },
+        "schema": {
+          "description": "Path to the GraphQL schema file",
+          "type": "string"
         }
-      }
+      },
+      "required": [
+        "database",
+        "schema"
+      ]
     },
     "runtime": {
       "type": "object",
@@ -49,30 +59,9 @@
           "type": "object",
           "description": "Global REST endpoint configuration",
           "properties": {
-            "enabled": {
-              "default": true,
-              "type": "boolean"
-            },
             "path": {
               "default": "/api",
               "type": "string"
-            }
-          }
-        },
-        "graphql": {
-          "type": "object",
-          "description": "Global GraphQL endpoint configuration",
-          "properties": {
-            "enabled": {
-              "default": true,
-              "type": "boolean"
-            },
-            "path": {
-              "default": "/graphql",
-              "type": "string"
-            },
-            "allow-introspection": {
-              "type": "boolean"
             }
           }
         },
@@ -83,6 +72,7 @@
             "mode": {
               "description": "Set if running in Development or Production mode",
               "type": "string",
+              "default": "production",
               "enum": [
                 "production",
                 "development"
@@ -110,6 +100,11 @@
             "authentication": {
               "type": "object",
               "properties": {
+                "provider": {
+                  "type": "string",
+                  "description": "The name of authentication provider",
+                  "default": "StaticWebApps"
+                },
                 "jwt": {
                   "type": "object",
                   "properties": {
@@ -146,12 +141,12 @@
                 {
                   "type": "object",
                   "properties": {
-                    "route": {
-                      "$ref": "#/$defs/singular-plural"
+                    "path": {
+                      "type": "string"
                     }
                   },
                   "required": [
-                    "route"
+                    "path"
                   ]
                 }
               ]
@@ -223,9 +218,6 @@
                                   "type": "object",
                                   "description": "Define item-level security policy",
                                   "properties": {
-                                    "request": {
-                                      "type": "string"
-                                    },
                                     "database": {
                                       "type": "string"
                                     }
@@ -277,10 +269,6 @@
                       "type": "string",
                       "description": "The database object used for supporting the M:N relationship"
                     },
-                    "linking.entity": {
-                      "type": "string",
-                      "description": "The entity used for supporting the M:N relationship"
-                    },
                     "linking.source.fields": {
                       "type": "array",
                       "items": {
@@ -295,17 +283,9 @@
                     }
                   },
                   "required": [
+                    "cardinality",
                     "target.entity"
                   ]
-                }
-              }
-            },
-            "mappings": {
-              "type": "object",
-              "description": "Define mappings between database fields and GraphQL and REST fields",
-              "patternProperties": {
-                "^.*$": {
-                  "type": "string"
                 }
               }
             }

@@ -60,15 +60,7 @@
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
-      ],
-      "relationships": {
-        "comics": {
-          "cardinality": "many",
-          "target.entity": "Comic",
-          "source.fields": [ "categoryName" ],
-          "target.fields": [ "categoryName" ]
-        }
-      }
+      ]
     },
     "Book": {
       "source": "books",
@@ -187,7 +179,7 @@
     "Comic": {
       "source": "comics",
       "rest": true,
-      "graphql": false,
+      "graphql": true,
       "permissions": [
         {
           "role": "anonymous",

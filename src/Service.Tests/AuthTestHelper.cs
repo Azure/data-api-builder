@@ -54,13 +54,21 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <summary>
         /// Creates a mocked EasyAuth token, namely, the value of the header injected by EasyAuth.
         /// </summary>
-        /// <returns>A Base64 encoded string of a serialized EasyAuthClientPrincipal object</returns>
-        public static string CreateStaticWebAppsEasyAuthToken(bool addAuthenticated = true, string specificRole = null)
+        /// <param name="addAuthenticated">Whether to conditionally add the authenticated and/or other custom roles</param>
+        /// <param name="specificRole">The name of the custom role to add to the token payload</param>
+        /// <param name="claims">Collection of claims to include in SWA token payload.</param>
+        /// <returns>A Base64 encoded string of a serialized StaticWebAppsClientPrincipal object</returns>
+        public static string CreateStaticWebAppsEasyAuthToken(
+            bool addAuthenticated = true,
+            string specificRole = null,
+            IEnumerable<SWAPrincipalClaim> claims = null)
         {
-            List<string> roles = new();
-            roles.Add("anonymous");
+            // The anonymous role is present in all requests sent to Static Web Apps or AppService endpoints.
+            List<string> roles = new()
+            {
+                "anonymous"
+            };
 
-            // Add authenticated role conditionally
             if (addAuthenticated)
             {
                 if (specificRole is null)
@@ -81,13 +89,13 @@ namespace Azure.DataApiBuilder.Service.Tests
                 {
                     roles.Add(specificRole);
                 }
-
             }
 
             StaticWebAppsClientPrincipal token = new()
             {
                 IdentityProvider = "github",
-                UserRoles = roles
+                UserRoles = roles,
+                Claims = claims
             };
 
             string serializedToken = JsonSerializer.Serialize(value: token);

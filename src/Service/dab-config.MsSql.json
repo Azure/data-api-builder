@@ -9,16 +9,15 @@
   },
   "runtime": {
     "rest": {
-      "enabled": true,
       "path": "/api"
     },
     "graphql": {
-      "enabled": true,
       "path": "/graphql",
       "allow-introspection": true
     },
     "host": {
       "mode": "development",
+      "authenticate-devmode-requests": false,
       "cors": {
         "origins": [ "http://localhost:5000" ],
         "allow-credentials": false
@@ -162,7 +161,9 @@
     },
     "Stock": {
       "source": "stocks",
-      "rest": true,
+      "rest": {
+        "path": "commodities"
+      },
       "graphql": true,
       "permissions": [
         {
@@ -186,7 +187,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update", "delete" ]
         },
         {
           "role": "authenticated",
@@ -478,7 +479,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update" ]
         },
         {
           "role": "authenticated",
@@ -495,17 +496,23 @@
     "Comic": {
       "source": "comics",
       "rest": true,
-      "graphql": false,
+      "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "create", "read", "update" ]
         },
         {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
-      ]
+      ],
+      "relationships": {
+        "series": {
+          "cardinality": "one",
+          "target.entity": "series"
+        }
+      }
     },
     "Broker": {
       "source": "brokers",
@@ -589,7 +596,9 @@
     },
     "Shrub": {
       "source": "trees",
-      "rest": true,
+      "rest": {
+        "path": "plants"
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -645,6 +654,10 @@
       "source": "empty_table",
       "rest": true,
       "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
         {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
@@ -808,6 +821,59 @@
         "StrategicAttack": "謀攻",
         "NoteNum": "┬─┬ノ( º _ ºノ)"
       }
+    },
+    "series": {
+      "source": "series",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "relationships": {
+        "comics": {
+          "cardinality": "many",
+          "target.entity": "Comic"
+        }
+      }
+    },
+    "GetBooks": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "get_books"
+      },
+      "rest": true,
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
+        }
+      ]
+    },
+    "GetBook": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "get_book_by_id"
+      },
+      "rest": true,
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
+        }
+      ]
     }
   }
 }

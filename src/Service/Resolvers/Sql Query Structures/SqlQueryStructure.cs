@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
@@ -105,7 +106,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IMiddlewareContext ctx,
             IDictionary<string, object?> queryParams,
             ISqlMetadataProvider sqlMetadataProvider,
-            IAuthorizationResolver authorizationResolver)
+            IAuthorizationResolver authorizationResolver,
+            RuntimeConfigProvider runtimeConfigProvider)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
@@ -118,7 +120,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // The outermost query is where we start, so this can define
                 // create the IncrementingInteger that will be shared between
                 // all subqueries in this query.
-                new IncrementingInteger())
+                new IncrementingInteger(),
+                runtimeConfigProvider)
         {
             // support identification of entities by primary key when query is non list type nor paginated
             // only perform this action for the outermost query as subqueries shouldn't provide primary key search
@@ -134,7 +137,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public SqlQueryStructure(
             RestRequestContext context,
-            ISqlMetadataProvider sqlMetadataProvider) :
+            ISqlMetadataProvider sqlMetadataProvider,
+            RuntimeConfigProvider runtimeConfigProvider) :
             this(sqlMetadataProvider,
                 new IncrementingInteger(),
                 entityName: context.EntityName)
@@ -171,10 +175,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                             value: predicate.Value);
             }
 
-            // context.OrderByColumnsInUrl will lack TableAlias because it is created in RequestParser
-            // which may be called for any type of operation. To avoid coupling the OrderByClauseInUrl
+            // context.OrderByClauseOfBackingColumns will lack TableAlias because it is created in RequestParser
+            // which may be called for any type of operation. To avoid coupling the OrderByClauseOfBackingColumns
             // to only Find, we populate the TableAlias in this constructor where we know we have a Find operation.
-            OrderByColumns = context.OrderByClauseInUrl is not null ? context.OrderByClauseInUrl : PrimaryKeyAsOrderByColumns();
+            OrderByColumns = context.OrderByClauseOfBackingColumns is not null ?
+                context.OrderByClauseOfBackingColumns : PrimaryKeyAsOrderByColumns();
+
             foreach (OrderByColumn column in OrderByColumns)
             {
                 if (string.IsNullOrEmpty(column.TableAlias))
@@ -195,11 +201,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     FilterPredicates = GetFilterPredicatesFromOdataClause(context.FilterClauseInUrl, visitor);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    throw new DataApiBuilderException(message: "$filter query parameter is not well formed.",
-                                                   statusCode: HttpStatusCode.BadRequest,
-                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    throw new DataApiBuilderException(
+                        message: "$filter query parameter is not well formed.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                        exception: ex);
                 }
             }
 
@@ -211,11 +219,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     ProcessOdataClause(context.DbPolicyClause);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    throw new DataApiBuilderException(message: "Policy query parameter is not well formed.",
-                                                   statusCode: HttpStatusCode.Forbidden,
-                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                    throw new DataApiBuilderException(
+                        message: "Policy query parameter is not well formed.",
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
+                        exception: ex);
                 }
             }
 
@@ -223,8 +233,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After,
                                                                                   PaginationMetadata,
+                                                                                  sqlMetadataProvider,
                                                                                   EntityName,
-                                                                                  sqlMetadataProvider));
+                                                                                  runtimeConfigProvider));
             }
 
             _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
@@ -248,6 +259,28 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
+        /// Exposes the primary key of the underlying table of the structure
+        /// as a list of OrderByColumn
+        /// </summary>
+        private List<OrderByColumn> PrimaryKeyAsOrderByColumns()
+        {
+            if (_primaryKeyAsOrderByColumns is null)
+            {
+                _primaryKeyAsOrderByColumns = new();
+
+                foreach (string column in PrimaryKey())
+                {
+                    _primaryKeyAsOrderByColumns.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
+                                                                      tableName: DatabaseObject.Name,
+                                                                      columnName: column,
+                                                                      tableAlias: TableAlias));
+                }
+            }
+
+            return _primaryKeyAsOrderByColumns;
+        }
+
+        /// <summary>
         /// Private constructor that is used for recursive query generation,
         /// for each subquery that's necessary to resolve a nested GraphQL
         /// request.
@@ -260,6 +293,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 IObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter,
+                RuntimeConfigProvider runtimeConfigProvider,
                 string entityName = ""
         ) : this(sqlMetadataProvider, counter, entityName: entityName)
         {
@@ -318,7 +352,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // There may be another entity to resolve as a sub-query.
             if (queryField != null && queryField.SelectionSet != null)
             {
-                AddGraphQLFields(queryField.SelectionSet.Selections);
+                AddGraphQLFields(queryField.SelectionSet.Selections, runtimeConfigProvider);
             }
 
             // Get HttpContext from IMiddlewareContext and fail if resolved value is null.
@@ -398,7 +432,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // TableName, TableAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
-                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata));
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata, sqlMetadataProvider, EntityName, runtimeConfigProvider));
 
                 if (PaginationMetadata.RequestedEndCursor)
                 {
@@ -488,7 +522,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new DataApiBuilderException(
                   message: ex.Message,
                   statusCode: HttpStatusCode.BadRequest,
-                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                  exception: ex);
             }
 
             PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
@@ -530,7 +565,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new DataApiBuilderException(
                   message: ex.Message,
                   statusCode: HttpStatusCode.BadRequest,
-                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                  exception: ex);
             }
         }
 
@@ -606,7 +642,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// takes place which is required to fetch nested data.
         /// </summary>
         /// <param name="selections">Fields selection in the GraphQL Query.</param>
-        private void AddGraphQLFields(IReadOnlyList<ISelectionNode> selections)
+        private void AddGraphQLFields(IReadOnlyList<ISelectionNode> selections, RuntimeConfigProvider runtimeConfigProvider)
         {
             foreach (ISelectionNode node in selections)
             {
@@ -630,7 +666,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
 
                     IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
-                    SqlQueryStructure subquery = new(_ctx, subqueryParams, SqlMetadataProvider, AuthorizationResolver, subschemaField, field, Counter);
+                    SqlQueryStructure subquery = new(_ctx, subqueryParams, SqlMetadataProvider, AuthorizationResolver, subschemaField, field, Counter, runtimeConfigProvider);
 
                     if (PaginationMetadata.IsPaginated)
                     {
@@ -849,28 +885,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return orderByColumnsList;
-        }
-
-        /// <summary>
-        /// Exposes the primary key of the underlying table of the structure
-        /// as a list of OrderByColumn
-        /// </summary>
-        public List<OrderByColumn> PrimaryKeyAsOrderByColumns()
-        {
-            if (_primaryKeyAsOrderByColumns == null)
-            {
-                _primaryKeyAsOrderByColumns = new();
-
-                foreach (string column in PrimaryKey())
-                {
-                    _primaryKeyAsOrderByColumns.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
-                                                                      tableName: DatabaseObject.Name,
-                                                                      columnName: column,
-                                                                      tableAlias: TableAlias));
-                }
-            }
-
-            return _primaryKeyAsOrderByColumns;
         }
 
         /// <summary>

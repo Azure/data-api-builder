@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Service.Controllers;
-using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
@@ -94,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             },
             {
                 "PutOne_Insert_AutoGenNonPK_Test",
-                $"SELECT [id], [title], [volume], [categoryName] FROM { _integration_AutoGenNonPK_TableName } " +
+                $"SELECT [id], [title], [volume], [categoryName], [series_id] FROM { _integration_AutoGenNonPK_TableName } " +
                 $"WHERE id = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Star Trek' " +
                 $"AND [categoryName] = 'Suspense' " +
                 $"AND [volume] IS NOT NULL " +
@@ -173,16 +171,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         {
             DatabaseEngine = TestCategory.MSSQL;
             await InitializeTestFixture(context);
-            // Setup REST Components
-            _restService = new RestService(_queryEngine,
-                _mutationEngine,
-                _sqlMetadataProvider,
-                _httpContextAccessor.Object,
-                _authorizationService.Object,
-                _authorizationResolver,
-                _runtimeConfigProvider);
-            _restController = new RestController(_restService,
-                                                 _restControllerLogger);
         }
 
         /// <summary>

@@ -1,3 +1,6 @@
+
+using Microsoft.Extensions.Logging;
+
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
     // <summary>
@@ -37,10 +40,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlUpsertQueryStructure structure);
 
         /// <summary>
+        /// Builds the query specific to the target database for the given
+        /// SqlExecuteStructure object which holds the major components of the
+        /// query.
+        /// </summary>
+        public string Build(SqlExecuteStructure structure);
+
+        /// <summary>
         /// Builds the query to obtain foreign key information with the given
         /// number of parameters.
         /// </summary>
-        public string BuildForeignKeyInfoQuery(int numberOfParameters);
+        public string BuildForeignKeyInfoQuery(int numberOfParameters, bool developerMode, ILogger logger);
 
         /// <summary>
         /// Adds database specific quotes to string identifier

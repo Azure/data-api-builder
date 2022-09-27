@@ -2,7 +2,7 @@ import encoding from 'k6/encoding';
 import { check } from 'k6';
 
 // Helper function to determine if two objects which can contain nested objects are equal
-// in terms of the values present in each field within the objects.
+// in terms of the values present in each field within the objects
 export const isDeepEqual = (expectedResponseJson, actualResponseJson) => {
 
   const keysInExpectedResponseJson = Object.keys(expectedResponseJson);
@@ -18,8 +18,8 @@ export const isDeepEqual = (expectedResponseJson, actualResponseJson) => {
 
     const isObjects = isObject(expectedResponseValueForCurrentKey) && isObject(actualResponseValueForCurrentKey);
 
-    // If the values for the current key are objects, a recursive check is performed 
-    // on all the fields present within the object. Otherwise, the values are compared. 
+    // If the values for the current key are objects, a recursive check is performed
+    // on all the fields present within the object. Otherwise, the values are compared.
     if ((isObjects && !isDeepEqual(expectedResponseValueForCurrentKey, actualResponseValueForCurrentKey))
       || (!isObjects && expectedResponseValueForCurrentKey != actualResponseValueForCurrentKey)) {
       return false;
@@ -46,7 +46,7 @@ export const validateResponses = (queryNames, responses, expectedStatusCodes, ex
     'Validate expected status code': validateStatusCode(queryNames, responses, expectedStatusCodes)
   });
 
-  // Validates the response bodies  
+  // Validates the response bodies
   check(responses, {
     'Validate API response': validateResponseBody(queryNames, responses, expectedResponses)
   });
@@ -88,7 +88,7 @@ export const validateStatusCodes = (queryNames, responses, expectedStatusCodes1,
     || validateStatusCode(queryNames, responses, expectedStatusCodes2);
 };
 
-// Helper method to validate the status code for all the responses against 
+// Helper method to validate the status code for all the responses against
 // one set of expected status codes
 export const validateStatusCode = (queryNames, responses, expectedStatusCodes) => {
   let validationResult = true;
@@ -100,7 +100,7 @@ export const validateStatusCode = (queryNames, responses, expectedStatusCodes) =
   return validationResult;
 };
 
-// Helper methods to validate that the response bodies for all the reqeusts 
+// Helper methods to validate that the response bodies for all the reqeusts
 // is one of the expected set of expected response bodies
 export const validateResponseBodies = (queryNames, responses, expectedResponseBody1, expectedResponseBody2) => {
   return validateResponseBody(queryNames, responses, expectedResponseBody1)

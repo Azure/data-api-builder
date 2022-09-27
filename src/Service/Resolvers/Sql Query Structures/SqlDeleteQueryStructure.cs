@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Net;
 using Azure.DataApiBuilder.Config;
@@ -20,28 +21,39 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
 
-            List<string> primaryKeys = tableDefinition.PrimaryKey;
-            foreach (KeyValuePair<string, object?> param in mutationParams)
+            try
             {
-                if (param.Value is null)
+                List<string> primaryKeys = tableDefinition.PrimaryKey;
+                foreach (KeyValuePair<string, object?> param in mutationParams)
                 {
-                    // Should never happen since delete mutations expect non nullable pk params
-                    throw new DataApiBuilderException(
-                        message: $"Unexpected {param.Key} null argument.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                }
+                    if (param.Value is null)
+                    {
+                        // Should never happen since delete mutations expect non nullable pk params
+                        throw new DataApiBuilderException(
+                            message: $"Unexpected {param.Key} null argument.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
 
-                // primary keys used as predicates
-                SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
-                if (primaryKeys.Contains(backingColumn!))
-                {
-                    Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn!)),
-                        PredicateOperation.Equal,
-                        new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, backingColumn!))}")
-                    ));
-                }
+                    // primary keys used as predicates
+                    SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+                    if (primaryKeys.Contains(backingColumn!))
+                    {
+                        Predicates.Add(new Predicate(
+                            new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn!)),
+                            PredicateOperation.Equal,
+                            new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, backingColumn!))}")
+                        ));
+                    }
+                }         
+            }
+            catch (ArgumentException ex)
+            {
+                // ArgumentException thrown from GetParamAsColumnSystemType()
+                throw new DataApiBuilderException(
+                    message: ex.Message,
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
         }
     }

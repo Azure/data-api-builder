@@ -204,8 +204,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             catch (Exception e) when (e is FormatException || e is ArgumentNullException || e is OverflowException)
             {
-                throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
-                        $"with type \"{systemType.Name}\".");
+                throw new ArgumentException(
+                    message: $"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
+                        $"with type \"{systemType.Name}\".",
+                    innerException: e);
             }
         }
 

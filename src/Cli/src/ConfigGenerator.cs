@@ -662,7 +662,7 @@ namespace Cli
             { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile };
             if (options.LogLevel is not null)
             {
-                if (options.LogLevel is < 0 or > 6)
+                if ((int)options.LogLevel is < 0 or > 6)
                 {
                     Console.WriteLine($"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}");
                     return false;

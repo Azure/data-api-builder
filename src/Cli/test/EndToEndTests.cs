@@ -293,7 +293,6 @@ public class EndToEndTests
     [TestCleanup]
     public void CleanUp()
     {
-        Console.WriteLine("cleaning up.....");
         if (File.Exists(_testRuntimeConfig))
         {
             File.Delete(_testRuntimeConfig);

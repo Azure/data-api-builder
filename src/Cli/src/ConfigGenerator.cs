@@ -665,7 +665,7 @@ namespace Cli
             {
                 if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
                 {
-                    Console.WriteLine($"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}, see:" +
+                    Console.WriteLine($"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}, see: " +
                         $"https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-7.0");
                     return false;
                 }

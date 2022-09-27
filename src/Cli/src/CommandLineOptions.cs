@@ -1,5 +1,6 @@
 using Azure.DataApiBuilder.Config;
 using CommandLine;
+using Microsoft.Extensions.Logging;
 
 namespace Cli
 {
@@ -240,7 +241,19 @@ namespace Cli
     [Verb("start", isDefault: false, HelpText = "Start Data Api Builder Engine", Hidden = false)]
     public class StartOptions : Options
     {
-        public StartOptions(string config)
-            : base(config) { }
+        public StartOptions(bool verbose, LogLevel? logLevel, string config)
+            : base(config)
+        {
+            // When verbose is true we set LogLevel to information.
+            LogLevel = verbose is true ? Microsoft.Extensions.Logging.LogLevel.Information : logLevel;
+        }
+
+        // SetName defines mutually exclusive sets, ie: can not have
+        // both verbose and LogLevel.
+        [Option("verbose", SetName = "verbose", Required = false, HelpText = "Specify logging level as informational.")]
+        public bool Verbose { get; }
+        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = "Specify logging level as provided value, " +
+            "see: https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-7.0")]
+        public LogLevel? LogLevel { get; }
     }
 }

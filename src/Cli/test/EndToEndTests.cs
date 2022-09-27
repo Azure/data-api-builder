@@ -215,15 +215,38 @@ public class EndToEndTests
     // <summary>
     // Test to verify the engine gets started using start command
     // </summary>
-    [TestMethod]
-    public void TestStartEngine()
+    [DataTestMethod]
+    [DataRow("", DisplayName = "No logging from command line.")]
+    [DataRow("--verbose", DisplayName = "Verbose logging from command line.")]
+    [DataRow("--LogLevel 0", DisplayName = "LogLevel 0 from command line.")]
+    [DataRow("--LogLevel 1", DisplayName = "LogLevel 1 from command line.")]
+    [DataRow("--LogLevel 2", DisplayName = "LogLevel 2 from command line.")]
+    [DataRow("--LogLevel 3", DisplayName = "LogLevel 3 from command line.")]
+    [DataRow("--LogLevel 4", DisplayName = "LogLevel 4 from command line.")]
+    [DataRow("--LogLevel 5", DisplayName = "LogLevel 5 from command line.")]
+    [DataRow("--LogLevel 6", DisplayName = "LogLevel 6 from command line.")]
+    [DataRow("--LogLevel Trace", DisplayName = "LogLevel Trace from command line.")]
+    [DataRow("--LogLevel Debug", DisplayName = "LogLevel Debug from command line.")]
+    [DataRow("--LogLevel Information", DisplayName = "LogLevel Information from command line.")]
+    [DataRow("--LogLevel Warning", DisplayName = "LogLevel Warning from command line.")]
+    [DataRow("--LogLevel Error", DisplayName = "LogLevel Error from command line.")]
+    [DataRow("--LogLevel Critical", DisplayName = "LogLevel Critical from command line.")]
+    [DataRow("--LogLevel None", DisplayName = "LogLevel None from command line.")]
+    [DataRow("--LogLevel tRace", DisplayName = "Case sensitivity: LogLevel Trace from command line.")]
+    [DataRow("--LogLevel DebUG", DisplayName = "Case sensitivity: LogLevel Debug from command line.")]
+    [DataRow("--LogLevel information", DisplayName = "Case sensitivity: LogLevel Information from command line.")]
+    [DataRow("--LogLevel waRNing", DisplayName = "Case sensitivity: LogLevel Warning from command line.")]
+    [DataRow("--LogLevel eRROR", DisplayName = "Case sensitivity: LogLevel Error from command line.")]
+    [DataRow("--LogLevel CrItIcal", DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
+    [DataRow("--LogLevel NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
+    public void TestStartEngine(string logging)
     {
         Process process = new()
         {
             StartInfo =
                 {
                     FileName = @"./dab",
-                    Arguments = $"start --config {RuntimeConfigPath.DefaultName}",
+                    Arguments = $"start --config {RuntimeConfigPath.DefaultName} {logging}",
                     WindowStyle = ProcessWindowStyle.Hidden,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,

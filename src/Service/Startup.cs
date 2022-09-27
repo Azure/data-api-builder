@@ -316,12 +316,8 @@ namespace Azure.DataApiBuilder.Service
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                if (runtimeConfig is not null && runtimeConfig.GraphQLGlobalSettings.Enabled)
-                {
-                    endpoints.MapGraphQL(runtimeConfig.GraphQLGlobalSettings.Path);
-                    endpoints.MapBananaCakePop();
-                }
-
+                endpoints.MapGraphQL("/graphql");
+                endpoints.MapBananaCakePop();
                 endpoints.MapHealthChecks("/");
             });
         }

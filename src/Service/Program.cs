@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Authentication;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.AspNetCore;
@@ -53,6 +54,17 @@ namespace Azure.DataApiBuilder.Service
                         });
                     ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
                     ILogger<RuntimeConfigProvider>? configProviderLogger = loggerFactory.CreateLogger<RuntimeConfigProvider>();
+
+                    // Disallow legacy TLS by default because some hosting environments
+                    // may have legacy TLS versions enabled by default, such as Windows Server 2016 with TLS 1.0
+                    webBuilder.UseKestrel(kestrelOptions =>
+                    {
+                        kestrelOptions.ConfigureHttpsDefaults(httpsOptions =>
+                        {
+                            httpsOptions.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
+                        });
+                    });
+
                     webBuilder.UseStartup(builder =>
                     {
                         return new Startup(builder.Configuration, startupLogger, configProviderLogger);

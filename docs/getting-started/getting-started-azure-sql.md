@@ -30,7 +30,7 @@ Create the database tables needed to represent Authors, Books and the many-to-ma
 - `dbo.books`: Table containing books
 - `dbo.books_authors`: Table associating books with respective authors
 
-Execute the script in the SQL Server or Azure SQL database you decided to use, so that the tables with samples data are created and populated.
+Execute the script in the SQL Server or Azure SQL database you decided to use, so that the tables with sample data are created and populated.
 
 ## Creating a configuration file for DAB
 

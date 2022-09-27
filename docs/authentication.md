@@ -19,7 +19,7 @@ To use this provider you need to specify the following configuration in the `run
 }
 ```
 
-Using the EasyAuth provider is useful when you plan to run Data API builder in Azure, hosting it using an App Service and running it in a container: [Run a custom container in Azure](https://learn.microsoft.com/azure/app-service/quickstart-custom-container?tabs=dotnet&pivots=container-linux-vscode).
+Using the EasyAuth provider is useful when you plan to run Data API builder in Azure, hosting it using App Service and running it in a container: [Run a custom container in Azure App Service](https://learn.microsoft.com/azure/app-service/quickstart-custom-container?tabs=dotnet&pivots=container-linux-vscode).
 
 ## JWT
 

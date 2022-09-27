@@ -28,7 +28,7 @@ To allow this ability to work, Data API Builder needs to know how the two object
 
 No matter what database you are using with Data API Builder, you have to explicitly tell Data API Builder that an object is related to another one even if, using Foreign Key metadata when available, it could infer it automatically. This is done to allow you to have full control on what is exposed via GraphQL and what not.
 
-There are three types of relationship that can be established between two entities:
+There are three types of relationships that can be established between two entities:
 
 - [One-to-Many Relationship](#one-to-many-relationship)
 - [Many-to-One Relationship](#many-to-one-relationship)
@@ -75,7 +75,7 @@ which will update the `series` entity - used in the example - to look like the f
 }
 ```
 
-A new key has been added under the `relationships` element: `books`. The element defines the name that will be used for GraphQL field to navigate from the series object to the object defined in the `target.entity`, `book` in this case. This means that there must be an entity called `book` in configuration file.
+A new key has been added under the `relationships` element: `books`. The element defines the name that will be used for the GraphQL field to navigate from the `series` object to the object defined in the `target.entity`, `book` in this case. This means that there must be an entity called `book` in configuration file.
 
 `cardinality` property tells Data API Builder that there can be many books in each series, so the created GraphQL field will return a list of items.
 
@@ -157,16 +157,16 @@ where each book will return also the series it belongs to.
 
 ### Many-To-Many Relationship
 
-Many to many relationships can be seen as a pair of One-to-Many and Many-to-One relationships working together. An author can surely write more than one book (a One-to-Many relationship), but is also true than more than one author can work on the same book (a Many-to-One relationship).
+Many to many relationships can be seen as a pair of One-to-Many and Many-to-One relationships working together. An author can surely write more than one book (a One-to-Many relationship), but is also true that more than one author can work on the same book (a Many-to-One relationship).
 
-Data API builder support this type of relationship natively:
+Data API builder supports this type of relationship natively:
 
 - using a pair of One-to-Many/Many-to-One relationships
 - using a *linking object*
 
 #### Using a pair of One-to-Many/Many-to-One relationships
 
-Continuing using the books and authors sample, one business requirement that is likely to be there is to keep track of how royalties are split between the authors of a book. To implement such requirement a dedicate entity that link together an author, a book and the assigned royalties is needed, so that there are three entities involved. If
+Continuing using the books and authors sample, one business requirement that is likely to be there is to keep track of how royalties are split between the authors of a book. To implement such requirement a dedicated entity that link together an author, a book and the assigned royalties is needed, so that there are three entities involved. If
 
 - `authors`, to represent biographical details of authors
 - `books`, to represent book data like title and ISBN
@@ -223,15 +223,15 @@ to add the relationships from `book_author` to `book` and `authors`. With the pr
 }
 ```
 
-where you are asking the return all the authors, the book they have written along with the related royalties.
+where you are asking to return all the authors, the book they have written along with the related royalties.
 
 #### Using a linking object
 
-The process described in the previous section works great if all the entities involved in the Many-to-Many relationships needs to be access via GraphQL. This is not always the case. For example, if you don't need to keep track of royalties, the `book_author` entity doesn't really bring any value to the end user, as it is just used to associated books to their authors. In relational databases Many-to-Many relationships are created using such third table that *links* the tables participating in the Many-to-Many relationship together:
+The process described in the previous section works great if all the entities involved in the Many-to-Many relationships need to be accessed via GraphQL. This is not always the case. For example, if you don't need to keep track of royalties, the `book_author` entity doesn't really bring any value to the end user, as it is just used to associated books to their authors. In relational databases Many-to-Many relationships are created using such third table that *links* the tables participating in the Many-to-Many relationship together:
 
 ![Many-to-Many Relationship](./media/relationship-many-to-many-02.png)
 
-In the diagram above you can see that there is a table named `books_authors` that is linking authors with their books and books with their authors. This linking table doesn't need to be exposed to the end user as it is just an artifact to allow the Many-to-Many relationship to exists, but Data API builder needs to know its existence in order to properly use it.
+In the diagram above you can see that there is a table named `books_authors` that is linking authors with their books and books with their authors. This linking table doesn't need to be exposed to the end user as it is just an artifact to allow the Many-to-Many relationship to exist, but Data API builder needs to know its existence in order to properly use it.
 
 DAB CLI can be used to create the Many-to-Many relationship and also configure the linking object (make sure to remove all the relationships created in the previous section and start only with the `book` and `author` entity with no configured relationship between them already):
 
@@ -259,9 +259,9 @@ which will update the JSON configuration file to be like the following:
 }
 ```
 
-the configuration is telling DAB that you want to add a field in the `book` entity that will allow access to books `authors`. `authors` can be `many`, so a list of authors will be returned when the GraphQL query will access the `authors` field. This relationship defines how to navigate *from* books *to* authors, so the database fields used to navigate from books to their authors are defined in the `source.fields` for the book, and in the `target.fields` for the authors, similarly to the One-to-Many or Many-to-One relationship described above.
+the configuration is telling DAB that you want to add a field in the `book` entity that will allow access to `authors` of the book. `authors` can be `many`, so a list of authors will be returned when the GraphQL query will access the `authors` field. This relationship defines how to navigate *from* books *to* authors, so the database fields used to navigate from books to their authors are defined in the `source.fields` for the book, and in the `target.fields` for the authors, similarly to the One-to-Many or Many-to-One relationship described above.
 
-This is a Many-to-Many relationship, so there is no direct connection between the two entities and so a `linking.object` needs to be used. In the sample the database table `dbo.books_authors` is used as the linking object. How the linking object is able to connect books to their authors is defined in the `linking.source.fields` and `linking.target.fields` properties. The first one tells DAB how the source entity - the `book` is connected to the liking object, and the second one how to linking object is connected to the target entity, `author` in the sample.
+This is a Many-to-Many relationship, so there is no direct connection between the two entities and so a `linking.object` needs to be used. In the sample the database table `dbo.books_authors` is used as the linking object. How the linking object is able to connect books to their authors is defined in the `linking.source.fields` and `linking.target.fields` properties. The first one tells DAB how the source entity - the `book` is connected to the liking object, and the second one how the linking object is connected to the target entity, `author` in the sample.
 
 To understand how the provided information are used, you can visualize the equivalent query that you would have written:
 

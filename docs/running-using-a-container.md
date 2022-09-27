@@ -12,7 +12,7 @@ once you are logged in you can run Data API Builder from Docker:
 docker run -it -v <configuration-file>://App/<configuration-file> -p 5000:5000 hawaiiacr.azurecr.io/dab:<tag> --ConfigFileName <configuration-file>
 ```
 
-for example, if:
+For example, if:
 
 - you are working in the `c:\data-api-builder` folder
 - the configuration file you want to use in the `samples` folder and is named `my-sample-dab-config.json`

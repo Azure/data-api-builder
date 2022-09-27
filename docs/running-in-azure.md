@@ -24,7 +24,7 @@ get the user name and the password you'll be using to allow the App Service to p
 az acr credential show --name dmdabcr --query "{username:username, password:passwords[0].value}"
 ```
 
-I'll be using the `username` and `password` values later. If you don't want to use username and password, you can switch to use Managed Identities for more security: [Use managed identity to pull image from Azure Container Registry](https://docs.microsoft.com/azure/app-service/configure-custom-container?pivots=container-linux#use-managed-identity-to-pull-image-from-azure-container-registry)
+I'll be using the `username` and `password` values later. If you don't want to use username and password, you can switch to use Managed Identities for more security: [Use managed identity to pull image from Azure Container Registry](https://learn.microsoft.com/azure/app-service/configure-custom-container?pivots=container-linux#use-managed-identity-to-pull-image-from-azure-container-registry)
 
 ### Build the Docker image
 

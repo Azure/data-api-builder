@@ -218,4 +218,3 @@ steps:
       $(BuildDate)-$(Build.SourceVersion)
       $(releaseName)
       $(dabVersion)
-      

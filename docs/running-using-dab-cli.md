@@ -48,7 +48,7 @@ To quickly get started using the CLI, make sure you have read the [Getting Start
 
 ## Uninstall `dab` CLI
 
-For some reason, if you need to uninstall `dab` cli, simply do:
+For any reason, if you need to uninstall `dab` cli, simply do:
 
 ```bash
 dotnet tool uninstall -g dab

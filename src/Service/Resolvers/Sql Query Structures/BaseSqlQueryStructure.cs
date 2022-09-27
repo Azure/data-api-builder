@@ -195,7 +195,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         ///</summary>
         /// <exception cref="ArgumentException">columnName is not a valid column of table or param
         /// does not have a valid value type</exception>
-        protected object GetParamAsColumnSystemType(string param, string columnName)
+        protected object? GetParamAsColumnSystemType(string param, string columnName)
         {
             Type systemType = GetColumnSystemType(columnName);
             try
@@ -224,7 +224,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="systemType"></param>
         /// <returns></returns>
         /// <exception cref="NotSupportedException"></exception>
-        protected object ParseParamAsSystemType(string param, Type systemType)
+        protected object? ParseParamAsSystemType(string param, Type systemType)
         {
             return systemType.Name switch
             {

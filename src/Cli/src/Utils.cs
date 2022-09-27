@@ -168,7 +168,7 @@ namespace Cli
                 JsonElement operationJson = (JsonElement)operation;
                 if (operationJson.ValueKind is JsonValueKind.String)
                 {
-                    if (TryConvertOperationNameToOperation(operationJson.GetString(), out Operation op))
+                    if (TryConvertOperationNameToOperation(operationJson.GetString()!, out Operation op))
                     {
                         if (op is Operation.All)
                         {

@@ -32,7 +32,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Authorization Resolver used within SqlQueryStructure to get and apply
         /// authorization policies to requests.
         /// </summary>
-        protected IAuthorizationResolver AuthorizationResolver { get; }
+        protected IAuthorizationResolver? AuthorizationResolver { get; }
 
         public const string DATA_IDENT = "data";
 
@@ -660,7 +660,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
 
                     IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
-                    SqlQueryStructure subquery = new(_ctx, subqueryParams, SqlMetadataProvider, AuthorizationResolver, subschemaField, field, Counter, runtimeConfigProvider);
+                    SqlQueryStructure subquery = new(_ctx, subqueryParams, SqlMetadataProvider, AuthorizationResolver!, subschemaField, field, Counter, runtimeConfigProvider);
 
                     if (PaginationMetadata.IsPaginated)
                     {

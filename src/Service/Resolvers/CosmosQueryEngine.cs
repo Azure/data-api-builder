@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a single Json back.
         /// </summary>
-        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
+        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -319,8 +319,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     if (string.Equals(item.Name.Value, "id", StringComparison.OrdinalIgnoreCase))
                     {
-                        IList<ObjectFieldNode> idValueObj = (IList<ObjectFieldNode>)item.Value.Value;
-                        return idValueObj.FirstOrDefault(x => x.Name.Value == "eq")?.Value.Value.ToString();
+                        IList<ObjectFieldNode> idValueObj = (IList<ObjectFieldNode>)item.Value.Value!;
+                        return idValueObj.FirstOrDefault(x => x.Name.Value == "eq")?.Value.Value!.ToString();
                     }
                 }
             }
@@ -328,7 +328,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return null;
         }
 
-        private static string Base64Encode(string plainText)
+        private static string? Base64Encode(string plainText)
         {
             if (plainText == default)
             {
@@ -339,7 +339,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return Convert.ToBase64String(plainTextBytes);
         }
 
-        private static string Base64Decode(string base64EncodedData)
+        private static string? Base64Decode(string base64EncodedData)
         {
             if (base64EncodedData == default)
             {

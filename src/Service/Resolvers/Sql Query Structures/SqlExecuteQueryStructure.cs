@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Gets the value of the parameter cast as the system type
         /// of the stored procedure parameter this parameter is associated with
         /// </summary>
-        private object GetParamAsProcedureParameterType(string param, string procParamName)
+        private object? GetParamAsProcedureParameterType(string param, string procParamName)
         {
             Type systemType = GetUnderlyingStoredProcedureDefinition().Parameters[procParamName].SystemType!;
             try

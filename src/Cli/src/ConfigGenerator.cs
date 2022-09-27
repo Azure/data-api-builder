@@ -541,7 +541,7 @@ namespace Cli
                 }
             }
 
-            return updatedOperationArray.ToArray();
+            return updatedOperationArray.ToArray()!;
         }
 
         /// <summary>

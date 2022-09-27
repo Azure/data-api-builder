@@ -245,7 +245,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             EventHandler<RuntimeConfig>? handlers = RuntimeConfigLoaded;
             if (handlers != null)
             {
-                handlers(this, RuntimeConfiguration);
+                handlers(this, RuntimeConfiguration!);
             }
         }
 

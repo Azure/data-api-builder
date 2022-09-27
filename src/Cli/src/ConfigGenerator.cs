@@ -212,9 +212,15 @@ namespace Cli
             }
 
             // Try to get the source object as string or DatabaseObjectSource
+            string[]? sourceKeyFields = null;
+            if (options.SourceKeyFields is not null)
+            {
+                sourceKeyFields = options.SourceKeyFields.ToArray();
+            }
+
             if (!TryGetSourceObject(
                 options.Source, options.SourceType, parametersDictionary,
-                options.SourceKeyFields is null || !options.SourceKeyFields.Any() ? null : options.SourceKeyFields.ToArray(),
+                sourceKeyFields,
                 out object? source))
             {
                 Console.Error.WriteLine("Unable to parse the given source.");
@@ -576,7 +582,7 @@ namespace Cli
             Dictionary<string, object>? updatedSourceParameters;
             if (options.SourceParameters is null)
             {
-                updatedSourceParameters = entity!.Parameters;
+                updatedSourceParameters = entity.Parameters;
             }
             else if (!TryParseSourceParameterDictionary(options.SourceParameters, out updatedSourceParameters))
             {
@@ -584,8 +590,8 @@ namespace Cli
                 return false;
             }
 
-            string[]? updatedKeyFields = options.SourceKeyFields is null ? entity!.KeyFields : options.SourceKeyFields.ToArray();
-            string? updatedSourceType = options.SourceType is null ? entity!.SourceTypeName : options.SourceType;
+            string[]? updatedKeyFields = options.SourceKeyFields is null ? entity.KeyFields : options.SourceKeyFields.ToArray();
+            string? updatedSourceType = options.SourceType is null ? entity.SourceTypeName : options.SourceType;
 
             // Try Creating Source Object with the updated values.
             if (!TryGetSourceObject(updatedSourceName, updatedSourceType,

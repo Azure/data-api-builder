@@ -921,15 +921,15 @@ namespace Cli.Tests
                     AssertOldAndUpdatedValuesForSourceObject(
                         options,
                         initialConfig,
-                        "MyEntity",
-                        "s001.book",
-                        "newSourceName",
-                        "stored-procedure",
-                        "stored-procedure",
-                        new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
-                        new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
-                        null,
-                        null
+                        entityName: "MyEntity",
+                        oldSourceName: "s001.book",
+                        updatedSourceName: "newSourceName",
+                        oldSourceType: "stored-procedure",
+                        updatedSourceType: "stored-procedure",
+                        oldParameters: new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
+                        updatedParameters: new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
+                        oldKeyFields: null,
+                        updatedKeyFields: null
                     );
                     break;
 
@@ -937,15 +937,15 @@ namespace Cli.Tests
                     AssertOldAndUpdatedValuesForSourceObject(
                         options,
                         initialConfig,
-                        "MyEntity",
-                        "s001.book",
-                        "s001.book",
-                        "stored-procedure",
-                        "stored-procedure",
-                        new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
-                        new Dictionary<string, object>() { { "param1", "dab" }, { "param2", false } },
-                        null,
-                        null
+                        entityName: "MyEntity",
+                        oldSourceName: "s001.book",
+                        updatedSourceName: "s001.book",
+                        oldSourceType: "stored-procedure",
+                        updatedSourceType: "stored-procedure",
+                        oldParameters: new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
+                        updatedParameters: new Dictionary<string, object>() { { "param1", "dab" }, { "param2", false } },
+                        oldKeyFields: null,
+                        updatedKeyFields: null
                     );
                     break;
 
@@ -954,15 +954,15 @@ namespace Cli.Tests
                     AssertOldAndUpdatedValuesForSourceObject(
                         options,
                         initialConfig,
-                        "MyEntity",
-                        "s001.book",
-                        "s001.book",
-                        "table",
-                        "table",
-                        null,
-                        null,
-                        new string[] { "id", "name" },
-                        new string[] { "col1", "col2" }
+                        entityName: "MyEntity",
+                        oldSourceName: "s001.book",
+                        updatedSourceName: "s001.book",
+                        oldSourceType: "table",
+                        updatedSourceType: "table",
+                        oldParameters: null,
+                        updatedParameters: null,
+                        oldKeyFields: new string[] { "id", "name" },
+                        updatedKeyFields: new string[] { "col1", "col2" }
                     );
                     break;
             }

@@ -507,7 +507,7 @@ namespace Cli
 
             if (!VerifySourceObjectFields(name, type, parameters, keyFields))
             {
-                Console.Error.WriteLine("Invalid Fields for Source.");
+                Console.Error.WriteLine("Invalid fields for Source.");
                 return false;
             }
 
@@ -549,24 +549,9 @@ namespace Cli
                 return false;
             }
 
-            SourceType? objectType;
-            if (type is not null)
+            if (!TryGetSourceObjectType(type, out SourceType? objectType))
             {
-                try
-                {
-                    objectType = Entity.ConvertSourceType(type);
-                }
-                catch (Exception e)
-                {
-                    // Invalid SourceType provided.
-                    Console.Error.WriteLine(e.Message);
-                    return false;
-                }
-            }
-            else
-            {
-                // If sourceType is not explicitly specified, we assume it is a Table
-                objectType = SourceType.Table;
+                return false;
             }
 
             if ((SourceType.StoredProcedure).Equals(objectType))
@@ -586,6 +571,34 @@ namespace Cli
                 }
             }
 
+            return true;
+        }
+
+        /// <summary>
+        /// Tries to convert given string to SourceType.
+        /// returns true on successful conversion else return false.
+        /// </summary>
+        public static bool TryGetSourceObjectType(string? type, out SourceType? objectType)
+        {
+            objectType=null;
+            if (type is not null)
+            {
+                try
+                {
+                    objectType = Entity.ConvertSourceType(type);
+                }
+                catch (Exception e)
+                {
+                    // Invalid SourceType provided.
+                    Console.Error.WriteLine(e.Message);
+                    return false;
+                }
+            }
+            else
+            {
+                // If sourceType is not explicitly specified, we assume it is a Table
+                objectType = SourceType.Table;
+            }
             return true;
         }
 

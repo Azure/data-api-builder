@@ -208,8 +208,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     e is ArgumentNullException ||
                     e is OverflowException)
                 {
-                    throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
-                        $"with type \"{systemType.Name}\".");
+                    throw new DataApiBuilderException(
+                        message: e.Message,
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
                 throw;

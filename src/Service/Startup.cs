@@ -189,8 +189,8 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
 
             AddGraphQL(services);
-
             services.AddControllers();
+            services.AddSwaggerGen();
         }
 
         private void AddGraphQL(IServiceCollection services)
@@ -265,7 +265,7 @@ namespace Azure.DataApiBuilder.Service
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
 
             app.UseRouting();
 

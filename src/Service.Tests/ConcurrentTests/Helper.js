@@ -144,5 +144,6 @@ export const statusCodes = {
   Ok: 200,
   NoContent: 204,
   Created: 201,
-  NotFound: 404
+  NotFound: 404,
+  InternalServerError: 500
 };

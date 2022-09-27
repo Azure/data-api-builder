@@ -202,17 +202,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 return ParseParamAsSystemType(param, systemType);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is FormatException || e is ArgumentNullException || e is OverflowException)
             {
-                if (e is FormatException ||
-                    e is ArgumentNullException ||
-                    e is OverflowException)
-                {
-                    throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
+                throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
                         $"with type \"{systemType.Name}\".");
-                }
-
-                throw;
             }
         }
 

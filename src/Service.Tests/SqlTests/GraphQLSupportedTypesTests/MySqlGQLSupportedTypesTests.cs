@@ -34,6 +34,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             ";
         }
 
+        protected override bool IsSupportedType(string type)
+        {
+            return type switch
+            {
+                GUID_TYPE => false,
+                _ => true
+            };
+        }
+
         /// <summary>
         /// Appends parsing logic to some columns which need it
         /// </summary>

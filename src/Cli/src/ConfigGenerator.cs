@@ -573,24 +573,58 @@ namespace Cli
         /// <summary>
         /// Parses updated options and uses them to create a new sourceObject
         /// for the given entity.
+        /// Verifies if the given combination of fields is valid for update
+        /// and then it updates it, else it fails.
         /// </summary>
         private static bool TryGetUpdatedSourceObjectWithOptions(UpdateOptions options, Entity entity, out object? updatedSourceObject)
         {
             entity.TryPopulateSourceFields();
+            updatedSourceObject = null;
             string updatedSourceName = options.Source is null ? entity!.SourceName : options.Source;
-            Dictionary<string, object>? updatedSourceParameters;
-            if (options.SourceParameters is null)
+            string[]? updatedKeyFields = entity.KeyFields;
+            string? updatedSourceType = entity.SourceTypeName;
+            Dictionary<string, object>? updatedSourceParameters = entity.Parameters;
+
+            // Changing source object from stored-procedure to table/view
+            // should automatically update the parameters to be null.
+            // Similarly from table/view to stored-procedure, key-fields
+            // should be marked null.
+            if (options.SourceType is not null && !options.SourceType.Equals(entity.SourceTypeName))
             {
-                updatedSourceParameters = entity.Parameters;
+                updatedSourceType = options.SourceType;
+                if ("stored-procedure".Equals(options.SourceType))
+                {
+                    if (options.SourceKeyFields is not null)
+                    {
+                        Console.Error.WriteLine("Stored Procedures don't support keyfields.");
+                        return false;
+                    }
+
+                    updatedKeyFields = null;
+                }
+                else
+                {
+                    if (options.SourceParameters is not null)
+                    {
+                        Console.Error.WriteLine("Tables/Views don't support parameters.");
+                        return false;
+                    }
+
+                    updatedSourceParameters = null;
+                }
             }
-            else if (!TryParseSourceParameterDictionary(options.SourceParameters, out updatedSourceParameters))
+
+            if (options.SourceParameters is not null &&
+                !TryParseSourceParameterDictionary(options.SourceParameters, out updatedSourceParameters))
             {
                 updatedSourceObject = null;
                 return false;
             }
 
-            string[]? updatedKeyFields = options.SourceKeyFields is null ? entity.KeyFields : options.SourceKeyFields.ToArray();
-            string? updatedSourceType = options.SourceType is null ? entity.SourceTypeName : options.SourceType;
+            if (options.SourceKeyFields is not null)
+            {
+                updatedKeyFields = options.SourceKeyFields.ToArray();
+            }
 
             // Try Creating Source Object with the updated values.
             if (!TryCreateSourceObject(updatedSourceName, updatedSourceType,

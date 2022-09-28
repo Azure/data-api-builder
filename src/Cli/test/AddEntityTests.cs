@@ -29,8 +29,8 @@ namespace Cli.Tests
                 policyDatabase: null,
                 config: _testRuntimeConfig);
 
-            string initialConfiguration = InitialConfiguration;
-            string expectedConfiguration = AddPropertiesToJson(InitialConfiguration, GetFirstEntityConfiguration());
+            string initialConfiguration = INITIAL_CONFIG;
+            string expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
             RunTest(options, initialConfiguration, expectedConfiguration);
         }
 
@@ -55,8 +55,8 @@ namespace Cli.Tests
                 policyDatabase: null,
                 config: _testRuntimeConfig);
 
-            string initialConfiguration = AddPropertiesToJson(InitialConfiguration, GetFirstEntityConfiguration());
-            string configurationWithOneEntity = AddPropertiesToJson(InitialConfiguration, GetFirstEntityConfiguration());
+            string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
+            string configurationWithOneEntity = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
             string expectedConfiguration = AddPropertiesToJson(configurationWithOneEntity, GetSecondEntityConfiguration());
             RunTest(options, initialConfiguration, expectedConfiguration);
 
@@ -83,7 +83,7 @@ namespace Cli.Tests
                 policyDatabase: null,
                 config: _testRuntimeConfig);
 
-            string initialConfiguration = AddPropertiesToJson(InitialConfiguration, GetFirstEntityConfiguration());
+            string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
             Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref initialConfiguration));
         }
 
@@ -110,8 +110,8 @@ namespace Cli.Tests
                 config: _testRuntimeConfig
             );
 
-            string initialConfiguration = AddPropertiesToJson(InitialConfiguration, GetFirstEntityConfiguration());
-            string configurationWithOneEntity = AddPropertiesToJson(InitialConfiguration, GetFirstEntityConfiguration());
+            string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
+            string configurationWithOneEntity = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
             string expectedConfiguration = AddPropertiesToJson(configurationWithOneEntity, GetConfigurationWithCaseSensitiveEntityName());
             RunTest(options, initialConfiguration, expectedConfiguration);
         }
@@ -149,17 +149,17 @@ namespace Cli.Tests
             switch (check)
             {
                 case "PolicyAndFields":
-                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, EntityConfigurationWithPolicyAndFields);
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLCIY_AND_ACTION_FIELDS);
                     break;
                 case "Policy":
-                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, EntityConfigurationWithPolicy);
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLICY);
                     break;
                 case "Fields":
-                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, EntityConfigurationWithFields);
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_ACTION_FIELDS);
                     break;
             }
 
-            RunTest(options, InitialConfiguration, expectedConfiguration!);
+            RunTest(options, INITIAL_CONFIG, expectedConfiguration!);
         }
 
         /// <summary>
@@ -183,8 +183,8 @@ namespace Cli.Tests
                 policyDatabase: null,
                 config: _testRuntimeConfig);
 
-            string initialConfiguration = InitialConfiguration;
-            string expectedConfiguration = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceAsStoredProcedure);
+            string initialConfiguration = INITIAL_CONFIG;
+            string expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
             RunTest(options, initialConfiguration, expectedConfiguration);
         }
 
@@ -225,7 +225,7 @@ namespace Cli.Tests
                 policyDatabase: null,
                 config: _testRuntimeConfig);
 
-            string runtimeConfig = InitialConfiguration;
+            string runtimeConfig = INITIAL_CONFIG;
 
             Assert.AreEqual(expectSuccess, ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
         }
@@ -259,7 +259,7 @@ namespace Cli.Tests
                 policyDatabase: null,
                 config: _testRuntimeConfig);
 
-            string runtimeConfig = InitialConfiguration;
+            string runtimeConfig = INITIAL_CONFIG;
 
             Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
         }

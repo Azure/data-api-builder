@@ -507,14 +507,20 @@ namespace Cli
             type = (string.Empty).Equals(type) ? null : type;
             sourceObject = null;
 
-            if (!VerifySourceObjectFields(name, type, parameters, keyFields))
+            try
             {
-                Console.Error.WriteLine("Invalid fields for Source.");
+                DatabaseObjectSource.VerifySourceObjectFields(name, type, parameters, keyFields);
+            }
+            catch (JsonException e)
+            {
+                Console.Error.WriteLine(e.Message);
                 return false;
             }
 
             // If type, parameter, and keyfields is null then return the source as string.
-            if (type is null && parameters is null && keyFields is null)
+            // By default source type is table, so we can keep the source object as string
+            // if it is updated to table considering other fields are null.
+            if ((type is null || "table".Equals(type)) && parameters is null && keyFields is null)
             {
                 sourceObject = name;
                 return true;
@@ -526,74 +532,6 @@ namespace Cli
                 Parameters: parameters,
                 KeyFields: keyFields
             );
-
-            return true;
-        }
-
-        /// <summary>
-        /// Verifies whether a valid source object can be created from the given source fields.
-        /// It checks for valid source name, type is either table,views, or stored-procedure.
-        /// Verifies that parameter is only used with Stored Procedure, while key fields with
-        /// tables/views only.
-        /// </summary>
-        public static bool VerifySourceObjectFields(
-            string? name,
-            string? type,
-            Dictionary<string, object>? parameters,
-            string[]? keyFields
-        )
-        {
-            // Source name cannot be null.
-            if (name is null)
-            {
-                return false;
-            }
-
-            // Converts Sourcetype string into SourceObjectType Enum.
-            if (!TryGetSourceObjectType(type, out SourceType? objectType))
-            {
-                return false;
-            }
-
-            // Stored Procedure only supports Parameters.
-            if ((SourceType.StoredProcedure).Equals(objectType))
-            {
-                if (keyFields is not null)
-                {
-                    Console.Error.WriteLine("KeyFields is only supported for Table and Views.");
-                    return false;
-                }
-            }
-            else
-            {
-                // Table/Views only support key fields.
-                if (parameters is not null)
-                {
-                    Console.Error.WriteLine("parameters are only supported for Stored Procedure.");
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Tries to convert given string to SourceType.
-        /// returns true on successful conversion else return false.
-        /// </summary>
-        public static bool TryGetSourceObjectType(string? type, out SourceType? objectType)
-        {
-            try
-            {
-                objectType = Entity.ConvertSourceType(type);
-            }
-            catch (JsonException e)
-            {
-                // Invalid SourceType provided.
-                Console.Error.WriteLine(e.Message);
-                objectType = null;
-                return false;
-            }
 
             return true;
         }

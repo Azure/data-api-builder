@@ -791,18 +791,18 @@ namespace Cli.Tests
                 config: _testRuntimeConfig
             );
 
-            string? actualConfig = AddPropertiesToJson(InitialConfiguration, SingleEntity);
+            string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
             string? expectedConfiguration = null;
             switch (check)
             {
                 case "PolicyAndFields":
-                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, EntityConfigurationWithPolicyAndFieldsGeneratedWithUpdateCommand);
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLCIY_AND_ACTION_FIELDS);
                     break;
                 case "Policy":
-                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, EntityConfigurationWithPolicyWithUpdateCommand);
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLICY);
                     break;
                 case "Fields":
-                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, EntityConfigurationWithFieldsGeneratedWithUpdateCommand);
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_ACTION_FIELDS);
                     break;
             }
 
@@ -816,7 +816,7 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow("s001.book", null, null, null, "UpdateSourceName", DisplayName = "Both KeyFields and Parameters provided for source.")]
         [DataRow(null, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" }, null, "ConvertToStoredProcedure", DisplayName = "SourceParameters with stored procedure.")]
-        [DataRow(null, "view", null, new string[] { "id", "name" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
+        [DataRow(null, "view", null, new string[] { "col1", "col2" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
         [DataRow(null, "table", null, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
         [DataRow(null, null, null, new string[] { "id", "name" }, "ConvertToDefaultType", DisplayName = "Source KeyFields with SourceType not provided")]
         public void TestUpdateSourceStringToDatabaseSourceObject(
@@ -852,22 +852,22 @@ namespace Cli.Tests
                 config: _testRuntimeConfig
             );
 
-            string? actualConfig = AddPropertiesToJson(InitialConfiguration, BasicEntityWithAnonymousRole);
+            string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
             string? expectedConfiguration;
             switch (task)
             {
                 case "UpdateSourceName":
-                    actualConfig = AddPropertiesToJson(InitialConfiguration, SingleEntity);
-                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, BasicEntityWithAnonymousRole);
+                    actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
                     break;
                 case "ConvertToStoredProcedure":
-                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceAsStoredProcedure);
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
                     break;
                 case "ConvertToView":
-                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceForView);
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_SOURCE_AS_VIEW);
                     break;
                 default:
-                    expectedConfiguration = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceWithDefaultType);
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE);
                     break;
             }
 
@@ -880,8 +880,8 @@ namespace Cli.Tests
         /// </summary>
         [DataTestMethod]
         [DataRow("newSourceName", null, null, "UpdateSourceName", DisplayName = "Update Source Name of the source object.")]
-        [DataRow(null, new string[] { "param1:dab", "param2:false" }, null, "UpdateParameters", DisplayName = "update Parameters of stored procedure.")]
-        [DataRow(null, null, new string[] { "col1", "col2" }, "UpdateKeyFields", DisplayName = "update KeyFields for table/view.")]
+        // [DataRow(null, new string[] { "param1:dab", "param2:false" }, null, "UpdateParameters", DisplayName = "update Parameters of stored procedure.")]
+        // [DataRow(null, null, new string[] { "col1", "col2" }, "UpdateKeyFields", DisplayName = "update KeyFields for table/view.")]
         public void TestUpdateDatabaseSourceObject(
             string? source,
             IEnumerable<string>? parameters,
@@ -913,7 +913,7 @@ namespace Cli.Tests
                 config: _testRuntimeConfig
             );
 
-            string? initialConfig = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceAsStoredProcedure);
+            string? initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
             switch (task)
             {
                 case "UpdateSourceName":
@@ -949,7 +949,7 @@ namespace Cli.Tests
                     break;
 
                 case "UpdateKeyFields":
-                    initialConfig = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceWithDefaultType);
+                    initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE);
                     AssertUpdatedValuesForSourceObject(
                         options,
                         initialConfig,
@@ -965,6 +965,85 @@ namespace Cli.Tests
                     );
                     break;
             }
+        }
+
+        /// <summary>
+        /// Converts one source object type to another.
+        /// Also testing automatic update for parameter and keyfield to null in case
+        /// of table/view, and stored-procedure respectively.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" },
+            null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, false, true)]
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, new string[] { "col1", "col2" },
+            SINGLE_ENTITY_WITH_STORED_PROCEDURE, false, false)]
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, null, SINGLE_ENTITY_WITH_STORED_PROCEDURE,
+            true, true)]
+        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, new string[] { "id", "name" },
+            SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, false, true)]
+        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "view", null, new string[] { "col1", "col2" },
+            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, false, true)]
+        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", new string[] { "param1:kind", "param2:true" },
+            null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, false, false)]
+        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE,
+            true, true)]
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", null, new string[] { "col1", "col2" },
+            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, false, true)]
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", new string[] { "param1:kind", "param2:true" }, null,
+            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, false, false)]
+        public void TestConversionOfSourceObject(
+            string initialSourceObjectEntity,
+            string sourceType,
+            IEnumerable<string>? parameters,
+            string[]? keyFields,
+            string updatedSourceObjectEntity,
+            bool expectNoKeyFieldsAndParameters,
+            bool expectSuccess
+        )
+        {
+            UpdateOptions options = new(
+                source: "s001.book",
+                permissions: new string[] { "anonymous", "*" },
+                entity: "MyEntity",
+                sourceType: sourceType,
+                sourceParameters: parameters,
+                sourceKeyFields: keyFields,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                map: new string[] { },
+                config: _testRuntimeConfig
+            );
+
+            string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, initialSourceObjectEntity);
+            Assert.AreEqual(expectSuccess, ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+
+            if (expectSuccess)
+            {
+                string updatedConfig = AddPropertiesToJson(INITIAL_CONFIG, updatedSourceObjectEntity);
+                if (!expectNoKeyFieldsAndParameters)
+                {
+                    Assert.IsTrue(JToken.DeepEquals(JObject.Parse(runtimeConfig), JObject.Parse(updatedConfig)));
+                }
+                else
+                {
+                    Entity entity = GetEntityObjectFromRuntimeConfigJson(runtimeConfig, entityName: "MyEntity");
+                    entity.TryPopulateSourceFields();
+                    Assert.IsNull(entity.Parameters);
+                    Assert.IsNull(entity.KeyFields);
+                }
+            }
+
         }
 
         /// <summary>
@@ -1056,7 +1135,7 @@ namespace Cli.Tests
                 config: _testRuntimeConfig
             );
 
-            string? actualConfig = AddPropertiesToJson(InitialConfiguration, EntityConfigurationWithPolicyAndFields);
+            string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLCIY_AND_ACTION_FIELDS);
             string updatedEntityConfigurationWithPolicyAndFields = @"
               {
                 ""entities"": {
@@ -1083,7 +1162,7 @@ namespace Cli.Tests
                     }
                 }
             }";
-            string? expectedConfiguration = AddPropertiesToJson(InitialConfiguration, updatedEntityConfigurationWithPolicyAndFields);
+            string? expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, updatedEntityConfigurationWithPolicyAndFields);
             Assert.IsTrue(TryUpdateExistingEntity(options, ref actualConfig));
             Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration!), JObject.Parse(actualConfig)));
         }
@@ -1368,7 +1447,7 @@ namespace Cli.Tests
                 map: new string[] { },
                 config: _testRuntimeConfig);
 
-            string runtimeConfig = AddPropertiesToJson(InitialConfiguration, SingleEntityWithSourceAsStoredProcedure);
+            string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
 
             Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
         }

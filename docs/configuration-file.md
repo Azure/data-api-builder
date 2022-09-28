@@ -141,7 +141,6 @@ This section contains options that will affect the runtime behavior and/or all e
 
 `authentication.provider.jwt`: Needed if authentication provier is `AAD`. In this section you have to specify the `audience` and the `issuer` to allow the received JWT token to be validated and checked agains the `AAD` tenant you want to use for authentication
 
-
 ### Entities
 
 The `entities` section is where mapping between database objects to exposed endpoint is done, along with properties mapping and permission definition.
@@ -420,3 +419,18 @@ The `policy` section contains detail about item-level security rules.
 + `database` policy: define a rule - a predicate - that will be injected in the query sent to the database
 
 In order for an request or item to be returned, the policies must be evaluated to `true`.
+
+With a policy two special functions are available:
+
+- `@claims`: allow access to claims stored in the authentication token
+- `@items`: allow access to entity's data in the underlying database.
+
+For example a policy could be the following:
+
+```json
+    "policy": {
+        "database": "@claims.UserId eq @item.OwnerId"
+    }
+```
+
+Data API Builder will take the value of the claim named `UserId` and it will compare it with the value if the field `OwnerId` existing in the entity where the policy has been defined. Only those element for which the expression will result to be true, will be allowed to be accessed.

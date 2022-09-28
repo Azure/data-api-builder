@@ -8,4 +8,4 @@ Depending on what you want to do, you have several options to run Data API Build
 - [Running using a container](./running-using-a-container.md)
 - [Running using the CLI tool](./running-using-dab-cli.md)
 
-Data API Builder work in the same way if run in Azure or if run locally or in a self-hosted environment. The only difference is related to how authentication can be done or simulated locally, so that even when using a local development experience you can test what happens when an authenticated request be received by Data API Builder. Read more how you can simulate authenticated request locally here: [Local Authentication](./local-authentication.md)
+Data API Builder work in the same way if run in Azure or if run locally or in a self-hosted environment. The only difference is related to how authentication can be done or simulated locally, so that even when using a local development experience you can test what happens when an authenticated request be received by Data API Builder. Read more how you can simulate authenticated request locally here: [Local Authentication](./local-authentication.md).

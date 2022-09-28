@@ -8,16 +8,16 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 
 - [Getting started](./getting-started/getting-started.md)
 - [Command Line Interface](./dab-cli.md)
-- [Local development](./local-development.md) - **Documentation Work in progress**
+- [Local development](./local-development.md)
   - [Running from source code](./running-from-source-code.md)
   - [Running using a container](./running-using-a-container.md)
   - [Running using the CLI tool](./running-using-dab-cli.md)
-  - [Local authentication](./local-authentication.md) - **Documentation Work in progress**
-- [Running in Azure](./running-in-azure.md) 
+  - [Local authentication](./local-authentication.md)
+- [Running in Azure](./running-in-azure.md)
 - [Configuration file](./configuration-file.md)
 - [REST features](./rest.md)
 - [GraphQL features](./graphql.md)
-- [Authentication](./authentication.md) - **Documentation Work in progress**
-- [Authorization](./authorization.md) - **Documentation Work in progress**
+- [Authentication](./authentication.md)
+- [Authorization](./authorization.md)
 - [Relationships](./relationships.md)
 - [Known Issues and Limitations](/docs/known-issues.md) - **Documentation Work in progress**

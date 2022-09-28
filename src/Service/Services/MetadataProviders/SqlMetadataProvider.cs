@@ -1171,7 +1171,7 @@ namespace Azure.DataApiBuilder.Service.Services
             RelationShipPair pairAB = new(databaseObjectA, databaseObjectB);
             RelationShipPair pairBA = new(databaseObjectB, databaseObjectA);
 
-            return (_pairToFkDefinition.ContainsKey(pairAB) || _pairToFkDefinition.ContainsKey(pairBA));
+            return (_pairToFkDefinition!.ContainsKey(pairAB) || _pairToFkDefinition.ContainsKey(pairBA));
         }
 
         /// <summary>

@@ -420,10 +420,10 @@ The `policy` section contains detail about item-level security rules.
 
 In order for an request or item to be returned, the policies must be evaluated to `true`.
 
-With a policy two special functions are available:
+Two types of directives can be used when configuring a database policy:
 
-- `@claims`: allow access to claims stored in the authentication token
-- `@items`: allow access to entity's data in the underlying database.
+- `@claims`: access a claim stored in the authentication token
+- `@item`: access an entity's field in the underlying database.
 
 For example a policy could be the following:
 
@@ -433,6 +433,6 @@ For example a policy could be the following:
     }
 ```
 
-Data API Builder will take the value of the claim named `UserId` and it will compare it with the value if the field `OwnerId` existing in the entity where the policy has been defined. Only those element for which the expression will result to be true, will be allowed to be accessed.
+Data API Builder will take the value of the claim named `UserId` and it will compare it with the value of the field `OwnerId` existing in the entity where the policy has been defined. Only those elements for which the expression will result to be true, will be allowed to be accessed.
 
 *PLEASE NOTE* that at the moment support for policies is very limited. Only the equality operator `eq` is supported and comparison can be done only with values of the same type.

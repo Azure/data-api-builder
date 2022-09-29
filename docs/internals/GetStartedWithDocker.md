@@ -1,46 +1,61 @@
 # Introduction
 
-This document provides instruction for running the engine inside a Docker container.
+This document provides instruction for running Data API Builder inside a Docker container.
 
-## Running docker container from Azure Container Registry (Prebuilt image)
+## Running a Docker Container from Azure Container Registry (Pre-built Image)
 
 N.B. If you want to build your own image, use the next section (Build and deploy as Docker Container)
 
 N.B. You might not have access to the container registry where the image is hosted. Reach out to someone on the team to get access.
 
-1. You will need to login to the ACR, if you don't have the Azure CLI on your machine, install it from [here (Azure CLI Installation Instructions)](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli):
+1. Use the Azure CLI to login to Azure using your web browser. Installation instructions for the Azure CLI can be found [here - Microsoft Learn Docs)](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
+
+```bash
+az login
+```
+
+2. Next, login to the Azure Container Registry (ACR) using the Azure CLI:
 
 ```bash
 az acr login --name hawaiiacr
 ```
 
-2. Update the configuration files for your environment:
+3. Locate the configuration files for your environment:
+Get the file path for `dab-config.json` (and `schema.gql` if using Cosmos).
 
-Update `dab-config.json` (and `schema.gql` if using cosmos).
+4. Choose a `docker-compose-*.yml` file from the `<git_repo_root>/docker` folder based on your environment (cosmos, sql, postgres)
 
-3. Choose a `docker-compose-*.yml` file based on your environment (cosmos, sql, postgres)
+    - Open the docker-compose file and update the `image` parameter with the tag you want to use. Using the tag `latest` in place of `<TAG_ID>` below will use the image with the latest commit.
+    ```yaml
+    dockercompose
+        version: "3.9"
+        services:
+            hawaii:
+                image: "hawaiiacr.azurecr.io/dab:<TAG_ID>"
+                ports:
+                    - "5000:5000"
+                volumes:
+                    - "<LOCAL_PATH>\dab-config.MsSql.json:/App/dab-config.json"
+    ```
+    - To find a different tag, find the CI run that was automatically triggered after your check-in, view more details on Azure Pipelines, then click `Job`.
+        - In the logs of `Build and push docker image` stage, search for `docker push` to find the tag that was pushed.
 
-    3.1. Open the docker-compose file and update the `image` with the tag you want to use. The `latest` tag has the latest commit.
-        To find a different tag, find the CI run that was automatically triggered after your checkin, view more details on azure pipelines, then click `Job`.
-        In the logs of `Build and push docker image` stage, search for `docker push` to find the tag that was pushed.
+    - If you are not using the configuration from the repo, update the path to your config/schema to point to your files and map them to `/App/dab-config.json` and for cosmos - `/App/schema.gql` as well.
 
-    3.2. If you are not using the configuration from the repo, update the path to your config/schema to point to your files and map them to `/App/dab-config.json` and for cosmos - `/App/schema.gql` as well.
+    - Run `docker compose up` to start the container:
+    ```bash
+    docker compose -f "../../docker/docker-compose.yml" up
+    ```
 
-    3.3. Run docker compose up to start the container:
+5. Your container should be accessible at `http://localhost:5000`. 
 
-```bash
-docker compose -f "../../docker/docker-compose.yml" up
-```
-
-4. Your container should be accessible at `http://localhost:5000`. 
-
-    4.1 Append the `path` from the `runtime` section of configuration file to access the respective GraphQL or REST endpoint URI.
+    - Append the `path` from the `runtime` section of configuration file to access the respective GraphQL or REST endpoint URI.
     e.g. if you are using the configuration example from this repo, GraphQL endpoint URI will be `http://localhost:5000/graphql`
     whereas one of the REST endpoint URIs will be `http://localhost:5000/api/Book`.
 
-    4.2 Use your favorite client like Banana Cake Pop(for GraphQL) or Post Man(for both GraphQL and REST) to trigger
-    the requests. In Banana Cake Pop, make sure to configure the schema endpoint to the GraphQL endpoint
-    e.g.`http://localhost:5000/graphql` in its `Connection Settings`-> `General` tab.
+    - Use your favorite client like Banana Cake Pop(for GraphQL) or Postman(for both GraphQL and REST) to trigger the requests. 
+        - In Banana Cake Pop, make sure to configure the schema endpoint to point to the engine's GraphQL endpoint:
+        e.g. `http://localhost:5000/graphql` in its `Connection Settings`-> `General` tab.
 
     ![Banana Cake Pop Connection Strings](BananaCakePopConnectionSettings.png)
 

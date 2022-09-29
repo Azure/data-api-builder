@@ -123,7 +123,7 @@ This section contains options that will affect the runtime behavior and/or all e
 
 #### GraphQL
 
-`path`: defines the URL path where all exposed REST endpoints will be made available. For example if set to `/graphql`, the GraphQL endpoint will be exposed `/graphql`. No sub-paths allowed. Optional. Default is `graphql`.
+`path`: defines the URL path where the GraphQL endpoint will be made available. For example if set to `/graphql`, the GraphQL endpoint will be exposed `/graphql`. No sub-paths allowed. Optional. Default is `graphql`. Currently, a customized path value for GraphQL endpoint is not supported.
 
 #### Host
 

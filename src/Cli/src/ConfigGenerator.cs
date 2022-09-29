@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
+using Microsoft.Extensions.Logging;
 using static Cli.Utils;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -656,9 +657,24 @@ namespace Cli
                 return false;
             }
 
-            /// This will start the runtime engine with project name and config file.
-            string[] args = new string[] { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile };
-            return Azure.DataApiBuilder.Service.Program.StartEngine(args);
+            /// This will start the runtime engine with project name, config file, and if defined then
+            /// a  valid LogLevel.
+            List<string> args = new()
+            { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile };
+            if (options.LogLevel is not null)
+            {
+                if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
+                {
+                    Console.WriteLine($"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}, see: " +
+                        $"https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-7.0");
+                    return false;
+                }
+
+                args.Add("--LogLevel");
+                args.Add(options.LogLevel.ToString()!);
+            }
+
+            return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
         }
     }
 }

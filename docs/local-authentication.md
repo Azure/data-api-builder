@@ -61,4 +61,3 @@ curl --request GET \
   --url http://localhost:5000/api/books \
   --header 'X-MS-API-ROLE: author' \
   --header 'X-MS-CLIENT-PRINCIPAL: eyAgDQogICJpZGVudGl0eVByb3ZpZGVyIjogInRlc3QiLA0KICAidXNlcklkIjogIjEyMzQ1IiwNCiAgInVzZXJEZXRhaWxzIjogImpvaG5AY29udG9zby5jb20iLA0KICAidXNlclJvbGVzIjogWyJyb2xlMSIsICJyb2xlMiIsICJhdXRob3IiXSwNCiAgImNsYWltcyI6IFt7DQogICAgInR5cCI6ICJGaXJzdE5hbWUiLA0KICAgICJ2YWwiOiAiSm9obiINCiAgfSwNCiAgew0KICAgICJ0eXAiOiAiTGFzdE5hbWUiLA0KICAgICJ2YWwiOiAiRG9lIg0KICB9XQ0KfQ=='
-```

@@ -4,26 +4,33 @@ Make sure you have read the [Getting Started](getting-started.md) document.
 
 As mentioned before, this tutorial assumes that you already have a SQL Server or an Azure SQL database that can be used as playground.
 
-### Get the database connection string
+## Get the database connection string
 
-There are several ways to get an Azure SQL database connection string. More details here:
-https://learn.microsoft.com/azure/azure-sql/database/connect-query-content-reference-guide?view=azuresql
+There are several ways to get an Azure SQL database connection string. More details here: [Azure SQL Database and Azure SQL Managed Instance connect and query articles](https://learn.microsoft.com/azure/azure-sql/database/connect-query-content-reference-guide?view=azuresql)
 
 If you are connecting to Azure SQL DB, Azure SQL MI, or SQL Server, the connection string look like:
 
-```
+```text
 Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;
 ```
 
 To connect to a local SQL Server, for example:
 
-```
+```text
 Server=localhost;Database=Library;User ID=dab_user;Password=<password>;TrustServerCertificate=true
 ```
 
 More details on Azure SQL and SQL Server connection strings can be found here: https://learn.microsoft.com/sql/connect/ado-net/connection-string-syntax
 
-Now that you have all the required pieces in place, it's time to create the configuration file for DAB.
+## Create the database objects
+
+Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `library.azure-sql.sql` script in the `azure-sql-db` folder in the GitHub repo. You can use it to create three tables, along with sample data:
+
+- `dbo.authors`: Table containing authors
+- `dbo.books`: Table containing books
+- `dbo.books_authors`: Table associating books with respective authors
+
+Execute the script in the SQL Server or Azure SQL database you decided to use, so that the tables with sample data are created and populated.
 
 ## Creating a configuration file for DAB
 
@@ -137,19 +144,19 @@ You can also add the `book` entity now, applying the same concepts you just lear
 
 that's all is needed at the moment. Data API builder is ready to be run.
 
-> **BEST PRACTICE**: It is recommended to use the *singular* form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a *list* of entity items will be returned. More on this behaviour in the [GraphQL documentation](./../graphql.md).
+> **BEST PRACTICE**: It is recommended to use the *singular* form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a *list* of entity items will be returned. More on this behavior in the [GraphQL documentation](./../graphql.md).
 
 ## Start Data API builder for Azure SQL Database
 
 You are ready to serve your API. Run the below command (this will start the engine with default config `dab-config.json`, use option --config otherwise):
 
-```
+```bash
 dab start
 ```
 
 when you'll see something like:
 
-```
+```text
 info: Azure.DataApiBuilder.Service.Startup[0]
       Successfully completed runtime initialization.
 info: Microsoft.Hosting.Lifetime[14]
@@ -170,13 +177,13 @@ Now that Data API builder engine is running, you can use your favorite REST clie
 
 REST endpoint is made available at the path (make sure to keep in mind that the url path is treated as Case Sensitive):
 
-```
+```text
 /api/<entity>
 ```
 
 so if you want to get a list of all the available books you can simply run this GET request:
 
-```
+```text
 /api/book
 ```
 
@@ -189,7 +196,7 @@ The following HTTP verbs are supported:
 
 Whenever you need to access a single item, you can get the item you want by specifying its primary key:
 
-```
+```text
 GET /api/book/id/1000
 ```
 
@@ -208,7 +215,7 @@ For more details on how they can be used, refer to the [REST documentation](../r
 
 GraphQL endpoint is available at
 
-```
+```text
 /graphql
 ```
 
@@ -283,6 +290,7 @@ The `author` entity should now look like the following:
 as we also want to enable querying a book and getting its authors, we also need to make a similar change to the book entity:
 
 ```bash
+dab update book --relationship "authors" --cardinality "many" --target.entity "author" --linking.object "dbo.books_authors"
 ```
 
 that will update the configuration file so that the `book` entity will look like the following code:

@@ -47,7 +47,7 @@ Installing the package will make the `dab` command available on your development
 dab --version
 ```
 
-which should output 
+which should output
 
 ```bash
 dab 0.1.5

@@ -880,8 +880,8 @@ namespace Cli.Tests
         /// </summary>
         [DataTestMethod]
         [DataRow("newSourceName", null, null, "UpdateSourceName", DisplayName = "Update Source Name of the source object.")]
-        // [DataRow(null, new string[] { "param1:dab", "param2:false" }, null, "UpdateParameters", DisplayName = "update Parameters of stored procedure.")]
-        // [DataRow(null, null, new string[] { "col1", "col2" }, "UpdateKeyFields", DisplayName = "update KeyFields for table/view.")]
+        [DataRow(null, new string[] { "param1:dab", "param2:false" }, null, "UpdateParameters", DisplayName = "update Parameters of stored procedure.")]
+        [DataRow(null, null, new string[] { "col1", "col2" }, "UpdateKeyFields", DisplayName = "update KeyFields for table/view.")]
         public void TestUpdateDatabaseSourceObject(
             string? source,
             IEnumerable<string>? parameters,
@@ -1073,9 +1073,9 @@ namespace Cli.Tests
             entity.TryPopulateSourceFields();
             Assert.AreEqual(oldSourceName, entity.SourceName);
             Assert.AreEqual(oldSourceType, entity.SourceTypeName);
-            Assert.AreEqual(
-                ToAssertableStringFromDictionary(oldParameters),
-                ToAssertableStringFromDictionary(entity.Parameters)
+            Assert.IsTrue(JToken.DeepEquals(
+                JToken.FromObject(JsonSerializer.SerializeToElement(oldParameters)),
+                JToken.FromObject(JsonSerializer.SerializeToElement(entity.Parameters)))
             );
             CollectionAssert.AreEquivalent(oldKeyFields, entity.KeyFields);
             Assert.IsTrue(TryUpdateExistingEntity(options, ref initialConfig));
@@ -1083,26 +1083,11 @@ namespace Cli.Tests
             entity.TryPopulateSourceFields();
             Assert.AreEqual(updatedSourceName, entity.SourceName);
             Assert.AreEqual(updatedSourceType, entity.SourceTypeName);
-            Assert.AreEqual(
-                ToAssertableStringFromDictionary(updatedParameters),
-                ToAssertableStringFromDictionary(entity.Parameters)
+            Assert.IsTrue(JToken.DeepEquals(
+                JToken.FromObject(JsonSerializer.SerializeToElement(updatedParameters)),
+                JToken.FromObject(JsonSerializer.SerializeToElement(entity.Parameters)))
             );
             CollectionAssert.AreEquivalent(updatedKeyFields, entity.KeyFields);
-        }
-
-        /// <summary>
-        /// Converts Dictionary into a string that can be Asserted for Testing.
-        /// </summary>
-        private static string? ToAssertableStringFromDictionary(Dictionary<string, object>? dictionary)
-        {
-            if (dictionary is null)
-            {
-                return null;
-            }
-
-            IEnumerable<string> pairStrings = dictionary.OrderBy(p => p.Key)
-                .Select(p => p.Key + ":" + p.Value);
-            return string.Join("; ", pairStrings);
         }
 
         /// <summary>

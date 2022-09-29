@@ -124,6 +124,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
         }
 
+        /// <summary>
+        /// <code>Do: </code> Load runtimeConfig and set up the source fields for the entities.
+        /// <code>Check: </code>  Verifies that source object is correctly parsed.
+        /// </summary>
         [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task CheckCorrectParsingForStoredProcedure()
         {

@@ -14,8 +14,7 @@ namespace Cli
         /// <returns>0 on success, -1 on failure.</returns>
         public static int Main(string[] args)
         {
-            Parser parser = new(settings => settings.CaseInsensitiveEnumValues = true);
-            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
+            ParserResult<object>? result = Parser.Default.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
                 .WithParsed<InitOptions>(options =>
                 {
                     bool isSuccess = ConfigGenerator.TryGenerateConfig(options);

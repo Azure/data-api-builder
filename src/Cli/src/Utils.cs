@@ -539,9 +539,7 @@ namespace Cli
             [NotNullWhen(true)] out object? sourceObject
         )
         {
-            type = (string.Empty).Equals(type) ? null : type;
             sourceObject = null;
-
             try
             {
                 DatabaseObjectSource.VerifySourceObjectFields(name, type, parameters, keyFields);

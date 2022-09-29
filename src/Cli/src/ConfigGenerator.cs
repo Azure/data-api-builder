@@ -260,7 +260,10 @@ namespace Cli
             // This is executed only two cases:
             // only when sourceParameters is null (no parsing happens, directly returns null)
             // when type is stored-procedure.
-            if (!TryParseSourceParameterDictionary(options.SourceParameters, out Dictionary<string, object>? parametersDictionary))
+            if (!TryParseSourceParameterDictionary(
+                options.SourceParameters,
+                out Dictionary<string, object>? parametersDictionary)
+            )
             {
                 return false;
             }
@@ -273,7 +276,9 @@ namespace Cli
 
             // Try to get the source object as string or DatabaseObjectSource
             if (!TryCreateSourceObject(
-                options.Source, options.SourceType, parametersDictionary,
+                options.Source,
+                options.SourceType,
+                parametersDictionary,
                 sourceKeyFields,
                 out sourceObject))
             {
@@ -612,7 +617,10 @@ namespace Cli
         /// Verifies if the given combination of fields is valid for update
         /// and then it updates it, else it fails.
         /// </summary>
-        private static bool TryGetUpdatedSourceObjectWithOptions(UpdateOptions options, Entity entity, out object? updatedSourceObject)
+        private static bool TryGetUpdatedSourceObjectWithOptions(
+            UpdateOptions options,
+            Entity entity,
+            [NotNullWhen(true)] out object? updatedSourceObject)
         {
             entity.TryPopulateSourceFields();
             updatedSourceObject = null;
@@ -659,8 +667,12 @@ namespace Cli
             }
 
             // Try Creating Source Object with the updated values.
-            if (!TryCreateSourceObject(updatedSourceName, updatedSourceType,
-                updatedSourceParameters, updatedKeyFields, out updatedSourceObject))
+            if (!TryCreateSourceObject(
+                updatedSourceName,
+                updatedSourceType,
+                updatedSourceParameters,
+                updatedKeyFields,
+                out updatedSourceObject))
             {
                 return false;
             }

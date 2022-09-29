@@ -51,7 +51,6 @@ namespace Azure.DataApiBuilder.Service
             Configuration.Bind(runtimeConfigPath);
 
             RuntimeConfigProvider runtimeConfigurationProvider = new(runtimeConfigPath, _configProviderLogger);
-
             services.AddSingleton(runtimeConfigurationProvider);
             services.AddSingleton<RuntimeConfigValidator>();
 
@@ -317,12 +316,8 @@ namespace Azure.DataApiBuilder.Service
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                if (runtimeConfig is not null && runtimeConfig.GraphQLGlobalSettings.Enabled)
-                {
-                    endpoints.MapGraphQL(runtimeConfig.GraphQLGlobalSettings.Path);
-                    endpoints.MapBananaCakePop();
-                }
-
+                endpoints.MapGraphQL("/graphql");
+                endpoints.MapBananaCakePop();
                 endpoints.MapHealthChecks("/");
             });
         }
@@ -396,7 +391,6 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
                 RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
-
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
                 runtimeConfigValidator.ValidateConfig();

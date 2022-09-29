@@ -36,6 +36,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<SqlMutationEngine> _logger;
+        public const string IS_FIRST_RESULT_SET = "IsFirstResultSet";
 
         /// <summary>
         /// Constructor
@@ -84,48 +85,50 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Tuple<JsonDocument, IMetadata>? result = null;
             Operation mutationOperation =
                 MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
+
+            // If authorization fails, an exception will be thrown and request execution halts.
+            AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
+
             if (mutationOperation is Operation.Delete)
             {
                 // compute the mutation result before removing the element,
                 // since typical GraphQL delete mutations return the metadata of the deleted item.
                 result = await _queryEngine.ExecuteAsync(context, parameters);
-            }
 
-            // If authorization fails, an exception will be thrown and request execution halts.
-            AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
+                Dictionary<string, object>? resultProperties =
+                    await PerformDeleteOperation(
+                        entityName,
+                        parameters);
 
-            using DbDataReader dbDataReader =
-                await PerformMutationOperation(
-                    entityName,
-                    mutationOperation,
-                    parameters,
-                    context: context);
-
-            if (!context.Selection.Type.IsScalarType() && mutationOperation is not Operation.Delete)
-            {
-                TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
-
-                // only extract pk columns
-                // since non pk columns can be null
-                // and the subsequent query would search with:
-                // nullParamName = NULL
-                // which would fail to get the mutated entry from the db
-                Dictionary<string, object?>? searchParams = await _queryExecutor.ExtractRowFromDbDataReader(
-                    dbDataReader,
-                    onlyExtract: tableDefinition.PrimaryKey);
-
-                if (searchParams == null)
+                // If the number of records affected by DELETE were zero,
+                // and yet the result was not null previously, it indicates this DELETE lost
+                // a concurrent request race. Hence, empty the non-null result.
+                if (resultProperties is not null
+                    && resultProperties.TryGetValue(nameof(DbDataReader.RecordsAffected), out object? value)
+                    && Convert.ToInt32(value) == 0
+                    && result is not null && result.Item1 is not null)
                 {
-                    string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
-                    throw new DataApiBuilderException(
-                        message: $"Could not find entity with {searchedPK}",
-                        statusCode: HttpStatusCode.NotFound,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                    result = new Tuple<JsonDocument, IMetadata>(
+                        default(JsonDocument)!,
+                        PaginationMetadata.MakeEmptyPaginationMetadata());
                 }
+            }
+            else
+            {
+                Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRowAndProperties =
+                    await PerformMutationOperation(
+                        entityName,
+                        mutationOperation,
+                        parameters,
+                        context);
 
-                result = await _queryEngine.ExecuteAsync(
-                    context,
-                    searchParams);
+                if (resultRowAndProperties is not null && resultRowAndProperties.Item1 is not null
+                    && !context.Selection.Type.IsScalarType())
+                {
+                    result = await _queryEngine.ExecuteAsync(
+                                context,
+                                resultRowAndProperties.Item1);
+                }
             }
 
             if (result is null)
@@ -143,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Executes the REST mutation query and returns IActionResult asynchronously.
         /// Result error cases differ for Stored Procedure requests than normal mutation requests
         /// QueryStructure built does not depend on Operation enum, thus not useful to use
-        /// PerformMutationOperation method
+        /// PerformMutationOperation method.
         /// </summary>
         public async Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context)
         {
@@ -151,8 +154,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string queryText = _queryBuilder.Build(executeQueryStructure);
             _logger.LogInformation(queryText);
 
-            using DbDataReader dbDataReader = await _queryExecutor.ExecuteQueryAsync(queryText, executeQueryStructure.Parameters);
-            Dictionary<string, object?>? resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
+            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRowAndProperties =
+                await _queryExecutor.ExecuteQueryAsync(
+                    queryText,
+                    executeQueryStructure.Parameters,
+                    _queryExecutor.ExtractRowFromDbDataReader);
 
             // A note on returning stored procedure results:
             // We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes
@@ -167,9 +173,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 case Operation.Insert:
                     // Returns a 201 Created with whatever the first result set is returned from the procedure
                     // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the first and only result set
-                    if (dbDataReader.HasRows)
+                    if (resultRowAndProperties is not null &&
+                        DoesResultHaveRows(resultRowAndProperties.Item2))
                     {
-                        return new CreatedResult(location: context.EntityName, OkMutationResponse(resultRecord).Value);
+                        return new CreatedResult(location: context.EntityName, OkMutationResponse(resultRowAndProperties.Item1).Value);
                     }
                     else
                     {   // If no result set returned, just return a 201 Created with empty array instead of array with single null value
@@ -187,9 +194,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 case Operation.UpsertIncremental:
                     // Since we cannot check if anything was created, just return a 200 Ok response with first result set output
                     // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the first and only result set
-                    if (dbDataReader.HasRows)
+                    if (resultRowAndProperties is not null &&
+                        DoesResultHaveRows(resultRowAndProperties.Item2))
                     {
-                        return OkMutationResponse(resultRecord);
+                        return OkMutationResponse(resultRowAndProperties.Item1);
                     }
                     else
                     {
@@ -219,94 +227,93 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             Dictionary<string, object?> parameters = PrepareParameters(context);
 
-            using DbDataReader dbDataReader =
-            await PerformMutationOperation(
-                context.EntityName,
-                context.OperationType,
-                parameters);
-
-            string primaryKeyRoute;
-            Dictionary<string, object?>? resultRecord = new();
-            resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
-
-            switch (context.OperationType)
+            if (context.OperationType is Operation.Delete)
             {
-                case Operation.Delete:
-                    // Records affected tells us that item was successfully deleted.
-                    // No records affected happens for a DELETE request on nonexistent object
-                    if (dbDataReader.RecordsAffected > 0)
+                Dictionary<string, object>? resultProperties =
+                    await PerformDeleteOperation(
+                        context.EntityName,
+                        parameters);
+
+                // Records affected tells us that item was successfully deleted.
+                // No records affected happens for a DELETE request on nonexistent object
+                if (resultProperties is not null
+                    && resultProperties.TryGetValue(nameof(DbDataReader.RecordsAffected), out object? value)
+                    && Convert.ToInt32(value) > 0)
+                {
+                    return new NoContentResult();
+                }
+            }
+            else if (context.OperationType is Operation.Upsert || context.OperationType is Operation.UpsertIncremental)
+            {
+                Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRowAndProperties =
+                    await PerformUpsertOperation(
+                        parameters,
+                        context);
+
+                if (resultRowAndProperties is not null &&
+                    resultRowAndProperties.Item1 is not null)
+                {
+                    Dictionary<string, object?> resultRow = resultRowAndProperties.Item1;
+
+                    bool isFirstResultSet = false;
+                    if (resultRowAndProperties.Item2.TryGetValue(IS_FIRST_RESULT_SET, out object? isFirstResultSetValue))
                     {
-                        return new NoContentResult();
+                        isFirstResultSet = Convert.ToBoolean(isFirstResultSetValue);
                     }
 
-                    break;
-                case Operation.Insert:
-                    if (resultRecord is null)
+                    // For MsSql, MySql, if it's not the first result, the upsert resulted in an INSERT operation.
+                    // Even if its first result, postgresql may still be an insert op here, if so, return CreatedResult
+                    if (!isFirstResultSet ||
+                        (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&
+                        PostgresQueryBuilder.IsInsert(resultRow)))
+                    {
+                        string primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRow);
+                        // location will be updated in rest controller where httpcontext is available
+                        return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value);
+                    }
+
+                    // Valid REST updates return OkObjectResult
+                    return OkMutationResponse(resultRow);
+                }
+            }
+            else
+            {
+                Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRowAndProperties =
+                    await PerformMutationOperation(
+                        context.EntityName,
+                        context.OperationType,
+                        parameters);
+
+                if (context.OperationType is Operation.Insert)
+                {
+                    if (resultRowAndProperties is null || resultRowAndProperties.Item1 is null)
                     {
                         // this case should not happen, we throw an exception
                         // which will be returned as an Unexpected Internal Server Error
                         throw new Exception();
                     }
 
-                    primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRecord);
+                    Dictionary<string, object?> resultRow = resultRowAndProperties.Item1;
+                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRow);
                     // location will be updated in rest controller where httpcontext is available
-                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRecord).Value);
-                case Operation.Update:
-                case Operation.UpdateIncremental:
+                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value);
+                }
+
+                if (context.OperationType is Operation.Update || context.OperationType is Operation.UpdateIncremental)
+                {
                     // Nothing to update means we throw Exception
-                    if (resultRecord is null || resultRecord.Count == 0)
+                    if (resultRowAndProperties is null ||
+                        resultRowAndProperties.Item1 is null ||
+                        resultRowAndProperties.Item1.Count == 0)
                     {
                         throw new DataApiBuilderException(message: "No Update could be performed, record not found",
-                                                       statusCode: HttpStatusCode.PreconditionFailed,
-                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
+                                                           statusCode: HttpStatusCode.PreconditionFailed,
+                                                           subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
                     }
 
                     // Valid REST updates return OkObjectResult
-                    return OkMutationResponse(resultRecord);
-                case Operation.Upsert:
-                case Operation.UpsertIncremental:
-                    /// Processes a second result set from DbDataReader if it exists.
-                    /// In MsSQL upsert:
-                    /// result set #1: result of the UPDATE operation.
-                    /// result set #2: result of the INSERT operation.
-                    if (resultRecord is not null)
-                    {
-                        // postgress may be an insert op here, if so, return CreatedResult
-                        if (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&
-                            PostgresQueryBuilder.IsInsert(resultRecord))
-                        {
-                            primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRecord);
-                            // location will be updated in rest controller where httpcontext is available
-                            return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRecord).Value);
-                        }
-
-                        // Valid REST updates return OkObjectResult
-                        return OkMutationResponse(resultRecord);
-                    }
-                    else if (await dbDataReader.NextResultAsync())
-                    {
-                        // Since no first result set exists, we overwrite Dictionary here.
-                        resultRecord = await _queryExecutor.ExtractRowFromDbDataReader(dbDataReader);
-                        if (resultRecord is null)
-                        {
-                            break;
-                        }
-
-                        // location will be updated in rest controller where httpcontext is available
-                        primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRecord);
-                        return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRecord).Value);
-                    }
-                    else
-                    {
-                        string prettyPrintPk = "<" + string.Join(", ", context.PrimaryKeyValuePairs.Select(
-                            kv_pair => $"{kv_pair.Key}: {kv_pair.Value}"
-                        )) + ">";
-                        throw new DataApiBuilderException(
-                            message: $"Cannot perform INSERT and could not find {context.EntityName} " +
-                                        $"with primary key {prettyPrintPk} to perform UPDATE on.",
-                            statusCode: HttpStatusCode.NotFound,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
-                    }
+                    return OkMutationResponse(resultRowAndProperties.Item1);
+                }
             }
 
             // if we have not yet returned, record is null
@@ -332,18 +339,27 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Performs the given REST and GraphQL mutation operation type
-        /// on the table and returns result as JSON object asynchronously.
+        /// Performs the given REST and GraphQL mutation operation of type
+        /// Insert, Create, Update, UpdateIncremental, UpdateGraphQL
+        /// on the source backing the given entity.
         /// </summary>
-        private async Task<DbDataReader> PerformMutationOperation(
-            string entityName,
-            Operation operationType,
-            IDictionary<string, object?> parameters,
-            IMiddlewareContext? context = null)
+        /// <param name="entityName">The name of the entity on which mutation is to be performed.</param>
+        /// <param name="operationType">The type of mutation operation.
+        /// This cannot be Delete, Upsert or UpsertIncremental since those operations have dedicated functions.</param>
+        /// <param name="parameters">The parameters of the mutation query.</param>
+        /// <param name="context">In the case of GraphQL, the HotChocolate library's middleware context.</param>
+        /// <returns>A tuple of 2 dictionaries:
+        /// 1. A dictionary representing the row in <c>ColumnName: Value</c> format, null if no row is mutated.
+        /// 2. A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
+        private async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
+            PerformMutationOperation(
+                string entityName,
+                Operation operationType,
+                IDictionary<string, object?> parameters,
+                IMiddlewareContext? context = null)
         {
             string queryString;
             Dictionary<string, object?> queryParameters;
-
             switch (operationType)
             {
                 case Operation.Insert:
@@ -393,45 +409,141 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     queryString = _queryBuilder.Build(updateGraphQLStructure);
                     queryParameters = updateGraphQLStructure.Parameters;
                     break;
-                case Operation.Delete:
-                    SqlDeleteStructure deleteStructure =
-                        new(entityName,
-                        _sqlMetadataProvider,
-                        parameters);
-                    AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                        Operation.Delete,
-                        deleteStructure,
-                        _httpContextAccessor.HttpContext!,
-                        _authorizationResolver,
-                        _sqlMetadataProvider);
-                    queryString = _queryBuilder.Build(deleteStructure);
-                    queryParameters = deleteStructure.Parameters;
-                    break;
-                case Operation.Upsert:
-                    SqlUpsertQueryStructure upsertStructure =
-                        new(entityName,
-                        _sqlMetadataProvider,
-                        parameters,
-                        incrementalUpdate: false);
-                    queryString = _queryBuilder.Build(upsertStructure);
-                    queryParameters = upsertStructure.Parameters;
-                    break;
-                case Operation.UpsertIncremental:
-                    SqlUpsertQueryStructure upsertIncrementalStructure =
-                        new(entityName,
-                        _sqlMetadataProvider,
-                        parameters,
-                        incrementalUpdate: true);
-                    queryString = _queryBuilder.Build(upsertIncrementalStructure);
-                    queryParameters = upsertIncrementalStructure.Parameters;
-                    break;
                 default:
                     throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
             }
 
             _logger.LogInformation(queryString);
 
-            return await _queryExecutor.ExecuteQueryAsync(queryString, queryParameters);
+            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRecord = null;
+
+            if (context is not null && !context.Selection.Type.IsScalarType())
+            {
+                TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
+
+                // only extract pk columns
+                // since non pk columns can be null
+                // and the subsequent query would search with:
+                // nullParamName = NULL
+                // which would fail to get the mutated entry from the db
+                resultRecord =
+                    await _queryExecutor.ExecuteQueryAsync(
+                        queryString,
+                        queryParameters,
+                        _queryExecutor.ExtractRowFromDbDataReader,
+                        tableDefinition.PrimaryKey);
+
+                if (resultRecord is not null && resultRecord.Item1 is null)
+                {
+                    string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                    throw new DataApiBuilderException(
+                        message: $"Could not find entity with {searchedPK}",
+                        statusCode: HttpStatusCode.NotFound,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                }
+            }
+            else
+            {
+                // This is the scenario for all REST mutation operations covered by this function
+                // and the case when the Selection Type is a scalar for GraphQL.
+                resultRecord =
+                    await _queryExecutor.ExecuteQueryAsync(
+                        queryString,
+                        queryParameters,
+                        _queryExecutor.ExtractRowFromDbDataReader);
+            }
+
+            return resultRecord;
+        }
+
+        /// <summary>
+        /// Perform the DELETE operation on the given entity.
+        /// To determine the correct response, uses QueryExecutor's GetResultProperties handler for
+        /// obtaining the db data reader properties like RecordsAffected, HasRows.
+        /// </summary>
+        /// <param name="entityName">The name of the entity.</param>
+        /// <param name="parameters">The parameters for the DELETE operation.</param>
+        /// <returns>A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
+        private async Task<Dictionary<string, object>?>
+            PerformDeleteOperation(
+                string entityName,
+                IDictionary<string, object?> parameters)
+        {
+            string queryString;
+            Dictionary<string, object?> queryParameters;
+            SqlDeleteStructure deleteStructure =
+                new(entityName,
+                _sqlMetadataProvider,
+                parameters);
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                Operation.Delete,
+                deleteStructure,
+                _httpContextAccessor.HttpContext!,
+                _authorizationResolver,
+                _sqlMetadataProvider);
+            queryString = _queryBuilder.Build(deleteStructure);
+            queryParameters = deleteStructure.Parameters;
+            _logger.LogInformation(queryString);
+
+            Dictionary<string, object>?
+                resultProperties = await _queryExecutor.ExecuteQueryAsync(
+                    queryString,
+                    queryParameters,
+                    _queryExecutor.GetResultProperties);
+
+            return resultProperties;
+        }
+
+        /// <summary>
+        /// Perform an Upsert or UpsertIncremental operation on the given entity.
+        /// Since Upsert operations could simply be an update or result in an insert,
+        /// uses QueryExecutor's GetMultipleResultSetsIfAnyAsync as the data reader handler.
+        /// </summary>
+        /// <param name="parameters">The parameters for the mutation query.</param>
+        /// <param name="context">The REST request context.</param>
+        /// <returns>A tuple of 2 dictionaries:
+        /// 1. A dictionary representing the row in <c>ColumnName: Value</c> format, null if no row was found
+        /// 2. A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
+        private async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
+            PerformUpsertOperation(
+                IDictionary<string, object?> parameters,
+                RestRequestContext context)
+        {
+            string queryString;
+            Dictionary<string, object?> queryParameters;
+            Operation operationType = context.OperationType;
+            string entityName = context.EntityName;
+
+            if (operationType is Operation.Upsert)
+            {
+                SqlUpsertQueryStructure upsertStructure =
+                        new(entityName,
+                        _sqlMetadataProvider,
+                        parameters,
+                        incrementalUpdate: false);
+                queryString = _queryBuilder.Build(upsertStructure);
+                queryParameters = upsertStructure.Parameters;
+            }
+            else
+            {
+                SqlUpsertQueryStructure upsertIncrementalStructure =
+                        new(entityName,
+                        _sqlMetadataProvider,
+                        parameters,
+                        incrementalUpdate: true);
+                queryString = _queryBuilder.Build(upsertIncrementalStructure);
+                queryParameters = upsertIncrementalStructure.Parameters;
+            }
+
+            string prettyPrintPk = "<" + string.Join(", ", context.PrimaryKeyValuePairs.Select(
+                kv_pair => $"{kv_pair.Key}: {kv_pair.Value}"
+                )) + ">";
+
+            return await _queryExecutor.ExecuteQueryAsync(
+                       queryString,
+                       queryParameters,
+                       _queryExecutor.GetMultipleResultSetsIfAnyAsync,
+                       new List<string> { prettyPrintPk, entityName });
         }
 
         /// <summary>
@@ -494,6 +606,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return parameters;
+        }
+
+        /// <summary>
+        /// Checks if the given dictionary has a property named `HasRows`
+        /// and if its true.
+        /// </summary>
+        /// <param name="properties">A dictionary of properties of a Db Data Reader like RecordsAffected, HasRows.</param>
+        /// <returns>True if HasRows is true, false otherwise.</returns>
+        private static bool DoesResultHaveRows(Dictionary<string, object> properties)
+        {
+            return properties.TryGetValue(nameof(DbDataReader.HasRows), out object? hasRows) &&
+                   Convert.ToBoolean(hasRows);
         }
 
         /// <summary>

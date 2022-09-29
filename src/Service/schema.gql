@@ -6,7 +6,7 @@ type Character @model(name:"Character") {
     primaryFunction: String
 }
 
-type planet @model(name:"Planet"){
+type Planet @model(name:"Planet"){
     id : ID,
     name : String,
     character: Character,

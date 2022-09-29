@@ -19,7 +19,7 @@ Once the containers are created, you can import the sample data which are placed
 
 We need to expose the books and the authors collections so that they can be used via GraphQL. Cosmos DB, being schema agnostic, requires us to provide the schema definition for the collections. These schema definitions need to be added in the `schema.gql` file.
 
-Start by adding the `author` and `book` schema:
+Start by adding the `Author` and `Book` schema:
 
 ```graphql
 type Author @model {
@@ -119,12 +119,13 @@ We want to expose the books and the authors collections so that they can be used
 You can do this either by using the CLI with the add command :
 
 ```bash
- dab add author --source authors --permissions "anonymous:*"
+  dab add Author --source authors --permissions "anonymous:*"
+```
 
-or by adding the `author` entity manually to the configuration file under entities section:
+or by adding the `Author` entity manually to the configuration file under entities section:
 
 ```json
-    "author": {
+    "Author": {
       "source": "authors",
       "rest": false,
       "graphql": true,
@@ -137,23 +138,24 @@ or by adding the `author` entity manually to the configuration file under entiti
     }
 ```
 
-within the `entities` object you can create any entity with any name (as long as it is valid for GraphQL). The name `author`, in this case, will be used to build the GraphQL type. Within the entity you have the `source` element that specifies which container contains the entity data. In our case it is `authors`.
+within the `entities` object you can create any entity with any name (as long as it is valid for GraphQL). The name `Author`, in this case, will be used to build the GraphQL type. Within the entity you have the `source` element that specifies which container contains the entity data. In our case it is `authors`.
 
 > **NOTE**: Entities names are case sensitive and they will be exposed via GraphQL as you have typed them.
 
-After that, you need to specify the permission for the exposed entity, so that you can be sure only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial we're just allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `author` entity.
+After that, you need to specify the permission for the exposed entity, so that you can be sure only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial we're just allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `Author` entity.
 
-You can also add the `book` entity now, applying the same concepts you just learnt for the `author` entity. 
+You can also add the `Book` entity now, applying the same concepts you just learnt for the `Author` entity. 
 
 CLI add command : 
 
 ```bash
- dab add book --source books --permissions "anonymous:*"
+  dab add Book --source books --permissions "anonymous:*"
+```
 
-or by adding the `book` entity manually to the configuration file:
+or by adding the `Book` entity manually to the configuration file:
 
 ```json
-    "book": {
+    "Book": {
       "source": "books",
       "rest": false,
       "graphql": true,
@@ -166,11 +168,11 @@ or by adding the `book` entity manually to the configuration file:
     }
 ```
 
-Once you have added the `author` entity, the `entities` object of configuration file will look like the following:
+Once you have added the `Author` entity, the `entities` object of configuration file will look like the following:
 
 ```json
  "entities": {
-    "author": {
+    "Author": {
       "source": "authors",
       "rest": false,
       "graphql": true,
@@ -181,7 +183,7 @@ Once you have added the `author` entity, the `entities` object of configuration 
         }
       ]
     },
-    "book": {
+    "Book": {
       "source": "books",
       "rest": false,
       "graphql": true,
@@ -202,13 +204,13 @@ that's all is needed at the moment. Data API builder is ready to be run.
 
 Run the below command (this will start the engine with default config `dab-config.json`, use option --config otherwise):
 
-```
+```dos
 dab start
 ```
 
 Once it is successfully started, then you'll see something like:
 
-```
+```text
 info: Azure.DataApiBuilder.Service.Startup[0]
       Successfully completed runtime initialization.
 info: Microsoft.Hosting.Lifetime[14]
@@ -233,7 +235,7 @@ Unlike other databases, Data API Builder for Azure Cosmos DB does not support ge
 
 GraphQL endpoint is available at
 
-```
+```text
 /graphql
 ```
 

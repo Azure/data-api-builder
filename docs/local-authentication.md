@@ -17,7 +17,7 @@ Make sure that in the configuration file you are using the `StaticWebApps` provi
 }
 ```
 
-## 2. Issue requests providing a generated `X-MS-CLIENT-PRINCIPAL` header
+## 2. Send requests providing a generated `X-MS-CLIENT-PRINCIPAL` header
 
 Once Data API Builder is running locally and configured to use the `StaticWebApps` authentication provider, you can generate a client principal object manually using the following template:
 

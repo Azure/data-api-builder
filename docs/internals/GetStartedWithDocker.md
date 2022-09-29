@@ -2,13 +2,13 @@
 
 This document provides instruction for running the engine inside a Docker container.
 
-## Running docker container from ACR (Prebuilt image)
+## Running docker container from Azure Container Registry (Prebuilt image)
 
 N.B. If you want to build your own image, use the next section (Build and deploy as Docker Container)
 
 N.B. You might not have access to the container registry where the image is hosted. Reach out to someone on the team to get access.
 
-1. You will need to login to the ACR:
+1. You will need to login to the ACR, if you don't have the Azure CLI on your machine, install it from [here (Azure CLI Installation Instructions)](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli):
 
 ```bash
 az acr login --name hawaiiacr

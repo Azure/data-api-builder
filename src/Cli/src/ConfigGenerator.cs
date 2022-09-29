@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using static Cli.Utils;
@@ -206,24 +207,12 @@ namespace Cli
                 return false;
             }
 
-            if (!TryParseSourceParameterDictionary(options.SourceParameters, out Dictionary<string, object>? parametersDictionary))
-            {
-                return false;
-            }
-
-            // Try to get the source object as string or DatabaseObjectSource
-            string[]? sourceKeyFields = null;
-            if (options.SourceKeyFields is not null && options.SourceKeyFields.Any())
-            {
-                sourceKeyFields = options.SourceKeyFields.ToArray();
-            }
-
-            if (!TryCreateSourceObject(
-                options.Source, options.SourceType, parametersDictionary,
-                sourceKeyFields,
+            // Try to get the source object as string or DatabaseObjectSource for new Entity
+            if (!TryCreateSourceObjectForNewEntity(
+                options,
                 out object? source))
             {
-                Console.Error.WriteLine("Unable to parse the given source.");
+                Console.Error.WriteLine("Unable to create the source object.");
                 return false;
             }
 
@@ -244,6 +233,53 @@ namespace Cli
             // Serialize runtime config to json string
             //
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
+
+            return true;
+        }
+
+        /// <summary>
+        /// This method creates the source object for a new entity
+        /// if the given source fields specified by the user are valid.
+        /// </summary>
+        public static bool TryCreateSourceObjectForNewEntity(
+            AddOptions options,
+            [NotNullWhen(true)] out object? sourceObject)
+        {
+            sourceObject = null;
+            // Verify that parameter is provided with stored-procedure only
+            // and keyfields with table/views.
+            if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
+                options.SourceType,
+                options.SourceParameters,
+                options.SourceKeyFields)
+            )
+            {
+                return false;
+            }
+
+            // This is executed only two cases:
+            // only when sourceParameters is null (no parsing happens, directly returns null)
+            // when type is stored-procedure.
+            if (!TryParseSourceParameterDictionary(options.SourceParameters, out Dictionary<string, object>? parametersDictionary))
+            {
+                return false;
+            }
+
+            string[]? sourceKeyFields = null;
+            if (options.SourceKeyFields is not null && options.SourceKeyFields.Any())
+            {
+                sourceKeyFields = options.SourceKeyFields.ToArray();
+            }
+
+            // Try to get the source object as string or DatabaseObjectSource
+            if (!TryCreateSourceObject(
+                options.Source, options.SourceType, parametersDictionary,
+                sourceKeyFields,
+                out sourceObject))
+            {
+                Console.Error.WriteLine("Unable to parse the given source.");
+                return false;
+            }
 
             return true;
         }
@@ -582,8 +618,17 @@ namespace Cli
             updatedSourceObject = null;
             string updatedSourceName = options.Source is null ? entity!.SourceName : options.Source;
             string[]? updatedKeyFields = entity.KeyFields;
-            string? updatedSourceType = entity.SourceTypeName;
+            string? updatedSourceType = options.SourceType is null ? entity.SourceTypeName : options.SourceType;
             Dictionary<string, object>? updatedSourceParameters = entity.Parameters;
+
+            if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
+                updatedSourceType,
+                options.SourceParameters,
+                options.SourceKeyFields)
+            )
+            {
+                return false;
+            }
 
             // Changing source object from stored-procedure to table/view
             // should automatically update the parameters to be null.
@@ -591,25 +636,12 @@ namespace Cli
             // should be marked null.
             if (options.SourceType is not null && !options.SourceType.Equals(entity.SourceTypeName))
             {
-                updatedSourceType = options.SourceType;
                 if ("stored-procedure".Equals(options.SourceType))
                 {
-                    if (options.SourceKeyFields is not null)
-                    {
-                        Console.Error.WriteLine("Stored Procedures don't support keyfields.");
-                        return false;
-                    }
-
                     updatedKeyFields = null;
                 }
                 else
                 {
-                    if (options.SourceParameters is not null)
-                    {
-                        Console.Error.WriteLine("Tables/Views don't support parameters.");
-                        return false;
-                    }
-
                     updatedSourceParameters = null;
                 }
             }

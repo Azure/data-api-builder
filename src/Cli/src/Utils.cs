@@ -487,6 +487,41 @@ namespace Cli
         }
 
         /// <summary>
+        /// This method checks that parameter is only used with Stored Procedure, while
+        /// key-fields only with table/views.
+        /// </summary>
+        /// <param name="sourceType">type of the source object.</param>
+        /// <param name="parameters">IEnumerable string containing parameters for stored-procedure.</param>
+        /// <param name="keyFields">IEnumerable string containing key columns for table/view.</param>
+        /// <returns> Returns true when successful else on failure, returns false.</returns>
+        public static bool VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
+            string? sourceType,
+            IEnumerable<string>? parameters,
+            IEnumerable<string>? keyFields
+        )
+        {
+            sourceType = (sourceType is null) ? "table" : sourceType;
+            if ("stored-procedure".Equals(sourceType))
+            {
+                if (keyFields is not null && keyFields.Any())
+                {
+                    Console.Error.WriteLine("Stored Procedures don't support keyfields.");
+                    return false;
+                }
+            }
+            else
+            {
+                if (parameters is not null && parameters.Any())
+                {
+                    Console.Error.WriteLine("Tables/Views don't support parameters.");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Creates source object by using valid type, params, and keyfields.
         /// </summary>
         /// <param name="name">Name of the source.</param>

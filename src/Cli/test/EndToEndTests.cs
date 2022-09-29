@@ -103,7 +103,8 @@ public class EndToEndTests
             runtimeConfig.DetermineGlobalSettings();
             Assert.AreEqual(hostModeEnumType, runtimeConfig.HostGlobalSettings.Mode);
         }
-        else{
+        else
+        {
             Assert.IsNull(runtimeConfig);
         }
     }

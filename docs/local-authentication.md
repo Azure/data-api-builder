@@ -1,8 +1,8 @@
 # Local Authentication
 
-When developing a solution using Data API Builder locally, or when running Data API Builder on-premises, you will need to test the configured authentication and authorization options, by simulating a request with a specific role or claim.
+When developing a solution using Data API Builder locally, or when running Data API Builder on-premises, you will need to test the configured authentication and authorization options by simulating a request with a specific role or claim.
 
-To simulate authenticated request without having the need to set up a full integration with an authentication provider (like Azure AD, for example), you can use the following steps:
+To simulate an authenticated request without configuring an authentication provider (like Azure AD, for example), you can make the following changes:
 
 ## 1. Use the `StaticWebApps` provider
 
@@ -17,7 +17,7 @@ Make sure that in the configuration file you are using the `StaticWebApps` provi
 }
 ```
 
-## 2. Issue requests providing a generate `X-MS-CLIENT-PRINCIPAL` header
+## 2. Issue requests providing a generated `X-MS-CLIENT-PRINCIPAL` header
 
 Once Data API Builder is running locally and configured to use the `StaticWebApps` authentication provider, you can generate a client principal object manually using the following template:
 

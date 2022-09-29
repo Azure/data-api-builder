@@ -50,7 +50,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestAddEntity()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--host-mode", "Development", "--database-type", "mssql", "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "false" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--host-mode", "development", "--database-type", "mssql", "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "false" };
         Program.Main(initArgs);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -81,6 +81,35 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Test to verify that --host-mode is case insensitive.
+    /// Short forms are not supported.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("production", HostModeType.Production, true)]
+    [DataRow("Production", HostModeType.Production, true)]
+    [DataRow("development", HostModeType.Development, true)]
+    [DataRow("Development", HostModeType.Development, true)]
+    [DataRow("developer", HostModeType.Development, false)]
+    [DataRow("prod", HostModeType.Production, false)]
+    public void EnsureHostModeEnumIsCaseInsensitive(string hostMode, HostModeType hostModeEnumType, bool expectSuccess)
+    {
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--host-mode", hostMode, "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        Program.Main(initArgs);
+
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+        if (expectSuccess)
+        {
+            Assert.IsNotNull(runtimeConfig);
+            runtimeConfig.DetermineGlobalSettings();
+            Assert.AreEqual(hostModeEnumType, runtimeConfig.HostGlobalSettings.Mode);
+        }
+        else
+        {
+            Assert.IsNull(runtimeConfig);
+        }
+    }
+
+    /// <summary>
     /// Test to verify adding a new Entity without IEnumerable options.
     /// </summary>
     [TestMethod]
@@ -93,6 +122,7 @@ public class EndToEndTests
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
+        Assert.AreEqual(HostModeType.Production, runtimeConfig.HostGlobalSettings.Mode);
 
         string[] addArgs = { "add", "book", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:*" };
         Program.Main(addArgs);

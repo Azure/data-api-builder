@@ -460,7 +460,7 @@ namespace Cli
                 }
             }
 
-            runtimeConfig.Entities[options.Entity] = new Entity(updatedSource!,
+            runtimeConfig.Entities[options.Entity] = new Entity(updatedSource,
                                                                 updatedRestDetails,
                                                                 updatedGraphQLDetails,
                                                                 updatedPermissions,

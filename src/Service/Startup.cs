@@ -246,9 +246,9 @@ namespace Azure.DataApiBuilder.Service
             }
             else
             {
-                runtimeConfigProvider.RuntimeConfigLoaded += async (sender, newConfig) =>
+                runtimeConfigProvider.RuntimeConfigLoaded += (sender, newConfig) =>
                 {
-                    isRuntimeReady = await PerformOnConfigChangeAsync(app);
+                    isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
                 };
             }
 

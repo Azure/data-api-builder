@@ -14,7 +14,8 @@ namespace Cli
         /// <returns>0 on success, -1 on failure.</returns>
         public static int Main(string[] args)
         {
-            Parser parser = new(settings => {
+            Parser parser = new(settings =>
+            {
                 settings.CaseInsensitiveEnumValues = true;
                 settings.HelpWriter = Console.Out;
             });

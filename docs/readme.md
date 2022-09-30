@@ -15,9 +15,10 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
   - [Local authentication](./local-authentication.md)
 - [Running in Azure](./running-in-azure.md)
 - [Configuration file](./configuration-file.md)
+  - [Database Connections](./database-connections.md) - **Work in progress**
 - [REST features](./rest.md)
 - [GraphQL features](./graphql.md)
 - [Authentication](./authentication.md)
 - [Authorization](./authorization.md)
 - [Relationships](./relationships.md)
-- [Known Issues and Limitations](/docs/known-issues.md) - **Documentation Work in progress**
+- [Known Issues and Limitations](/docs/known-issues.md) - **Work in progress**

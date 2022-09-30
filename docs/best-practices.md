@@ -5,12 +5,12 @@
 When adding an entity to the configuration file, use PascalCasing, so that the generated GraphQL types will be easier to read. For example if you have an entity named `CompositeNameEntity` the generated GraphQL schema will be have the following queries and mutations:
 
 - Queries
-  - compositeNameEntities
-  - compositeNameEntity_by_pk  
-Mutations
-  - createCompositeNameEntity
-  - updateCompositeNameEntity
-  - deleteCompositeNameEntity
+  - `compositeNameEntities`
+  - `compositeNameEntity_by_pk`
+- Mutations
+  - `createCompositeNameEntity`
+  - `updateCompositeNameEntity`
+  - `deleteCompositeNameEntity`
 
 which are much easier an nicer to read.
 

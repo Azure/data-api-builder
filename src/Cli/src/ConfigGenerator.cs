@@ -648,12 +648,19 @@ namespace Cli
         /// <summary>
         /// This method will try starting the engine.
         /// It will use the config provided by the user, else will look for the default config.
+        /// Does validation to check connection string and database-type is correctly configured.
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options)
         {
             if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
             {
                 Console.Error.WriteLine("Config not provided and default config file doesn't exist.");
+                return false;
+            }
+
+            if (!ValidateCanStartEngineWithConfig(runtimeConfigFile))
+            {
+                Console.Error.WriteLine("Failed to start the engine");
                 return false;
             }
 

@@ -28,6 +28,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
         // Only characters from a-z,A-Z,0-9,.,_ are allowed to be present within the claimType.
         private static readonly string _invalidClaimChars = @"[^a-zA-Z0-9_\.]+";
 
+        // To make sure validation once done by CLI is not repeated by engine for the same config.
+        // Default value is false.
+        public static bool _isValidatedByCLI;
+
         // Regex to check occurence of any character not among [a-z,A-Z,0-9,.,_] in the claimType.
         // The claimType is invalid if there is a match found.
         private static readonly Regex _invalidClaimCharsRgx = new(_invalidClaimChars, RegexOptions.Compiled);
@@ -59,11 +63,41 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
 
+            ValidateDatabaseTypeAndConnectionString(
+                runtimeConfig,
+                _fileSystem,
+                _logger
+            );
+
+            ValidateAuthenticationConfig();
+
+            // Running these graphQL validations only in development mode to ensure
+            // fast startup of engine in production mode.
+            if (runtimeConfig.GraphQLGlobalSettings.Enabled
+                 && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
+            {
+                ValidateEntityNamesInConfig(runtimeConfig.Entities);
+                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
+            }
+        }
+
+        public static void ValidateDatabaseTypeAndConnectionString(
+            RuntimeConfig runtimeConfig,
+            IFileSystem fileSystem,
+            ILogger<RuntimeConfigValidator> logger
+        )
+        {
+            // No Need to Validated Again if Validated by CLI
+            if (_isValidatedByCLI)
+            {
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(runtimeConfig.DatabaseType.ToString()))
             {
                 const string databaseTypeNotSpecified =
                     "The database-type should be provided with the runtime config.";
-                _logger.LogCritical(databaseTypeNotSpecified);
+                logger.LogCritical(databaseTypeNotSpecified);
                 throw new NotSupportedException(databaseTypeNotSpecified);
             }
 
@@ -89,22 +123,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
                     }
 
-                    if (!_fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    if (!fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
                     {
                         throw new FileNotFoundException($"The GraphQL schema file at '{runtimeConfig.CosmosDb.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
                     }
                 }
-            }
-
-            ValidateAuthenticationConfig();
-
-            // Running these graphQL validations only in development mode to ensure
-            // fast startup of engine in production mode.
-            if (runtimeConfig.GraphQLGlobalSettings.Enabled
-                 && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
-            {
-                ValidateEntityNamesInConfig(runtimeConfig.Entities);
-                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
             }
         }
 

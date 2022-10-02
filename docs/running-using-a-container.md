@@ -16,12 +16,12 @@ For example, if:
 
 - you are working in the `c:\data-api-builder` folder
 - the configuration file you want to use in the `samples` folder and is named `my-sample-dab-config.json`
-- you want to use the M1.5 release
+- you want to use the 0.2.52 (Sept2022 release)
 
 the command to run is the following:
 
 ```bash
-docker run -it -v "c:\data-api-builder\samples://App/samples" -p 5000:5000 hawaiiacr.azurecr.io/dab:M1.5 --ConfigFileName ./samples/my-sample-dab-config.json
+docker run -it -v "c:\data-api-builder\samples://App/samples" -p 5000:5000 hawaiiacr.azurecr.io/dab:0.2.52 --ConfigFileName ./samples/my-sample-dab-config.json
 ```
 
 There is also the option to use one of the provided Docker compose files, available in the `docker` folder:

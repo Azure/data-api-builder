@@ -95,7 +95,7 @@ You can do this either using the CLI:
 dab add Author --source dbo.authors --permissions "anonymous:*"
 ```
 
-or by adding the `author` entity manually to the config file:
+or by adding the `Author` entity manually to the config file:
 
 ```json
 "entities": {
@@ -113,7 +113,7 @@ or by adding the `author` entity manually to the config file:
 
 within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL). The name `Author`, in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case is `dbo.authors`.
 
-> **NOTE**: Entities names are case sensitive, and they will be exposed via REST and GraphQL as you have typed them.
+> **NOTE**: Entities names are case sensitive, and they will be exposed via REST and GraphQL as you have typed them. Take a look at the [Best Practices](../best-practices.md) document to learn the best practices on entities names.
 
 After that, the permissions for the exposed entity are defined via the `permission` element; it allows you to be sure that only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial, we're allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `Author` entity.
 
@@ -193,7 +193,7 @@ The following HTTP verbs are supported:
 
 - `GET`: return one or more items
 - `POST`: create a new item
-- `PUT` `PATCH`: update or create an item
+- `PUT` & `PATCH`: update or create an item
 - `DELETE`: delete an item
 
 Whenever you need to access a single item, you can get the item you want by specifying its primary key:
@@ -252,11 +252,11 @@ which will create the `relationships` section in the `Author` entity:
 
 ```json
 "relationships": {
-    "books": {
-        "cardinality": "many",
-        "target.entity": "Book",
-        "linking.object": "dbo.books_authors"
-    }
+  "books": {
+    "cardinality": "many",
+    "target.entity": "Book",
+    "linking.object": "dbo.books_authors"
+  }
 }
 ```
 
@@ -342,7 +342,7 @@ that will return all the authors of "Nightfall" book, or like:
 {
   authors(
     filter: {
-        or: [
+        and: [
           { first_name: { eq: "Isaac" } }
           { last_name: { eq: "Asimov" } }
         ]

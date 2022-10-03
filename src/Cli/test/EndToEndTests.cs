@@ -271,13 +271,18 @@ public class EndToEndTests
     [DataRow("--LogLevel NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
     public void TestStartEngine(string flags)
     {
-        string output = GetConsoleOutputOnRunningDabProcessWithCommandAndFlags(
+        Process process = GetConsoleOutputOnRunningDabProcessWithCommandAndFlags(
             command: "start",
             flags
         );
 
+        string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
         Assert.IsTrue(output!.Contains($"Using config file: {RuntimeConfigPath.DefaultName}"));
+        output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
         Assert.IsTrue(output.Contains("Starting the runtime engine..."));
+        process.Kill();
     }
 
     // <summary>
@@ -290,10 +295,13 @@ public class EndToEndTests
     [DataRow("", "--help", DisplayName = "Checking output for --help.")]
     public void TestHelpWriterOutput(string command, string flags)
     {
-        string output = GetConsoleOutputOnRunningDabProcessWithCommandAndFlags(
+        Process process = GetConsoleOutputOnRunningDabProcessWithCommandAndFlags(
             command,
             flags
         );
+
+        string? output = process.StandardOutput.ReadToEnd();
+        Assert.IsNotNull(output);
 
         if ("--help".Equals(flags))
         {
@@ -314,6 +322,8 @@ public class EndToEndTests
                 Assert.IsTrue(output.Contains("No verb selected."));
             }
         }
+
+        process.Kill();
     }
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)

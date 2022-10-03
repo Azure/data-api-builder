@@ -26,7 +26,7 @@ namespace Cli.Tests
         // Creates a new dab Process with the given command and flags,
         // and returns the console output.
         // </summary>
-        public static string GetConsoleOutputOnRunningDabProcessWithCommandAndFlags(string command, string flags)
+        public static Process GetConsoleOutputOnRunningDabProcessWithCommandAndFlags(string command, string flags)
         {
             Process process = new()
             {
@@ -46,10 +46,24 @@ namespace Cli.Tests
 
             // The new process should not be exited after triggering the start command.
             Assert.IsFalse(process.HasExited);
-            string? output = process.StandardOutput.ReadToEnd();
-            Assert.IsNotNull(output);
-            process.Kill();
-            return output;
+            return process;
+            // string output = "";
+            // if ("start".Equals(command))
+            // {
+            //   // start process doesn't automatically ends, so we call ReadLine twice,
+            //   // once to get the config info
+            //   // second to get the confirmation that engine has started.
+            //   output += process.StandardOutput.ReadLine();
+            //   output += process.StandardOutput.ReadLine();
+            // }
+            // else
+            // {
+            //   output += process.StandardOutput.ReadToEnd();
+            // }
+
+            // Assert.IsNotNull(output);
+            // process.Kill();
+            // return output;
         }
 
         public static string GetInitialConfiguration

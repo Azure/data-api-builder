@@ -309,7 +309,7 @@ public class EndToEndTests
         else
         {   // Wrong command or No command
             Assert.IsTrue(output.Contains("ERROR"));
-            if("".Equals(command))
+            if ("".Equals(command))
             {
                 Assert.IsTrue(output.Contains("No verb selected."));
             }

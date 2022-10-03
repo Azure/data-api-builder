@@ -22,15 +22,15 @@ namespace Cli.Tests
             return configurationJson.ToString();
         }
 
-    // <summary>
-    // Creates a new dab Process with the given command and flags,
-    // and returns the console output.
-    // </summary>
-    public static string GetConsoleOutputOnRunningDabProcessWithCommandAndFlags(string command, string flags)
-    {
-        Process process = new()
+        // <summary>
+        // Creates a new dab Process with the given command and flags,
+        // and returns the console output.
+        // </summary>
+        public static string GetConsoleOutputOnRunningDabProcessWithCommandAndFlags(string command, string flags)
         {
-            StartInfo =
+            Process process = new()
+            {
+                StartInfo =
                 {
                     FileName = @"./dab",
                     Arguments = $"{command} {flags}",
@@ -39,18 +39,18 @@ namespace Cli.Tests
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                 }
-        };
+            };
 
-        // Asserting that a new process has been started and no existing process is reused.
-        Assert.IsTrue(process.Start());
+            // Asserting that a new process has been started and no existing process is reused.
+            Assert.IsTrue(process.Start());
 
-        // The new process should not be exited after triggering the start command.
-        Assert.IsFalse(process.HasExited);
-        string? output = process.StandardOutput.ReadToEnd();
-        Assert.IsNotNull(output);
-        process.Kill();
-        return output;
-    }
+            // The new process should not be exited after triggering the start command.
+            Assert.IsFalse(process.HasExited);
+            string? output = process.StandardOutput.ReadToEnd();
+            Assert.IsNotNull(output);
+            process.Kill();
+            return output;
+        }
 
         public static string GetInitialConfiguration
         {

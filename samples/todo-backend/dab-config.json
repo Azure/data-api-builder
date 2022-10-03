@@ -1,0 +1,50 @@
+{
+  "$schema": "../../schemas/dab.draft-01.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "@env('AZURE_SQL_CONNECTION_STRING')"
+  },
+  "runtime": {
+    "host": {    
+      "mode": "production",
+      "cors": {
+        "origins": [
+          "*"
+        ],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "StaticWebApps"
+      }          
+    }
+  },
+  "entities": {
+    "todo": {
+      "source": "dab.todos",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*",
+              "policy": {
+                "database": "@item.owner eq 'anonymous'"
+              }
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [            
+            {
+              "action": "*",
+              "policy": {
+                "database": "@item.owner eq @claims.name"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

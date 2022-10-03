@@ -5,15 +5,18 @@ param (
     [Parameter (Mandatory=$true)][string] $DabVersion
 )
 
-# Dab executable
+# Getting executable file path for DAB
 $file = "dab"
-if ($OsName -eq "Linux")
-{
-    $RID = "linux-x64"
-}
-elseif ($OsName -eq "Windows_NT"){
-    # for Windows
-    $RID = "win-x64"
+switch ($OsName) {
+    "Windows_NT"{
+        $RID = "win-x64"
+    }
+    "Linux"{
+        $RID = "linux-x64"
+    }
+    "Darwin"{ 
+        $RID = "osx-x64"
+    }
 }
 
 $executableDAB = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab/$file"

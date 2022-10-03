@@ -4,7 +4,7 @@ param (
     [Parameter (Mandatory=$true)][string] $DabVersion
 )
 
-Invoke-expression "cd ./$BuildOutputDir/src/out/cli/$BuildConfiguration/net6.0"
+Invoke-expression "cd ./$BuildOutputDir/src/"
 
 ls -a
 

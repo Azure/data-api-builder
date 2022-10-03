@@ -7,7 +7,8 @@ param (
 ls -a
 
 # Check version
-$ver = ./$BuildOutputDir/out/cli/$BuildConfiguration/*/dab --version
+$x = "./$BuildOutputDir/out/cli/$BuildConfiguration/*/dab"
+$ver = $x --version
 
 describe MyTest {
     it 'verifies something' {

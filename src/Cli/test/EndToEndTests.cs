@@ -303,7 +303,7 @@ public class EndToEndTests
         // The new process should not be exited after triggering the start command.
         Assert.IsFalse(process.HasExited);
         string? output = process.StandardOutput.ReadLine();
-        Assert.IsTrue(output!.Contains($"Using config file: {RuntimeConfigPath.DefaultName}"));
+        Assert.IsTrue(output!.Contains($"Using config file: {configFileName}"));
         output = process.StandardOutput.ReadLine();
         process.Kill();
         Assert.IsNotNull(output);

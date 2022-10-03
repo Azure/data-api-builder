@@ -81,13 +81,6 @@ steps:
     projects: '**/*Tests*.csproj'
     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
-- task: PowerShell@2
-  displayName: "Regression Test for DAB CLI"
-  inputs:
-    targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/dab-regression-test-script.ps1
-    arguments: $(buildConfiguration) $(dabVersion)
-
 - template: templates/code-signing.yml
   parameters:
     # This is the path that will be used for packing nuget package.
@@ -115,6 +108,13 @@ steps:
     targetType: 'filePath'
     filePath: $(System.DefaultWorkingDirectory)/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -Package
+
+- task: PowerShell@2
+  displayName: "Regression Test for DAB CLI"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/dab-regression-test-script.ps1
+    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(Agent.OS)  $(dabVersion)
 
 # Sign the binaries that were generated per platform
 - template: templates/code-signing.yml

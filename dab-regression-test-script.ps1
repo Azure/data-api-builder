@@ -1,10 +1,14 @@
 param (
     [Parameter (Mandatory=$true)][string] $BuildConfiguration,
+    [Parameter (Mandatory=$true)][string] $BuildOutputDir,
+    [Parameter (Mandatory=$true)][string] $OsName,
     [Parameter (Mandatory=$true)][string] $DabVersion
 )
 
+Write-Host $OsName
+
 # Dab executable
-$executableDAB = "./src/out/cli/$BuildConfiguration/net6.0/dab"
+$executableDAB = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab/dab"
 
 describe RegressionTest {
     it 'Check Version' {

@@ -4,6 +4,8 @@ param (
     [Parameter (Mandatory=$true)][string] $DabVersion
 )
 
+cd "./$BuildOutputDir/out/cli/$BuildConfiguration/net6.0/"
+
 ls -a
 
 # Check version

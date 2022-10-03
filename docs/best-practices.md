@@ -2,7 +2,7 @@
 
 ## Name entity using PascalCasing
 
-When adding an entity to the configuration file, use PascalCasing, so that the generated GraphQL types will be easier to read. For example if you have an entity named `CompositeNameEntity` the generated GraphQL schema will be have the following queries and mutations:
+When adding an entity to the configuration file, use PascalCasing, so that the generated GraphQL types will be easier to read. For example if you have an entity named `CompositeNameEntity` the generated GraphQL schema will have the following queries and mutations:
 
 - Queries
   - `compositeNameEntities`

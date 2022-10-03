@@ -269,32 +269,51 @@ public class EndToEndTests
     [DataRow("--LogLevel eRROR", DisplayName = "Case sensitivity: LogLevel Error from command line.")]
     [DataRow("--LogLevel CrItIcal", DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
     [DataRow("--LogLevel NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
-    public void TestStartEngine(string logging)
+    public void TestStartEngine(string flags)
     {
-        Process process = new()
-        {
-            StartInfo =
-                {
-                    FileName = @"./dab",
-                    Arguments = $"start --config {RuntimeConfigPath.DefaultName} {logging}",
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                }
-        };
+        string output = GetConsoleOutputOnRunningDabProcessWithCommandAndFlags(
+            command: "start",
+            flags
+        );
 
-        // Asserting that a new process has been started and no existing process is reused.
-        Assert.IsTrue(process.Start());
-
-        // The new process should not be exited after triggering the start command.
-        Assert.IsFalse(process.HasExited);
-        string? output = process.StandardOutput.ReadLine();
         Assert.IsTrue(output!.Contains($"Using config file: {RuntimeConfigPath.DefaultName}"));
-        output = process.StandardOutput.ReadLine();
-        process.Kill();
-        Assert.IsNotNull(output);
         Assert.IsTrue(output.Contains("Starting the runtime engine..."));
+    }
+
+    // <summary>
+    // Test to verify that help writter window generates output on the console.
+    // </summary>
+    [DataTestMethod]
+    [DataRow("", "", DisplayName = "No flags provided.")]
+    [DataRow("initialize", "", DisplayName = "Wrong Command provided.")]
+    [DataRow("", "--version", DisplayName = "Checking version.")]
+    [DataRow("", "--help", DisplayName = "Checking output for --help.")]
+    public void TestHelpWriterOutput(string command, string flags)
+    {
+        string output = GetConsoleOutputOnRunningDabProcessWithCommandAndFlags(
+            command,
+            flags
+        );
+
+        if ("--help".Equals(flags))
+        {
+            Assert.IsTrue(output.Contains("init"));
+            Assert.IsTrue(output.Contains("add"));
+            Assert.IsTrue(output.Contains("update"));
+            Assert.IsTrue(output.Contains("start"));
+        }
+        else if ("--version".Equals(flags))
+        {
+            Assert.IsTrue(output.Contains("dab 1.0.0"));
+        }
+        else
+        {   // Wrong command or No command
+            Assert.IsTrue(output.Contains("ERROR"));
+            if("".Equals(command))
+            {
+                Assert.IsTrue(output.Contains("No verb selected."));
+            }
+        }
     }
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)

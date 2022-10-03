@@ -113,7 +113,7 @@ steps:
   displayName: "Regression Test for DAB CLI"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/dab-regression-test-script.ps1
+    filePath: $(System.DefaultWorkingDirectory)/dab-smoke-test-script.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(Agent.OS)  $(dabVersion)
 
 # Sign the binaries that were generated per platform

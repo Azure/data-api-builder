@@ -7,8 +7,7 @@ param (
 ls -a
 
 # Check version
-$x = "./$BuildOutputDir/out/cli/$BuildConfiguration/*/dab"
-$ver = $x --version
+$ver = Invoke-expression "./$BuildOutputDir/out/cli/$BuildConfiguration/*/dab --version"
 
 describe MyTest {
     it 'verifies something' {

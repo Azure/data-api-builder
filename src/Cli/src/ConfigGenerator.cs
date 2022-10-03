@@ -660,7 +660,7 @@ namespace Cli
 
             if (!ValidateCanStartEngineWithConfig(runtimeConfigFile))
             {
-                Console.Error.WriteLine("Failed to start the engine");
+                Console.Error.WriteLine("Config is not valid.");
                 return false;
             }
 

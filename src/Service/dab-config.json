@@ -2,7 +2,7 @@
   "$schema": "../schemas/dab.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": ""
+    "connection-string": "xxxxx"
   },
   "runtime": {
     "rest": {

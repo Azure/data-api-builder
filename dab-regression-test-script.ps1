@@ -9,7 +9,7 @@ $ver = Invoke-expression "./src/out/cli/$BuildConfiguration/net6.0/dab --version
 
 describe MyTest {
     it 'verifies something' {
-        $x.Contains("dab $DabVersion") | should be False
+        $x.Contains("dab $DabVersion") | should be True
     }
 }
 

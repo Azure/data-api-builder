@@ -82,7 +82,7 @@ steps:
 #     arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
 - task: PowerShell@2
-  displayName: "Smoke Test for DAB CLI"
+  displayName: "Regression Test for DAB CLI"
   inputs:
     targetType: 'filePath'
     filePath: $(System.DefaultWorkingDirectory)/dab-regression-test-script.ps1

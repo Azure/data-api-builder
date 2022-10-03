@@ -8,6 +8,14 @@ param (
 Write-Host $OsName
 
 # Dab executable
+if ($OsName -eq "Linux")
+{
+    $RID = "linux-x64"
+}
+else {
+    # for windows
+    $RID = "win-x64"
+}
 $executableDAB = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab/dab"
 
 describe RegressionTest {

@@ -1,4 +1,5 @@
 param (
+    [Parameter (Mandatory=$true)][string] $BuildConfiguration,
     [Parameter (Mandatory=$true)][string] $BuildOutputDir,
     [Parameter (Mandatory=$true)][string] $DabVersion
 )
@@ -6,7 +7,7 @@ param (
 ls -a
 
 # Check version
-$ver = ./$BuildOutputDir/dab.exe --version
+$ver = ./$BuildOutputDir/out/cli/$BuildConfiguration/*/dab --version
 
 describe MyTest {
     it 'verifies something' {

@@ -85,7 +85,7 @@ steps:
   displayName: "Smoke Test for DAB CLI"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/dab-cli-smoke-tests.ps1
+    filePath: $(System.DefaultWorkingDirectory)/dab-regression-test-script.ps1
     arguments: $(Build.ArtifactStagingDirectory) $(dabVersion)
 
 # - template: templates/code-signing.yml

@@ -223,6 +223,7 @@ namespace Azure.DataApiBuilder.Config
             writer.WriteStringValue(valueToWrite);
         }
     }
+    
     /// <summary>
     /// Supported source types as defined by json schema
     /// </summary>

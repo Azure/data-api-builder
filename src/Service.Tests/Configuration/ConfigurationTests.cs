@@ -99,6 +99,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, result.StatusCode);
         }
 
+        /// <summary>
+        /// Checks correct serialization and deserialization of Source Type from 
+        /// Enum to String and vice-versa.
+        /// Consider both cases for source as an object and as a string
+        /// </summary>
         [DataTestMethod]
         [DataRow(true, SourceType.StoredProcedure, "stored-procedure", DisplayName = "source is a stored-procedure")]
         [DataRow(true, SourceType.Table, "table", DisplayName = "source is a table")]

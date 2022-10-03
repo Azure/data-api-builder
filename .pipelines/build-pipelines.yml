@@ -86,7 +86,7 @@ steps:
   inputs:
     targetType: 'filePath'
     filePath: $(System.DefaultWorkingDirectory)/dab-regression-test-script.ps1
-    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion)
+    arguments: $(buildConfiguration) $(dabVersion)
 
 # - template: templates/code-signing.yml
 #   parameters:

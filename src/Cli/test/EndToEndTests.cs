@@ -269,11 +269,11 @@ public class EndToEndTests
     [DataRow("--LogLevel eRROR", DisplayName = "Case sensitivity: LogLevel Error from command line.")]
     [DataRow("--LogLevel CrItIcal", DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
     [DataRow("--LogLevel NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
-    public void TestStartEngine(string flags)
+    public void TestStartEngine(string logging)
     {
         Process process = GetConsoleOutputOnRunningDabProcessWithCommandAndFlags(
-            command: "start",
-            flags
+            command: $"start --config {RuntimeConfigPath.DefaultName}",
+            logging
         );
 
         string? output = process.StandardOutput.ReadLine();

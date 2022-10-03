@@ -4,12 +4,12 @@ param (
     [Parameter (Mandatory=$true)][string] $DabVersion
 )
 
-Invoke-expression "cd ./$BuildOutputDir"
+Invoke-expression "cd ./src/out/cli/$BuildConfiguration/"
 
 ls -a
 
 # Check version
-$ver = Invoke-expression "./$BuildOutputDir/out/cli/$BuildConfiguration/*/dab --version"
+$ver = Invoke-expression "./src/out/cli/$BuildConfiguration/*/dab --version"
 
 describe MyTest {
     it 'verifies something' {

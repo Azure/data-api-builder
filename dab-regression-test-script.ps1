@@ -9,6 +9,8 @@ $executableDAB = "./src/out/cli/$BuildConfiguration/net6.0/dab"
 describe RegressionTest {
     it 'Check Version' {
         $ver = Invoke-expression "$executableDAB --version"
+        Write-Host $ver
+        Write-Host $DabVersion
         $ver.Contains("dab $DabVersion") | Should -Be True
     }
 

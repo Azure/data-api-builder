@@ -149,13 +149,13 @@ Each exposed entity is enclosed in a dedicated section. The property name will b
 
 ```json
 "entities" {
-  "users": {
+  "User": {
     ...
   }
 }
 ```
 
-will instruct Data API builder to expose a GraphQL entity named `users` and a REST endpoint reachable via `/users` url path.
+will instruct Data API builder to expose a GraphQL entity named `user` and a REST endpoint reachable via `/User` url path.
 
 Within the entity section, there are feature specific sections:
 

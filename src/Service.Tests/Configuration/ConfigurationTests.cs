@@ -133,10 +133,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 excludedCols: null,
                 databasePolicy: null
                 );
-            
+
             string runtimeConfigJson = JsonSerializer.Serialize<RuntimeConfig>(runtimeConfig);
 
-            if (isDatabaseObjectSource) {
+            if (isDatabaseObjectSource)
+            {
                 Assert.IsTrue(runtimeConfigJson.Contains(sourceTypeName));
             }
 
@@ -145,13 +146,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 runtimeConfigJson,
                 out RuntimeConfig deserializedRuntimeConfig,
                 logger.Object));
-            
+
             Assert.IsTrue(deserializedRuntimeConfig.Entities.ContainsKey("MyEntity"));
             deserializedRuntimeConfig.Entities["MyEntity"].TryPopulateSourceFields();
             Assert.AreEqual("sourceName", deserializedRuntimeConfig.Entities["MyEntity"].SourceName);
 
             JsonElement sourceJson = (JsonElement)deserializedRuntimeConfig.Entities["MyEntity"].Source;
-            if (isDatabaseObjectSource) {
+            if (isDatabaseObjectSource)
+            {
                 Assert.AreEqual(JsonValueKind.Object, sourceJson.ValueKind);
                 Assert.AreEqual(sourceObjectType, deserializedRuntimeConfig.Entities["MyEntity"].ObjectType);
             }

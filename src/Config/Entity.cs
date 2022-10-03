@@ -187,10 +187,9 @@ namespace Azure.DataApiBuilder.Config
         [property: JsonPropertyName("key-fields")]
             Array KeyFields);
 
-    
     /// <summary>
-    /// Class to specify custom converter used while deserialising action from json config
-    /// to SourceType.
+    /// Class to specify custom converter used while deserialising json config
+    /// to SourceType and serializing from SourceType to string.
     /// Tries to convert the given string sourceType into one of the supported SourceType enums
     /// Throws an exception if not a case-insensitive match
     /// </summary>

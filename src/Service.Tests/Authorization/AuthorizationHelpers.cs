@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         {
             Field? fieldsForRole = null;
 
-            if(entitySource is null)
+            if (entitySource is null)
             {
                 entitySource = TEST_ENTITY;
             }

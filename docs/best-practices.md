@@ -12,7 +12,7 @@ When adding an entity to the configuration file, use PascalCasing, so that the g
   - `updateCompositeNameEntity`
   - `deleteCompositeNameEntity`
 
-which are much easier an nicer to read.
+which are much easier and nicer to read.
 
 ## Use singular form when naming entities
 

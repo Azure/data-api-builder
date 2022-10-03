@@ -222,7 +222,7 @@ Using the following configuration snippet as an example:
     "relationships": {
       "todos": {
         "cardinality": "many",
-        "target.entity": "todo",
+        "target.entity": "Todo",
         "source.fields": ["id"],
         "target.fields": ["category_id"]
       }
@@ -255,11 +255,11 @@ Very similar, to the One-To-Many, but cardinality is set to `one`. Using the fol
 
 ```json
 "entities": {
-  "todo": {
+  "Todo": {
     "relationships": {
       "category": {
         "cardinality": "one",
-        "target.entity": "category",
+        "target.entity": "Category",
         "source.fields": ["category_id"],
         "target.fields": ["id"]
       }
@@ -292,11 +292,11 @@ A many to many relationship is configured in the same way the other relationship
 
 ```json
 "entities": {
-  "todo": {
+  "Todo": {
     "relationships": {
       "assignees": {
         "cardinality": "many",
-        "target.entity": "user",
+        "target.entity": "User",
         "source.fields": ["id"],
         "target.fields": ["id"],
         "linking.object": "s005.users_todos",

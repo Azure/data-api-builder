@@ -278,7 +278,7 @@ public class EndToEndTests
             configFileName = RuntimeConfigPath.DefaultName;
         }
         else
-        {   
+        {
             // config with non-empty connection-string
             configFileName = _testRuntimeConfig;
             WriteJsonContentToFile(configFileName, GetInitialConfiguration);

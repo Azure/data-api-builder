@@ -5,29 +5,29 @@ param (
     [Parameter (Mandatory=$true)][string] $DabVersion
 )
 
-Write-Host $OsName
-
 # Dab executable
+$file = "dab"
 if ($OsName -eq "Linux")
 {
     $RID = "linux-x64"
 }
-else {
-    # for windows
+elseif ($OsName -eq "Windows_NT"){
+    # for Windows
     $RID = "win-x64"
 }
-$executableDAB = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab/dab"
+
+$executableDAB = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab/$file"
 
 describe RegressionTest {
     it 'Check Version' {
         $ver = Invoke-expression "$executableDAB --version"
-        Write-Host $ver
-        Write-Host $DabVersion
         $ver.Contains("dab $DabVersion") | Should -Be True
     }
 
     it 'Check Command Help Window' {
         $helpTexts = Invoke-expression "$executableDAB --help"
+
+        # Converting to object[] to string
         $helpWritterOutput = ""
         foreach ($helpText in $helpTexts)
         {

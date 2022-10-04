@@ -923,8 +923,8 @@ namespace Cli.Tests
                         entityName: "MyEntity",
                         oldSourceName: "s001.book",
                         updatedSourceName: "newSourceName",
-                        oldSourceType: "stored-procedure",
-                        updatedSourceType: "stored-procedure",
+                        oldSourceType: SourceType.StoredProcedure,
+                        updatedSourceType: SourceType.StoredProcedure,
                         oldParameters: new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
                         updatedParameters: new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
                         oldKeyFields: null,
@@ -939,8 +939,8 @@ namespace Cli.Tests
                         entityName: "MyEntity",
                         oldSourceName: "s001.book",
                         updatedSourceName: "s001.book",
-                        oldSourceType: "stored-procedure",
-                        updatedSourceType: "stored-procedure",
+                        oldSourceType: SourceType.StoredProcedure,
+                        updatedSourceType: SourceType.StoredProcedure,
                         oldParameters: new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
                         updatedParameters: new Dictionary<string, object>() { { "param1", "dab" }, { "param2", false } },
                         oldKeyFields: null,
@@ -956,8 +956,8 @@ namespace Cli.Tests
                         entityName: "MyEntity",
                         oldSourceName: "s001.book",
                         updatedSourceName: "s001.book",
-                        oldSourceType: "table",
-                        updatedSourceType: "table",
+                        oldSourceType: SourceType.Table,
+                        updatedSourceType: SourceType.Table,
                         oldParameters: null,
                         updatedParameters: null,
                         oldKeyFields: new string[] { "id", "name" },
@@ -1064,7 +1064,7 @@ namespace Cli.Tests
             string initialConfig,
             string entityName,
             string oldSourceName, string updatedSourceName,
-            string oldSourceType, string updatedSourceType,
+            SourceType oldSourceType, SourceType updatedSourceType,
             Dictionary<string, object>? oldParameters, Dictionary<string, object>? updatedParameters,
             string[]? oldKeyFields, string[]? updatedKeyFields
         )
@@ -1072,7 +1072,7 @@ namespace Cli.Tests
             Entity entity = GetEntityObjectFromRuntimeConfigJson(initialConfig, entityName);
             entity.TryPopulateSourceFields();
             Assert.AreEqual(oldSourceName, entity.SourceName);
-            Assert.AreEqual(oldSourceType, entity.SourceTypeName);
+            Assert.AreEqual(oldSourceType, entity.ObjectType);
             Assert.IsTrue(JToken.DeepEquals(
                 JToken.FromObject(JsonSerializer.SerializeToElement(oldParameters)),
                 JToken.FromObject(JsonSerializer.SerializeToElement(entity.Parameters)))
@@ -1082,7 +1082,7 @@ namespace Cli.Tests
             entity = GetEntityObjectFromRuntimeConfigJson(initialConfig, entityName);
             entity.TryPopulateSourceFields();
             Assert.AreEqual(updatedSourceName, entity.SourceName);
-            Assert.AreEqual(updatedSourceType, entity.SourceTypeName);
+            Assert.AreEqual(updatedSourceType, entity.ObjectType);
             Assert.IsTrue(JToken.DeepEquals(
                 JToken.FromObject(JsonSerializer.SerializeToElement(updatedParameters)),
                 JToken.FromObject(JsonSerializer.SerializeToElement(entity.Parameters)))

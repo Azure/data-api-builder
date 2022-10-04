@@ -165,28 +165,28 @@ namespace Cli.Tests
         /// <summary>
         /// Simple test to add a new entity to json config where source is a stored procedure.
         /// </summary>
-        [TestMethod]
-        public void AddNewEntityWhenEntitiesWithSourceAsStoredProcedure()
-        {
-            AddOptions options = new(
-                source: "s001.book",
-                permissions: new string[] { "anonymous", "*" },
-                entity: "MyEntity",
-                sourceType: "stored-procedure",
-                sourceParameters: new string[] { "param1:123", "param2:hello", "param3:true" },
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                config: _testRuntimeConfig);
+        // [TestMethod]
+        // public void AddNewEntityWhenEntitiesWithSourceAsStoredProcedure()
+        // {
+        //     AddOptions options = new(
+        //         source: "s001.book",
+        //         permissions: new string[] { "anonymous", "*" },
+        //         entity: "MyEntity",
+        //         sourceType: "stored-procedure",
+        //         sourceParameters: new string[] { "param1:123", "param2:hello", "param3:true" },
+        //         sourceKeyFields: null,
+        //         restRoute: null,
+        //         graphQLType: null,
+        //         fieldsToInclude: new string[] { },
+        //         fieldsToExclude: new string[] { },
+        //         policyRequest: null,
+        //         policyDatabase: null,
+        //         config: _testRuntimeConfig);
 
-            string initialConfiguration = INITIAL_CONFIG;
-            string expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
-            RunTest(options, initialConfiguration, expectedConfiguration);
-        }
+        //     string initialConfiguration = INITIAL_CONFIG;
+        //     string expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
+        //     RunTest(options, initialConfiguration, expectedConfiguration);
+        // }
 
         /// <summary>
         /// Simple test to verify success on adding a new entity with source object for valid fields.

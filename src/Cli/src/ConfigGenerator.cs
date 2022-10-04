@@ -247,13 +247,24 @@ namespace Cli
             [NotNullWhen(true)] out object? sourceObject)
         {
             sourceObject = null;
+
+            // Try to Parse the SourceType
+            if (!SourceTypeEnumConverter.TryGetSourceType(
+                    options.SourceType,
+                    out SourceType objectType))
+            {
+                Console.Error.WriteLine(
+                    SourceTypeEnumConverter.GenerateMessageForInvalidSourceType(options.SourceType!)
+                );
+                return false;
+            }
+
             // Verify that parameter is provided with stored-procedure only
             // and keyfields with table/views.
             if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
-                    options.SourceType,
+                    objectType,
                     options.SourceParameters,
-                    options.SourceKeyFields)
-            )
+                    options.SourceKeyFields))
             {
                 return false;
             }
@@ -276,7 +287,7 @@ namespace Cli
             // Try to get the source object as string or DatabaseObjectSource
             if (!TryCreateSourceObject(
                     options.Source,
-                    options.SourceType,
+                    objectType,
                     parametersDictionary,
                     sourceKeyFields,
                     out sourceObject))
@@ -623,10 +634,23 @@ namespace Cli
         {
             entity.TryPopulateSourceFields();
             updatedSourceObject = null;
-            string updatedSourceName = options.Source ?? entity!.SourceName;
+            string updatedSourceName = options.Source ?? entity.SourceName;
             string[]? updatedKeyFields = entity.KeyFields;
-            string? updatedSourceType = options.SourceType ?? entity.SourceTypeName;
+            SourceType updatedSourceType = entity.ObjectType;
             Dictionary<string, object>? updatedSourceParameters = entity.Parameters;
+
+            // If SourceType provided by user is null,
+            // no update is required.
+            if (options.SourceType is not null)
+            {
+                if (!SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out updatedSourceType))
+                {
+                    Console.Error.WriteLine(
+                        SourceTypeEnumConverter.GenerateMessageForInvalidSourceType(options.SourceType)
+                    );
+                    return false;
+                }
+            }
 
             if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
                 updatedSourceType,
@@ -641,18 +665,17 @@ namespace Cli
             // should automatically update the parameters to be null.
             // Similarly from table/view to stored-procedure, key-fields
             // should be marked null.
-            if (options.SourceType is not null && !options.SourceType.Equals(entity.SourceTypeName))
+            if (SourceType.StoredProcedure.Equals(updatedSourceType))
             {
-                if ("stored-procedure".Equals(options.SourceType))
-                {
-                    updatedKeyFields = null;
-                }
-                else
-                {
-                    updatedSourceParameters = null;
-                }
+                updatedKeyFields = null;
+            }
+            else
+            {
+                updatedSourceParameters = null;
             }
 
+            // If given SourceParameter is null, no update is required.
+            // Else updatedSourceParameters will contain the parsed dictionary of parameters. 
             if (options.SourceParameters is not null &&
                 !TryParseSourceParameterDictionary(options.SourceParameters, out updatedSourceParameters))
             {

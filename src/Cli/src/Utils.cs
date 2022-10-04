@@ -495,13 +495,12 @@ namespace Cli
         /// <param name="keyFields">IEnumerable string containing key columns for table/view.</param>
         /// <returns> Returns true when successful else on failure, returns false.</returns>
         public static bool VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
-            string? sourceType,
+            SourceType sourceType,
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields
         )
         {
-            sourceType = (sourceType is null) ? "table" : sourceType;
-            if ("stored-procedure".Equals(sourceType))
+            if (SourceType.StoredProcedure.Equals(sourceType))
             {
                 if (keyFields is not null && keyFields.Any())
                 {
@@ -533,7 +532,7 @@ namespace Cli
         /// <returns>True in case of succesful creation of source object.</returns>
         public static bool TryCreateSourceObject(
             string name,
-            string? type,
+            SourceType type,
             Dictionary<string, object>? parameters,
             string[]? keyFields,
             [NotNullWhen(true)] out object? sourceObject
@@ -550,17 +549,15 @@ namespace Cli
                 return false;
             }
 
-            // If type, parameter, and keyfields is null then return the source as string.
-            // By default source type is table, so we can keep the source object as string
-            // if it is updated to table considering other fields are null.
-            if ((type is null || "table".Equals(type)) && parameters is null && keyFields is null)
+            // If type is Table along with that parameter and keyfields is null then return the source as string.
+            if (SourceType.Table.Equals(type) && parameters is null && keyFields is null)
             {
                 sourceObject = name;
                 return true;
             }
 
             sourceObject = new DatabaseObjectSource(
-                Type: type is null ? "table" : type,    // If sourceType is not explicitly specified, we assume it is a Table
+                Type: type,
                 Name: name,
                 Parameters: parameters,
                 KeyFields: keyFields

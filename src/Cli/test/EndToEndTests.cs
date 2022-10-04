@@ -271,7 +271,7 @@ public class EndToEndTests
     [DataRow("--LogLevel NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
     public void TestStartEngine(string logging)
     {
-        Process process = GetConsoleOutputOnRunningDabProcessWithCommandAndFlags(
+        Process process = GetDabProcessWithCommandAndFlags(
             command: $"start --config {RuntimeConfigPath.DefaultName}",
             logging
         );
@@ -285,17 +285,17 @@ public class EndToEndTests
         process.Kill();
     }
 
-    // <summary>
-    // Test to verify that help writter window generates output on the console.
-    // </summary>
+    /// <summary>
+    /// Test to verify that help writter window generates output on the console.
+    /// </summary>
     [DataTestMethod]
-    [DataRow("", "", DisplayName = "No flags provided.")]
-    [DataRow("initialize", "", DisplayName = "Wrong Command provided.")]
-    [DataRow("", "--version", DisplayName = "Checking version.")]
-    [DataRow("", "--help", DisplayName = "Checking output for --help.")]
-    public void TestHelpWriterOutput(string command, string flags)
+    [DataRow("", "", new string[] { "ERROR" }, DisplayName = "No flags provided.")]
+    [DataRow("initialize", "", new string[] { "ERROR", "Verb 'initialize' is not recognized." }, DisplayName = "Wrong Command provided.")]
+    [DataRow("", "--version", new string[] { "dab 1.0.0" }, DisplayName = "Checking version.")]
+    [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
+    public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
     {
-        Process process = GetConsoleOutputOnRunningDabProcessWithCommandAndFlags(
+        Process process = GetDabProcessWithCommandAndFlags(
             command,
             flags
         );
@@ -303,24 +303,9 @@ public class EndToEndTests
         string? output = process.StandardOutput.ReadToEnd();
         Assert.IsNotNull(output);
 
-        if ("--help".Equals(flags))
+        foreach (string expectedOutput in expectedOutputArray)
         {
-            Assert.IsTrue(output.Contains("init"));
-            Assert.IsTrue(output.Contains("add"));
-            Assert.IsTrue(output.Contains("update"));
-            Assert.IsTrue(output.Contains("start"));
-        }
-        else if ("--version".Equals(flags))
-        {
-            Assert.IsTrue(output.Contains("dab 1.0.0"));
-        }
-        else
-        {   // Wrong command or No command
-            Assert.IsTrue(output.Contains("ERROR"));
-            if ("".Equals(command))
-            {
-                Assert.IsTrue(output.Contains("No verb selected."));
-            }
+            Assert.IsTrue(output.Contains(expectedOutput));
         }
 
         process.Kill();

@@ -99,6 +99,76 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, result.StatusCode);
         }
 
+        /// <summary>
+        /// Checks correct serialization and deserialization of Source Type from 
+        /// Enum to String and vice-versa.
+        /// Consider both cases for source as an object and as a string
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, SourceType.StoredProcedure, "stored-procedure", DisplayName = "source is a stored-procedure")]
+        [DataRow(true, SourceType.Table, "table", DisplayName = "source is a table")]
+        [DataRow(true, SourceType.View, "view", DisplayName = "source is a view")]
+        [DataRow(false, null, null, DisplayName = "source is just string")]
+        public void TestCorrectSerializationOfSourceObject(
+            bool isDatabaseObjectSource,
+            SourceType sourceObjectType,
+            string sourceTypeName)
+        {
+            object entitySource;
+            if (isDatabaseObjectSource)
+            {
+                entitySource = new DatabaseObjectSource(
+                    Type: sourceObjectType,
+                    Name: "sourceName",
+                    Parameters: null,
+                    KeyFields: null
+                );
+            }
+            else
+            {
+                entitySource = "sourceName";
+            }
+
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: "MyEntity",
+                entitySource: entitySource,
+                roleName: "Anonymous",
+                operation: Operation.All,
+                includedCols: null,
+                excludedCols: null,
+                databasePolicy: null
+                );
+
+            string runtimeConfigJson = JsonSerializer.Serialize<RuntimeConfig>(runtimeConfig);
+
+            if (isDatabaseObjectSource)
+            {
+                Assert.IsTrue(runtimeConfigJson.Contains(sourceTypeName));
+            }
+
+            Mock<ILogger> logger = new();
+            Assert.IsTrue(RuntimeConfig.TryGetDeserializedConfig(
+                runtimeConfigJson,
+                out RuntimeConfig deserializedRuntimeConfig,
+                logger.Object));
+
+            Assert.IsTrue(deserializedRuntimeConfig.Entities.ContainsKey("MyEntity"));
+            deserializedRuntimeConfig.Entities["MyEntity"].TryPopulateSourceFields();
+            Assert.AreEqual("sourceName", deserializedRuntimeConfig.Entities["MyEntity"].SourceName);
+
+            JsonElement sourceJson = (JsonElement)deserializedRuntimeConfig.Entities["MyEntity"].Source;
+            if (isDatabaseObjectSource)
+            {
+                Assert.AreEqual(JsonValueKind.Object, sourceJson.ValueKind);
+                Assert.AreEqual(sourceObjectType, deserializedRuntimeConfig.Entities["MyEntity"].ObjectType);
+            }
+            else
+            {
+                Assert.AreEqual(JsonValueKind.String, sourceJson.ValueKind);
+                Assert.AreEqual("sourceName", deserializedRuntimeConfig.Entities["MyEntity"].Source.ToString());
+            }
+        }
+
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable.")]
         public async Task TestConflictAlreadySetConfiguration()
         {

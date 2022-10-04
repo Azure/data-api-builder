@@ -215,8 +215,7 @@ namespace Azure.DataApiBuilder.Config
             string? name,
             string? type,
             Dictionary<string, object>? parameters,
-            string[]? keyFields
-        )
+            string[]? keyFields)
         {
             // Source name cannot be null.
             if (name is null)

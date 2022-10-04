@@ -250,20 +250,18 @@ namespace Cli
             // Verify that parameter is provided with stored-procedure only
             // and keyfields with table/views.
             if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
-                options.SourceType,
-                options.SourceParameters,
-                options.SourceKeyFields)
+                    options.SourceType,
+                    options.SourceParameters,
+                    options.SourceKeyFields)
             )
             {
                 return false;
             }
 
-            // This is executed only two cases:
-            // only when sourceParameters is null (no parsing happens, directly returns null)
-            // when type is stored-procedure.
+            // Parses the string array to parameter Dictionary
             if (!TryParseSourceParameterDictionary(
-                options.SourceParameters,
-                out Dictionary<string, object>? parametersDictionary)
+                    options.SourceParameters,
+                    out Dictionary<string, object>? parametersDictionary)
             )
             {
                 return false;
@@ -277,11 +275,11 @@ namespace Cli
 
             // Try to get the source object as string or DatabaseObjectSource
             if (!TryCreateSourceObject(
-                options.Source,
-                options.SourceType,
-                parametersDictionary,
-                sourceKeyFields,
-                out sourceObject))
+                    options.Source,
+                    options.SourceType,
+                    parametersDictionary,
+                    sourceKeyFields,
+                    out sourceObject))
             {
                 Console.Error.WriteLine("Unable to parse the given source.");
                 return false;
@@ -625,9 +623,9 @@ namespace Cli
         {
             entity.TryPopulateSourceFields();
             updatedSourceObject = null;
-            string updatedSourceName = options.Source is null ? entity!.SourceName : options.Source;
+            string updatedSourceName = options.Source ?? entity!.SourceName;
             string[]? updatedKeyFields = entity.KeyFields;
-            string? updatedSourceType = options.SourceType is null ? entity.SourceTypeName : options.SourceType;
+            string? updatedSourceType = options.SourceType ?? entity.SourceTypeName;
             Dictionary<string, object>? updatedSourceParameters = entity.Parameters;
 
             if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(

@@ -573,6 +573,7 @@ namespace Cli
         /// This method tries to parse the source parameters Dictionary from IEnumerable list
         /// by splitting each item of the list on ':', where first item is param name and the
         /// and the second item is the value. for any other item it should fail.
+        /// If Parameter List is null, no parsing happens and sourceParameter is returned as null.
         /// </summary>
         /// <param name="parametersList">List of ':' separated values indicating key and value.</param>
         /// <param name="mappings">Output a Dictionary of parameters and their values.</param>

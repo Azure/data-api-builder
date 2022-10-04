@@ -149,13 +149,13 @@ Each exposed entity is enclosed in a dedicated section. The property name will b
 
 ```json
 "entities" {
-  "users": {
+  "User": {
     ...
   }
 }
 ```
 
-will instruct Data API builder to expose a GraphQL entity named `users` and a REST endpoint reachable via `/users` url path.
+will instruct Data API builder to expose a GraphQL entity named `User` and a REST endpoint reachable via `/User` url path.
 
 Within the entity section, there are feature specific sections:
 
@@ -218,11 +218,11 @@ Using the following configuration snippet as an example:
 
 ```json
 "entities": {
-  "category": {
+  "Category": {
     "relationships": {
       "todos": {
         "cardinality": "many",
-        "target.entity": "todo",
+        "target.entity": "Todo",
         "source.fields": ["id"],
         "target.fields": ["category_id"]
       }
@@ -231,7 +231,7 @@ Using the following configuration snippet as an example:
 }
 ```
 
-the configuration is telling Data API builder that the exposed `category` entity has a One-To-Many relationship with the `todo` entity (defined elsewhere in the configuration file) and so the resulting exposed GraphQL schema (limited to the `category` entity) should look like the following:
+the configuration is telling Data API builder that the exposed `category` entity has a One-To-Many relationship with the `Todo` entity (defined elsewhere in the configuration file) and so the resulting exposed GraphQL schema (limited to the `Category` entity) should look like the following:
 
 ```graphql
 type Category
@@ -244,8 +244,8 @@ type Category
 
 `source.fields` and `target.fields` are optional and can be used to specify which database columns will be used to create the query behind the scenes:
 
-+ `source.fields`: database fields, in the *source* entity (`category` in the example), that will be used to connect to the related item in the `target` entity
-+ `target.fields`: database fields, in the *target* entity (`todo` in the example), that will be used to connect to the related item in the `source` entity
++ `source.fields`: database fields, in the *source* entity (`Category` in the example), that will be used to connect to the related item in the `target` entity
++ `target.fields`: database fields, in the *target* entity (`Todo` in the example), that will be used to connect to the related item in the `source` entity
 
 These are optional if there is a Foreign Key constraint on the database, between the two tables, that can be used to infer that information automatically.
 
@@ -255,11 +255,11 @@ Very similar, to the One-To-Many, but cardinality is set to `one`. Using the fol
 
 ```json
 "entities": {
-  "todo": {
+  "Todo": {
     "relationships": {
       "category": {
         "cardinality": "one",
-        "target.entity": "category",
+        "target.entity": "Category",
         "source.fields": ["category_id"],
         "target.fields": ["id"]
       }
@@ -268,7 +268,7 @@ Very similar, to the One-To-Many, but cardinality is set to `one`. Using the fol
 }
 ```
 
-the configuration is telling Data API builder that the exposed `todo` entity has a Many-To-One relationship with the `category` entity (defined elsewhere in the configuration file) and so the resulting exposed GraphQL schema (limited to the `todo` entity) should look like the following:
+the configuration is telling Data API builder that the exposed `Todo` entity has a Many-To-One relationship with the `Category` entity (defined elsewhere in the configuration file) and so the resulting exposed GraphQL schema (limited to the `Todo` entity) should look like the following:
 
 ```graphql
 type Todo
@@ -281,8 +281,8 @@ type Todo
 
 `source.fields` and `target.fields` are optional and can be used to specify which database columns will be used to create the query behind the scenes:
 
-+ `source.fields`: database fields, in the *source* entity (`todo` in the example), that will be used to connect to the related item in the `target` entity
-+ `target.fields`: database fields, in the *target* entity (`category` in the example), that will be used to connect to the related item in the `source` entity
++ `source.fields`: database fields, in the *source* entity (`Todo` in the example), that will be used to connect to the related item in the `target` entity
++ `target.fields`: database fields, in the *target* entity (`Category` in the example), that will be used to connect to the related item in the `source` entity
 
 These are optional if there is a Foreign Key constraint on the database, between the two tables, that can be used to infer that information automatically.
 
@@ -292,11 +292,11 @@ A many to many relationship is configured in the same way the other relationship
 
 ```json
 "entities": {
-  "todo": {
+  "Todo": {
     "relationships": {
       "assignees": {
         "cardinality": "many",
-        "target.entity": "user",
+        "target.entity": "User",
         "source.fields": ["id"],
         "target.fields": ["id"],
         "linking.object": "s005.users_todos",
@@ -311,8 +311,8 @@ A many to many relationship is configured in the same way the other relationship
 the `linking` prefix in elements identifies those elements used to provide association table or entity information:
 
 + `linking.object`: the database object (if not exposed via Hawaii) that is used in the backend database to support the M:N relationship
-+ `linking.source.fields`: database fields, in the *linking* object (`s005.users_todos` in the example), that will be used to connect to the related item in the `source` entity (`todo` in the sample)
-+ `linking.target.fields`: database fields, in the *linking* object (`s005.users_todos` in the example), that will be used to connect to the related item in the `target` entity (`user` in the sample)
++ `linking.source.fields`: database fields, in the *linking* object (`s005.users_todos` in the example), that will be used to connect to the related item in the `source` entity (`Todo` in the sample)
++ `linking.target.fields`: database fields, in the *linking* object (`s005.users_todos` in the example), that will be used to connect to the related item in the `target` entity (`User` in the sample)
 
 The expected GraphQL schema generated by the above configuration is something like:
 

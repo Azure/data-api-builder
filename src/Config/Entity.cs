@@ -213,7 +213,7 @@ namespace Azure.DataApiBuilder.Config
             else
             {
                 throw new JsonException($"Invalid Source Type: {type}." +
-                    $" Valid values are {STORED_PROCEDURE},{SourceType.Table}, and {SourceType.View}.");
+                    $" Valid values are {STORED_PROCEDURE}, {SourceType.Table}, and {SourceType.View}.");
             }
         }
 

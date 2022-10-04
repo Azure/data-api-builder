@@ -117,13 +117,13 @@
                   }
                 }
               }
+            },
+            "authenticate-devmode-requests": {
+              "type": "boolean",
+              "description": "Whether to automatically authenticate all requests when host mode is developer.",
+              "default": false
             }
           }
-        },
-        "dev-mode-authenticate": {
-          "type": "boolean",
-          "description": "Whether to automatically authenticate all requests when host mode is developer. ",
-          "default": false
         }
       }
     },

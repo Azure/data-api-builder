@@ -297,7 +297,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             {
                                 configOperation = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
                             }
-                            catch(Exception e)
+                            catch (Exception e)
                             {
                                 throw new DataApiBuilderException(
                                     message: $"One of the action specified for entity:{entityName} is not well formed.",

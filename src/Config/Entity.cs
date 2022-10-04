@@ -154,7 +154,7 @@ namespace Azure.DataApiBuilder.Config
                 }
                 else
                 {
-                    ObjectType = ConvertSourceType(objectSource.Type);
+                    ObjectType = objectSource.Type;
                     SourceName = objectSource.Name;
                     Parameters = objectSource.Parameters;
                     KeyFields = objectSource.KeyFields;
@@ -164,23 +164,6 @@ namespace Azure.DataApiBuilder.Config
             {
                 throw new JsonException(message: $"Source not one of string or object");
             }
-        }
-
-        /// <summary>
-        /// Tries to convert the given string sourceType into one of the supported SourceType enums
-        /// Throws an exception if not a case-insensitive match
-        /// </summary>
-        private static SourceType ConvertSourceType(string? sourceType)
-        {
-            // If sourceType is not explicitly specified, we assume it is a Table
-            return sourceType is null ? SourceType.Table
-                : sourceType.ToLowerInvariant() switch
-                {
-                    "table" => SourceType.Table,
-                    "view" => SourceType.View,
-                    "stored-procedure" => SourceType.StoredProcedure,
-                    _ => throw new JsonException(message: "Source type must be one of: [table, view, stored-procedure]")
-                };
         }
     }
 
@@ -196,12 +179,51 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="KeyFields"> The field(s) to be used as primary keys.
     /// Support tracked in #547 </param>
     public record DatabaseObjectSource(
-        string Type,
+        [property: JsonConverter(typeof(SourceTypeEnumJsonConverter))]
+        SourceType Type,
         [property: JsonPropertyName("object")]
             string Name,
         Dictionary<string, object>? Parameters,
         [property: JsonPropertyName("key-fields")]
             Array KeyFields);
+
+    /// <summary>
+    /// Class to specify custom converter used while deserialising json config
+    /// to SourceType and serializing from SourceType to string.
+    /// Tries to convert the given string sourceType into one of the supported SourceType enums
+    /// Throws an exception if not a case-insensitive match
+    /// </summary>
+    public class SourceTypeEnumJsonConverter : JsonConverter<SourceType>
+    {
+        public const string STORED_PROCEDURE = "stored-procedure";
+
+        /// <inheritdoc/>
+        public override SourceType Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            string? type = reader.GetString();
+            if (STORED_PROCEDURE.Equals(type))
+            {
+                return SourceType.StoredProcedure;
+            }
+
+            if (Enum.TryParse<SourceType>(type, ignoreCase: true, out SourceType sourceType))
+            {
+                return sourceType;
+            }
+            else
+            {
+                throw new JsonException($"Invalid Source Type: {type}." +
+                    $" Valid values are {STORED_PROCEDURE}, {SourceType.Table}, and {SourceType.View}.");
+            }
+        }
+
+        /// <inheritdoc/>
+        public override void Write(Utf8JsonWriter writer, SourceType value, JsonSerializerOptions options)
+        {
+            string valueToWrite = value is SourceType.StoredProcedure ? STORED_PROCEDURE : value.ToString().ToLower();
+            writer.WriteStringValue(valueToWrite);
+        }
+    }
 
     /// <summary>
     /// Supported source types as defined by json schema

@@ -19,3 +19,7 @@ The Data API Builder CLI (**dab CLI** or `dab`) is a command line tool that stre
 
 Your feedback and contributions are key to its success.
 [Build from Source](../../CONTRIBUTING.md)
+
+## CLI command line verbs and options
+
+WIP

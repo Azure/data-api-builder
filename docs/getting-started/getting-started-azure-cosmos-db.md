@@ -204,13 +204,13 @@ that's all is needed at the moment. Data API builder is ready to be run.
 
 Run the below command (this will start the engine with default config `dab-config.json`, use option --config otherwise):
 
-```
+```dos
 dab start
 ```
 
 Once it is successfully started, then you'll see something like:
 
-```
+```text
 info: Azure.DataApiBuilder.Service.Startup[0]
       Successfully completed runtime initialization.
 info: Microsoft.Hosting.Lifetime[14]
@@ -235,7 +235,7 @@ Unlike other databases, Data API Builder for Azure Cosmos DB does not support ge
 
 GraphQL endpoint is available at
 
-```
+```text
 /graphql
 ```
 

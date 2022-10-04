@@ -36,6 +36,12 @@ then, to install this tool globally, use:
 dotnet tool install -g --add-source ./ dab --version <version_number>
 ```
 
+or, if you have already installed a previous version, you can update DAB CLI to the latest version via the following:
+
+```bash
+dotnet tool update -g --add-source ./ dab --version <version_number>
+```
+
 > **ATTENTION**: if you are running on Linux or MacOS, you may need to add .NET global tools to your PATH to call `dab` directly. Once installed run:
 > `export PATH=$PATH:~/.dotnet/tools`
 
@@ -47,7 +53,7 @@ Installing the package will make the `dab` command available on your development
 dab --version
 ```
 
-which should output 
+which should output
 
 ```bash
 dab 0.1.5

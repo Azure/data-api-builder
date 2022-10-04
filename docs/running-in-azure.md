@@ -20,7 +20,7 @@ az acr login --name dabcr
 
 get the user name and the password you'll be using to allow the App Service to pull the image from the created registry:
 
-```
+```bash
 az acr credential show --name dmdabcr --query "{username:username, password:passwords[0].value}"
 ```
 
@@ -38,7 +38,7 @@ docker build . -t dabcr.azurecr.io/dab:M1.5
 
 Push the created image the container registry:
 
-```
+```bash
 docker push dabcr.azurecr.io/dab:M1.5
 ```
 
@@ -56,20 +56,20 @@ The steps to have Data API Builder running in an App Service are the following (
 - Upload the configuration file
 - Mount the created Storage Account to the created App Service (for reference: [Mount storage to Linux container](https://learn.microsoft.com/azure/app-service/configure-connect-to-azure-storage?tabs=cli&pivots=container-linux#mount-storage-to-linux-container))
 - Update the App Service to tell Data API Builder to use the configuration file
-- Configure CORS to allow cross-origin calls from your frontends. *Please note that the provided script set CORS to allow ANY origin which is not a best pratice from a security standpoint. Only allow accepting request from trusted frontends.*
+- Configure CORS to allow cross-origin calls from your frontends. *Please note that the provided script set CORS to allow ANY origin which is not a best practice from a security standpoint. Only allow accepting request from trusted frontends.*
 
 To make it easier to perform all the above step, a shell script `azure-deploy.sh` file is available in `/samples/azure`
 
-At the first run the script will create an `.env` file that you have to fill out with the correct values for your enviroment.
+At the first run the script will create an `.env` file that you have to fill out with the correct values for your environment.
 
 - `RESOURCE_GROUP`: name of the resource group you are using (eg: `my-dab-rg`)
 - `APP_NAME`: the name of the App Service you want to create (eg: `dab-backend`)
 - `APP_PLAN_NAME`: the name of the App Service Plan you want to create (eg: `dab-backend-plan`)
-- `DAB_CONFIG_FILE`: the configuration file you want to use (eg: `library-dab-config.json`)
+- `DAB_CONFIG_FILE`: the configuration file you want to use (eg: `my-dab-config.json`)
 - `STORAGE_ACCOUNT`: the name for the Storage Account you want to create (eg: `dabstorage`)
 - `LOCATION`: the region where you want to create the resources (eg: `westus2`)
 - `IMAGE_NAME`: the image you want to use (eg: `dabcr.azurecr.io/dab:M1.5`)
 - `IMAGE_REGISTRY_USER`: the `username` you have retrieved before from the Azure Container Registry
 - `IMAGE_REGISTRY_PASSWORD`: the `password` you have retrieved above from the Azure Container Registry
 
-After the script has finished running, you have to give App Service a couple of minutes to pull the container and warm everything up, and you'll be good to go. Connect to the created App Service URL, for example https://dab-backend.azurewebsites.net using your favourite REST or GraphQL client and you can start to use your data.
+After the script has finished running, you have to give App Service a couple of minutes to pull the container and warm everything up, and you'll be good to go. Connect to the created App Service URL, for example https://dab-backend.azurewebsites.net using your favorite REST or GraphQL client and you can start to use your data.

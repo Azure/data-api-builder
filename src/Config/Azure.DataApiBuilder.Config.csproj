@@ -9,7 +9,6 @@
 
   <ItemGroup>
       <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="$(NetCoreAutorizationVersion)" />
-      <PackageReference Include="Enums.NET" Version="4.0.0" />
       <PackageReference Include="StyleCop.Analyzers" Version="$(StyleCopAnalyzerVersion)">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

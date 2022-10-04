@@ -120,7 +120,7 @@
             },
             "authenticate-devmode-requests": {
               "type": "boolean",
-              "description": "Whether to automatically authenticate all requests when host mode is developer.",
+              "description": "Whether to automatically authenticate all requests when host mode is set to development.",
               "default": false
             }
           }

@@ -489,7 +489,7 @@ namespace Cli
 
         /// <summary>
         /// Reads the config and calls the method to validate 
-        /// null or empty connection-string
+        /// connection-string and database-type
         /// </summary>
         public static bool CanStartEngineWithConfig(string configFile)
         {

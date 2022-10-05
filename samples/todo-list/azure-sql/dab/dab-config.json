@@ -1,26 +1,33 @@
 {
-  "$schema": "../../schemas/dab.draft-01.schema.json",
+  "$schema": "dab.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
     "connection-string": "@env('AZURE_SQL_CONNECTION_STRING')"
   },
   "runtime": {
-    "host": {    
-      "mode": "production",
+    "rest": {
+      "path": "/api"
+    },
+    "graphql": {
+      "path": "/graphql"
+    },
+    "host": {
+      "mode": "development",      
       "cors": {
-        "origins": [
-          "*"
-        ],
-        "allow-credentials": false
+        "origins": [ "http://localhost:4280", "http://localhost:8080" ],
+        "allow-credentials": true
       },
       "authentication": {
         "provider": "StaticWebApps"
-      }          
+      }
     }
   },
   "entities": {
-    "todo": {
-      "source": "dab.todos",
+    "Todo": {
+      "source": "dbo.todos",
+      "rest": {
+        "path": "todo"
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -28,20 +35,20 @@
             {
               "action": "*",
               "policy": {
-                "database": "@item.owner eq 'anonymous'"
+                "database": "@item.owner_id eq 'public'"
               }
-            }
+            }            
           ]
         },
         {
           "role": "authenticated",
-          "actions": [            
+          "actions": [
             {
               "action": "*",
               "policy": {
-                "database": "@item.owner eq @claims.name"
+                "database": "@item.owner_id eq @claims.userId"
               }
-            }
+            }            
           ]
         }
       ]

@@ -24,7 +24,7 @@ switch ($OsName) {
 }
 
 # Install dab nuget
-$installCommand = "dotnet tool install -g --add-source ./$BuildOutputDir dab"
+$installCommand = "dotnet tool install -g --add-source ./$BuildOutputDir dab --version $DabVersion"
 Invoke-Expression $installCommand
 
 Write-Host Invoke-Expression "dab --version"

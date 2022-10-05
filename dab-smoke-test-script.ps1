@@ -26,6 +26,7 @@ $executableFileDirectory = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab
 $executableDAB = "$executableFileDirectory/dab"
 
 # Install dab nuget
+Invoke-Expression "dotnet tool uninstall -g dab"
 $installCommand = "dotnet tool install -g --add-source $BuildOutputDir/nupkg dab --version $DabVersion"
 Invoke-Expression $installCommand
 $nugetDAB = "dab"

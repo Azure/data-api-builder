@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <returns></returns>
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = TEST_ENTITY,
-            string entitySource = TEST_ENTITY,
+            object? entitySource = null,
             string roleName = "Reader",
             Operation operation = Operation.Create,
             HashSet<string>? includedCols = null,
@@ -68,6 +68,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             )
         {
             Field? fieldsForRole = null;
+
+            if (entitySource is null)
+            {
+                entitySource = TEST_ENTITY;
+            }
 
             if (includedCols is not null || excludedCols is not null)
             {

@@ -25,11 +25,6 @@ switch ($OsName) {
 $executableFileDirectory = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab"
 $executableDAB = "$executableFileDirectory/dab"
 
-# Install dab nuget
-# $installCommand = "dotnet tool install -g --add-source $BuildOutputDir/nupkg dab --version $DabVersion"
-# Invoke-Expression $installCommand
-# $nugetDAB = "dab"
-
 describe SmokeTest {
     it 'Check Version' {
         $ver = Invoke-expression "$executableDAB --version"

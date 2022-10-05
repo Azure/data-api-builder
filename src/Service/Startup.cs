@@ -393,7 +393,7 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
-                RuntimeConfigValidator._isValidatedByCLI = false; // Config set  by the runtime needs to be validated again
+                RuntimeConfigValidator._isConnectionStringValidatedByCLI = false; // Config set  by the runtime needs to be validated again
                 runtimeConfigValidator.ValidateConfig();
 
                 if (runtimeConfigProvider.IsDeveloperMode())

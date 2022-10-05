@@ -648,7 +648,7 @@ namespace Cli
         /// <summary>
         /// This method will try starting the engine.
         /// It will use the config provided by the user, else will look for the default config.
-        /// Does validation to check connection string and database-type is correctly configured.
+        /// Does validation to check connection string is not null or empty.
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options)
         {
@@ -658,7 +658,7 @@ namespace Cli
                 return false;
             }
 
-            if (!ValidateCanStartEngineWithConfig(runtimeConfigFile))
+            if (!CanStartEngineWithConfig(runtimeConfigFile))
             {
                 Console.Error.WriteLine("Config is not valid.");
                 return false;

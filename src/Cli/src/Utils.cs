@@ -491,7 +491,7 @@ namespace Cli
         /// Reads the config and calls the method to validate 
         /// null or empty connection-string and correct database-type
         /// </summary>
-        public static bool ValidateCanStartEngineWithConfig(string configFile)
+        public static bool CanStartEngineWithConfig(string configFile)
         {
             ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
             {
@@ -512,13 +512,11 @@ namespace Cli
 
             try
             {
-                RuntimeConfigValidator._isValidatedByCLI = false;
-                RuntimeConfigValidator.ValidateDatabaseTypeAndConnectionString(
-                    runtimeConfig!,
-                    new FileSystem(),
-                    logger);
+                RuntimeConfigValidator._isConnectionStringValidatedByCLI = false;
+                RuntimeConfigValidator.ValidateConnectionString(
+                    runtimeConfig!);
 
-                RuntimeConfigValidator._isValidatedByCLI = true;
+                RuntimeConfigValidator._isConnectionStringValidatedByCLI = true;
             }
             catch (Exception e)
             {

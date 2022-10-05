@@ -271,7 +271,7 @@ public class EndToEndTests
     [DataRow("--LogLevel NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
     public void TestStartEngine(string logging)
     {
-        Process process = GetDabProcessWithCommandAndFlags(
+        Process process = StartDabProcess(
             command: $"start --config {RuntimeConfigPath.DefaultName}",
             logging
         );
@@ -295,7 +295,7 @@ public class EndToEndTests
     [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
     public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
     {
-        Process process = GetDabProcessWithCommandAndFlags(
+        Process process = StartDabProcess(
             command,
             flags
         );

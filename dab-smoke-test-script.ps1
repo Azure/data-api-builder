@@ -1,3 +1,7 @@
+# This file is used to check the nuget file and executables are passing the basic checks:
+# 1. Correct version
+# 2. HelpWindow is displaying on Console
+# 3. File is correctly generated.
 param (
     [Parameter (Mandatory=$true)][string] $BuildConfiguration,
     [Parameter (Mandatory=$true)][string] $BuildOutputDir,
@@ -19,9 +23,15 @@ switch ($OsName) {
     }
 }
 
+# Install dab nuget
+$installCommand = "dotnet tool install -g --add-source ./$BuildOutputDir dab"
+Invoke-Expression $installCommand
+
+Write-Host Invoke-Expression "dab --version"
+
 $executableDAB = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab/$file"
 
-describe RegressionTest {
+describe SmokeTest {
     it 'Check Version' {
         $ver = Invoke-expression "$executableDAB --version"
         $ver.Contains("dab $DabVersion") | Should -Be True

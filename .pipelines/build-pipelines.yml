@@ -110,7 +110,7 @@ steps:
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -Package
 
 - task: PowerShell@2
-  displayName: "Regression Test for DAB CLI"
+  displayName: "Smoke Test for DAB CLI"
   inputs:
     targetType: 'filePath'
     filePath: $(System.DefaultWorkingDirectory)/dab-smoke-test-script.ps1

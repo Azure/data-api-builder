@@ -106,6 +106,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
         }
 
+        /// <summary>
+        /// Throws exception if the connection string specified
+        /// in the config is null or empty
+        /// </summary>
         public static void ValidateConnectionString(
             RuntimeConfig runtimeConfig)
         {

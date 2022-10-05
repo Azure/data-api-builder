@@ -31,36 +31,32 @@ Invoke-Expression $installCommand
 $nugetDAB = "dab"
 
 describe SmokeTest {
-    $dabPackages = {$executableDAB, $nugetDAB}
-    foreach ($dab in $dabPackages)
-    {
-        it 'Check Version' {
-            $ver = Invoke-expression "$dab --version"
-            $ver.Contains("dab $DabVersion") | Should -Be True
+    it 'Check Version' {
+        $ver = Invoke-expression "$nugetDAB --version"
+        $ver.Contains("dab $DabVersion") | Should -Be True
+    }
+
+    it 'Check Command Help Window' {
+        $helpTexts = Invoke-expression "$nugetDAB --help"
+
+        # Converting to object[] to string
+        $helpWritterOutput = ""
+        foreach ($helpText in $helpTexts)
+        {
+            $helpWritterOutput += $helpTexts
         }
-    
-        it 'Check Command Help Window' {
-            $helpTexts = Invoke-expression "$dab --help"
-    
-            # Converting to object[] to string
-            $helpWritterOutput = ""
-            foreach ($helpText in $helpTexts)
-            {
-                $helpWritterOutput += $helpTexts
-            }
-    
-            # Verifying all the supported commands are displayed on the help window
-            $helpWritterOutput.Contains("init") | Should -Be True
-            $helpWritterOutput.Contains("add") | Should -Be True
-            $helpWritterOutput.Contains("update") | Should -Be True
-            $helpWritterOutput.Contains("start") | Should -Be True
-        }
-    
-        it 'Check Config File is generated' {
-            $configFileName = "dab-config-smoke-test.json"
-            Invoke-expression "$dab init -c $configFileName --database-type mssql --connection-string xxxx"
-            Test-Path -Path $configFileName | Should -Be True
-        }
+
+        # Verifying all the supported commands are displayed on the help window
+        $helpWritterOutput.Contains("init") | Should -Be True
+        $helpWritterOutput.Contains("add") | Should -Be True
+        $helpWritterOutput.Contains("update") | Should -Be True
+        $helpWritterOutput.Contains("start") | Should -Be True
+    }
+
+    it 'Check Config File is generated' {
+        $configFileName = "dab-config-smoke-test.json"
+        Invoke-expression "$nugetDAB init -c $configFileName --database-type mssql --connection-string xxxx"
+        Test-Path -Path $configFileName | Should -Be True
     }
     
 }

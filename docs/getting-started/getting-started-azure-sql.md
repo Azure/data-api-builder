@@ -87,41 +87,41 @@ With the configuration file in place, then it's time to start defining which ent
 
 ## Add Book and Author entities
 
-Now, you'll want to expose the `books` and the `authors` table as REST or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.
+Now, you'll want to expose the `dbo.books` and the `dbo.authors` table as REST or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.
 
 You can do this either using the CLI:
 
 ```bash
-dab add author --source dbo.authors --permissions "anonymous:*"
+dab add Author --source dbo.authors --permissions "anonymous:*"
 ```
 
-or by adding the `author` entity manually to the config file:
+or by adding the `Author` entity manually to the config file:
 
 ```json
 "entities": {
-    "author": {
-      "source": "dbo.authors",
-      "permissions": [
-        {
-          "actions": ["*"],
-          "role": "anonymous"
-        }
-      ]
-    }
+  "Author": {
+    "source": "dbo.authors",
+    "permissions": [
+      {
+        "actions": ["*"],
+        "role": "anonymous"
+      }
+    ]
+  }
 }
 ```
 
-within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL). The name `author`, in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case is `dbo.authors`.
+within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL). The name `Author`, in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case is `dbo.authors`.
 
-> **NOTE**: Entities names are case sensitive, and they will be exposed via REST and GraphQL as you have typed them.
+> **NOTE**: Entities names are case sensitive, and they will be exposed via REST and GraphQL as you have typed them. Take a look at the [Best Practices](../best-practices.md) document to learn the best practices on entities names.
 
-After that, the permissions for the exposed entity are defined via the `permission` element; it allows you to be sure that only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial, we're allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `author` entity.
+After that, the permissions for the exposed entity are defined via the `permission` element; it allows you to be sure that only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial, we're allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `Author` entity.
 
-You can also add the `book` entity now, applying the same concepts you just learnt for the `author` entity. Once you have added the `author` entity, the `entities` object of configuration file will look like the following:
+You can also add the `Book` entity now, applying the same concepts you just learnt for the `Author` entity. Once you have added the `Author` entity, the `entities` object of configuration file will look like the following:
 
 ```json
 "entities": {
-    "author": {
+    "Author": {
       "source": "dbo.authors",
       "permissions": [
         {
@@ -130,7 +130,7 @@ You can also add the `book` entity now, applying the same concepts you just lear
         }
       ]
     },
-    "book": {
+    "Book": {
       "source": "dbo.books",
       "permissions": [
         {
@@ -145,6 +145,8 @@ You can also add the `book` entity now, applying the same concepts you just lear
 that's all is needed at the moment. Data API builder is ready to be run.
 
 > **BEST PRACTICE**: It is recommended to use the *singular* form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a *list* of entity items will be returned. More on this behavior in the [GraphQL documentation](./../graphql.md).
+
+> **BEST PRACTICE**: It is recommended to use Pascal Casing for the entity names, so that the generated GraphQL types, queries and mutations will be easier to read.
 
 ## Start Data API builder for Azure SQL Database
 
@@ -175,7 +177,7 @@ Now that Data API builder engine is running, you can use your favorite REST clie
 
 ### REST Endpoint
 
-REST endpoint is made available at the path (make sure to keep in mind that the url path is treated as Case Sensitive):
+REST endpoint is made available at the path (make sure to keep in mind that the url path is treated as Case Sensitive and must match the entity and path names defined in the configuration file):
 
 ```text
 /api/<entity>
@@ -184,20 +186,20 @@ REST endpoint is made available at the path (make sure to keep in mind that the 
 so if you want to get a list of all the available books you can simply run this GET request:
 
 ```text
-/api/book
+/api/Book
 ```
 
 The following HTTP verbs are supported:
 
 - `GET`: return one or more items
 - `POST`: create a new item
-- `PUT` `PATCH`: update or create an item
+- `PUT` & `PATCH`: update or create an item
 - `DELETE`: delete an item
 
 Whenever you need to access a single item, you can get the item you want by specifying its primary key:
 
 ```text
-GET /api/book/id/1000
+GET /api/Book/id/1000
 ```
 
 The ability to filter by primary key is supported by all verbs with the exception of POST as that verb is used to create a new item and therefore searching an item by its primary key is not applicable.
@@ -243,25 +245,25 @@ Stop the engine (`Ctrl+C`).
 Relationships are also defined in the configuration file, via the `relationships` section. Relationships must be defined on each entity where you want to have them. For example to create a relationship between a Book and its Authors, you can use the following DAB CLI command:
 
 ```bash
-dab update author --relationship "books" --cardinality "many" --target.entity "book" --linking.object "dbo.books_authors"
+dab update Author --relationship "books" --cardinality "many" --target.entity "Book" --linking.object "dbo.books_authors"
 ```
 
-which will create the `relationships` section in the `author` entity:
+which will create the `relationships` section in the `Author` entity:
 
 ```json
 "relationships": {
-    "books": {
-        "cardinality": "many",
-        "target.entity": "book",
-        "linking.object": "dbo.books_authors"
-    }
+  "books": {
+    "cardinality": "many",
+    "target.entity": "Book",
+    "linking.object": "dbo.books_authors"
+  }
 }
 ```
 
-The element under `relationship` is used to add a field - `books` in the sample - to the generated GraphQL object, so that one will be able to navigate the relationship between an Author and their Books. Within the `books` object there are three fields:
+The element under `relationship` is used to add a field - `books` in the sample - to the generated GraphQL object, so that one will be able to navigate the relationship between an Author and their Books. Within the `books` element there are three fields:
 
 - `cardinality`: set to `many` as an author can be associated with more than one book
-- `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample is `book` as we are creating the relationship on the `author` entity.
+- `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample is `book` as we are creating the relationship on the `Author` entity.
 - `linking.object`: the database table used to support the many-to-many relationship. That table is the `dbo.books_authors`.
 
 Data API Builder will automatically figure out what are the columns that are used to support the relationship between all the involved parts by analyzing the foreign key constraints that exist between the involved tables. For this reason the configuration is done! (If you don't have foreign keys you can always manually specify the columns you want to use to navigate from one table to another. More on this in the [relationships documentation](../relationships.md))
@@ -269,48 +271,48 @@ Data API Builder will automatically figure out what are the columns that are use
 The `author` entity should now look like the following:
 
 ```json
-"author": {
-    "source": "dbo.authors",
-    "permissions": [
-        {
-            "actions": [ "*" ],
-            "role": "anonymous"
-        }
-    ],
-    "relationships": {
-        "books": {
-            "cardinality": "many",
-            "target.entity": "book",
-            "linking.object": "dbo.books_authors"
-        }
+"Author": {
+  "source": "dbo.authors",
+  "permissions": [
+    {
+      "actions": [ "*" ],
+      "role": "anonymous"
     }
+  ],
+  "relationships": {
+    "books": {
+      "cardinality": "many",
+      "target.entity": "Book",
+      "linking.object": "dbo.books_authors"
+    }
+  }
 },
 ```
 
 as we also want to enable querying a book and getting its authors, we also need to make a similar change to the book entity:
 
 ```bash
-dab update book --relationship "authors" --cardinality "many" --target.entity "author" --linking.object "dbo.books_authors"
+dab update Book --relationship "authors" --cardinality "many" --target.entity "Author" --linking.object "dbo.books_authors"
 ```
 
 that will update the configuration file so that the `book` entity will look like the following code:
 
 ```json
-"book": {
-    "source": "dbo.books",
-    "permissions": [
-        {
-            "actions": [ "*" ],
-            "role": "anonymous"
-        }
-    ],
-    "relationships": {
-        "authors": {
-            "cardinality": "many",
-            "target.entity": "author",
-            "linking.object": "dbo.books_authors"
-        }
+"Book": {
+  "source": "dbo.books",
+  "permissions": [
+    {
+      "actions": [ "*" ],
+      "role": "anonymous"
     }
+  ],
+  "relationships": {
+    "authors": {
+      "cardinality": "many",
+      "target.entity": "Author",
+      "linking.object": "dbo.books_authors"
+    }
+  }
 }
 ```
 
@@ -340,7 +342,7 @@ that will return all the authors of "Nightfall" book, or like:
 {
   authors(
     filter: {
-        or: [
+        and: [
           { first_name: { eq: "Isaac" } }
           { last_name: { eq: "Asimov" } }
         ]
@@ -371,6 +373,6 @@ If you want to practice what you have learned, here's a little exercise you can 
   - add the table `dbo.series` which will store series names (for example: [Foundation Series](https://en.wikipedia.org/wiki/Foundation_series))
   - update the `dbo.books` table by adding a column named `series_id`
   - update the `dbo.books` table by adding a foreign key constraint on the `dbo.series` table
-- Update the configuration file with a new entity named `series`, supported by the `dbo.series` source table you just created.
-- Update the `book` entity by creating a relationship with the `series` entity. Make sure you select `one` for the `cardinality` property
-- Update the `series` entity by creating a relationship with the `book` entity. Make sure you select `many` for the `cardinality` property
+- Update the configuration file with a new entity named `Series`, supported by the `dbo.series` source table you just created.
+- Update the `Book` entity by creating a relationship with the `Series` entity. Make sure you select `one` for the `cardinality` property
+- Update the `Series` entity by creating a relationship with the `Book` entity. Make sure you select `many` for the `cardinality` property

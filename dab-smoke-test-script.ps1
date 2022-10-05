@@ -33,6 +33,8 @@ $nugetDAB = "dab"
 describe SmokeTest {
     it 'Check Version' {
         $ver = Invoke-expression "$nugetDAB --version"
+        Write-Host($ver)
+        Write-Host($DabVersion)
         $ver.Contains("dab $DabVersion") | Should -Be True
     }
 

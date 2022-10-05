@@ -1,3 +1,4 @@
+using System.IO.Abstractions;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -488,7 +489,7 @@ namespace Cli
 
         /// <summary>
         /// Reads the config and calls the method to validate 
-        /// null or empty connection-string and correct database-type
+        /// null or empty connection-string
         /// </summary>
         public static bool CanStartEngineWithConfig(string configFile)
         {
@@ -511,11 +512,13 @@ namespace Cli
 
             try
             {
-                RuntimeConfigValidator._isConnectionStringValidatedByCLI = false;
-                RuntimeConfigValidator.ValidateConnectionString(
-                    runtimeConfig!);
+                RuntimeConfigValidator._isDataSourceValidatedByCLI = false;
+                RuntimeConfigValidator.ValidateDataSourceInConfig(
+                    runtimeConfig!,
+                    new FileSystem(),
+                    logger);
 
-                RuntimeConfigValidator._isConnectionStringValidatedByCLI = true;
+                RuntimeConfigValidator._isDataSourceValidatedByCLI = true;
             }
             catch (Exception e)
             {

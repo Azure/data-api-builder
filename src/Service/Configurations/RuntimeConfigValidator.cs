@@ -28,9 +28,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
         // Only characters from a-z,A-Z,0-9,.,_ are allowed to be present within the claimType.
         private static readonly string _invalidClaimChars = @"[^a-zA-Z0-9_\.]+";
 
-        // To make sure validation once done by CLI for connection string is not repeated
+        // To make sure validation once done by CLI for connection string and databaseType is not repeated
         // by engine for the same config. Default value is false.
-        public static bool _isConnectionStringValidatedByCLI;
+        public static bool _isDataSourceValidatedByCLI;
 
         // Regex to check occurence of any character not among [a-z,A-Z,0-9,.,_] in the claimType.
         // The claimType is invalid if there is a match found.
@@ -63,36 +63,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
 
-            ValidateConnectionString(runtimeConfig);
-
-            if (string.IsNullOrWhiteSpace(runtimeConfig.DatabaseType.ToString()))
-            {
-                const string databaseTypeNotSpecified =
-                    "The database-type should be provided with the runtime config.";
-                _logger.LogCritical(databaseTypeNotSpecified);
-                throw new NotSupportedException(databaseTypeNotSpecified);
-            }
-
-            if (runtimeConfig.DatabaseType is DatabaseType.cosmos)
-            {
-                if (runtimeConfig.CosmosDb is null)
-                {
-                    throw new NotSupportedException("CosmosDB is specified but no CosmosDB configuration information has been provided.");
-                }
-
-                if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchema))
-                {
-                    if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchemaPath))
-                    {
-                        throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
-                    }
-
-                    if (!_fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
-                    {
-                        throw new FileNotFoundException($"The GraphQL schema file at '{runtimeConfig.CosmosDb.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
-                    }
-                }
-            }
+            ValidateDataSourceInConfig(
+                runtimeConfig,
+                _fileSystem,
+                _logger);
 
             ValidateAuthenticationConfig();
 
@@ -107,24 +81,71 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// Throws exception if the connection string specified
-        /// in the config is null or empty
+        /// Throws exception if Invalid connection-string or database type
+        /// is present in the config
         /// </summary>
-        public static void ValidateConnectionString(
-            RuntimeConfig runtimeConfig)
+        public static void ValidateDataSourceInConfig(
+            RuntimeConfig runtimeConfig,
+            IFileSystem fileSystem,
+            ILogger logger)
         {
             // No Need to Validated Again if Validated by CLI
-            if (_isConnectionStringValidatedByCLI)
+            if (_isDataSourceValidatedByCLI)
             {
                 return;
             }
 
+            // Connection string can't be null or empty
             if (string.IsNullOrWhiteSpace(runtimeConfig.ConnectionString))
             {
                 throw new DataApiBuilderException(
                     message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            ValidateDatabaseType(runtimeConfig, fileSystem, logger);
+        }
+
+        /// <summary>
+        /// Throws exception if database type is incorrectly configured
+        /// in the config. 
+        /// </summary>
+        public static void ValidateDatabaseType(
+            RuntimeConfig runtimeConfig,
+            IFileSystem fileSystem,
+            ILogger logger)
+        {
+            // Database Type cannot be null or empty
+            if (string.IsNullOrWhiteSpace(runtimeConfig.DatabaseType.ToString()))
+            {
+                const string databaseTypeNotSpecified =
+                    "The database-type should be provided with the runtime config.";
+                logger.LogCritical(databaseTypeNotSpecified);
+                throw new NotSupportedException(databaseTypeNotSpecified);
+            }
+
+            // Schema file should be present in the directory if not specified in the config
+            // when using cosmos database.
+            if (runtimeConfig.DatabaseType is DatabaseType.cosmos)
+            {
+                if (runtimeConfig.CosmosDb is null)
+                {
+                    throw new NotSupportedException("CosmosDB is specified but no CosmosDB configuration information has been provided.");
+                }
+
+                if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchema))
+                {
+                    if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    {
+                        throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
+                    }
+
+                    if (!fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    {
+                        throw new FileNotFoundException($"The GraphQL schema file at '{runtimeConfig.CosmosDb.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
+                    }
+                }
             }
         }
 

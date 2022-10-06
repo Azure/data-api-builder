@@ -1,7 +1,7 @@
-# This file is used to check the nuget file and executables are passing the basic checks:
-# 1. Correct version
-# 2. HelpWindow is displaying on Console
-# 3. File is correctly generated.
+# This file validates the executables are passing the following basic checks:
+# 1. Correct version of DAB is generated
+# 2. HelpWindow gets displayed on the Console
+# 3. Config file gets generated successfully.
 param (
     [Parameter (Mandatory=$true)][string] $BuildConfiguration,
     [Parameter (Mandatory=$true)][string] $BuildOutputDir,
@@ -34,13 +34,13 @@ describe SmokeTest {
     }
 
     it 'Check Command Help Window' {
-        $helpTexts = Invoke-expression "$executableDAB --help"
+        $helpText = Invoke-expression "$executableDAB --help"
 
-        # Converting to object[] to string
+        # Converting object[] to string
         $helpWritterOutput = ""
-        foreach ($helpText in $helpTexts)
+        foreach ($helpText in $helpText)
         {
-            $helpWritterOutput += $helpTexts
+            $helpWritterOutput += $helpText
         }
 
         # Verifying all the supported commands are displayed on the help window

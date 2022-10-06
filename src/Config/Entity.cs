@@ -235,7 +235,7 @@ namespace Azure.DataApiBuilder.Config
             {
                 objectType = SourceType.Table;  // Assume Default type as Table if type not provided.
             }
-            else if (STORED_PROCEDURE.Equals(type))
+            else if (STORED_PROCEDURE.Equals(type, StringComparison.OrdinalIgnoreCase))
             {
                 objectType = SourceType.StoredProcedure;
             }

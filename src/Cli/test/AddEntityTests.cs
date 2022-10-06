@@ -194,6 +194,7 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow(null, null, null, true, DisplayName = "Both KeyFields and Parameters not provided for source.")]
         [DataRow("stored-procedure", new string[] { "param1:value1" }, null, true, DisplayName = "SourceParameters with stored procedure.")]
+        [DataRow("Stored-Procedure", new string[] { "param1:value1" }, null, true, DisplayName = "SourceParameters with stored procedure Case Insensitive.")]
         [DataRow("view", null, new string[] { "col1", "col2" }, true, DisplayName = "Source KeyFields with View")]
         [DataRow("table", null, new string[] { "col1", "col2" }, true, DisplayName = "Source KeyFields with Table")]
         [DataRow(null, null, new string[] { "col1", "col2" }, true, DisplayName = "Source KeyFields with SourceType not provided")]

@@ -167,6 +167,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 httpContextAccessor.Object,
                 mutationEngingLogger.Object);
 
+            RequestValidator requestValidator = new(queryExecutor, runtimeConfigProvider);
             // Setup REST Service
             _restService = new RestService(
                 queryEngine,
@@ -175,7 +176,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 httpContextAccessor.Object,
                 authorizationService.Object,
                 authorizationResolver,
-                runtimeConfigProvider);
+                runtimeConfigProvider,
+                requestValidator);
         }
 
         /// <summary>

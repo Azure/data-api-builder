@@ -29,6 +29,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public string EntityName { get; protected set; }
 
+        public string BaseEntityName { get; protected set; }
+        public DatabaseObject DatabaseObjectForBaseEntity { get; }
+
         /// <summary>
         /// The DatabaseObject associated with the entity, represents the
         /// databse object to be queried.
@@ -39,6 +42,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// The alias of the main table to be queried.
         /// </summary>
         public string TableAlias { get; protected set; }
+
+        public Dictionary<string, string>? ColumnAliases { get; protected set; } = new();
 
         /// <summary>
         /// FilterPredicates is a string that represents the filter portion of our query
@@ -56,7 +61,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public BaseSqlQueryStructure(
             ISqlMetadataProvider sqlMetadataProvider,
             string entityName,
-            IncrementingInteger? counter = null)
+            IncrementingInteger? counter = null,
+            string? baseEntityName =  null,
+            Dictionary<string, string>? columnAliases = null)
             : base(counter)
         {
             SqlMetadataProvider = sqlMetadataProvider;
@@ -71,11 +78,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 DatabaseObject = new();
             }
 
+            BaseEntityName = baseEntityName is null ? entityName : baseEntityName;
+            DatabaseObjectForBaseEntity = sqlMetadataProvider.EntityToDatabaseObject[BaseEntityName];
             // Default the alias to the empty string since this base construtor
             // is called for requests other than Find operations. We only use
             // TableAlias for Find, so we leave empty here and then populate
             // in the Find specific contructor.
             TableAlias = string.Empty;
+
+            ColumnAliases = columnAliases;
         }
 
         /// <summary>
@@ -167,12 +178,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         protected List<LabelledColumn> GenerateOutputColumns()
         {
             List<LabelledColumn> outputColumns = new();
-            foreach (string columnName in GetUnderlyingTableDefinition().Columns.Keys)
+            TableDefinition baseTableDefinition = SqlMetadataProvider.GetTableDefinition(BaseEntityName);
+            foreach (string columnName in baseTableDefinition.Columns.Keys)
             {
+                string aliasName = ColumnAliases is not null && ColumnAliases.Count > 0 ?
+                    ColumnAliases[columnName] : columnName;
                 // if column is not exposed we skip
                 if (!SqlMetadataProvider.TryGetExposedColumnName(
                     entityName: EntityName,
-                    backingFieldName: columnName,
+                    backingFieldName: aliasName,
                     out string? exposedName))
                 {
                     continue;
@@ -181,7 +195,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 outputColumns.Add(new(
                     tableSchema: DatabaseObject.SchemaName,
                     tableName: DatabaseObject.Name,
-                    columnName: columnName,
+                    columnName: aliasName,
                     label: exposedName!,
                     tableAlias: TableAlias));
             }

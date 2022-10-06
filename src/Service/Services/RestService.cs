@@ -30,6 +30,7 @@ namespace Azure.DataApiBuilder.Service.Services
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly RequestValidator _requestValidator;
 
         public RestService(
             IQueryEngine queryEngine,
@@ -38,7 +39,8 @@ namespace Azure.DataApiBuilder.Service.Services
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService,
             IAuthorizationResolver authorizationResolver,
-            RuntimeConfigProvider runtimeConfigProvider
+            RuntimeConfigProvider runtimeConfigProvider,
+            RequestValidator requestValidator
             )
         {
             _queryEngine = queryEngine;
@@ -48,6 +50,7 @@ namespace Azure.DataApiBuilder.Service.Services
             _sqlMetadataProvider = sqlMetadataProvider;
             _authorizationResolver = authorizationResolver;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _requestValidator = requestValidator;
         }
 
         /// <summary>
@@ -105,7 +108,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             insertPayloadRoot,
                             operationType);
-                        RequestValidator.ValidateInsertRequestContext(
+                        await _requestValidator.ValidateInsertRequestContext(
                             (InsertRequestContext)context,
                             _sqlMetadataProvider);
                         break;
@@ -125,7 +128,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             upsertPayloadRoot,
                             operationType);
-                        RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
+                        await _requestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                         break;
                     default:
                         throw new DataApiBuilderException(

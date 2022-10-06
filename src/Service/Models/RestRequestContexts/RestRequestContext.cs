@@ -21,13 +21,16 @@ namespace Azure.DataApiBuilder.Service.Models
         protected RestRequestContext(string entityName, DatabaseObject dbo)
         {
             EntityName = entityName;
+            BaseEntityName = entityName;
             DatabaseObject = dbo;
         }
 
         /// <summary>
         /// The target Entity on which the request needs to be operated upon.
         /// </summary>
-        public string EntityName { get; }
+        public string EntityName { get; set; }
+
+        public string BaseEntityName { get; set; }
 
         /// <summary>
         /// The database object associated with the target entity.
@@ -107,6 +110,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// A collection of all unique column names present in the request.
         /// </summary>
         public ISet<string> CumulativeColumns { get; } = new HashSet<string>();
+        public Dictionary<string, string>? ColumnAliases { get; set; } = new();
 
         /// <summary>
         /// Populates the CumulativeColumns property with a unique list

@@ -185,5 +185,10 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         {
             throw new NotImplementedException();
         }
+
+        public string GetEntityNameFromSource(string entityPathName)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

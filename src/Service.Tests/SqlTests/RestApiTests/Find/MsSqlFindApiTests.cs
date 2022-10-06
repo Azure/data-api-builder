@@ -55,7 +55,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindViewComposite",
                 $"SELECT name ,id, publisher_id FROM {_composite_subset_bookPub} " +
-                $"WHERE id=2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                $"WHERE id=2 AND publisher_id = 1234 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindTestWithFilterQueryOneGeFilterOnView",

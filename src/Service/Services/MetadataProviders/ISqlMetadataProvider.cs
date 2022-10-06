@@ -75,6 +75,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <returns>True if exists, false otherwise.</returns>
         bool TryGetBackingColumn(string entityName, string field, out string? name);
 
+        string GetEntityNameFromSource(string entityPathName);
+
         /// <summary>
         /// Try to obtain the name of the Entity that has the provided Path. If It
         /// exists save in out param, and return true, otherwise return false.

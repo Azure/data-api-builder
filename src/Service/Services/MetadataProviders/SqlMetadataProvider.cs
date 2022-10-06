@@ -54,6 +54,8 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private Dictionary<string, string> EntityPathToEntityName { get; } = new();
 
+        private Dictionary<string,string> SourceToEntityName { get; } = new();
+
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
         /// </summary>
@@ -173,6 +175,11 @@ namespace Azure.DataApiBuilder.Service.Services
         public virtual bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
         {
             return EntityPathToEntityName.TryGetValue(entityPathName, out entityName);
+        }
+
+        public virtual string GetEntityNameFromSource(string entityPathName)
+        {
+            return SourceToEntityName[entityPathName];
         }
 
         /// <inheritdoc />
@@ -630,19 +637,20 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private async Task PopulateObjectDefinitionForEntities()
         {
-            foreach ((string entityName, Entity procedureEntity) in _entities)
+            foreach ((string entityName, Entity entity) in _entities)
             {
-                SourceType entitySourceType = procedureEntity.ObjectType;
+                SourceType entitySourceType = entity.ObjectType;
                 if (entitySourceType is SourceType.StoredProcedure)
                 {
                     await FillSchemaForStoredProcedureAsync(
-                        procedureEntity,
+                        entity,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         GetStoredProcedureDefinition(entityName));
                 }
                 else
                 {
+                    SourceToEntityName[entity.SourceName] = entityName;
                     await PopulateTableDefinitionAsync(
                         entityName,
                         GetSchemaName(entityName),

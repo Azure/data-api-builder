@@ -58,8 +58,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
-            bool incrementalUpdate)
-        : base(sqlMetadataProvider, entityName: entityName)
+            bool incrementalUpdate,
+            string? baseEntityName = null,
+            Dictionary<string, string>? columnAliases = null)
+        : base(sqlMetadataProvider, entityName: entityName, baseEntityName: baseEntityName, columnAliases: columnAliases)
         {
             UpdateOperations = new();
             InsertColumns = new();
@@ -97,7 +99,34 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             bool isIncrementalUpdate)
         {
             List<string> primaryKeys = tableDefinition.PrimaryKey;
-            List<string> schemaColumns = tableDefinition.Columns.Keys.ToList();
+            List<string> primaryKeysInBaseTable = new();
+            TableDefinition baseTableDefinition = SqlMetadataProvider.GetTableDefinition(BaseEntityName);
+            List<string> schemaColumns = new();
+            //= SqlMetadataProvider.GetTableDefinition(BaseEntityName).Columns.Keys.ToList();
+            //primaryKeysInBaseTable.Add("publisher_id");
+            foreach (string key in baseTableDefinition.Columns.Keys)
+            {
+                if (ColumnAliases!.ContainsKey(key))
+                {
+                    schemaColumns.Add(ColumnAliases[key]);
+                }
+                else
+                {
+                    schemaColumns.Add(key);
+                }
+
+                if (baseTableDefinition.PrimaryKey.Contains(key))
+                {
+                    if (ColumnAliases!.ContainsKey(key))
+                    {
+                        primaryKeysInBaseTable.Add(ColumnAliases[key]);
+                    }
+                    else
+                    {
+                        primaryKeysInBaseTable.Add(key);
+                    }
+                }
+            }
 
             try
             {
@@ -130,7 +159,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // as Update request uses Where clause to target item by PK.
                     if (primaryKeys.Contains(backingColumn!))
                     {
-                        PopulateColumnsAndParams(backingColumn!);
+                        if (primaryKeysInBaseTable.Contains(backingColumn!))
+                        {
+                            PopulateColumnsAndParams(backingColumn!);
+                        }
 
                         // PK added as predicate for Update Operation
                         Predicates.Add(predicate);

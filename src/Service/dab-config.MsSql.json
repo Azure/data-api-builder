@@ -2,7 +2,7 @@
   "$schema": "../schemas/dab.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests"
+    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;MultipleActiveResultSets=False;Connection Timeout=5;"
   },
   "mssql": {
     "set-session-context": false
@@ -35,7 +35,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "*" ]
         },
         {
           "role": "authenticated",
@@ -792,7 +792,24 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "stocks_price_view_composite": {
+      "source": "stocks_price_view_composite",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
         },
         {
           "role": "authenticated",

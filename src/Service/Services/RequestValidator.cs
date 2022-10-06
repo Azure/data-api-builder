@@ -3,9 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
+using Azure.DataApiBuilder.Service.Resolvers;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -18,7 +22,16 @@ namespace Azure.DataApiBuilder.Service.Services
         public const string BATCH_MUTATION_UNSUPPORTED_ERR_MESSAGE = "A Mutation operation on more than one entity in a single request is not yet supported.";
         public const string QUERY_STRING_INVALID_USAGE_ERR_MESSAGE = "Query string for this HTTP request type is an invalid URL.";
         public const string PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE = "Primary Key for this HTTP request type is required.";
+        private IQueryExecutor _queryExecutor;
+        private RuntimeConfigProvider _runtimeConfigProvider;
 
+        public RequestValidator(
+            IQueryExecutor queryExecutor,
+            RuntimeConfigProvider runtimeConfigProvider)
+        {
+            _queryExecutor = queryExecutor;
+            _runtimeConfigProvider = runtimeConfigProvider;
+        }
         /// <summary>
         /// Validates the given request by ensuring:
         /// - each field to be returned is one of the exposed names for the entity.
@@ -269,7 +282,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="insertRequestCtx">Insert Request context containing the request body.</param>
         /// <param name="sqlMetadataProvider">To get the table definition.</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateInsertRequestContext(
+        public async Task<bool> ValidateInsertRequestContext(
             InsertRequestContext insertRequestCtx,
             ISqlMetadataProvider sqlMetadataProvider)
         {
@@ -277,24 +290,37 @@ namespace Azure.DataApiBuilder.Service.Services
             TableDefinition tableDefinition =
                 TryGetTableDefinition(insertRequestCtx.EntityName, sqlMetadataProvider);
 
+            Tuple<string, Dictionary<string, string>>
+                baseTableAndcolToBaseColMapping =
+                await TryGetBaseTableMappings(insertRequestCtx, sqlMetadataProvider);
+
+            TableDefinition baseTableDefinition =
+                TryGetTableDefinition(baseTableAndcolToBaseColMapping.Item1, sqlMetadataProvider);
+
+            Dictionary<string,string> colToBaseColMapping = baseTableAndcolToBaseColMapping.Item2;
+
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
             // At the end, if we end up with extraneous unvalidated fields, we throw error.
             HashSet<string> unvalidatedFields = new(fieldsInRequestBody);
 
-            foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
+            foreach ((string colName, ColumnDefinition colDef) in tableDefinition.Columns)
             {
+                ColumnDefinition baseColumnDef =
+                    baseTableDefinition == tableDefinition ?
+                    colDef : baseTableDefinition.Columns[colToBaseColMapping[colName]];
+
                 // if column is not exposed we skip
                 if (!sqlMetadataProvider.TryGetExposedColumnName(
                     entityName: insertRequestCtx.EntityName,
-                    backingFieldName: column.Key,
+                    backingFieldName: colName,
                     out string? exposedName))
                 {
                     continue;
                 }
 
                 // Request body must have value defined for included non-nullable columns
-                if (!column.Value.IsNullable && fieldsInRequestBody.Contains(exposedName))
+                if (!baseColumnDef.IsNullable && fieldsInRequestBody.Contains(exposedName))
                 {
                     if (insertRequestCtx.FieldValuePairsInBody[exposedName!] is null)
                     {
@@ -307,7 +333,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 // The insert operation behaves like a replacement update, since it
                 // requires nullable fields to be defined in the request.
-                if (ValidateColumn(column.Value,
+                if (ValidateColumn(baseColumnDef,
                                    exposedName!,
                                    fieldsInRequestBody,
                                    isReplacementUpdate: true))
@@ -324,6 +350,91 @@ namespace Azure.DataApiBuilder.Service.Services
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
+
+            return true;
+        }
+
+        private async Task<Tuple<string, Dictionary<string, string>>> TryGetBaseTableMappings(RestRequestContext requestCtx, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            if (_queryExecutor.GetType() != typeof(MsSqlQueryExecutor))
+            {
+                return new Tuple<string, Dictionary<string, string>>
+                    (requestCtx.EntityName, new());
+            }
+
+            // This logic is specific to MsSql. And once we have object type
+            // specified in views we will limit this logic to views only.
+
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
+            string entitySourceName = runtimeConfig.Entities[requestCtx.EntityName].GetSourceName();
+            string query = "SELECT name as col_name, source_table, source_column, source_schema " +
+                           "FROM sys.dm_exec_describe_first_result_set (N'SELECT * from " +
+                           $"{entitySourceName}', null, 1)";
+            JsonArray? resultArray = await _queryExecutor.ExecuteQueryAsync(
+                sqltext: query,
+                parameters: null,
+                dataReaderHandler: _queryExecutor.GetJsonArrayAsync);
+            JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
+            Dictionary<string, string> colToBaseColMapping = new();
+            Dictionary<string, string> colToBaseTableMapping = new();
+            Dictionary<string, string> baseColToColMapping = new();
+            string sourceTableForEntity = string.Empty;
+            string sourceSchemaForEntity = string.Empty;
+            foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
+            {
+                string colName = element.GetProperty("col_name").ToString();
+                string sourceTable = element.GetProperty("source_table").ToString();
+                string sourceColumn = element.GetProperty("source_column").ToString();
+                string sourceSchema = element.GetProperty("source_schema").ToString();
+                if (requestCtx.FieldValuePairsInBody.Keys.Contains(colName))
+                {
+                    if (string.Empty.Equals(sourceTableForEntity))
+                    {
+                        sourceTableForEntity = sourceTable;
+                        sourceSchemaForEntity = sourceSchema;
+                    }
+                    else if (!sourceTableForEntity.Equals(sourceTable) ||
+                        !sourceSchemaForEntity.Equals(sourceSchema))
+                    {
+                        // Mutation operation on entity based on multiple base tables
+                        // is not allowed.
+                        throw new DataApiBuilderException(
+                            message: "Not all the fields in the request body belong to the same table",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                            );
+                    }
+                }
+
+                colToBaseColMapping.Add(colName, sourceColumn);
+                colToBaseTableMapping.Add(colName, sourceTable);
+            }
+
+            foreach ((string colName, string sourceTable) in colToBaseTableMapping)
+            {
+                if (sourceTable.Equals(sourceTableForEntity))
+                {
+                    baseColToColMapping.Add(colToBaseColMapping[colName], colName);
+                }
+            }
+
+            string fullSourceTableNameinDb = sourceSchemaForEntity + "." + sourceTableForEntity;
+            string fullSourceTableNameinConfig = runtimeConfig.Entities[requestCtx.EntityName].GetSourceName();
+
+            if (fullSourceTableNameinConfig.StartsWith(".") && !fullSourceTableNameinConfig.StartsWith("dbo."))
+            {
+                fullSourceTableNameinConfig = "dbo." + fullSourceTableNameinConfig;
+            }
+
+            requestCtx.ColumnAliases = baseColToColMapping;
+            if (!string.Empty.Equals(sourceTableForEntity))
+            {
+                requestCtx.BaseEntityName = sqlMetadataProvider.GetEntityNameFromSource(sourceTableForEntity);
+            }
+
+            return new Tuple<string, Dictionary<string, string>>
+                (requestCtx.BaseEntityName,
+                colToBaseColMapping);
         }
 
         /// <summary>
@@ -334,7 +445,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="upsertRequestCtx">Upsert Request context containing the request body.</param>
         /// <param name="sqlMetadataProvider">To get the table definition.</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateUpsertRequestContext(
+        public async Task<bool> ValidateUpsertRequestContext(
             UpsertRequestContext upsertRequestCtx,
             ISqlMetadataProvider sqlMetadataProvider)
         {
@@ -342,17 +453,30 @@ namespace Azure.DataApiBuilder.Service.Services
             TableDefinition tableDefinition =
                 TryGetTableDefinition(upsertRequestCtx.EntityName, sqlMetadataProvider);
 
+            Tuple<string, Dictionary<string, string>>
+                baseTableAndcolToBaseColMapping =
+                await TryGetBaseTableMappings(upsertRequestCtx, sqlMetadataProvider);
+
+            TableDefinition baseTableDefinition =
+                TryGetTableDefinition(baseTableAndcolToBaseColMapping.Item1, sqlMetadataProvider);
+
+            Dictionary<string, string> colToBaseColMapping = baseTableAndcolToBaseColMapping.Item2;
+
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
             // At the end, if we end up with extraneous unvalidated fields, we throw error.
             HashSet<string> unValidatedFields = new(fieldsInRequestBody);
 
-            foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
+            foreach ((string colName, ColumnDefinition columnDef) in tableDefinition.Columns)
             {
+                ColumnDefinition baseColumnDef =
+                    baseTableDefinition == tableDefinition ?
+                    columnDef : baseTableDefinition.Columns[colToBaseColMapping[colName]];
+
                 // if column is not exposed we skip
                 if (!sqlMetadataProvider.TryGetExposedColumnName(
                     entityName: upsertRequestCtx.EntityName,
-                    backingFieldName: column.Key,
+                    backingFieldName: colName,
                     out string? exposedName))
                 {
                     continue;
@@ -362,13 +486,13 @@ namespace Azure.DataApiBuilder.Service.Services
                 // if a PK is autogenerated here, because an UPSERT request may only need to update a
                 // record. If an insert occurs on a table with autogenerated primary key,
                 // a database error will be returned.
-                if (tableDefinition.PrimaryKey.Contains(column.Key))
+                if (tableDefinition.PrimaryKey.Contains(colName))
                 {
                     continue;
                 }
 
                 // Request body must have value defined for included non-nullable columns
-                if (!column.Value.IsNullable && fieldsInRequestBody.Contains(exposedName))
+                if (!baseColumnDef.IsNullable && fieldsInRequestBody.Contains(exposedName))
                 {
                     if (upsertRequestCtx.FieldValuePairsInBody[exposedName!] is null)
                     {
@@ -380,7 +504,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
 
                 bool isReplacementUpdate = (upsertRequestCtx.OperationType == Operation.Upsert) ? true : false;
-                if (ValidateColumn(column.Value, exposedName!, fieldsInRequestBody, isReplacementUpdate))
+                if (ValidateColumn(baseColumnDef, exposedName!, fieldsInRequestBody, isReplacementUpdate))
                 {
                     unValidatedFields.Remove(exposedName!);
                 }
@@ -395,6 +519,8 @@ namespace Azure.DataApiBuilder.Service.Services
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
+
+            return true;
         }
 
         /// <summary>

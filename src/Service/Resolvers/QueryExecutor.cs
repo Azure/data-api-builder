@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc/>
         public virtual async Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
-            IDictionary<string, object?> parameters,
+            IDictionary<string, object?>? parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
             List<string>? args = null)
         {
@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public virtual async Task<TResult?> ExecuteQueryAgainstDbAsync<TResult>(
             TConnection conn,
             string sqltext,
-            IDictionary<string, object?> parameters,
+            IDictionary<string, object?>? parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
             List<string>? args = null)
         {

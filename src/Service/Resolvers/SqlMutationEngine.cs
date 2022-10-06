@@ -267,7 +267,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&
                         PostgresQueryBuilder.IsInsert(resultRow)))
                     {
-                        string primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRow);
+                        string primaryKeyRoute = ConstructPrimaryKeyRoute(
+                            context.EntityName,
+                            context.BaseEntityName,
+                            resultRow);
                         // location will be updated in rest controller where httpcontext is available
                         return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value);
                     }
@@ -282,7 +285,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     await PerformMutationOperation(
                         context.EntityName,
                         context.OperationType,
-                        parameters);
+                        parameters,
+                        baseEntityName: context.BaseEntityName,
+                        columnAliases: context.ColumnAliases);
 
                 if (context.OperationType is Operation.Insert)
                 {
@@ -294,7 +299,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
 
                     Dictionary<string, object?> resultRow = resultRowAndProperties.Item1;
-                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRow);
+                    string primaryKeyRoute = ConstructPrimaryKeyRoute(
+                        context.EntityName,
+                        context.BaseEntityName,
+                        resultRow,
+                        context.ColumnAliases);
                     // location will be updated in rest controller where httpcontext is available
                     return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value);
                 }
@@ -356,7 +365,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 string entityName,
                 Operation operationType,
                 IDictionary<string, object?> parameters,
-                IMiddlewareContext? context = null)
+                IMiddlewareContext? context = null,
+                string? baseEntityName = null,
+                Dictionary<string, string>? columnAliases = null)
         {
             string queryString;
             Dictionary<string, object?> queryParameters;
@@ -365,7 +376,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 case Operation.Insert:
                 case Operation.Create:
                     SqlInsertStructure insertQueryStruct = context is null ?
-                        new(entityName, _sqlMetadataProvider, parameters) :
+                        new(entityName, _sqlMetadataProvider, parameters, baseEntityName, columnAliases: columnAliases) :
                         new(context, entityName, _sqlMetadataProvider, parameters);
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
@@ -375,7 +386,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         new(entityName,
                         _sqlMetadataProvider,
                         parameters,
-                        isIncrementalUpdate: false);
+                        isIncrementalUpdate: false,
+                        baseEntityName,
+                        columnAliases);
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
                     break;
@@ -384,7 +397,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         new(entityName,
                         _sqlMetadataProvider,
                         parameters,
-                        isIncrementalUpdate: true);
+                        isIncrementalUpdate: true,
+                        baseEntityName,
+                        columnAliases);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;
@@ -520,7 +535,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         new(entityName,
                         _sqlMetadataProvider,
                         parameters,
-                        incrementalUpdate: false);
+                        incrementalUpdate: false,
+                        baseEntityName: context.BaseEntityName,
+                        columnAliases: context.ColumnAliases);
                 queryString = _queryBuilder.Build(upsertStructure);
                 queryParameters = upsertStructure.Parameters;
             }
@@ -530,7 +547,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         new(entityName,
                         _sqlMetadataProvider,
                         parameters,
-                        incrementalUpdate: true);
+                        incrementalUpdate: true,
+                        baseEntityName: context.BaseEntityName,
+                        columnAliases: context.ColumnAliases);
                 queryString = _queryBuilder.Build(upsertIncrementalStructure);
                 queryParameters = upsertIncrementalStructure.Parameters;
             }
@@ -551,20 +570,26 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// using the primary key names from metadata and their values
         /// from the JsonElement representing the entity.
         /// </summary>
-        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="baseEntityName">Name of the base entity.</param>
         /// <param name="entity">A Json element representing one instance of the entity.</param>
         /// <remarks> This function expects the Json element entity to contain all the properties
         /// that make up the primary keys.</remarks>
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
-        public string ConstructPrimaryKeyRoute(string entityName, Dictionary<string, object?> entity)
+        public string ConstructPrimaryKeyRoute(
+            string entityName,
+            string baseEntityName,
+            Dictionary<string, object?> entity,
+            Dictionary<string, string>? columnAliases = null)
         {
-            TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
+            TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(baseEntityName);
             StringBuilder newPrimaryKeyRoute = new();
 
             foreach (string primaryKey in tableDefinition.PrimaryKey)
             {
+                string primaryKeyAlias = columnAliases is not null && columnAliases.Count > 0 ?
+                    columnAliases[primaryKey] : primaryKey;
                 // get backing column for lookup, previously validated to be non-null
-                _sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? pkExposedName);
+                _sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKeyAlias, out string? pkExposedName);
                 newPrimaryKeyRoute.Append(pkExposedName);
                 newPrimaryKeyRoute.Append("/");
                 newPrimaryKeyRoute.Append(entity[pkExposedName!]!.ToString());

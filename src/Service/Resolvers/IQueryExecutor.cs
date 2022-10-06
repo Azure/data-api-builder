@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         ///<returns>An object formed using the results of the query as returned by the given handler.</returns>
         public Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
-            IDictionary<string, object?> parameters,
+            IDictionary<string, object?>? parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
             List<string>? args = null);
 

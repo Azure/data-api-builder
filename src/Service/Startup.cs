@@ -114,6 +114,8 @@ namespace Azure.DataApiBuilder.Service
                 }
             });
 
+            services.AddSingleton<RequestValidator>();
+
             services.AddSingleton<IQueryBuilder>(implementationFactory: (serviceProvider) =>
             {
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();

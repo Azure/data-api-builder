@@ -55,7 +55,5 @@ describe SmokeTest {
         Invoke-expression "$executableDAB init -c $configFileName --database-type mssql --connection-string xxxx"
         Test-Path -Path $configFileName | Should -Be True
     }
-    
 }
-
 

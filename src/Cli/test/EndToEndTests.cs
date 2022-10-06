@@ -302,6 +302,7 @@ public class EndToEndTests
         {
             Assert.IsTrue(output.Contains("Failed to start the engine."));
         }
+
         process.Kill();
     }
 

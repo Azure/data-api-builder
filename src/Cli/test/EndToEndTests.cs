@@ -284,28 +284,15 @@ public class EndToEndTests
             WriteJsonContentToFile(configFileName, GetInitialConfiguration);
         }
 
-        Process process = new()
-        {
-            StartInfo =
-                {
-                    FileName = @"./dab",
-                    Arguments = $"start --config {configFileName} {logging}",
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                }
-        };
+        Process process = StartDabProcess(
+            command: $"start --config {configFileName}",
+            logging
+        );
 
-        // Asserting that a new process has been started and no existing process is reused.
-        Assert.IsTrue(process.Start());
-
-        // The new process should not be exited after triggering the start command.
-        Assert.IsFalse(process.HasExited);
         string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
         Assert.IsTrue(output!.Contains($"Using config file: {configFileName}"));
         output = process.StandardOutput.ReadLine();
-        process.Kill();
         Assert.IsNotNull(output);
         if (expectSuccess)
         {
@@ -315,6 +302,33 @@ public class EndToEndTests
         {
             Assert.IsTrue(output.Contains("Failed to start the engine."));
         }
+        process.Kill();
+    }
+
+    /// <summary>
+    /// Test to verify that help writer window generates output on the console.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("", "", new string[] { "ERROR" }, DisplayName = "No flags provided.")]
+    [DataRow("initialize", "", new string[] { "ERROR", "Verb 'initialize' is not recognized." }, DisplayName = "Wrong Command provided.")]
+    [DataRow("", "--version", new string[] { "dab 1.0.0" }, DisplayName = "Checking version.")]
+    [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
+    public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
+    {
+        Process process = StartDabProcess(
+            command,
+            flags
+        );
+
+        string? output = process.StandardOutput.ReadToEnd();
+        Assert.IsNotNull(output);
+
+        foreach (string expectedOutput in expectedOutputArray)
+        {
+            Assert.IsTrue(output.Contains(expectedOutput));
+        }
+
+        process.Kill();
     }
 
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)

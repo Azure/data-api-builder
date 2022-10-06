@@ -653,10 +653,9 @@ namespace Cli
             }
 
             if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
-                updatedSourceType,
-                options.SourceParameters,
-                options.SourceKeyFields)
-            )
+                    updatedSourceType,
+                    options.SourceParameters,
+                    options.SourceKeyFields))
             {
                 return false;
             }
@@ -679,7 +678,6 @@ namespace Cli
             if (options.SourceParameters is not null &&
                 !TryParseSourceParameterDictionary(options.SourceParameters, out updatedSourceParameters))
             {
-                updatedSourceObject = null;
                 return false;
             }
 
@@ -690,11 +688,11 @@ namespace Cli
 
             // Try Creating Source Object with the updated values.
             if (!TryCreateSourceObject(
-                updatedSourceName,
-                updatedSourceType,
-                updatedSourceParameters,
-                updatedKeyFields,
-                out updatedSourceObject))
+                    updatedSourceName,
+                    updatedSourceType,
+                    updatedSourceParameters,
+                    updatedKeyFields,
+                    out updatedSourceObject))
             {
                 return false;
             }

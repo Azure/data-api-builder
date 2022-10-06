@@ -497,8 +497,7 @@ namespace Cli
         public static bool VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
             SourceType sourceType,
             IEnumerable<string>? parameters,
-            IEnumerable<string>? keyFields
-        )
+            IEnumerable<string>? keyFields)
         {
             if (SourceType.StoredProcedure.Equals(sourceType))
             {
@@ -535,19 +534,9 @@ namespace Cli
             SourceType type,
             Dictionary<string, object>? parameters,
             string[]? keyFields,
-            [NotNullWhen(true)] out object? sourceObject
-        )
+            [NotNullWhen(true)] out object? sourceObject)
         {
             sourceObject = null;
-            try
-            {
-                DatabaseObjectSource.VerifySourceObjectFields(name, type, parameters, keyFields);
-            }
-            catch (JsonException e)
-            {
-                Console.Error.WriteLine(e.Message);
-                return false;
-            }
 
             // If type is Table along with that parameter and keyfields is null then return the source as string.
             if (SourceType.Table.Equals(type) && parameters is null && keyFields is null)

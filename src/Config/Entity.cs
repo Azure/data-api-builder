@@ -188,38 +188,7 @@ namespace Azure.DataApiBuilder.Config
             string Name,
         Dictionary<string, object>? Parameters,
         [property: JsonPropertyName("key-fields")]
-            string[]? KeyFields)
-    {
-        public static void VerifySourceObjectFields(
-            string? name,
-            SourceType objectType,
-            Dictionary<string, object>? parameters,
-            string[]? keyFields)
-        {
-            // Source name cannot be null.
-            if (name is null)
-            {
-                throw new JsonException(message: "Must specify entity source.");
-            }
-
-            // Stored Procedure only supports Parameters.
-            if ((SourceType.StoredProcedure).Equals(objectType))
-            {
-                if (keyFields is not null)
-                {
-                    throw new JsonException(message: "KeyFields is only supported for Table and Views.");
-                }
-            }
-            else
-            {
-                // Table/Views only support key fields.
-                if (parameters is not null)
-                {
-                    throw new JsonException(message: "parameters are only supported for Stored Procedure.");
-                }
-            }
-        }
-    }
+            string[]? KeyFields);
 
     /// <summary>
     /// Class to specify custom converter used while deserialising json config

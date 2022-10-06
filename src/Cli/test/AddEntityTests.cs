@@ -207,8 +207,7 @@ namespace Cli.Tests
             string? sourceType,
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields,
-            bool expectSuccess
-        )
+            bool expectSuccess)
         {
             AddOptions options = new(
                 source: "testSource",

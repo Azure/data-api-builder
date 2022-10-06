@@ -272,8 +272,7 @@ namespace Cli
             // Parses the string array to parameter Dictionary
             if (!TryParseSourceParameterDictionary(
                     options.SourceParameters,
-                    out Dictionary<string, object>? parametersDictionary)
-            )
+                    out Dictionary<string, object>? parametersDictionary))
             {
                 return false;
             }

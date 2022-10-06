@@ -278,8 +278,7 @@ namespace Cli.Tests
             DatabaseType databaseType,
             HostModeType hostModeType = HostModeType.Production,
             IEnumerable<string>? corsOrigins = null,
-            bool? authenticateDevModeRequest = null
-        )
+            bool? authenticateDevModeRequest = null)
         {
             Dictionary<string, object> runtimeSettingDict = new();
             Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(

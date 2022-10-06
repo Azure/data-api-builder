@@ -824,8 +824,7 @@ namespace Cli.Tests
             string? sourceType,
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields,
-            string task
-        )
+            string task)
         {
 
             UpdateOptions options = new(
@@ -886,8 +885,7 @@ namespace Cli.Tests
             string? source,
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields,
-            string task
-        )
+            string task)
         {
             UpdateOptions options = new(
                 source: source,
@@ -998,8 +996,7 @@ namespace Cli.Tests
             string[]? keyFields,
             string updatedSourceObjectEntity,
             bool expectNoKeyFieldsAndParameters,
-            bool expectSuccess
-        )
+            bool expectSuccess)
         {
             UpdateOptions options = new(
                 source: "s001.book",
@@ -1066,8 +1063,7 @@ namespace Cli.Tests
             string oldSourceName, string updatedSourceName,
             SourceType oldSourceType, SourceType updatedSourceType,
             Dictionary<string, object>? oldParameters, Dictionary<string, object>? updatedParameters,
-            string[]? oldKeyFields, string[]? updatedKeyFields
-        )
+            string[]? oldKeyFields, string[]? updatedKeyFields)
         {
             Entity entity = GetEntityObjectFromRuntimeConfigJson(initialConfig, entityName);
             entity.TryPopulateSourceFields();
@@ -1406,8 +1402,7 @@ namespace Cli.Tests
         public void TestUpdateSourceObjectWithInvalidFields(
             string? sourceType,
             IEnumerable<string>? parameters,
-            IEnumerable<string>? keyFields
-        )
+            IEnumerable<string>? keyFields)
         {
             UpdateOptions options = new(
                 source: "MyTable",

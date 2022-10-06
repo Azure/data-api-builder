@@ -12,22 +12,26 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 
 ![Data API Builder Architecture Overview Diagram](./docs/media/data-api-builder-overview.png)
 
+## 
+
+Data API builder is completely transparent to your database. It doesn't require any modification to your schema or data. It doesn't create any database object. It doesn't require any special naming convention to be followed or implemented. Data API builder just does the heavy lifting for you, and it will 
+
 ## Features
 
 - Allow collections, tables and views to be accessed via REST and GraphQL
 - Support authentication via JWT and EasyAuth
 - Role-based authorization using received claims
 - Item-level security via policy expressions
-- REST 
+- REST
   - CRUD operations via POST, GET, PUT, PATCH, DELETE
   - filtering, sorting and pagination
-- GraphQL 
+- GraphQL
   - queries and mutations
   - filtering, sorting and pagination
   - relationship navigation
 - Easy development via dedicated CLI
 
-## Limitations 
+## Current limitations
 
 - JWT only supports Azure AD
 - Tables must have a primary key

@@ -2,7 +2,7 @@
   "$schema": "dab.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "@env('AZURE_SQL_CONNECTION_STRING')"
+    "connection-string": "Server=localhost;Database=DAB_Todo;User ID=dab_test_user;Password=DAB_Pas$w0rD!;TrustServerCertificate=true"
   },
   "runtime": {
     "rest": {
@@ -12,9 +12,12 @@
       "path": "/graphql"
     },
     "host": {
-      "mode": "development",      
+      "mode": "development",
       "cors": {
-        "origins": [ "http://localhost:4280", "http://localhost:8080" ],
+        "origins": [
+          "http://localhost:4280",
+          "http://localhost:8080"
+        ],
         "allow-credentials": true
       },
       "authentication": {
@@ -37,7 +40,7 @@
               "policy": {
                 "database": "@item.owner_id eq 'public'"
               }
-            }            
+            }
           ]
         },
         {
@@ -48,10 +51,33 @@
               "policy": {
                 "database": "@item.owner_id eq @claims.userId"
               }
-            }            
+            }
           ]
         }
-      ]
+      ],
+      "relationships": {
+        "category": {
+          "cardinality": "one",
+          "target.entity": "Category"
+        }
+      }
+    },
+    "Category": {
+      "source": "dbo.categories",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ],
+      "relationships": {
+        "todos": {
+          "cardinality": "many",
+          "target.entity": "Todo"
+        }
+      }
     }
   }
 }

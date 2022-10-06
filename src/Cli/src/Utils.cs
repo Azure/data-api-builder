@@ -536,7 +536,6 @@ namespace Cli
             string[]? keyFields,
             [NotNullWhen(true)] out object? sourceObject)
         {
-            sourceObject = null;
 
             // If type is Table along with that parameter and keyfields is null then return the source as string.
             if (SourceType.Table.Equals(type) && parameters is null && keyFields is null)

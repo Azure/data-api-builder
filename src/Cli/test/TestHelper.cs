@@ -22,6 +22,32 @@ namespace Cli.Tests
             return configurationJson.ToString();
         }
 
+        /// <summary>
+        /// Returns a new dab Process with the given command and flags
+        /// </summary>
+        public static Process StartDabProcess(string command, string flags)
+        {
+            Process process = new()
+            {
+                StartInfo =
+                {
+                    FileName = @"./dab",
+                    Arguments = $"{command} {flags}",
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                }
+            };
+
+            // Asserting that a new process has been started and no existing process is reused.
+            Assert.IsTrue(process.Start());
+
+            // The new process should not be exited after triggering the start command.
+            Assert.IsFalse(process.HasExited);
+            return process;
+        }
+
         public const string INITIAL_CONFIG = @"
           {
             ""$schema"": ""dab.draft-01.schema.json"",

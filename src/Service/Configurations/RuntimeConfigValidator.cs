@@ -28,6 +28,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
         // Only characters from a-z,A-Z,0-9,.,_ are allowed to be present within the claimType.
         private static readonly string _invalidClaimChars = @"[^a-zA-Z0-9_\.]+";
 
+        // To make sure validation once done by CLI for connection string and databaseType is not repeated
+        // by engine for the same config. Default value is false.
+        public static bool _isDataSourceValidatedByCLI;
+
         // Regex to check occurence of any character not among [a-z,A-Z,0-9,.,_] in the claimType.
         // The claimType is invalid if there is a match found.
         private static readonly Regex _invalidClaimCharsRgx = new(_invalidClaimChars, RegexOptions.Compiled);
@@ -59,14 +63,39 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
 
-            if (string.IsNullOrWhiteSpace(runtimeConfig.DatabaseType.ToString()))
+            ValidateDataSourceInConfig(
+                runtimeConfig,
+                _fileSystem,
+                _logger);
+
+            ValidateAuthenticationConfig();
+
+            // Running these graphQL validations only in development mode to ensure
+            // fast startup of engine in production mode.
+            if (runtimeConfig.GraphQLGlobalSettings.Enabled
+                 && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
             {
-                const string databaseTypeNotSpecified =
-                    "The database-type should be provided with the runtime config.";
-                _logger.LogCritical(databaseTypeNotSpecified);
-                throw new NotSupportedException(databaseTypeNotSpecified);
+                ValidateEntityNamesInConfig(runtimeConfig.Entities);
+                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
+            }
+        }
+
+        /// <summary>
+        /// Throws exception if Invalid connection-string or database type
+        /// is present in the config
+        /// </summary>
+        public static void ValidateDataSourceInConfig(
+            RuntimeConfig runtimeConfig,
+            IFileSystem fileSystem,
+            ILogger logger)
+        {
+            // No Need to Validated Again if Validated by CLI
+            if (_isDataSourceValidatedByCLI)
+            {
+                return;
             }
 
+            // Connection string can't be null or empty
             if (string.IsNullOrWhiteSpace(runtimeConfig.ConnectionString))
             {
                 throw new DataApiBuilderException(
@@ -75,6 +104,29 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
+            ValidateDatabaseType(runtimeConfig, fileSystem, logger);
+        }
+
+        /// <summary>
+        /// Throws exception if database type is incorrectly configured
+        /// in the config. 
+        /// </summary>
+        public static void ValidateDatabaseType(
+            RuntimeConfig runtimeConfig,
+            IFileSystem fileSystem,
+            ILogger logger)
+        {
+            // Database Type cannot be null or empty
+            if (string.IsNullOrWhiteSpace(runtimeConfig.DatabaseType.ToString()))
+            {
+                const string databaseTypeNotSpecified =
+                    "The database-type should be provided with the runtime config.";
+                logger.LogCritical(databaseTypeNotSpecified);
+                throw new NotSupportedException(databaseTypeNotSpecified);
+            }
+
+            // Schema file should be present in the directory if not specified in the config
+            // when using cosmos database.
             if (runtimeConfig.DatabaseType is DatabaseType.cosmos)
             {
                 if (runtimeConfig.CosmosDb is null)
@@ -89,22 +141,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
                     }
 
-                    if (!_fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    if (!fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
                     {
                         throw new FileNotFoundException($"The GraphQL schema file at '{runtimeConfig.CosmosDb.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
                     }
                 }
-            }
-
-            ValidateAuthenticationConfig();
-
-            // Running these graphQL validations only in development mode to ensure
-            // fast startup of engine in production mode.
-            if (runtimeConfig.GraphQLGlobalSettings.Enabled
-                 && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
-            {
-                ValidateEntityNamesInConfig(runtimeConfig.Entities);
-                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
             }
         }
 

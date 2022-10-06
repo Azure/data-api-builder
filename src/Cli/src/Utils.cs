@@ -1,10 +1,13 @@
+using System.IO.Abstractions;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Configurations;
 using Humanizer;
+using Microsoft.Extensions.Logging;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>
@@ -484,6 +487,48 @@ namespace Cli
             }
 
             return !string.IsNullOrEmpty(runtimeConfigFile);
+        }
+
+        /// <summary>
+        /// Reads the config and calls the method to validate 
+        /// connection-string and database-type
+        /// </summary>
+        public static bool CanStartEngineWithConfig(string configFile)
+        {
+            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddConsole();
+            });
+
+            ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
+
+            if (!TryReadRuntimeConfig(configFile, out string runtimeConfigJson))
+            {
+                return false;
+            }
+
+            if (!RuntimeConfig.TryGetDeserializedConfig(runtimeConfigJson, out RuntimeConfig? runtimeConfig, logger))
+            {
+                return false;
+            }
+
+            try
+            {
+                RuntimeConfigValidator._isDataSourceValidatedByCLI = false;
+                RuntimeConfigValidator.ValidateDataSourceInConfig(
+                    runtimeConfig!,
+                    new FileSystem(),
+                    logger);
+
+                RuntimeConfigValidator._isDataSourceValidatedByCLI = true;
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e.Message);
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>

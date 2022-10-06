@@ -280,47 +280,68 @@ public class EndToEndTests
     // Test to verify the engine gets started using start command
     // </summary>
     [DataTestMethod]
-    [DataRow("", DisplayName = "No logging from command line.")]
-    [DataRow("--verbose", DisplayName = "Verbose logging from command line.")]
-    [DataRow("--LogLevel 0", DisplayName = "LogLevel 0 from command line.")]
-    [DataRow("--LogLevel 1", DisplayName = "LogLevel 1 from command line.")]
-    [DataRow("--LogLevel 2", DisplayName = "LogLevel 2 from command line.")]
-    [DataRow("--LogLevel 3", DisplayName = "LogLevel 3 from command line.")]
-    [DataRow("--LogLevel 4", DisplayName = "LogLevel 4 from command line.")]
-    [DataRow("--LogLevel 5", DisplayName = "LogLevel 5 from command line.")]
-    [DataRow("--LogLevel 6", DisplayName = "LogLevel 6 from command line.")]
-    [DataRow("--LogLevel Trace", DisplayName = "LogLevel Trace from command line.")]
-    [DataRow("--LogLevel Debug", DisplayName = "LogLevel Debug from command line.")]
-    [DataRow("--LogLevel Information", DisplayName = "LogLevel Information from command line.")]
-    [DataRow("--LogLevel Warning", DisplayName = "LogLevel Warning from command line.")]
-    [DataRow("--LogLevel Error", DisplayName = "LogLevel Error from command line.")]
-    [DataRow("--LogLevel Critical", DisplayName = "LogLevel Critical from command line.")]
-    [DataRow("--LogLevel None", DisplayName = "LogLevel None from command line.")]
-    [DataRow("--LogLevel tRace", DisplayName = "Case sensitivity: LogLevel Trace from command line.")]
-    [DataRow("--LogLevel DebUG", DisplayName = "Case sensitivity: LogLevel Debug from command line.")]
-    [DataRow("--LogLevel information", DisplayName = "Case sensitivity: LogLevel Information from command line.")]
-    [DataRow("--LogLevel waRNing", DisplayName = "Case sensitivity: LogLevel Warning from command line.")]
-    [DataRow("--LogLevel eRROR", DisplayName = "Case sensitivity: LogLevel Error from command line.")]
-    [DataRow("--LogLevel CrItIcal", DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
-    [DataRow("--LogLevel NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
-    public void TestStartEngine(string logging)
+    [DataRow("", true, false, DisplayName = "No logging from command line.")]
+    [DataRow("--verbose", true, false, DisplayName = "Verbose logging from command line.")]
+    [DataRow("--LogLevel 0", true, false, DisplayName = "LogLevel 0 from command line.")]
+    [DataRow("--LogLevel 1", true, false, DisplayName = "LogLevel 1 from command line.")]
+    [DataRow("--LogLevel 2", true, false, DisplayName = "LogLevel 2 from command line.")]
+    [DataRow("--LogLevel 3", true, false, DisplayName = "LogLevel 3 from command line.")]
+    [DataRow("--LogLevel 4", true, false, DisplayName = "LogLevel 4 from command line.")]
+    [DataRow("--LogLevel 5", false, true, DisplayName = "LogLevel 5 from command line.")]
+    [DataRow("--LogLevel 6", false, true, DisplayName = "LogLevel 6 from command line.")]
+    [DataRow("--LogLevel Trace", true, false, DisplayName = "LogLevel Trace from command line.")]
+    [DataRow("--LogLevel Debug", true, false, DisplayName = "LogLevel Debug from command line.")]
+    [DataRow("--LogLevel Information", true, false, DisplayName = "LogLevel Information from command line.")]
+    [DataRow("--LogLevel Warning", true, false, DisplayName = "LogLevel Warning from command line.")]
+    [DataRow("--LogLevel Error", true, false, DisplayName = "LogLevel Error from command line.")]
+    [DataRow("--LogLevel Critical", true, false, DisplayName = "LogLevel Critical from command line.")]
+    [DataRow("--LogLevel None", false, true, DisplayName = "LogLevel None from command line.")]
+    [DataRow("--LogLevel tRace", false, true, DisplayName = "Case sensitivity: LogLevel Trace from command line.")]
+    [DataRow("--LogLevel DebUG", false, true, DisplayName = "Case sensitivity: LogLevel Debug from command line.")]
+    [DataRow("--LogLevel information", false, true, DisplayName = "Case sensitivity: LogLevel Information from command line.")]
+    [DataRow("--LogLevel waRNing", false, true, DisplayName = "Case sensitivity: LogLevel Warning from command line.")]
+    [DataRow("--LogLevel eRROR", false, true, DisplayName = "Case sensitivity: LogLevel Error from command line.")]
+    [DataRow("--LogLevel CrItIcal", false, true, DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
+    [DataRow("--LogLevel NONE", false, true, DisplayName = "Case sensitivity: LogLevel None from command line.")]
+    public void TestStartEngine(string logging, bool useDefaultConfig, bool expectSuccess)
     {
+        string configFileName;
+        if (useDefaultConfig)
+        {
+            // default config contains empty connection-string
+            configFileName = RuntimeConfigPath.DefaultName;
+        }
+        else
+        {
+            // config with non-empty connection-string
+            configFileName = _testRuntimeConfig;
+            WriteJsonContentToFile(configFileName, INITIAL_CONFIG);
+        }
+
         Process process = StartDabProcess(
-            command: $"start --config {RuntimeConfigPath.DefaultName}",
+            command: $"start --config {configFileName}",
             logging
         );
 
         string? output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
-        Assert.IsTrue(output!.Contains($"Using config file: {RuntimeConfigPath.DefaultName}"));
+        Assert.IsTrue(output!.Contains($"Using config file: {configFileName}"));
         output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
-        Assert.IsTrue(output.Contains("Starting the runtime engine..."));
+        if (expectSuccess)
+        {
+            Assert.IsTrue(output.Contains("Starting the runtime engine..."));
+        }
+        else
+        {
+            Assert.IsTrue(output.Contains("Failed to start the engine."));
+        }
+
         process.Kill();
     }
 
     /// <summary>
-    /// Test to verify that help writter window generates output on the console.
+    /// Test to verify that help writer window generates output on the console.
     /// </summary>
     [DataTestMethod]
     [DataRow("", "", new string[] { "ERROR" }, DisplayName = "No flags provided.")]

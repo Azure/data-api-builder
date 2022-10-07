@@ -74,7 +74,10 @@ namespace Azure.DataApiBuilder.Service.Services
             int countOfPrimaryKeysInSchema = baseTableDefinition.PrimaryKey.Count;
             int countOfPrimaryKeysInRequest = context.PrimaryKeyValuePairs.Count;
 
-            if (countOfPrimaryKeysInRequest < countOfPrimaryKeysInSchema)
+            // If the base entity is same as the original entity
+            bool isSimpleEntity = context.BaseEntityName.Equals(context.EntityName);
+            if (isSimpleEntity && countOfPrimaryKeysInRequest != countOfPrimaryKeysInSchema
+                || !isSimpleEntity && countOfPrimaryKeysInRequest < countOfPrimaryKeysInSchema)
             {
                 throw new DataApiBuilderException(
                     message: "Primary key column(s) provided do not match DB schema.",

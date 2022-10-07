@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private Dictionary<string, string> EntityPathToEntityName { get; } = new();
 
-        private Dictionary<string,string> SourceToEntityName { get; } = new();
+        private Dictionary<string, string> SourceToEntityName { get; } = new();
 
         /// <summary>
         /// Maps an entity name to a DatabaseObject.

@@ -30,7 +30,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string EntityName { get; protected set; }
 
         public string BaseEntityName { get; protected set; }
-        public DatabaseObject DatabaseObjectForBaseEntity { get; }
 
         /// <summary>
         /// The DatabaseObject associated with the entity, represents the
@@ -62,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             string entityName,
             IncrementingInteger? counter = null,
-            string? baseEntityName =  null,
+            string? baseEntityName = null,
             Dictionary<string, string>? columnAliases = null)
             : base(counter)
         {
@@ -79,7 +78,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             BaseEntityName = baseEntityName is null ? entityName : baseEntityName;
-            DatabaseObjectForBaseEntity = sqlMetadataProvider.EntityToDatabaseObject[BaseEntityName];
             // Default the alias to the empty string since this base construtor
             // is called for requests other than Find operations. We only use
             // TableAlias for Find, so we leave empty here and then populate

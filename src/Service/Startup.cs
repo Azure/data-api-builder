@@ -316,8 +316,21 @@ namespace Azure.DataApiBuilder.Service
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapGraphQL("/graphql");
-                endpoints.MapBananaCakePop();
+
+                endpoints.MapGraphQL("/graphql").WithOptions(new GraphQLServerOptions
+                {
+                    Tool = {
+                        // Determines if accessing the endpoint from a browser
+                        // will load the GraphQL Banana Cake Pop IDE.
+                        Enable = runtimeConfigProvider.IsDeveloperMode()
+                    }
+                });
+
+                endpoints.MapBananaCakePop().WithOptions(new GraphQLToolOptions
+                {
+                    Enable = false
+                });
+
                 endpoints.MapHealthChecks("/");
             });
         }

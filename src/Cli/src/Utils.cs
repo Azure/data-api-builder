@@ -514,6 +514,12 @@ namespace Cli
 
             try
             {
+                // Validating Global settings and GraphQL configuration contains
+                // no parsing error.
+                runtimeConfig!.DetermineGlobalSettings();
+                runtimeConfig!.DetermineGraphQLEntityNames();
+
+                // Validating DataSource(connection-string and database-type)
                 RuntimeConfigValidator._isDataSourceValidatedByCLI = false;
                 RuntimeConfigValidator.ValidateDataSourceInConfig(
                     runtimeConfig!,

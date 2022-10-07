@@ -75,6 +75,39 @@ namespace Cli.Tests
             },
             ""entities"": {}
           }";
+        
+        /// <summary>
+        /// Config containing authenticate-devmode-request type as string
+        /// instead of boolean for Host global settings.
+        /// </summary>
+        public const string CONFIG_WITH_INVALID_DEVMODE_REQUEST_AUTH_TYPE = @"
+          {
+            ""$schema"": ""dab.draft-01.schema.json"",
+            ""data-source"": {
+              ""database-type"": ""mssql"",
+              ""connection-string"": ""testconnectionstring""
+            },
+            ""runtime"": {
+              ""rest"": {
+                ""path"": ""/api""
+              },
+              ""graphql"": {
+                ""path"": ""/graphql""
+              },
+              ""host"": {
+                ""mode"": ""development"",
+                ""authenticate-devmode-requests"": ""false"",
+                ""cors"": {
+                  ""origins"": [],
+                  ""allow-credentials"": false
+                },
+                ""authentication"": {
+                  ""provider"": ""StaticWebApps""
+                }
+              }
+            },
+            ""entities"": {}
+          }";
 
         public const string SINGLE_ENTITY = @"
           {
@@ -98,6 +131,29 @@ namespace Cli.Tests
               ""entities"": {
                   ""MyEntity"": {
                   ""source"": ""s001.book"",
+                  ""permissions"": [
+                      {
+                      ""role"": ""anonymous"",
+                      ""actions"": [
+                          ""*""
+                      ]
+                      }
+                  ]
+                  }
+              }
+          }";
+        
+        /// <summary>
+        /// Entity containing invalid graphQL type
+        /// </summary>
+        public const string SINGLE_ENTITY_WITH_INVALID_GRAPHQL_TYPE = @"
+          {
+              ""entities"": {
+                  ""MyEntity"": {
+                  ""source"": ""s001.book"",
+                  ""graphql"": {
+                    ""type"" : 123
+                  },
                   ""permissions"": [
                       {
                       ""role"": ""anonymous"",

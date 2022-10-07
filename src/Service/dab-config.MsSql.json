@@ -803,7 +803,10 @@
       }
     },
     "stocks_price_view_composite": {
-      "source": "stocks_price_view_composite",
+      "source": {
+        "type": "view",
+        "object": "stocks_price_view_composite"
+      },
       "rest": true,
       "graphql": true,
       "permissions": [

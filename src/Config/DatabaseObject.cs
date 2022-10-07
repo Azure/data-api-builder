@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Config
 
         public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
 
-        public SourceType? ObjectType { get; set; } = null!;
+        public SourceType ObjectType { get; set; } = SourceType.Table;
 
         public DatabaseObject(string schemaName, string tableName)
         {

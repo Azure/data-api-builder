@@ -102,8 +102,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             foreach (string primarKey in baseTableDefinition.PrimaryKey)
             {
-                string primaryKeyAlias = context.ColumnAliases is not null &&
-                    context.ColumnAliases.ContainsKey(primarKey) ?
+                string primaryKeyAlias = context.ColumnAliases.ContainsKey(primarKey) ?
                     context.ColumnAliases[primarKey] : primarKey;
 
                 sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, primaryKeyAlias, out string? exposedPrimaryKeyName);
@@ -314,8 +313,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             foreach ((string colName, ColumnDefinition colDef) in baseTableDefinition.Columns)
             {
-                string aliasName = insertRequestCtx.ColumnAliases is not null
-                    && insertRequestCtx.ColumnAliases.ContainsKey(colName) ?
+                string aliasName = insertRequestCtx.ColumnAliases.ContainsKey(colName) ?
                     insertRequestCtx.ColumnAliases[colName] : colName;
 
                 // if column is not exposed we skip
@@ -364,13 +362,13 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private async Task<string> TryGetBaseEntityName(RestRequestContext requestCtx, ISqlMetadataProvider sqlMetadataProvider)
         {
-            if (_queryExecutor.GetType() != typeof(MsSqlQueryExecutor))
+            if (_queryExecutor.GetType() != typeof(MsSqlQueryExecutor)
+                || requestCtx.DatabaseObject.ObjectType is not SourceType.View)
             {
                 return requestCtx.EntityName;
             }
 
-            // This logic is specific to MsSql. And once we have object type
-            // specified in views we will limit this logic to views only.
+            // This logic is specific to MsSql views.
 
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
             string entitySourceName = runtimeConfig.Entities[requestCtx.EntityName].GetSourceName();
@@ -415,7 +413,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         // Mutation operation on entity based on multiple base tables
                         // is not allowed.
                         throw new DataApiBuilderException(
-                            message: "Not all the fields in the request body belong to the same table",
+                            message: "Not all the fields in the request body belong to the same base table",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
                             );
@@ -478,8 +476,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             foreach ((string colName, ColumnDefinition colDef) in baseTableDefinition.Columns)
             {
-                string aliasName = upsertRequestCtx.ColumnAliases is not null
-                    && upsertRequestCtx.ColumnAliases.ContainsKey(colName) ?
+                string aliasName = upsertRequestCtx.ColumnAliases.ContainsKey(colName) ?
                     upsertRequestCtx.ColumnAliases[colName] : colName;
 
                 // if column is not exposed we skip

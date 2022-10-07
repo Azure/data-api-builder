@@ -61,7 +61,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             bool incrementalUpdate,
             string? baseEntityName = null,
             Dictionary<string, string>? columnAliases = null)
-        : base(sqlMetadataProvider, entityName: entityName, baseEntityName: baseEntityName, columnAliases: columnAliases)
+        : base(sqlMetadataProvider, entityName: entityName,
+              baseEntityName: baseEntityName,
+              columnAliases: columnAliases)
         {
             UpdateOperations = new();
             InsertColumns = new();
@@ -106,7 +108,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             //primaryKeysInBaseTable.Add("publisher_id");
             foreach (string key in baseTableDefinition.Columns.Keys)
             {
-                if (ColumnAliases!.ContainsKey(key))
+                if (ColumnAliases.ContainsKey(key))
                 {
                     schemaColumns.Add(ColumnAliases[key]);
                 }
@@ -117,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (baseTableDefinition.PrimaryKey.Contains(key))
                 {
-                    if (ColumnAliases!.ContainsKey(key))
+                    if (ColumnAliases.ContainsKey(key))
                     {
                         primaryKeysInBaseTable.Add(ColumnAliases[key]);
                     }
@@ -183,7 +185,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
                 }
 
-                if (!IsView)
+                if (!(DatabaseObject.ObjectType is SourceType.View))
                 {
                     // Process remaining columns in schemaColumns.
                     if (isIncrementalUpdate)

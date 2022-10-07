@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public string TableAlias { get; protected set; }
 
-        public Dictionary<string, string>? ColumnAliases { get; protected set; } = new();
+        public Dictionary<string, string> ColumnAliases { get; protected set; } = new();
 
         /// <summary>
         /// FilterPredicates is a string that represents the filter portion of our query
@@ -58,7 +58,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public string? DbPolicyPredicates { get; set; }
 
-        public bool IsView { get; set; } = true;
         public BaseSqlQueryStructure(
             ISqlMetadataProvider sqlMetadataProvider,
             string entityName,
@@ -87,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // in the Find specific contructor.
             TableAlias = string.Empty;
 
-            ColumnAliases = columnAliases;
+            ColumnAliases = columnAliases is null ? new() : columnAliases;
         }
 
         /// <summary>
@@ -182,7 +181,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             TableDefinition baseTableDefinition = SqlMetadataProvider.GetTableDefinition(BaseEntityName);
             foreach (string columnName in baseTableDefinition.Columns.Keys)
             {
-                string aliasName = ColumnAliases is not null && ColumnAliases.ContainsKey(columnName) ?
+                string aliasName = ColumnAliases.ContainsKey(columnName) ?
                     ColumnAliases[columnName] : columnName;
                 // if column is not exposed we skip
                 if (!SqlMetadataProvider.TryGetExposedColumnName(

@@ -165,10 +165,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         /// </summary>
         /// <returns></returns>
         [DataTestMethod]
-        [DataRow("/UNION SELECT * FROM books/*",
-            "Primary key column(s) provided do not match DB schema.")]
-        [DataRow("/OR 1=1/*",
-            "Primary key column(s) provided do not match DB schema.")]
         [DataRow("; SELECT * FROM information_schema.tables/*",
             "Support for url template with implicit primary key field names is not yet added.")]
         [DataRow("/value; DROP TABLE authors;",
@@ -187,6 +183,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     expectedErrorMessage: message,
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
+        [DataTestMethod]
+        [DataRow("/OR 1=1/*",
+            "Primary key column: OR 1=1 not found in the entity definition.")]
+        [DataRow("/UNION SELECT * FROM books/*",
+            "Primary key column: UNION SELECT * FROM books not found in the entity definition.")]
+        public async Task DeleteWithSqlInjectionTestWithInvalidPrimaryKeys(string sqlInjection, string message)
+        {
+            //expected status code 400
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/1{sqlInjection}",
+                    queryString: string.Empty,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: string.Empty,
+                    operationType: Operation.Delete,
+                    requestBody: string.Empty,
+                    exceptionExpected: true,
+                    expectedErrorMessage: message,
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
 

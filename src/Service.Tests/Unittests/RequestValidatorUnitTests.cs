@@ -284,7 +284,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string primaryKeyRoute = "id/12345/isbn/2/name/TwoTowers";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
 
-            PerformTest(findRequestContext, _mockMetadataStore.Object, expectsException: true);
+            PerformTest(
+                findRequestContext,
+                _mockMetadataStore.Object,
+                expectsException: true,
+                statusCode: HttpStatusCode.NotFound,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
 
         /// <summary>

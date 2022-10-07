@@ -177,9 +177,9 @@ namespace Azure.DataApiBuilder.Service.Services
             return EntityPathToEntityName.TryGetValue(entityPathName, out entityName);
         }
 
-        public virtual string GetEntityNameFromSource(string entityPathName)
+        public virtual bool TryGetEntityNameFromSource(string sourceName, [NotNullWhen(true)] out string? entityName)
         {
-            return SourceToEntityName[entityPathName];
+            return SourceToEntityName.TryGetValue(sourceName, out entityName);
         }
 
         /// <inheritdoc />
@@ -639,6 +639,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             foreach ((string entityName, Entity entity) in _entities)
             {
+                SourceToEntityName[entity.SourceName] = entityName;
                 SourceType entitySourceType = entity.ObjectType;
                 if (entitySourceType is SourceType.StoredProcedure)
                 {
@@ -650,7 +651,6 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
                 else
                 {
-                    SourceToEntityName[entity.SourceName] = entityName;
                     await PopulateTableDefinitionAsync(
                         entityName,
                         GetSchemaName(entityName),

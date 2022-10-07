@@ -22,16 +22,7 @@ namespace Azure.DataApiBuilder.Service.Services
         public const string BATCH_MUTATION_UNSUPPORTED_ERR_MESSAGE = "A Mutation operation on more than one entity in a single request is not yet supported.";
         public const string QUERY_STRING_INVALID_USAGE_ERR_MESSAGE = "Query string for this HTTP request type is an invalid URL.";
         public const string PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE = "Primary Key for this HTTP request type is required.";
-        private IQueryExecutor _queryExecutor;
-        private RuntimeConfigProvider _runtimeConfigProvider;
 
-        public RequestValidator(
-            IQueryExecutor queryExecutor,
-            RuntimeConfigProvider runtimeConfigProvider)
-        {
-            _queryExecutor = queryExecutor;
-            _runtimeConfigProvider = runtimeConfigProvider;
-        }
         /// <summary>
         /// Validates the given request by ensuring:
         /// - each field to be returned is one of the exposed names for the entity.
@@ -69,15 +60,16 @@ namespace Azure.DataApiBuilder.Service.Services
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider)
         {
+            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, sqlMetadataProvider);
             TableDefinition baseTableDefinition = TryGetTableDefinition(context.BaseEntityName, sqlMetadataProvider);
 
-            int countOfPrimaryKeysInSchema = baseTableDefinition.PrimaryKey.Count;
+            int countOfPrimaryKeysInBaseTable = baseTableDefinition.PrimaryKey.Count;
             int countOfPrimaryKeysInRequest = context.PrimaryKeyValuePairs.Count;
 
             // If the base entity is same as the original entity
             bool isSimpleEntity = context.BaseEntityName.Equals(context.EntityName);
-            if (isSimpleEntity && countOfPrimaryKeysInRequest != countOfPrimaryKeysInSchema
-                || !isSimpleEntity && countOfPrimaryKeysInRequest < countOfPrimaryKeysInSchema)
+            if (isSimpleEntity && countOfPrimaryKeysInRequest != countOfPrimaryKeysInBaseTable
+                || !isSimpleEntity && countOfPrimaryKeysInRequest < countOfPrimaryKeysInBaseTable)
             {
                 throw new DataApiBuilderException(
                     message: "Primary key column(s) provided do not match DB schema.",
@@ -85,7 +77,8 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
-            List<string> primaryKeysInRequest = new();
+            HashSet<string> primaryKeysInTable = new(tableDefinition.PrimaryKey);
+            List<string> missingKeys = new();
             foreach (string pk in context.PrimaryKeyValuePairs.Keys)
             {
                 if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, pk, out string? backingColumn))
@@ -96,25 +89,17 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
                 }
 
-                primaryKeysInRequest.Add(backingColumn!);
+                if (primaryKeysInTable.Contains(backingColumn!))
+                {
+                    primaryKeysInTable.Remove(backingColumn!);
+                }
+                else
+                {
+                    missingKeys.Add(backingColumn!);
+                }
             }
 
             // Verify each primary key is present in the table definition.
-
-            List<string> primaryKeysInBaseTable = new();
-
-            foreach (string primarKey in baseTableDefinition.PrimaryKey)
-            {
-                string primaryKeyAlias = context.ColumnAliases.ContainsKey(primarKey) ?
-                    context.ColumnAliases[primarKey] : primarKey;
-
-                sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, primaryKeyAlias, out string? exposedPrimaryKeyName);
-
-                primaryKeysInBaseTable.Add(exposedPrimaryKeyName!);
-            }
-
-            IEnumerable<string> missingKeys = primaryKeysInRequest.Except(baseTableDefinition.PrimaryKey);
-
             if (missingKeys.Any())
             {
                 throw new DataApiBuilderException(
@@ -298,13 +283,11 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="insertRequestCtx">Insert Request context containing the request body.</param>
         /// <param name="sqlMetadataProvider">To get the table definition.</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public async Task<bool> ValidateInsertRequestContext(
+        public static void ValidateInsertRequestContext(
             InsertRequestContext insertRequestCtx,
             ISqlMetadataProvider sqlMetadataProvider)
         {
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
-            insertRequestCtx.BaseEntityName =
-                await TryGetBaseEntityName(insertRequestCtx, sqlMetadataProvider);
 
             TableDefinition baseTableDefinition =
                 TryGetTableDefinition(insertRequestCtx.BaseEntityName, sqlMetadataProvider);
@@ -359,135 +342,6 @@ namespace Azure.DataApiBuilder.Service.Services
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Helper method to the name of the underlying entity for the current request.
-        /// </summary>
-        /// <param name="requestCtx">current request context</param>
-        /// <param name="sqlMetadataProvider">To get the table metadata.</param>
-        /// <returns>Entity name of the underlying entity.</returns>
-        /// <exception cref="DataApiBuilderException"></exception>
-        /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-views/sys-dm-exec-describe-first-result-set-transact-sql?view=sql-server-ver16#table-returned"/>
-        private async Task<string> TryGetBaseEntityName(RestRequestContext requestCtx, ISqlMetadataProvider sqlMetadataProvider)
-        {
-            if (_queryExecutor.GetType() != typeof(MsSqlQueryExecutor)
-                || requestCtx.DatabaseObject.ObjectType is not SourceType.View)
-            {
-                return requestCtx.EntityName;
-            }
-
-            // This logic is specific to MsSql views.
-            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
-            string entitySourceName = runtimeConfig.Entities[requestCtx.EntityName].GetSourceName();
-
-            // Use the dm_exec_describe_first_result_set function provided to
-            // fetch the column details of the view.
-            string queryToFetchColDetails = "SELECT name as col_name, source_table, source_column, " +
-                           "source_schema, is_hidden, is_computed " +
-                           "FROM sys.dm_exec_describe_first_result_set (N'SELECT * from " +
-                           $"{entitySourceName}', null, 1)";
-
-            // Store the result of the query.
-            JsonArray? resultArray = await _queryExecutor.ExecuteQueryAsync(
-                sqltext: queryToFetchColDetails,
-                parameters: null,
-                dataReaderHandler: _queryExecutor.GetJsonArrayAsync);
-            JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
-
-            // Dictionary to store the mappings from the view column to
-            // the corresponding base table column.
-            Dictionary<string, string> colToBaseColMapping = new();
-
-            // Dictionary to store the mapping from the view column
-            // to the corresponding base table.
-            Dictionary<string, string> colToBaseTableMapping = new();
-
-            // Dictionary to store the mapping in the final source table
-            // (if found), from the base table column to the view column.
-            Dictionary<string, string> baseColToColMapping = new();
-
-            // A single base table for the current request's entity.
-            string sourceTableForEntity = string.Empty;
-
-            // A single source schema for the current request's entity.
-            string sourceSchemaForEntity = string.Empty;
-
-            // Parse all the rows returned by the query and populate all
-            // the mappings.
-            foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
-            {
-                // colName is the column name in the view, which can be an alias
-                // of the actual column name in the base table.
-                string colName = element.GetProperty("col_name").ToString();
-                string sourceTable = element.GetProperty("source_table").ToString();
-                string sourceColumn = element.GetProperty("source_column").ToString();
-                string sourceSchema = element.GetProperty("source_schema").ToString();
-                bool isHidden = Boolean.Parse(element.GetProperty("is_hidden").ToString());
-
-                if (isHidden)
-                {
-                    // If the column is hidden, it is not included in the select
-                    // statement of the view.
-                    continue;
-                }
-
-                sqlMetadataProvider.
-                    TryGetExposedColumnName(requestCtx.EntityName, colName, out string? exposedColName);
-
-                if (requestCtx.FieldValuePairsInBody.Keys.Contains(exposedColName))
-                {
-                    // If the column is a field present in the request body
-                    // evaluate the source table and schema /
-                    // ensure that it belongs to the same source table and schema,
-                    // if already evaluated.
-                    if (string.Empty.Equals(sourceTableForEntity))
-                    {
-                        sourceTableForEntity = sourceTable;
-                        sourceSchemaForEntity = sourceSchema;
-                    }
-                    else if (!sourceTableForEntity.Equals(sourceTable) ||
-                        !sourceSchemaForEntity.Equals(sourceSchema))
-                    {
-                        // Mutation operation on entity based on multiple base tables
-                        // is not allowed.
-                        throw new DataApiBuilderException(
-                            message: "Not all the fields in the request body belong to the same base table",
-                            statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
-                            );
-                    }
-                }
-
-                colToBaseColMapping.Add(colName, sourceColumn);
-                colToBaseTableMapping.Add(colName, sourceTable);
-            }
-
-            foreach ((string colName, string sourceTable) in colToBaseTableMapping)
-            {
-                if (sourceTable.Equals(sourceTableForEntity))
-                {
-                    baseColToColMapping.Add(colToBaseColMapping[colName], colName);
-                }
-            }
-
-            string fullSourceTableNameinDb = sourceSchemaForEntity + "." + sourceTableForEntity;
-            string fullSourceTableNameinConfig = runtimeConfig.Entities[requestCtx.EntityName].GetSourceName();
-
-            if (fullSourceTableNameinConfig.StartsWith(".") && !fullSourceTableNameinConfig.StartsWith("dbo."))
-            {
-                fullSourceTableNameinConfig = "dbo." + fullSourceTableNameinConfig;
-            }
-
-            requestCtx.ColumnAliases = baseColToColMapping;
-            if (!string.Empty.Equals(sourceTableForEntity))
-            {
-                return sqlMetadataProvider.GetEntityNameFromSource(sourceTableForEntity);
-            }
-
-            return requestCtx.EntityName;
         }
 
         /// <summary>
@@ -498,14 +352,11 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="upsertRequestCtx">Upsert Request context containing the request body.</param>
         /// <param name="sqlMetadataProvider">To get the table definition.</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public async Task<bool> ValidateUpsertRequestContext(
+        public static void ValidateUpsertRequestContext(
             UpsertRequestContext upsertRequestCtx,
             ISqlMetadataProvider sqlMetadataProvider)
         {
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
-
-            upsertRequestCtx.BaseEntityName =
-                await TryGetBaseEntityName(upsertRequestCtx, sqlMetadataProvider);
 
             TableDefinition baseTableDefinition =
                 TryGetTableDefinition(upsertRequestCtx.BaseEntityName, sqlMetadataProvider);
@@ -566,8 +417,6 @@ namespace Azure.DataApiBuilder.Service.Services
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
-
-            return true;
         }
 
         /// <summary>

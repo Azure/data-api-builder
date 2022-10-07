@@ -143,6 +143,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return SqlMetadataProvider.GetTableDefinition(EntityName);
         }
 
+        protected TableDefinition GetUnderlyingBaseTableDefinition()
+        {
+            return SqlMetadataProvider.GetTableDefinition(BaseEntityName);
+        }
+
         /// <summary>
         /// Return the StoredProcedureDefinition associated with this database object
         /// </summary>
@@ -176,7 +181,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         protected List<LabelledColumn> GenerateOutputColumns()
         {
             List<LabelledColumn> outputColumns = new();
-            TableDefinition baseTableDefinition = SqlMetadataProvider.GetTableDefinition(BaseEntityName);
+            TableDefinition baseTableDefinition = GetUnderlyingBaseTableDefinition();
             foreach (string columnName in baseTableDefinition.Columns.Keys)
             {
                 string aliasName = ColumnAliases.ContainsKey(columnName) ?

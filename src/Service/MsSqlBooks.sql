@@ -293,7 +293,8 @@ EXEC('CREATE PROCEDURE get_book_by_id @id int AS
       WHERE id = @id');
 EXEC('CREATE PROCEDURE get_books AS
       SELECT * FROM dbo.books');
-EXEC('create view stocks_price_view_composite as
-select sp.categoryid ,sp.pieceid,sp.instant,st.categoryName,st.piecesAvailable, st.piecesRequired, sp.is_wholesale_price
-from stocks st,stocks_price sp 
-where st.categoryid = sp.categoryid and st.pieceid = sp.pieceid;');
+EXEC('CREATE VIEW stocks_price_view_composite AS
+      SELECT sp.categoryid, sp.pieceid, sp.instant, st.categoryName,
+      st.piecesAvailable, st.piecesRequired, sp.is_wholesale_price,
+      sp.price FROM dbo.stocks st,dbo.stocks_price sp 
+      WHERE st.categoryid = sp.categoryid and st.pieceid = sp.pieceid;');

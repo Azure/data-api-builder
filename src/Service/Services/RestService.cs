@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Auth;
@@ -30,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.Services
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
-        private readonly RequestValidator _requestValidator;
+        private readonly IQueryExecutor _queryExecutor;
 
         public RestService(
             IQueryEngine queryEngine,
@@ -40,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Services
             IAuthorizationService authorizationService,
             IAuthorizationResolver authorizationResolver,
             RuntimeConfigProvider runtimeConfigProvider,
-            RequestValidator requestValidator
+            IQueryExecutor queryExecutor
             )
         {
             _queryEngine = queryEngine;
@@ -50,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Services
             _sqlMetadataProvider = sqlMetadataProvider;
             _authorizationResolver = authorizationResolver;
             _runtimeConfigProvider = runtimeConfigProvider;
-            _requestValidator = requestValidator;
+            _queryExecutor = queryExecutor;
         }
 
         /// <summary>
@@ -108,7 +111,10 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             insertPayloadRoot,
                             operationType);
-                        await _requestValidator.ValidateInsertRequestContext(
+                        await PopulateBaseEntityNameAndColumnAliases(
+                            context,
+                            _sqlMetadataProvider);
+                        RequestValidator.ValidateInsertRequestContext(
                             (InsertRequestContext)context,
                             _sqlMetadataProvider);
                         break;
@@ -128,7 +134,10 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             upsertPayloadRoot,
                             operationType);
-                        await _requestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
+                        await PopulateBaseEntityNameAndColumnAliases(
+                            context,
+                            _sqlMetadataProvider);
+                        RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                         break;
                     default:
                         throw new DataApiBuilderException(
@@ -405,6 +414,141 @@ namespace Azure.DataApiBuilder.Service.Services
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
                     );
             }
+        }
+
+        private async Task<bool> PopulateBaseEntityNameAndColumnAliases(
+            RestRequestContext requestCtx,
+            ISqlMetadataProvider sqlMetadataProvider)
+        {
+            if (_queryExecutor.GetType() != typeof(MsSqlQueryExecutor))
+              //  || requestCtx.DatabaseObject.ObjectType is not SourceType.View)
+            {
+                return true;
+            }
+
+            // This logic is specific to MsSql views.
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
+            string entitySourceName = runtimeConfig.Entities[requestCtx.EntityName].GetSourceName();
+
+            // Use the dm_exec_describe_first_result_set function provided to
+            // fetch the column details of the view.
+            string queryToFetchColDetails = "SELECT name as col_name, source_table, source_column, " +
+                           "source_schema, is_hidden " +
+                           "FROM sys.dm_exec_describe_first_result_set (N'SELECT * from " +
+                           $"{entitySourceName}', null, 1)";
+
+            // Store the result of the query.
+            JsonArray? resultArray = await _queryExecutor.ExecuteQueryAsync(
+                sqltext: queryToFetchColDetails,
+                parameters: null,
+                dataReaderHandler: _queryExecutor.GetJsonArrayAsync);
+            JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
+
+            // Dictionary to store the mappings from the view column to
+            // the corresponding base table column.
+            Dictionary<string, string> colToBaseColMapping = new();
+
+            // Dictionary to store the mapping from the view column
+            // to the corresponding base table.
+            Dictionary<string, string> colToBaseTableMapping = new();
+
+            // Dictionary to store the mapping in the final source table
+            // (if found), from the base table column to the view column.
+            Dictionary<string, string> baseColToColMapping = new();
+
+            // A single base table for the current request's entity.
+            string sourceTableForEntity = string.Empty;
+
+            // A single source schema for the current request's entity.
+            string sourceSchemaForEntity = string.Empty;
+
+            // Parse all the rows returned by the query and populate all
+            // the mappings.
+            foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
+            {
+                // colName is the column name in the view, which can be an alias
+                // of the actual column name in the base table.
+                string colName = element.GetProperty("col_name").ToString();
+                string sourceTable = element.GetProperty("source_table").ToString();
+                string sourceColumn = element.GetProperty("source_column").ToString();
+                string sourceSchema = element.GetProperty("source_schema").ToString();
+                bool isHidden = Boolean.Parse(element.GetProperty("is_hidden").ToString());
+
+                if (isHidden)
+                {
+                    // If the column is hidden, it is not included in the select
+                    // statement of the view.
+                    continue;
+                }
+
+                sqlMetadataProvider.
+                    TryGetExposedColumnName(requestCtx.EntityName, colName, out string? exposedColName);
+
+                if (requestCtx.FieldValuePairsInBody.Keys.Contains(exposedColName))
+                {
+                    // If the column is a field present in the request body
+                    // evaluate the source table and schema /
+                    // ensure that it belongs to the same source table and schema,
+                    // if already evaluated.
+                    if (string.Empty.Equals(sourceTableForEntity))
+                    {
+                        sourceTableForEntity = sourceTable;
+                        sourceSchemaForEntity = sourceSchema;
+                    }
+                    else if (!sourceTableForEntity.Equals(sourceTable) ||
+                        !sourceSchemaForEntity.Equals(sourceSchema))
+                    {
+                        // Mutation operation on entity based on multiple base tables
+                        // is not allowed.
+                        throw new DataApiBuilderException(
+                            message: "Not all the fields in the request body belong to the same base table",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                            );
+                    }
+                }
+
+                colToBaseColMapping.Add(colName, sourceColumn);
+                colToBaseTableMapping.Add(colName, sourceTable);
+            }
+
+            foreach ((string colName, string sourceTable) in colToBaseTableMapping)
+            {
+                if (sourceTable.Equals(sourceTableForEntity))
+                {
+                    baseColToColMapping.Add(colToBaseColMapping[colName], colName);
+                }
+            }
+
+            // Store column aliases.
+            requestCtx.ColumnAliases = baseColToColMapping;
+
+            if (!string.Empty.Equals(sourceTableForEntity))
+            {
+                string? sourceEntityName;
+                if (sourceSchemaForEntity.Equals("dbo"))
+                {
+                    if(sqlMetadataProvider.TryGetEntityNameFromSource(
+                        sourceTableForEntity,
+                        out sourceEntityName) ||
+                       sqlMetadataProvider.TryGetEntityNameFromSource(
+                           $"{sourceSchemaForEntity}.{sourceTableForEntity}",
+                           out sourceEntityName))
+                    {
+                        requestCtx.BaseEntityName = sourceEntityName;
+                    }
+                }
+                else
+                {
+                    sqlMetadataProvider.TryGetEntityNameFromSource(
+                           $"{sourceSchemaForEntity}.{sourceTableForEntity}",
+                           out sourceEntityName);
+                    requestCtx.BaseEntityName = sourceEntityName!;
+                }
+                
+            }
+
+            return true;
         }
     }
 }

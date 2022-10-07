@@ -2,7 +2,7 @@
   "$schema": "../schemas/dab.draft-01.schema.json",
   "data-source": {
     "database-type": "mysql",
-    "connection-string": "server=localhost;database=mysql;Allow User Variables=true;uid=root;pwd=Srsral12345"
+    "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests"
   },
   "runtime": {
     "rest": {

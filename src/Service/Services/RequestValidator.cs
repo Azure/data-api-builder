@@ -69,12 +69,12 @@ namespace Azure.DataApiBuilder.Service.Services
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, sqlMetadataProvider);
+            TableDefinition baseTableDefinition = TryGetTableDefinition(context.BaseEntityName, sqlMetadataProvider);
 
-            int countOfPrimaryKeysInSchema = tableDefinition.PrimaryKey.Count;
+            int countOfPrimaryKeysInSchema = baseTableDefinition.PrimaryKey.Count;
             int countOfPrimaryKeysInRequest = context.PrimaryKeyValuePairs.Count;
 
-            if (countOfPrimaryKeysInRequest != countOfPrimaryKeysInSchema)
+            if (countOfPrimaryKeysInRequest < countOfPrimaryKeysInSchema)
             {
                 throw new DataApiBuilderException(
                     message: "Primary key column(s) provided do not match DB schema.",
@@ -97,7 +97,21 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             // Verify each primary key is present in the table definition.
-            IEnumerable<string> missingKeys = primaryKeysInRequest.Except(tableDefinition.PrimaryKey);
+
+            List<string> primaryKeysInBaseTable = new();
+
+            foreach (string primarKey in baseTableDefinition.PrimaryKey)
+            {
+                string primaryKeyAlias = context.ColumnAliases is not null &&
+                    context.ColumnAliases.ContainsKey(primarKey) ?
+                    context.ColumnAliases[primarKey] : primarKey;
+
+                sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, primaryKeyAlias, out string? exposedPrimaryKeyName);
+
+                primaryKeysInBaseTable.Add(exposedPrimaryKeyName!);
+            }
+
+            IEnumerable<string> missingKeys = primaryKeysInRequest.Except(baseTableDefinition.PrimaryKey);
 
             if (missingKeys.Any())
             {
@@ -287,40 +301,34 @@ namespace Azure.DataApiBuilder.Service.Services
             ISqlMetadataProvider sqlMetadataProvider)
         {
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
-            TableDefinition tableDefinition =
-                TryGetTableDefinition(insertRequestCtx.EntityName, sqlMetadataProvider);
-
-            Tuple<string, Dictionary<string, string>>
-                baseTableAndcolToBaseColMapping =
-                await TryGetBaseTableMappings(insertRequestCtx, sqlMetadataProvider);
+            insertRequestCtx.BaseEntityName =
+                await TryGetBaseEntityName(insertRequestCtx, sqlMetadataProvider);
 
             TableDefinition baseTableDefinition =
-                TryGetTableDefinition(baseTableAndcolToBaseColMapping.Item1, sqlMetadataProvider);
-
-            Dictionary<string,string> colToBaseColMapping = baseTableAndcolToBaseColMapping.Item2;
+                TryGetTableDefinition(insertRequestCtx.BaseEntityName, sqlMetadataProvider);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
             // At the end, if we end up with extraneous unvalidated fields, we throw error.
             HashSet<string> unvalidatedFields = new(fieldsInRequestBody);
 
-            foreach ((string colName, ColumnDefinition colDef) in tableDefinition.Columns)
+            foreach ((string colName, ColumnDefinition colDef) in baseTableDefinition.Columns)
             {
-                ColumnDefinition baseColumnDef =
-                    baseTableDefinition == tableDefinition ?
-                    colDef : baseTableDefinition.Columns[colToBaseColMapping[colName]];
+                string aliasName = insertRequestCtx.ColumnAliases is not null
+                    && insertRequestCtx.ColumnAliases.ContainsKey(colName) ?
+                    insertRequestCtx.ColumnAliases[colName] : colName;
 
                 // if column is not exposed we skip
                 if (!sqlMetadataProvider.TryGetExposedColumnName(
                     entityName: insertRequestCtx.EntityName,
-                    backingFieldName: colName,
+                    backingFieldName: aliasName,
                     out string? exposedName))
                 {
                     continue;
                 }
 
                 // Request body must have value defined for included non-nullable columns
-                if (!baseColumnDef.IsNullable && fieldsInRequestBody.Contains(exposedName))
+                if (!colDef.IsNullable && fieldsInRequestBody.Contains(exposedName))
                 {
                     if (insertRequestCtx.FieldValuePairsInBody[exposedName!] is null)
                     {
@@ -333,7 +341,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 // The insert operation behaves like a replacement update, since it
                 // requires nullable fields to be defined in the request.
-                if (ValidateColumn(baseColumnDef,
+                if (ValidateColumn(colDef,
                                    exposedName!,
                                    fieldsInRequestBody,
                                    isReplacementUpdate: true))
@@ -354,12 +362,11 @@ namespace Azure.DataApiBuilder.Service.Services
             return true;
         }
 
-        private async Task<Tuple<string, Dictionary<string, string>>> TryGetBaseTableMappings(RestRequestContext requestCtx, ISqlMetadataProvider sqlMetadataProvider)
+        private async Task<string> TryGetBaseEntityName(RestRequestContext requestCtx, ISqlMetadataProvider sqlMetadataProvider)
         {
             if (_queryExecutor.GetType() != typeof(MsSqlQueryExecutor))
             {
-                return new Tuple<string, Dictionary<string, string>>
-                    (requestCtx.EntityName, new());
+                return requestCtx.EntityName;
             }
 
             // This logic is specific to MsSql. And once we have object type
@@ -367,7 +374,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
             string entitySourceName = runtimeConfig.Entities[requestCtx.EntityName].GetSourceName();
-            string query = "SELECT name as col_name, source_table, source_column, source_schema " +
+            string query = "SELECT name as col_name, source_table, source_column, source_schema, is_hidden " +
                            "FROM sys.dm_exec_describe_first_result_set (N'SELECT * from " +
                            $"{entitySourceName}', null, 1)";
             JsonArray? resultArray = await _queryExecutor.ExecuteQueryAsync(
@@ -386,6 +393,15 @@ namespace Azure.DataApiBuilder.Service.Services
                 string sourceTable = element.GetProperty("source_table").ToString();
                 string sourceColumn = element.GetProperty("source_column").ToString();
                 string sourceSchema = element.GetProperty("source_schema").ToString();
+                bool isHidden = Boolean.Parse(element.GetProperty("is_hidden").ToString());
+
+                if (isHidden)
+                {
+                    // If the column is hidden, it is not included in the select
+                    // statement of the view.
+                    continue;
+                }
+
                 if (requestCtx.FieldValuePairsInBody.Keys.Contains(colName))
                 {
                     if (string.Empty.Equals(sourceTableForEntity))
@@ -429,12 +445,10 @@ namespace Azure.DataApiBuilder.Service.Services
             requestCtx.ColumnAliases = baseColToColMapping;
             if (!string.Empty.Equals(sourceTableForEntity))
             {
-                requestCtx.BaseEntityName = sqlMetadataProvider.GetEntityNameFromSource(sourceTableForEntity);
+                return sqlMetadataProvider.GetEntityNameFromSource(sourceTableForEntity);
             }
 
-            return new Tuple<string, Dictionary<string, string>>
-                (requestCtx.BaseEntityName,
-                colToBaseColMapping);
+            return requestCtx.EntityName;
         }
 
         /// <summary>
@@ -450,33 +464,28 @@ namespace Azure.DataApiBuilder.Service.Services
             ISqlMetadataProvider sqlMetadataProvider)
         {
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
-            TableDefinition tableDefinition =
-                TryGetTableDefinition(upsertRequestCtx.EntityName, sqlMetadataProvider);
 
-            Tuple<string, Dictionary<string, string>>
-                baseTableAndcolToBaseColMapping =
-                await TryGetBaseTableMappings(upsertRequestCtx, sqlMetadataProvider);
+            upsertRequestCtx.BaseEntityName =
+                await TryGetBaseEntityName(upsertRequestCtx, sqlMetadataProvider);
 
             TableDefinition baseTableDefinition =
-                TryGetTableDefinition(baseTableAndcolToBaseColMapping.Item1, sqlMetadataProvider);
-
-            Dictionary<string, string> colToBaseColMapping = baseTableAndcolToBaseColMapping.Item2;
+                TryGetTableDefinition(upsertRequestCtx.BaseEntityName, sqlMetadataProvider);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
             // At the end, if we end up with extraneous unvalidated fields, we throw error.
             HashSet<string> unValidatedFields = new(fieldsInRequestBody);
 
-            foreach ((string colName, ColumnDefinition columnDef) in tableDefinition.Columns)
+            foreach ((string colName, ColumnDefinition colDef) in baseTableDefinition.Columns)
             {
-                ColumnDefinition baseColumnDef =
-                    baseTableDefinition == tableDefinition ?
-                    columnDef : baseTableDefinition.Columns[colToBaseColMapping[colName]];
+                string aliasName = upsertRequestCtx.ColumnAliases is not null
+                    && upsertRequestCtx.ColumnAliases.ContainsKey(colName) ?
+                    upsertRequestCtx.ColumnAliases[colName] : colName;
 
                 // if column is not exposed we skip
                 if (!sqlMetadataProvider.TryGetExposedColumnName(
                     entityName: upsertRequestCtx.EntityName,
-                    backingFieldName: colName,
+                    backingFieldName: aliasName,
                     out string? exposedName))
                 {
                     continue;
@@ -486,13 +495,13 @@ namespace Azure.DataApiBuilder.Service.Services
                 // if a PK is autogenerated here, because an UPSERT request may only need to update a
                 // record. If an insert occurs on a table with autogenerated primary key,
                 // a database error will be returned.
-                if (tableDefinition.PrimaryKey.Contains(colName))
+                if (baseTableDefinition.PrimaryKey.Contains(colName))
                 {
                     continue;
                 }
 
                 // Request body must have value defined for included non-nullable columns
-                if (!baseColumnDef.IsNullable && fieldsInRequestBody.Contains(exposedName))
+                if (!colDef.IsNullable && fieldsInRequestBody.Contains(exposedName))
                 {
                     if (upsertRequestCtx.FieldValuePairsInBody[exposedName!] is null)
                     {
@@ -504,7 +513,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
 
                 bool isReplacementUpdate = (upsertRequestCtx.OperationType == Operation.Upsert) ? true : false;
-                if (ValidateColumn(baseColumnDef, exposedName!, fieldsInRequestBody, isReplacementUpdate))
+                if (ValidateColumn(colDef, exposedName!, fieldsInRequestBody, isReplacementUpdate))
                 {
                     unValidatedFields.Remove(exposedName!);
                 }

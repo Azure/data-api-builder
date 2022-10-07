@@ -58,6 +58,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public string? DbPolicyPredicates { get; set; }
 
+        public bool IsView { get; set; } = true;
         public BaseSqlQueryStructure(
             ISqlMetadataProvider sqlMetadataProvider,
             string entityName,
@@ -181,7 +182,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             TableDefinition baseTableDefinition = SqlMetadataProvider.GetTableDefinition(BaseEntityName);
             foreach (string columnName in baseTableDefinition.Columns.Keys)
             {
-                string aliasName = ColumnAliases is not null && ColumnAliases.Count > 0 ?
+                string aliasName = ColumnAliases is not null && ColumnAliases.ContainsKey(columnName) ?
                     ColumnAliases[columnName] : columnName;
                 // if column is not exposed we skip
                 if (!SqlMetadataProvider.TryGetExposedColumnName(

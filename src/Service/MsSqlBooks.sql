@@ -1,8 +1,8 @@
 BEGIN TRANSACTION
 DROP VIEW IF EXISTS books_view_all;
 DROP VIEW IF EXISTS stocks_view_selected;
-DROP VIEW IF EXISTS books_publishers_view_composite;
 DROP VIEW IF EXISTS stocks_price_view_composite;
+DROP VIEW IF EXISTS books_publishers_view_composite;
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP TABLE IF EXISTS book_author_link;
@@ -293,8 +293,7 @@ EXEC('CREATE PROCEDURE get_book_by_id @id int AS
       WHERE id = @id');
 EXEC('CREATE PROCEDURE get_books AS
       SELECT * FROM dbo.books');
-
-EXEC('CREATE VIEW stocks_price_view_composite as SELECT
-      sp.categoryid, sp.pieceid, sp.instant, st.categoryName, st.piecesAvailable 
-      FROM dbo.stocks st,dbo.stocks_price sp 
-      WHERE st.categoryid = sp.categoryid AND st.pieceid = sp.pieceid');
+EXEC('create view stocks_price_view_composite as
+select sp.categoryid ,sp.pieceid,sp.instant,st.categoryName,st.piecesAvailable, st.piecesRequired, sp.is_wholesale_price
+from stocks st,stocks_price sp 
+where st.categoryid = sp.categoryid and st.pieceid = sp.pieceid;');

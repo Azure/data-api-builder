@@ -183,15 +183,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
                 }
 
-                // Process remaining columns in schemaColumns.
-                if (isIncrementalUpdate)
+                if (!IsView)
                 {
-                    SetFallbackToUpdateOnMissingColumInPatch(schemaColumns, tableDefinition);
-                }
-                else
-                {
-                    // UpdateOperations will be modified and have nullable values added for update when appropriate
-                    AddNullifiedUnspecifiedFields(schemaColumns, UpdateOperations, tableDefinition);
+                    // Process remaining columns in schemaColumns.
+                    if (isIncrementalUpdate)
+                    {
+                        SetFallbackToUpdateOnMissingColumInPatch(schemaColumns, tableDefinition);
+                    }
+                    else
+                    {
+                        // UpdateOperations will be modified and have nullable values added for update when appropriate
+                        AddNullifiedUnspecifiedFields(schemaColumns, UpdateOperations, baseTableDefinition);
+                    }
                 }
             }
             catch (ArgumentException ex)

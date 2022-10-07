@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// <code>Do: </code> Fills the table definition with information of the foreign keys
         /// for all the tables based on the entities relationship.
-        /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
+        /// <code>Check: </code> Making sure no exception is thrown if there are no Foreign Keys.
         /// </summary>
         [TestMethod, TestCategory(TestCategory.POSTGRESQL)]
         public async Task CheckNoExceptionForNoForeignKey()
@@ -122,6 +122,25 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
             }
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Load runtimeConfig and set up the source fields for the entities.
+        /// <code>Check: </code>  Verifies that source object is correctly parsed.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task CheckCorrectParsingForStoredProcedure()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
+            SetUpSQLMetadataProvider();
+
+            await _sqlMetadataProvider.InitializeAsync();
+
+            Entity entity = _runtimeConfig.Entities["GetBooks"];
+            Assert.AreEqual("get_books", entity.SourceName);
+            Assert.AreEqual(SourceType.StoredProcedure, entity.ObjectType);
         }
     }
 }

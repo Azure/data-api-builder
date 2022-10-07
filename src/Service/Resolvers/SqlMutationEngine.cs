@@ -386,9 +386,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         new(entityName,
                         _sqlMetadataProvider,
                         parameters,
-                        isIncrementalUpdate: false,
-                        baseEntityName,
-                        columnAliases);
+                        isIncrementalUpdate: false);
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
                     break;
@@ -397,9 +395,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         new(entityName,
                         _sqlMetadataProvider,
                         parameters,
-                        isIncrementalUpdate: true,
-                        baseEntityName,
-                        columnAliases);
+                        isIncrementalUpdate: true);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;

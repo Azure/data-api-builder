@@ -363,6 +363,14 @@ namespace Azure.DataApiBuilder.Service.Services
             return true;
         }
 
+        /// <summary>
+        /// Helper method to the name of the underlying entity for the current request.
+        /// </summary>
+        /// <param name="requestCtx">current request context</param>
+        /// <param name="sqlMetadataProvider">To get the table metadata.</param>
+        /// <returns>Entity name of the underlying entity.</returns>
+        /// <exception cref="DataApiBuilderException"></exception>
+        /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-views/sys-dm-exec-describe-first-result-set-transact-sql?view=sql-server-ver16#table-returned"/>
         private async Task<string> TryGetBaseEntityName(RestRequestContext requestCtx, ISqlMetadataProvider sqlMetadataProvider)
         {
             if (_queryExecutor.GetType() != typeof(MsSqlQueryExecutor)
@@ -372,24 +380,47 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             // This logic is specific to MsSql views.
-
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
             string entitySourceName = runtimeConfig.Entities[requestCtx.EntityName].GetSourceName();
-            string query = "SELECT name as col_name, source_table, source_column, source_schema, is_hidden " +
+
+            // Use the dm_exec_describe_first_result_set function provided to
+            // fetch the column details of the view.
+            string queryToFetchColDetails = "SELECT name as col_name, source_table, source_column, " +
+                           "source_schema, is_hidden, is_computed " +
                            "FROM sys.dm_exec_describe_first_result_set (N'SELECT * from " +
                            $"{entitySourceName}', null, 1)";
+
+            // Store the result of the query.
             JsonArray? resultArray = await _queryExecutor.ExecuteQueryAsync(
-                sqltext: query,
+                sqltext: queryToFetchColDetails,
                 parameters: null,
                 dataReaderHandler: _queryExecutor.GetJsonArrayAsync);
             JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
+
+            // Dictionary to store the mappings from the view column to
+            // the corresponding base table column.
             Dictionary<string, string> colToBaseColMapping = new();
+
+            // Dictionary to store the mapping from the view column
+            // to the corresponding base table.
             Dictionary<string, string> colToBaseTableMapping = new();
+
+            // Dictionary to store the mapping in the final source table
+            // (if found), from the base table column to the view column.
             Dictionary<string, string> baseColToColMapping = new();
+
+            // A single base table for the current request's entity.
             string sourceTableForEntity = string.Empty;
+
+            // A single source schema for the current request's entity.
             string sourceSchemaForEntity = string.Empty;
+
+            // Parse all the rows returned by the query and populate all
+            // the mappings.
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
             {
+                // colName is the column name in the view, which can be an alias
+                // of the actual column name in the base table.
                 string colName = element.GetProperty("col_name").ToString();
                 string sourceTable = element.GetProperty("source_table").ToString();
                 string sourceColumn = element.GetProperty("source_column").ToString();
@@ -403,8 +434,15 @@ namespace Azure.DataApiBuilder.Service.Services
                     continue;
                 }
 
-                if (requestCtx.FieldValuePairsInBody.Keys.Contains(colName))
+                sqlMetadataProvider.
+                    TryGetExposedColumnName(requestCtx.EntityName, colName, out string? exposedColName);
+
+                if (requestCtx.FieldValuePairsInBody.Keys.Contains(exposedColName))
                 {
+                    // If the column is a field present in the request body
+                    // evaluate the source table and schema /
+                    // ensure that it belongs to the same source table and schema,
+                    // if already evaluated.
                     if (string.Empty.Equals(sourceTableForEntity))
                     {
                         sourceTableForEntity = sourceTable;

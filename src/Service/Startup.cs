@@ -322,7 +322,7 @@ namespace Azure.DataApiBuilder.Service
                     Tool = {
                         // Determines if accessing the endpoint from a browser
                         // will load the GraphQL Banana Cake Pop IDE.
-                        Enable = runtimeConfigProvider.IsDeveloperMode()
+                        Enable = runtimeConfigProvider.IsDeveloperMode() 
                     }
                 });
 

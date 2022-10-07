@@ -420,8 +420,8 @@ namespace Azure.DataApiBuilder.Service.Services
             RestRequestContext requestCtx,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-            if (_queryExecutor.GetType() != typeof(MsSqlQueryExecutor))
-              //  || requestCtx.DatabaseObject.ObjectType is not SourceType.View)
+            if (_queryExecutor.GetType() != typeof(MsSqlQueryExecutor)
+                || requestCtx.DatabaseObject.ObjectType is not SourceType.View)
             {
                 return true;
             }
@@ -528,7 +528,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 string? sourceEntityName;
                 if (sourceSchemaForEntity.Equals("dbo"))
                 {
-                    if(sqlMetadataProvider.TryGetEntityNameFromSource(
+                    if (sqlMetadataProvider.TryGetEntityNameFromSource(
                         sourceTableForEntity,
                         out sourceEntityName) ||
                        sqlMetadataProvider.TryGetEntityNameFromSource(
@@ -545,7 +545,6 @@ namespace Azure.DataApiBuilder.Service.Services
                            out sourceEntityName);
                     requestCtx.BaseEntityName = sourceEntityName!;
                 }
-                
             }
 
             return true;

@@ -295,6 +295,6 @@ EXEC('CREATE PROCEDURE get_books AS
       SELECT * FROM dbo.books');
 EXEC('CREATE VIEW stocks_price_view_composite AS
       SELECT sp.categoryid, sp.pieceid, sp.instant, st.categoryName,
-      st.piecesAvailable, st.piecesRequired, sp.is_wholesale_price,
+      st.piecesAvailable, st.piecesRequired,
       sp.price FROM dbo.stocks st,dbo.stocks_price sp 
       WHERE st.categoryid = sp.categoryid and st.pieceid = sp.pieceid;');

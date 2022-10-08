@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             insertPayloadRoot,
                             operationType);
-                        await PopulateBaseEntityNameAndColumnAliases(
+                        await PopulateBaseEntityNameAndColumnAliasesInReqCtxt(
                             context,
                             _sqlMetadataProvider);
                         RequestValidator.ValidateInsertRequestContext(
@@ -134,7 +134,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             upsertPayloadRoot,
                             operationType);
-                        await PopulateBaseEntityNameAndColumnAliases(
+                        await PopulateBaseEntityNameAndColumnAliasesInReqCtxt(
                             context,
                             _sqlMetadataProvider);
                         RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
@@ -416,7 +416,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
         }
 
-        private async Task<bool> PopulateBaseEntityNameAndColumnAliases(
+        private async Task<bool> PopulateBaseEntityNameAndColumnAliasesInReqCtxt(
             RestRequestContext requestCtx,
             ISqlMetadataProvider sqlMetadataProvider)
         {
@@ -432,10 +432,11 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Use the dm_exec_describe_first_result_set function provided to
             // fetch the column details of the view.
-            string queryToFetchColDetails = "SELECT name as col_name, source_table, source_column, " +
-                           "source_schema, is_hidden " +
-                           "FROM sys.dm_exec_describe_first_result_set (N'SELECT * from " +
-                           $"{entitySourceName}', null, 1)";
+            string queryToFetchColDetails =
+                "SELECT name as col_name, source_column, source_table," +
+                "source_schema, is_hidden, is_computed_column " +
+                "FROM sys.dm_exec_describe_first_result_set (N'SELECT * from " +
+                $"{entitySourceName}', null, 1)";
 
             // Store the result of the query.
             JsonArray? resultArray = await _queryExecutor.ExecuteQueryAsync(
@@ -469,16 +470,31 @@ namespace Azure.DataApiBuilder.Service.Services
                 // colName is the column name in the view, which can be an alias
                 // of the actual column name in the base table.
                 string colName = element.GetProperty("col_name").ToString();
-                string sourceTable = element.GetProperty("source_table").ToString();
+
+                // Details of the source column and table.
                 string sourceColumn = element.GetProperty("source_column").ToString();
+                string sourceTable = element.GetProperty("source_table").ToString();
                 string sourceSchema = element.GetProperty("source_schema").ToString();
+
+                // Properties of the column
                 bool isHidden = Boolean.Parse(element.GetProperty("is_hidden").ToString());
+                bool isComputedColumn = Boolean.Parse(element.GetProperty("is_computed_column").ToString());
 
                 if (isHidden)
                 {
                     // If the column is hidden, it is not included in the select
                     // statement of the view.
                     continue;
+                }
+
+                if(string.IsNullOrEmpty(sourceColumn) || string.IsNullOrEmpty(sourceTable)
+                    || string.IsNullOrEmpty(sourceSchema) || isComputedColumn)
+                {
+                    throw new DataApiBuilderException(
+                            message: $"{requestCtx.EntityName} is not an updatable entity",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                            );
                 }
 
                 sqlMetadataProvider.

@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
@@ -18,6 +19,7 @@ using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
@@ -629,6 +631,65 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
             string actualRuntimeConfigFile = GetFileNameForEnvironment(hostingEnvironmentValue, considerOverrides);
             Assert.AreEqual(expectedRuntimeConfigFile, actualRuntimeConfigFile);
+        }
+
+        /// <summary>
+        /// Test different graphql endpoints in different host modes.
+        /// </summary>
+        /// <param name="endpoint">The endpoint route</param>
+        /// <param name="hostModeType">The mode in which the service is executing.</param>
+        /// <param name="expectedStatusCode">Expected Status Code.</param>
+        [DataTestMethod]
+        [DataRow("/graphql/", HostModeType.Development, HttpStatusCode.OK,
+            DisplayName = "GraphQL endpoint with no query in development mode.")]
+        [DataRow("/graphql", HostModeType.Production, HttpStatusCode.BadRequest,
+            DisplayName = "GraphQL endpoint with no query in production mode.")]
+        [DataRow("/graphql/ui", HostModeType.Development, HttpStatusCode.NotFound,
+            DisplayName = "Default BananaCakePop in development mode.")]
+        [DataRow("/graphql/ui", HostModeType.Production, HttpStatusCode.NotFound,
+            DisplayName = "Default BananaCakePop in production mode.")]
+        [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
+            HostModeType.Development, HttpStatusCode.OK,
+            DisplayName = "GraphQL endpoint with query in development mode.")]
+        [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
+            HostModeType.Production, HttpStatusCode.OK,
+            DisplayName = "GraphQL endpoint with query in production mode.")]
+        [DataRow(RestController.REDIRECTED_ROUTE, HostModeType.Development, HttpStatusCode.BadRequest,
+            DisplayName = "Redirected endpoint in development mode.")]
+        [DataRow(RestController.REDIRECTED_ROUTE, HostModeType.Production, HttpStatusCode.BadRequest,
+            DisplayName = "Redirected endpoint in development mode.")]
+        public async Task TestGraphQLEndpoints(
+            string endpoint,
+            HostModeType hostModeType,
+            HttpStatusCode expectedStatusCode)
+        {
+            const string CUSTOM_CONFIG = "custom-config.json";
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(MSSQL_ENVIRONMENT);
+            RuntimeConfig config = configProvider.GetRuntimeConfiguration();
+            HostGlobalSettings customHostGlobalSettings = config.HostGlobalSettings with { Mode = hostModeType};
+            JsonElement serializedCustomHostGlobalSettings =
+                JsonSerializer.SerializeToElement(customHostGlobalSettings, RuntimeConfig.SerializerOptions);
+            Dictionary<GlobalSettingsType, object> customRuntimeSettings = new(config.RuntimeSettings);
+            customRuntimeSettings.Remove(GlobalSettingsType.Host);
+            customRuntimeSettings.Add(GlobalSettingsType.Host, serializedCustomHostGlobalSettings);
+            RuntimeConfig configWithCustomHostMode = 
+                config with { RuntimeSettings = customRuntimeSettings};
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configWithCustomHostMode, RuntimeConfig.SerializerOptions));
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            TestServer server = new(Program.CreateWebHostBuilder(args));
+
+            HttpClient client = server.CreateClient();
+            HttpRequestMessage request = new(HttpMethod.Get, endpoint);
+            request.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+
+            HttpResponseMessage response = await client.SendAsync(request);
+            Assert.AreEqual(expectedStatusCode, response.StatusCode);
         }
 
         private static ConfigurationPostParameters GetCosmosConfigurationParameters()

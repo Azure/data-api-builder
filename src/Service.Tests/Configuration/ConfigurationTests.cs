@@ -639,6 +639,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="hostModeType">The mode in which the service is executing.</param>
         /// <param name="expectedStatusCode">Expected Status Code.</param>
         [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
         [DataRow("/graphql/", HostModeType.Development, HttpStatusCode.OK, "Banana Cake Pop",
             DisplayName = "GraphQL endpoint with no query in development mode.")]
         [DataRow("/graphql", HostModeType.Production, HttpStatusCode.BadRequest,

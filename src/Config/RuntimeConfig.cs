@@ -129,6 +129,37 @@ namespace Azure.DataApiBuilder.Config
         }
 
         /// <summary>
+        /// Mapping GraphQL singular type To each entity name.
+        /// This is used for looking up top-level entity name with GraphQL type, GraphQL type is not matching any of the top level entity name.
+        /// Use singular field to find the top level entity name, then do the look up from the entities dictionary
+        /// </summary>
+        public void MappingGraphQLSingularTypeToEntityName()
+        {
+            foreach (KeyValuePair<string, Entity> item in Entities)
+            {
+                Entity entity = item.Value;
+                string entityName = item.Key;
+
+                if (entity?.GraphQL != null
+                    && entity.GraphQL.GetType() == typeof(GraphQLEntitySettings))
+                {
+                    GraphQLEntitySettings? graphQL = entity.GraphQL as GraphQLEntitySettings;
+                    SingularPlural? graphQLType = graphQL?.Type as SingularPlural;
+
+                    if (graphQLType is null || graphQLType.Singular is null)
+                    {
+                        continue;
+                    }
+
+                    if (!GraphQLSingularTypeToEntityNameMap.ContainsKey(graphQLType.Singular))
+                    {
+                        GraphQLSingularTypeToEntityNameMap.Add(graphQLType.Singular, entityName);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Try to deserialize the given json string into its object form.
         /// </summary>
         /// <typeparam name="T">The object type.</typeparam>
@@ -166,6 +197,9 @@ namespace Azure.DataApiBuilder.Config
 
         [JsonIgnore]
         public HostGlobalSettings HostGlobalSettings { get; private set; } = new();
+
+        [JsonIgnore]
+        public Dictionary<string, string> GraphQLSingularTypeToEntityNameMap { get; private set; } = new();
 
         public bool IsEasyAuthAuthenticationProvider()
         {

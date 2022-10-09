@@ -57,6 +57,7 @@ query{
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
             OverrideEntityContainer("Planet", _containerName);
+            OverrideEntityContainer("StarAlias", _containerName);
         }
 
         [TestMethod]
@@ -212,6 +213,29 @@ query {{
             {
                 Assert.AreEqual(id, response.GetProperty("items")[i++].GetProperty("id").GetString());
             }
+        }
+
+        /// <summary>
+        /// This is to exercise the senario when graphQL type and top level entity name in the runtim config aren't match.
+        /// "Star" is a GraphQL type, in the runtime config, the top level entity name is "StarAlias"
+        /// The matching is using the runtime config entity singular type name instead when there is no match found
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task GetByPrimaryKeyWhenEntityNameDoesntMatchGraphQLType()
+        {
+            // Run query
+            string id = _idList[0];
+            string query = @$"
+query {{
+    star_by_pk (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
+        id
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("star_by_pk", query);
+
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
         private static void ConvertJsonElementToStringList(JsonElement ele, List<string> strList)

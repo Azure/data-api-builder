@@ -80,7 +80,7 @@ You can use Docker to run the Data API Builder on your machine. Instructions are
 
 ### Using Data API Builder CLI to build the configuration file
 
-Data API Builder comes with a full CLI to help you run common tasks [Getting started with Data API Builder (`dab`) CLI](../getting-started/getting-started-dab-cli.md): 
+Data API Builder comes with a full CLI to help you run common tasks [Getting started with Data API Builder (`dab`) CLI](../getting-started/getting-started-dab-cli.md).
 
 ### Deploy on Azure
 

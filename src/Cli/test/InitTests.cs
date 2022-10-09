@@ -137,8 +137,7 @@ namespace Cli.Tests
             string? cosmosDatabase,
             string? cosmosContainer,
             string? graphQLSchema,
-            bool expectedResult
-        )
+            bool expectedResult)
         {
             InitOptions options = new(
                 databaseType: DatabaseType.cosmos,

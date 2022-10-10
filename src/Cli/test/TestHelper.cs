@@ -75,7 +75,7 @@ namespace Cli.Tests
             },
             ""entities"": {}
           }";
-        
+
         /// <summary>
         /// Config containing authenticate-devmode-request type as string
         /// instead of boolean for Host global settings.
@@ -142,7 +142,7 @@ namespace Cli.Tests
                   }
               }
           }";
-        
+
         /// <summary>
         /// Entity containing invalid graphQL type
         /// </summary>

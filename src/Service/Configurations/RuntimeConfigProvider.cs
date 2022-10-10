@@ -130,9 +130,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     out runtimeConfig,
                     ConfigProviderLogger!))
             {
-                runtimeConfig!.DetermineGlobalSettings();
-                runtimeConfig!.DetermineGraphQLEntityNames();
-
                 if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
                 {
                     runtimeConfig!.ConnectionString = configPath.CONNSTRING;

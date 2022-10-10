@@ -812,12 +812,6 @@ namespace Cli
                 return false;
             }
 
-            if (!CanStartEngineWithConfig(runtimeConfigFile))
-            {
-                Console.Error.WriteLine("Config is not valid.");
-                return false;
-            }
-
             /// This will start the runtime engine with project name, config file, and if defined then
             /// a  valid LogLevel.
             List<string> args = new()

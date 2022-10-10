@@ -109,24 +109,6 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to verify that any parsing errors in the config
-        /// are caught before starting the engine.
-        /// </summary>
-        [DataRow(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE, true, DisplayName = "Correct Config")]
-        [DataRow(CONFIG_WITH_INVALID_DEVMODE_REQUEST_AUTH_TYPE, BASIC_ENTITY_WITH_ANONYMOUS_ROLE, false, DisplayName = "Invalid devmode auth request type")]
-        [DataRow(INITIAL_CONFIG, SINGLE_ENTITY_WITH_INVALID_GRAPHQL_TYPE, false, DisplayName = "Invalid GraphQL type for entity")]
-        [DataTestMethod]
-        public void TestFailedToStartEngineWithInvalidConfig(
-            string initialConfig,
-            string entityDetails,
-            bool expectSuccess)
-        {
-            string runtimeConfigJson = AddPropertiesToJson(initialConfig, entityDetails);
-            File.WriteAllText(_testRuntimeConfig, runtimeConfigJson);
-            Assert.AreEqual(expectSuccess, CanStartEngineWithConfig(_testRuntimeConfig));
-        }
-
-        /// <summary>
         /// Test to verify negative/positive string numerals are correctly parsed as integers
         /// Decimal values are parsed as double.
         /// Boolean string is correctly parsed as boolean

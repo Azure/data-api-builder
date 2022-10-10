@@ -323,7 +323,7 @@ public class EndToEndTests
             logging
         );
 
-        string? output = process.StandardOutput.ReadToEnd();
+        string? output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
         Assert.IsTrue(output!.Contains($"Using config file: {configFileName}"));
         // output = process.StandardOutput.ReadLine();

@@ -391,9 +391,8 @@ public class EndToEndTests
 
         string? output = process.StandardOutput.ReadToEnd();
         Assert.IsNotNull(output);
-        Console.WriteLine(output);
-        Assert.IsTrue(process.HasExited);
         Assert.IsTrue(output.Contains("Exiting the runtime engine..."));
+        process.Kill();
 
     }
 

@@ -386,7 +386,7 @@ public class EndToEndTests
         File.WriteAllText(_testRuntimeConfig, runtimeConfigJson);
         Process process = StartDabProcess(
             command: "start",
-            flags: $"--config {_testRuntimeConfig} --LogLevel Information"
+            flags: $"--config {_testRuntimeConfig} --LogLevel Error"
         );
 
         string? output = process.StandardOutput.ReadToEnd();

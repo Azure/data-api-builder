@@ -353,20 +353,20 @@ public class EndToEndTests
     [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
     public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
     {
-        // Process process = StartDabProcess(
-        //     command,
-        //     flags
-        // );
+        Process process = StartDabProcess(
+            command,
+            flags
+        );
 
-        // string? output = process.StandardOutput.ReadToEnd();
-        // Assert.IsNotNull(output);
+        string? output = process.StandardOutput.ReadToEnd();
+        Assert.IsNotNull(output);
 
-        // foreach (string expectedOutput in expectedOutputArray)
-        // {
-        //     Assert.IsTrue(output.Contains(expectedOutput));
-        // }
+        foreach (string expectedOutput in expectedOutputArray)
+        {
+            Assert.IsTrue(output.Contains(expectedOutput));
+        }
 
-        // process.Kill();
+        process.Kill();
     }
 
     /// <summary>

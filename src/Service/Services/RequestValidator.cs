@@ -192,7 +192,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         message: REQUEST_BODY_INVALID_JSON_ERR_MESSAGE,
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                        exception: ex
+                        innerException: ex
                         );
                 }
 
@@ -472,7 +472,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     message: $"TableDefinition for entity: {entityName} does not exist.",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                    exception: ex);
+                    innerException: ex);
             }
         }
 
@@ -493,7 +493,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     message: $"Underlying database object for entity {entityName} does not exist.",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                    exception: ex);
+                    innerException: ex);
             }
         }
 

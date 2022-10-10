@@ -360,7 +360,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     message: "Policy query parameter is not well formed for GraphQL Policy Processing.",
                     statusCode: HttpStatusCode.Forbidden,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
-                    exception: ex);
+                    innerException: ex);
             }
         }
 

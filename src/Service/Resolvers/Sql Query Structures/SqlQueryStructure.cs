@@ -207,7 +207,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         message: "$filter query parameter is not well formed.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                        exception: ex);
+                        innerException: ex);
                 }
             }
 
@@ -225,7 +225,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         message: "Policy query parameter is not well formed.",
                         statusCode: HttpStatusCode.Forbidden,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
-                        exception: ex);
+                        innerException: ex);
                 }
             }
 
@@ -523,7 +523,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                   message: ex.Message,
                   statusCode: HttpStatusCode.BadRequest,
                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                  exception: ex);
+                  innerException: ex);
             }
 
             PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
@@ -566,7 +566,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                   message: ex.Message,
                   statusCode: HttpStatusCode.BadRequest,
                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                  exception: ex);
+                  innerException: ex);
             }
         }
 

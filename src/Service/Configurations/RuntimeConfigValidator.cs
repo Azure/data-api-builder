@@ -303,7 +303,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                     message: $"One of the action specified for entity:{entityName} is not well formed.",
                                     statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError,
-                                    exception: e);
+                                    innerException: e);
                             }
 
                             actionOp = configOperation.Name;

@@ -75,8 +75,8 @@ namespace Azure.DataApiBuilder.Service.Exceptions
         public DataApiBuilderException(string message,
             HttpStatusCode statusCode,
             SubStatusCodes subStatusCode,
-            Exception? exception = null)
-            : base(message, innerException: exception)
+            Exception? innerException = null)
+            : base(message, innerException: innerException)
         {
             StatusCode = statusCode;
             SubStatusCode = subStatusCode;

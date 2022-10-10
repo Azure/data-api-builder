@@ -89,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     message: ex.Message,
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                    exception: ex);
+                    innerException: ex);
             }
         }
 

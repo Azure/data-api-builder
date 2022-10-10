@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
-                    exception: ex);
+                    innerException: ex);
             }
 
             schemaName = connectionStringBuilder.SearchPath is null ? string.Empty : connectionStringBuilder.SearchPath;

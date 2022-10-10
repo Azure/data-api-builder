@@ -353,20 +353,20 @@ public class EndToEndTests
     [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
     public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
     {
-        Process process = StartDabProcess(
-            command,
-            flags
-        );
+        // Process process = StartDabProcess(
+        //     command,
+        //     flags
+        // );
 
-        string? output = process.StandardOutput.ReadToEnd();
-        Assert.IsNotNull(output);
+        // string? output = process.StandardOutput.ReadToEnd();
+        // Assert.IsNotNull(output);
 
-        foreach (string expectedOutput in expectedOutputArray)
-        {
-            Assert.IsTrue(output.Contains(expectedOutput));
-        }
+        // foreach (string expectedOutput in expectedOutputArray)
+        // {
+        //     Assert.IsTrue(output.Contains(expectedOutput));
+        // }
 
-        process.Kill();
+        // process.Kill();
     }
 
     /// <summary>
@@ -382,17 +382,17 @@ public class EndToEndTests
         string entityDetails,
         bool expectSuccess)
     {
-        // string runtimeConfigJson = AddPropertiesToJson(initialConfig, entityDetails);
-        // File.WriteAllText(_testRuntimeConfig, runtimeConfigJson);
-        // Process process = StartDabProcess(
-        //     command: "start",
-        //     flags: $"--config {_testRuntimeConfig} --LogLevel Error"
-        // );
+        string runtimeConfigJson = AddPropertiesToJson(initialConfig, entityDetails);
+        File.WriteAllText(_testRuntimeConfig, runtimeConfigJson);
+        Process process = StartDabProcess(
+            command: "start",
+            flags: $"--config {_testRuntimeConfig} --LogLevel Error"
+        );
 
-        // string? output = process.StandardOutput.ReadToEnd();
-        // Assert.IsNotNull(output);
-        // Assert.IsTrue(output.Contains("Exiting the runtime engine..."));
-        // process.Kill();
+        string? output = process.StandardOutput.ReadToEnd();
+        Assert.IsNotNull(output);
+        Assert.IsTrue(output.Contains("Exiting the runtime engine..."));
+        process.Kill();
 
     }
 

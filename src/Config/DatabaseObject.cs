@@ -68,6 +68,15 @@ namespace Azure.DataApiBuilder.Config
     public class TableDefinition
     {
         /// <summary>
+        /// Points to the actual source table in the database for the object,
+        /// which is evaluated on a per request basis depending on the fields
+        /// being modified by the mutation request.
+        /// It is populated only for views and is null otherwise, since for
+        /// tables, base table is same as the source table.
+        /// </summary>
+        public TableDefinition? BaseTableDefinition { get; set; }
+        public Dictionary<string, TableDefinition> BaseTableDefinitions { get; set; } = new();
+        /// <summary>
         /// The list of columns that together form the primary key of the table.
         /// </summary>
         public List<string> PrimaryKey { get; set; } = new();
@@ -77,6 +86,8 @@ namespace Azure.DataApiBuilder.Config
         /// </summary>
         public Dictionary<string, ColumnDefinition> Columns { get; private set; } =
             new(StringComparer.InvariantCultureIgnoreCase);
+
+        public Dictionary<string, string> ColumnAliases { get; set; } = new();
 
         /// <summary>
         /// A dictionary mapping all the source entities to their relationship metadata.

@@ -185,10 +185,5 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         {
             throw new NotImplementedException();
         }
-
-        public bool TryGetEntityNameFromSource(string sourceName, [NotNullWhen(true)] out string? entityName)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -53,8 +54,6 @@ namespace Azure.DataApiBuilder.Service.Services
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
 
         private Dictionary<string, string> EntityPathToEntityName { get; } = new();
-
-        private Dictionary<string, string> SourceToEntityName { get; } = new();
 
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
@@ -175,11 +174,6 @@ namespace Azure.DataApiBuilder.Service.Services
         public virtual bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
         {
             return EntityPathToEntityName.TryGetValue(entityPathName, out entityName);
-        }
-
-        public virtual bool TryGetEntityNameFromSource(string sourceName, [NotNullWhen(true)] out string? entityName)
-        {
-            return SourceToEntityName.TryGetValue(sourceName, out entityName);
         }
 
         /// <inheritdoc />
@@ -639,7 +633,6 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             foreach ((string entityName, Entity entity) in _entities)
             {
-                SourceToEntityName[entity.SourceName] = entityName;
                 SourceType entitySourceType = entity.ObjectType;
                 if (entitySourceType is SourceType.StoredProcedure)
                 {
@@ -656,11 +649,48 @@ namespace Azure.DataApiBuilder.Service.Services
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         GetTableDefinition(entityName));
+
+                    if (entitySourceType is SourceType.View)
+                    {
+                        await PopulateBaseTableDefinitionsForView(
+                            schemaName: GetSchemaName(entityName),
+                            viewName: GetDatabaseObjectName(entityName),
+                            GetTableDefinition(entityName));
+                    }
+
+                    GetTableDefinition(entityName).BaseTableDefinition = GetTableDefinition(entityName);
                 }
             }
 
             await PopulateForeignKeyDefinitionAsync();
 
+        }
+
+        private async Task PopulateBaseTableDefinitionsForView(string schemaName, string viewName, TableDefinition tableDefinition)
+        {
+            string dbviewName = $"{schemaName}.{viewName}";
+            string query = "SELECT distinct source_schema,source_table " +
+                           "FROM sys.dm_exec_describe_first_result_set (" +
+                           $"N'SELECT * from {dbviewName}', null, 1)";
+
+            JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
+                sqltext: query,
+                parameters: null!,
+                dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
+            JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
+            foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
+            {
+                string sourceTable = element.GetProperty("source_table").ToString();
+                string sourceSchema = element.GetProperty("source_schema").ToString();
+                string dbTableName = $"{sourceSchema}.{sourceTable}";
+                tableDefinition.BaseTableDefinitions[dbTableName] = new();
+                await PopulateTableDefinitionAsync(
+                    entityName: string.Empty,
+                    schemaName: schemaName,
+                    tableName: sourceTable,
+                    tableDefinition: tableDefinition.BaseTableDefinitions[dbTableName]
+                    );
+            }
         }
 
         /// <summary>

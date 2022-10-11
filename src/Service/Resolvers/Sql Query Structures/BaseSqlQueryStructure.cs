@@ -29,8 +29,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public string EntityName { get; protected set; }
 
-        public string BaseEntityName { get; protected set; }
-
         /// <summary>
         /// The DatabaseObject associated with the entity, represents the
         /// databse object to be queried.
@@ -60,9 +58,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public BaseSqlQueryStructure(
             ISqlMetadataProvider sqlMetadataProvider,
             string entityName,
-            IncrementingInteger? counter = null,
-            string? baseEntityName = null,
-            Dictionary<string, string>? columnAliases = null)
+            IncrementingInteger? counter = null)
             : base(counter)
         {
             SqlMetadataProvider = sqlMetadataProvider;
@@ -77,14 +73,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 DatabaseObject = new();
             }
 
-            BaseEntityName = baseEntityName is null ? entityName : baseEntityName;
             // Default the alias to the empty string since this base construtor
             // is called for requests other than Find operations. We only use
             // TableAlias for Find, so we leave empty here and then populate
             // in the Find specific contructor.
             TableAlias = string.Empty;
-
-            ColumnAliases = columnAliases is null ? new() : columnAliases;
         }
 
         /// <summary>
@@ -100,7 +93,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
             foreach (string leftoverColumn in leftoverSchemaColumns)
             {
-                string leftOverColumnAlias = ColumnAliases.ContainsKey(leftoverColumn) ?
+                string leftOverColumnAlias = tableDefinition.ColumnAliases.ContainsKey(leftoverColumn) ?
                     ColumnAliases[leftoverColumn] : leftoverColumn;
 
                 // if column is not included in the underlying table, we skip.
@@ -154,7 +147,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         protected TableDefinition GetUnderlyingBaseTableDefinition()
         {
-            return SqlMetadataProvider.GetTableDefinition(BaseEntityName);
+            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
+            return tableDefinition.BaseTableDefinition is null ?
+                tableDefinition : tableDefinition.BaseTableDefinition;
         }
 
         /// <summary>
@@ -190,11 +185,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         protected List<LabelledColumn> GenerateOutputColumns()
         {
             List<LabelledColumn> outputColumns = new();
+            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
             TableDefinition baseTableDefinition = GetUnderlyingBaseTableDefinition();
             foreach (string columnName in baseTableDefinition.Columns.Keys)
             {
-                string columnAlias = ColumnAliases.ContainsKey(columnName) ?
-                    ColumnAliases[columnName] : columnName;
+                string columnAlias = tableDefinition.ColumnAliases.ContainsKey(columnName) ?
+                    tableDefinition.ColumnAliases[columnName] : columnName;
 
                 // if column is not exposed in the underlying table, we skip.
                 if (!SqlMetadataProvider.TryGetExposedColumnName(

@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             insertPayloadRoot,
                             operationType);
-                        await PopulateBaseEntityNameAndColumnAliasesInReqCtxt(
+                        await PopulateBaseTableDefAndColumnAliasesInReqCtxt(
                             context,
                             _sqlMetadataProvider);
                         RequestValidator.ValidateInsertRequestContext(
@@ -134,7 +134,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             upsertPayloadRoot,
                             operationType);
-                        await PopulateBaseEntityNameAndColumnAliasesInReqCtxt(
+                        await PopulateBaseTableDefAndColumnAliasesInReqCtxt(
                             context,
                             _sqlMetadataProvider);
                         RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
@@ -416,7 +416,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
         }
 
-        private async Task<bool> PopulateBaseEntityNameAndColumnAliasesInReqCtxt(
+        private async Task<bool> PopulateBaseTableDefAndColumnAliasesInReqCtxt(
             RestRequestContext requestCtx,
             ISqlMetadataProvider sqlMetadataProvider)
         {
@@ -487,7 +487,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     continue;
                 }
 
-                if(string.IsNullOrEmpty(sourceColumn) || string.IsNullOrEmpty(sourceTable)
+                if (string.IsNullOrEmpty(sourceColumn) || string.IsNullOrEmpty(sourceTable)
                     || string.IsNullOrEmpty(sourceSchema) || isComputedColumn)
                 {
                     throw new DataApiBuilderException(
@@ -536,31 +536,15 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
             }
 
+            DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[requestCtx.EntityName];
+
             // Store column aliases.
-            requestCtx.ColumnAliases = baseColToColMapping;
+            dbObject.TableDefinition.ColumnAliases = baseColToColMapping;
 
             if (!string.Empty.Equals(sourceTableForEntity))
             {
-                string? sourceEntityName;
-                if (sourceSchemaForEntity.Equals("dbo"))
-                {
-                    if (sqlMetadataProvider.TryGetEntityNameFromSource(
-                        sourceTableForEntity,
-                        out sourceEntityName) ||
-                       sqlMetadataProvider.TryGetEntityNameFromSource(
-                           $"{sourceSchemaForEntity}.{sourceTableForEntity}",
-                           out sourceEntityName))
-                    {
-                        requestCtx.BaseEntityName = sourceEntityName;
-                    }
-                }
-                else
-                {
-                    sqlMetadataProvider.TryGetEntityNameFromSource(
-                           $"{sourceSchemaForEntity}.{sourceTableForEntity}",
-                           out sourceEntityName);
-                    requestCtx.BaseEntityName = sourceEntityName!;
-                }
+                string tableNameForEntity = $"{sourceSchemaForEntity}.{sourceTableForEntity}"; 
+                dbObject.TableDefinition.BaseTableDefinition = dbObject.TableDefinition.BaseTableDefinitions[tableNameForEntity];
             }
 
             return true;

@@ -44,11 +44,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
-            string? baseEntityName = null,
             Dictionary<string, string>? columnAliases = null
             )
-        : base(sqlMetadataProvider, entityName: entityName,
-              baseEntityName: baseEntityName, columnAliases: columnAliases)
+        : base(sqlMetadataProvider, entityName: entityName)
         {
             InsertColumns = new();
             Values = new();

@@ -249,7 +249,7 @@ public class EndToEndTests
         Entity entity = runtimeConfig.Entities["todo"];
         Assert.AreEqual("{\"path\":\"/todo\"}", JsonSerializer.Serialize(entity.Rest));
         Assert.IsNotNull(entity.GraphQL);
-        Assert.IsTrue(((JsonElement)entity.GraphQL).Deserialize<bool>());
+        Assert.IsTrue((System.Boolean)entity.GraphQL);
         //The value isn entity.GraphQL is true/false, we expect the serialization to be a string.
         Assert.AreEqual("true", JsonSerializer.Serialize(entity.GraphQL), ignoreCase: true);
         Assert.AreEqual(1, entity.Permissions.Length);
@@ -401,10 +401,9 @@ public class EndToEndTests
         else
         {
             Assert.IsTrue(output.Contains($"Failed to parse the config file: {_testRuntimeConfig}."));
-            output = process.StandardOutput.ReadToEnd();
+            output = process.StandardOutput.ReadLine();
             Assert.IsNotNull(output);
             Assert.IsTrue(output.Contains("Failed to start the engine."));
-            Assert.IsTrue(process.HasExited);
         }
 
         process.Kill();

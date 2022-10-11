@@ -473,24 +473,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     Assert.IsTrue(((JsonElement)rest.Path).ValueKind == JsonValueKind.String);
                 }
 
-                Assert.IsTrue(entity.GraphQL == null
-                    || ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.True
-                    || ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.False
-                    || ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.Object);
-                if (entity.GraphQL != null
-                    && ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.Object)
-                {
-                    GraphQLEntitySettings graphQL =
-                        ((JsonElement)entity.GraphQL).Deserialize<GraphQLEntitySettings>(RuntimeConfig.SerializerOptions);
-                    Assert.IsTrue(
-                        ((JsonElement)graphQL.Type).ValueKind == JsonValueKind.String
-                        || ((JsonElement)graphQL.Type).ValueKind == JsonValueKind.Object);
-                    if (((JsonElement)graphQL.Type).ValueKind == JsonValueKind.Object)
-                    {
-                        SingularPlural route = ((JsonElement)graphQL.Type).Deserialize<SingularPlural>(RuntimeConfig.SerializerOptions);
-                    }
-                }
-
                 Assert.IsInstanceOfType(entity.Permissions, typeof(PermissionSetting[]));
                 foreach (PermissionSetting permission in entity.Permissions)
                 {

@@ -44,12 +44,13 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 connectionStringBuilder = new(connectionString);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 throw new DataApiBuilderException(
                     message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
                     statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                    innerException: ex);
             }
 
             schemaName = connectionStringBuilder.SearchPath is null ? string.Empty : connectionStringBuilder.SearchPath;

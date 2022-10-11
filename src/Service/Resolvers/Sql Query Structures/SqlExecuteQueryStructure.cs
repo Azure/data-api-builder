@@ -43,14 +43,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             GetParamAsProcedureParameterType(requestParamValue.ToString()!, paramKey));
                         ProcedureParameters.Add(paramKey, $"@{parameterizedName}");
                     }
-                    catch (ArgumentException)
+                    catch (ArgumentException ex)
                     {
                         // In the case GetParamAsProcedureParameterType fails to parse as SystemType from database metadata
                         // Keep message being returned to the client more generalized to not expose schema info
                         throw new DataApiBuilderException(
                             message: $"Invalid value supplied for field: {paramKey}",
                             statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                            innerException: ex);
                     }
                 }
                 else

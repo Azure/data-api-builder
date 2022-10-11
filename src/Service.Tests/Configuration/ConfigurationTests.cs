@@ -99,6 +99,76 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, result.StatusCode);
         }
 
+        /// <summary>
+        /// Checks correct serialization and deserialization of Source Type from 
+        /// Enum to String and vice-versa.
+        /// Consider both cases for source as an object and as a string
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, SourceType.StoredProcedure, "stored-procedure", DisplayName = "source is a stored-procedure")]
+        [DataRow(true, SourceType.Table, "table", DisplayName = "source is a table")]
+        [DataRow(true, SourceType.View, "view", DisplayName = "source is a view")]
+        [DataRow(false, null, null, DisplayName = "source is just string")]
+        public void TestCorrectSerializationOfSourceObject(
+            bool isDatabaseObjectSource,
+            SourceType sourceObjectType,
+            string sourceTypeName)
+        {
+            object entitySource;
+            if (isDatabaseObjectSource)
+            {
+                entitySource = new DatabaseObjectSource(
+                    Type: sourceObjectType,
+                    Name: "sourceName",
+                    Parameters: null,
+                    KeyFields: null
+                );
+            }
+            else
+            {
+                entitySource = "sourceName";
+            }
+
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: "MyEntity",
+                entitySource: entitySource,
+                roleName: "Anonymous",
+                operation: Operation.All,
+                includedCols: null,
+                excludedCols: null,
+                databasePolicy: null
+                );
+
+            string runtimeConfigJson = JsonSerializer.Serialize<RuntimeConfig>(runtimeConfig);
+
+            if (isDatabaseObjectSource)
+            {
+                Assert.IsTrue(runtimeConfigJson.Contains(sourceTypeName));
+            }
+
+            Mock<ILogger> logger = new();
+            Assert.IsTrue(RuntimeConfig.TryGetDeserializedConfig(
+                runtimeConfigJson,
+                out RuntimeConfig deserializedRuntimeConfig,
+                logger.Object));
+
+            Assert.IsTrue(deserializedRuntimeConfig.Entities.ContainsKey("MyEntity"));
+            deserializedRuntimeConfig.Entities["MyEntity"].TryPopulateSourceFields();
+            Assert.AreEqual("sourceName", deserializedRuntimeConfig.Entities["MyEntity"].SourceName);
+
+            JsonElement sourceJson = (JsonElement)deserializedRuntimeConfig.Entities["MyEntity"].Source;
+            if (isDatabaseObjectSource)
+            {
+                Assert.AreEqual(JsonValueKind.Object, sourceJson.ValueKind);
+                Assert.AreEqual(sourceObjectType, deserializedRuntimeConfig.Entities["MyEntity"].ObjectType);
+            }
+            else
+            {
+                Assert.AreEqual(JsonValueKind.String, sourceJson.ValueKind);
+                Assert.AreEqual("sourceName", deserializedRuntimeConfig.Entities["MyEntity"].Source.ToString());
+            }
+        }
+
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable.")]
         public async Task TestConflictAlreadySetConfiguration()
         {
@@ -559,6 +629,77 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
             string actualRuntimeConfigFile = GetFileNameForEnvironment(hostingEnvironmentValue, considerOverrides);
             Assert.AreEqual(expectedRuntimeConfigFile, actualRuntimeConfigFile);
+        }
+
+        /// <summary>
+        /// Test different graphql endpoints in different host modes
+        /// when accessed interactively via browser.
+        /// </summary>
+        /// <param name="endpoint">The endpoint route</param>
+        /// <param name="hostModeType">The mode in which the service is executing.</param>
+        /// <param name="expectedStatusCode">Expected Status Code.</param>
+        /// <param name="expectedContent">The expected phrase in the response body.</param>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow("/graphql/", HostModeType.Development, HttpStatusCode.OK, "Banana Cake Pop",
+            DisplayName = "GraphQL endpoint with no query in development mode.")]
+        [DataRow("/graphql", HostModeType.Production, HttpStatusCode.BadRequest,
+            "Either the parameter query or the parameter id has to be set",
+            DisplayName = "GraphQL endpoint with no query in production mode.")]
+        [DataRow("/graphql/ui", HostModeType.Development, HttpStatusCode.NotFound,
+            DisplayName = "Default BananaCakePop in development mode.")]
+        [DataRow("/graphql/ui", HostModeType.Production, HttpStatusCode.NotFound,
+            DisplayName = "Default BananaCakePop in production mode.")]
+        [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
+            HostModeType.Development, HttpStatusCode.Moved,
+            DisplayName = "GraphQL endpoint with query in development mode.")]
+        [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
+            HostModeType.Production, HttpStatusCode.OK, "data",
+            DisplayName = "GraphQL endpoint with query in production mode.")]
+        [DataRow(RestController.REDIRECTED_ROUTE, HostModeType.Development, HttpStatusCode.BadRequest,
+            "GraphQL request redirected to favicon.ico.",
+            DisplayName = "Redirected endpoint in development mode.")]
+        [DataRow(RestController.REDIRECTED_ROUTE, HostModeType.Production, HttpStatusCode.BadRequest,
+            "GraphQL request redirected to favicon.ico.",
+            DisplayName = "Redirected endpoint in production mode.")]
+        public async Task TestInteractiveGraphQLEndpoints(
+            string endpoint,
+            HostModeType hostModeType,
+            HttpStatusCode expectedStatusCode,
+            string expectedContent = "")
+        {
+            const string CUSTOM_CONFIG = "custom-config.json";
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(MSSQL_ENVIRONMENT);
+            RuntimeConfig config = configProvider.GetRuntimeConfiguration();
+            HostGlobalSettings customHostGlobalSettings = config.HostGlobalSettings with { Mode = hostModeType };
+            JsonElement serializedCustomHostGlobalSettings =
+                JsonSerializer.SerializeToElement(customHostGlobalSettings, RuntimeConfig.SerializerOptions);
+            Dictionary<GlobalSettingsType, object> customRuntimeSettings = new(config.RuntimeSettings);
+            customRuntimeSettings.Remove(GlobalSettingsType.Host);
+            customRuntimeSettings.Add(GlobalSettingsType.Host, serializedCustomHostGlobalSettings);
+            RuntimeConfig configWithCustomHostMode =
+                config with { RuntimeSettings = customRuntimeSettings };
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configWithCustomHostMode, RuntimeConfig.SerializerOptions));
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            TestServer server = new(Program.CreateWebHostBuilder(args));
+
+            HttpClient client = server.CreateClient();
+            HttpRequestMessage request = new(HttpMethod.Get, endpoint);
+
+            // Adding the following headers simulates an interactive browser request.
+            request.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36");
+            request.Headers.Add("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
+
+            HttpResponseMessage response = await client.SendAsync(request);
+            Assert.AreEqual(expectedStatusCode, response.StatusCode);
+            string actualBody = await response.Content.ReadAsStringAsync();
+            Assert.IsTrue(actualBody.Contains(expectedContent));
         }
 
         private static ConfigurationPostParameters GetCosmosConfigurationParameters()

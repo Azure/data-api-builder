@@ -234,7 +234,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 "Decimal" => decimal.Parse(param),
                 "Boolean" => bool.Parse(param),
                 "DateTime" => DateTimeOffset.Parse(param),
-                "Guid" => param is null ? Guid.Parse(param) : null,
+                "Guid" => Guid.Parse(param),
                 _ => throw new NotSupportedException($"{systemType.Name} is not supported")
             };
         }
@@ -349,11 +349,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 DbPolicyPredicates = GetFilterPredicatesFromOdataClause(odataClause, visitor);
             }
-            catch
+            catch (Exception ex)
             {
-                throw new DataApiBuilderException(message: "Policy query parameter is not well formed for GraphQL Policy Processing.",
-                                               statusCode: HttpStatusCode.Forbidden,
-                                               subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                throw new DataApiBuilderException(
+                    message: "Policy query parameter is not well formed for GraphQL Policy Processing.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
+                    innerException: ex);
             }
         }
 

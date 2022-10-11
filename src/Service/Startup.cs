@@ -51,7 +51,6 @@ namespace Azure.DataApiBuilder.Service
             Configuration.Bind(runtimeConfigPath);
 
             RuntimeConfigProvider runtimeConfigurationProvider = new(runtimeConfigPath, _configProviderLogger);
-
             services.AddSingleton(runtimeConfigurationProvider);
             services.AddSingleton<RuntimeConfigValidator>();
 
@@ -247,9 +246,9 @@ namespace Azure.DataApiBuilder.Service
             }
             else
             {
-                runtimeConfigProvider.RuntimeConfigLoaded += async (sender, newConfig) =>
+                runtimeConfigProvider.RuntimeConfigLoaded += (sender, newConfig) =>
                 {
-                    isRuntimeReady = await PerformOnConfigChangeAsync(app);
+                    isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
                 };
             }
 
@@ -317,8 +316,24 @@ namespace Azure.DataApiBuilder.Service
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapGraphQL("/graphql");
-                endpoints.MapBananaCakePop();
+
+                endpoints.MapGraphQL("/graphql").WithOptions(new GraphQLServerOptions
+                {
+                    Tool = {
+                        // Determines if accessing the endpoint from a browser
+                        // will load the GraphQL Banana Cake Pop IDE.
+                        Enable = runtimeConfigProvider.IsDeveloperMode() || env.IsDevelopment()
+                    }
+                });
+
+                // In development mode, BCP is enabled at /graphql endpoint by default.
+                // Need to disable mapping BCP explicitly as well to avoid ability to query
+                // at an additional endpoint: /graphql/ui.
+                endpoints.MapBananaCakePop().WithOptions(new GraphQLToolOptions
+                {
+                    Enable = false
+                });
+
                 endpoints.MapHealthChecks("/");
             });
         }
@@ -392,9 +407,9 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
                 RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
-
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
+                RuntimeConfigValidator._isDataSourceValidatedByCLI = false; // Config set  by the runtime needs to be validated again
                 runtimeConfigValidator.ValidateConfig();
 
                 if (runtimeConfigProvider.IsDeveloperMode())

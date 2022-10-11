@@ -1,5 +1,6 @@
 using Azure.DataApiBuilder.Config;
 using CommandLine;
+using Microsoft.Extensions.Logging;
 
 namespace Cli
 {
@@ -80,6 +81,9 @@ namespace Cli
     {
         public EntityOptions(
             string entity,
+            string? sourceType,
+            IEnumerable<string>? sourceParameters,
+            IEnumerable<string>? sourceKeyFields,
             string? restRoute,
             string? graphQLType,
             IEnumerable<string>? fieldsToInclude,
@@ -90,6 +94,9 @@ namespace Cli
             : base(config)
         {
             Entity = entity;
+            SourceType = sourceType;
+            SourceParameters = sourceParameters;
+            SourceKeyFields = sourceKeyFields;
             RestRoute = restRoute;
             GraphQLType = graphQLType;
             FieldsToInclude = fieldsToInclude;
@@ -100,6 +107,15 @@ namespace Cli
 
         [Value(0, MetaName = "Entity", Required = true, HelpText = "Name of the entity.")]
         public string Entity { get; }
+
+        [Option("source.type", Required = false, HelpText = "Type of the database object.Must be one of: [table, view, stored-procedure]")]
+        public string? SourceType { get; }
+
+        [Option("source.params", Required = false, Separator = ',', HelpText = "Dictionary of parameters and their values for Source object.\"param1:val1,param2:value2,..\"")]
+        public IEnumerable<string>? SourceParameters { get; }
+
+        [Option("source.key-fields", Required = false, Separator = ',', HelpText = "The field(s) to be used as primary keys.")]
+        public IEnumerable<string>? SourceKeyFields { get; }
 
         [Option("rest", Required = false, HelpText = "Route for rest api.")]
         public string? RestRoute { get; }
@@ -130,6 +146,9 @@ namespace Cli
             string source,
             IEnumerable<string> permissions,
             string entity,
+            string? sourceType,
+            IEnumerable<string>? sourceParameters,
+            IEnumerable<string>? sourceKeyFields,
             string? restRoute,
             string? graphQLType,
             IEnumerable<string>? fieldsToInclude,
@@ -138,6 +157,9 @@ namespace Cli
             string? policyDatabase,
             string config)
             : base(entity,
+                  sourceType,
+                  sourceParameters,
+                  sourceKeyFields,
                   restRoute,
                   graphQLType,
                   fieldsToInclude,
@@ -175,6 +197,9 @@ namespace Cli
             IEnumerable<string>? relationshipFields,
             IEnumerable<string>? map,
             string entity,
+            string? sourceType,
+            IEnumerable<string>? sourceParameters,
+            IEnumerable<string>? sourceKeyFields,
             string? restRoute,
             string? graphQLType,
             IEnumerable<string>? fieldsToInclude,
@@ -183,6 +208,9 @@ namespace Cli
             string? policyDatabase,
             string config)
             : base(entity,
+                  sourceType,
+                  sourceParameters,
+                  sourceKeyFields,
                   restRoute,
                   graphQLType,
                   fieldsToInclude,
@@ -240,7 +268,19 @@ namespace Cli
     [Verb("start", isDefault: false, HelpText = "Start Data Api Builder Engine", Hidden = false)]
     public class StartOptions : Options
     {
-        public StartOptions(string config)
-            : base(config) { }
+        public StartOptions(bool verbose, LogLevel? logLevel, string config)
+            : base(config)
+        {
+            // When verbose is true we set LogLevel to information.
+            LogLevel = verbose is true ? Microsoft.Extensions.Logging.LogLevel.Information : logLevel;
+        }
+
+        // SetName defines mutually exclusive sets, ie: can not have
+        // both verbose and LogLevel.
+        [Option("verbose", SetName = "verbose", Required = false, HelpText = "Specify logging level as informational.")]
+        public bool Verbose { get; }
+        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = "Specify logging level as provided value, " +
+            "see: https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-7.0")]
+        public LogLevel? LogLevel { get; }
     }
 }

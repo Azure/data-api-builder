@@ -244,12 +244,12 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
-                if (!isRuntimeReady)
-                {
-                    // Exiting if config provided is Invalid.
-                    _logger.LogError("Exiting the runtime engine...");
-                    Environment.Exit(-1);
-                }
+                // if (!isRuntimeReady)
+                // {
+                //     // Exiting if config provided is Invalid.
+                //     _logger.LogError("Exiting the runtime engine...");
+                //     Environment.Exit(-1);
+                // }
             }
             else
             {
@@ -403,8 +403,8 @@ namespace Azure.DataApiBuilder.Service
                 // itself.
 
                 // Deserializing GlobalSettings and GraphQLTypes 
-                runtimeConfig.DetermineGlobalSettings();
-                runtimeConfig.DetermineGraphQLEntityNames();
+                // runtimeConfig.DetermineGlobalSettings();
+                // runtimeConfig.DetermineGraphQLEntityNames();
 
                 runtimeConfigValidator.ValidateConfig();
 

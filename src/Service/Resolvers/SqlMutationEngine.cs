@@ -564,13 +564,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Dictionary<string, object?> entity)
         {
             TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
-            TableDefinition baseTableDefinition = tableDefinition.BaseTableDefinition == null?
+            TableDefinition baseTableDefinition = tableDefinition.BaseTableDefinition == null ?
                 tableDefinition : tableDefinition.BaseTableDefinition;
             StringBuilder newPrimaryKeyRoute = new();
 
             foreach (string primaryKey in baseTableDefinition.PrimaryKey)
             {
-                string primaryKeyAlias = tableDefinition.ColumnAliases.ContainsKey(primaryKey)?
+                string primaryKeyAlias = tableDefinition.ColumnAliases.ContainsKey(primaryKey) ?
                     tableDefinition.ColumnAliases[primaryKey] : primaryKey;
                 // get backing column for lookup, previously validated to be non-null
                 _sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKeyAlias, out string? pkExposedName);

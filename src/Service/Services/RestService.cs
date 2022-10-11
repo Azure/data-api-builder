@@ -541,9 +541,9 @@ namespace Azure.DataApiBuilder.Service.Services
             // Store column aliases.
             dbObject.TableDefinition.ColumnAliases = baseColToColMapping;
 
-            if (!string.Empty.Equals(sourceTableForEntity))
+            if (!string.IsNullOrEmpty(sourceTableForEntity))
             {
-                string tableNameForEntity = $"{sourceSchemaForEntity}.{sourceTableForEntity}"; 
+                string tableNameForEntity = $"{sourceSchemaForEntity}.{sourceTableForEntity}";
                 dbObject.TableDefinition.BaseTableDefinition = dbObject.TableDefinition.BaseTableDefinitions[tableNameForEntity];
             }
 

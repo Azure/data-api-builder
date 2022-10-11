@@ -40,8 +40,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public string TableAlias { get; protected set; }
 
-        public Dictionary<string, string> ColumnAliases { get; protected set; } = new();
-
         /// <summary>
         /// FilterPredicates is a string that represents the filter portion of our query
         /// in the WHERE Clause. This is generated specifically from the $filter portion
@@ -94,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             foreach (string leftoverColumn in leftoverSchemaColumns)
             {
                 string leftOverColumnAlias = tableDefinition.ColumnAliases.ContainsKey(leftoverColumn) ?
-                    ColumnAliases[leftoverColumn] : leftoverColumn;
+                    tableDefinition.ColumnAliases[leftoverColumn] : leftoverColumn;
 
                 // if column is not included in the underlying table, we skip.
                 if (!tableDefinition.Columns.ContainsKey(leftOverColumnAlias))

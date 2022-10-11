@@ -297,8 +297,10 @@ namespace Azure.DataApiBuilder.Service.Services
 
             foreach ((string colName, ColumnDefinition colDef) in baseTableDefinition.Columns)
             {
-                string aliasName = tableDefinition.ColumnAliases.ContainsKey(colName) ?
-                    tableDefinition.ColumnAliases[colName] : colName;
+                if (!tableDefinition.ColumnAliasesFromBaseTable.TryGetValue(colName, out string? aliasName))
+                {
+                    aliasName = colName;
+                }
 
                 // if column is not exposed we skip
                 if (!sqlMetadataProvider.TryGetExposedColumnName(
@@ -377,8 +379,11 @@ namespace Azure.DataApiBuilder.Service.Services
 
             foreach ((string colName, ColumnDefinition colDef) in baseTableDefinition.Columns)
             {
-                string aliasName = tableDefinition.ColumnAliases.ContainsKey(colName) ?
-                    tableDefinition.ColumnAliases[colName] : colName;
+                if (!tableDefinition.ColumnAliasesFromBaseTable.
+                    TryGetValue(colName, out string? aliasName))
+                {
+                    aliasName = colName;
+                }
 
                 // if column is not exposed we skip
                 if (!sqlMetadataProvider.TryGetExposedColumnName(

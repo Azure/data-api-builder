@@ -87,7 +87,7 @@ namespace Azure.DataApiBuilder.Config
         public Dictionary<string, ColumnDefinition> Columns { get; private set; } =
             new(StringComparer.InvariantCultureIgnoreCase);
 
-        public Dictionary<string, string> ColumnAliases { get; set; } = new();
+        public Dictionary<string, string> ColumnAliasesFromBaseTable { get; set; } = new();
 
         /// <summary>
         /// A dictionary mapping all the source entities to their relationship metadata.

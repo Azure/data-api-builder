@@ -91,8 +91,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
             foreach (string leftoverColumn in leftoverSchemaColumns)
             {
-                string leftOverColumnAlias = tableDefinition.ColumnAliases.ContainsKey(leftoverColumn) ?
-                    tableDefinition.ColumnAliases[leftoverColumn] : leftoverColumn;
+                if(!tableDefinition.ColumnAliasesFromBaseTable.
+                    TryGetValue(leftoverColumn, out string? leftOverColumnAlias))
+                {
+                    leftOverColumnAlias = leftoverColumn;
+                }
 
                 // if column is not included in the underlying table, we skip.
                 if (!tableDefinition.Columns.ContainsKey(leftOverColumnAlias))
@@ -187,8 +190,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             TableDefinition baseTableDefinition = GetUnderlyingBaseTableDefinition();
             foreach (string columnName in baseTableDefinition.Columns.Keys)
             {
-                string columnAlias = tableDefinition.ColumnAliases.ContainsKey(columnName) ?
-                    tableDefinition.ColumnAliases[columnName] : columnName;
+                if (!tableDefinition.ColumnAliasesFromBaseTable.
+                    TryGetValue(columnName, out string? columnAlias))
+                {
+                    columnAlias = columnName;
+                }
 
                 // if column is not exposed in the underlying table, we skip.
                 if (!SqlMetadataProvider.TryGetExposedColumnName(

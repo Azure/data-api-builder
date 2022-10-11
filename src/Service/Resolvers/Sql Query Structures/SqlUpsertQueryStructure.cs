@@ -102,8 +102,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             foreach (string key in baseTableDefinition.Columns.Keys)
             {
-                string field = tableDefinition.ColumnAliases.ContainsKey(key) ?
-                    tableDefinition.ColumnAliases[key] : key;
+                if (!tableDefinition.ColumnAliasesFromBaseTable.
+                    TryGetValue(key, out string? field))
+                {
+                    field = key;
+                }
+
                 schemaColumns.Add(field);
                 if (baseTableDefinition.PrimaryKey.Contains(key))
                 {

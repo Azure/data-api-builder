@@ -539,7 +539,7 @@ namespace Azure.DataApiBuilder.Service.Services
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[requestCtx.EntityName];
 
             // Store column aliases.
-            dbObject.TableDefinition.ColumnAliases = baseColToColMapping;
+            dbObject.TableDefinition.ColumnAliasesFromBaseTable = baseColToColMapping;
 
             if (!string.IsNullOrEmpty(sourceTableForEntity))
             {

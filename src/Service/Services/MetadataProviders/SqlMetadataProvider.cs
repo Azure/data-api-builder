@@ -657,8 +657,6 @@ namespace Azure.DataApiBuilder.Service.Services
                             viewName: GetDatabaseObjectName(entityName),
                             GetTableDefinition(entityName));
                     }
-
-                    GetTableDefinition(entityName).BaseTableDefinition = GetTableDefinition(entityName);
                 }
             }
 

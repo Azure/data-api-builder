@@ -17,6 +17,7 @@ using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -570,8 +571,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             foreach (string primaryKey in baseTableDefinition.PrimaryKey)
             {
-                string primaryKeyAlias = tableDefinition.ColumnAliases.ContainsKey(primaryKey) ?
-                    tableDefinition.ColumnAliases[primaryKey] : primaryKey;
+                if (!tableDefinition.ColumnAliasesFromBaseTable.
+                    TryGetValue(primaryKey, out string? primaryKeyAlias))
+                {
+                    primaryKeyAlias = primaryKey;
+                }
+
                 // get backing column for lookup, previously validated to be non-null
                 _sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKeyAlias, out string? pkExposedName);
                 newPrimaryKeyRoute.Append(pkExposedName);

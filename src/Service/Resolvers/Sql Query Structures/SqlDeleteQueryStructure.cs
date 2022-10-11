@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, backingColumn!))}")
                         ));
                     }
-                }         
+                }
             }
             catch (ArgumentException ex)
             {

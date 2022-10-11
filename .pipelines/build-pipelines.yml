@@ -19,6 +19,7 @@ variables:
   # The counter is reset when the minor version is updated.
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
   isReleaseBuild: $(isNugetRelease)
+  additionalProperties.version: 'urn:dab:config:schema:draft-$(major).$(minor).$(patch)'
 
 steps:
 - task: NuGetAuthenticate@1
@@ -42,8 +43,6 @@ steps:
 
  - task: FileTransform@1.206.0
    displayName: 'Generate dab-config.MsSql.json'
-   variables: 
-     additionalProperties.version: 'urn:dab:config:schema:draft-$(dabVersion)'
    inputs:
      folderPath: '$(System.DefaultWorkingDirectory)'
      fileType: 'json'

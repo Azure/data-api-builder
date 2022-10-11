@@ -22,9 +22,34 @@ namespace Cli.Tests
             return configurationJson.ToString();
         }
 
-        public static string GetInitialConfiguration
+        /// <summary>
+        /// Returns a new dab Process with the given command and flags
+        /// </summary>
+        public static Process StartDabProcess(string command, string flags)
         {
-            get { return @"{
+            Process process = new()
+            {
+                StartInfo =
+                {
+                    FileName = @"./dab",
+                    Arguments = $"{command} {flags}",
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                }
+            };
+
+            // Asserting that a new process has been started and no existing process is reused.
+            Assert.IsTrue(process.Start());
+
+            // The new process should not be exited after triggering the start command.
+            Assert.IsFalse(process.HasExited);
+            return process;
+        }
+
+        public const string INITIAL_CONFIG = @"
+          {
             ""$schema"": ""dab.draft-01.schema.json"",
             ""data-source"": {
               ""database-type"": ""mssql"",
@@ -32,19 +57,16 @@ namespace Cli.Tests
             },
             ""runtime"": {
               ""rest"": {
-                ""enabled"": true,
                 ""path"": ""/api""
               },
               ""graphql"": {
-                ""allow-introspection"": true,
-                ""enabled"": true,
                 ""path"": ""/graphql""
               },
               ""host"": {
                 ""mode"": ""development"",
                 ""cors"": {
                   ""origins"": [],
-                  ""allow-credentials"": true
+                  ""allow-credentials"": false
                 },
                 ""authentication"": {
                   ""provider"": ""StaticWebApps""
@@ -52,241 +74,227 @@ namespace Cli.Tests
               }
             },
             ""entities"": {}
-          }"; }
+          }";
 
-        }
-
-        public static string GetSingleEntity
-        {
-            get { return @"
-            {
-                ""entities"": {
-                    ""MyEntity"": {
-                    ""source"": ""MyTable"",
-                    ""permissions"": [
-                        {
-                        ""role"": ""anonymous"",
-                        ""actions"": [
-                            ""delete""
-                        ]
-                        }
-                    ]
-                    }
-                }
-            }"; }
-        }
-
-        public static string GetEntityConfigurationWithPolicy
-        {
-            get { return @"
-              {
-                ""entities"": {
-                    ""MyEntity"": {
-                      ""source"": ""MyTable"",
-                      ""permissions"": [
-                          {
-                          ""role"": ""anonymous"",
-                          ""actions"": [
-                                {
-                                    ""action"": ""Delete"",
-                                    ""policy"": {
-                                        ""request"": ""@claims.name eq 'dab'"",
-                                        ""database"": ""@claims.id eq @item.id""
-                                    }
-                                }
-                            ]
-                          }
-                        ]
-                    }
-                }
-            }"; }
-        }
-
-        public static string GetEntityConfigurationWithFields
-        {
-            get { return @"
-              {
-                ""entities"": {
-                    ""MyEntity"": {
-                      ""source"": ""MyTable"",
-                      ""permissions"": [
-                          {
-                          ""role"": ""anonymous"",
-                          ""actions"": [
-                                {
-                                    ""action"": ""Delete"",
-                                    ""fields"": {
-                                        ""include"": [ ""*"" ],
-                                        ""exclude"": [ ""level"", ""rating"" ]
-                                    }
-                                }
-                            ]
-                          }
-                        ]
-                    }
-                }
-            }"; }
-        }
-
-        public static string GetEntityConfigurationWithPolicyAndFields
-        {
-            get { return @"
-              {
-                ""entities"": {
-                    ""MyEntity"": {
-                      ""source"": ""MyTable"",
-                      ""permissions"": [
-                          {
-                          ""role"": ""anonymous"",
-                          ""actions"": [
-                                {
-                                    ""action"": ""Delete"",
-                                    ""policy"": {
-                                        ""request"": ""@claims.name eq 'dab'"",
-                                        ""database"": ""@claims.id eq @item.id""
-                                    },
-                                    ""fields"": {
-                                        ""include"": [ ""*"" ],
-                                        ""exclude"": [ ""level"", ""rating"" ]
-                                    }
-                                }
-                            ]
-                          }
-                        ]
-                    }
-                }
-            }"; }
-        }
-
-        public static string GetEntityConfigurationWithPolicyAndFieldsGeneratedWithUpdateCommand
-        {
-            get { return @"
-              {
-                ""entities"": {
-                    ""MyEntity"": {
-                      ""source"": ""MyTable"",
-                      ""permissions"": [
-                          {
-                          ""role"": ""anonymous"",
-                          ""actions"": [
-                                {
-                                    ""action"": ""Delete"",
-                                    ""policy"": {
-                                        ""request"": ""@claims.name eq 'dab'"",
-                                        ""database"": ""@claims.id eq @item.id""
-                                    },
-                                    ""fields"": {
-                                        ""include"": [""*""],
-                                        ""exclude"": [""level"", ""rating""]
-                                    }
-                                }
-                            ]
-                          }
-                        ]
-                    }
-                }
-            }"; }
-
-        }
-
-        public static string GetEntityConfigurationWithPolicyWithUpdateCommand
-        {
-            get { return @"
-              {
-                ""entities"": {
-                    ""MyEntity"": {
-                      ""source"": ""MyTable"",
-                      ""permissions"": [
-                          {
-                          ""role"": ""anonymous"",
-                          ""actions"": [
-                                {
-                                    ""action"": ""Delete"",
-                                    ""policy"": {
-                                        ""request"": ""@claims.name eq 'dab'"",
-                                        ""database"": ""@claims.id eq @item.id""
-                                    }
-                                }
-                            ]
-                          }
-                        ]
-                    }
-                }
-            }"; }
-        }
-
-        public static string GetEntityConfigurationWithFieldsGeneratedWithUpdateCommand
-        {
-            get { return @"
-              {
-                ""entities"": {
-                    ""MyEntity"": {
-                      ""source"": ""MyTable"",
-                      ""permissions"": [
-                          {
-                          ""role"": ""anonymous"",
-                          ""actions"": [
-                                {
-                                    ""action"": ""Delete"",
-                                    ""fields"": {
-                                        ""include"": [ ""*"" ],
-                                        ""exclude"": [ ""level"", ""rating"" ]
-                                    }
-                                }
-                            ]
-                          }
-                        ]
-                    }
-                }
-            }"; }
-
-        }
-
-        public static string GetCompleteConfigAfterAddingEntity
-        {
-            get
-            {
-                return @"
-                {
-              ""$schema"": ""dab.draft-01.schema.json"",
-              ""data-source"": {
-                ""database-type"": ""mssql"",
-                ""connection-string"": ""localhost:5000""
-              },
-              ""runtime"": {
-                ""rest"": {
-                  ""path"": ""/api""
-                },
-                ""graphql"": {
-                  ""path"": ""/graphql""
-                },
-                ""host"": {
-                  ""mode"": ""production"",
-                  ""cors"": {
-                    ""origins"": [],
-                    ""allow-credentials"": false
-                  },
-                  ""authentication"": {
-                    ""provider"": ""StaticWebApps""
-                  }
-                }
-              },
+        public const string SINGLE_ENTITY = @"
+          {
               ""entities"": {
-                ""book"": {
-                  ""source"": ""s001.book"",
+                  ""MyEntity"": {
+                  ""source"": ""MyTable"",
                   ""permissions"": [
-                    {
+                      {
                       ""role"": ""anonymous"",
                       ""actions"": [
-                        ""*""
+                          ""delete""
                       ]
-                    }
+                      }
                   ]
-                }
+                  }
               }
-            }";
+          }";
+
+        public const string BASIC_ENTITY_WITH_ANONYMOUS_ROLE = @"
+          {
+              ""entities"": {
+                  ""MyEntity"": {
+                  ""source"": ""s001.book"",
+                  ""permissions"": [
+                      {
+                      ""role"": ""anonymous"",
+                      ""actions"": [
+                          ""*""
+                      ]
+                      }
+                  ]
+                  }
+              }
+          }";
+
+        public const string SINGLE_ENTITY_WITH_STORED_PROCEDURE = @"
+          {
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book"",
+                  ""parameters"": {
+                      ""param1"": 123,
+                      ""param2"": ""hello"",
+                      ""param3"": true
+                  }
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""*""
+                    ]
+                  }
+                ]
+              }
             }
+          }";
+
+        public const string SINGLE_ENTITY_WITH_SOURCE_AS_TABLE = @"
+          {
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""table"",
+                  ""object"": ""s001.book"",
+                  ""key-fields"": [
+                      ""id"",
+                      ""name""
+                  ]
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""*""
+                    ]
+                  }
+                ]
+              }
+            }
+          }";
+
+        public const string SINGLE_ENTITY_WITH_SOURCE_AS_VIEW = @"
+          {
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""view"",
+                  ""object"": ""s001.book"",
+                  ""key-fields"": [
+                      ""col1"",
+                      ""col2""
+                  ]
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""*""
+                    ]
+                  }
+                ]
+              }
+            }
+          }";
+
+        public const string ENTITY_CONFIG_WITH_POLICY = @"
+          {
+            ""entities"": {
+                ""MyEntity"": {
+                  ""source"": ""MyTable"",
+                  ""permissions"": [
+                      {
+                      ""role"": ""anonymous"",
+                      ""actions"": [
+                            {
+                                ""action"": ""Delete"",
+                                ""policy"": {
+                                    ""request"": ""@claims.name eq 'dab'"",
+                                    ""database"": ""@claims.id eq @item.id""
+                                }
+                            }
+                        ]
+                      }
+                    ]
+                }
+            }
+        }";
+
+        public const string ENTITY_CONFIG_WITH_ACTION_FIELDS = @"
+          {
+            ""entities"": {
+                ""MyEntity"": {
+                  ""source"": ""MyTable"",
+                  ""permissions"": [
+                      {
+                      ""role"": ""anonymous"",
+                      ""actions"": [
+                            {
+                                ""action"": ""Delete"",
+                                ""fields"": {
+                                    ""include"": [ ""*"" ],
+                                    ""exclude"": [ ""level"", ""rating"" ]
+                                }
+                            }
+                        ]
+                      }
+                    ]
+                }
+            }
+        }";
+
+        public const string ENTITY_CONFIG_WITH_POLCIY_AND_ACTION_FIELDS = @"
+          {
+            ""entities"": {
+                ""MyEntity"": {
+                  ""source"": ""MyTable"",
+                  ""permissions"": [
+                      {
+                      ""role"": ""anonymous"",
+                      ""actions"": [
+                            {
+                                ""action"": ""Delete"",
+                                ""policy"": {
+                                    ""request"": ""@claims.name eq 'dab'"",
+                                    ""database"": ""@claims.id eq @item.id""
+                                },
+                                ""fields"": {
+                                    ""include"": [ ""*"" ],
+                                    ""exclude"": [ ""level"", ""rating"" ]
+                                }
+                            }
+                        ]
+                      }
+                    ]
+                }
+            }
+        }";
+
+        public const string CONFIG_WITH_SINGLE_ENTITY = @"
+          {
+        ""$schema"": ""dab.draft-01.schema.json"",
+        ""data-source"": {
+          ""database-type"": ""mssql"",
+          ""connection-string"": ""localhost:5000""
+        },
+        ""runtime"": {
+          ""rest"": {
+            ""path"": ""/api""
+          },
+          ""graphql"": {
+            ""path"": ""/graphql""
+          },
+          ""host"": {
+            ""mode"": ""production"",
+            ""cors"": {
+              ""origins"": [],
+              ""allow-credentials"": false
+            },
+            ""authentication"": {
+              ""provider"": ""StaticWebApps""
+            }
+          }
+        },
+        ""entities"": {
+          ""book"": {
+            ""source"": ""s001.book"",
+            ""permissions"": [
+              {
+                ""role"": ""anonymous"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          }
         }
+      }";
 
         /// <summary>
         /// Helper method to create json string for runtime settings
@@ -296,8 +304,7 @@ namespace Cli.Tests
             DatabaseType databaseType,
             HostModeType hostModeType = HostModeType.Production,
             IEnumerable<string>? corsOrigins = null,
-            bool? authenticateDevModeRequest = null
-        )
+            bool? authenticateDevModeRequest = null)
         {
             Dictionary<string, object> runtimeSettingDict = new();
             Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(

@@ -1,4 +1,5 @@
 using CommandLine;
+using static Cli.Utils;
 
 namespace Cli
 {
@@ -14,7 +15,12 @@ namespace Cli
         /// <returns>0 on success, -1 on failure.</returns>
         public static int Main(string[] args)
         {
-            Parser parser = new(settings => settings.CaseInsensitiveEnumValues = true);
+            Parser parser = new(settings =>
+                {
+                    settings.CaseInsensitiveEnumValues = true;
+                    settings.HelpWriter = Console.Out;
+                }
+            );
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
                 .WithParsed<InitOptions>(options =>
                 {
@@ -34,12 +40,14 @@ namespace Cli
                     bool isSuccess = ConfigGenerator.TryAddEntityToConfigWithOptions(options);
                     if (isSuccess)
                     {
-                        Console.WriteLine($"Added new entity:{options.Entity} with source: {options.Source} to config: {options.Config} with permissions: {string.Join(":", options.Permissions.ToArray())}.");
+                        Console.WriteLine($"Added new entity: {options.Entity} with source: {options.Source} to config: {options.Config}" +
+                            $" with permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
                         Console.WriteLine($"SUGGESTION: Use 'dab update <options>' to update any entities in your config.");
                     }
                     else
                     {
-                        Console.WriteLine($"ERROR: Could not add entity:{options.Entity} source: {options.Source} to config: {options.Config} with permissions: {string.Join(":", options.Permissions.ToArray())}.");
+                        Console.WriteLine($"ERROR: Could not add entity: {options.Entity} source: {options.Source} to config: {options.Config}" +
+                            $" with permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
                     }
                 })
                 .WithParsed<UpdateOptions>(options =>
@@ -52,7 +60,7 @@ namespace Cli
                     }
                     else
                     {
-                        Console.WriteLine($"Could not update the entity:{options.Entity}.");
+                        Console.WriteLine($"Could not update the entity: {options.Entity}.");
                     }
                 })
                 .WithParsed<StartOptions>(options =>
@@ -61,7 +69,7 @@ namespace Cli
 
                     if (!isSuccess)
                     {
-                        Console.WriteLine("Engine Failed to start.");
+                        Console.WriteLine("Failed to start the engine.");
                     }
                 });
 

@@ -354,11 +354,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 DbPolicyPredicates = GetFilterPredicatesFromOdataClause(odataClause, visitor);
             }
-            catch
+            catch (Exception ex)
             {
-                throw new DataApiBuilderException(message: "Policy query parameter is not well formed for GraphQL Policy Processing.",
-                                               statusCode: HttpStatusCode.Forbidden,
-                                               subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                throw new DataApiBuilderException(
+                    message: "Policy query parameter is not well formed for GraphQL Policy Processing.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
+                    innerException: ex);
             }
         }
 

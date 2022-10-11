@@ -118,6 +118,13 @@ steps:
     filePath: $(System.DefaultWorkingDirectory)/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -Package
 
+- task: PowerShell@2
+  displayName: "Smoke Test for DAB CLI"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/dab-smoke-test-script.ps1
+    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(Agent.OS)  $(dabVersion)
+
 # Sign the binaries that were generated per platform
 - template: templates/code-signing.yml
   parameters:

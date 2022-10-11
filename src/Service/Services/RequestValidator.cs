@@ -57,8 +57,7 @@ namespace Azure.DataApiBuilder.Service.Services
             ISqlMetadataProvider sqlMetadataProvider)
         {
             TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, sqlMetadataProvider);
-            TableDefinition baseTableDefinition = tableDefinition.BaseTableDefinition is null ?
-                tableDefinition : tableDefinition.BaseTableDefinition;
+            TableDefinition baseTableDefinition = GetBaseTableDefinition(tableDefinition);
 
             int countOfPrimaryKeysInBaseTable = baseTableDefinition.PrimaryKey.Count;
             int countOfPrimaryKeysInRequest = context.PrimaryKeyValuePairs.Count;
@@ -287,8 +286,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
             TableDefinition tableDefinition = TryGetTableDefinition(insertRequestCtx.EntityName, sqlMetadataProvider);
-            TableDefinition baseTableDefinition = tableDefinition.BaseTableDefinition is null ?
-                tableDefinition : tableDefinition.BaseTableDefinition;
+            TableDefinition baseTableDefinition = GetBaseTableDefinition(tableDefinition);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
@@ -297,7 +295,8 @@ namespace Azure.DataApiBuilder.Service.Services
 
             foreach ((string colName, ColumnDefinition colDef) in baseTableDefinition.Columns)
             {
-                if (!tableDefinition.ColumnAliasesFromBaseTable.TryGetValue(colName, out string? aliasName))
+                if (!tableDefinition.ColumnAliasesFromBaseTable.
+                    TryGetValue(colName, out string? aliasName))
                 {
                     aliasName = colName;
                 }
@@ -369,8 +368,7 @@ namespace Azure.DataApiBuilder.Service.Services
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
 
             TableDefinition tableDefinition = TryGetTableDefinition(upsertRequestCtx.EntityName, sqlMetadataProvider);
-            TableDefinition baseTableDefinition = tableDefinition.BaseTableDefinition is null ?
-                tableDefinition : tableDefinition.BaseTableDefinition;
+            TableDefinition baseTableDefinition = GetBaseTableDefinition(tableDefinition);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
@@ -509,6 +507,19 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
                     innerException: ex);
             }
+        }
+
+        /// <summary>
+        /// Gets the base table definition for the current view/table.
+        /// In case of table, base table definition is same as the
+        /// table definition.
+        /// </summary>
+        /// <param name="tableDefinition"></param>
+        /// <returns></returns>
+        private static TableDefinition GetBaseTableDefinition(TableDefinition tableDefinition)
+        {
+            return tableDefinition.BaseTableDefinition == null ?
+                tableDefinition : tableDefinition.BaseTableDefinition;
         }
 
         /// <summary>

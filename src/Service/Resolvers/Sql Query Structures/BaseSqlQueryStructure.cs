@@ -91,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             TableDefinition tableDefinition = GetUnderlyingTableDefinition();
             foreach (string leftoverColumn in leftoverSchemaColumns)
             {
-                if(!tableDefinition.ColumnAliasesFromBaseTable.
+                if (!tableDefinition.ColumnAliasesFromBaseTable.
                     TryGetValue(leftoverColumn, out string? leftOverColumnAlias))
                 {
                     leftOverColumnAlias = leftoverColumn;

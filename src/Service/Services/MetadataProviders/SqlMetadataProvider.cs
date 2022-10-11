@@ -650,7 +650,8 @@ namespace Azure.DataApiBuilder.Service.Services
                         GetDatabaseObjectName(entityName),
                         GetTableDefinition(entityName));
 
-                    if (entitySourceType is SourceType.View)
+                    if (entitySourceType is SourceType.View
+                        && _databaseType is DatabaseType.mssql)
                     {
                         await PopulateBaseTableDefinitionsForView(
                             schemaName: GetSchemaName(entityName),

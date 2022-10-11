@@ -420,7 +420,7 @@ namespace Azure.DataApiBuilder.Service.Services
             RestRequestContext requestCtx,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-            if (_queryExecutor.GetType() != typeof(MsSqlQueryExecutor)
+            if (_sqlMetadataProvider.GetDatabaseType() is not DatabaseType.mssql
                 || requestCtx.DatabaseObject.ObjectType is not SourceType.View)
             {
                 return true;

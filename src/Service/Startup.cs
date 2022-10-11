@@ -326,6 +326,9 @@ namespace Azure.DataApiBuilder.Service
                     }
                 });
 
+                // In development mode, BCP is enabled at /graphql endpoint by default.
+                // Need to disable mapping BCP explicitly as well to avoid ability to query
+                // at an additional endpoint: /graphql/ui.
                 endpoints.MapBananaCakePop().WithOptions(new GraphQLToolOptions
                 {
                     Enable = false

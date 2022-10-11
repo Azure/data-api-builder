@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Microsoft.Extensions.Logging;
@@ -207,10 +208,19 @@ namespace Cli
                 return false;
             }
 
+            // Try to get the source object as string or DatabaseObjectSource for new Entity
+            if (!TryCreateSourceObjectForNewEntity(
+                options,
+                out object? source))
+            {
+                Console.Error.WriteLine("Unable to create the source object.");
+                return false;
+            }
+
             // Create new entity.
             //
             Entity entity = new(
-                options.Source,
+                source!,
                 GetRestDetails(options.RestRoute),
                 GetGraphQLDetails(options.GraphQLType),
                 permissionSettings,
@@ -229,6 +239,66 @@ namespace Cli
         }
 
         /// <summary>
+        /// This method creates the source object for a new entity
+        /// if the given source fields specified by the user are valid.
+        /// </summary>
+        public static bool TryCreateSourceObjectForNewEntity(
+            AddOptions options,
+            [NotNullWhen(true)] out object? sourceObject)
+        {
+            sourceObject = null;
+
+            // Try to Parse the SourceType
+            if (!SourceTypeEnumConverter.TryGetSourceType(
+                    options.SourceType,
+                    out SourceType objectType))
+            {
+                Console.Error.WriteLine(
+                    SourceTypeEnumConverter.GenerateMessageForInvalidSourceType(options.SourceType!)
+                );
+                return false;
+            }
+
+            // Verify that parameter is provided with stored-procedure only
+            // and keyfields with table/views.
+            if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
+                    objectType,
+                    options.SourceParameters,
+                    options.SourceKeyFields))
+            {
+                return false;
+            }
+
+            // Parses the string array to parameter Dictionary
+            if (!TryParseSourceParameterDictionary(
+                    options.SourceParameters,
+                    out Dictionary<string, object>? parametersDictionary))
+            {
+                return false;
+            }
+
+            string[]? sourceKeyFields = null;
+            if (options.SourceKeyFields is not null && options.SourceKeyFields.Any())
+            {
+                sourceKeyFields = options.SourceKeyFields.ToArray();
+            }
+
+            // Try to get the source object as string or DatabaseObjectSource
+            if (!TryCreateSourceObject(
+                    options.Source,
+                    objectType,
+                    parametersDictionary,
+                    sourceKeyFields,
+                    out sourceObject))
+            {
+                Console.Error.WriteLine("Unable to parse the given source.");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Parse permission string to create PermissionSetting array.
         /// </summary>
         /// <param name="permissions">Permission input string as IEnumerable.</param>
@@ -241,7 +311,7 @@ namespace Cli
             string? role, operations;
             if (!TryGetRoleAndOperationFromPermission(permissions, out role, out operations))
             {
-                Console.Error.Write($"Failed to fetch the role and operation from the given permission string: {string.Join(":", permissions.ToArray())}.");
+                Console.Error.Write($"Failed to fetch the role and operation from the given permission string: {string.Join(SEPARATOR, permissions.ToArray())}.");
                 return null;
             }
 
@@ -320,7 +390,12 @@ namespace Cli
                 return false;
             }
 
-            object updatedSource = options.Source is null ? entity!.Source : options.Source;
+            if (!TryGetUpdatedSourceObjectWithOptions(options, entity, out object? updatedSource))
+            {
+                Console.Error.WriteLine("Failed to update the source object.");
+                return false;
+            }
+
             object? updatedRestDetails = options.RestRoute is null ? entity!.Rest : GetRestDetails(options.RestRoute);
             object? updatedGraphQLDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
             PermissionSetting[]? updatedPermissions = entity!.Permissions;
@@ -543,6 +618,85 @@ namespace Cli
             }
 
             return updatedOperationArray.ToArray();
+        }
+
+        /// <summary>
+        /// Parses updated options and uses them to create a new sourceObject
+        /// for the given entity.
+        /// Verifies if the given combination of fields is valid for update
+        /// and then it updates it, else it fails.
+        /// </summary>
+        private static bool TryGetUpdatedSourceObjectWithOptions(
+            UpdateOptions options,
+            Entity entity,
+            [NotNullWhen(true)] out object? updatedSourceObject)
+        {
+            entity.TryPopulateSourceFields();
+            updatedSourceObject = null;
+            string updatedSourceName = options.Source ?? entity.SourceName;
+            string[]? updatedKeyFields = entity.KeyFields;
+            SourceType updatedSourceType = entity.ObjectType;
+            Dictionary<string, object>? updatedSourceParameters = entity.Parameters;
+
+            // If SourceType provided by user is null,
+            // no update is required.
+            if (options.SourceType is not null)
+            {
+                if (!SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out updatedSourceType))
+                {
+                    Console.Error.WriteLine(
+                        SourceTypeEnumConverter.GenerateMessageForInvalidSourceType(options.SourceType)
+                    );
+                    return false;
+                }
+            }
+
+            if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
+                    updatedSourceType,
+                    options.SourceParameters,
+                    options.SourceKeyFields))
+            {
+                return false;
+            }
+
+            // Changing source object from stored-procedure to table/view
+            // should automatically update the parameters to be null.
+            // Similarly from table/view to stored-procedure, key-fields
+            // should be marked null.
+            if (SourceType.StoredProcedure.Equals(updatedSourceType))
+            {
+                updatedKeyFields = null;
+            }
+            else
+            {
+                updatedSourceParameters = null;
+            }
+
+            // If given SourceParameter is null, no update is required.
+            // Else updatedSourceParameters will contain the parsed dictionary of parameters. 
+            if (options.SourceParameters is not null &&
+                !TryParseSourceParameterDictionary(options.SourceParameters, out updatedSourceParameters))
+            {
+                return false;
+            }
+
+            if (options.SourceKeyFields is not null)
+            {
+                updatedKeyFields = options.SourceKeyFields.ToArray();
+            }
+
+            // Try Creating Source Object with the updated values.
+            if (!TryCreateSourceObject(
+                    updatedSourceName,
+                    updatedSourceType,
+                    updatedSourceParameters,
+                    updatedKeyFields,
+                    out updatedSourceObject))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>

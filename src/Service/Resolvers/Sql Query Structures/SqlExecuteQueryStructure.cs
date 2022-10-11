@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             message: $"Invalid value supplied for field: {paramKey}",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                            exception: ex);
+                            innerException: ex);
                     }
                 }
                 else

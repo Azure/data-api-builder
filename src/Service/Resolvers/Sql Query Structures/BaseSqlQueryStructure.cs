@@ -239,7 +239,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 "Decimal" => decimal.Parse(param),
                 "Boolean" => bool.Parse(param),
                 "DateTime" => DateTimeOffset.Parse(param),
-                "Guid" => param is null ? Guid.Parse(param) : null,
+                "Guid" => Guid.Parse(param),
                 _ => throw new NotSupportedException($"{systemType.Name} is not supported")
             };
         }
@@ -360,7 +360,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     message: "Policy query parameter is not well formed for GraphQL Policy Processing.",
                     statusCode: HttpStatusCode.Forbidden,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
-                    exception: ex);
+                    innerException: ex);
             }
         }
 

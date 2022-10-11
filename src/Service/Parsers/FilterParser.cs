@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
                     e.Message,
                     HttpStatusCode.BadRequest,
                     DataApiBuilderException.SubStatusCodes.BadRequest,
-                    exception: e);
+                    innerException: e);
             }
         }
 
@@ -71,7 +71,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
                     e.Message,
                     HttpStatusCode.BadRequest,
                     DataApiBuilderException.SubStatusCodes.BadRequest,
-                    exception: e);
+                    innerException: e);
             }
         }
     }

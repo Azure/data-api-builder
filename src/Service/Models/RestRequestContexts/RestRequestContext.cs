@@ -162,7 +162,7 @@ namespace Azure.DataApiBuilder.Service.Models
                     message: "$filter query parameter is not well formed.",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                    exception: e);
+                    innerException: e);
             }
         }
 
@@ -202,7 +202,7 @@ namespace Azure.DataApiBuilder.Service.Models
                         message: "The request body is not in a valid JSON format.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                        exception: ex);
+                        innerException: ex);
                 }
             }
             else

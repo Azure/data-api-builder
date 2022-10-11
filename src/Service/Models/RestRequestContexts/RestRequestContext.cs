@@ -161,7 +161,8 @@ namespace Azure.DataApiBuilder.Service.Models
                 throw new DataApiBuilderException(
                     message: "$filter query parameter is not well formed.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    innerException: e);
             }
         }
 
@@ -195,12 +196,13 @@ namespace Azure.DataApiBuilder.Service.Models
                         throw new JsonException("Failed to deserialize the request body payload");
                     }
                 }
-                catch (JsonException)
+                catch (JsonException ex)
                 {
                     throw new DataApiBuilderException(
                         message: "The request body is not in a valid JSON format.",
                         statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                        innerException: ex);
                 }
             }
             else

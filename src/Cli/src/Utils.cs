@@ -4,7 +4,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Configurations;
 using Humanizer;
+using Microsoft.Extensions.Logging;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>
@@ -484,6 +486,34 @@ namespace Cli
             }
 
             return !string.IsNullOrEmpty(runtimeConfigFile);
+        }
+
+        /// <summary>
+        /// Checks if config can be correctly parsed by deserializing the
+        /// json config into runtime config object.
+        /// </summary>
+        public static bool CanParseConfigCorrectly(string configFile)
+        {
+            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddConsole();
+            });
+
+            ILogger<RuntimeConfigProvider> logger = loggerFactory.CreateLogger<RuntimeConfigProvider>();
+
+            if (!TryReadRuntimeConfig(configFile, out string? runtimeConfigJson))
+            {
+                Console.WriteLine($"Failed to read the config file: {configFile}.");
+                return false;
+            }
+
+            if (!RuntimeConfig.TryGetDeserializedRuntimeConfig(runtimeConfigJson, out RuntimeConfig? _, logger))
+            {
+                Console.WriteLine($"Failed to parse the config file: {configFile}.");
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>

@@ -386,12 +386,27 @@ public class EndToEndTests
         File.WriteAllText(_testRuntimeConfig, runtimeConfigJson);
         Process process = StartDabProcess(
             command: "start",
-            flags: $"--config {_testRuntimeConfig} --LogLevel Error"
+            flags: $"--config {_testRuntimeConfig}"
         );
 
-        string? output = process.StandardOutput.ReadToEnd();
+        string? output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
-        Assert.IsTrue(output.Contains("Exiting the runtime engine..."));
+        Assert.IsTrue(output!.Contains($"Using config file: {_testRuntimeConfig}"));
+        output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+        if (expectSuccess)
+        {
+            Assert.IsTrue(output.Contains("Starting the runtime engine..."));
+        }
+        else
+        {
+            Assert.IsTrue(output.Contains($"Failed to parse the config file: {_testRuntimeConfig}."));
+            output = process.StandardOutput.ReadToEnd();
+            Assert.IsNotNull(output);
+            Assert.IsTrue(output.Contains("Failed to start the engine."));
+            Assert.IsTrue(process.HasExited);
+        }
+
         process.Kill();
 
     }
@@ -406,7 +421,7 @@ public class EndToEndTests
             return null;
         }
 
-        RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig? runtimeConfig, logger);
+        RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig? runtimeConfig, logger);
 
         if (runtimeConfig is null)
         {

@@ -812,6 +812,12 @@ namespace Cli
                 return false;
             }
 
+            // Validates that config file has data and follows the correct json schema
+            if (!CanParseConfigCorrectly(runtimeConfigFile))
+            {
+                return false;
+            }
+
             /// This will start the runtime engine with project name, config file, and if defined then
             /// a  valid LogLevel.
             List<string> args = new()

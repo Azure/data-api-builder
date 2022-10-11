@@ -147,7 +147,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
 
             Mock<ILogger> logger = new();
-            Assert.IsTrue(RuntimeConfig.TryGetDeserializedConfig(
+            Assert.IsTrue(RuntimeConfig.TryGetDeserializedRuntimeConfig(
                 runtimeConfigJson,
                 out RuntimeConfig deserializedRuntimeConfig,
                 logger.Object));
@@ -443,7 +443,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             Mock<ILogger> logger = new();
             string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
-            RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
+            RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
             Assert.IsNotNull(runtimeConfig.Schema);
             Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
             Assert.IsTrue(runtimeConfig.CosmosDb == null
@@ -696,7 +696,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string configPayload = File.ReadAllText(sqlFile);
 
             Mock<ILogger> logger = new();
-            RuntimeConfig.TryGetDeserializedConfig(configPayload, out RuntimeConfig runtimeConfig, logger.Object);
+            RuntimeConfig.TryGetDeserializedRuntimeConfig(configPayload, out RuntimeConfig runtimeConfig, logger.Object);
 
             return runtimeConfig.ConnectionString;
         }

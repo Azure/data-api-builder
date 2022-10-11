@@ -125,14 +125,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
             string? runtimeConfigJson = GetRuntimeConfigJsonString(configFileName);
 
             if (!string.IsNullOrEmpty(runtimeConfigJson) &&
-                RuntimeConfig.TryGetDeserializedConfig(
+                RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     runtimeConfigJson,
                     out runtimeConfig,
                     ConfigProviderLogger!))
             {
-                runtimeConfig!.DetermineGlobalSettings();
-                runtimeConfig!.DetermineGraphQLEntityNames();
-
                 if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
                 {
                     runtimeConfig!.ConnectionString = configPath.CONNSTRING;
@@ -218,14 +215,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
             }
 
-            if (RuntimeConfig.TryGetDeserializedConfig(
+            if (RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     configuration,
                     out RuntimeConfig? runtimeConfig,
                     ConfigProviderLogger!))
             {
                 RuntimeConfiguration = runtimeConfig;
-                RuntimeConfiguration!.DetermineGlobalSettings();
-                RuntimeConfiguration!.DetermineGraphQLEntityNames();
                 RuntimeConfiguration!.ConnectionString = connectionString;
 
                 if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmos)

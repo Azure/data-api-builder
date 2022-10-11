@@ -402,10 +402,6 @@ namespace Azure.DataApiBuilder.Service
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
 
-                // Deserializing GlobalSettings and GraphQLTypes 
-                // runtimeConfig.DetermineGlobalSettings();
-                // runtimeConfig.DetermineGraphQLEntityNames();
-
                 runtimeConfigValidator.ValidateConfig();
 
                 if (runtimeConfigProvider.IsDeveloperMode())

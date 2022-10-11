@@ -40,6 +40,15 @@ steps:
     echo "##vso[task.setvariable variable=dabVersion]$dabVersion"
   displayName: Set dab version
 
+ - task: FileTransform@1.206.0
+   displayName: 'Generate dab-config.MsSql.json'
+   variables: 
+     additionalProperties.version: 'urn:dab:config:schema:draft-$(dabVersion)'
+   inputs:
+     folderPath: '$(System.DefaultWorkingDirectory)'
+     fileType: 'json'
+     targetFiles: 'schemas/dab.draft.schema.json'
+
 - task: UseDotNet@2
   displayName: Setup .NET SDK v6.0.x
   inputs:

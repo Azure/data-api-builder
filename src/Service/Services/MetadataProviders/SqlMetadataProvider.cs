@@ -853,7 +853,8 @@ namespace Azure.DataApiBuilder.Service.Services
                 throw new DataApiBuilderException(
                     message,
                     statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                    innerException: ex);
             }
 
             await conn.OpenAsync();

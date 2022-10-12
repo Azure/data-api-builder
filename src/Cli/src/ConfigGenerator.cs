@@ -1,6 +1,8 @@
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
+using Microsoft.Extensions.Logging;
 using static Cli.Utils;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -16,16 +18,25 @@ namespace Cli
         /// </summary>
         public static bool TryGenerateConfig(InitOptions options)
         {
-            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
-            {
-                Console.Error.Write($"Failed to create the runtime config file.");
-                return false;
-            }
-
             if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
             {
                 runtimeConfigFile = RuntimeConfigPath.DefaultName;
                 Console.WriteLine($"Creating a new config file: {runtimeConfigFile}");
+            }
+
+            // File existence checked to avoid overwriting the existing configuration.
+            if (File.Exists(runtimeConfigFile))
+            {
+                Console.Error.Write($"Config file: {runtimeConfigFile} already exists. " +
+                    "Please provide a different name or remove the existing config file.");
+                return false;
+            }
+
+            // Creating a new json file with runtime configuration
+            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
+            {
+                Console.Error.Write($"Failed to create the runtime config file.");
+                return false;
             }
 
             return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
@@ -42,10 +53,14 @@ namespace Cli
             runtimeConfigJson = string.Empty;
 
             DatabaseType dbType = options.DatabaseType;
-            DataSource dataSource = new(dbType)
+            DataSource dataSource = new(dbType);
+
+            // default value of connection-string should be used, i.e Empty-string
+            // if not explicitly provided by the user
+            if (options.ConnectionString is not null)
             {
-                ConnectionString = options.ConnectionString
-            };
+                dataSource.ConnectionString = options.ConnectionString;
+            }
 
             CosmosDbOptions? cosmosDbOptions = null;
             MsSqlOptions? msSqlOptions = null;
@@ -91,11 +106,36 @@ namespace Cli
                 MsSql: msSqlOptions,
                 PostgreSql: postgreSqlOptions,
                 MySql: mySqlOptions,
-                RuntimeSettings: GetDefaultGlobalSettings(dbType, options.HostMode, options.CorsOrigin),
+                RuntimeSettings: GetDefaultGlobalSettings(
+                    options.HostMode,
+                    options.CorsOrigin,
+                    devModeDefaultAuth: GetDevModeDefaultAuth(options.DevModeDefaultAuth)),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
             return true;
+        }
+
+        /// <summary>
+        /// Helper method to parse the devModeDefaultAuth string into its corresponding boolean representation.
+        /// </summary>
+        /// <param name="devModeDefaultAuth">string to be parsed into bool value.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception">throws exception if string is not null and cannot be parsed into a bool value.</exception>
+        private static bool? GetDevModeDefaultAuth(string? devModeDefaultAuth)
+        {
+            if (devModeDefaultAuth is null)
+            {
+                return null;
+            }
+
+            if (bool.TryParse(devModeDefaultAuth, out bool parsedBoolVar))
+            {
+                return parsedBoolVar;
+            }
+
+            throw new Exception($"{devModeDefaultAuth} is an invalid value for the property authenticate-devmode-requests." +
+                $" It can only assume boolean values true/false.");
         }
 
         /// <summary>
@@ -168,10 +208,19 @@ namespace Cli
                 return false;
             }
 
+            // Try to get the source object as string or DatabaseObjectSource for new Entity
+            if (!TryCreateSourceObjectForNewEntity(
+                options,
+                out object? source))
+            {
+                Console.Error.WriteLine("Unable to create the source object.");
+                return false;
+            }
+
             // Create new entity.
             //
             Entity entity = new(
-                options.Source,
+                source!,
                 GetRestDetails(options.RestRoute),
                 GetGraphQLDetails(options.GraphQLType),
                 permissionSettings,
@@ -190,6 +239,66 @@ namespace Cli
         }
 
         /// <summary>
+        /// This method creates the source object for a new entity
+        /// if the given source fields specified by the user are valid.
+        /// </summary>
+        public static bool TryCreateSourceObjectForNewEntity(
+            AddOptions options,
+            [NotNullWhen(true)] out object? sourceObject)
+        {
+            sourceObject = null;
+
+            // Try to Parse the SourceType
+            if (!SourceTypeEnumConverter.TryGetSourceType(
+                    options.SourceType,
+                    out SourceType objectType))
+            {
+                Console.Error.WriteLine(
+                    SourceTypeEnumConverter.GenerateMessageForInvalidSourceType(options.SourceType!)
+                );
+                return false;
+            }
+
+            // Verify that parameter is provided with stored-procedure only
+            // and keyfields with table/views.
+            if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
+                    objectType,
+                    options.SourceParameters,
+                    options.SourceKeyFields))
+            {
+                return false;
+            }
+
+            // Parses the string array to parameter Dictionary
+            if (!TryParseSourceParameterDictionary(
+                    options.SourceParameters,
+                    out Dictionary<string, object>? parametersDictionary))
+            {
+                return false;
+            }
+
+            string[]? sourceKeyFields = null;
+            if (options.SourceKeyFields is not null && options.SourceKeyFields.Any())
+            {
+                sourceKeyFields = options.SourceKeyFields.ToArray();
+            }
+
+            // Try to get the source object as string or DatabaseObjectSource
+            if (!TryCreateSourceObject(
+                    options.Source,
+                    objectType,
+                    parametersDictionary,
+                    sourceKeyFields,
+                    out sourceObject))
+            {
+                Console.Error.WriteLine("Unable to parse the given source.");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Parse permission string to create PermissionSetting array.
         /// </summary>
         /// <param name="permissions">Permission input string as IEnumerable.</param>
@@ -202,7 +311,7 @@ namespace Cli
             string? role, operations;
             if (!TryGetRoleAndOperationFromPermission(permissions, out role, out operations))
             {
-                Console.Error.Write($"Failed to fetch the role and operation from the given permission string: {string.Join(":", permissions.ToArray())}.");
+                Console.Error.Write($"Failed to fetch the role and operation from the given permission string: {string.Join(SEPARATOR, permissions.ToArray())}.");
                 return null;
             }
 
@@ -281,14 +390,24 @@ namespace Cli
                 return false;
             }
 
-            object updatedSource = options.Source is null ? entity!.Source : options.Source;
+            if (!TryGetUpdatedSourceObjectWithOptions(options, entity, out object? updatedSource))
+            {
+                Console.Error.WriteLine("Failed to update the source object.");
+                return false;
+            }
+
             object? updatedRestDetails = options.RestRoute is null ? entity!.Rest : GetRestDetails(options.RestRoute);
-            object? updatedGraphqlDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
+            object? updatedGraphQLDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
             PermissionSetting[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, Relationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;
             Policy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             Field? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
+
+            if (false.Equals(updatedGraphQLDetails))
+            {
+                Console.WriteLine("WARNING: Disabling GraphQL for this entity will restrict it's usage in relationships");
+            }
 
             if (options.Permissions is not null && options.Permissions.Any())
             {
@@ -351,7 +470,7 @@ namespace Cli
 
             runtimeConfig.Entities[options.Entity] = new Entity(updatedSource,
                                                                 updatedRestDetails,
-                                                                updatedGraphqlDetails,
+                                                                updatedGraphQLDetails,
                                                                 updatedPermissions,
                                                                 updatedRelationships,
                                                                 updatedMappings);
@@ -422,7 +541,7 @@ namespace Cli
                 }
             }
 
-            // if the role we are trying to update is not found, we create a new one
+            // If the role we are trying to update is not found, we create a new one
             // and add it to permissionSettings list.
             if (!role_found)
             {
@@ -474,7 +593,7 @@ namespace Cli
             // Looping through existing operations
             foreach (KeyValuePair<Operation, PermissionOperation> operation in existingOperations)
             {
-                // if any existing operation doesn't require update, it is added as it is.
+                // If any existing operation doesn't require update, it is added as it is.
                 if (!updatedOperations.ContainsKey(operation.Key))
                 {
                     updatedOperations.Add(operation.Key, operation.Value);
@@ -502,6 +621,85 @@ namespace Cli
         }
 
         /// <summary>
+        /// Parses updated options and uses them to create a new sourceObject
+        /// for the given entity.
+        /// Verifies if the given combination of fields is valid for update
+        /// and then it updates it, else it fails.
+        /// </summary>
+        private static bool TryGetUpdatedSourceObjectWithOptions(
+            UpdateOptions options,
+            Entity entity,
+            [NotNullWhen(true)] out object? updatedSourceObject)
+        {
+            entity.TryPopulateSourceFields();
+            updatedSourceObject = null;
+            string updatedSourceName = options.Source ?? entity.SourceName;
+            string[]? updatedKeyFields = entity.KeyFields;
+            SourceType updatedSourceType = entity.ObjectType;
+            Dictionary<string, object>? updatedSourceParameters = entity.Parameters;
+
+            // If SourceType provided by user is null,
+            // no update is required.
+            if (options.SourceType is not null)
+            {
+                if (!SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out updatedSourceType))
+                {
+                    Console.Error.WriteLine(
+                        SourceTypeEnumConverter.GenerateMessageForInvalidSourceType(options.SourceType)
+                    );
+                    return false;
+                }
+            }
+
+            if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
+                    updatedSourceType,
+                    options.SourceParameters,
+                    options.SourceKeyFields))
+            {
+                return false;
+            }
+
+            // Changing source object from stored-procedure to table/view
+            // should automatically update the parameters to be null.
+            // Similarly from table/view to stored-procedure, key-fields
+            // should be marked null.
+            if (SourceType.StoredProcedure.Equals(updatedSourceType))
+            {
+                updatedKeyFields = null;
+            }
+            else
+            {
+                updatedSourceParameters = null;
+            }
+
+            // If given SourceParameter is null, no update is required.
+            // Else updatedSourceParameters will contain the parsed dictionary of parameters. 
+            if (options.SourceParameters is not null &&
+                !TryParseSourceParameterDictionary(options.SourceParameters, out updatedSourceParameters))
+            {
+                return false;
+            }
+
+            if (options.SourceKeyFields is not null)
+            {
+                updatedKeyFields = options.SourceKeyFields.ToArray();
+            }
+
+            // Try Creating Source Object with the updated values.
+            if (!TryCreateSourceObject(
+                    updatedSourceName,
+                    updatedSourceType,
+                    updatedSourceParameters,
+                    updatedKeyFields,
+                    out updatedSourceObject))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// This Method will verify the params required to update relationship info of an entity.
         /// </summary>
         /// <param name="runtimeConfig">runtime config object</param>
@@ -518,15 +716,28 @@ namespace Cli
             }
 
             // Checking if both cardinality and targetEntity is provided.
-            //
             if (cardinality is null || targetEntity is null)
             {
                 Console.WriteLine("cardinality and target entity is mandatory to update/add a relationship.");
                 return false;
             }
 
+            // Add/Update of relationship is not allowed when GraphQL is disabled in Global Runtime Settings
+            if (runtimeConfig.RuntimeSettings!.TryGetValue(GlobalSettingsType.GraphQL, out object? graphQLRuntimeSetting))
+            {
+                GraphQLGlobalSettings? graphQLGlobalSettings = JsonSerializer.Deserialize<GraphQLGlobalSettings>(
+                    (JsonElement)graphQLRuntimeSetting
+                );
+
+                if (graphQLGlobalSettings is not null && !graphQLGlobalSettings.Enabled)
+                {
+                    Console.WriteLine("Cannot add/update relationship as GraphQL is disabled in the" +
+                    " global runtime settings of the config.");
+                    return false;
+                }
+            }
+
             // Both the source entity and target entity needs to present in config to establish relationship.
-            //
             if (!runtimeConfig.Entities.ContainsKey(targetEntity))
             {
                 Console.WriteLine($"Entity:{targetEntity} is not present. Relationship cannot be added.");
@@ -534,11 +745,17 @@ namespace Cli
             }
 
             // Check if provided value of cardinality is present in the enum.
-            //
             if (!string.Equals(cardinality, Cardinality.One.ToString(), StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(cardinality, Cardinality.Many.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine($"Failed to parse the given cardinality : {cardinality}. Supported values are one/many.");
+                return false;
+            }
+
+            // If GraphQL is disabled, entity cannot be used in relationship
+            if (false.Equals(runtimeConfig.Entities[targetEntity].GraphQL))
+            {
+                Console.WriteLine($"Entity: {targetEntity} cannot be used in relationship as it is disabled for GraphQL.");
                 return false;
             }
 
@@ -584,7 +801,8 @@ namespace Cli
 
         /// <summary>
         /// This method will try starting the engine.
-        /// it will use the config provided by the user, else will look for the default config.
+        /// It will use the config provided by the user, else will look for the default config.
+        /// Does validation to check connection string is not null or empty.
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options)
         {
@@ -594,9 +812,30 @@ namespace Cli
                 return false;
             }
 
-            /// This will start the runtime engine with project name and config file.
-            string[] args = new string[] { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile };
-            return Azure.DataApiBuilder.Service.Program.StartEngine(args);
+            if (!CanStartEngineWithConfig(runtimeConfigFile))
+            {
+                Console.Error.WriteLine("Config is not valid.");
+                return false;
+            }
+
+            /// This will start the runtime engine with project name, config file, and if defined then
+            /// a  valid LogLevel.
+            List<string> args = new()
+            { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile };
+            if (options.LogLevel is not null)
+            {
+                if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
+                {
+                    Console.WriteLine($"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}, see: " +
+                        $"https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-7.0");
+                    return false;
+                }
+
+                args.Add("--LogLevel");
+                args.Add(options.LogLevel.ToString()!);
+            }
+
+            return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
         }
     }
 }

@@ -1,7 +1,7 @@
 # ASP.NET Core (.NET Framework)
 # Build and test ASP.NET Core projects targeting the full .NET Framework.
 # Add steps that publish symbols, save build artifacts, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+# https://learn.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 trigger:
 - main
 strategy:
@@ -25,13 +25,13 @@ variables:
 steps:
 - task: NuGetAuthenticate@0
   displayName: 'NuGet Authenticate'
-  
+
 - task: UseDotNet@2
   displayName: Setup .NET SDK v6.0.x
   inputs:
     packageType: sdk
     version: 6.0.x
-    
+
 - task: NuGetToolInstaller@1
 
 - task: NuGetCommand@2
@@ -40,7 +40,13 @@ steps:
     restoreSolution: '$(solution)'
     feedsToUse: config
     nugetConfigPath: Nuget.config
-    
+
+- task: FileTransform@1.206.0
+  displayName: 'Generate dab-config.Cosmos.json'
+  inputs:
+    folderPath: '$(System.DefaultWorkingDirectory)'
+    fileType: 'json'
+    targetFiles: 'src/Service/dab-config.Cosmos.json'
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
@@ -61,7 +67,7 @@ steps:
     command: test
     arguments: '--filter "TestCategory=Cosmos" --no-build --configuration $(buildConfiguration) $(ADDITIONAL_TEST_ARGS)'
     projects: '**/*Tests/*.csproj'
-    
+
 # '/XPlat Code coverage --results-directory /home/vsts/work/1/s/TestResults/'
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

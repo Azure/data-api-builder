@@ -1,86 +1,87 @@
 # Getting started with Data API builder for Azure Databases
 
-Welcome to this getting started tutorial that will guide you to have Data API builder for Azure Databases running locally on your machine as a first step, and then will guide you to deploy Data API builder for Azure Databases in an Azure Container Instance, so that at the end of the tutorial you'll have full knowledge of what's needed to run Data API builder for Azure Databases both on-prem and in Azure.
+Welcome! In this guide we will help you get started with Data API builder (DAB) for Azure Databases. First you are going to get DAB running locally on your machine. Then you will use DAB to create an API for your application. You will have the option to choose between Azure SQL Database or Azure Cosmos DB as the database backend.
 
-## Prerequisites
+## Use case scenario
 
-As the Data API builder for Azure Databases generate REST and GraphQL endpoints for database objects, you need to have a database ready to be used. You can choose either a relational or non-relational database.
-
-Please note that familiarity with Git commands and concept is assumed throughout all the tutorial.
-
-## Clone the Data API builder for Azure Databases engine
-
-Clone the repository locally:
-
-```
-git clone https://github.com/Azure/hawaii-engine.git
-```
-
-then move into the folder where the Data API builder for Azure Databases engine has been cloned and then move into the `samples/getting-started` folder, for example:
-
-```
-cd ./hawaii-engine/samples/getting-started
-```
-
-## Create the configuration file
-
-The Data API builder for Azure Databases engine needs a configuration file to know to which database it has to connect to, and what are the entities that have to be exposed, and their properties.
-
-Creating a configuration file is simple and you can use the Data API builder CLI to make it even simpler. In this tutorial the CLI will not be used so that you can get the chance to get familar with the configuration file, as it is a key part of Data API builder for Azure Databases.
-
-Create a copy of the `basic-empty.config.json.sample` file and rename it `library.config.json`
-
-The content of the file is the following:
-
-```json
-{
-    "$schema": "../schemas/hawaii.draft-01.schema.json",
-    "data-source": {
-        "database-type": "",
-        "connection-string": ""
-    },
-    "runtime": {
-        "host": {
-            "mode": "development"
-        }
-    },
-    "entities": {
-    }
-}
-```
-
-Aside the `$schema` property that points to the JSON schema that can be used to validate the configuration file, and that will be used by IDE like Visual Studio Code to provide intellisense and autocomplete, there are a few other properties that you need to know.
-
-In the `data-source` section you have to specify the database type and the connection string to connect to the database containing the objects you want to expose.
-
-`database-type` can be any of the following:
-- `mssql`: for Azure SQL DB, Azure SQL MI or SQL Server
-- `cosmos`: for Azure Cosmos DB (SQL API)
-- `postgresql`: for PostgreSQL
-- `mariadb`: for MariaDB
-- `mysql`: for MySQL
-
-Set the value of `database-type` to the database you plan to use. For this tutorial we'll be using `mssql` or `cosmos` to showcase both the relational and non-relational support.
-
-Once you have chosen the database you want to connect to, you need to provide the connection string in the `connection-string` property. This is a standard ADO.NET connection string for the database you'll be using and you can get it from the Azure Portal, for example. If don't know the connection string, no worries, we'll take care of that later.
-
-The `runtime` section is telling Data API builder to run in `development` mode. This means database errors will be surfaced and returned with full detail. This is great for development, but can be a security risk when running in production: that's why switching to `production` mode will disable this ability.
-
-The remaining property is the `entities` property and it is empty for now. This property will contain all the object you want to be exposed as REST or GraphQL endpoints.
-
-## The sample scenario
-
-In this tutorial we'll be creating the backend API for a small solution that allow end-user to keep track of the book in their library. Therefore the business entities we'll be dealing with are
+In this tutorial we'll be creating the backend API for a small solution that allows end-users to keep track of books in their bookshelf. Therefore, the business entities we'll be dealing with are:
 
 - Books
 - Authors
 
-Both the business entities need a modern endpoint, REST and/or GraphQL, to allow third party developers to build mobile and desktop application to manage the library catalog. Data API builder is perfect for enabling that modern endpoint support.
+Both the business entities need a modern endpoint, REST and/or GraphQL, to allow third party developers to build mobile and desktop applications to manage the library catalog. Data API builder is perfect for enabling that modern endpoint support.
 
-## Configure the Entities
+## Prerequisites
 
-Depending if you want to use Azure SQL Database or Cosmos DB, continue to the appropriate link:
+### .NET 6 SDK
 
-- [Getting Started with Data API builder for Azure SQL DB](./getting-started-azure-sql-db.md)
-- [Getting Started Data API builder for with Azure Cosmos DB](./getting-started-azure-cosmos-db.md)
+Make sure you have .NET 6.0 SDK installed on your machine: https://dotnet.microsoft.com/en-us/download/dotnet/6.0.
 
+You can list the SDKs installed on your machine by using the following command:
+
+```bash
+dotnet --list-sdks
+```
+
+## Installing DAB CLI
+
+Data API Builder provides a CLI tool to simplify configuration and execution of the engine. You can install the DAB CLI using [.NET tools](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools):
+
+- Download the latest version of the package: [dab.<version_number>.nupkg](https://github.com/Azure/data-api-builder/releases/)
+- Navigate to the folder where the package file is downloaded.
+
+then, to install this tool globally, use:
+
+```bash
+dotnet tool install -g --add-source ./ dab --version <version_number>
+```
+
+or, if you have already installed a previous version, you can update DAB CLI to the latest version via the following:
+
+```bash
+dotnet tool update -g --add-source ./ dab --version <version_number>
+```
+
+> **ATTENTION**: if you are running on Linux or MacOS, you may need to add .NET global tools to your PATH to call `dab` directly. Once installed run:
+> `export PATH=$PATH:~/.dotnet/tools`
+
+## Verifying the installation
+
+Installing the package will make the `dab` command available on your development machine. To validate your installation, you can run the following command:
+
+```bash
+dab --version
+```
+
+which should output
+
+```bash
+dab 0.1.5
+```
+
+Where `0.1.5` should match your version of DAB CLI.
+
+>For detailed instructions on how to Install DAB CLI look here: [Running Data API Builder for Azure Databases using CLI](../running-using-dab-cli.md)
+
+## Azure Database
+
+As the Data API builder for Azure Databases generates REST and GraphQL endpoints for database objects, you need to have a database ready for the tutorial. You can choose either a relational or non-relational database. This getting started guide documents the process to set up Data API builder for Azure SQL or Azure Cosmos DB.
+
+It's time for you to choose which database you want to use, so you can continue the getting started guide from there:
+
+- [Getting Started with Data API builder for Azure SQL](./getting-started-azure-sql.md)
+- [Getting Started with Data API builder for with Azure Cosmos DB](./getting-started-azure-cosmos-db.md)
+
+## Further reading
+
+### Running Data API Builder using Docker
+
+You can use Docker to run the Data API Builder on your machine. Instructions are available here: [Running Data API Builder for Azure Databases using a container](../running-using-a-container.md)
+
+### Using Data API Builder CLI to build the configuration file
+
+Data API Builder comes with a full CLI to help you run common tasks [Getting started with Data API Builder (`dab`) CLI](../getting-started/getting-started-dab-cli.md).
+
+### Deploy on Azure
+
+Data API Builder can run in Azure so that you can easily build scalable applications. Detailed explanation - along with a sample script to help you getting started - is available here: [Running in Azure](./../running-in-azure.md)

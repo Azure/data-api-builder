@@ -50,8 +50,8 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             {
                 ClaimsIdentity? identity = Options.EasyAuthProvider switch
                 {
-                    EasyAuthType.StaticWebApps => StaticWebAppsAuthentication.Parse(Context),
-                    EasyAuthType.AppService => AppServiceAuthentication.Parse(Context),
+                    EasyAuthType.StaticWebApps => StaticWebAppsAuthentication.Parse(Context, Logger),
+                    EasyAuthType.AppService => AppServiceAuthentication.Parse(Context, Logger),
                     _ => null
                 };
 
@@ -61,8 +61,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     // we don't terminate the pipeline since the request is
                     // always at least in the anonymous role.
                     // It means that anything that is exposed anonymously will still be visible.
-                    // This also represents the scenario where the user attempted to logon
-                    // but failed authentication. So, the role assigned to X-MS-API-ROLE will be anonymous.
+                    // The role assigned to X-MS-API-ROLE will be anonymous.
                     return Task.FromResult(AuthenticateResult.NoResult());
                 }
 

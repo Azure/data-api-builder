@@ -1,9 +1,9 @@
+using System.Collections.Generic;
 using System.Data.Common;
-using System.Reflection;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Resolvers;
-using Microsoft.Data.SqlClient;
+using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -27,42 +27,35 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(false, "While processing your request the database ran into an error.")]
         public void VerifyCorrectErrorMessage(bool isDeveloperMode, string expected)
         {
+            // We can use any other error code here, doesn't really matter.
+            int connectionEstablishmentError = 53;
             Mock<RuntimeConfigPath> configPath = new();
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             Mock<RuntimeConfigProvider> provider = new(configPath.Object, configProviderLogger.Object);
             provider.Setup(x => x.IsDeveloperMode()).Returns(isDeveloperMode);
-            DbExceptionParser parser = new(provider.Object);
-            DbException e = CreateSqlException();
-            string actual = parser.Parse(e).Message;
+            Mock<DbExceptionParser> parser = new(provider.Object, new HashSet<string>());
+            DbException e = SqlTestHelper.CreateSqlException(connectionEstablishmentError, expected);
+            string actual = (parser.Object).Parse(e).Message;
             Assert.AreEqual(expected, actual);
         }
 
         /// <summary>
-        /// Need to create our own DbException to invoke
-        /// the parser, do that here and return. Use
-        /// reflection to set _message for consistency and
-        /// readability.
+        /// Method to validate usage of the DbExceptionParser.IsTransientException method.
         /// </summary>
-        /// <returns>DbException for use in our unit tests.</returns>
-        private static DbException CreateSqlException()
+        /// <param name="expected">boolean value indicating if exception is expected to be transient or not.</param>
+        /// <param name="number">number to be populated in SqlException.Number field</param>
+        [DataTestMethod]
+        [DataRow(true, 121, DisplayName = "Transient exception error code #1")]
+        [DataRow(true, 8628, DisplayName = "Transient exception error code #2")]
+        [DataRow(true, 926, DisplayName = "Transient exception error code #3")]
+        [DataRow(false, 107, DisplayName = "Non-transient exception error code #1")]
+        [DataRow(false, 209, DisplayName = "Non-transient exception error code #2")]
+        public void TestIsTransientExceptionMethod(bool expected, int number)
         {
-            SqlException e = null;
-            try
-            {
-                SqlConnection connection = new(@"Data Source=NULL;Database=FAIL;Connection Timeout=1");
-                connection.Open();
-            }
-            catch (SqlException ex)
-            {
-                // To keep a consistent and descriptive message
-                // reflection is used to override "_message"
-                typeof(SqlException)
-                    .GetField("_message", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .SetValue(ex, "Development Mode Error Message.");
-                e = ex;
-            }
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
 
-            return e;
+            Assert.AreEqual(expected, dbExceptionParser.IsTransientException(SqlTestHelper.CreateSqlException(number)));
         }
     }
 }

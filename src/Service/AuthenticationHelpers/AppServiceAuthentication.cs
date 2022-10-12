@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
@@ -49,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         /// Failure: null, which indicates parsing failed, and can be interpreted
         /// as an authentication failure.
         /// </returns>
-        public static ClaimsIdentity? Parse(HttpContext context)
+        public static ClaimsIdentity? Parse(HttpContext context, ILogger logger)
         {
             ClaimsIdentity? identity = null;
 
@@ -77,9 +78,9 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     // Logging the parsing failure exception to the console, but not rethrowing
                     // nor creating a DataApiBuilder exception because the authentication handler
                     // will create and send a 401 unauthorized response to the client.
-                    Console.Error.WriteLine("Failure processing the AppService EasyAuth header.");
-                    Console.Error.WriteLine(error.Message);
-                    Console.Error.WriteLine(error.StackTrace);
+                    logger.LogError($"Failure processing the AppService EasyAuth header.\n" +
+                        $"{error.Message}\n" +
+                        $"{error.StackTrace}");
                 }
             }
 

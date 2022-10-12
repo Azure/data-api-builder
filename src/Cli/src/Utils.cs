@@ -1,9 +1,13 @@
+using System.Diagnostics.CodeAnalysis;
+using System.IO.Abstractions;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Configurations;
 using Humanizer;
+using Microsoft.Extensions.Logging;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>
@@ -14,9 +18,10 @@ namespace Cli
     public class Utils
     {
         public const string WILDCARD = "*";
+        public static readonly string SEPARATOR = ":";
 
         /// <summary>
-        /// creates the rest object which can be either a boolean value
+        /// Creates the rest object which can be either a boolean value
         /// or a RestEntitySettings object containing api route based on the input
         /// </summary>
         public static object? GetRestDetails(string? rest)
@@ -42,7 +47,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// creates the graphql object which can be either a boolean value
+        /// Creates the graphql object which can be either a boolean value
         /// or a GraphQLEntitySettings object containing graphql type {singular, plural} based on the input
         /// </summary>
         public static object? GetGraphQLDetails(string? graphQL)
@@ -61,9 +66,9 @@ namespace Cli
             else
             {
                 string singular, plural;
-                if (graphQL.Contains(":"))
+                if (graphQL.Contains(SEPARATOR))
                 {
-                    string[] arr = graphQL.Split(":");
+                    string[] arr = graphQL.Split(SEPARATOR);
                     if (arr.Length != 2)
                     {
                         Console.Error.WriteLine($"Invalid format for --graphql. Accepted values are true/false," +
@@ -112,7 +117,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// creates an array of Operation element which contains one of the CRUD operation and
+        /// Creates an array of Operation element which contains one of the CRUD operation and
         /// fields to which this operation is allowed as permission setting based on the given input.
         /// </summary>
         public static object[] CreateOperations(string operations, Policy? policy, Field? fields)
@@ -209,7 +214,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// creates a single PermissionSetting Object based on role, operations, fieldsToInclude, and fieldsToExclude.
+        /// Creates a single PermissionSetting Object based on role, operations, fieldsToInclude, and fieldsToExclude.
         /// </summary>
         public static PermissionSetting CreatePermissions(string role, string operations, Policy? policy, Field? fields)
         {
@@ -246,8 +251,8 @@ namespace Cli
         }
 
         /// <summary>
-        /// return true on successful parsing of mappings Dictionary from IEnumerable list.
-        /// returns false in case the format of the input is not correct.
+        /// Returns true on successful parsing of mappings Dictionary from IEnumerable list.
+        /// Returns false in case the format of the input is not correct.
         /// </summary>
         /// <param name="mappingList">List of ':' separated values indicating exposed and backend names.</param>
         /// <param name="mappings">Output a Dictionary containing mapping from backend name to exposed name.</param>
@@ -257,7 +262,7 @@ namespace Cli
             mappings = new();
             foreach (string item in mappingList)
             {
-                string[] map = item.Split(":");
+                string[] map = item.Split(SEPARATOR);
                 if (map.Length != 2)
                 {
                     Console.Error.WriteLine("Invalid format for --map");
@@ -272,31 +277,25 @@ namespace Cli
         }
 
         /// <summary>
-        /// returns the default global settings based on dbType.
+        /// Returns the default global settings.
         /// </summary>
-        public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(DatabaseType dbType,
-                                                                                        HostModeType hostMode,
-                                                                                        IEnumerable<string>? corsOrigin)
+        public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(HostModeType hostMode,
+                                                                                      IEnumerable<string>? corsOrigin,
+                                                                                      bool? devModeDefaultAuth)
         {
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
-            if (DatabaseType.cosmos.Equals(dbType))
-            {
-                defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(Enabled: false));
-            }
-            else
-            {
-                defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings());
-            }
-
+            defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings());
             defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
-            defaultGlobalSettings.Add(GlobalSettingsType.Host, GetDefaultHostGlobalSettings(hostMode, corsOrigin));
+            defaultGlobalSettings.Add(
+                GlobalSettingsType.Host,
+                GetDefaultHostGlobalSettings(hostMode, corsOrigin, devModeDefaultAuth));
             return defaultGlobalSettings;
         }
 
         /// <summary>
-        /// returns the default host Global Settings
-        /// if the user doesn't specify host mode. Default value to be used is Production.
-        /// sample:
+        /// Returns the default host Global Settings
+        /// If the user doesn't specify host mode. Default value to be used is Production.
+        /// Sample:
         // "host": {
         //     "mode": "production",
         //     "cors": {
@@ -308,17 +307,24 @@ namespace Cli
         //     }
         // }
         /// </summary>
-        public static HostGlobalSettings GetDefaultHostGlobalSettings(HostModeType hostMode, IEnumerable<string>? corsOrigin)
+        public static HostGlobalSettings GetDefaultHostGlobalSettings(
+            HostModeType hostMode,
+            IEnumerable<string>? corsOrigin,
+            bool? devModeDefaultAuth)
         {
             string[]? corsOriginArray = corsOrigin is null ? new string[] { } : corsOrigin.ToArray();
             Cors cors = new(Origins: corsOriginArray);
             AuthenticationConfig authenticationConfig = new(Provider: EasyAuthType.StaticWebApps.ToString());
-            return new HostGlobalSettings(hostMode, cors, authenticationConfig);
+            return new HostGlobalSettings(
+                Mode: hostMode,
+                IsDevModeDefaultRequestAuthenticated: devModeDefaultAuth,
+                Cors: cors,
+                Authentication: authenticationConfig);
         }
 
         /// <summary>
-        /// returns an object of type Policy
-        /// if policyRequest or policyDatabase is provided. Otherwise, returns null.
+        /// Returns an object of type Policy
+        /// If policyRequest or policyDatabase is provided. Otherwise, returns null.
         /// </summary>
         public static Policy? GetPolicyForOperation(string? policyRequest, string? policyDatabase)
         {
@@ -331,8 +337,8 @@ namespace Cli
         }
 
         /// <summary>
-        /// returns an object of type Field
-        /// if fieldsToInclude or fieldsToExclude is provided. Otherwise, returns null.
+        /// Returns an object of type Field
+        /// If fieldsToInclude or fieldsToExclude is provided. Otherwise, returns null.
         /// </summary>
         public static Field? GetFieldsForOperation(IEnumerable<string>? fieldsToInclude, IEnumerable<string>? fieldsToExclude)
         {
@@ -425,9 +431,9 @@ namespace Cli
         }
 
         /// <summary>
-        /// this method will parse role and operation from permission string.
+        /// This method will parse role and operation from permission string.
         /// A valid permission string will be of the form "<<role>>:<<actions>>"
-        /// it will return true if parsing is successful and add the parsed value
+        /// It will return true if parsing is successful and add the parsed value
         /// to the out params role and operations.
         /// </summary>
         public static bool TryGetRoleAndOperationFromPermission(IEnumerable<string> permissions, out string? role, out string? operations)
@@ -448,7 +454,7 @@ namespace Cli
 
         /// <summary>
         /// This method will try to find the config file based on the precedence.
-        /// if the config file is provided by user, it will return that.
+        /// If the config file is provided by user, it will return that.
         /// Else it will check the DAB_ENVIRONMENT variable.
         /// In case the environment variable is not set it will check for default config.
         /// If none of the files exists it will return false. Else true with output in runtimeConfigFile.
@@ -469,14 +475,14 @@ namespace Cli
             else
             {
                 Console.WriteLine("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
-                /// Need to reset to true explicitly so any that any reinvocations of this function
+                /// Need to reset to true explicitly so any that any re-invocations of this function
                 /// get simulated as being called for the first time specifically useful for tests.
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = true;
                 runtimeConfigFile = RuntimeConfigPath.GetFileNameForEnvironment(
                         hostingEnvironmentName: null,
                         considerOverrides: false);
 
-                /// so that the check doesn't run again when starting engine
+                /// So that the check doesn't run again when starting engine
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
             }
 
@@ -484,7 +490,184 @@ namespace Cli
         }
 
         /// <summary>
-        /// this method will write all the json string in the given file.
+        /// Reads the config and calls the method to validate 
+        /// connection-string and database-type
+        /// </summary>
+        public static bool CanStartEngineWithConfig(string configFile)
+        {
+            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddConsole();
+            });
+
+            ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
+
+            if (!TryReadRuntimeConfig(configFile, out string runtimeConfigJson))
+            {
+                return false;
+            }
+
+            if (!RuntimeConfig.TryGetDeserializedConfig(runtimeConfigJson, out RuntimeConfig? runtimeConfig, logger))
+            {
+                return false;
+            }
+
+            try
+            {
+                RuntimeConfigValidator._isDataSourceValidatedByCLI = false;
+                RuntimeConfigValidator.ValidateDataSourceInConfig(
+                    runtimeConfig!,
+                    new FileSystem(),
+                    logger);
+
+                RuntimeConfigValidator._isDataSourceValidatedByCLI = true;
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e.Message);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// This method checks that parameter is only used with Stored Procedure, while
+        /// key-fields only with table/views.
+        /// </summary>
+        /// <param name="sourceType">type of the source object.</param>
+        /// <param name="parameters">IEnumerable string containing parameters for stored-procedure.</param>
+        /// <param name="keyFields">IEnumerable string containing key columns for table/view.</param>
+        /// <returns> Returns true when successful else on failure, returns false.</returns>
+        public static bool VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
+            SourceType sourceType,
+            IEnumerable<string>? parameters,
+            IEnumerable<string>? keyFields)
+        {
+            if (SourceType.StoredProcedure.Equals(sourceType))
+            {
+                if (keyFields is not null && keyFields.Any())
+                {
+                    Console.Error.WriteLine("Stored Procedures don't support keyfields.");
+                    return false;
+                }
+            }
+            else
+            {
+                if (parameters is not null && parameters.Any())
+                {
+                    Console.Error.WriteLine("Tables/Views don't support parameters.");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Creates source object by using valid type, params, and keyfields.
+        /// </summary>
+        /// <param name="name">Name of the source.</param>
+        /// <param name="type">Type of the soure. i.e, table,view, and stored-procedure.</param>
+        /// <param name="parameters">Dictionary for parameters if source is stored-procedure</param>
+        /// <param name="keyFields">Array of string containing key columns for table/view type.</param>
+        /// <param name="sourceObject">Outputs the created source object.
+        /// It can be null, string, or DatabaseObjectSource</param>
+        /// <returns>True in case of succesful creation of source object.</returns>
+        public static bool TryCreateSourceObject(
+            string name,
+            SourceType type,
+            Dictionary<string, object>? parameters,
+            string[]? keyFields,
+            [NotNullWhen(true)] out object? sourceObject)
+        {
+
+            // If type is Table along with that parameter and keyfields is null then return the source as string.
+            if (SourceType.Table.Equals(type) && parameters is null && keyFields is null)
+            {
+                sourceObject = name;
+                return true;
+            }
+
+            sourceObject = new DatabaseObjectSource(
+                Type: type,
+                Name: name,
+                Parameters: parameters,
+                KeyFields: keyFields
+            );
+
+            return true;
+        }
+
+        /// <summary>
+        /// This method tries to parse the source parameters Dictionary from IEnumerable list
+        /// by splitting each item of the list on ':', where first item is param name and the
+        /// and the second item is the value. for any other item it should fail.
+        /// If Parameter List is null, no parsing happens and sourceParameter is returned as null.
+        /// </summary>
+        /// <param name="parametersList">List of ':' separated values indicating key and value.</param>
+        /// <param name="mappings">Output a Dictionary of parameters and their values.</param>
+        /// <returns> Returns true when successful else on failure, returns false.</returns>
+        public static bool TryParseSourceParameterDictionary(
+            IEnumerable<string>? parametersList,
+            out Dictionary<string, object>? sourceParameters)
+        {
+            sourceParameters = null;
+            if (parametersList is null)
+            {
+                return true;
+            }
+
+            sourceParameters = new(StringComparer.OrdinalIgnoreCase);
+            foreach (string param in parametersList)
+            {
+                string[] items = param.Split(SEPARATOR);
+                if (items.Length != 2)
+                {
+                    sourceParameters = null;
+                    Console.Error.WriteLine("Invalid format for --source.params");
+                    Console.WriteLine("Correct source parameter syntax: --source.params \"key1:value1,key2:value2,...\".");
+                    return false;
+                }
+
+                string paramKey = items[0];
+                object paramValue = ParseStringValue(items[1]);
+
+                sourceParameters.Add(paramKey, paramValue);
+            }
+
+            if (!sourceParameters.Any())
+            {
+                sourceParameters = null;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Converts string into either integer, double, or boolean value.
+        /// If the given string is neither of the above, it returns as string.
+        /// </summary>
+        private static object ParseStringValue(string stringValue)
+        {
+            if (int.TryParse(stringValue, out int integerValue))
+            {
+                return integerValue;
+            }
+            else if (double.TryParse(stringValue, out double floatingValue))
+            {
+                return floatingValue;
+            }
+            else if (Boolean.TryParse(stringValue, out bool booleanValue))
+            {
+                return booleanValue;
+            }
+
+            return stringValue;
+        }
+
+        /// <summary>
+        /// This method will write all the json string in the given file.
         /// </summary>
         public static bool WriteJsonContentToFile(string file, string jsonContent)
         {

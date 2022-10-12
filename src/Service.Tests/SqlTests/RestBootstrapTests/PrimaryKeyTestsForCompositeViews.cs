@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestBootstrapTests
                 await SetupAndRunRestApiTest(
                     primaryKeyRoute: "book_id/1/author_id/123",
                     queryString: string.Empty,
-                    entity: _compositeViewName,
+                    entityNameOrPath: _compositeViewName,
                     sqlQuery: query
                 );
             }
@@ -132,7 +132,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestBootstrapTests
         public async Task TestCleanup()
         {
             string dropViewQuery = $"DROP VIEW IF EXISTS {_compositeViewName}";
-            await _queryExecutor.ExecuteQueryAsync(dropViewQuery, parameters: null);
+            await _queryExecutor.ExecuteQueryAsync<object>(dropViewQuery, parameters: null, dataReaderHandler: null);
         }
     }
 }

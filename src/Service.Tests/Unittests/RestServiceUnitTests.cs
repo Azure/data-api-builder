@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Net;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
@@ -12,7 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
-namespace Azure.DataApiBuilder.Service.Tests.Unittests
+namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class RestServiceUnitTests
@@ -50,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         [DataRow("foo/bar/baz/qux", "/foo", "bar", "baz/qux")]
         [DataRow("foo/bar/baz/qux", "/foo/bar/", "baz", "qux")]
         [DataRow("foo/bar/baz/qux", "/foo/bar/baz", "qux", "")]
-        [DataRow("foo////bar////baz/qux", "////foo", "bar", "baz/qux")]
+        [DataRow("foo////bar////baz/qux", "////foo", "bar", "///baz/qux")]
         [DataRow("foo/bar/baz/qux/1/fred/23/thud/456789", "",
             "foo", "bar/baz/qux/1/fred/23/thud/456789")]
         public void ParseEntityNameAndPrimaryKeyTest(string route,
@@ -58,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                                                      string expectedEntityName,
                                                      string expectedPrimaryKeyRoute)
         {
-            InitializeTest(path);
+            InitializeTest(path, expectedEntityName);
             (string actualEntityName, string actualPrimaryKeyRoute) =
                 _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
             Assert.AreEqual(expectedEntityName, actualEntityName);
@@ -85,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         public void ErrorForInvalidRouteAndPathToParseTest(string route,
                                                            string path)
         {
-            InitializeTest(path);
+            InitializeTest(path, route);
             try
             {
                 (string actualEntityName, string actualPrimaryKeyRoute) =
@@ -113,48 +114,55 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         /// </summary>
         /// <param name="path">path to return from mocked
         /// runtimeconfigprovider.</param>
-        public static void InitializeTest(string path)
+        public static void InitializeTest(string path, string entityName)
         {
             RuntimeConfigPath runtimeConfigPath = TestHelper.GetRuntimeConfigPath(_testCategory);
             RuntimeConfigProvider runtimeConfigProvider =
                 TestHelper.GetMockRuntimeConfigProvider(runtimeConfigPath, path);
             MsSqlQueryBuilder queryBuilder = new();
-            DbExceptionParser dbExceptionParser = new(runtimeConfigProvider);
+            Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider, new HashSet<string>());
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<ILogger<ISqlMetadataProvider>> sqlMetadataLogger = new();
             Mock<ILogger<SqlQueryEngine>> queryEngineLogger = new();
             Mock<ILogger<SqlMutationEngine>> mutationEngingLogger = new();
+            Mock<ILogger<AuthorizationResolver>> authLogger = new();
 
             QueryExecutor<SqlConnection> queryExecutor = new(
                 runtimeConfigProvider,
-                dbExceptionParser,
+                dbExceptionParser.Object,
                 queryExecutorLogger.Object);
-            MsSqlMetadataProvider sqlMetadataProvider = new(
+            Mock<MsSqlMetadataProvider> sqlMetadataProvider = new(
                 runtimeConfigProvider,
                 queryExecutor,
                 queryBuilder,
                 sqlMetadataLogger.Object);
-
+            string outParam;
+            sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam)).Returns(true);
+            Dictionary<string, string> _pathToEntityMock = new() { { entityName, entityName } };
+            sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam))
+                               .Callback(new metaDataCallback((string entityPath, out string entity) => _ = _pathToEntityMock.TryGetValue(entityPath, out entity)))
+                               .Returns((string entityPath, out string entity) => _pathToEntityMock.TryGetValue(entityPath, out entity));
             Mock<IAuthorizationService> authorizationService = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             DefaultHttpContext context = new();
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
-            AuthorizationResolver authorizationResolver = new(runtimeConfigProvider, sqlMetadataProvider);
+            AuthorizationResolver authorizationResolver = new(runtimeConfigProvider, sqlMetadataProvider.Object, authLogger.Object);
 
             SqlQueryEngine queryEngine = new(
                 queryExecutor,
                 queryBuilder,
-                sqlMetadataProvider,
+                sqlMetadataProvider.Object,
                 httpContextAccessor.Object,
                 authorizationResolver,
-                queryEngineLogger.Object);
+                queryEngineLogger.Object,
+                runtimeConfigProvider);
 
             SqlMutationEngine mutationEngine =
                 new(
                 queryEngine,
                 queryExecutor,
                 queryBuilder,
-                sqlMetadataProvider,
+                sqlMetadataProvider.Object,
                 authorizationResolver,
                 httpContextAccessor.Object,
                 mutationEngingLogger.Object);
@@ -163,13 +171,24 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             _restService = new RestService(
                 queryEngine,
                 mutationEngine,
-                sqlMetadataProvider,
+                sqlMetadataProvider.Object,
                 httpContextAccessor.Object,
                 authorizationService.Object,
                 authorizationResolver,
                 runtimeConfigProvider);
         }
 
+        /// <summary>
+        /// Needed for the callback that is required
+        /// to make use of out parameter with mocking.
+        /// Without use of delegate the out param will
+        /// not be populated with the correct value.
+        /// This delegate is for the callback used
+        /// with the mocked SqlMetadataProvider.
+        /// </summary>
+        /// <param name="entityPath">The entity path.</param>
+        /// <param name="entity">Name of entity.</param>
+        delegate void metaDataCallback(string entityPath, out string entity);
         #endregion
     }
 }

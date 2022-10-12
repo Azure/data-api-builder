@@ -9,7 +9,9 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.Services;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Azure.DataApiBuilder.Service.Configurations
@@ -25,6 +27,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
         // Only characters from a-z,A-Z,0-9,.,_ are allowed to be present within the claimType.
         private static readonly string _invalidClaimChars = @"[^a-zA-Z0-9_\.]+";
+
+        // To make sure validation once done by CLI for connection string and databaseType is not repeated
+        // by engine for the same config. Default value is false.
+        public static bool _isDataSourceValidatedByCLI;
 
         // Regex to check occurence of any character not among [a-z,A-Z,0-9,.,_] in the claimType.
         // The claimType is invalid if there is a match found.
@@ -57,14 +63,39 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
 
-            if (string.IsNullOrWhiteSpace(runtimeConfig.DatabaseType.ToString()))
+            ValidateDataSourceInConfig(
+                runtimeConfig,
+                _fileSystem,
+                _logger);
+
+            ValidateAuthenticationConfig();
+
+            // Running these graphQL validations only in development mode to ensure
+            // fast startup of engine in production mode.
+            if (runtimeConfig.GraphQLGlobalSettings.Enabled
+                 && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
             {
-                const string databaseTypeNotSpecified =
-                    "The database-type should be provided with the runtime config.";
-                _logger.LogCritical(databaseTypeNotSpecified);
-                throw new NotSupportedException(databaseTypeNotSpecified);
+                ValidateEntityNamesInConfig(runtimeConfig.Entities);
+                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
+            }
+        }
+
+        /// <summary>
+        /// Throws exception if Invalid connection-string or database type
+        /// is present in the config
+        /// </summary>
+        public static void ValidateDataSourceInConfig(
+            RuntimeConfig runtimeConfig,
+            IFileSystem fileSystem,
+            ILogger logger)
+        {
+            // No Need to Validated Again if Validated by CLI
+            if (_isDataSourceValidatedByCLI)
+            {
+                return;
             }
 
+            // Connection string can't be null or empty
             if (string.IsNullOrWhiteSpace(runtimeConfig.ConnectionString))
             {
                 throw new DataApiBuilderException(
@@ -73,6 +104,29 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
+            ValidateDatabaseType(runtimeConfig, fileSystem, logger);
+        }
+
+        /// <summary>
+        /// Throws exception if database type is incorrectly configured
+        /// in the config. 
+        /// </summary>
+        public static void ValidateDatabaseType(
+            RuntimeConfig runtimeConfig,
+            IFileSystem fileSystem,
+            ILogger logger)
+        {
+            // Database Type cannot be null or empty
+            if (string.IsNullOrWhiteSpace(runtimeConfig.DatabaseType.ToString()))
+            {
+                const string databaseTypeNotSpecified =
+                    "The database-type should be provided with the runtime config.";
+                logger.LogCritical(databaseTypeNotSpecified);
+                throw new NotSupportedException(databaseTypeNotSpecified);
+            }
+
+            // Schema file should be present in the directory if not specified in the config
+            // when using cosmos database.
             if (runtimeConfig.DatabaseType is DatabaseType.cosmos)
             {
                 if (runtimeConfig.CosmosDb is null)
@@ -87,18 +141,65 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
                     }
 
-                    if (!_fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    if (!fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
                     {
                         throw new FileNotFoundException($"The GraphQL schema file at '{runtimeConfig.CosmosDb.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
                     }
                 }
             }
+        }
 
-            ValidateAuthenticationConfig();
+        /// <summary>
+        /// Validate that the entities that have graphQL exposed do not generate queries with the
+        /// same name.
+        /// For example: Consider the entity definitions
+        /// "Book": {
+        ///   "graphql": true
+        /// }
+        ///
+        /// "book": {
+        ///     "graphql": true
+        /// }
+        /// "Notebook": {
+        ///     "graphql": {
+        ///         "type": {
+        ///             "singular": "book",
+        ///             "plural": "books"
+        ///         }
+        ///     }
+        /// }
+        /// All these entities will create queries with the following field names
+        /// pk query name: book_by_pk
+        /// List query name: books
+        /// </summary>
+        /// <param name="entityCollection">Entity definitions</param>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static void ValidateEntitiesDoNotGenerateDuplicateQueries(IDictionary<string, Entity> entityCollection)
+        {
+            HashSet<string> graphQLQueries = new();
 
-            if (runtimeConfig.GraphQLGlobalSettings.Enabled)
+            foreach ((string entityName, Entity entity) in entityCollection)
             {
-                ValidateEntityNamesInConfig(runtimeConfig.Entities);
+                if (entity.GraphQL is null
+                    || (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
+                {
+                    continue;
+                }
+
+                // For entities that have graphQL exposed, two queries would be generated.
+                // Primary Key Query: For fetching an item using its primary key.
+                // List Query: To fetch a paginated list of items
+                // Query names for both these queries are determined.
+                string pkQueryName = GenerateByPKQueryName(entityName, entity);
+                string listQueryName = GenerateListQueryName(entityName, entity);
+
+                if (!graphQLQueries.Add(pkQueryName) || !graphQLQueries.Add(listQueryName))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Entity {entityName} generates queries that already exist",
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
             }
         }
 
@@ -164,6 +265,19 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
 
+            // Validate that the user has not set the devmode-authenticate-all-requests
+            // feature switch when hostmode is production.
+
+            if (runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production
+                && runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is not null
+                && runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is true)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Default state of authentication cannot be set for requests in production mode.",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
+
             bool isAudienceSet =
                 runtimeConfig.AuthNConfig is not null &&
                 runtimeConfig.AuthNConfig.Jwt is not null &&
@@ -225,12 +339,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             {
                                 configOperation = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
                             }
-                            catch
+                            catch (Exception e)
                             {
                                 throw new DataApiBuilderException(
                                     message: $"One of the action specified for entity:{entityName} is not well formed.",
                                     statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError,
+                                    innerException: e);
                             }
 
                             actionOp = configOperation.Name;
@@ -287,7 +402,105 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// Method to do the pre-processing needed in the permissions section of the runtimeconfig object.
+        /// Validates the semantic correctness of an Entity's relationship metadata
+        /// in the runtime configuration.
+        /// Validating Cases:
+        /// 1. Entities not defined in the config cannot be used in a relationship.
+        /// 2. Entities with graphQL disabled cannot be used in a relationship with another entity.
+        /// 3. If the LinkingSourceFields or sourceFields and LinkingTargetFields or targetFields are not
+        /// specified in the config for the given linkingObject, then the underlying database should
+        /// contain a foreign key relationship between the source and target entity.
+        /// 4. If linkingObject is null, and either of SourceFields or targetFields is null, then foreignKey pair
+        /// between source and target entity must be defined in the DB.
+        /// </summary>
+        /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
+        public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            _logger.LogInformation("Validating Relationship Section in Config...");
+
+            // Loop through each entity in the config and verify its relationship.
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+            {
+                // Skipping relationship validation if entity has no relationship
+                // or if graphQL is disabled.
+                if (entity.Relationships is null || false.Equals(entity.GraphQL))
+                {
+                    continue;
+                }
+
+                foreach ((string relationshipName, Relationship relationship) in entity.Relationships)
+                {
+                    // Validate if entity referenced in relationship is defined in the config.
+                    if (!runtimeConfig.Entities.ContainsKey(relationship.TargetEntity))
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"entity: {relationship.TargetEntity} used for relationship is not defined in the config.",
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    }
+
+                    // Validation to ensure that an entity with graphQL disabled cannot be referenced in a relationship by other entities
+                    object? targetEntityGraphQLDetails = runtimeConfig.Entities[relationship.TargetEntity].GraphQL;
+                    if (false.Equals(targetEntityGraphQLDetails))
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"entity: {relationship.TargetEntity} is disabled for GraphQL.",
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    }
+
+                    if (relationship.LinkingObject is not null)
+                    {
+                        (string linkingObjectSchema, string linkingObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(relationship.LinkingObject)!;
+                        DatabaseObject linkingDatabaseObject = new(linkingObjectSchema, linkingObjectName);
+
+                        if (relationship.LinkingSourceFields is null || relationship.SourceFields is null)
+                        {
+                            if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject,
+                                sqlMetadataProvider.EntityToDatabaseObject[entityName]))
+                            {
+                                throw new DataApiBuilderException(
+                                message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
+                                    $" and entity: {entityName}.",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            }
+                        }
+
+                        if (relationship.LinkingTargetFields is null || relationship.TargetFields is null)
+                        {
+                            if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject,
+                                sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity]))
+                            {
+                                throw new DataApiBuilderException(
+                                message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
+                                    $" and entity: {relationship.TargetEntity}.",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            }
+                        }
+                    }
+
+                    if (relationship.LinkingObject is null
+                        && (relationship.SourceFields is null || relationship.TargetFields is null))
+                    {
+                        if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(
+                                sqlMetadataProvider.EntityToDatabaseObject[entityName],
+                                sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity])
+                            )
+                        {
+                            throw new DataApiBuilderException(
+                            message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Pre-processes the permissions section of the runtime config object.
         /// For eg. removing the @item. directives, checking for invalid characters in claimTypes etc.
         /// </summary>
         /// <param name="runtimeConfig">The deserialised config object obtained from the json config supplied.</param>

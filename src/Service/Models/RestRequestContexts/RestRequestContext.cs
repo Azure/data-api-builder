@@ -7,6 +7,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
+using Microsoft.Extensions.Logging;
 using Microsoft.OData.UriParser;
 
 namespace Azure.DataApiBuilder.Service.Models
@@ -118,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <returns>
         /// Returns true on success, false on failure.
         /// </returns>
-        public void CalculateCumulativeColumns()
+        public void CalculateCumulativeColumns(ILogger logger)
         {
             try
             {
@@ -153,13 +154,15 @@ namespace Azure.DataApiBuilder.Service.Models
             {
                 // Exception not rethrown as returning false here is gracefully handled by caller,
                 // which will result in a 403 Unauthorized response to the client.
-                Console.Error.WriteLine("ERROR IN ODATA_AST_COLUMN_VISITOR TRAVERSAL");
-                Console.Error.WriteLine(e.Message);
-                Console.Error.WriteLine(e.StackTrace);
+                logger.LogError($"ERROR IN ODATA_AST_COLUMN_VISITOR TRAVERSAL" +
+                    $"{e.Message}" +
+                    $"{e.StackTrace}");
+
                 throw new DataApiBuilderException(
                     message: "$filter query parameter is not well formed.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    innerException: e);
             }
         }
 
@@ -193,12 +196,13 @@ namespace Azure.DataApiBuilder.Service.Models
                         throw new JsonException("Failed to deserialize the request body payload");
                     }
                 }
-                catch (JsonException)
+                catch (JsonException ex)
                 {
                     throw new DataApiBuilderException(
                         message: "The request body is not in a valid JSON format.",
                         statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                        innerException: ex);
                 }
             }
             else

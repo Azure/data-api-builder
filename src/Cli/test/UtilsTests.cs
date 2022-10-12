@@ -14,7 +14,7 @@ namespace Cli.Tests
         [TestMethod]
         public void TestGetRestDetails()
         {
-            // when the rest is a boolean object
+            // When the rest is a boolean object
             object? restDetails = GetRestDetails("true");
             Assert.IsNotNull(restDetails);
             Assert.IsInstanceOfType(restDetails, typeof(bool));
@@ -35,9 +35,9 @@ namespace Cli.Tests
             Assert.IsInstanceOfType(restDetails, typeof(bool));
             Assert.IsFalse((bool)restDetails);
 
-            // when rest is non-boolean string
+            // When rest is non-boolean string
             restDetails = GetRestDetails("book");
-            Assert.AreEqual(new RestEntitySettings(Route: "/book"), restDetails);
+            Assert.AreEqual(new RestEntitySettings(Path: "/book"), restDetails);
         }
 
         /// <summary>
@@ -70,11 +70,11 @@ namespace Cli.Tests
             //when graphql is null
             Assert.IsNull(GetGraphQLDetails(null));
 
-            // when graphql is non-boolean string
+            // When graphql is non-boolean string
             graphQlDetails = GetGraphQLDetails("book");
             Assert.AreEqual(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "books")), graphQlDetails);
 
-            // when graphql is a pair of string for custom singular, plural string.
+            // When graphql is a pair of string for custom singular, plural string.
             graphQlDetails = GetGraphQLDetails("book:plural_books");
             Assert.AreEqual(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "plural_books")), graphQlDetails);
 
@@ -106,6 +106,25 @@ namespace Cli.Tests
             Assert.IsTrue(TryGetConfigFileBasedOnCliPrecedence(userProvidedConfigFile, out string actualRuntimeConfigFile));
             Assert.AreEqual(expectedRuntimeConfigFile, actualRuntimeConfigFile);
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, envValueBeforeTest);
+        }
+
+        /// <summary>
+        /// Test to verify negative/positive string numerals are correctly parsed as integers
+        /// Decimal values are parsed as double.
+        /// Boolean string is correctly parsed as boolean
+        /// everything else is parsed as string.
+        /// </summary>
+        [TestMethod]
+        public void TestTryParseSourceParameterDictionary()
+        {
+            IEnumerable<string>? parametersList = new string[] { "param1:123", "param2:-243", "param3:220.12", "param4:True", "param5:dab" };
+            Assert.IsTrue(TryParseSourceParameterDictionary(parametersList, out Dictionary<string, object>? sourceParameters));
+            Assert.IsNotNull(sourceParameters);
+            Assert.AreEqual(sourceParameters.GetValueOrDefault("param1"), 123);
+            Assert.AreEqual(sourceParameters.GetValueOrDefault("param2"), -243);
+            Assert.AreEqual(sourceParameters.GetValueOrDefault("param3"), 220.12);
+            Assert.AreEqual(sourceParameters.GetValueOrDefault("param4"), true);
+            Assert.AreEqual(sourceParameters.GetValueOrDefault("param5"), "dab");
         }
 
         [ClassCleanup]

@@ -18,13 +18,13 @@ jobs:
   steps:
   - task: NuGetAuthenticate@0
     displayName: 'NuGet Authenticate'
-  
+
   - task: UseDotNet@2
     displayName: Setup .NET SDK v6.0.x
     inputs:
       packageType: sdk
       version: 6.0.x
-      
+
   - task: NuGetToolInstaller@1
 
   - task: NuGetCommand@2
@@ -48,6 +48,13 @@ jobs:
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu MySql Image Docker
 
+  - task: FileTransform@1.206.0
+    displayName: 'Generate dab-config.MySql.json'
+    inputs:
+      folderPath: '$(System.DefaultWorkingDirectory)'
+      fileType: 'json'
+      targetFiles: 'src/Service/dab-config.MySql.json'
+
   - task: DotNetCoreCLI@2
     displayName: Build
     inputs:
@@ -61,7 +68,7 @@ jobs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
       targetFiles: 'src/out/tests/net6.0/dab-config.MySql.json'
-      
+
   - task: DotNetCoreCLI@2
     displayName: 'Run MySql Integration Tests'
     inputs:

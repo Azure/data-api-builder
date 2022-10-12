@@ -18,6 +18,9 @@ namespace Cli.Tests
                 source: "MyTable",
                 permissions: new string[] { "anonymous", "create" },
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { "id", "rating" },
@@ -32,7 +35,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -88,6 +91,9 @@ namespace Cli.Tests
                 source: "MyTable",
                 permissions: new string[] { "authenticated", "*" },
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { "id", "rating" },
@@ -102,7 +108,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -159,6 +165,9 @@ namespace Cli.Tests
                 source: "MyTable",
                 permissions: new string[] { "anonymous", "update" },
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { "id", "rating" },
@@ -173,7 +182,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -227,6 +236,9 @@ namespace Cli.Tests
                 source: "MyTable",
                 permissions: new string[] { "anonymous", "read,delete" },
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { "id", "type", "quantity" },
@@ -241,7 +253,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -323,6 +335,9 @@ namespace Cli.Tests
                 source: "MyTable",
                 permissions: new string[] { "anonymous", "*" },
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { "id", "rating" },
@@ -337,7 +352,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -389,6 +404,9 @@ namespace Cli.Tests
                 source: null,
                 permissions: null,
                 entity: "SecondEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { },
@@ -403,7 +421,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -489,7 +507,7 @@ namespace Cli.Tests
 
         /// <summary>
         /// Simple test to update an existing relationship.
-        /// it will add source.fiels, target.fields, linking.object, linking.source.fields, linking.target.fields
+        /// It will add source.fields, target.fields, linking.object, linking.source.fields, linking.target.fields
         /// </summary>
         [TestMethod, Description("it should update an existing relationship")]
         public void TestUpdateEntityByModifyingRelationship()
@@ -498,6 +516,9 @@ namespace Cli.Tests
                 source: null,
                 permissions: null,
                 entity: "SecondEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { },
@@ -512,7 +533,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -616,6 +637,9 @@ namespace Cli.Tests
                 source: null,
                 permissions: null,
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { },
@@ -630,7 +654,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -655,6 +679,9 @@ namespace Cli.Tests
                 source: null,
                 permissions: null,
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { },
@@ -669,7 +696,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -694,6 +721,9 @@ namespace Cli.Tests
                 source: null,
                 permissions: null,
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { },
@@ -708,7 +738,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -741,6 +771,9 @@ namespace Cli.Tests
                source: "MyTable",
                permissions: new string[] { "anonymous", "delete" },
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: fieldsToInclude,
@@ -755,26 +788,302 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: "outputfile"
+                config: _testRuntimeConfig
             );
 
-            string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetSingleEntity);
+            string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
             string? expectedConfiguration = null;
             switch (check)
             {
                 case "PolicyAndFields":
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyAndFieldsGeneratedWithUpdateCommand);
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLCIY_AND_ACTION_FIELDS);
                     break;
                 case "Policy":
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyWithUpdateCommand);
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLICY);
                     break;
                 case "Fields":
-                    expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithFieldsGeneratedWithUpdateCommand);
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_ACTION_FIELDS);
                     break;
             }
 
             Assert.IsTrue(TryUpdateExistingEntity(options, ref actualConfig));
             Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration!), JObject.Parse(actualConfig)));
+        }
+
+        /// <summary>
+        /// Simple test to verify success on updating a source from string to source object for valid fields.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("s001.book", null, null, null, "UpdateSourceName", DisplayName = "Both KeyFields and Parameters provided for source.")]
+        [DataRow(null, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" }, null, "ConvertToStoredProcedure", DisplayName = "SourceParameters with stored procedure.")]
+        [DataRow(null, "view", null, new string[] { "col1", "col2" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
+        [DataRow(null, "table", null, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
+        [DataRow(null, null, null, new string[] { "id", "name" }, "ConvertToDefaultType", DisplayName = "Source KeyFields with SourceType not provided")]
+        public void TestUpdateSourceStringToDatabaseSourceObject(
+            string? source,
+            string? sourceType,
+            IEnumerable<string>? parameters,
+            IEnumerable<string>? keyFields,
+            string task)
+        {
+
+            UpdateOptions options = new(
+                source: source,
+                permissions: new string[] { "anonymous", "*" },
+                entity: "MyEntity",
+                sourceType: sourceType,
+                sourceParameters: parameters,
+                sourceKeyFields: keyFields,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                map: new string[] { },
+                config: _testRuntimeConfig
+            );
+
+            string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
+            string? expectedConfiguration;
+            switch (task)
+            {
+                case "UpdateSourceName":
+                    actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
+                    break;
+                case "ConvertToStoredProcedure":
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
+                    break;
+                case "ConvertToView":
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_SOURCE_AS_VIEW);
+                    break;
+                default:
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE);
+                    break;
+            }
+
+            Assert.IsTrue(TryUpdateExistingEntity(options, ref actualConfig));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration!), JObject.Parse(actualConfig)));
+        }
+
+        /// <summary>
+        /// Simple test to verify success on updating a source's value type from string to object.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("newSourceName", null, null, "UpdateSourceName", DisplayName = "Update Source Name of the source object.")]
+        [DataRow(null, new string[] { "param1:dab", "param2:false" }, null, "UpdateParameters", DisplayName = "update Parameters of stored procedure.")]
+        [DataRow(null, null, new string[] { "col1", "col2" }, "UpdateKeyFields", DisplayName = "update KeyFields for table/view.")]
+        public void TestUpdateDatabaseSourceObject(
+            string? source,
+            IEnumerable<string>? parameters,
+            IEnumerable<string>? keyFields,
+            string task)
+        {
+            UpdateOptions options = new(
+                source: source,
+                permissions: new string[] { "anonymous", "*" },
+                entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: parameters,
+                sourceKeyFields: keyFields,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                map: new string[] { },
+                config: _testRuntimeConfig
+            );
+
+            string? initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
+            switch (task)
+            {
+                case "UpdateSourceName":
+                    AssertUpdatedValuesForSourceObject(
+                        options,
+                        initialConfig,
+                        entityName: "MyEntity",
+                        oldSourceName: "s001.book",
+                        updatedSourceName: "newSourceName",
+                        oldSourceType: SourceType.StoredProcedure,
+                        updatedSourceType: SourceType.StoredProcedure,
+                        oldParameters: new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
+                        updatedParameters: new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
+                        oldKeyFields: null,
+                        updatedKeyFields: null
+                    );
+                    break;
+
+                case "UpdateParameters":
+                    AssertUpdatedValuesForSourceObject(
+                        options,
+                        initialConfig,
+                        entityName: "MyEntity",
+                        oldSourceName: "s001.book",
+                        updatedSourceName: "s001.book",
+                        oldSourceType: SourceType.StoredProcedure,
+                        updatedSourceType: SourceType.StoredProcedure,
+                        oldParameters: new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
+                        updatedParameters: new Dictionary<string, object>() { { "param1", "dab" }, { "param2", false } },
+                        oldKeyFields: null,
+                        updatedKeyFields: null
+                    );
+                    break;
+
+                case "UpdateKeyFields":
+                    initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE);
+                    AssertUpdatedValuesForSourceObject(
+                        options,
+                        initialConfig,
+                        entityName: "MyEntity",
+                        oldSourceName: "s001.book",
+                        updatedSourceName: "s001.book",
+                        oldSourceType: SourceType.Table,
+                        updatedSourceType: SourceType.Table,
+                        oldParameters: null,
+                        updatedParameters: null,
+                        oldKeyFields: new string[] { "id", "name" },
+                        updatedKeyFields: new string[] { "col1", "col2" }
+                    );
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Converts one source object type to another.
+        /// Also testing automatic update for parameter and keyfield to null in case
+        /// of table/view, and stored-procedure respectively.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" },
+            null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, false, true)]
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, new string[] { "col1", "col2" },
+            SINGLE_ENTITY_WITH_STORED_PROCEDURE, false, false)]
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, null, SINGLE_ENTITY_WITH_STORED_PROCEDURE,
+            true, true)]
+        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, new string[] { "id", "name" },
+            SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, false, true)]
+        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "view", null, new string[] { "col1", "col2" },
+            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, false, true)]
+        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", new string[] { "param1:kind", "param2:true" },
+            null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, false, false)]
+        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE,
+            true, true)]
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", null, new string[] { "col1", "col2" },
+            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, false, true)]
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", new string[] { "param1:kind", "param2:true" }, null,
+            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, false, false)]
+        public void TestConversionOfSourceObject(
+            string initialSourceObjectEntity,
+            string sourceType,
+            IEnumerable<string>? parameters,
+            string[]? keyFields,
+            string updatedSourceObjectEntity,
+            bool expectNoKeyFieldsAndParameters,
+            bool expectSuccess)
+        {
+            UpdateOptions options = new(
+                source: "s001.book",
+                permissions: new string[] { "anonymous", "*" },
+                entity: "MyEntity",
+                sourceType: sourceType,
+                sourceParameters: parameters,
+                sourceKeyFields: keyFields,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                map: new string[] { },
+                config: _testRuntimeConfig
+            );
+
+            string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, initialSourceObjectEntity);
+            Assert.AreEqual(expectSuccess, ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+
+            if (expectSuccess)
+            {
+                string updatedConfig = AddPropertiesToJson(INITIAL_CONFIG, updatedSourceObjectEntity);
+                if (!expectNoKeyFieldsAndParameters)
+                {
+                    Assert.IsTrue(JToken.DeepEquals(JObject.Parse(runtimeConfig), JObject.Parse(updatedConfig)));
+                }
+                else
+                {
+                    Entity entity = GetEntityObjectFromRuntimeConfigJson(runtimeConfig, entityName: "MyEntity");
+                    entity.TryPopulateSourceFields();
+                    Assert.IsNull(entity.Parameters);
+                    Assert.IsNull(entity.KeyFields);
+                }
+            }
+
+        }
+
+        /// <summary>
+        /// Deserialize the given json config and return the entity object for the provided entityName if present.
+        /// </summary>
+        private static Entity GetEntityObjectFromRuntimeConfigJson(string runtimeConfigJson, string entityName)
+        {
+            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigJson, GetSerializationOptions());
+            Assert.IsTrue(runtimeConfig!.Entities.ContainsKey(entityName));
+            return runtimeConfig!.Entities[entityName];
+        }
+
+        /// <summary>
+        /// Contains Assert to check only the intended values of source object is updated.
+        /// </summary>
+        private static void AssertUpdatedValuesForSourceObject(
+            UpdateOptions options,
+            string initialConfig,
+            string entityName,
+            string oldSourceName, string updatedSourceName,
+            SourceType oldSourceType, SourceType updatedSourceType,
+            Dictionary<string, object>? oldParameters, Dictionary<string, object>? updatedParameters,
+            string[]? oldKeyFields, string[]? updatedKeyFields)
+        {
+            Entity entity = GetEntityObjectFromRuntimeConfigJson(initialConfig, entityName);
+            entity.TryPopulateSourceFields();
+            Assert.AreEqual(oldSourceName, entity.SourceName);
+            Assert.AreEqual(oldSourceType, entity.ObjectType);
+            Assert.IsTrue(JToken.DeepEquals(
+                JToken.FromObject(JsonSerializer.SerializeToElement(oldParameters)),
+                JToken.FromObject(JsonSerializer.SerializeToElement(entity.Parameters)))
+            );
+            CollectionAssert.AreEquivalent(oldKeyFields, entity.KeyFields);
+            Assert.IsTrue(TryUpdateExistingEntity(options, ref initialConfig));
+            entity = GetEntityObjectFromRuntimeConfigJson(initialConfig, entityName);
+            entity.TryPopulateSourceFields();
+            Assert.AreEqual(updatedSourceName, entity.SourceName);
+            Assert.AreEqual(updatedSourceType, entity.ObjectType);
+            Assert.IsTrue(JToken.DeepEquals(
+                JToken.FromObject(JsonSerializer.SerializeToElement(updatedParameters)),
+                JToken.FromObject(JsonSerializer.SerializeToElement(entity.Parameters)))
+            );
+            CollectionAssert.AreEquivalent(updatedKeyFields, entity.KeyFields);
         }
 
         /// <summary>
@@ -787,6 +1096,9 @@ namespace Cli.Tests
                source: "MyTable",
                permissions: new string[] { "anonymous", "delete" },
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { },
@@ -801,10 +1113,10 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: "outputfile"
+                config: _testRuntimeConfig
             );
 
-            string? actualConfig = AddPropertiesToJson(GetInitialConfiguration, GetEntityConfigurationWithPolicyAndFields);
+            string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLCIY_AND_ACTION_FIELDS);
             string updatedEntityConfigurationWithPolicyAndFields = @"
               {
                 ""entities"": {
@@ -831,7 +1143,7 @@ namespace Cli.Tests
                     }
                 }
             }";
-            string? expectedConfiguration = AddPropertiesToJson(GetInitialConfiguration, updatedEntityConfigurationWithPolicyAndFields);
+            string? expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, updatedEntityConfigurationWithPolicyAndFields);
             Assert.IsTrue(TryUpdateExistingEntity(options, ref actualConfig));
             Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration!), JObject.Parse(actualConfig)));
         }
@@ -846,6 +1158,9 @@ namespace Cli.Tests
                 source: null,
                 permissions: null,
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { },
@@ -860,7 +1175,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "id:Identity", "name:Company Name" },
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -908,6 +1223,9 @@ namespace Cli.Tests
                 source: null,
                 permissions: null,
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { },
@@ -922,7 +1240,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "Macaroni:Mac & Cheese", "region:United State's Region", "russian:русский", "chinese:中文" },
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -972,6 +1290,9 @@ namespace Cli.Tests
                 source: null,
                 permissions: null,
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { },
@@ -986,7 +1307,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "name:Company Name", "addr:Company Address", "number:Contact Details" },
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string runtimeConfig = GetConfigWithMappings();
 
@@ -1019,8 +1340,8 @@ namespace Cli.Tests
 
         /// <summary>
         /// Simple test to update an entity permission with new action containing WILDCARD and other crud operation.
-        /// example "*,read,create"
-        /// update including WILDCARD along with other crud operation is not allowed
+        /// Example "*,read,create"
+        /// Update including WILDCARD along with other crud operation is not allowed
         /// </summary>
         [TestMethod, Description("update action should fail because of invalid action combination.")]
         public void TestUpdateEntityPermissionWithWildcardAndOtherCRUDAction()
@@ -1029,6 +1350,9 @@ namespace Cli.Tests
                 source: "MyTable",
                 permissions: new string[] { "anonymous", "*,create,read" },
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { "id", "rating" },
@@ -1043,7 +1367,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1061,6 +1385,49 @@ namespace Cli.Tests
                             }
                         }
                     }";
+
+            Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+        }
+
+        /// <summary>
+        /// Simple test to verify failure on updating source of an entity with invalid fields.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, DisplayName = "Both KeyFields and Parameters provided for source.")]
+        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, DisplayName = "KeyFields with stored procedure.")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, DisplayName = "Parameters with duplicate keys for stored procedure.")]
+        [DataRow("view", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with View")]
+        [DataRow("table", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with Table")]
+        [DataRow("table-view", new string[] { "param1:value1" }, null, DisplayName = "Invalid Source Type.")]
+        public void TestUpdateSourceObjectWithInvalidFields(
+            string? sourceType,
+            IEnumerable<string>? parameters,
+            IEnumerable<string>? keyFields)
+        {
+            UpdateOptions options = new(
+                source: "MyTable",
+                permissions: new string[] { "anonymous", "*,create,read" },
+                entity: "MyEntity",
+                sourceType: sourceType,
+                sourceParameters: parameters,
+                sourceKeyFields: keyFields,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: new string[] { "id", "rating" },
+                fieldsToExclude: new string[] { "level" },
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                map: new string[] { },
+                config: _testRuntimeConfig);
+
+            string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
 
             Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
         }
@@ -1091,6 +1458,9 @@ namespace Cli.Tests
                 source: null,
                 permissions: null,
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { },
@@ -1105,7 +1475,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: null,
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -1125,6 +1495,9 @@ namespace Cli.Tests
                 source: null,
                 permissions: null,
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: new string[] { },
@@ -1139,7 +1512,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: mappings.Split(','),
-                config: "outputfile");
+                config: _testRuntimeConfig);
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1162,7 +1535,7 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to validate that Permissions is madatory when using options --fields.include or --fields.exclude
+        /// Test to validate that Permissions is mandatory when using options --fields.include or --fields.exclude
         /// </summary>
         [DataTestMethod]
         [DataRow(new string[] { }, new string[] { "field" }, new string[] { }, DisplayName = "Invalid command with fieldsToInclude but no permissions")]
@@ -1174,6 +1547,9 @@ namespace Cli.Tests
                 source: null,
                 permissions: Permissions,
                 entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
                 restRoute: null,
                 graphQLType: null,
                 fieldsToInclude: FieldsToInclude,
@@ -1188,7 +1564,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: null,
-                config: "outputfile"
+                config: _testRuntimeConfig
             );
 
             string runtimeConfig = GetConfigWithMappings();
@@ -1220,6 +1596,60 @@ namespace Cli.Tests
             Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: cardinality, targetEntity: targetEntity));
         }
 
+        /// <summary>
+        /// Test to verify that adding a relationship to an entity which has GraphQL disabled should fail.
+        /// The test created 2 entities. One entity has GQL enabled which tries to create relationship with
+        /// another entity which has GQL disabled which is invalid.
+        /// </summary>
+        [TestMethod]
+        public void EnsureFailure_AddRelationshipToEntityWithDisabledGraphQL()
+        {
+            PermissionOperation actionForRole = new(
+                Name: Operation.Create,
+                Fields: null,
+                Policy: null);
+
+            PermissionSetting permissionForEntity = new(
+                role: "anonymous",
+                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+
+            Entity sampleEntity1 = new(
+                Source: JsonSerializer.SerializeToElement("SOURCE1"),
+                Rest: true,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+            );
+
+            // entity with graphQL disabled
+            Entity sampleEntity2 = new(
+                Source: JsonSerializer.SerializeToElement("SOURCE2"),
+                Rest: true,
+                GraphQL: false,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+            );
+
+            Dictionary<string, Entity> entityMap = new();
+            entityMap.Add("SampleEntity1", sampleEntity1);
+            entityMap.Add("SampleEntity2", sampleEntity2);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "schema",
+                DataSource: new DataSource(DatabaseType.mssql),
+                CosmosDb: null,
+                MsSql: null,
+                PostgreSql: null,
+                MySql: null,
+                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                Entities: entityMap
+            );
+
+            Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: "one", targetEntity: "SampleEntity2"));
+        }
+
         #endregion
 
         private static string GetInitialConfigString()
@@ -1230,9 +1660,6 @@ namespace Cli.Tests
                         ""data-source"": {
                             ""database-type"": ""mssql"",
                             ""connection-string"": ""testconnectionstring""
-                        },
-                        ""mssql"": {
-                            ""set-session-context"": true
                         },
                         ""runtime"": {
                             ""rest"": {

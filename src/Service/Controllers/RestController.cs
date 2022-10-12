@@ -28,6 +28,14 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// String representing the value associated with "code" for a server error
         /// </summary>
         public const string SERVER_ERROR = "While processing your request the server ran into an unexpected error.";
+
+        /// <summary>
+        /// Every GraphQL request gets redirected to this route
+        /// when Banana Cake Pop UI is disabled.
+        /// e.g. https://servername:port/favicon.ico
+        /// </summary>
+        public const string REDIRECTED_ROUTE = "favicon.ico";
+
         private readonly ILogger<RestController> _logger;
 
         /// <summary>
@@ -169,9 +177,17 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             try
             {
+                if (route.Equals(REDIRECTED_ROUTE))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"GraphQL request redirected to {REDIRECTED_ROUTE}.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
                 (string entityName, string primaryKeyRoute) =
                     _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
-                // Utilizes C#8 using syntax which does not require brackets.
+
                 IActionResult? result
                     = await _restService.ExecuteAsync(
                             entityName,

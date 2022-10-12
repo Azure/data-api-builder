@@ -62,14 +62,21 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// <summary>
             /// The runtime config is invalid semantically.
             /// </summary>
-            ConfigValidationError
+            ConfigValidationError,
+            /// <summary>
+            /// Provided EasyAuth header is non-existent or malformed.
+            /// </summary>
+            ErrorProcessingEasyAuthHeader
         }
 
         public HttpStatusCode StatusCode { get; }
         public SubStatusCodes SubStatusCode { get; }
 
-        public DataApiBuilderException(string message, HttpStatusCode statusCode, SubStatusCodes subStatusCode)
-            : base(message)
+        public DataApiBuilderException(string message,
+            HttpStatusCode statusCode,
+            SubStatusCodes subStatusCode,
+            Exception? innerException = null)
+            : base(message, innerException: innerException)
         {
             StatusCode = statusCode;
             SubStatusCode = subStatusCode;

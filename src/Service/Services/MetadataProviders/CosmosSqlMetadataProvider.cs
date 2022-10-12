@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
@@ -137,6 +138,18 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
+        public bool VerifyForeignKeyExistsInDB(
+            DatabaseObject databaseObjectA,
+            DatabaseObject databaseObjectB)
+        {
+            throw new NotImplementedException();
+        }
+
+        public (string, string) ParseSchemaAndDbObjectName(string source)
+        {
+            throw new NotImplementedException();
+        }
+
         public bool TryGetExposedColumnName(string entityName, string field, out string? name)
         {
             throw new NotImplementedException();
@@ -147,7 +160,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
-        public IEnumerable<KeyValuePair<string, DatabaseObject>> GetEntityNamesAndDbObjects()
+        public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
             throw new NotImplementedException();
         }
@@ -166,6 +179,11 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             {
                 _partitionKeyPaths[$"{database}/{container}"] = partitionKeyPath;
             }
+        }
+
+        public bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
+        {
+            throw new NotImplementedException();
         }
     }
 }

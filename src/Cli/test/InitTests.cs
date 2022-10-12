@@ -6,6 +6,8 @@ namespace Cli.Tests
     [TestClass]
     public class InitTests
     {
+        private string _basicRuntimeConfig = string.Empty;
+
         /// <summary>
         /// Test the simple init config for mssql database. PG and MySQL should be similar.
         /// There is no need for a separate test.
@@ -21,42 +23,66 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: "outputfile");
+                config: _testRuntimeConfig,
+                devModeDefaultAuth: "true");
 
-            string expectedRuntimeConfig =
+            _basicRuntimeConfig =
             @"{
-  ""$schema"": ""dab.draft-01.schema.json"",
-  ""data-source"": {
-    ""database-type"": ""mssql"",
-    ""connection-string"": ""testconnectionstring""
-  },
-  ""mssql"": {
-    ""set-session-context"": true
-  },
-  ""runtime"": {
-    ""rest"": {
-      ""enabled"": true,
-      ""path"": ""/api""
-    },
-    ""graphql"": {
-      ""allow-introspection"": true,
-      ""enabled"": true,
-      ""path"": ""/graphql""
-    },
-    ""host"": {
-      ""mode"": ""development"",
-      ""cors"": {
-        ""origins"": [""http://localhost:3000"", ""http://nolocalhost:80""],
-        ""allow-credentials"": false
-      },
-      ""authentication"": {
-        ""provider"": ""StaticWebApps""
-      }
-    }
-  },
-  ""entities"": {}
-}";
+                ""$schema"": ""dab.draft-01.schema.json"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring""
+                },
+                ""entities"": {}
+            }";
 
+            // Adding runtime settings to the above basic config
+            string expectedRuntimeConfig = AddPropertiesToJson(
+                _basicRuntimeConfig,
+                GetDefaultTestRuntimeSettingString(DatabaseType.mssql,
+                    HostModeType.Development,
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                    authenticateDevModeRequest: true)
+            );
+            RunTest(options, expectedRuntimeConfig);
+        }
+
+        /// <summary>
+        /// Test to verify creation of initial config without providing
+        /// connection-string
+        /// </summary>
+        [TestMethod]
+        public void TestInitializingConfigWithoutConnectionString()
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: null,
+                cosmosDatabase: null,
+                cosmosContainer: null,
+                graphQLSchemaPath: null,
+                hostMode: HostModeType.Development,
+                corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                config: _testRuntimeConfig,
+                devModeDefaultAuth: "false");
+
+            _basicRuntimeConfig =
+            @"{
+                ""$schema"": ""dab.draft-01.schema.json"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": """"
+                },
+                ""entities"": {}
+            }";
+
+            // Adding runtime settings to the above basic config
+            string expectedRuntimeConfig = AddPropertiesToJson(
+                _basicRuntimeConfig,
+                GetDefaultTestRuntimeSettingString(DatabaseType.mssql,
+                    HostModeType.Development,
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                    authenticateDevModeRequest: false)
+            );
             RunTest(options, expectedRuntimeConfig);
         }
 
@@ -74,43 +100,27 @@ namespace Cli.Tests
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: "outputfile");
+                config: _testRuntimeConfig,
+                devModeDefaultAuth: null);
 
-            string expectedRuntimeConfig = @"{
-  ""$schema"": ""dab.draft-01.schema.json"",
-  ""data-source"": {
-    ""database-type"": ""cosmos"",
-    ""connection-string"": ""testconnectionstring""
-  },
-  ""cosmos"": {
-    ""database"": ""testdb"",
-    ""container"": ""testcontainer"",
-    ""schema"": ""schemafile""
-  },
-  ""runtime"": {
-    ""rest"": {
-      ""enabled"": false,
-      ""path"": ""/api""
-    },
-    ""graphql"": {
-      ""allow-introspection"": true,
-      ""enabled"": true,
-      ""path"": ""/graphql""
-    },
-    ""host"": {
-      ""mode"": ""production"",
-      ""cors"": {
-        ""origins"": [],
-        ""allow-credentials"": false
-      },
-      ""authentication"": {
-        ""provider"": ""StaticWebApps""
-      }
-    }
-  },
-  ""entities"": {}
-}";
+            _basicRuntimeConfig = @"{
+                ""$schema"": ""dab.draft-01.schema.json"",
+                ""data-source"": {
+                    ""database-type"": ""cosmos"",
+                    ""connection-string"": ""testconnectionstring""
+                },
+                ""cosmos"": {
+                    ""database"": ""testdb"",
+                    ""container"": ""testcontainer"",
+                    ""schema"": ""schemafile""
+                },
+                ""entities"": {}
+            }";
 
+            // Adding runtime settings to the above basic config
+            string expectedRuntimeConfig = AddPropertiesToJson(
+                _basicRuntimeConfig,
+                GetDefaultTestRuntimeSettingString(DatabaseType.cosmos));
             RunTest(options, expectedRuntimeConfig);
         }
 
@@ -127,8 +137,7 @@ namespace Cli.Tests
             string? cosmosDatabase,
             string? cosmosContainer,
             string? graphQLSchema,
-            bool expectedResult
-        )
+            bool expectedResult)
         {
             InitOptions options = new(
                 databaseType: DatabaseType.cosmos,
@@ -138,9 +147,59 @@ namespace Cli.Tests
                 graphQLSchemaPath: graphQLSchema,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: "outputfile");
+                config: _testRuntimeConfig,
+                devModeDefaultAuth: null
+                );
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
+        }
+
+        /// <summary>
+        /// Test to verify that an error is thrown when user tries to
+        /// initialize a config with a file name that already exists.
+        /// </summary>
+        [TestMethod]
+        public void EnsureFailureOnReInitializingExistingConfig()
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: "testconnectionstring",
+                cosmosDatabase: null,
+                cosmosContainer: null,
+                graphQLSchemaPath: null,
+                hostMode: HostModeType.Development,
+                corsOrigin: new List<string>() { },
+                config: _testRuntimeConfig,
+                devModeDefaultAuth: null);
+
+            // Config generated successfully for the first time.
+            Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(options));
+
+            // Error is thrown because the config file with the same name
+            // already exists.
+            Assert.AreEqual(false, ConfigGenerator.TryGenerateConfig(options));
+        }
+
+        /// <summary>
+        /// Test to verify that error is thrown when user tries to
+        /// initialize a config with a file name that already exists
+        /// but with different case.
+        /// </summary>
+        [TestMethod]
+        public void EnsureFailureReInitializingExistingConfigWithDifferentCase()
+        {
+            // Should PASS, new file is being created
+            InitOptions initOptionsWithAllLowerCaseFileName = GetSampleInitOptionsWithFileName(_testRuntimeConfig);
+            Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(initOptionsWithAllLowerCaseFileName));
+
+            // same file with all uppercase letters
+            InitOptions initOptionsWithAllUpperCaseFileName = GetSampleInitOptionsWithFileName(_testRuntimeConfig.ToUpper());
+            // Platform Dependent
+            // Windows,MacOs: Should FAIL - File Exists is Case insensitive
+            // Unix: Should PASS - File Exists is Case sensitive
+            Assert.AreEqual(
+                expected: PlatformID.Unix.Equals(Environment.OSVersion.Platform) ? true : false,
+                actual: ConfigGenerator.TryGenerateConfig(initOptionsWithAllUpperCaseFileName));
         }
 
         /// <summary>
@@ -157,6 +216,41 @@ namespace Cli.Tests
             JObject actualJson = JObject.Parse(runtimeConfigJson);
 
             Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
+        }
+
+        /// <summary>
+        /// Returns an InitOptions object with sample database and connection-string
+        /// for a specified fileName.
+        /// </summary>
+        /// <param name="fileName">Name of the config file.</param>
+        private static InitOptions GetSampleInitOptionsWithFileName(string fileName)
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: "testconnectionstring",
+                cosmosDatabase: null,
+                cosmosContainer: null,
+                graphQLSchemaPath: null,
+                hostMode: HostModeType.Production,
+                corsOrigin: new List<string>() { },
+                config: fileName,
+                devModeDefaultAuth: null);
+
+            return options;
+        }
+
+        /// <summary>
+        /// Removes the generated configuration file after each test
+        /// to avoid file name conflicts on subsequent test runs because the
+        /// file is statically named.
+        /// </summary>
+        [TestCleanup]
+        public void CleanUp()
+        {
+            if (File.Exists(_testRuntimeConfig))
+            {
+                File.Delete(_testRuntimeConfig);
+            }
         }
     }
 }

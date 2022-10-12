@@ -67,6 +67,9 @@ namespace Azure.DataApiBuilder.Config
         public object? ConfigDefaultValue { get; set; }
     }
 
+    /// <summary>
+    /// Class to store database table definition.
+    /// </summary>
     public class DatabaseEntityDefinition
     {
         /// <summary>
@@ -104,11 +107,21 @@ namespace Azure.DataApiBuilder.Config
         }
     }
 
+    /// <summary>
+    /// Class to store the database view definition.
+    /// </summary>
     public class DatabaseViewDefinition : DatabaseEntityDefinition
     {
-        public DatabaseEntityDefinition? BaseTableDefinition { get; set; }
+        // Stores the entity definition for the base table targeted by the operation.
+        // Evaluated on a per request basis.
+        public DatabaseEntityDefinition? BaseTableForRequestDefinition { get; set; }
+
+        // Stores the mapping from the source table names for the base tables
+        // to the corresponding entity definition for the base table.
         public Dictionary<string, DatabaseEntityDefinition> BaseTableDefinitions { get; set; } = new();
 
+        // Stores the mapping from the column name in the base table to the alias
+        // given to the column name in view, if that column is selected in the view.
         public Dictionary<string, string> ColumnAliasesFromBaseTable { get; set; } = new();
     }
     /// <summary>

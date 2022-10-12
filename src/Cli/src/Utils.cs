@@ -4,9 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Configurations;
 using Humanizer;
-using Microsoft.Extensions.Logging;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>
@@ -491,25 +489,28 @@ namespace Cli
         /// <summary>
         /// Checks if config can be correctly parsed by deserializing the
         /// json config into runtime config object.
+        /// Also checks that connection-string is not null or empty whitespace
         /// </summary>
         public static bool CanParseConfigCorrectly(string configFile)
         {
-            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
-            {
-                builder.AddConsole();
-            });
-
-            ILogger<RuntimeConfigProvider> logger = loggerFactory.CreateLogger<RuntimeConfigProvider>();
-
-            if (!TryReadRuntimeConfig(configFile, out string? runtimeConfigJson))
+            if (!TryReadRuntimeConfig(configFile, out string runtimeConfigJson))
             {
                 Console.WriteLine($"Failed to read the config file: {configFile}.");
                 return false;
             }
 
-            if (!RuntimeConfig.TryGetDeserializedRuntimeConfig(runtimeConfigJson, out RuntimeConfig? _, logger))
+            if (!RuntimeConfig.TryGetDeserializedRuntimeConfig(
+                    runtimeConfigJson,
+                    out RuntimeConfig? deserializedRuntimeConfig,
+                    logger: null))
             {
                 Console.WriteLine($"Failed to parse the config file: {configFile}.");
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.ConnectionString))
+            {
+                Console.WriteLine($"Invalid connection-string provided in the config.");
                 return false;
             }
 

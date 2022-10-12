@@ -326,19 +326,19 @@ public class EndToEndTests
         string? output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
         Assert.IsTrue(output!.Contains($"Using config file: {configFileName}"));
-        // output = process.StandardOutput.ReadLine();
-        // Assert.IsNotNull(output);
-        // if (expectSuccess)
-        // {
-        //     Assert.IsTrue(output.Contains("Starting the runtime engine..."));
-        // }
-        // else
-        // {
-        //     // The process should exit after triggering the start command
-        //     // if there are failures.
-        //     // Assert.IsTrue(process.HasExited);
-        //     Assert.IsTrue(output.Contains("Failed to start the engine."));
-        // }
+        output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+        if (expectSuccess)
+        {
+            Assert.IsTrue(output.Contains("Starting the runtime engine..."));
+        }
+        else
+        {
+            Assert.IsTrue(output.Contains("Invalid connection-string provided in the config."));
+            output = process.StandardOutput.ReadLine();
+            Assert.IsNotNull(output);
+            Assert.IsTrue(output.Contains("Failed to start the engine."));
+        }
 
         process.Kill();
     }
@@ -391,7 +391,7 @@ public class EndToEndTests
 
         string? output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
-        Assert.IsTrue(output!.Contains($"Using config file: {_testRuntimeConfig}"));
+        Assert.IsTrue(output.Contains($"Using config file: {_testRuntimeConfig}"));
         output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
         if (expectSuccess)
@@ -400,8 +400,8 @@ public class EndToEndTests
         }
         else
         {
-            Assert.IsTrue(output.Contains($"Failed to parse the config file: {_testRuntimeConfig}."));
-            output = process.StandardOutput.ReadLine();
+            Assert.IsTrue(output.Contains($"Deserialization of the configuration file failed."));
+            output = process.StandardOutput.ReadToEnd();
             Assert.IsNotNull(output);
             Assert.IsTrue(output.Contains("Failed to start the engine."));
         }

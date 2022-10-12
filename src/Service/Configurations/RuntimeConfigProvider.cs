@@ -128,7 +128,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     runtimeConfigJson,
                     out runtimeConfig,
-                    ConfigProviderLogger!))
+                    ConfigProviderLogger))
             {
                 if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
                 {

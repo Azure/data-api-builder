@@ -172,7 +172,7 @@ namespace Azure.DataApiBuilder.Config
         public static bool TryGetDeserializedRuntimeConfig(
             string configJson,
             [NotNullWhen(true)] out RuntimeConfig? deserializedRuntimeConfig,
-            ILogger logger)
+            ILogger? logger)
         {
             try
             {
@@ -183,11 +183,21 @@ namespace Azure.DataApiBuilder.Config
             }
             catch (Exception ex)
             {
+                string errorMessage = $"Deserialization of the configuration file failed.\n" +
+                        $"Message:\n {ex.Message}\n" +
+                        $"Stack Trace:\n {ex.StackTrace}";
+
                 // until this function is refactored to exist in RuntimeConfigProvider
                 // we must use Console for logging.
-                logger.LogError($"Deserialization of the configuration file failed.\n" +
-                    $"Message:\n {ex.Message}\n" +
-                    $"Stack Trace:\n {ex.StackTrace}");
+                if (logger is null)
+                {
+                    // logger can be null when called from CLI
+                    Console.WriteLine(errorMessage);
+                }
+                else
+                {
+                    logger.LogError(errorMessage);
+                }
 
                 deserializedRuntimeConfig = null;
                 return false;

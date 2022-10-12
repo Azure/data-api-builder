@@ -119,10 +119,6 @@ namespace Azure.DataApiBuilder.Config
         // Stores the mapping from the source table names for the base tables
         // to the corresponding entity definition for the base table.
         public Dictionary<string, DatabaseEntityDefinition> BaseTableDefinitions { get; set; } = new();
-
-        // Stores the mapping from the column name in the base table to the alias
-        // given to the column name in view, if that column is selected in the view.
-        public Dictionary<string, string> ColumnAliasesFromBaseTable { get; set; } = new();
     }
     /// <summary>
     /// Class encapsulating foreign keys corresponding to target entities.

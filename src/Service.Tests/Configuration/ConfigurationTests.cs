@@ -87,9 +87,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// When UpdatingConfig during runtime is possible, For Invalid config the Application continues to
-        /// accept request with status code of 503
-        /// While when the same config is provided during startup, ApplicationException is thrown
+        /// When updating config during runtime is possible, then For invalid config the Application continues to
+        /// accept request with status code of 503.
+        /// But if invalid config is provided during startup, ApplicationException is thrown
         /// and application exits.
         /// </summary>
         [DataTestMethod]

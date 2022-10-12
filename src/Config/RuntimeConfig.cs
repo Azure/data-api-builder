@@ -165,7 +165,6 @@ namespace Azure.DataApiBuilder.Config
         /// <summary>
         /// Try to deserialize the given json string into its object form.
         /// </summary>
-        /// <typeparam name="T">The object type.</typeparam>
         /// <param name="configJson">Json string to be deserialized.</param>
         /// <param name="deserializedRuntimeConfig">Deserialized json object upon success.</param>
         /// <returns>True on success, false otherwise.</returns>
@@ -187,8 +186,6 @@ namespace Azure.DataApiBuilder.Config
                         $"Message:\n {ex.Message}\n" +
                         $"Stack Trace:\n {ex.StackTrace}";
 
-                // until this function is refactored to exist in RuntimeConfigProvider
-                // we must use Console for logging.
                 if (logger is null)
                 {
                     // logger can be null when called from CLI

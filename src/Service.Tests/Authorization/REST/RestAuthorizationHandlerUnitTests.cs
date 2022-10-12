@@ -331,7 +331,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             IEnumerable<string> columnsRequested
             )
         {
-            TableDefinition tableDef = new();
+            DatabaseEntityDefinition tableDef = new();
             tableDef.SourceEntityRelationshipMap.Add(AuthorizationHelpers.TEST_ENTITY, new());
             DatabaseObject stubDbObj = new()
             {

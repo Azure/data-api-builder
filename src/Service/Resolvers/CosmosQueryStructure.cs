@@ -127,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         schemaName: string.Empty,
                         tableName: _containerAlias,
                         tableAlias: _containerAlias,
-                        table: new TableDefinition(),
+                        table: new DatabaseEntityDefinition(),
                         processLiterals: MakeParamWithValue));
                 }
             }

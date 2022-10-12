@@ -419,7 +419,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (context is not null && !context.Selection.Type.IsScalarType())
             {
-                TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
+                DatabaseEntityDefinition dbEntityDefinition = _sqlMetadataProvider.GetDbEntityDefinition(entityName);
 
                 // only extract pk columns
                 // since non pk columns can be null
@@ -431,11 +431,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         queryString,
                         queryParameters,
                         _queryExecutor.ExtractRowFromDbDataReader,
-                        tableDefinition.PrimaryKey);
+                        dbEntityDefinition.PrimaryKey);
 
                 if (resultRecord is not null && resultRecord.Item1 is null)
                 {
-                    string searchedPK = '<' + string.Join(", ", tableDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                    string searchedPK = '<' + string.Join(", ", dbEntityDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
                     throw new DataApiBuilderException(
                         message: $"Could not find entity with {searchedPK}",
                         statusCode: HttpStatusCode.NotFound,
@@ -558,10 +558,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
         public string ConstructPrimaryKeyRoute(string entityName, Dictionary<string, object?> entity)
         {
-            TableDefinition tableDefinition = _sqlMetadataProvider.GetTableDefinition(entityName);
+            DatabaseEntityDefinition dbEntityDefinition = _sqlMetadataProvider.GetDbEntityDefinition(entityName);
             StringBuilder newPrimaryKeyRoute = new();
 
-            foreach (string primaryKey in tableDefinition.PrimaryKey)
+            foreach (string primaryKey in dbEntityDefinition.PrimaryKey)
             {
                 // get backing column for lookup, previously validated to be non-null
                 _sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? pkExposedName);

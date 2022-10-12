@@ -148,8 +148,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             AddFields(context, sqlMetadataProvider);
             if (Columns.Count == 0)
             {
-                TableDefinition tableDefinition = GetUnderlyingTableDefinition();
-                foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
+                DatabaseEntityDefinition dbEntityDefinition = GetUnderlyingDbEntityDefinition();
+                foreach (KeyValuePair<string, ColumnDefinition> column in dbEntityDefinition.Columns)
                 {
                     // We only include columns that are exposed for use in requests
                     if (sqlMetadataProvider.TryGetExposedColumnName(EntityName, column.Key, out string? name))
@@ -412,7 +412,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                                          schemaName: DatabaseObject.SchemaName,
                                                          tableName: DatabaseObject.Name,
                                                          tableAlias: TableAlias,
-                                                         table: GetUnderlyingTableDefinition(),
+                                                         table: GetUnderlyingDbEntityDefinition(),
                                                          processLiterals: MakeParamWithValue));
                 }
             }
@@ -735,8 +735,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string subtableAlias,
             SqlQueryStructure subQuery)
         {
-            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
-            if (tableDefinition.SourceEntityRelationshipMap.TryGetValue(
+            DatabaseEntityDefinition dbEntityDefinition = GetUnderlyingDbEntityDefinition();
+            if (dbEntityDefinition.SourceEntityRelationshipMap.TryGetValue(
                 _underlyingFieldType.Name, out RelationshipMetadata? relationshipMetadata)
                 && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
                     out List<ForeignKeyDefinition>? foreignKeyDefinitions))

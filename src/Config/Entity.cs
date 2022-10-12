@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Config
         public const string JSON_PROPERTY_NAME = "entities";
 
         [JsonIgnore]
-        public SourceType ObjectType { get; private set; } = new();
+        public SourceType ObjectType { get; private set; } = SourceType.Table;
 
         [JsonIgnore]
         public string SourceName { get; private set; } = string.Empty;

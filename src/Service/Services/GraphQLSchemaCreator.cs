@@ -146,7 +146,8 @@ namespace Azure.DataApiBuilder.Service.Services
                     // of the objectTypeDefinitionNode. The authorize Directive is one of many directives created.
                     IEnumerable<string> rolesAllowedForEntity = _authorizationResolver.GetRolesForEntity(entityName);
                     Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
-                    foreach (string column in databaseObject.TableDefinition.Columns.Keys)
+                    DatabaseEntityDefinition dbEntityDefinition = _sqlMetadataProvider.GetDbEntityDefinition(entityName);
+                    foreach (string column in dbEntityDefinition.Columns.Keys)
                     {
                         IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Operation.Read);
                         if (!rolesAllowedForFields.TryAdd(key: column, value: roles))

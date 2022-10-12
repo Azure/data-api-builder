@@ -60,12 +60,13 @@ namespace Azure.DataApiBuilder.Service.Parsers
                     EdmEntityType newEntity = new(DEFAULT_NAMESPACE, newEntityKey);
                     _entities.Add(newEntityKey, newEntity);
 
-                    TableDefinition tableDefinition = entityAndDbObject.Value.TableDefinition;
+                    DatabaseEntityDefinition dbEntityDefinition = sqlMetadataProvider.GetDbEntityDefinition(entityAndDbObject.Key);
+
                     // each column represents a property of the current entity we are adding
-                    foreach (string column in tableDefinition.Columns.Keys)
+                    foreach (string column in dbEntityDefinition.Columns.Keys)
                     {
                         // need to convert our column system type to an Edm type
-                        Type columnSystemType = tableDefinition.Columns[column].SystemType;
+                        Type columnSystemType = dbEntityDefinition.Columns[column].SystemType;
                         EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.None;
                         if (columnSystemType.IsArray)
                         {
@@ -114,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
                         // which is on a per entity basis.
                         // if column is in our list of keys we add as a key to entity
                         string exposedColumnName;
-                        if (tableDefinition.PrimaryKey.Contains(column))
+                        if (dbEntityDefinition.PrimaryKey.Contains(column))
                         {
                             sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out exposedColumnName!);
                             newEntity.AddKeys(newEntity.AddStructuralProperty(name: exposedColumnName,

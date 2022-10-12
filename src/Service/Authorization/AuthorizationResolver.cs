@@ -226,7 +226,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         // Use a hashset to store all the backing field names
                         // that are accessible to the user.
                         HashSet<string> allowedColumns = new();
-                        IEnumerable<string> allTableColumns = ResolveTableDefinitionColumns(entityName);
+                        IEnumerable<string> allTableColumns = ResolveEntityDefinitionColumns(entityName);
 
                         // Implicitly, all table columns are 'allowed' when an operationtype is a string.
                         // Since no granular field permissions exist for this operation within the current role.
@@ -247,7 +247,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                                 operation = operationObj.Name;
                                 if (operationObj.Fields is null)
                                 {
-                                    operationToColumn.Included.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                    operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName));
                                 }
                                 else
                                 {
@@ -259,7 +259,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                                         // resolved when no columns were included in a request.
                                         if (operationObj.Fields.Include.Count == 1 && operationObj.Fields.Include.Contains(WILDCARD))
                                         {
-                                            operationToColumn.Included.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                            operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName));
                                         }
                                         else
                                         {
@@ -273,7 +273,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                                         // columns must be resolved and placed in the operationToColumn Key/Value store.
                                         if (operationObj.Fields.Exclude.Count == 1 && operationObj.Fields.Exclude.Contains(WILDCARD))
                                         {
-                                            operationToColumn.Excluded.UnionWith(ResolveTableDefinitionColumns(entityName));
+                                            operationToColumn.Excluded.UnionWith(ResolveEntityDefinitionColumns(entityName));
                                         }
                                         else
                                         {
@@ -616,7 +616,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// </summary>
         /// <param name="entityName">Used to lookup table definition of specific entity</param>
         /// <returns>Collection of columns in table definition.</returns>
-        private IEnumerable<string> ResolveTableDefinitionColumns(string entityName)
+        private IEnumerable<string> ResolveEntityDefinitionColumns(string entityName)
         {
             if (_metadataProvider.GetDatabaseType() is DatabaseType.cosmos)
             {
@@ -624,8 +624,8 @@ namespace Azure.DataApiBuilder.Service.Authorization
             }
 
             // Table definition is null on stored procedure entities
-            TableDefinition? tableDefinition = _metadataProvider.GetTableDefinition(entityName);
-            return tableDefinition is null ? new List<string>() : tableDefinition.Columns.Keys;
+            DatabaseEntityDefinition? dbEntityDefinition = _metadataProvider.GetDbEntityDefinition(entityName);
+            return dbEntityDefinition is null ? new List<string>() : dbEntityDefinition.Columns.Keys;
         }
 
         /// <summary>

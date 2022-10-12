@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Models
             string schemaName,
             string tableName,
             string tableAlias,
-            TableDefinition table,
+            DatabaseEntityDefinition table,
             Func<object, string> processLiterals)
         {
             InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Models
             string schemaName,
             string tableName,
             string tableAlias,
-            TableDefinition table,
+            DatabaseEntityDefinition table,
             PredicateOperation op,
             Func<object, string> processLiterals)
         {

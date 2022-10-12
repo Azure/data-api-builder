@@ -158,10 +158,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 SELECT
     CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))},
     TABLE_SCHEMA {QuoteIdentifier($"Referencing{nameof(DatabaseObject.SchemaName)}")},
-    TABLE_NAME {QuoteIdentifier($"Referencing{nameof(TableDefinition)}")},
+    TABLE_NAME {QuoteIdentifier($"Referencing{nameof(DatabaseEntityDefinition)}")},
     COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))},
     REFERENCED_TABLE_SCHEMA {QuoteIdentifier($"Referenced{nameof(DatabaseObject.SchemaName)}")},
-    REFERENCED_TABLE_NAME {QuoteIdentifier($"Referenced{nameof(TableDefinition)}")},
+    REFERENCED_TABLE_NAME {QuoteIdentifier($"Referenced{nameof(DatabaseEntityDefinition)}")},
     REFERENCED_COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))}
 FROM
     INFORMATION_SCHEMA.KEY_COLUMN_USAGE

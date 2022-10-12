@@ -9,11 +9,13 @@ namespace Azure.DataApiBuilder.Config
 
         public string Name { get; set; } = null!;
 
-        public TableDefinition TableDefinition { get; set; } = null!;
+        public DatabaseEntityDefinition TableDefinition { get; set; } = null!;
+
+        public DatabaseViewDefinition ViewDefinition { get; set; } = null!;
 
         public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
 
-        public SourceType? ObjectType { get; set; } = null!;
+        public SourceType? ObjectType { get; set; } = SourceType.Table;
 
         public DatabaseObject(string schemaName, string tableName)
         {
@@ -65,15 +67,15 @@ namespace Azure.DataApiBuilder.Config
         public object? ConfigDefaultValue { get; set; }
     }
 
-    public class TableDefinition
+    public class DatabaseEntityDefinition
     {
         /// <summary>
-        /// The list of columns that together form the primary key of the table.
+        /// The list of columns that together form the primary key of the entity.
         /// </summary>
         public List<string> PrimaryKey { get; set; } = new();
 
         /// <summary>
-        /// The list of columns in this table.
+        /// The list of columns in this entity.
         /// </summary>
         public Dictionary<string, ColumnDefinition> Columns { get; private set; } =
             new(StringComparer.InvariantCultureIgnoreCase);
@@ -88,7 +90,7 @@ namespace Azure.DataApiBuilder.Config
 
         /// <summary>
         /// Given the list of column names to check, evaluates
-        /// if any of them is a nullable column when matched with the columns in this table definition.
+        /// if any of them is a nullable column when matched with the columns in this entity definition.
         /// </summary>
         /// <param name="columnsToCheck">List of column names.</param>
         /// <returns>True if any of the columns is null, false otherwise.</returns>
@@ -102,6 +104,13 @@ namespace Azure.DataApiBuilder.Config
         }
     }
 
+    public class DatabaseViewDefinition : DatabaseEntityDefinition
+    {
+        public DatabaseEntityDefinition? BaseTableDefinition { get; set; }
+        public Dictionary<string, DatabaseEntityDefinition> BaseTableDefinitions { get; set; } = new();
+
+        public Dictionary<string, string> ColumnAliasesFromBaseTable { get; set; } = new();
+    }
     /// <summary>
     /// Class encapsulating foreign keys corresponding to target entities.
     /// </summary>

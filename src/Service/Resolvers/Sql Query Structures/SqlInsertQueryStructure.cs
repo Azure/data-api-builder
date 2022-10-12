@@ -98,7 +98,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public ColumnDefinition GetColumnDefinition(string columnName)
         {
-            return GetUnderlyingTableDefinition().Columns[columnName];
+            return GetUnderlyingDbEntityDefinition().Columns[columnName];
         }
     }
 }

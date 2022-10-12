@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             };
         }
 
-        public TableDefinition GetTableDefinition(string entityName)
+        public DatabaseEntityDefinition GetDbEntityDefinition(string entityName)
         {
             throw new NotSupportedException("Cosmos backends don't support direct table definitions. Definitions are provided via the GraphQL schema");
         }

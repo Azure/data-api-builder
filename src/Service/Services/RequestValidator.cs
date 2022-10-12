@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 // Get backing column and check that column is valid
                 if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, field, out string? backingColumn) ||
-                    dbEntityDefinition.Columns.ContainsKey(backingColumn!))
+                    !dbEntityDefinition.Columns.ContainsKey(backingColumn!))
                 {
                     throw new DataApiBuilderException(
                         message: "Invalid field to be returned requested: " + field,

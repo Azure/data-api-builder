@@ -28,10 +28,10 @@
     <ConfigFiles Include="dab-config*.json" />
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+  <!-- <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="powershell.exe -command ..\..\..\configGenerator.ps1 " Condition=" '$(OS)' == 'Windows_NT' "/>
     <Exec Command="bash ../../../configGenerator.sh" Condition=" '$(OS)' != 'Windows_NT' " UseCommandProcessor="False"/>
     <Copy SourceFiles="@(ConfigFiles)"  DestinationFolder="$(BaseOutputPath)\tests\$(TargetFramework)\" />
-  </Target>
+  </Target> -->
 
 </Project>

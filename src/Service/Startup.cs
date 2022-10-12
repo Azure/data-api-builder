@@ -248,7 +248,7 @@ namespace Azure.DataApiBuilder.Service
                 {
                     // Exiting if config provided is Invalid.
                     _logger.LogError("Exiting the runtime engine...");
-                    Environment.Exit(-1);
+                    throw new ApplicationException("Could not Initialize the engine with the runtime config.");
                 }
             }
             else

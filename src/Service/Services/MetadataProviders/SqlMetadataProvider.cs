@@ -710,7 +710,8 @@ namespace Azure.DataApiBuilder.Service.Services
             string dbviewName = $"{schemaName}.{viewName}";
             string query = "SELECT distinct source_schema,source_table " +
                            "FROM sys.dm_exec_describe_first_result_set (" +
-                           $"N'SELECT * from {dbviewName}', null, 1)";
+                           $"N'SELECT * from {dbviewName}', null, 1) " +
+                           $"WHERE is_hidden = 0 AND is_computed_column = 0";
 
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: query,

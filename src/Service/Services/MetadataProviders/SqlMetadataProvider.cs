@@ -687,10 +687,13 @@ namespace Azure.DataApiBuilder.Service.Services
                         GetDatabaseObjectName(entityName),
                         GetSourceDefinition(entityName));
 
-                    await PopulateBaseTableDefinitionsForViewAsync(
-                        GetSchemaName(entityName),
-                        GetDatabaseObjectName(entityName),
-                        GetSourceDefinition(entityName));
+                    if (GetDatabaseType() == DatabaseType.mssql)
+                    {
+                        await PopulateBaseTableDefinitionsForViewAsync(
+                            GetSchemaName(entityName),
+                            GetDatabaseObjectName(entityName),
+                            GetSourceDefinition(entityName));
+                    }
                 }
             }
 

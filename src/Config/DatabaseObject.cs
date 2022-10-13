@@ -9,7 +9,7 @@ namespace Azure.DataApiBuilder.Config
 
         public string Name { get; set; } = null!;
 
-        public SourceType? ObjectType { get; set; } = SourceType.Table;
+        public SourceType ObjectType { get; set; } = SourceType.Table;
 
         public DatabaseObject(string schemaName, string tableName)
         {

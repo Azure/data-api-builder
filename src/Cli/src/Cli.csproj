@@ -59,7 +59,6 @@
 
     <Copy SourceFiles="@(ConfigFiles)" DestinationFolder="..\..\out\tests\$(TargetFramework)" />
     <Move SourceFiles="@(ConfigFiles)" DestinationFolder="..\..\Service" />
-    <Delete Files="@(ConfigFiles)" />
 
   </Target>
 

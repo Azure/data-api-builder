@@ -49,7 +49,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             catch (ArgumentException ex)
             {
-                // ArgumentException thrown from GetParamAsColumnSystemType()
                 throw new DataApiBuilderException(
                     message: ex.Message,
                     statusCode: HttpStatusCode.BadRequest,

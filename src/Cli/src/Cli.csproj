@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ConfigFiles Include="dab-config*.json" />
+      <ConfigFiles Include="dab-config*.json" />
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
@@ -52,12 +52,14 @@
 
     <Delete Files="@(ConfigFiles)" />
 
-    <Exec Command="dotnet $(DllFilePath) %(MsSqlCommands.Identity)" />
-    <Exec Command="dotnet $(DllFilePath) %(MySqlCommands.Identity)" />
-    <Exec Command="dotnet $(DllFilePath) %(PostgreSqlCommands.Identity)" />
-    <Exec Command="dotnet $(DllFilePath) %(CosmosCommands.Identity)" />
+    <Exec Command="dotnet $(DllFilePath) %(MsSqlCommands.Identity)" UseUtf8Encoding="Always" />
+    <Exec Command="dotnet $(DllFilePath) %(MySqlCommands.Identity)" UseUtf8Encoding="Always" />
+    <Exec Command="dotnet $(DllFilePath) %(PostgreSqlCommands.Identity)" UseUtf8Encoding="Always" />
+    <Exec Command="dotnet $(DllFilePath) %(CosmosCommands.Identity)" UseUtf8Encoding="Always" />
 
-    <Copy SourceFiles="@(ConfigFiles)"  DestinationFolder="$(BaseOutputPath)\tests\$(TargetFramework)\" />
+    <Copy SourceFiles="@(ConfigFiles)" DestinationFolder="..\..\out\tests\$(TargetFramework)" />
+    <Move SourceFiles="@(ConfigFiles)" DestinationFolder="..\..\Service" />
+    <Delete Files="@(ConfigFiles)" />
 
   </Target>
 

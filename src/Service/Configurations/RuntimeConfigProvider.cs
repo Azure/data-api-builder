@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using Azure.DataApiBuilder.Config;
@@ -262,7 +263,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
             return RuntimeConfiguration;
         }
 
-        public virtual bool TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig)
+        /// <summary>
+        /// Attempt to acquire runtime configuration metadata.
+        /// </summary>
+        /// <param name="runtimeConfig">Populated runtime configuartion, if present.</param>
+        /// <returns>True when runtime config is provided, otherwise false.</returns>
+        public virtual bool TryGetRuntimeConfiguration([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
         {
             runtimeConfig = RuntimeConfiguration;
             return RuntimeConfiguration is not null;

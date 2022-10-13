@@ -192,9 +192,19 @@ namespace Azure.DataApiBuilder.Service
             services.AddControllers();
         }
 
+        /// <summary>
+        /// Configure GraphQL services within the service collection of the
+        /// request pipeline.
+        /// </summary>
+        /// <param name="services">Service Collection</param>
+        /// <param name="configProvider">Runtime configuration provider</param>
         private void AddGraphQL(IServiceCollection services, RuntimeConfigProvider configProvider)
         {
-            RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+            bool allowIntrospection = false;
+            if (configProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            {
+                allowIntrospection = runtimeConfig.GraphQLGlobalSettings.AllowIntrospection;
+            }
 
             services.AddGraphQLServer()
                     .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
@@ -203,7 +213,7 @@ namespace Azure.DataApiBuilder.Service
                         GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
                         graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
                     })
-                    .AllowIntrospection(runtimeConfig.GraphQLGlobalSettings.AllowIntrospection)
+                    .AllowIntrospection(allowIntrospection)
                     .AddAuthorization()
                     .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
                     .AddErrorFilter(error =>

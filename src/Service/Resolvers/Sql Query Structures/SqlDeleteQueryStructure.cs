@@ -53,7 +53,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new DataApiBuilderException(
                     message: ex.Message,
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    innerException: ex);
             }
         }
     }

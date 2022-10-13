@@ -145,7 +145,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
-        public (string, string) ParseSchemaAndDbObjectName(string source)
+        public (string, string) ParseSchemaAndDbTableName(string source)
         {
             throw new NotImplementedException();
         }

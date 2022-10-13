@@ -72,10 +72,7 @@ namespace Azure.DataApiBuilder.Config
     public class DatabaseStoredProcedure : DatabaseObject
     {
         public DatabaseStoredProcedure(string schemaName, string tableName)
-            : base(schemaName, tableName)
-        {
-
-        }
+            : base(schemaName, tableName) { }
 
         public DatabaseStoredProcedure() { }
         public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;

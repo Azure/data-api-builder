@@ -460,8 +460,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                     if (relationship.LinkingObject is not null)
                     {
-                        (string linkingObjectSchema, string linkingObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(relationship.LinkingObject)!;
-                        DatabaseTable linkingDatabaseObject = new(linkingObjectSchema, linkingObjectName);
+                        (string linkingTableSchema, string linkingTableName) = sqlMetadataProvider.ParseSchemaAndDbTableName(relationship.LinkingObject)!;
+                        DatabaseTable linkingDatabaseObject = new(linkingTableSchema, linkingTableName);
 
                         if (relationship.LinkingSourceFields is null || relationship.SourceFields is null)
                         {

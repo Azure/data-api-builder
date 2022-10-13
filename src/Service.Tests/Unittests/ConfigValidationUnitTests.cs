@@ -248,7 +248,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // To mock the schema name and dbObjectName for linkingObject
             _sqlMetadataProvider.Setup<(string, string)>(x =>
-                x.ParseSchemaAndDbObjectName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
+                x.ParseSchemaAndDbTableName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
 
             // Exception thrown as foreignKeyPair not found in the DB.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -351,7 +351,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // To mock the schema name and dbObjectName for linkingObject
             _sqlMetadataProvider.Setup<(string, string)>(x =>
-                x.ParseSchemaAndDbObjectName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
+                x.ParseSchemaAndDbTableName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
 
             // Mocking ForeignKeyPair to be defined In DB
             _sqlMetadataProvider.Setup<bool>(x =>

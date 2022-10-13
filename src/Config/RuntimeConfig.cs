@@ -189,7 +189,7 @@ namespace Azure.DataApiBuilder.Config
                 if (logger is null)
                 {
                     // logger can be null when called from CLI
-                    Console.WriteLine(errorMessage);
+                    Console.Error.WriteLine(errorMessage);
                 }
                 else
                 {

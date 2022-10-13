@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <summary>
         /// Represents the path to the runtime configuration file.
         /// </summary>
-        protected RuntimeConfigPath? RuntimeConfigPath { get; private set; }
+        public RuntimeConfigPath? RuntimeConfigPath { get; private set; }
 
         /// <summary>
         /// Represents the loaded and deserialized runtime configuration.

@@ -99,13 +99,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates that queries before runtime is configured returns a 503.")]
         public async Task TestNoConfigReturnsServiceUnavailable(
             string[] args,
-            bool IsUpdatableRuntimeConfig)
+            bool isUpdateableRuntimeConfig)
         {
             TestServer server;
 
             try
             {
-                if (IsUpdatableRuntimeConfig)
+                if (isUpdateableRuntimeConfig)
                 {
                     server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(args));
                 }
@@ -120,9 +120,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
             catch (Exception e)
             {
-                Assert.IsFalse(IsUpdatableRuntimeConfig);
+                Assert.IsFalse(isUpdateableRuntimeConfig);
                 Assert.AreEqual(typeof(ApplicationException), e.GetType());
-                Assert.AreEqual("Could not Initialize the engine with the runtime config.", e.Message);
+                Assert.AreEqual(
+                    $"Could not initialize the engine with the runtime config file: {RuntimeConfigPath.DefaultName}",
+                    e.Message);
             }
         }
 
@@ -613,7 +615,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             catch (Exception e)
             {
                 Assert.AreEqual(typeof(ApplicationException), e.GetType());
-                Assert.AreEqual("Could not Initialize the engine with the runtime config.", e.Message);
+                Assert.AreEqual(
+                    $"Could not initialize the engine with the runtime config file: " +
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}",
+                    e.Message);
             }
         }
 

@@ -327,17 +327,18 @@ public class EndToEndTests
         Assert.IsNotNull(output);
         Assert.IsTrue(output!.Contains($"Using config file: {configFileName}"));
         output = process.StandardOutput.ReadLine();
-        Assert.IsNotNull(output);
         if (expectSuccess)
         {
+            Assert.IsNotNull(output);
             Assert.IsTrue(output.Contains("Starting the runtime engine..."));
         }
         else
         {
-            Assert.IsTrue(output.Contains("Invalid connection-string provided in the config."));
-            output = process.StandardOutput.ReadLine();
-            Assert.IsNotNull(output);
-            Assert.IsTrue(output.Contains("Failed to start the engine."));
+            Assert.IsNull(output);
+            string? err = process.StandardError.ReadToEnd();
+            Assert.IsNotNull(err);
+            Assert.IsTrue(err.Contains("Invalid connection-string provided in the config."));
+            Assert.IsTrue(err.Contains("Failed to start the engine."));
         }
 
         process.Kill();
@@ -393,17 +394,17 @@ public class EndToEndTests
         Assert.IsNotNull(output);
         Assert.IsTrue(output.Contains($"Using config file: {_testRuntimeConfig}"));
         output = process.StandardOutput.ReadLine();
-        Assert.IsNotNull(output);
         if (expectSuccess)
         {
+            Assert.IsNotNull(output);
             Assert.IsTrue(output.Contains("Starting the runtime engine..."));
         }
         else
         {
-            Assert.IsTrue(output.Contains($"Deserialization of the configuration file failed."));
-            output = process.StandardOutput.ReadToEnd();
-            Assert.IsNotNull(output);
-            Assert.IsTrue(output.Contains("Failed to start the engine."));
+            Assert.IsNull(output);
+            string? err = process.StandardError.ReadToEnd();
+            Assert.IsTrue(err.Contains($"Deserialization of the configuration file failed."));
+            Assert.IsTrue(err.Contains("Failed to start the engine."));
         }
 
         process.Kill();

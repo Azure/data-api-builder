@@ -495,7 +495,7 @@ namespace Cli
         {
             if (!TryReadRuntimeConfig(configFile, out string runtimeConfigJson))
             {
-                Console.WriteLine($"Failed to read the config file: {configFile}.");
+                Console.Error.WriteLine($"Failed to read the config file: {configFile}.");
                 return false;
             }
 
@@ -504,13 +504,13 @@ namespace Cli
                     out RuntimeConfig? deserializedRuntimeConfig,
                     logger: null))
             {
-                Console.WriteLine($"Failed to parse the config file: {configFile}.");
+                Console.Error.WriteLine($"Failed to parse the config file: {configFile}.");
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.ConnectionString))
             {
-                Console.WriteLine($"Invalid connection-string provided in the config.");
+                Console.Error.WriteLine($"Invalid connection-string provided in the config.");
                 return false;
             }
 

@@ -133,7 +133,7 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        public SourceDefinition GetDbEntityDefinition(string entityName)
+        public SourceDefinition GetSourceDefinition(string entityName)
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
@@ -142,8 +142,18 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
-            return databaseObject!.ObjectType is SourceType.Table ?
-                databaseObject.TableDefinition : databaseObject.ViewDefinition;
+            if (databaseObject!.ObjectType is SourceType.Table)
+            {
+                DatabaseTable databaseTable = (DatabaseTable)databaseObject;
+                return databaseTable.TableDefinition;
+            }
+            else if(databaseObject.ObjectType is SourceType.View)
+            {
+                DatabaseView databaseView = (DatabaseView)databaseObject;
+                return databaseView.ViewDefinition;
+            }
+
+            return null!;
         }
 
         /// <inheritdoc />
@@ -156,7 +166,8 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
-            return databaseObject!.StoredProcedureDefinition;
+            DatabaseStoredProcedure storedProcedureDefinition = (DatabaseStoredProcedure)databaseObject;
+            return storedProcedureDefinition.StoredProcedureDefinition;
         }
 
         /// <inheritdoc />
@@ -333,7 +344,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Creates a Database object with the given schema and table names.
         /// </summary>
-        protected virtual DatabaseObject GenerateDbObject(string schemaName, string tableName)
+        protected virtual DatabaseTable GenerateDbTable(string schemaName, string tableName)
         {
             return new(schemaName, tableName);
         }
@@ -393,23 +404,36 @@ namespace Azure.DataApiBuilder.Service.Services
 
                         // if specified as stored procedure in config, initialize DatabaseObject with StoredProcedureDefinition, else with
                         // DatabaseEntityDefinition (for tables) / DatabaseViewDefinition (for views).
-                        sourceObject = new()
+
+                        if (entity.ObjectType is SourceType.StoredProcedure)
                         {
-                            SchemaName = schemaName,
-                            Name = dbObjectName,
-                            ObjectType = entity.ObjectType
-                        };
-                        if (sourceObject.ObjectType is SourceType.StoredProcedure)
-                        {
-                            sourceObject.StoredProcedureDefinition = new();
+                            sourceObject = new DatabaseStoredProcedure()
+                            {
+                                SchemaName = schemaName,
+                                Name = dbObjectName,
+                                ObjectType = entity.ObjectType,
+                                StoredProcedureDefinition = new()
+                            };
                         }
-                        else if (sourceObject.ObjectType is SourceType.Table)
+                        else if (entity.ObjectType is SourceType.Table)
                         {
-                            sourceObject.TableDefinition = new();
+                            sourceObject = new DatabaseTable()
+                            {
+                                SchemaName = schemaName,
+                                Name = dbObjectName,
+                                ObjectType = entity.ObjectType,
+                                TableDefinition = new()
+                            };
                         }
                         else
                         {
-                            sourceObject.ViewDefinition = new();
+                            sourceObject = new DatabaseView()
+                            {
+                                SchemaName = schemaName,
+                                Name = dbObjectName,
+                                ObjectType = entity.ObjectType,
+                                ViewDefinition = new()
+                            };
                         }
 
                         sourceObjects.Add(entity.SourceName, sourceObject);
@@ -417,9 +441,9 @@ namespace Azure.DataApiBuilder.Service.Services
 
                     EntityToDatabaseObject.Add(entityName, sourceObject);
 
-                    if (entity.Relationships is not null)
+                    if (entity.Relationships is not null && entity.ObjectType is SourceType.Table)
                     {
-                        AddForeignKeysForRelationships(entityName, entity, sourceObject);
+                        AddForeignKeysForRelationships(entityName, entity, (DatabaseTable)sourceObject);
                     }
                 }
             }
@@ -439,15 +463,15 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="entityName"></param>
         /// <param name="entity"></param>
-        /// <param name="databaseObject"></param>
+        /// <param name="databaseTable"></param>
         /// <exception cref="InvalidOperationException"></exception>
         private void AddForeignKeysForRelationships(
             string entityName,
             Entity entity,
-            DatabaseObject databaseObject)
+            DatabaseTable databaseTable)
         {
             RelationshipMetadata? relationshipData;
-            SourceDefinition sourceDefinition = GetDbEntityDefinition(entityName);
+            SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
             if (!sourceDefinition.SourceEntityRelationshipMap
                 .TryGetValue(entityName, out relationshipData))
             {
@@ -465,25 +489,25 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
 
                 (targetSchemaName, targetDbObjectName) = ParseSchemaAndDbObjectName(targetEntity.SourceName)!;
-                DatabaseObject targetDbObject = new(targetSchemaName, targetDbObjectName);
+                DatabaseTable targetDbTable = new(targetSchemaName, targetDbObjectName);
                 // If a linking object is specified,
                 // give that higher preference and add two foreign keys for this targetEntity.
                 if (relationship.LinkingObject is not null)
                 {
                     (linkingObjectSchema, linkingObjectName) = ParseSchemaAndDbObjectName(relationship.LinkingObject)!;
-                    DatabaseObject linkingDbObject = new(linkingObjectSchema, linkingObjectName);
+                    DatabaseTable linkingDbObject = new(linkingObjectSchema, linkingObjectName);
                     AddForeignKeyForTargetEntity(
                         targetEntityName,
-                        referencingDbObject: linkingDbObject,
-                        referencedDbObject: databaseObject,
+                        referencingDbTable: linkingDbObject,
+                        referencedDbTable: databaseTable,
                         referencingColumns: relationship.LinkingSourceFields,
                         referencedColumns: relationship.SourceFields,
                         relationshipData);
 
                     AddForeignKeyForTargetEntity(
                         targetEntityName,
-                        referencingDbObject: linkingDbObject,
-                        referencedDbObject: targetDbObject,
+                        referencingDbTable: linkingDbObject,
+                        referencedDbTable: targetDbTable,
                         referencingColumns: relationship.LinkingTargetFields,
                         referencedColumns: relationship.TargetFields,
                         relationshipData);
@@ -509,8 +533,8 @@ namespace Azure.DataApiBuilder.Service.Services
                     // b. no foreign keys were defined at all.
                     AddForeignKeyForTargetEntity(
                         targetEntityName,
-                        referencingDbObject: databaseObject,
-                        referencedDbObject: targetDbObject,
+                        referencingDbTable: databaseTable,
+                        referencedDbTable: targetDbTable,
                         referencingColumns: relationship.SourceFields,
                         referencedColumns: relationship.TargetFields,
                         relationshipData);
@@ -521,8 +545,8 @@ namespace Azure.DataApiBuilder.Service.Services
                     // This foreign key WILL NOT exist if its a Many-One relationship.
                     AddForeignKeyForTargetEntity(
                         targetEntityName,
-                        referencingDbObject: targetDbObject,
-                        referencedDbObject: databaseObject,
+                        referencingDbTable: targetDbTable,
+                        referencedDbTable: databaseTable,
                         referencingColumns: relationship.TargetFields,
                         referencedColumns: relationship.SourceFields,
                         relationshipData);
@@ -535,8 +559,8 @@ namespace Azure.DataApiBuilder.Service.Services
                     // so, the referencingTable is the source of the target entity.
                     AddForeignKeyForTargetEntity(
                         targetEntityName,
-                        referencingDbObject: targetDbObject,
-                        referencedDbObject: databaseObject,
+                        referencingDbTable: targetDbTable,
+                        referencedDbTable: databaseTable,
                         referencingColumns: relationship.TargetFields,
                         referencedColumns: relationship.SourceFields,
                         relationshipData);
@@ -550,8 +574,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private static void AddForeignKeyForTargetEntity(
             string targetEntityName,
-            DatabaseObject referencingDbObject,
-            DatabaseObject referencedDbObject,
+            DatabaseTable referencingDbTable,
+            DatabaseTable referencedDbTable,
             string[]? referencingColumns,
             string[]? referencedColumns,
             RelationshipMetadata relationshipData)
@@ -560,8 +584,8 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 Pair = new()
                 {
-                    ReferencingDbObject = referencingDbObject,
-                    ReferencedDbObject = referencedDbObject
+                    ReferencingDbTable = referencingDbTable,
+                    ReferencedDbTable = referencedDbTable
                 }
             };
 
@@ -655,7 +679,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
-                        GetDbEntityDefinition(entityName));
+                        GetSourceDefinition(entityName));
                 }
                 else
                 {
@@ -663,12 +687,12 @@ namespace Azure.DataApiBuilder.Service.Services
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
-                        GetDbEntityDefinition(entityName));
+                        GetSourceDefinition(entityName));
 
                     await PopulateBaseTableDefinitionsForViewAsync(
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
-                        GetDbEntityDefinition(entityName));
+                        GetSourceDefinition(entityName));
                 }
             }
 
@@ -729,7 +753,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
                     EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
                     EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
-                    SourceDefinition sourceDefinition = GetDbEntityDefinition(entityName);
+                    SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
                         if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
@@ -1055,7 +1079,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     if (!sourceNameToDbEntityDefinition.ContainsKey(dbObject.Name))
                     {
-                        SourceDefinition sourceDefinition = GetDbEntityDefinition(entityName);
+                        SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
                         foreach ((_, RelationshipMetadata relationshipData)
                             in sourceDefinition.SourceEntityRelationshipMap)
                         {
@@ -1066,8 +1090,8 @@ namespace Azure.DataApiBuilder.Service.Services
                             {
                                 foreach (ForeignKeyDefinition fk in fkDefinitionsForTargetEntity)
                                 {
-                                    schemaNames.Add(fk.Pair.ReferencingDbObject.SchemaName);
-                                    tableNames.Add(fk.Pair.ReferencingDbObject.Name);
+                                    schemaNames.Add(fk.Pair.ReferencingDbTable.SchemaName);
+                                    tableNames.Add(fk.Pair.ReferencingDbTable.Name);
                                     sourceNameToDbEntityDefinition.TryAdd(dbObject.Name, sourceDefinition);
                                 }
                             }
@@ -1130,8 +1154,8 @@ namespace Azure.DataApiBuilder.Service.Services
                     (string)foreignKeyInfo[$"Referenced{nameof(DatabaseObject.SchemaName)}"]!;
                 string referencedTableName = (string)foreignKeyInfo[$"Referenced{nameof(SourceDefinition)}"]!;
 
-                DatabaseObject referencingDbObject = GenerateDbObject(referencingSchemaName, referencingTableName);
-                DatabaseObject referencedDbObject = GenerateDbObject(referencedSchemaName, referencedTableName);
+                DatabaseTable referencingDbObject = GenerateDbTable(referencingSchemaName, referencingTableName);
+                DatabaseTable referencedDbObject = GenerateDbTable(referencedSchemaName, referencedTableName);
                 RelationShipPair pair = new(referencingDbObject, referencedDbObject);
                 if (!pairToFkDefinition.TryGetValue(pair, out ForeignKeyDefinition? foreignKeyDefinition))
                 {
@@ -1221,11 +1245,11 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Else returns false.
         /// </summary>
         public bool VerifyForeignKeyExistsInDB(
-            DatabaseObject databaseObjectA,
-            DatabaseObject databaseObjectB)
+            DatabaseTable databaseTableA,
+            DatabaseTable databaseTableB)
         {
-            RelationShipPair pairAB = new(databaseObjectA, databaseObjectB);
-            RelationShipPair pairBA = new(databaseObjectB, databaseObjectA);
+            RelationShipPair pairAB = new(databaseTableA, databaseTableB);
+            RelationShipPair pairBA = new(databaseTableB, databaseTableA);
 
             return (_pairToFkDefinition.ContainsKey(pairAB) || _pairToFkDefinition.ContainsKey(pairBA));
         }

@@ -419,7 +419,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (context is not null && !context.Selection.Type.IsScalarType())
             {
-                SourceDefinition sourceDefinition = _sqlMetadataProvider.GetDbEntityDefinition(entityName);
+                SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
 
                 // only extract pk columns
                 // since non pk columns can be null
@@ -558,7 +558,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
         public string ConstructPrimaryKeyRoute(string entityName, Dictionary<string, object?> entity)
         {
-            SourceDefinition sourceDefinition = _sqlMetadataProvider.GetDbEntityDefinition(entityName);
+            SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
             StringBuilder newPrimaryKeyRoute = new();
 
             foreach (string primaryKey in sourceDefinition.PrimaryKey)

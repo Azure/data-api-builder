@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             };
         }
 
-        public SourceDefinition GetDbEntityDefinition(string entityName)
+        public SourceDefinition GetSourceDefinition(string entityName)
         {
             throw new NotSupportedException("Cosmos backends don't support direct table definitions. Definitions are provided via the GraphQL schema");
         }
@@ -139,8 +139,8 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         }
 
         public bool VerifyForeignKeyExistsInDB(
-            DatabaseObject databaseObjectA,
-            DatabaseObject databaseObjectB)
+            DatabaseTable databaseTableA,
+            DatabaseTable databaseTableB)
         {
             throw new NotImplementedException();
         }

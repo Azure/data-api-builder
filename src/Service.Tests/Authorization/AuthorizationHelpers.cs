@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Mock<ISqlMetadataProvider> metadataProvider = new();
             Mock<ILogger<AuthorizationResolver>> logger = new();
             SourceDefinition sampleTable = CreateSampleTable();
-            metadataProvider.Setup(x => x.GetDbEntityDefinition(TEST_ENTITY)).Returns(sampleTable);
+            metadataProvider.Setup(x => x.GetSourceDefinition(TEST_ENTITY)).Returns(sampleTable);
             metadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.mssql);
 
             string outParam;

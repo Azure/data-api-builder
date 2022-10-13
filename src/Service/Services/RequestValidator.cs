@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Services
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-            SourceDefinition sourceDefinition = sqlMetadataProvider.GetDbEntityDefinition(context.EntityName);
+            SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(context.EntityName);
             foreach (string field in context.FieldsToBeReturned)
             {
                 // Get backing column and check that column is valid
@@ -470,7 +470,7 @@ namespace Azure.DataApiBuilder.Service.Services
             try
             {
                 SourceDefinition sourceDefinition =
-                    sqlMetadataProvider.GetDbEntityDefinition(entityName);
+                    sqlMetadataProvider.GetSourceDefinition(entityName);
                 return sourceDefinition;
             }
             catch (KeyNotFoundException ex)

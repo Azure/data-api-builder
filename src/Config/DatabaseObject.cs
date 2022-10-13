@@ -3,17 +3,11 @@ namespace Azure.DataApiBuilder.Config
     /// <summary>
     /// Represents a database object - which could be a view, table, or stored procedure.
     /// </summary>
-    public class DatabaseObject
+    public abstract class DatabaseObject
     {
         public string SchemaName { get; set; } = null!;
 
         public string Name { get; set; } = null!;
-
-        public SourceDefinition TableDefinition { get; set; } = null!;
-
-        public ViewDefinition ViewDefinition { get; set; } = null!;
-
-        public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
 
         public SourceType? ObjectType { get; set; } = SourceType.Table;
 
@@ -49,6 +43,42 @@ namespace Azure.DataApiBuilder.Config
         {
             return HashCode.Combine(SchemaName, Name);
         }
+    }
+
+    public class DatabaseTable : DatabaseObject
+    {
+        public DatabaseTable(string schemaName, string tableName)
+            : base(schemaName, tableName)
+        {
+
+        }
+
+        public DatabaseTable() { }
+        public SourceDefinition TableDefinition { get; set; } = null!;
+    }
+
+    public class DatabaseView : DatabaseObject
+    {
+        public DatabaseView(string schemaName, string tableName)
+            : base(schemaName, tableName)
+        {
+
+        }
+
+        public DatabaseView() { }
+        public ViewDefinition ViewDefinition { get; set; } = null!;
+    }
+
+    public class DatabaseStoredProcedure : DatabaseObject
+    {
+        public DatabaseStoredProcedure(string schemaName, string tableName)
+            : base(schemaName, tableName)
+        {
+
+        }
+
+        public DatabaseStoredProcedure() { }
+        public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
     }
 
     public class StoredProcedureDefinition
@@ -190,16 +220,16 @@ namespace Azure.DataApiBuilder.Config
         public RelationShipPair() { }
 
         public RelationShipPair(
-            DatabaseObject referencingDbObject,
-            DatabaseObject referencedDbObject)
+            DatabaseTable referencingDbObject,
+            DatabaseTable referencedDbObject)
         {
-            ReferencingDbObject = referencingDbObject;
-            ReferencedDbObject = referencedDbObject;
+            ReferencingDbTable = referencingDbObject;
+            ReferencedDbTable = referencedDbObject;
         }
 
-        public DatabaseObject ReferencingDbObject { get; set; } = new();
+        public DatabaseTable ReferencingDbTable { get; set; } = new();
 
-        public DatabaseObject ReferencedDbObject { get; set; } = new();
+        public DatabaseTable ReferencedDbTable { get; set; } = new();
 
         public override bool Equals(object? other)
         {
@@ -209,14 +239,14 @@ namespace Azure.DataApiBuilder.Config
         public bool Equals(RelationShipPair? other)
         {
             return other != null &&
-                   ReferencedDbObject.Equals(other.ReferencedDbObject) &&
-                   ReferencingDbObject.Equals(other.ReferencingDbObject);
+                   ReferencedDbTable.Equals(other.ReferencedDbTable) &&
+                   ReferencingDbTable.Equals(other.ReferencingDbTable);
         }
 
         public override int GetHashCode()
         {
             return HashCode.Combine(
-                    ReferencedDbObject, ReferencingDbObject);
+                    ReferencedDbTable, ReferencingDbTable);
         }
     }
 

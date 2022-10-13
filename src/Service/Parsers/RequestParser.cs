@@ -155,7 +155,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
             string tableName = context.DatabaseObject.Name;
 
             OrderByClause node = sqlMetadataProvider.GetODataParser().GetOrderByClause(sortQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
-            List<string> primaryKeys = sqlMetadataProvider.GetDbEntityDefinition(context.EntityName).PrimaryKey;
+            List<string> primaryKeys = sqlMetadataProvider.GetSourceDefinition(context.EntityName).PrimaryKey;
 
             // used for performant Remove operations
             HashSet<string> remainingKeys = new(primaryKeys);

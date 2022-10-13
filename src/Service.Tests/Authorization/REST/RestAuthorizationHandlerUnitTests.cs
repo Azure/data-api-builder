@@ -333,7 +333,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         {
             SourceDefinition tableDef = new();
             tableDef.SourceEntityRelationshipMap.Add(AuthorizationHelpers.TEST_ENTITY, new());
-            DatabaseObject stubDbObj = new()
+            DatabaseObject stubDbObj = new DatabaseTable()
             {
                 TableDefinition = tableDef
             };

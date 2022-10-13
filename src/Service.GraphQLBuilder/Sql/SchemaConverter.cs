@@ -36,8 +36,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
             List<DirectiveNode> objectTypeDirectives = new();
-            SourceDefinition sourceDefinition = databaseObject.ObjectType is SourceType.Table ?
-                databaseObject.TableDefinition : databaseObject.ViewDefinition;
+            SourceDefinition sourceDefinition =
+                databaseObject.ObjectType is SourceType.Table ?
+                ((DatabaseTable)databaseObject).TableDefinition :
+                ((DatabaseView)databaseObject).ViewDefinition;
             foreach ((string columnName, ColumnDefinition column) in sourceDefinition.Columns)
             {
                 List<DirectiveNode> directives = new();
@@ -134,7 +136,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                             RelationShipPair pair = foreignKeyInfo.Pair;
                             // The given entity may be the referencing or referenced database object in the foreign key
                             // relationship. To determine this, compare with the entity's database object.
-                            if (pair.ReferencingDbObject.Equals(databaseObject))
+                            if (pair.ReferencingDbTable.Equals(databaseObject))
                             {
                                 isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
                             }

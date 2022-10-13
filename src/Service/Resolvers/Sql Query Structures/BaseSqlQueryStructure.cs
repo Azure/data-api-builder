@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             else
             {
                 EntityName = string.Empty;
-                DatabaseObject = new();
+                DatabaseObject = new DatabaseTable();
             }
 
             // Default the alias to the empty string since this base construtor
@@ -134,7 +134,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         protected SourceDefinition GetUnderlyingDbEntityDefinition()
         {
-            return SqlMetadataProvider.GetDbEntityDefinition(EntityName);
+            return SqlMetadataProvider.GetSourceDefinition(EntityName);
         }
 
         /// <summary>

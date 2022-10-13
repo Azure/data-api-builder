@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
                     _entities.Add(newEntityKey, newEntity);
 
                     SourceDefinition sourceDefinition
-                        = sqlMetadataProvider.GetDbEntityDefinition(entityAndDbObject.Key);
+                        = sqlMetadataProvider.GetSourceDefinition(entityAndDbObject.Key);
 
                     // each column represents a property of the current entity we are adding
                     foreach (string column in sourceDefinition.Columns.Keys)

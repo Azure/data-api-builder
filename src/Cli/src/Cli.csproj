@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -28,10 +28,37 @@
     <ConfigFiles Include="dab-config*.json" />
   </ItemGroup>
 
-  <!-- <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="powershell.exe -command ..\..\..\configGenerator.ps1 " Condition=" '$(OS)' == 'Windows_NT' "/>
-    <Exec Command="bash ../../../configGenerator.sh" Condition=" '$(OS)' != 'Windows_NT' " UseCommandProcessor="False"/>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+
+    <PropertyGroup>
+      <DllFilePath>$(BaseOutputPath)$(Configuration)\$(TargetFramework)\dab.dll</DllFilePath>
+    </PropertyGroup>
+
+    <ReadLinesFromFile File="..\..\..\MsSqlCommands.txt">
+      <Output TaskParameter="Lines" ItemName="MsSqlCommands" />
+    </ReadLinesFromFile>
+
+    <ReadLinesFromFile File="..\..\..\MySqlCommands.txt">
+      <Output TaskParameter="Lines" ItemName="MySqlCommands" />
+    </ReadLinesFromFile>
+
+    <ReadLinesFromFile File="..\..\..\PostgreSqlCommands.txt">
+      <Output TaskParameter="Lines" ItemName="PostgreSqlCommands" />
+    </ReadLinesFromFile>
+
+    <ReadLinesFromFile File="..\..\..\CosmosCommands.txt">
+      <Output TaskParameter="Lines" ItemName="CosmosCommands" />
+    </ReadLinesFromFile>
+
+    <Delete Files="@(ConfigFiles)" />
+
+    <Exec Command="dotnet $(DllFilePath) %(MsSqlCommands.Identity)" />
+    <Exec Command="dotnet $(DllFilePath) %(MySqlCommands.Identity)" />
+    <Exec Command="dotnet $(DllFilePath) %(PostgreSqlCommands.Identity)" />
+    <Exec Command="dotnet $(DllFilePath) %(CosmosCommands.Identity)" />
+
     <Copy SourceFiles="@(ConfigFiles)"  DestinationFolder="$(BaseOutputPath)\tests\$(TargetFramework)\" />
-  </Target> -->
+
+  </Target>
 
 </Project>

@@ -1,4 +1,4 @@
-init --config "dab-config.PostgreSql.json" --database-type mssql --connection-string "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME" --host-mode Development --cors-origin "http://localhost:5000"
+init --config "dab-config.PostgreSql.json" --database-type mssql --connection-string "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME" --host-mode Development --authenticate-devmode-requests false --cors-origin "http://localhost:5000"
 add Publisher --config "dab-config.PostgreSql.json" --source publishers --permissions "anonymous:read"
 add Stock --config "dab-config.PostgreSql.json" --source stocks --permissions "anonymous:create,read,update"
 add Book --config "dab-config.PostgreSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
@@ -74,7 +74,7 @@ update BookWebsitePlacement --config "dab-config.PostgreSql.json" --permissions 
 update Author --config "dab-config.PostgreSql.json"  --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update WebsiteUser --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,delete,update" --rest false --graphql "websiteUser:websiteUsers"
 update stocks_price --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,delete,update" --rest false
-update Comic --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql false
+update Comic --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update Broker --config "dab-config.PostgreSql.json" --permissions "authenticated:create,update,read,delete" --graphql false
 update Tree --config "dab-config.PostgreSql.json" --rest true --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
 update Shrub --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"

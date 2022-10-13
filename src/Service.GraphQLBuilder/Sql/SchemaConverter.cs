@@ -36,13 +36,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
             List<DirectiveNode> objectTypeDirectives = new();
-            DatabaseEntityDefinition dbEntityDefinition = databaseObject.ObjectType is SourceType.Table ?
+            SourceDefinition sourceDefinition = databaseObject.ObjectType is SourceType.Table ?
                 databaseObject.TableDefinition : databaseObject.ViewDefinition;
-            foreach ((string columnName, ColumnDefinition column) in dbEntityDefinition.Columns)
+            foreach ((string columnName, ColumnDefinition column) in sourceDefinition.Columns)
             {
                 List<DirectiveNode> directives = new();
 
-                if (dbEntityDefinition.PrimaryKey.Contains(columnName))
+                if (sourceDefinition.PrimaryKey.Contains(columnName))
                 {
                     directives.Add(new DirectiveNode(PrimaryKeyDirectiveType.DirectiveName, new ArgumentNode("databaseType", column.SystemType.Name)));
                 }
@@ -118,7 +118,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     bool isNullableRelationship = false;
 
                     if (// Retrieve all the relationship information for the source entity which is backed by this table definition
-                        dbEntityDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
+                        sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
                         &&
                         // From the relationship information, obtain the foreign key definition for the given target entity
                         relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
@@ -136,11 +136,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                             // relationship. To determine this, compare with the entity's database object.
                             if (pair.ReferencingDbObject.Equals(databaseObject))
                             {
-                                isNullableRelationship = dbEntityDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
+                                isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
                             }
                             else
                             {
-                                isNullableRelationship = dbEntityDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencedColumns);
+                                isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencedColumns);
                             }
                         }
                         else

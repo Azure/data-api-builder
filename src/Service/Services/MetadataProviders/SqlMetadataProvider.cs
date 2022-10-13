@@ -133,7 +133,7 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        public DatabaseEntityDefinition GetDbEntityDefinition(string entityName)
+        public SourceDefinition GetDbEntityDefinition(string entityName)
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
@@ -447,12 +447,12 @@ namespace Azure.DataApiBuilder.Service.Services
             DatabaseObject databaseObject)
         {
             RelationshipMetadata? relationshipData;
-            DatabaseEntityDefinition dbEntityDefinition = GetDbEntityDefinition(entityName);
-            if (!dbEntityDefinition.SourceEntityRelationshipMap
+            SourceDefinition sourceDefinition = GetDbEntityDefinition(entityName);
+            if (!sourceDefinition.SourceEntityRelationshipMap
                 .TryGetValue(entityName, out relationshipData))
             {
                 relationshipData = new();
-                dbEntityDefinition.SourceEntityRelationshipMap.Add(entityName, relationshipData);
+                sourceDefinition.SourceEntityRelationshipMap.Add(entityName, relationshipData);
             }
 
             string targetSchemaName, targetDbObjectName, linkingObjectSchema, linkingObjectName;
@@ -679,9 +679,9 @@ namespace Azure.DataApiBuilder.Service.Services
         private async Task PopulateBaseTableDefinitionsForViewAsync(
             string schemaName,
             string viewName,
-            DatabaseEntityDefinition dbEntityDefinition)
+            SourceDefinition sourceDefinition)
         {
-            DatabaseViewDefinition viewDefinition = (DatabaseViewDefinition)dbEntityDefinition;
+            ViewDefinition viewDefinition = (ViewDefinition)sourceDefinition;
             string dbviewName = $"{schemaName}.{viewName}";
             string query = "SELECT distinct source_schema,source_table " +
                            "FROM sys.dm_exec_describe_first_result_set (" +
@@ -702,7 +702,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     entityName: string.Empty,
                     schemaName: schemaName,
                     tableName: sourceTable,
-                    dbEntityDefinition: viewDefinition.BaseTableDefinitions[dbTableName]
+                    sourceDefinition: viewDefinition.BaseTableDefinitions[dbTableName]
                     );
             }
         }
@@ -729,8 +729,8 @@ namespace Azure.DataApiBuilder.Service.Services
                     Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
                     EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
                     EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
-                    DatabaseEntityDefinition dbEntityDefinition = GetDbEntityDefinition(entityName);
-                    foreach (string column in dbEntityDefinition.Columns.Keys)
+                    SourceDefinition sourceDefinition = GetDbEntityDefinition(entityName);
+                    foreach (string column in sourceDefinition.Columns.Keys)
                     {
                         if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
                         {
@@ -769,13 +769,13 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="schemaName">Name of the schema.</param>
         /// <param name="tableName">Name of the table.</param>
-        /// <param name="dbEntityDefinition">Table definition to fill.</param>
+        /// <param name="sourceDefinition">Table definition to fill.</param>
         /// <param name="entityName">EntityName included to pass on for error messaging.</param>
         private async Task PopulateDbEntityDefinitionAsync(
             string entityName,
             string schemaName,
             string tableName,
-            DatabaseEntityDefinition dbEntityDefinition)
+            SourceDefinition sourceDefinition)
         {
             DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(entityName, schemaName, tableName);
 
@@ -789,7 +789,7 @@ namespace Azure.DataApiBuilder.Service.Services
                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-            dbEntityDefinition.PrimaryKey = new(primaryKeys.Select(primaryKey => primaryKey.ColumnName));
+            sourceDefinition.PrimaryKey = new(primaryKeys.Select(primaryKey => primaryKey.ColumnName));
 
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
@@ -807,13 +807,13 @@ namespace Azure.DataApiBuilder.Service.Services
                 // hence we use TryAdd here.
                 // If the addition fails, it is assumed the column definition
                 // has already been added and need not error out.
-                dbEntityDefinition.Columns.TryAdd(columnName, column);
+                sourceDefinition.Columns.TryAdd(columnName, column);
             }
 
             DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
 
             PopulateColumnDefinitionWithHasDefault(
-                dbEntityDefinition,
+                sourceDefinition,
                 columnsInTable);
         }
 
@@ -976,7 +976,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Populates the column definition with HasDefault property.
         /// </summary>
         private static void PopulateColumnDefinitionWithHasDefault(
-            DatabaseEntityDefinition dbEntityDefinition,
+            SourceDefinition sourceDefinition,
             DataTable allColumnsInTable)
         {
             foreach (DataRow columnInfo in allColumnsInTable.Rows)
@@ -985,7 +985,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 bool hasDefault =
                     Type.GetTypeCode(columnInfo["COLUMN_DEFAULT"].GetType()) != TypeCode.DBNull;
                 ColumnDefinition? columnDefinition;
-                if (dbEntityDefinition.Columns.TryGetValue(columnName, out columnDefinition))
+                if (sourceDefinition.Columns.TryGetValue(columnName, out columnDefinition))
                 {
                     columnDefinition.HasDefault = hasDefault;
 
@@ -1010,7 +1010,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // and the array for all tableNames
             List<string> schemaNames = new();
             List<string> tableNames = new();
-            IEnumerable<DatabaseEntityDefinition> dbEntitiesToBePopulatedWithFK =
+            IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK =
                 FindAllEntitiesWhoseForeignKeyIsToBeRetrieved(schemaNames, tableNames);
 
             // No need to do any further work if there are no FK to be retrieved
@@ -1042,12 +1042,12 @@ namespace Azure.DataApiBuilder.Service.Services
             ValidateAllFkHaveBeenInferred(dbEntitiesToBePopulatedWithFK);
         }
 
-        private IEnumerable<DatabaseEntityDefinition>
+        private IEnumerable<SourceDefinition>
             FindAllEntitiesWhoseForeignKeyIsToBeRetrieved(
                 List<string> schemaNames,
                 List<string> tableNames)
         {
-            Dictionary<string, DatabaseEntityDefinition> sourceNameToDbEntityDefinition = new();
+            Dictionary<string, SourceDefinition> sourceNameToDbEntityDefinition = new();
             foreach ((string entityName, DatabaseObject dbObject) in EntityToDatabaseObject)
             {
                 // Ensure we're only doing this on tables, not stored procedures which have no table definition
@@ -1055,9 +1055,9 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     if (!sourceNameToDbEntityDefinition.ContainsKey(dbObject.Name))
                     {
-                        DatabaseEntityDefinition dbEntityDefinition = GetDbEntityDefinition(entityName);
+                        SourceDefinition sourceDefinition = GetDbEntityDefinition(entityName);
                         foreach ((_, RelationshipMetadata relationshipData)
-                            in dbEntityDefinition.SourceEntityRelationshipMap)
+                            in sourceDefinition.SourceEntityRelationshipMap)
                         {
                             IEnumerable<List<ForeignKeyDefinition>> foreignKeysForAllTargetEntities
                                 = relationshipData.TargetEntityToFkDefinitionMap.Values;
@@ -1068,7 +1068,7 @@ namespace Azure.DataApiBuilder.Service.Services
                                 {
                                     schemaNames.Add(fk.Pair.ReferencingDbObject.SchemaName);
                                     tableNames.Add(fk.Pair.ReferencingDbObject.Name);
-                                    sourceNameToDbEntityDefinition.TryAdd(dbObject.Name, dbEntityDefinition);
+                                    sourceNameToDbEntityDefinition.TryAdd(dbObject.Name, sourceDefinition);
                                 }
                             }
                         }
@@ -1080,12 +1080,12 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         private static void ValidateAllFkHaveBeenInferred(
-            IEnumerable<DatabaseEntityDefinition> dbEntitiesToBePopulatedWithFK)
+            IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {
-            foreach (DatabaseEntityDefinition dbEntityDefinition in dbEntitiesToBePopulatedWithFK)
+            foreach (SourceDefinition sourceDefinition in dbEntitiesToBePopulatedWithFK)
             {
                 foreach ((string sourceEntityName, RelationshipMetadata relationshipData)
-                        in dbEntityDefinition.SourceEntityRelationshipMap)
+                        in sourceDefinition.SourceEntityRelationshipMap)
                 {
                     IEnumerable<List<ForeignKeyDefinition>> foreignKeys = relationshipData.TargetEntityToFkDefinitionMap.Values;
                     // If none of the inferred foreign keys have the referencing columns,
@@ -1125,10 +1125,10 @@ namespace Azure.DataApiBuilder.Service.Services
                 Dictionary<string, object?> foreignKeyInfo = foreignKeyInfoWithProperties.Item1;
                 string referencingSchemaName =
                     (string)foreignKeyInfo[$"Referencing{nameof(DatabaseObject.SchemaName)}"]!;
-                string referencingTableName = (string)foreignKeyInfo[$"Referencing{nameof(DatabaseEntityDefinition)}"]!;
+                string referencingTableName = (string)foreignKeyInfo[$"Referencing{nameof(SourceDefinition)}"]!;
                 string referencedSchemaName =
                     (string)foreignKeyInfo[$"Referenced{nameof(DatabaseObject.SchemaName)}"]!;
-                string referencedTableName = (string)foreignKeyInfo[$"Referenced{nameof(DatabaseEntityDefinition)}"]!;
+                string referencedTableName = (string)foreignKeyInfo[$"Referenced{nameof(SourceDefinition)}"]!;
 
                 DatabaseObject referencingDbObject = GenerateDbObject(referencingSchemaName, referencingTableName);
                 DatabaseObject referencedDbObject = GenerateDbObject(referencedSchemaName, referencedTableName);
@@ -1160,16 +1160,16 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="dbEntitiesToBePopulatedWithFK"></param>
         private void FillInferredFkInfo(
-            IEnumerable<DatabaseEntityDefinition> dbEntitiesToBePopulatedWithFK)
+            IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {
             // For each table definition that has to be populated with the inferred
             // foreign key information.
-            foreach (DatabaseEntityDefinition dbEntityDefinition in dbEntitiesToBePopulatedWithFK)
+            foreach (SourceDefinition sourceDefinition in dbEntitiesToBePopulatedWithFK)
             {
                 // For each source entities, which maps to this table definition
                 // and has a relationship metadata to be filled.
                 foreach ((_, RelationshipMetadata relationshipData)
-                       in dbEntityDefinition.SourceEntityRelationshipMap)
+                       in sourceDefinition.SourceEntityRelationshipMap)
                 {
                     // Enumerate all the foreign keys required for all the target entities
                     // that this source is related to.

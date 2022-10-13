@@ -624,8 +624,8 @@ namespace Azure.DataApiBuilder.Service.Authorization
             }
 
             // Table definition is null on stored procedure entities
-            DatabaseEntityDefinition? dbEntityDefinition = _metadataProvider.GetDbEntityDefinition(entityName);
-            return dbEntityDefinition is null ? new List<string>() : dbEntityDefinition.Columns.Keys;
+            SourceDefinition? sourceDefinition = _metadataProvider.GetDbEntityDefinition(entityName);
+            return sourceDefinition is null ? new List<string>() : sourceDefinition.Columns.Keys;
         }
 
         /// <summary>

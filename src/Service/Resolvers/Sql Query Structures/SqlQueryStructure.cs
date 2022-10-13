@@ -148,8 +148,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             AddFields(context, sqlMetadataProvider);
             if (Columns.Count == 0)
             {
-                DatabaseEntityDefinition dbEntityDefinition = GetUnderlyingDbEntityDefinition();
-                foreach (KeyValuePair<string, ColumnDefinition> column in dbEntityDefinition.Columns)
+                SourceDefinition sourceDefinition = GetUnderlyingDbEntityDefinition();
+                foreach (KeyValuePair<string, ColumnDefinition> column in sourceDefinition.Columns)
                 {
                     // We only include columns that are exposed for use in requests
                     if (sqlMetadataProvider.TryGetExposedColumnName(EntityName, column.Key, out string? name))
@@ -735,8 +735,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string subtableAlias,
             SqlQueryStructure subQuery)
         {
-            DatabaseEntityDefinition dbEntityDefinition = GetUnderlyingDbEntityDefinition();
-            if (dbEntityDefinition.SourceEntityRelationshipMap.TryGetValue(
+            SourceDefinition sourceDefinition = GetUnderlyingDbEntityDefinition();
+            if (sourceDefinition.SourceEntityRelationshipMap.TryGetValue(
                 _underlyingFieldType.Name, out RelationshipMetadata? relationshipMetadata)
                 && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
                     out List<ForeignKeyDefinition>? foreignKeyDefinitions))

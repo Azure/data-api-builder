@@ -9,9 +9,9 @@ namespace Azure.DataApiBuilder.Config
 
         public string Name { get; set; } = null!;
 
-        public DatabaseEntityDefinition TableDefinition { get; set; } = null!;
+        public SourceDefinition TableDefinition { get; set; } = null!;
 
-        public DatabaseViewDefinition ViewDefinition { get; set; } = null!;
+        public ViewDefinition ViewDefinition { get; set; } = null!;
 
         public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
 
@@ -70,15 +70,15 @@ namespace Azure.DataApiBuilder.Config
     /// <summary>
     /// Class to store database table definition.
     /// </summary>
-    public class DatabaseEntityDefinition
+    public class SourceDefinition
     {
         /// <summary>
-        /// The list of columns that together form the primary key of the entity.
+        /// The list of columns that together form the primary key of the source.
         /// </summary>
         public List<string> PrimaryKey { get; set; } = new();
 
         /// <summary>
-        /// The list of columns in this entity.
+        /// The list of columns in this source.
         /// </summary>
         public Dictionary<string, ColumnDefinition> Columns { get; private set; } =
             new(StringComparer.InvariantCultureIgnoreCase);
@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Config
         /// <summary>
         /// A dictionary mapping all the source entities to their relationship metadata.
         /// All these entities share this table definition
-        /// as their underlying database object 
+        /// as their underlying database object. 
         /// </summary>
         public Dictionary<string, RelationshipMetadata> SourceEntityRelationshipMap { get; private set; } =
             new(StringComparer.InvariantCultureIgnoreCase);
@@ -110,15 +110,15 @@ namespace Azure.DataApiBuilder.Config
     /// <summary>
     /// Class to store the database view definition.
     /// </summary>
-    public class DatabaseViewDefinition : DatabaseEntityDefinition
+    public class ViewDefinition : SourceDefinition
     {
-        // Stores the entity definition for the base table targeted by the operation.
+        // Stores the source definition for the base table targeted by the operation.
         // Evaluated on a per request basis.
-        public DatabaseEntityDefinition? BaseTableForRequestDefinition { get; set; }
+        public SourceDefinition? BaseTableForRequestDefinition { get; set; }
 
         // Stores the mapping from the source table names for the base tables
-        // to the corresponding entity definition for the base table.
-        public Dictionary<string, DatabaseEntityDefinition> BaseTableDefinitions { get; set; } = new();
+        // to the corresponding source definition for the base table.
+        public Dictionary<string, SourceDefinition> BaseTableDefinitions { get; set; } = new();
     }
     /// <summary>
     /// Class encapsulating foreign keys corresponding to target entities.

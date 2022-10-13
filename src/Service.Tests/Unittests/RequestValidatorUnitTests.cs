@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void MatchingPrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id" };
-            DatabaseEntityDefinition tableDef = new()
+            SourceDefinition tableDef = new()
             {
                 PrimaryKey = new(primaryKeys)
             };
@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void MatchingCompositePrimaryKeyOrdered()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            DatabaseEntityDefinition tableDef = new()
+            SourceDefinition tableDef = new()
             {
                 PrimaryKey = new(primaryKeys)
             };
@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void MatchingCompositePrimaryKeyNotOrdered()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            DatabaseEntityDefinition tableDef = new()
+            SourceDefinition tableDef = new()
             {
                 PrimaryKey = new(primaryKeys)
             };
@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void RequestWithInvalidPrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id" };
-            DatabaseEntityDefinition tableDef = new()
+            SourceDefinition tableDef = new()
             {
                 PrimaryKey = new(primaryKeys)
             };
@@ -223,7 +223,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void RequestWithIncompleteCompositePrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id", "name" };
-            DatabaseEntityDefinition tableDef = new()
+            SourceDefinition tableDef = new()
             {
                 PrimaryKey = new(primaryKeys)
             };
@@ -246,7 +246,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void IncompleteRequestCompositePrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            DatabaseEntityDefinition tableDef = new()
+            SourceDefinition tableDef = new()
             {
                 PrimaryKey = new(primaryKeys)
             };
@@ -272,7 +272,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void BloatedRequestCompositePrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            DatabaseEntityDefinition tableDef = new()
+            SourceDefinition tableDef = new()
             {
                 PrimaryKey = new(primaryKeys)
             };

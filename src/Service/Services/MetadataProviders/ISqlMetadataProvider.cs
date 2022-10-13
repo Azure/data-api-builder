@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Obtains the underlying DatabaseEntityDefinition for the given entity name.
         /// </summary>
-        DatabaseEntityDefinition GetDbEntityDefinition(string entityName);
+        SourceDefinition GetDbEntityDefinition(string entityName);
 
         /// <summary>
         /// Obtains the underlying StoredProcedureDefinition for the given entity name.

@@ -18,9 +18,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IDictionary<string, object?> mutationParams)
         : base(sqlMetadataProvider, entityName: entityName)
         {
-            DatabaseEntityDefinition dbEntityDefinition = GetUnderlyingDbEntityDefinition();
+            SourceDefinition sourceDefinition = GetUnderlyingDbEntityDefinition();
 
-            List<string> primaryKeys = dbEntityDefinition.PrimaryKey;
+            List<string> primaryKeys = sourceDefinition.PrimaryKey;
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 if (param.Value is null)

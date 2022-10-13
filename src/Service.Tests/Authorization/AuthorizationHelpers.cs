@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(runtimeConfig);
             Mock<ISqlMetadataProvider> metadataProvider = new();
             Mock<ILogger<AuthorizationResolver>> logger = new();
-            DatabaseEntityDefinition sampleTable = CreateSampleTable();
+            SourceDefinition sampleTable = CreateSampleTable();
             metadataProvider.Setup(x => x.GetDbEntityDefinition(TEST_ENTITY)).Returns(sampleTable);
             metadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.mssql);
 
@@ -126,11 +126,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// </summary>
         /// <param name="columnCount">Number of columns to create.</param>
         /// <returns>Sample TableDefinition object</returns>
-        public static DatabaseEntityDefinition CreateSampleTable(int columnCount = 4)
+        public static SourceDefinition CreateSampleTable(int columnCount = 4)
         {
             Assert.IsTrue(columnCount > 0);
 
-            DatabaseEntityDefinition tableDefinition = new();
+            SourceDefinition tableDefinition = new();
 
             for (int count = 1; count <= columnCount; count++)
             {

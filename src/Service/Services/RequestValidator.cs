@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.Services
             ISqlMetadataProvider sqlMetadataProvider)
         {
             SourceDefinition sourceDefinition =
-                TryGetDatabaseEntityDefinition(
+                TryGetSourceDefinition(
                 context.EntityName,
                 sqlMetadataProvider);
 
@@ -280,7 +280,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
             SourceDefinition sourceDefinition =
-                TryGetDatabaseEntityDefinition(insertRequestCtx.EntityName, sqlMetadataProvider);
+                TryGetSourceDefinition(insertRequestCtx.EntityName, sqlMetadataProvider);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
@@ -345,7 +345,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
             SourceDefinition sourceDefinition =
-                TryGetDatabaseEntityDefinition(upsertRequestCtx.EntityName, sqlMetadataProvider);
+                TryGetSourceDefinition(upsertRequestCtx.EntityName, sqlMetadataProvider);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
@@ -463,7 +463,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// enables referencing DB schema.</param>
         /// <exception cref="DataApiBuilderException"></exception>
 
-        private static SourceDefinition TryGetDatabaseEntityDefinition(
+        private static SourceDefinition TryGetSourceDefinition(
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider)
         {
@@ -476,7 +476,7 @@ namespace Azure.DataApiBuilder.Service.Services
             catch (KeyNotFoundException ex)
             {
                 throw new DataApiBuilderException(
-                    message: $"EntityDefinition for entity: {entityName} does not exist.",
+                    message: $"Source definition for entity: {entityName} does not exist.",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
                     innerException: ex);

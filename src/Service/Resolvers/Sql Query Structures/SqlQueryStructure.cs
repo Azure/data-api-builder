@@ -148,7 +148,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             AddFields(context, sqlMetadataProvider);
             if (Columns.Count == 0)
             {
-                SourceDefinition sourceDefinition = GetUnderlyingDbEntityDefinition();
+                SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
                 foreach (KeyValuePair<string, ColumnDefinition> column in sourceDefinition.Columns)
                 {
                     // We only include columns that are exposed for use in requests
@@ -412,7 +412,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                                          schemaName: DatabaseObject.SchemaName,
                                                          tableName: DatabaseObject.Name,
                                                          tableAlias: TableAlias,
-                                                         table: GetUnderlyingDbEntityDefinition(),
+                                                         table: GetUnderlyingSourceDefinition(),
                                                          processLiterals: MakeParamWithValue));
                 }
             }
@@ -735,7 +735,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string subtableAlias,
             SqlQueryStructure subQuery)
         {
-            SourceDefinition sourceDefinition = GetUnderlyingDbEntityDefinition();
+            SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
             if (sourceDefinition.SourceEntityRelationshipMap.TryGetValue(
                 _underlyingFieldType.Name, out RelationshipMetadata? relationshipMetadata)
                 && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,

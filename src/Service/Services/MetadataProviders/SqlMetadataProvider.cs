@@ -147,7 +147,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 DatabaseTable databaseTable = (DatabaseTable)databaseObject;
                 return databaseTable.TableDefinition;
             }
-            else if(databaseObject.ObjectType is SourceType.View)
+            else if (databaseObject.ObjectType is SourceType.View)
             {
                 DatabaseView databaseView = (DatabaseView)databaseObject;
                 return databaseView.ViewDefinition;
@@ -402,8 +402,9 @@ namespace Azure.DataApiBuilder.Service.Services
                         // parse source name into a tuple of (schemaName, databaseObjectName)
                         (schemaName, dbObjectName) = ParseSchemaAndDbObjectName(entity.SourceName)!;
 
-                        // if specified as stored procedure in config, initialize DatabaseObject with StoredProcedureDefinition, else with
-                        // DatabaseEntityDefinition (for tables) / DatabaseViewDefinition (for views).
+                        // if specified as stored procedure in config,
+                        // initialize DatabaseObject as DatabaseStoredProcedure,
+                        // else with DatabaseTable (for tables) / DatabaseView (for views).
 
                         if (entity.ObjectType is SourceType.StoredProcedure)
                         {
@@ -675,7 +676,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
                 else if (entitySourceType is SourceType.Table)
                 {
-                    await PopulateDbEntityDefinitionAsync(
+                    await PopulateSourceDefinitionAsync(
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
@@ -683,7 +684,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
                 else
                 {
-                    await PopulateDbEntityDefinitionAsync(
+                    await PopulateSourceDefinitionAsync(
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
@@ -722,7 +723,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 string sourceSchema = element.GetProperty("source_schema").ToString();
                 string dbTableName = $"{sourceSchema}.{sourceTable}";
                 viewDefinition.BaseTableDefinitions[dbTableName] = new();
-                await PopulateDbEntityDefinitionAsync(
+                await PopulateSourceDefinitionAsync(
                     entityName: string.Empty,
                     schemaName: schemaName,
                     tableName: sourceTable,
@@ -739,7 +740,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// exposed name and backing column (or the reverse)
         /// when needed while processing the request.
         ///
-        /// For now, only do this for tables/views as Stored Procedures do not have a DatabaseEntityDefinition
+        /// For now, only do this for tables/views as Stored Procedures do not have a SourceDefinition
         /// In the future, mappings for SPs could be used for parameter renaming.
         /// </summary>
         private void GenerateExposedToBackingColumnMapsForEntities()
@@ -747,7 +748,7 @@ namespace Azure.DataApiBuilder.Service.Services
             foreach (string entityName in _entities.Keys)
             {
                 // Ensure we don't attempt for stored procedures, which have no
-                // DatabaseEntityDefinition, Columns, Keys, etc.
+                // SourceDefinition, Columns, Keys, etc.
                 if (_entities[entityName].ObjectType is not SourceType.StoredProcedure)
                 {
                     Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
@@ -795,7 +796,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="tableName">Name of the table.</param>
         /// <param name="sourceDefinition">Table definition to fill.</param>
         /// <param name="entityName">EntityName included to pass on for error messaging.</param>
-        private async Task PopulateDbEntityDefinitionAsync(
+        private async Task PopulateSourceDefinitionAsync(
             string entityName,
             string schemaName,
             string tableName,
@@ -1071,13 +1072,13 @@ namespace Azure.DataApiBuilder.Service.Services
                 List<string> schemaNames,
                 List<string> tableNames)
         {
-            Dictionary<string, SourceDefinition> sourceNameToDbEntityDefinition = new();
+            Dictionary<string, SourceDefinition> sourceNameToSourceDefinition = new();
             foreach ((string entityName, DatabaseObject dbObject) in EntityToDatabaseObject)
             {
                 // Ensure we're only doing this on tables, not stored procedures which have no table definition
                 if (dbObject.ObjectType is not SourceType.StoredProcedure)
                 {
-                    if (!sourceNameToDbEntityDefinition.ContainsKey(dbObject.Name))
+                    if (!sourceNameToSourceDefinition.ContainsKey(dbObject.Name))
                     {
                         SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
                         foreach ((_, RelationshipMetadata relationshipData)
@@ -1092,7 +1093,7 @@ namespace Azure.DataApiBuilder.Service.Services
                                 {
                                     schemaNames.Add(fk.Pair.ReferencingDbTable.SchemaName);
                                     tableNames.Add(fk.Pair.ReferencingDbTable.Name);
-                                    sourceNameToDbEntityDefinition.TryAdd(dbObject.Name, sourceDefinition);
+                                    sourceNameToSourceDefinition.TryAdd(dbObject.Name, sourceDefinition);
                                 }
                             }
                         }
@@ -1100,7 +1101,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
             }
 
-            return sourceNameToDbEntityDefinition.Values;
+            return sourceNameToSourceDefinition.Values;
         }
 
         private static void ValidateAllFkHaveBeenInferred(

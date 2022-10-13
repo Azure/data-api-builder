@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             UpdateOperations = new();
             OutputColumns = GenerateOutputColumns();
-            SourceDefinition sourceDefinition = GetUnderlyingDbEntityDefinition();
+            SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
 
             List<string> primaryKeys = sourceDefinition.PrimaryKey;
             List<string> columns = sourceDefinition.Columns.Keys.ToList();
@@ -83,7 +83,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             : base(sqlMetadataProvider, entityName: entityName)
         {
             UpdateOperations = new();
-            SourceDefinition sourceDefinition = GetUnderlyingDbEntityDefinition();
+            SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
             List<string> columns = sourceDefinition.Columns.Keys.ToList();
             OutputColumns = GenerateOutputColumns();
             foreach (KeyValuePair<string, object?> param in mutationParams)
@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private Predicate CreatePredicateForParam(KeyValuePair<string, object?> param)
         {
-            SourceDefinition sourceDefinition = GetUnderlyingDbEntityDefinition();
+            SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
             Predicate predicate;
             // since we have already validated param we know backing column exists
             SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);

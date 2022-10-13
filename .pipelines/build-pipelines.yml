@@ -79,7 +79,7 @@ steps:
   inputs:
     command: test
     projects: '**/*Tests*.csproj'
-    arguments: '--no-build --filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+    arguments: '--filter "TestCategory!=Cosmos&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
 - template: templates/code-signing.yml
   parameters:

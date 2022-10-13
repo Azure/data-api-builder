@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
@@ -54,6 +55,8 @@ namespace Azure.DataApiBuilder.Service.Models
                 bool fieldIsAnd = string.Equals(name, $"{PredicateOperation.AND}", StringComparison.OrdinalIgnoreCase);
                 bool fieldIsOr = string.Equals(name, $"{PredicateOperation.OR}", StringComparison.OrdinalIgnoreCase);
 
+                InputObjectType filterInputObjectType = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentObject.Fields[name]);
+
                 if (fieldIsAnd || fieldIsOr)
                 {
                     PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
@@ -74,19 +77,35 @@ namespace Azure.DataApiBuilder.Service.Models
                 else
                 {
                     List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
-                    predicates.Push(new PredicateOperand(ParseScalarType(
-                        ctx,
-                        argumentSchema: filterArgumentObject.Fields[name],
-                        name,
-                        subfields,
-                        schemaName,
-                        sourceName,
-                        sourceAlias,
-                        processLiterals)));
+
+                    if (!IsSingularType(filterInputObjectType.Name))
+                    {
+                        return Parse(ctx,
+                            filterArgumentObject.Fields[name],
+                            subfields,
+                            schemaName, sourceName + "." + name, sourceAlias + "." + name, table, processLiterals);
+                    }
+                    else
+                    {
+                        predicates.Push(new PredicateOperand(ParseScalarType(
+                            ctx,
+                            argumentSchema: filterArgumentObject.Fields[name],
+                            name,
+                            subfields,
+                            schemaName,
+                            sourceName,
+                            sourceAlias,
+                            processLiterals)));
+                    }
                 }
             }
 
             return MakeChainPredicate(predicates, PredicateOperation.AND);
+        }
+
+        static bool IsSingularType(string name) 
+        {
+            return new string[] { "StringFilterInput", "IntFilterInput", "BoolFilterInput", "IdFilterInput" }.Contains(name);
         }
 
         /// <summary>

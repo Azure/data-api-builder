@@ -56,7 +56,7 @@ namespace Cli.Tests
             }
         ";
 
-        public const string INITIAL_CONFIG = 
+        public const string INITIAL_CONFIG =
           "{" +
             SAMPLE_SCHEMA_DATA_SOURCE + "," +
             @"
@@ -85,7 +85,7 @@ namespace Cli.Tests
         /// Config containing authenticate-devmode-request type as string
         /// instead of boolean for Host global settings.
         /// </summary>
-        public const string CONFIG_WITH_INVALID_DEVMODE_REQUEST_AUTH_TYPE = 
+        public const string CONFIG_WITH_INVALID_DEVMODE_REQUEST_AUTH_TYPE =
           "{" +
             SAMPLE_SCHEMA_DATA_SOURCE + "," +
             @"

@@ -21,8 +21,6 @@ add Notebook --config "dab-config.MySql.json" --source "notebooks" --permissions
 add Journal --config "dab-config.MySql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
 add ArtOfWar --config "dab-config.MySql.json" --source "aow" --rest true --permissions "anonymous:*"
 add series --config "dab-config.MySql.json" --source "series" --permissions "anonymous:*"
-add GetBooks --config "dab-config.MySql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:read" --rest true --graphql false
-add GetBook --config "dab-config.MySql.json" --source "get_book_by_id" --source.type "stored-procedure" --permissions "anonymous:read" --rest true --graphql false
 update Publisher --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
 update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_01:create,delete"
 update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_01:update" --fields.include "*"
@@ -102,5 +100,3 @@ update Journal --config "dab-config.MySql.json" --permissions "policy_tester_upd
 update Journal --config "dab-config.MySql.json" --permissions "policy_tester_update_noread:delete" --fields.include "*" --policy-database "@item.id eq 1"
 update Journal --config "dab-config.MySql.json" --permissions "authorizationHandlerTester:read"
 update ArtOfWar --config "dab-config.MySql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
-update GetBook --config "dab-config.MySql.json" --permissions "authenticated:*"
-update GetBooks --config "dab-config.MySql.json" --permissions "authenticated:*"

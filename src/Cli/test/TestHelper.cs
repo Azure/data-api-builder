@@ -48,13 +48,18 @@ namespace Cli.Tests
             return process;
         }
 
-        public const string INITIAL_CONFIG = @"
-          {
-            ""$schema"": ""dab.draft-01.schema.json"",
+        public const string SAMPLE_SCHEMA_DATA_SOURCE = @"
+          ""$schema"": ""dab.draft-01.schema.json"",
             ""data-source"": {
               ""database-type"": ""mssql"",
               ""connection-string"": ""testconnectionstring""
-            },
+            }
+        ";
+
+        public const string INITIAL_CONFIG = 
+          "{" +
+            SAMPLE_SCHEMA_DATA_SOURCE + "," +
+            @"
             ""runtime"": {
               ""rest"": {
                 ""path"": ""/api""
@@ -73,20 +78,17 @@ namespace Cli.Tests
                 }
               }
             },
-            ""entities"": {}
-          }";
+            ""entities"": {}" +
+          "}";
 
         /// <summary>
         /// Config containing authenticate-devmode-request type as string
         /// instead of boolean for Host global settings.
         /// </summary>
-        public const string CONFIG_WITH_INVALID_DEVMODE_REQUEST_AUTH_TYPE = @"
-          {
-            ""$schema"": ""dab.draft-01.schema.json"",
-            ""data-source"": {
-              ""database-type"": ""mssql"",
-              ""connection-string"": ""testconnectionstring""
-            },
+        public const string CONFIG_WITH_INVALID_DEVMODE_REQUEST_AUTH_TYPE = 
+          "{" +
+            SAMPLE_SCHEMA_DATA_SOURCE + "," +
+            @"
             ""runtime"": {
               ""rest"": {
                 ""path"": ""/api""
@@ -106,8 +108,8 @@ namespace Cli.Tests
                 }
               }
             },
-            ""entities"": {}
-          }";
+            ""entities"": {}" +
+          "}";
 
         public const string SINGLE_ENTITY = @"
           {

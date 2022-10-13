@@ -34,19 +34,19 @@
       <DllFilePath>$(BaseOutputPath)$(Configuration)\$(TargetFramework)\dab.dll</DllFilePath>
     </PropertyGroup>
 
-    <ReadLinesFromFile File="..\..\..\MsSqlCommands.txt">
+    <ReadLinesFromFile File="..\..\..\CommandFiles\MsSqlCommands.txt">
       <Output TaskParameter="Lines" ItemName="MsSqlCommands" />
     </ReadLinesFromFile>
 
-    <ReadLinesFromFile File="..\..\..\MySqlCommands.txt">
+    <ReadLinesFromFile File="..\..\..\CommandFiles\MySqlCommands.txt">
       <Output TaskParameter="Lines" ItemName="MySqlCommands" />
     </ReadLinesFromFile>
 
-    <ReadLinesFromFile File="..\..\..\PostgreSqlCommands.txt">
+    <ReadLinesFromFile File="..\..\..\CommandFiles\PostgreSqlCommands.txt">
       <Output TaskParameter="Lines" ItemName="PostgreSqlCommands" />
     </ReadLinesFromFile>
 
-    <ReadLinesFromFile File="..\..\..\CosmosCommands.txt">
+    <ReadLinesFromFile File="..\..\..\CommandFiles\CosmosCommands.txt">
       <Output TaskParameter="Lines" ItemName="CosmosCommands" />
     </ReadLinesFromFile>
 

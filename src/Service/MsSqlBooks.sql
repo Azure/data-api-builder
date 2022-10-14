@@ -84,7 +84,7 @@ CREATE TABLE comics(
     title varchar(max) NOT NULL,
     volume int IDENTITY(5001,1),
     categoryName varchar(100) NOT NULL UNIQUE,
-    series_id int NULL,
+    series_id int NULL
 );
 
 CREATE TABLE stocks(
@@ -271,7 +271,7 @@ SET IDENTITY_INSERT series ON
 INSERT INTO series(id, [name]) VALUES (3001, 'Foundation'), (3002, 'Hyperion Cantos');
 SET IDENTITY_INSERT series OFF
 
-INSERT INTO comics(id, title, categoryName, series_id) 
+INSERT INTO comics(id, title, categoryName, series_id)
 VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'FairyTales', 3001),(3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');
 INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, 'instant1', 100.57, 1), (1, 1, 'instant2', 42.75, 0);

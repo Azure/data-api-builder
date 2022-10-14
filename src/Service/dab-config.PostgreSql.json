@@ -780,6 +780,69 @@
         }
       ]
     },
+    "books_view_all": {
+      "source": {
+        "type": "view",
+        "object": "books_view_all",
+        "key-fields": ["id"]
+      },
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read", "create", "update" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read", "create", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "stocks_view_selected": {
+      "source": {
+        "type": "view",
+        "object": "stocks_view_selected",
+        "key-fields": ["categoryid", "pieceid"]
+      },
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "books_publishers_view_composite": {
+      "source": {
+        "type": "view",
+        "object": "books_publishers_view_composite",
+        "key-fields": ["id"]
+      },
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
     "ArtOfWar": {
       "source": "aow",
       "rest": true,

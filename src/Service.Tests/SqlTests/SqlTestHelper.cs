@@ -133,7 +133,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Assert.AreEqual(actualAsDict[jsonResultTopLevelKey].Length, verifyNumRecords);
                 }
 
-                Assert.IsTrue(JsonStringsDeepEqual(expected, responseBody));
+                PerformTestEqualJsonStrings(expected, responseBody);
             }
             else
             {

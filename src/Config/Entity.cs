@@ -5,7 +5,7 @@ namespace Azure.DataApiBuilder.Config
 {
     /// <summary>
     /// Defines the Entities that are exposed.
-    /// </summary>   
+    /// </summary>
     /// <param name="Source">The underlying database object to which
     /// the exposed entity is connected to.</param>
     /// <param name="Rest">Can be a bool or RestEntitySettings type.
@@ -45,8 +45,7 @@ namespace Azure.DataApiBuilder.Config
         [JsonIgnore]
         public Dictionary<string, object>? Parameters { get; private set; }
 
-        [JsonIgnore]
-        public Array? KeyFields { get; private set; }
+        public List<string>? KeyFields { get; private set; }
 
         [property: JsonPropertyName("graphql")]
         public object? GraphQL { get; set; } = GraphQL;
@@ -201,7 +200,7 @@ namespace Azure.DataApiBuilder.Config
             string Name,
         Dictionary<string, object>? Parameters,
         [property: JsonPropertyName("key-fields")]
-            Array KeyFields);
+            List<string> KeyFields);
 
     /// <summary>
     /// Supported source types as defined by json schema

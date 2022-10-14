@@ -44,6 +44,100 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "
             },
             {
+                "FindViewAll",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT * FROM " + _simple_all_books + @"
+                        WHERE id = 2
+                        ORDER BY id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindViewSelected",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE categoryid = 2 AND pieceid = 1
+                        ORDER BY categoryid, pieceid
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindViewComposite",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT name, id, publisher_id FROM " + _composite_subset_bookPub + @"
+                        WHERE id = 2
+                        ORDER BY id
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryOneGeFilterOnView",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT * FROM " + _simple_all_books + @"
+                        WHERE id >= 4
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindByIdTestWithQueryStringFieldsOnView",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT id, title FROM " + _simple_all_books + @"
+                        WHERE id = 1
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryStringOneEqFilterOnView",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE pieceid = 1
+                        ORDER BY categoryid, pieceid
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryOneNotFilterOnView",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE NOT categoryid > 1
+                        ORDER BY categoryid, pieceid
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterQueryOneLtFilterOnView",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT name, id, publisher_id FROM " + _composite_subset_bookPub + @"
+                        WHERE id < 5
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
                 "FindEmptyResultSetWithQueryFilter",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -665,27 +759,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         public async Task TestCleanup()
         {
             await ResetDbStateAsync();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindOnViews()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindTestWithQueryStringOnViews()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindTestWithInvalidFieldsInQueryStringOnViews()
-        {
-            throw new NotImplementedException();
         }
 
         // Pending Stored Procedure Support

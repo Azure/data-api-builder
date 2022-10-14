@@ -1,3 +1,6 @@
+DROP VIEW IF EXISTS books_view_all;
+DROP VIEW IF EXISTS stocks_view_selected;
+DROP VIEW IF EXISTS books_publishers_view_composite;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -242,3 +245,12 @@ SELECT setval('publishers_id_seq', 5000);
 SELECT setval('authors_id_seq', 5000);
 SELECT setval('reviews_id_seq', 5000);
 SELECT setval('type_table_id_seq', 5000);
+
+CREATE VIEW books_view_all AS SELECT * FROM books;
+CREATE VIEW stocks_view_selected AS
+    SELECT categoryid, pieceid, "categoryName", "piecesAvailable"
+    FROM stocks;
+CREATE VIEW books_publishers_view_composite as SELECT
+    publishers.name, books.id, books.publisher_id
+    FROM books, publishers
+    where publishers.id = books.publisher_id;

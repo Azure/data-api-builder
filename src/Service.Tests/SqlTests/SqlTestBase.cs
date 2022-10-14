@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="customEntities">Test specific entities to be added to database.</param>
         /// <returns></returns>
         protected static async Task InitializeTestFixture(TestContext context, List<string> customQueries = null,
-            List<string[]> customEntities = null)
+            List<string[]> customEntities = null, RuntimeConfig configurationOverride = null)
         {
             _queryEngineLogger = new Mock<ILogger<SqlQueryEngine>>().Object;
             _mutationEngineLogger = new Mock<ILogger<SqlMutationEngine>>().Object;
@@ -79,7 +79,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             Mock<ILogger<AuthorizationResolver>> authLogger = new();
             RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
-            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
+
+            if (configurationOverride is not null)
+            {
+                _runtimeConfig = configurationOverride;
+            }
+            else
+            {
+                RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
+            }
+
             _runtimeConfigProvider = TestHelper.GetMockRuntimeConfigProvider(configPath, string.Empty);
 
             // Add magazines entity to the 

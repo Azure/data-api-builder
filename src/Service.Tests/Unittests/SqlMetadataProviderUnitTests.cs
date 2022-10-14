@@ -155,7 +155,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="baseTableNames">Names of the base tables.</param>
         /// <returns></returns>
         [DataTestMethod]
-        [DataRow("books_view_all",1, new string[] { "dbo.books" })]
+        [DataRow("books_view_all", 1, new string[] { "dbo.books" })]
         [DataRow("stocks_view_selected", 1, new string[] { "dbo.stocks" })]
         [DataRow("books_publishers_view_composite", 2, new string[] { "dbo.books", "dbo.publishers" })]
         public async Task CheckPopulatedBaseTableDefinitionsForViewAsync(
@@ -207,7 +207,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 // Assert that there is a mapping for every column in view.
                 Assert.IsTrue(viewDefinition.ColToBaseTableDetails.
-                   TryGetValue(colName, out Tuple<string,string> baseTableDetails));
+                   TryGetValue(colName, out Tuple<string, string> baseTableDetails));
 
                 // Assert that the source column name is as expected.
                 Assert.IsTrue(expectedBaseTableDetail.Item1.Equals(baseTableDetails.Item1));

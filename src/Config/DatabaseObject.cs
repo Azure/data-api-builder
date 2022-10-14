@@ -149,6 +149,8 @@ namespace Azure.DataApiBuilder.Config
 
         // Stores the mapping from the source table names for the base tables
         // to the corresponding source definition for the base table.
+        // Definitions for only those base tables will be populated which have
+        // atleast one column in the view's SELECT clause.
         public Dictionary<string, SourceDefinition> BaseTableDefinitions { get; set; } = new();
 
         // Stores the mapping from column's name in view to a tuple of string in which:

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
@@ -141,6 +143,78 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Entity entity = _runtimeConfig.Entities["GetBooks"];
             Assert.AreEqual("get_books", entity.SourceName);
             Assert.AreEqual(SourceType.StoredProcedure, entity.ObjectType);
+        }
+
+        /// <summary>
+        /// Test to verify that all the base tables which have a column in select clause
+        /// for the view are present in the base table definitions for the view's
+        /// definition.
+        /// </summary>
+        /// <param name="entityName">Name of the view.</param>
+        /// <param name="expectedBaseTableCount">Expected number of base tables.</param>
+        /// <param name="baseTableNames">Names of the base tables.</param>
+        /// <returns></returns>
+        [DataTestMethod]
+        [DataRow("books_view_all",1, new string[] { "dbo.books" })]
+        [DataRow("stocks_view_selected", 1, new string[] { "dbo.stocks" })]
+        [DataRow("books_publishers_view_composite", 2, new string[] { "dbo.books", "dbo.publishers" })]
+        public async Task CheckPopulatedBaseTableDefinitionsForViewAsync(
+            string entityName,
+            int expectedBaseTableCount,
+            string[] baseTableNames)
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
+            SetUpSQLMetadataProvider();
+
+            await _sqlMetadataProvider.InitializeAsync();
+            ViewDefinition viewDefinition = (ViewDefinition)_sqlMetadataProvider.GetSourceDefinition(entityName);
+
+            // Assert that there are expected number of base tables in view's definition.
+            Assert.AreEqual(expectedBaseTableCount, viewDefinition.BaseTableDefinitions.Count);
+            foreach (string baseTableName in baseTableNames)
+            {
+                // Assert that the base table's in the BaseTableDefinitions are the ones
+                // that are expected.
+                Assert.IsTrue(viewDefinition.BaseTableDefinitions.ContainsKey(baseTableName));
+            }
+        }
+
+        /// <summary>
+        /// Test to verify that the mappings generated for columns in view to corresponding
+        /// source column and table are correct.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task CheckPopulatedColToBaseTableDetailsForViewAsync()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
+            SetUpSQLMetadataProvider();
+
+            await _sqlMetadataProvider.InitializeAsync();
+            ViewDefinition viewDefinition = (ViewDefinition)_sqlMetadataProvider.GetSourceDefinition("books_publishers_view_composite");
+
+            // Create the expected column mapping for view columns to source column and table.
+            Dictionary<string, Tuple<string, string>> expectedColToBaseTableDetails = new();
+            expectedColToBaseTableDetails.Add("publisher_id", new Tuple<string, string>("id", "dbo.publishers"));
+            expectedColToBaseTableDetails.Add("name", new Tuple<string, string>("name", "dbo.publishers"));
+            expectedColToBaseTableDetails.Add("id", new Tuple<string, string>("id", "dbo.books"));
+
+            foreach ((string colName, Tuple<string, string> expectedBaseTableDetail) in expectedColToBaseTableDetails)
+            {
+                // Assert that there is a mapping for every column in view.
+                Assert.IsTrue(viewDefinition.ColToBaseTableDetails.
+                   TryGetValue(colName, out Tuple<string,string> baseTableDetails));
+
+                // Assert that the source column name is as expected.
+                Assert.IsTrue(expectedBaseTableDetail.Item1.Equals(baseTableDetails.Item1));
+
+                // Assert that the source table name is as expected.
+                Assert.IsTrue(expectedBaseTableDetail.Item2.Equals(baseTableDetails.Item2));
+            }
         }
     }
 }

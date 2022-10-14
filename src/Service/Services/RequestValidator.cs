@@ -57,8 +57,7 @@ namespace Azure.DataApiBuilder.Service.Services
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-            SourceDefinition sourceDefinition =
-                TryGetSourceDefinition(
+            SourceDefinition sourceDefinition = TryGetSourceDefinition(
                 context.EntityName,
                 sqlMetadataProvider);
 

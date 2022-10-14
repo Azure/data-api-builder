@@ -717,7 +717,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 sqltext: query,
                 parameters: null!,
                 dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
-            JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
+            using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
             {
                 string sourceTable = element.GetProperty("source_table").ToString();
@@ -1068,6 +1068,13 @@ namespace Azure.DataApiBuilder.Service.Services
             ValidateAllFkHaveBeenInferred(dbEntitiesToBePopulatedWithFK);
         }
 
+        /// <summary>
+        /// Helper method to find all the entities whose foreign key information is
+        /// to be retrieved.
+        /// </summary>
+        /// <param name="schemaNames">List of names of the schemas to which entities belong.</param>
+        /// <param name="tableNames">List of names of the entities(tables)</param>
+        /// <returns></returns>
         private IEnumerable<SourceDefinition>
             FindAllEntitiesWhoseForeignKeyIsToBeRetrieved(
                 List<string> schemaNames,
@@ -1107,6 +1114,13 @@ namespace Azure.DataApiBuilder.Service.Services
             return sourceNameToSourceDefinition.Values;
         }
 
+        /// <summary>
+        /// Method to validate that the foreign key information is populdated
+        /// for all the expected entities
+        /// </summary>
+        /// <param name="dbEntitiesToBePopulatedWithFK">List of database entities
+        /// whose definition has to be populated with foreign key information.</param>
+        /// <exception cref="NotSupportedException"></exception>
         private static void ValidateAllFkHaveBeenInferred(
             IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {
@@ -1186,7 +1200,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Fills the table definition with the inferred foreign key metadata
         /// about the referencing and referenced columns.
         /// </summary>
-        /// <param name="dbEntitiesToBePopulatedWithFK"></param>
+        /// <param name="dbEntitiesToBePopulatedWithFK">List of database entities
+        /// whose definition has to be populated with foreign key information.</param>
         private void FillInferredFkInfo(
             IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {

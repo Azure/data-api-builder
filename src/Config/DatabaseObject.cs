@@ -45,30 +45,33 @@ namespace Azure.DataApiBuilder.Config
         }
     }
 
+    /// <summary>
+    /// Sub-class of DatabaseObject class, represents a table in the database.
+    /// </summary>
     public class DatabaseTable : DatabaseObject
     {
         public DatabaseTable(string schemaName, string tableName)
-            : base(schemaName, tableName)
-        {
-
-        }
+            : base(schemaName, tableName) { }
 
         public DatabaseTable() { }
         public SourceDefinition TableDefinition { get; set; } = null!;
     }
 
+    /// <summary>
+    /// Sub-class of DatabaseObject class, represents a view in the database.
+    /// </summary>
     public class DatabaseView : DatabaseObject
     {
         public DatabaseView(string schemaName, string tableName)
-            : base(schemaName, tableName)
-        {
-
-        }
+            : base(schemaName, tableName) { }
 
         public DatabaseView() { }
         public ViewDefinition ViewDefinition { get; set; } = null!;
     }
 
+    /// <summary>
+    /// Sub-class of DatabaseObject class, represents a stored procedure in the database.
+    /// </summary>
     public class DatabaseStoredProcedure : DatabaseObject
     {
         public DatabaseStoredProcedure(string schemaName, string tableName)
@@ -95,7 +98,8 @@ namespace Azure.DataApiBuilder.Config
     }
 
     /// <summary>
-    /// Class to store database table definition.
+    /// Class to store database table definition. It is also the parent class of
+    /// ViewDefinition, and hence can point to a table or a view's definition.
     /// </summary>
     public class SourceDefinition
     {
@@ -139,7 +143,7 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     public class ViewDefinition : SourceDefinition
     {
-        // Stores the source definition for the base table targeted by the operation.
+        // Stores the source definition for the base table targeted by the mutation operation.
         // Evaluated on a per request basis.
         public SourceDefinition? BaseTableForRequestDefinition { get; set; }
 

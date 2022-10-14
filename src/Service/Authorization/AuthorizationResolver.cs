@@ -239,9 +239,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         }
                         else
                         {
-                            // If not a string, the operationObj is expected to be an object that can be deserialised into PermissionOperation
+                            // If not a string, the operationObj is expected to be an object that can be deserialized into PermissionOperation
                             // object. We will put validation checks later to make sure this is the case.
-                            if (RuntimeConfig.TryGetDeserializedConfig(operationElement.ToString(), out PermissionOperation? operationObj, _logger)
+                            if (RuntimeConfig.TryGetDeserializedJsonString(operationElement.ToString(), out PermissionOperation? operationObj, _logger)
                                 && operationObj is not null)
                             {
                                 operation = operationObj.Name;

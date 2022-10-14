@@ -86,17 +86,46 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable($"{ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)}", "");
         }
 
+        /// <summary>
+        /// When updating config during runtime is possible, then For invalid config the Application continues to
+        /// accept request with status code of 503.
+        /// But if invalid config is provided during startup, ApplicationException is thrown
+        /// and application exits.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(new string[] { }, DisplayName = "No config returns 503 - config file flag absent")]
-        [DataRow(new string[] { "--ConfigFileName=" }, DisplayName = "No config returns 503 - empty config file option")]
-        [TestMethod("Validates that queries before runtime is configured returns a 503.")]
-        public async Task TestNoConfigReturnsServiceUnavailable(string[] args)
+        [DataRow(new string[] { }, true, DisplayName = "No config returns 503 - config file flag absent")]
+        [DataRow(new string[] { "--ConfigFileName=" }, true, DisplayName = "No config returns 503 - empty config file option")]
+        [DataRow(new string[] { }, false, DisplayName = "Throws Application exception")]
+        [TestMethod("Validates that queries before runtime is configured returns a 503 in hosting scenario whereas an application exception when run through CLI")]
+        public async Task TestNoConfigReturnsServiceUnavailable(
+            string[] args,
+            bool isUpdateableRuntimeConfig)
         {
-            TestServer server = new(Program.CreateWebHostBuilder(args));
-            HttpClient httpClient = server.CreateClient();
+            TestServer server;
 
-            HttpResponseMessage result = await httpClient.GetAsync("/graphql");
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, result.StatusCode);
+            try
+            {
+                if (isUpdateableRuntimeConfig)
+                {
+                    server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(args));
+                }
+                else
+                {
+                    server = new(Program.CreateWebHostBuilder(args));
+                }
+
+                HttpClient httpClient = server.CreateClient();
+                HttpResponseMessage result = await httpClient.GetAsync("/graphql");
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, result.StatusCode);
+            }
+            catch (Exception e)
+            {
+                Assert.IsFalse(isUpdateableRuntimeConfig);
+                Assert.AreEqual(typeof(ApplicationException), e.GetType());
+                Assert.AreEqual(
+                    $"Could not initialize the engine with the runtime config file: {RuntimeConfigPath.DefaultName}",
+                    e.Message);
+            }
         }
 
         /// <summary>
@@ -147,7 +176,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
 
             Mock<ILogger> logger = new();
-            Assert.IsTrue(RuntimeConfig.TryGetDeserializedConfig(
+            Assert.IsTrue(RuntimeConfig.TryGetDeserializedRuntimeConfig(
                 runtimeConfigJson,
                 out RuntimeConfig deserializedRuntimeConfig,
                 logger.Object));
@@ -443,7 +472,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             Mock<ILogger> logger = new();
             string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
-            RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
+            RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
             Assert.IsNotNull(runtimeConfig.Schema);
             Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
             Assert.IsTrue(runtimeConfig.CosmosDb == null
@@ -471,24 +500,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     RestEntitySettings rest =
                         ((JsonElement)entity.Rest).Deserialize<RestEntitySettings>(RuntimeConfig.SerializerOptions);
                     Assert.IsTrue(((JsonElement)rest.Path).ValueKind == JsonValueKind.String);
-                }
-
-                Assert.IsTrue(entity.GraphQL == null
-                    || ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.True
-                    || ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.False
-                    || ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.Object);
-                if (entity.GraphQL != null
-                    && ((JsonElement)entity.GraphQL).ValueKind == JsonValueKind.Object)
-                {
-                    GraphQLEntitySettings graphQL =
-                        ((JsonElement)entity.GraphQL).Deserialize<GraphQLEntitySettings>(RuntimeConfig.SerializerOptions);
-                    Assert.IsTrue(
-                        ((JsonElement)graphQL.Type).ValueKind == JsonValueKind.String
-                        || ((JsonElement)graphQL.Type).ValueKind == JsonValueKind.Object);
-                    if (((JsonElement)graphQL.Type).ValueKind == JsonValueKind.Object)
-                    {
-                        SingularPlural route = ((JsonElement)graphQL.Type).Deserialize<SingularPlural>(RuntimeConfig.SerializerOptions);
-                    }
                 }
 
                 Assert.IsInstanceOfType(entity.Permissions, typeof(PermissionSetting[]));
@@ -585,6 +596,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// Set the connection string to an invalid value and expect the service to be unavailable
         /// since without this env var, it would be available - guaranteeing this env variable
         /// has highest precedence irrespective of what the connection string is in the config file.
+        /// Verifying the Exception thrown.
         /// </summary>
         [TestMethod("Validates that environment variable DAB_CONNSTRING has highest precedence.")]
         public void TestConnectionStringEnvVarHasHighestPrecedence()
@@ -593,15 +605,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(
                 $"{RuntimeConfigPath.ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)}",
                 "Invalid Connection String");
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+
             try
             {
+                TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
                 _ = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
                 Assert.Fail($"{RuntimeConfigPath.ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)} is not given highest precedence");
             }
-            catch (ArgumentException)
+            catch (Exception e)
             {
-
+                Assert.AreEqual(typeof(ApplicationException), e.GetType());
+                Assert.AreEqual(
+                    $"Could not initialize the engine with the runtime config file: " +
+                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}",
+                    e.Message);
             }
         }
 
@@ -767,7 +784,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string configPayload = File.ReadAllText(sqlFile);
 
             Mock<ILogger> logger = new();
-            RuntimeConfig.TryGetDeserializedConfig(configPayload, out RuntimeConfig runtimeConfig, logger.Object);
+            RuntimeConfig.TryGetDeserializedRuntimeConfig(configPayload, out RuntimeConfig runtimeConfig, logger.Object);
 
             return runtimeConfig.ConnectionString;
         }

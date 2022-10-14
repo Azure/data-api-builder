@@ -79,12 +79,14 @@ namespace Azure.DataApiBuilder.Config
         /// Processes per entity GraphQL Naming Settings
         /// Top Level: true | false
         /// Alternatives: string, SingularPlural object
+        /// returns true on successfull processing
+        /// else false.
         /// </summary>
-        public void ProcessGraphQLNamingConfig()
+        public bool TryProcessGraphQLNamingConfig()
         {
             if (GraphQL is null)
             {
-                return;
+                return true;
             }
 
             if (GraphQL is JsonElement configElement)
@@ -108,7 +110,8 @@ namespace Azure.DataApiBuilder.Config
                     }
                     else
                     {
-                        throw new NotSupportedException("The runtime does not support this GraphQL settings type for an entity.");
+                        // Not Supported Type
+                        return false;
                     }
 
                     GraphQLEntitySettings graphQLEntitySettings = new(Type: nameConfiguration);
@@ -117,8 +120,11 @@ namespace Azure.DataApiBuilder.Config
             }
             else
             {
-                throw new NotSupportedException("The runtime does not support this GraphQL settings type for an entity.");
+                // Not Supported Type
+                return false;
             }
+
+            return true;
         }
 
         /// <summary>

@@ -95,8 +95,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataTestMethod]
         [DataRow(new string[] { }, true, DisplayName = "No config returns 503 - config file flag absent")]
         [DataRow(new string[] { "--ConfigFileName=" }, true, DisplayName = "No config returns 503 - empty config file option")]
-        [DataRow(new string[] { }, false, DisplayName = "No config returns 503 - config file flag absent")]
-        [TestMethod("Validates that queries before runtime is configured returns a 503.")]
+        [DataRow(new string[] { }, false, DisplayName = "Throws Application exception")]
+        [TestMethod("Validates that queries before runtime is configured returns a 503 in hosting scenario whereas an application exception when run through CLI")]
         public async Task TestNoConfigReturnsServiceUnavailable(
             string[] args,
             bool isUpdateableRuntimeConfig)

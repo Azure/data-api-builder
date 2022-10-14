@@ -154,7 +154,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="expectedBaseTableCount">Expected number of base tables.</param>
         /// <param name="baseTableNames">Names of the base tables.</param>
         /// <returns></returns>
-        [DataTestMethod]
+        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
         [DataRow("books_view_all", 1, new string[] { "dbo.books" })]
         [DataRow("stocks_view_selected", 1, new string[] { "dbo.stocks" })]
         [DataRow("books_publishers_view_composite", 2, new string[] { "dbo.books", "dbo.publishers" })]
@@ -186,7 +186,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// source column and table are correct.
         /// </summary>
         /// <returns></returns>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task CheckPopulatedColToBaseTableDetailsForViewAsync()
         {
             DatabaseEngine = TestCategory.MSSQL;

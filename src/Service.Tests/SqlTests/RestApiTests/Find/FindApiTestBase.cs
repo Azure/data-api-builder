@@ -127,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             );
 
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/2",
+                primaryKeyRoute: "id/2/publisher_id/1234",
                 queryString: string.Empty,
                 entityNameOrPath: _composite_subset_bookPub,
                 sqlQuery: GetQuery("FindViewComposite")

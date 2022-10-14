@@ -708,29 +708,68 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             ViewDefinition viewDefinition = (ViewDefinition)sourceDefinition;
             string dbviewName = $"{schemaName}.{viewName}";
-            string query = "SELECT distinct source_schema,source_table " +
-                           "FROM sys.dm_exec_describe_first_result_set (" +
-                           $"N'SELECT * from {dbviewName}', null, 1) " +
-                           $"WHERE is_hidden = 0 AND is_computed_column = 0";
 
+            // Get query parameters and generate query to get columns' details
+            // of the view.
+            object[] paramValues = { dbviewName, 0, 0 };
+            Dictionary<string, object> parameters = GetQueryParams(paramName: "param",paramValues: paramValues);
+            string queryForColumnDetails = SqlQueryBuilder.BuildViewColumnsDetailsQuery(
+                numberOfParameters: 3);
+
+            // Execute the query to get columns' details.
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
-                sqltext: query,
-                parameters: null!,
+                sqltext: queryForColumnDetails,
+                parameters: parameters!,
                 dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
             using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
+
+            // Iterate through each row returned by the query which corresponds to
+            // one column in the view.
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
             {
+                string colName = element.GetProperty("col_name").ToString();
+                string sourceColumn = element.GetProperty("source_column").ToString();
                 string sourceTable = element.GetProperty("source_table").ToString();
                 string sourceSchema = element.GetProperty("source_schema").ToString();
                 string dbTableName = $"{sourceSchema}.{sourceTable}";
-                viewDefinition.BaseTableDefinitions[dbTableName] = new();
-                await PopulateSourceDefinitionAsync(
-                    entityName: string.Empty,
-                    schemaName: schemaName,
-                    tableName: sourceTable,
-                    sourceDefinition: viewDefinition.BaseTableDefinitions[dbTableName]
-                    );
+
+                // Store the mapping from view column to corresponding
+                // source column and table. Using TryAdd because tests may try
+                // to add the same column multiple times.
+                viewDefinition.ColToBaseTableDetails.TryAdd(colName,
+                    new Tuple<string, string>(sourceColumn, dbTableName));
+
+                // Store the source table's definition in the dictionary,
+                // if not already added.
+                if (!viewDefinition.BaseTableDefinitions.TryAdd(dbTableName, new()))
+                {
+                    await PopulateSourceDefinitionAsync(
+                        entityName: string.Empty,
+                        schemaName: schemaName,
+                        tableName: sourceTable,
+                        sourceDefinition: viewDefinition.BaseTableDefinitions[dbTableName]
+                        );
+                }
             }
+        }
+
+        /// <summary>
+        /// Helper method to create params for the query.
+        /// </summary>
+        /// <param name="paramName">Common prefix of param names.</param>
+        /// <param name="paramValues">Values of the param.</param>
+        /// <returns></returns>
+        private static Dictionary<string, object> GetQueryParams(
+            string paramName,
+            object[] paramValues)
+        {
+            Dictionary<string, object> parameters = new();
+            for (int paramNumber = 0; paramNumber < paramValues.Length; paramNumber++)
+            {
+                parameters.Add($"{paramName}{paramNumber}", paramValues[paramNumber]);
+            }
+
+            return parameters;
         }
 
         /// <summary>

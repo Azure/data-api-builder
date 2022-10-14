@@ -150,6 +150,11 @@ namespace Azure.DataApiBuilder.Config
         // Stores the mapping from the source table names for the base tables
         // to the corresponding source definition for the base table.
         public Dictionary<string, SourceDefinition> BaseTableDefinitions { get; set; } = new();
+
+        // Stores the mapping from column's name in view to a tuple of string in which:
+        // Item1: Name of the column in source table
+        // Item2: Name of the source table (including the schema).
+        public Dictionary<string, Tuple<string, string>> ColToBaseTableDetails { get; set; } = new();
     }
     /// <summary>
     /// Class encapsulating foreign keys corresponding to target entities.

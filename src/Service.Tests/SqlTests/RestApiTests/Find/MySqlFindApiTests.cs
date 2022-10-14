@@ -84,7 +84,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _composite_subset_bookPub + @"
-                      WHERE id = 2
+                      WHERE id = 2 AND publisher_id = 1234
                       ORDER BY id
                       LIMIT 1
                   ) AS subq"

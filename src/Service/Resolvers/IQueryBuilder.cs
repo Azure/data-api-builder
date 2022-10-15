@@ -54,11 +54,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// Builds the query to obtain details about the source table,source column etc
-        /// for a column present in a view.
+        /// for each column present in a view.
         /// </summary>
         /// <param name="numberOfParameters"></param>
         /// <returns></returns>
         public string BuildViewColumnsDetailsQuery(int numberOfParameters);
+
         /// <summary>
         /// Adds database specific quotes to string identifier
         /// </summary>

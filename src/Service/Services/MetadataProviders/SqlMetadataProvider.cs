@@ -711,6 +711,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Get query parameters and generate query to get columns' details
             // of the view.
+            // Parameters : dbViewName = dbViewName, is_hidden = 0, is_computed_column = 0
             object[] paramValues = { dbviewName, 0, 0 };
             Dictionary<string, object> parameters = GetQueryParams(paramName: "param", paramValues: paramValues);
             string queryForColumnDetails = SqlQueryBuilder.BuildViewColumnsDetailsQuery(

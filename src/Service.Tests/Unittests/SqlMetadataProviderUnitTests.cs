@@ -155,9 +155,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="baseTableNames">Names of the base tables.</param>
         /// <returns></returns>
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
-        [DataRow("books_view_all", 1, new string[] { "dbo.books" })]
-        [DataRow("stocks_view_selected", 1, new string[] { "dbo.stocks" })]
-        [DataRow("books_publishers_view_composite", 2, new string[] { "dbo.books", "dbo.publishers" })]
+        [DataRow("books_view_all", 1, new string[] { "dbo.books" },
+            DisplayName = "Validate view definition on books_view_all")]
+        [DataRow("stocks_view_selected", 1, new string[] { "dbo.stocks" },
+            DisplayName = "Validate view definition on stocks_view_selected")]
+        [DataRow("books_publishers_view_composite", 2, new string[] { "dbo.books", "dbo.publishers" },
+            DisplayName = "Validate view definition on books_publishers_view_composite")]
         public async Task CheckPopulatedBaseTableDefinitionsForViewAsync(
             string entityName,
             int expectedBaseTableCount,
@@ -175,7 +178,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(expectedBaseTableCount, viewDefinition.BaseTableDefinitions.Count);
             foreach (string baseTableName in baseTableNames)
             {
-                // Assert that the base table's in the BaseTableDefinitions are the ones
+                // Assert that the base tables in the BaseTableDefinitions are the ones
                 // that are expected.
                 Assert.IsTrue(viewDefinition.BaseTableDefinitions.ContainsKey(baseTableName));
             }
@@ -203,18 +206,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             expectedColToBaseTableDetails.Add("name", new Tuple<string, string>("name", "dbo.publishers"));
             expectedColToBaseTableDetails.Add("id", new Tuple<string, string>("id", "dbo.books"));
 
-            foreach ((string colName, Tuple<string, string> expectedBaseTableDetail) in expectedColToBaseTableDetails)
-            {
-                // Assert that there is a mapping for every column in view.
-                Assert.IsTrue(viewDefinition.ColToBaseTableDetails.
-                   TryGetValue(colName, out Tuple<string, string> baseTableDetails));
-
-                // Assert that the source column name is as expected.
-                Assert.IsTrue(expectedBaseTableDetail.Item1.Equals(baseTableDetails.Item1));
-
-                // Assert that the source table name is as expected.
-                Assert.IsTrue(expectedBaseTableDetail.Item2.Equals(baseTableDetails.Item2));
-            }
+            // Assert that the expected column mapping and the actual column mapping are same.
+            CollectionAssert.AreEquivalent(expectedColToBaseTableDetails, viewDefinition.ColToBaseTableDetails);
         }
     }
 }

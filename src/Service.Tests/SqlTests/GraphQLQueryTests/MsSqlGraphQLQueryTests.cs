@@ -113,27 +113,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task QueryWithNullableForeignKey()
         {
             string msSqlQuery = @"
-                SELECT 
-                  TOP 1 [table0].[title] AS [title], 
-                  JSON_QUERY ([table1_subq].[data]) AS [series] 
-                FROM 
+                SELECT
+                  TOP 1 [table0].[title] AS [title],
+                  JSON_QUERY ([table1_subq].[data]) AS [series]
+                FROM
                   [dbo].[comics] AS [table0] OUTER APPLY (
-                    SELECT 
-                      TOP 1 [table1].[name] AS [name] 
-                    FROM 
-                      [dbo].[series] AS [table1] 
-                    WHERE 
-                      [table0].[series_id] = [table1].[id] 
-                    ORDER BY 
-                      [table1].[id] ASC FOR JSON PATH, 
-                      INCLUDE_NULL_VALUES, 
+                    SELECT
+                      TOP 1 [table1].[name] AS [name]
+                    FROM
+                      [dbo].[series] AS [table1]
+                    WHERE
+                      [table0].[series_id] = [table1].[id]
+                    ORDER BY
+                      [table1].[id] ASC FOR JSON PATH,
+                      INCLUDE_NULL_VALUES,
                       WITHOUT_ARRAY_WRAPPER
-                  ) AS [table1_subq]([data]) 
-                WHERE 
+                  ) AS [table1_subq]([data])
+                WHERE
                   [table0].[id] = 1
-                ORDER BY 
-                  [table0].[id] ASC FOR JSON PATH, 
-                  INCLUDE_NULL_VALUES, 
+                ORDER BY
+                  [table0].[id] ASC FOR JSON PATH,
+                  INCLUDE_NULL_VALUES,
                   WITHOUT_ARRAY_WRAPPER";
 
             await QueryWithNullableForeignKey(msSqlQuery);
@@ -244,6 +244,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string msSqlQuery = $"SELECT id, title FROM books ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
             await TestQueryWithExplicitlyNullArguments(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task TestQueryOnBasicView()
+        {
+            string msSqlQuery = $"SELECT TOP 5 id, title FROM books_view_all ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await base.TestQueryOnBasicView(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task TestQueryOnCompositeView()
+        {
+            string msSqlQuery = $"SELECT TOP 5 id, name FROM books_publishers_view_composite ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await base.TestQueryOnCompositeView(msSqlQuery);
         }
 
         #endregion

@@ -56,6 +56,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "
             },
             {
+                "FindViewWithKeyAndMapping",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT id as book_id FROM " + _book_view_with_key_and_mapping + @"
+                        ORDER BY id
+                        LIMIT 100
+                    ) AS subq
+                "
+            },
+            {
                 "FindViewSelected",
                 @"
                     SELECT to_jsonb(subq) AS data

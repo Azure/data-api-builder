@@ -1,7 +1,9 @@
 BEGIN TRANSACTION
 DROP VIEW IF EXISTS books_view_all;
+DROP VIEW IF EXISTS books_view_with_mapping;
 DROP VIEW IF EXISTS stocks_view_selected;
 DROP VIEW IF EXISTS books_publishers_view_composite;
+DROP VIEW IF EXISTS books_publishers_view_composite_insertable;
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP TABLE IF EXISTS book_author_link;
@@ -280,11 +282,16 @@ INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack
 INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
+EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW stocks_view_selected AS SELECT
       categoryid,pieceid,categoryName,piecesAvailable
       FROM dbo.stocks');
 EXEC('CREATE VIEW books_publishers_view_composite as SELECT
       publishers.name,books.id,books.publisher_id
+      FROM dbo.books,dbo.publishers
+      where publishers.id = books.publisher_id');
+EXEC('CREATE VIEW books_publishers_view_composite_insertable as SELECT
+      books.id, books.title, publishers.name, books.publisher_id
       FROM dbo.books,dbo.publishers
       where publishers.id = books.publisher_id');
 EXEC('CREATE PROCEDURE get_book_by_id @id int AS

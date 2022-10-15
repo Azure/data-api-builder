@@ -48,6 +48,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "FindViewWithKeyAndMapping",
+                $"SELECT id as book_id FROM { _book_view_with_key_and_mapping } FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindViewSelected",
                 $"SELECT categoryid, pieceid, categoryName, piecesAvailable FROM {_simple_subset_stocks} " +
                 $"WHERE categoryid = 2 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"

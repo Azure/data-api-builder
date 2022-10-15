@@ -787,7 +787,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "create", "read", "update" ]
+          "actions": [ "read" ]
         },
         {
           "role": "authenticated",
@@ -797,6 +797,29 @@
       "relationships": {
       }
     },
+    "books_view_with_mapping": {
+      "source": {
+        "type": "view",
+        "object": "books_view_with_mapping",
+        "key-fields": ["id"]
+      },
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read", "create", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+      },
+      "mappings": {
+        "id": "book_id"
+      }
+    },
     "stocks_view_selected": {
       "source": "stocks_view_selected",
       "rest": true,
@@ -804,7 +827,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "create", "read", "update" ]
+          "actions": [ "read" ]
         },
         {
           "role": "authenticated",
@@ -821,11 +844,28 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "create", "read", "update" ]
+          "actions": [ "read" ]
         },
         {
           "role": "authenticated",
-          "actions": [ "create", "read", "update", "delete" ]
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "books_publishers_view_composite_insertable": {
+      "source": "books_publishers_view_composite_insertable",
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read", "create" ]
         }
       ],
       "relationships": {

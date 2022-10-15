@@ -326,6 +326,105 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await TestAliasSupportForGraphQLMutationQueryFields(msSqlQuery);
         }
 
+        /// <summary>
+        /// <code>Do: </code>insert into a simple view
+        /// <code>Check: </code> that the new entry is in the view
+        /// </summary>
+        [TestMethod]
+        public async Task InsertIntoSimpleView()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 1 [table0].[id] AS [id],
+                    [table0].[title] AS [title]
+                FROM [books_view_all] AS [table0]
+                WHERE [table0].[id] = 5001
+                    AND [table0].[title] = 'Book View'
+                    AND [table0].[publisher_id] = 1234
+                ORDER BY [id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await InsertIntoSimpleView(msSqlQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Update a simple view
+        /// <code>Check: </code> the updated entry is present in the view
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateSimpleView()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 1 [id], [title]
+                FROM [books_view_all]
+                WHERE [id] = 1
+                ORDER BY [id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await UpdateSimpleView(msSqlQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Delete an entry from a simple view
+        /// <code>Check: </code>if the mutation returned result is as expected and if the entry that id has been deleted
+        /// </summary>
+        [TestMethod]
+        public async Task DeleteFromSimpleView()
+        {
+            string msSqlQueryForResult = @"
+                SELECT TOP 1 [id], [title]
+                FROM [books_view_all]
+                WHERE [id] = 1
+                ORDER BY [id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string msSqlQueryToVerifyDeletion = @"
+                SELECT COUNT(*) AS count
+                FROM [books_view_all]
+                WHERE [id] = 1
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await DeleteFromSimpleView(msSqlQueryForResult, msSqlQueryToVerifyDeletion);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>insert into an "insertable" complex view
+        /// <code>Check: </code> that the new entry is in the view
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public async Task InsertIntoInsertableComplexView()
+        {
+            // this view does not have the necessary trigger
+            // implemented yet
+            string msSqlQuery = @"
+                SELECT TOP 1 [table0].[id] AS [id],
+                    [table0].[title] AS [title],
+                    [table0].[publisher_id] AS [publisher_id]
+                FROM [books_publishers_view_composite_insertable] AS [table0]
+                WHERE [table0].[id] = 5001
+                    AND [table0].[title] = 'Book Complex View'
+                    AND [table0].[publisher_id] = 1234
+                ORDER BY [id]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await InsertIntoInsertableComplexView(msSqlQuery);
+        }
+
         #endregion
 
         #region Negative Tests

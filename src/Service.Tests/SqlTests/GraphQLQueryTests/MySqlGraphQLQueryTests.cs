@@ -125,40 +125,40 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task QueryWithNullableForeignKey()
         {
             string mySqlQuery = @"
-                SELECT 
+                SELECT
                   JSON_OBJECT(
                     'title', `subq7`.`title`, 'series',
                     `subq7`.`series`
-                  ) AS `data` 
-                FROM 
+                  ) AS `data`
+                FROM
                   (
-                    SELECT 
+                    SELECT
                       `table0`.`title` AS `title`,
                       `table1_subq`.`data` AS `series`
-                    FROM 
-                      `comics` AS `table0` 
+                    FROM
+                      `comics` AS `table0`
                       LEFT OUTER JOIN LATERAL (
-                        SELECT 
-                          JSON_OBJECT('name', `subq6`.`name`) AS `data` 
-                        FROM 
+                        SELECT
+                          JSON_OBJECT('name', `subq6`.`name`) AS `data`
+                        FROM
                           (
-                            SELECT 
-                              `table1`.`name` AS `name` 
-                            FROM 
-                              `series` AS `table1` 
-                            WHERE 
-                              `table0`.`series_id` = `table1`.`id` 
-                            ORDER BY 
-                              `table1`.`id` ASC 
-                            LIMIT 
+                            SELECT
+                              `table1`.`name` AS `name`
+                            FROM
+                              `series` AS `table1`
+                            WHERE
+                              `table0`.`series_id` = `table1`.`id`
+                            ORDER BY
+                              `table1`.`id` ASC
+                            LIMIT
                               1
                           ) AS `subq6`
-                      ) AS `table1_subq` ON TRUE 
-                    WHERE 
+                      ) AS `table1_subq` ON TRUE
+                    WHERE
                       `table0`.`id` = 1
-                    ORDER BY 
-                      `table0`.`id` ASC 
-                    LIMIT 
+                    ORDER BY
+                      `table0`.`id` ASC
+                    LIMIT
                       1
                   ) AS `subq7`";
 
@@ -372,6 +372,38 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                    LIMIT 100) AS `subq1`";
 
             await TestQueryWithExplicitlyNullArguments(mySqlQuery);
+        }
+
+        [TestMethod]
+        public async Task TestQueryOnBasicView()
+        {
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq1`.`id`, 'title', `subq1`.`title`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`id` AS `id`,
+                          `table0`.`title` AS `title`
+                   FROM `books_view_all` AS `table0`
+                   WHERE 1 = 1
+                   ORDER BY `table0`.`id`
+                   LIMIT 5) AS `subq1`";
+
+            await TestQueryOnBasicView(mySqlQuery);
+        }
+
+        [TestMethod]
+        public async Task TestQueryOnCompositeView()
+        {
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq1`.`id`, 'name', `subq1`.`name`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`id` AS `id`,
+                          `table0`.`name` AS `name`
+                   FROM `books_publishers_view_composite` AS `table0`
+                   WHERE 1 = 1
+                   ORDER BY `table0`.`id`
+                   LIMIT 5) AS `subq1`";
+
+            await TestQueryOnCompositeView(mySqlQuery);
         }
 
         #endregion

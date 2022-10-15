@@ -33,6 +33,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _emptyTableEntityName = "Empty";
         protected static readonly string _emptyTableTableName = "empty_table";
         protected static readonly string _simple_all_books = "books_view_all";
+        protected static readonly string _book_view_with_key_and_mapping = "books_view_with_mapping";
         protected static readonly string _simple_subset_stocks = "stocks_view_selected";
         protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
         protected static readonly string _integrationProcedureFindMany_EntityName = "GetBooks";

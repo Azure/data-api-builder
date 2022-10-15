@@ -410,9 +410,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                                          filterArgumentSchema: queryArgumentSchemas[QueryBuilder.FILTER_FIELD_NAME],
                                                          fields: filterFields,
                                                          schemaName: DatabaseObject.SchemaName,
-                                                         tableName: DatabaseObject.Name,
-                                                         tableAlias: TableAlias,
-                                                         table: GetUnderlyingSourceDefinition(),
+                                                         sourceName: DatabaseObject.Name,
+                                                         sourceAlias: TableAlias,
+                                                         sourceDefinition: GetUnderlyingSourceDefinition(),
                                                          processLiterals: MakeParamWithValue));
                 }
             }

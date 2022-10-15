@@ -125,9 +125,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         filterArgumentSchema: selection.Field.Arguments[QueryBuilder.FILTER_FIELD_NAME],
                         fields: filterFields,
                         schemaName: string.Empty,
-                        tableName: _containerAlias,
-                        tableAlias: _containerAlias,
-                        table: new SourceDefinition(),
+                        sourceName: _containerAlias,
+                        sourceAlias: _containerAlias,
+                        sourceDefinition: new SourceDefinition(),
                         processLiterals: MakeParamWithValue));
                 }
             }

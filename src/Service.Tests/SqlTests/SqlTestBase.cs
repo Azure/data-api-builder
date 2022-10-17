@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -17,6 +18,7 @@ using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -69,7 +71,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="customEntities">Test specific entities to be added to database.</param>
         /// <returns></returns>
         protected static async Task InitializeTestFixture(TestContext context, List<string> customQueries = null,
-            List<string[]> customEntities = null, RuntimeConfig configurationOverride = null)
+            List<string[]> customEntities = null, string configPathOverride = null)
         {
             _queryEngineLogger = new Mock<ILogger<SqlQueryEngine>>().Object;
             _mutationEngineLogger = new Mock<ILogger<SqlMutationEngine>>().Object;
@@ -80,9 +82,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             Mock<ILogger<AuthorizationResolver>> authLogger = new();
             RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
 
-            if (configurationOverride is not null)
+            if (configPathOverride is not null)
             {
-                _runtimeConfig = configurationOverride;
+                //_runtimeConfig = configPathOverride;
             }
             else
             {
@@ -107,13 +109,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
 
             SetUpSQLMetadataProvider();
-            // Setup AuthorizationService to always return Authorized.
-            _authorizationService = new Mock<IAuthorizationService>();
-            _authorizationService.Setup(x => x.AuthorizeAsync(
-                It.IsAny<ClaimsPrincipal>(),
-                It.IsAny<object>(),
-                It.IsAny<IEnumerable<IAuthorizationRequirement>>()
-                ).Result).Returns(AuthorizationResult.Success);
 
             // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
@@ -139,34 +134,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 .WithWebHostBuilder(builder =>
                 {
                     builder.ConfigureTestServices(services =>
+                {
+                    services.AddHttpContextAccessor();
+                    services.AddSingleton(_runtimeConfigProvider);
+                    services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
                     {
-                        services.AddHttpContextAccessor();
-                        services.AddSingleton(_runtimeConfigProvider);
-                        services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
-                        {
-                            return new SqlQueryEngine(
+                        return new SqlQueryEngine(
+                            _queryExecutor,
+                            _queryBuilder,
+                            _sqlMetadataProvider,
+                            ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
+                            _authorizationResolver,
+                            _queryEngineLogger,
+                            _runtimeConfigProvider
+                            );
+                    });
+                    services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
+                    {
+                        return new SqlMutationEngine(
+                                ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider),
                                 _queryExecutor,
                                 _queryBuilder,
                                 _sqlMetadataProvider,
-                                ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
                                 _authorizationResolver,
-                                _queryEngineLogger,
-                                _runtimeConfigProvider
-                                );
-                        });
-                        services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
-                        {
-                            return new SqlMutationEngine(
-                                    ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider),
-                                    _queryExecutor,
-                                    _queryBuilder,
-                                    _sqlMetadataProvider,
-                                    _authorizationResolver,
-                                    ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
-                                    _mutationEngineLogger);
-                        });
-                        services.AddSingleton(_sqlMetadataProvider);
-                        services.AddSingleton(_authorizationResolver);
+                                ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
+                                _mutationEngineLogger);
+                    });
+                    services.AddSingleton(_sqlMetadataProvider);
+                    services.AddSingleton(_authorizationResolver);
                     });
                 });
 

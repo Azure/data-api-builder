@@ -18,6 +18,7 @@ using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
@@ -761,7 +762,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         /// <param name="environment">Environment such as TestCategory.MSSQL</param>
         /// <returns>Connection string</returns>
-        private static string GetConnectionStringFromEnvironmentConfig(string environment)
+        public static string GetConnectionStringFromEnvironmentConfig(string environment)
         {
             string sqlFile = GetFileNameForEnvironment(environment, considerOverrides: true);
             string configPayload = File.ReadAllText(sqlFile);

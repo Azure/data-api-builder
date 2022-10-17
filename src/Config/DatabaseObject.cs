@@ -64,8 +64,6 @@ namespace Azure.DataApiBuilder.Config
     {
         public DatabaseView(string schemaName, string tableName)
             : base(schemaName, tableName) { }
-
-        public DatabaseView() { }
         public ViewDefinition ViewDefinition { get; set; } = null!;
     }
 
@@ -76,8 +74,6 @@ namespace Azure.DataApiBuilder.Config
     {
         public DatabaseStoredProcedure(string schemaName, string tableName)
             : base(schemaName, tableName) { }
-
-        public DatabaseStoredProcedure() { }
         public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
     }
 

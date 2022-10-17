@@ -405,10 +405,8 @@ namespace Azure.DataApiBuilder.Service.Services
 
                         if (entity.ObjectType is SourceType.StoredProcedure)
                         {
-                            sourceObject = new DatabaseStoredProcedure()
+                            sourceObject = new DatabaseStoredProcedure(schemaName, dbObjectName)
                             {
-                                SchemaName = schemaName,
-                                Name = dbObjectName,
                                 SourceType = entity.ObjectType,
                                 StoredProcedureDefinition = new()
                             };
@@ -425,7 +423,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         }
                         else
                         {
-                            sourceObject = new DatabaseView()
+                            sourceObject = new DatabaseView(schemaName, dbObjectName)
                             {
                                 SchemaName = schemaName,
                                 Name = dbObjectName,

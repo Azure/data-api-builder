@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
-            switch (databaseObject!.ObjectType)
+            switch (databaseObject!.SourceType)
             {
                 case SourceType.Table:
                     return ((DatabaseTable)databaseObject).TableDefinition;
@@ -409,7 +409,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             {
                                 SchemaName = schemaName,
                                 Name = dbObjectName,
-                                ObjectType = entity.ObjectType,
+                                SourceType = entity.ObjectType,
                                 StoredProcedureDefinition = new()
                             };
                         }
@@ -419,7 +419,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             {
                                 SchemaName = schemaName,
                                 Name = dbObjectName,
-                                ObjectType = entity.ObjectType,
+                                SourceType = entity.ObjectType,
                                 TableDefinition = new()
                             };
                         }
@@ -429,7 +429,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             {
                                 SchemaName = schemaName,
                                 Name = dbObjectName,
-                                ObjectType = entity.ObjectType,
+                                SourceType = entity.ObjectType,
                                 ViewDefinition = new()
                             };
                         }
@@ -1126,7 +1126,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // Ensure we're only doing this on tables, not stored procedures which have no table definition,
                 // not views whose underlying base table's foreign key constraints are taken care of
                 // by database itself.
-                if (dbObject.ObjectType is SourceType.Table)
+                if (dbObject.SourceType is SourceType.Table)
                 {
                     if (!sourceNameToSourceDefinition.ContainsKey(dbObject.Name))
                     {

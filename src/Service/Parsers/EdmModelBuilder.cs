@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
             {
                 // Do not add stored procedures, which do not have table definitions or conventional columns, to edm model
                 // As of now, no ODataFilterParsing will be supported for stored procedure result sets
-                if (entityAndDbObject.Value.ObjectType is not SourceType.StoredProcedure)
+                if (entityAndDbObject.Value.SourceType is not SourceType.StoredProcedure)
                 {
                     // given an entity Publisher with schema.table of dbo.publishers
                     // entitySourceName = dbo.publishers
@@ -156,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
             // that has a key, then an entity set can be thought of as a table made up of those rows.
             foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
-                if (entityAndDbObject.Value.ObjectType != SourceType.StoredProcedure)
+                if (entityAndDbObject.Value.SourceType != SourceType.StoredProcedure)
                 {
                     string entityName = $"{entityAndDbObject.Value.FullName}";
                     container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);

@@ -9,7 +9,7 @@ namespace Azure.DataApiBuilder.Config
 
         public string Name { get; set; } = null!;
 
-        public SourceType ObjectType { get; set; } = SourceType.Table;
+        public SourceType SourceType { get; set; } = SourceType.Table;
 
         public DatabaseObject(string schemaName, string tableName)
         {
@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Config
 
         /// <summary>
         /// A dictionary mapping all the source entities to their relationship metadata.
-        /// All these entities share this table definition
+        /// All these entities share this source definition
         /// as their underlying database object. 
         /// </summary>
         public Dictionary<string, RelationshipMetadata> SourceEntityRelationshipMap { get; private set; } =
@@ -124,7 +124,7 @@ namespace Azure.DataApiBuilder.Config
 
         /// <summary>
         /// Given the list of column names to check, evaluates
-        /// if any of them is a nullable column when matched with the columns in this entity definition.
+        /// if any of them is a nullable column when matched with the columns in this source definition.
         /// </summary>
         /// <param name="columnsToCheck">List of column names.</param>
         /// <returns>True if any of the columns is null, false otherwise.</returns>
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     public class ViewDefinition : SourceDefinition
     {
-        // Stores the source definition for the base table targeted by the mutation operation.
+        // Stores the source definition for the base table targeted by a mutation operation.
         // Evaluated on a per request basis.
         public SourceDefinition? BaseTableForRequestDefinition { get; set; }
 

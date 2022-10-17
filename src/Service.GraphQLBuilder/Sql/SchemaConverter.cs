@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             Dictionary<string, FieldDefinitionNode> fields = new();
             List<DirectiveNode> objectTypeDirectives = new();
             SourceDefinition sourceDefinition =
-                databaseObject.ObjectType is SourceType.Table ?
+                databaseObject.SourceType is SourceType.Table ?
                 ((DatabaseTable)databaseObject).TableDefinition :
                 ((DatabaseView)databaseObject).ViewDefinition;
             foreach ((string columnName, ColumnDefinition column) in sourceDefinition.Columns)

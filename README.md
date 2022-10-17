@@ -53,3 +53,13 @@ Contributions to this project are more than welcome. Make sure you check out the
 - [Security](./SECURITY.md)
 - [Contributing](./CONTRIBUTING.md)
 
+If you want to propose a completely new feature, please create an RFC item. Good examples of how to create RFC can be found here:
+
+- [Rust RFC Template](https://github.com/rust-lang/rfcs/blob/master/0000-template.md)
+- [Python PEP Guidance](https://www.python.org/dev/peps/pep-0001/#what-belongs-in-a-successful-pep)
+
+## References
+
+- [Microsoft REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md)
+- [Microsoft Azure REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/azure/Guidelines.md)
+- [GraphQL] (https://graphql.org/)

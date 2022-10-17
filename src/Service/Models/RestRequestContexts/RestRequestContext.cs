@@ -108,6 +108,10 @@ namespace Azure.DataApiBuilder.Service.Models
         /// </summary>
         public ISet<string> CumulativeColumns { get; } = new HashSet<string>();
 
+        public SourceDefinition? BaseTableForRequestDefinition { get; set; }
+
+        public Dictionary<string, string> ColumnAliasesFromBaseTable { get; set; } = new();
+
         /// <summary>
         /// Populates the CumulativeColumns property with a unique list
         /// of all columns present in a request. Primarily used

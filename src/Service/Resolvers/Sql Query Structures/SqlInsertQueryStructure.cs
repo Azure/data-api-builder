@@ -43,9 +43,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public SqlInsertStructure(
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
-            IDictionary<string, object?> mutationParams
+            IDictionary<string, object?> mutationParams,
+            SourceDefinition? baseTableForRequestDefinition = null,
+            Dictionary<string, string>? columnAliasesFromBaseTable = null
             )
-        : base(sqlMetadataProvider, entityName: entityName)
+        : base(sqlMetadataProvider, entityName: entityName,
+              baseTableForRequestDefinition: baseTableForRequestDefinition,
+              columnAliasesFromBaseTable: columnAliasesFromBaseTable)
         {
             InsertColumns = new();
             Values = new();

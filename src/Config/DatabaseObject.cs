@@ -139,10 +139,6 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     public class ViewDefinition : SourceDefinition
     {
-        // Stores the source definition for the base table targeted by a mutation operation.
-        // Evaluated on a per request basis.
-        public SourceDefinition? BaseTableForRequestDefinition { get; set; }
-
         // Stores the mapping from the source table names for the base tables
         // to the corresponding source definition for the base table.
         // Definitions for only those base tables will be populated which have

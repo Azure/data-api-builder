@@ -679,18 +679,19 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
                 else
                 {
+                    ViewDefinition viewDefinition = (ViewDefinition)GetSourceDefinition(entityName);
                     await PopulateSourceDefinitionAsync(
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
-                        GetSourceDefinition(entityName));
+                        viewDefinition);
 
                     if (GetDatabaseType() == DatabaseType.mssql)
                     {
                         await PopulateBaseTableDefinitionsForViewAsync(
                             GetSchemaName(entityName),
                             GetDatabaseObjectName(entityName),
-                            GetSourceDefinition(entityName));
+                            viewDefinition);
                     }
                 }
             }

@@ -29,8 +29,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
-            bool isIncrementalUpdate)
-        : base(sqlMetadataProvider, entityName)
+            bool isIncrementalUpdate,
+            SourceDefinition? baseTableForRequestDefinition = null,
+            Dictionary<string, string>? columnAliasesFromBaseTable = null)
+        : base(sqlMetadataProvider,
+              entityName,
+              baseTableForRequestDefinition: baseTableForRequestDefinition,
+              columnAliasesFromBaseTable: columnAliasesFromBaseTable)
         {
             UpdateOperations = new();
             OutputColumns = GenerateOutputColumns();

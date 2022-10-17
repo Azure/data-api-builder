@@ -418,6 +418,15 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     continue;
                 }
 
+                if (entity.ObjectType is not SourceType.Table && entity.Relationships is not null
+                    && entity.Relationships.Count > 0)
+                {
+                    throw new DataApiBuilderException(
+                            message: $"Cannot define relationship for entity: {entity}",
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
+
                 foreach ((string relationshipName, Relationship relationship) in entity.Relationships)
                 {
                     // Validate if entity referenced in relationship is defined in the config.
@@ -441,13 +450,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                     if (relationship.LinkingObject is not null)
                     {
-                        (string linkingObjectSchema, string linkingObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(relationship.LinkingObject)!;
-                        DatabaseObject linkingDatabaseObject = new(linkingObjectSchema, linkingObjectName);
+                        (string linkingTableSchema, string linkingTableName) = sqlMetadataProvider.ParseSchemaAndDbTableName(relationship.LinkingObject)!;
+                        DatabaseTable linkingDatabaseObject = new(linkingTableSchema, linkingTableName);
 
                         if (relationship.LinkingSourceFields is null || relationship.SourceFields is null)
                         {
                             if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject,
-                                sqlMetadataProvider.EntityToDatabaseObject[entityName]))
+                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[entityName]))
                             {
                                 throw new DataApiBuilderException(
                                 message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
@@ -460,7 +469,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         if (relationship.LinkingTargetFields is null || relationship.TargetFields is null)
                         {
                             if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject,
-                                sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity]))
+                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity]))
                             {
                                 throw new DataApiBuilderException(
                                 message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
@@ -475,8 +484,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         && (relationship.SourceFields is null || relationship.TargetFields is null))
                     {
                         if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(
-                                sqlMetadataProvider.EntityToDatabaseObject[entityName],
-                                sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity])
+                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[entityName],
+                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity])
                             )
                         {
                             throw new DataApiBuilderException(

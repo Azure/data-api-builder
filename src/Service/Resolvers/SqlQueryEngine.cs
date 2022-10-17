@@ -158,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string after = SqlPaginationUtil.MakeCursorFromJsonElement(
                                element: rootEnumerated.Last(),
                                orderByColumns: context.OrderByClauseOfBackingColumns,
-                               primaryKey: _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
+                               primaryKey: _sqlMetadataProvider.GetSourceDefinition(context.EntityName).PrimaryKey,
                                entityName: context.EntityName,
                                schemaName: context.DatabaseObject.SchemaName,
                                tableName: context.DatabaseObject.Name,

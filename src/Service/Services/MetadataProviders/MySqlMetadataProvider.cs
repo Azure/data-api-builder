@@ -105,7 +105,7 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        protected override DatabaseObject GenerateDbObject(string schemaName, string tableName)
+        protected override DatabaseTable GenerateDbTable(string schemaName, string tableName)
         {
             return new(GetDefaultSchemaName(), tableName);
         }

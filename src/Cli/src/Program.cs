@@ -69,7 +69,7 @@ namespace Cli
 
                     if (!isSuccess)
                     {
-                        Console.WriteLine("Failed to start the engine.");
+                        Console.Error.WriteLine("Failed to start the engine.");
                     }
                 });
 

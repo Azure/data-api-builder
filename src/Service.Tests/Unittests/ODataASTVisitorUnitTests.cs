@@ -251,7 +251,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Name = tableName
             };
             FindRequestContext context = new(entityName, dbo, isList);
-            Mock<SqlQueryStructure> structure = new(context, _sqlMetadataProvider, _runtimeConfigProvider);
+
+            // Null out the baseTableForRequestDefinition and columnAliasesFromBaseTable.
+            Mock<SqlQueryStructure> structure = new(context, _sqlMetadataProvider, _runtimeConfigProvider, null, null);
             return new ODataASTVisitor(structure.Object, _sqlMetadataProvider);
         }
 

@@ -286,8 +286,7 @@ namespace Azure.DataApiBuilder.Service.Services
             ISqlMetadataProvider sqlMetadataProvider)
         {
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
-            SourceDefinition baseTableDefinition =
-                GetBaseTableDefinition(insertRequestCtx); 
+            SourceDefinition baseTableDefinition = GetBaseTableDefinition(insertRequestCtx); 
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.

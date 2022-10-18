@@ -47,9 +47,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             },
             {
                 "InsertOneInStocksPriceCompositeView",
-                $"SELECT [categoryid], [pieceid], [instant] as phase, [price] " +
-                $"FROM { _composite_subset_stocksPrice } " +
-                $"WHERE [categoryid] = 0 AND [pieceid] = 1 AND [instant] = 'instant3' " +
+                $"SELECT [categoryid], [pieceid], [instant] as phase, [price], [is_wholesale_price] " +
+                $"FROM { _composite_subset_stocksPrice } WHERE [categoryid] = 0 AND [pieceid] = 1 " +
+                $"AND [instant] = 'instant3' AND [is_wholesale_price] is NULL " +
                 $"AND [categoryName] = '' AND [price] is NULL AND [piecesRequired] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },

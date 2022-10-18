@@ -857,6 +857,9 @@
           "actions": [ "create", "read", "update", "delete" ]
         }
       ],
+      "mappings": {
+        "instant": "phase"
+      },
       "relationships": {
       }
     },

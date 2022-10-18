@@ -258,7 +258,7 @@ prepare stmt3 from 'CREATE VIEW books_publishers_view_composite as SELECT
                     where publishers.id = books.publisher_id';
 prepare stmt4 from 'CREATE VIEW stocks_price_view_composite AS
                     SELECT sp.categoryid, sp.pieceid, sp.instant, st.categoryName, st.piecesRequired,
-                    sp.price FROM stocks st, stocks_price sp 
+                    sp.price, sp.is_wholesale_price FROM stocks st, stocks_price sp 
                     WHERE st.categoryid = sp.categoryid and st.pieceid = sp.pieceid';
 
 execute stmt1;

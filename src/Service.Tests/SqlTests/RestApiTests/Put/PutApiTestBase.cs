@@ -273,6 +273,50 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 );
         }
 
+        [TestMethod]
+        public virtual async Task PutOneInsertInViewTest()
+        {
+            // PUT insertion on a simple view based on one table where not
+            // all the fields from base table are selected in view.
+            // The missing field has to be nullable or has default value.
+            string requestBody = @"
+            {
+               ""categoryName"": ""SciFi""
+            }";
+
+            string expectedLocationHeader = $"categoryid/4/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("PutOneInsertInStocksViewSelected"),
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+                );
+
+            // Put insert on composite view targeting stocks_price table.
+            // The join condition for the view will have a match for the
+            // inserted row and hence we will query the view for expected result.
+            requestBody = @"
+            {
+               ""is_wholesale_price"": true
+            }";
+
+            expectedLocationHeader = $"categoryid/0/pieceid/1/phase/instant3";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entityNameOrPath: _composite_subset_stocksPrice,
+                sqlQuery: GetQuery("PutOneInsertInStocksPriceCompositeView"),
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
         /// <summary>
         /// Tests the PutOne functionality with a REST PUT request
         /// with a nullable column specified as NULL.
@@ -321,6 +365,58 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.OK,
                 expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        [TestMethod]
+        public virtual async Task PutOneUpdateViewTest()
+        {
+            // Put update on simple view with subset of fields from base table.
+            string requestBody = @"
+            {
+                ""categoryName"": ""Historical""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/2/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _simple_subset_stocks,
+                    sqlQuery: GetQuery("PutOneUpdateStocksViewSelected"),
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            // Put update on composite view resolving to publishers table.
+            requestBody = @"
+            {
+                ""name"": ""New publisher name""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1/pub_id/1234",
+                    queryString: null,
+                    entityNameOrPath: _composite_subset_bookPub,
+                    sqlQuery: GetQuery("PutOneUpdateBooksPubCompositeView"),
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            // Put update on composite view resolving to stocks_price table.
+            requestBody = @"
+            {
+                ""is_wholesale_price"": true
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
+                    queryString: null,
+                    entityNameOrPath: _composite_subset_stocksPrice,
+                    sqlQuery: GetQuery("PutOneUpdateStocksPriceCompositeView"),
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
                 );
         }
 
@@ -692,6 +788,49 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             );
         }
 
+        [TestMethod]
+        public virtual async Task PutOneInViewBadRequest()
+        {
+            // PUT update trying to modify fields from multiple base table
+            // will result in error.
+            string requestBody = @"
+            {
+                ""categoryName"": ""SciFi"",
+                ""is_wholesale_price"": false
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
+                queryString: string.Empty,
+                entityNameOrPath: _composite_subset_stocksPrice,
+                sqlQuery: string.Empty,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: "Not all the fields in the request body belong to the same base table.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+            );
+
+            // PUT update missing value for non-nullable field categoryName.
+            requestBody = @"
+            {
+                ""piecesAvailable"": 4
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: string.Empty,
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: string.Empty,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+            );
+        }
         #endregion
     }
 }

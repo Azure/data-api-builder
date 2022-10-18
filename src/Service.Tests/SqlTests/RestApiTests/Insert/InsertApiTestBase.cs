@@ -122,7 +122,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedLocationHeader: expectedLocationHeader
             );
 
-            // Insert on composite view in targeting stocks_price table.
+            // Insert on composite view targeting stocks_price table.
             // The join condition for the view will have a match for the
             // inserted row and hence we will query the view for expected result.
             requestBody = @"

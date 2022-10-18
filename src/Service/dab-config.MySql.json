@@ -840,6 +840,26 @@
       "relationships": {
       }
     },
+    "stocks_price_view_composite": {
+      "source": {
+        "object": "stocks_price_view_composite",
+        "type": "view"
+      },
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
     "ArtOfWar": {
       "source": "aow",
       "rest": true,

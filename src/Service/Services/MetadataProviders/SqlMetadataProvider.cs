@@ -739,14 +739,13 @@ namespace Azure.DataApiBuilder.Service.Services
                 viewDefinition.ColToBaseTableMap.TryAdd(colName, dbTableName);
 
                 // Store mapping from base table to columns.
-                Tuple<string, string> columnPair = new(sourceColumn, colName);
-                if (viewDefinition.BaseTableToColumnsMap.TryGetValue(dbTableName, out List<Tuple<string, string>>? columnPairsList))
+                if (viewDefinition.BaseTableToColumnsMap.TryGetValue(dbTableName, out Dictionary<string, string>? viewColToBaseColDict))
                 {
-                    columnPairsList!.Add(columnPair);
+                    viewColToBaseColDict!.TryAdd(colName, sourceColumn);
                 }
                 else
                 {
-                    viewDefinition.BaseTableToColumnsMap.Add(dbTableName, new List<Tuple<string, string>> { columnPair });
+                    viewDefinition.BaseTableToColumnsMap.Add(dbTableName, new Dictionary<string, string> { { colName, sourceColumn } });
                 }
 
                 // Store the base table's definition in the dictionary,

@@ -1,5 +1,6 @@
 DROP VIEW IF EXISTS books_view_all;
 DROP VIEW IF EXISTS stocks_view_selected;
+DROP VIEW IF EXISTS stocks_price_view_composite;
 DROP VIEW IF EXISTS books_publishers_view_composite;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
@@ -252,9 +253,13 @@ prepare stmt2 from 'CREATE VIEW stocks_view_selected AS SELECT
                     FROM stocks';
 
 prepare stmt3 from 'CREATE VIEW books_publishers_view_composite as SELECT
-                    publishers.name,books.id,publishers.id as publisher_id
+                    books.id,books.title,publishers.name,publishers.id as pub_id
                     FROM books,publishers
                     where publishers.id = books.publisher_id';
+prepare stmt4 from 'CREATE VIEW stocks_price_view_composite AS
+                    SELECT sp.categoryid, sp.pieceid, sp.instant, st.categoryName, st.piecesRequired,
+                    sp.price FROM stocks st, stocks_price sp 
+                    WHERE st.categoryid = sp.categoryid and st.pieceid = sp.pieceid';
 
 execute stmt1;
 execute stmt2;

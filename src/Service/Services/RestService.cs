@@ -215,8 +215,10 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (!_sqlMetadataProvider.
                     TryGetBackingColumn(requestCtx.EntityName, field, out string? backingColName))
                 {
+                    // If there is no backing column for a field in request body,
+                    // the field is invalid.
                     throw new DataApiBuilderException(
-                        message: $"The request body contains an invalid field",
+                        message: $"Invalid request body. Contained unexpected field: {field}.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
                         );
@@ -244,7 +246,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     // Mutation operation on entity based on multiple base tables
                     // is not allowed.
                     throw new DataApiBuilderException(
-                        message: "Not all the fields in the request body belong to the same base table",
+                        message: "Not all the fields in the request body belong to the same base table.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
                         );
@@ -255,9 +257,9 @@ namespace Azure.DataApiBuilder.Service.Services
             requestCtx.BaseTableForRequestDefinition = viewDefinition.BaseTableDefinitions[baseTableForView];
 
             // Add mappings from base table column name to view column name.
-            List<Tuple<string, string>> baseTableToColumnsMapping =
+            Dictionary<string, string> viewColToBaseColMap =
             ((DatabaseView)requestCtx.DatabaseObject).ViewDefinition.BaseTableToColumnsMap[baseTableForView];
-            foreach ((string sourceColumn, string viewColumn) in baseTableToColumnsMapping)
+            foreach ((string viewColumn, string sourceColumn) in viewColToBaseColMap)
             {
                 requestCtx.ColumnAliasesFromBaseTable.Add(sourceColumn, viewColumn);
             }

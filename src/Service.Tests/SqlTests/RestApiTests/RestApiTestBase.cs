@@ -10,6 +10,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
     {
         protected static readonly string _integrationEntityName = "Book";
         protected static readonly string _integrationTableName = "books";
+        protected static readonly string _foreignKeyTableName = "publishers";
         protected static readonly string _entityWithCompositePrimaryKey = "Review";
         protected static readonly string _tableWithCompositePrimaryKey = "reviews";
         protected const int STARTING_ID_FOR_TEST_INSERTS = 5001;
@@ -35,6 +36,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _simple_all_books = "books_view_all";
         protected static readonly string _simple_subset_stocks = "stocks_view_selected";
         protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
+        protected static readonly string _composite_subset_stocksPrice = "stocks_price_view_composite";
         protected static readonly string _integrationProcedureFindMany_EntityName = "GetBooks";
         protected static readonly string _integrationProcedureFindMany_ProcName = "get_books";
         protected static readonly string _integrationProcedureFindOne_EntityName = "GetBook";

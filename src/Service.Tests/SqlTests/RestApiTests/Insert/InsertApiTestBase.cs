@@ -57,6 +57,94 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             );
         }
 
+        [TestMethod]
+        public virtual async Task InsertOneInViewTest()
+        {
+            // Insert on simple view containing all fields from base table.
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _simple_all_books,
+                sqlQuery: GetQuery("InsertOneInBooksViewAll"),
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+
+            // Insertion on a simple view based on one table where not
+            // all the fields from base table are selected in view.
+            // The missing field has to be nullable or has default value.
+            requestBody = @"
+            {
+                ""categoryid"": 4,
+                ""pieceid"": 1,
+                ""categoryName"": ""SciFi""
+            }";
+
+            expectedLocationHeader = $"categoryid/4/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("InsertOneInStocksViewSelected"),
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+
+            // Insert on composite view targeting publishers table.
+            // The join condition for the view won't be matched for the
+            // inserted row and hence we will have to query the publishers table
+            // for expected result.
+            requestBody = @"
+            {
+                ""name"": ""New Publisher in town""
+            }";
+
+            expectedLocationHeader = $"pub_id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _composite_subset_bookPub,
+                sqlQuery: GetQuery("InsertOneInBooksPubCompositeView"),
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+
+            // Insert on composite view in targeting stocks_price table.
+            // The join condition for the view will have a match for the
+            // inserted row and hence we will query the view for expected result.
+            requestBody = @"
+            {
+                ""categoryid"": 0,
+                ""pieceid"": 1,
+                ""phase"": ""instant3""
+            }";
+
+            expectedLocationHeader = $"categoryid/0/pieceid/1/phase/instant3";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _composite_subset_stocksPrice,
+                sqlQuery: GetQuery("InsertOneInStocksPriceCompositeView"),
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
         /// <summary>
         /// Tests the InsertOne functionality with a REST POST request using
         /// unique unicode characters in the exposed names.
@@ -452,6 +540,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
+
+            // The field instant is exposed as 'phase'. If we reference
+            // it by 'instant' or any other name, we would get an error
+            // for including an invalid field in request body.
+            requestBody = @"
+            {
+                ""categoryid"": 0,
+                ""pieceid"": 1,
+                ""instant"": ""instant3""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _composite_subset_stocksPrice,
+                sqlQuery: string.Empty,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: "Invalid request body. Contained unexpected field: instant.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
         }
 
         /// <summary>
@@ -484,6 +594,53 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest",
                 expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        [TestMethod]
+        public virtual async Task InsertOneInViewBadRequestTest()
+        {
+            // Non-nullable column books.publisher_id is not selected in
+            // the view and hence insert operation on view resolving to
+            // books table will fail.
+            string requestBody = @"
+            {
+                ""title"" : ""AwesomeBook""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _composite_subset_bookPub,
+                sqlQuery: string.Empty,
+                operationType: Operation.Insert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Cannot perform this operation on the underlying base table.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
+                );
+
+            // A request trying to modify fields from multiple base tables will fail .
+            requestBody = @"
+            {
+                ""categoryid"": 0,
+                ""pieceid"": 1,
+                ""phase"": ""instant3"",
+                ""categoryName"": ""SciFi""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _composite_subset_stocksPrice,
+                sqlQuery: string.Empty,
+                operationType: Operation.Insert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Not all the fields in the request body belong to the same base table.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: "BadRequest"
                 );
         }
 

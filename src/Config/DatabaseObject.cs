@@ -148,10 +148,10 @@ namespace Azure.DataApiBuilder.Config
         // Stores the mapping from column's name in view to source table (including the schema).
         public Dictionary<string, string> ColToBaseTableMap { get; set; } = new();
 
-        // Stores the mapping from source table's name to list of tuple of strings in which:
-        // Item1: Name of the column in source table
-        // Item2: Name of the column in view.
-        public Dictionary<string, List<Tuple<string, string>>> BaseTableToColumnsMap { get; set; } = new();
+        // Stores the mapping from source table's name to dictionary of string->string in which:
+        // key: Name of the column in view.
+        // Item2: Name of the column in source table
+        public Dictionary<string, Dictionary<string, string>> BaseTableToColumnsMap { get; set; } = new();
     }
 
     /// <summary>

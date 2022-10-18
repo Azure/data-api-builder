@@ -229,8 +229,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             };
 
             _mockMetadataStore.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(tableDef);
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "name/1";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);

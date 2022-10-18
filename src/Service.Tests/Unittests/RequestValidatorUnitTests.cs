@@ -252,10 +252,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 PrimaryKey = new(primaryKeys)
             };
-
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             _mockMetadataStore.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "id/12345/name/2";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -278,10 +279,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 PrimaryKey = new(primaryKeys)
             };
-
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             _mockMetadataStore.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "id/12345/isbn/2/name/TwoTowers";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);

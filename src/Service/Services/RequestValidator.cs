@@ -286,15 +286,13 @@ namespace Azure.DataApiBuilder.Service.Services
             ISqlMetadataProvider sqlMetadataProvider)
         {
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
-            SourceDefinition baseTableDefinition = GetBaseTableDefinition(insertRequestCtx); 
+            SourceDefinition baseTableDefinition = GetBaseTableDefinition(insertRequestCtx);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
             // At the end, if we end up with extraneous unvalidated fields, we throw error.
             HashSet<string> unvalidatedFields = new(fieldsInRequestBody);
-
             Dictionary<string, string> columnAliasesFromBaseTable = insertRequestCtx.ColumnAliasesFromBaseTable;
-
             foreach ((string colName, ColumnDefinition colDef) in baseTableDefinition.Columns)
             {
                 if (!columnAliasesFromBaseTable.

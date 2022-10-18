@@ -79,8 +79,6 @@ namespace Azure.DataApiBuilder.Service.Services
 
             RestRequestContext context;
 
-            // To store the sourcename of the base table in case of database view.
-            string baseTableSourceName = string.Empty;
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
             if (dbObject.SourceType is SourceType.StoredProcedure)
             {
@@ -109,9 +107,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             insertPayloadRoot,
                             operationType);
-                        baseTableSourceName = PopulateBaseTableDefAndColumnAliasesInReqCtxt(
-                            context,
-                            _sqlMetadataProvider);
+                        PopulateBaseTableDefAndColumnAliasesInReqCtxt(context);
                         RequestValidator.ValidateInsertRequestContext(
                             (InsertRequestContext)context,
                             _sqlMetadataProvider);
@@ -132,9 +128,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             upsertPayloadRoot,
                             operationType);
-                        baseTableSourceName = PopulateBaseTableDefAndColumnAliasesInReqCtxt(
-                            context,
-                            _sqlMetadataProvider);
+                        PopulateBaseTableDefAndColumnAliasesInReqCtxt(context);
                         RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                         break;
                     default:
@@ -150,11 +144,6 @@ namespace Azure.DataApiBuilder.Service.Services
                     // correct PrimaryKeyValuePairs.
                     RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
                     RequestValidator.ValidatePrimaryKey(context, _sqlMetadataProvider);
-
-                    // If the baseTableSourceName is not empty,
-                    // it implies the entity under operation is a view.
-                    // We need to populate the column alias mapping for primary key in that case.
-                    AddPrimaryKeyAlias(context, baseTableSourceName);
                 }
 
                 if (!string.IsNullOrWhiteSpace(queryString))
@@ -205,25 +194,25 @@ namespace Azure.DataApiBuilder.Service.Services
             };
         }
 
-        private string PopulateBaseTableDefAndColumnAliasesInReqCtxt(
-            RestRequestContext requestCtx,
-            ISqlMetadataProvider sqlMetadataProvider)
+        private void PopulateBaseTableDefAndColumnAliasesInReqCtxt(
+            RestRequestContext requestCtx)
         {
-            if (_sqlMetadataProvider.GetDatabaseType() is not DatabaseType.mssql
+            if (this._sqlMetadataProvider.GetDatabaseType() is not DatabaseType.mssql
                 || requestCtx.DatabaseObject.SourceType is not SourceType.View)
             {
-                return string.Empty;
+                // As of now, support for mutation on views is provided for MsSql only.
+                return;
             }
 
             ViewDefinition viewDefinition = ((DatabaseView)requestCtx.DatabaseObject).ViewDefinition;
-            Dictionary<string, Tuple<string, string>> colToBaseTableDetails = viewDefinition.ColToBaseTableDetails;
+            Dictionary<string, string> colToBaseTableDetails = viewDefinition.ColToBaseTableMap;
 
             // A single base table for the current request.
             string baseTableForView = string.Empty;
 
             foreach (string field in requestCtx.FieldValuePairsInBody.Keys)
             {
-                if (!sqlMetadataProvider.
+                if (!_sqlMetadataProvider.
                     TryGetBackingColumn(requestCtx.EntityName, field, out string? backingColName))
                 {
                     throw new DataApiBuilderException(
@@ -233,7 +222,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         );
                 }
 
-                if (!colToBaseTableDetails.TryGetValue(backingColName!, out Tuple<string, string>? baseTableDetails))
+                if (!colToBaseTableDetails.TryGetValue(backingColName!, out string? baseTableForField))
                 {
                     throw new DataApiBuilderException(
                         message: $"{requestCtx.EntityName} is not an updatable entity",
@@ -242,14 +231,11 @@ namespace Azure.DataApiBuilder.Service.Services
                         );
                 }
 
-                string baseColForField = baseTableDetails.Item1;
-                string baseTableForField = baseTableDetails.Item2;
-
                 // If the column is a field present in the request body
                 // evaluate the source table and schema /
                 // ensure that it belongs to the same source table and schema,
                 // if already evaluated.
-                if (string.Empty.Equals(baseTableForView))
+                if (string.IsNullOrEmpty(baseTableForView))
                 {
                     baseTableForView = baseTableForField;
                 }
@@ -263,29 +249,17 @@ namespace Azure.DataApiBuilder.Service.Services
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
                         );
                 }
-
-                requestCtx.ColumnAliasesFromBaseTable.Add(baseColForField, backingColName!);
             }
+
             // This will fail if the request body is empty.
             requestCtx.BaseTableForRequestDefinition = viewDefinition.BaseTableDefinitions[baseTableForView];
-            return baseTableForView;
-        }
 
-        private void AddPrimaryKeyAlias(RestRequestContext context, string baseTableSourceName)
-        {
-            Dictionary<string, Tuple<string, string>> colToBaseTableDetails =
-                ((DatabaseView)context.DatabaseObject).ViewDefinition.ColToBaseTableDetails;
-
-            foreach (string primaryKey in context.PrimaryKeyValuePairs.Keys)
+            // Add mappings from base table column name to view column name.
+            List<Tuple<string, string>> baseTableToColumnsMapping =
+            ((DatabaseView)requestCtx.DatabaseObject).ViewDefinition.BaseTableToColumnsMap[baseTableForView];
+            foreach ((string sourceColumn, string viewColumn) in baseTableToColumnsMapping)
             {
-                _sqlMetadataProvider.
-                    TryGetBackingColumn(context.EntityName, primaryKey, out string? backingColumn);
-
-                if (colToBaseTableDetails.TryGetValue(backingColumn!, out Tuple<string,string>? baseTableDetails)
-                    && baseTableSourceName.Equals(baseTableDetails.Item2))
-                {
-                    context.ColumnAliasesFromBaseTable.Add(baseTableDetails.Item1, backingColumn!);
-                }
+                requestCtx.ColumnAliasesFromBaseTable.Add(sourceColumn, viewColumn);
             }
         }
 

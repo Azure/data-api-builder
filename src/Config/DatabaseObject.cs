@@ -94,8 +94,8 @@ namespace Azure.DataApiBuilder.Config
     }
 
     /// <summary>
-    /// Class to store database table definition. It is also the parent class of
-    /// ViewDefinition, and hence can point to a table or a view's definition.
+    /// Class to store database table definition. It contains properties that are
+    /// common between a database table and a view.
     /// </summary>
     public class SourceDefinition
     {
@@ -145,11 +145,15 @@ namespace Azure.DataApiBuilder.Config
         // atleast one column in the view's SELECT clause.
         public Dictionary<string, SourceDefinition> BaseTableDefinitions { get; set; } = new();
 
-        // Stores the mapping from column's name in view to a tuple of string in which:
+        // Stores the mapping from column's name in view to source table (including the schema).
+        public Dictionary<string, string> ColToBaseTableMap { get; set; } = new();
+
+        // Stores the mapping from source table's name to list of tuple of strings in which:
         // Item1: Name of the column in source table
-        // Item2: Name of the source table (including the schema).
-        public Dictionary<string, Tuple<string, string>> ColToBaseTableDetails { get; set; } = new();
+        // Item2: Name of the column in view.
+        public Dictionary<string, List<Tuple<string, string>>> BaseTableToColumnsMap { get; set; } = new();
     }
+
     /// <summary>
     /// Class encapsulating foreign keys corresponding to target entities.
     /// </summary>

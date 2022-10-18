@@ -201,13 +201,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ViewDefinition viewDefinition = (ViewDefinition)_sqlMetadataProvider.GetSourceDefinition("books_publishers_view_composite");
 
             // Create the expected column mapping for view columns to source column and table.
-            Dictionary<string, Tuple<string, string>> expectedColToBaseTableDetails = new();
-            expectedColToBaseTableDetails.Add("publisher_id", new Tuple<string, string>("id", "dbo.publishers"));
-            expectedColToBaseTableDetails.Add("name", new Tuple<string, string>("name", "dbo.publishers"));
-            expectedColToBaseTableDetails.Add("id", new Tuple<string, string>("id", "dbo.books"));
+            Dictionary<string, string> expectedColToBaseTableMap = new();
+            expectedColToBaseTableMap.Add("publisher_id", "dbo.publishers");
+            expectedColToBaseTableMap.Add("name", "dbo.publishers");
+            expectedColToBaseTableMap.Add("id", "dbo.books");
 
             // Assert that the expected column mapping and the actual column mapping are same.
-            CollectionAssert.AreEquivalent(expectedColToBaseTableDetails, viewDefinition.ColToBaseTableDetails);
+            CollectionAssert.AreEquivalent(expectedColToBaseTableMap, viewDefinition.ColToBaseTableMap);
         }
     }
 }

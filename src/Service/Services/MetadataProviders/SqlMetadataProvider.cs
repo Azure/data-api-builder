@@ -734,12 +734,22 @@ namespace Azure.DataApiBuilder.Service.Services
                 string dbTableName = $"{sourceSchema}.{sourceTable}";
 
                 // Store the mapping from view column to corresponding
-                // source column and table. Using TryAdd because tests may try
+                // source table. Using TryAdd because tests may try
                 // to add the same column multiple times.
-                viewDefinition.ColToBaseTableDetails.TryAdd(colName,
-                    new Tuple<string, string>(sourceColumn, dbTableName));
+                viewDefinition.ColToBaseTableMap.TryAdd(colName, dbTableName);
 
-                // Store the source table's definition in the dictionary,
+                // Store mapping from base table to columns.
+                Tuple<string, string> columnPair = new(sourceColumn, colName);
+                if (viewDefinition.BaseTableToColumnsMap.TryGetValue(dbTableName, out List<Tuple<string, string>>? columnPairsList))
+                {
+                    columnPairsList!.Add(columnPair);
+                }
+                else
+                {
+                    viewDefinition.BaseTableToColumnsMap.Add(dbTableName, new List<Tuple<string, string>> { columnPair });
+                }
+
+                // Store the base table's definition in the dictionary,
                 // if not already added.
                 if (!viewDefinition.BaseTableDefinitions.TryAdd(dbTableName, new()))
                 {

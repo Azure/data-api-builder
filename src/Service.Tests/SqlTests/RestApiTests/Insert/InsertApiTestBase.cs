@@ -540,28 +540,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
-
-            // The field instant is exposed as 'phase'. If we reference
-            // it by 'instant' or any other name, we would get an error
-            // for including an invalid field in request body.
-            requestBody = @"
-            {
-                ""categoryid"": 0,
-                ""pieceid"": 1,
-                ""instant"": ""instant3""
-            }";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: string.Empty,
-                entityNameOrPath: _composite_subset_stocksPrice,
-                sqlQuery: string.Empty,
-                operationType: Operation.Insert,
-                requestBody: requestBody,
-                exceptionExpected: true,
-                expectedErrorMessage: "Invalid request body. Contained unexpected field: instant.",
-                expectedStatusCode: HttpStatusCode.BadRequest
-            );
         }
 
         /// <summary>
@@ -642,6 +620,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
                 );
+
+            // The field instant is exposed as 'phase'. If we reference
+            // it by 'instant' or any other name, we would get an error
+            // for including an invalid field in request body.
+            requestBody = @"
+            {
+                ""categoryid"": 0,
+                ""pieceid"": 1,
+                ""instant"": ""instant3""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _composite_subset_stocksPrice,
+                sqlQuery: string.Empty,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: "Invalid request body. Contained unexpected field: instant.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
         }
 
         /// <summary>

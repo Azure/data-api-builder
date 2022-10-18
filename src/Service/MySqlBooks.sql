@@ -264,3 +264,4 @@ prepare stmt4 from 'CREATE VIEW stocks_price_view_composite AS
 execute stmt1;
 execute stmt2;
 execute stmt3;
+execute stmt4;

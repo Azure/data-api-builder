@@ -201,9 +201,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Create the expected column mapping for view columns to source column and table.
             Dictionary<string, string> expectedColToBaseTableMap = new();
-            expectedColToBaseTableMap.Add("publisher_id", "dbo.publishers");
+            expectedColToBaseTableMap.Add("pub_id", "dbo.publishers");
             expectedColToBaseTableMap.Add("name", "dbo.publishers");
             expectedColToBaseTableMap.Add("id", "dbo.books");
+            expectedColToBaseTableMap.Add("title", "dbo.books");
 
             // Assert that the expected column mapping and the actual column mapping are same.
             CollectionAssert.AreEquivalent(expectedColToBaseTableMap, viewDefinition.ColToBaseTableMap);

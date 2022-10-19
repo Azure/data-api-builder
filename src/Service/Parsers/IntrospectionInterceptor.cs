@@ -18,7 +18,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
 
         /// <summary>
         /// Constructor injects RuntimeConfigProvider to allow
-        /// HotChocolate to attempt to retreive the runtime config
+        /// HotChocolate to attempt to retrieve the runtime config
         /// when evaluating GraphQL requests.
         /// </summary>
         /// <param name="runtimeConfigProvider"></param>

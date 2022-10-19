@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLIntrospectionTests
             {
                 { "Book", sampleEntity }
             };
-            //JsonElement elementGql = JsonSerializer.SerializeToElement(globalSettings);
+
             RuntimeConfig runtimeConfig = new(
                 Schema: "IntegrationTestMinimalSchema",
                 MsSql: null,
@@ -122,6 +122,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLIntrospectionTests
                 Entities: entityMap
                 );
 
+            runtimeConfig.DetermineGlobalSettings();
             return runtimeConfig;
         }
     }

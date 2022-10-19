@@ -268,7 +268,10 @@ namespace Azure.DataApiBuilder.Service.Services
             ((DatabaseView)requestCtx.DatabaseObject).ViewDefinition.BaseTableToColumnsMap[baseTableForView];
             foreach ((string viewColumn, string sourceColumn) in viewColToBaseColMap)
             {
-                requestCtx.ColumnAliasesFromBaseTable.Add(sourceColumn, viewColumn);
+                if (!viewColumn.Equals(sourceColumn))
+                {
+                    requestCtx.ColumnAliasesFromBaseTable.Add(sourceColumn, viewColumn);
+                }
             }
         }
 

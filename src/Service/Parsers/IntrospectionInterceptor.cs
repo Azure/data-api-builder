@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
             HttpContext context,
             IRequestExecutor requestExecutor,
             IQueryRequestBuilder requestBuilder,
-            CancellationToken cancellationToken   
+            CancellationToken cancellationToken
             )
         {
             if (_runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig) &&

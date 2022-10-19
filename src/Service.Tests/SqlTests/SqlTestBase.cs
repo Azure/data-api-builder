@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -17,6 +18,7 @@ using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -98,13 +100,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
 
             SetUpSQLMetadataProvider();
-            // Setup AuthorizationService to always return Authorized.
-            _authorizationService = new Mock<IAuthorizationService>();
-            _authorizationService.Setup(x => x.AuthorizeAsync(
-                It.IsAny<ClaimsPrincipal>(),
-                It.IsAny<object>(),
-                It.IsAny<IEnumerable<IAuthorizationRequirement>>()
-                ).Result).Returns(AuthorizationResult.Success);
 
             // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
             _httpContextAccessor = new Mock<IHttpContextAccessor>();

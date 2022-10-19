@@ -1,17 +1,23 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using HotChocolate;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLIntrospectionTests
 {
     [TestClass]
-    public class GraphQLSchemaIntrospectionTests : SqlTestBase
+    public class GraphQLSchemaIntrospectionTests
     {
         /// <summary>
         /// Validates that schema introspection requests fail when allow-introspection is false in the runtime configuration.
@@ -24,21 +30,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLIntrospectionTests
 
         public async Task TestSchemaIntrospectionQuery(bool enableIntrospection, bool expectError, string? errorMessage)
         {
-            DatabaseEngine = TestCategory.MSSQL;
-            string introspectionSetting = @"{""allow-introspection"": "+ enableIntrospection.ToString().ToLower() + "}";
             Dictionary<GlobalSettingsType, object> settings = new()
             {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(introspectionSetting) }
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ AllowIntrospection = enableIntrospection }) }
             };
 
             DataSource dataSource = new(DatabaseType.mssql)
             {
-                ConnectionString = ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: DatabaseEngine)
+                ConnectionString = ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
             };
 
             RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource);
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
 
-            await InitializeTestFixture(context: null, configurationOverride: configuration);
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            TestServer server = new(Program.CreateWebHostBuilder(args));
+
+            HttpClient client = server.CreateClient();
 
             string graphQLQueryName = "__schema";
             string graphQLQuery = @"{
@@ -53,12 +68,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLIntrospectionTests
 
             try
             {
-                JsonElement actual = await ExecuteGraphQLRequestAsync(
+                RuntimeConfigProvider configProvider = server.Services.GetRequiredService<RuntimeConfigProvider>();
+
+                JsonElement actual = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                    client,
+                    configProvider,
                     query: graphQLQuery,
                     queryName: graphQLQueryName,
-                    isAuthenticated: false,
                     variables: null,
-                    clientRoleHeader: null);
+                    clientRoleHeader: null
+                    );
 
                 if (expectError)
                 {

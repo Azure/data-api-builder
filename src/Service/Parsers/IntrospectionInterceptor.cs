@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// Request interceptor logic which allows GraphQL introspection requests
         /// to continue only if the runtime config (if available) sets allow-introspection
         /// to true.
-        /// Per Hot Chocolate documentation, the base constructor must be called
+        /// Per Hot Chocolate documentation, the base implementation must be called
         /// with the included parameters.
         /// </summary>
         /// <param name="context">HttpContext</param>

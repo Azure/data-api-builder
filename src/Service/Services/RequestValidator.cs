@@ -61,12 +61,12 @@ namespace Azure.DataApiBuilder.Service.Services
                 context.EntityName,
                 sqlMetadataProvider);
             SourceDefinition baseTableDefinition = GetBaseTableDefinition(context);
-            bool isSimpleEntity = sourceDefinition == baseTableDefinition;
+            bool isEntityBasedOnOneTable = IsEntityBasedOnOneTable(context);
             int countOfPrimaryKeysInBaseTable = baseTableDefinition.PrimaryKey.Count;
             int countOfPrimaryKeysInRequest = context.PrimaryKeyValuePairs.Count;
 
-            if (isSimpleEntity && countOfPrimaryKeysInRequest != countOfPrimaryKeysInBaseTable
-                || !isSimpleEntity && countOfPrimaryKeysInRequest < countOfPrimaryKeysInBaseTable)
+            if (isEntityBasedOnOneTable && countOfPrimaryKeysInRequest != countOfPrimaryKeysInBaseTable
+                || !isEntityBasedOnOneTable && countOfPrimaryKeysInRequest < countOfPrimaryKeysInBaseTable)
             {
                 throw new DataApiBuilderException(
                     message: "Primary key column(s) provided do not match DB schema.",
@@ -106,6 +106,24 @@ namespace Azure.DataApiBuilder.Service.Services
                     statusCode: HttpStatusCode.NotFound,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
+        }
+
+        /// <summary>
+        /// Helper method to check whether a database table or view is based on
+        /// one base table (always true for database table). The method is only
+        /// called for view/table.
+        /// </summary>
+        /// <param name="context">Current request's context</param>
+        /// <returns></returns>
+        private static bool IsEntityBasedOnOneTable(RestRequestContext context)
+        {
+            if (context.DatabaseObject.SourceType is SourceType.Table)
+            {
+                return true;
+            }
+
+            ViewDefinition viewDefinition = ((DatabaseView)context.DatabaseObject).ViewDefinition;
+            return viewDefinition.BaseTableDefinitions.Count == 1;
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -263,15 +264,13 @@ namespace Azure.DataApiBuilder.Service.Services
             // This will fail if the request body is empty.
             requestCtx.BaseTableForRequestDefinition = viewDefinition.BaseTableDefinitions[baseTableForView];
 
-            // Add mappings from base table column name to view column name.
-            Dictionary<string, string> viewColToBaseColMap =
-            ((DatabaseView)requestCtx.DatabaseObject).ViewDefinition.BaseTableToColumnsMap[baseTableForView];
-            foreach ((string viewColumn, string sourceColumn) in viewColToBaseColMap)
+            // Add mappings from base table column name to view column name to the context.
+            if (viewDefinition.BaseTableToColumnsMap.TryGetValue(
+                baseTableForView,
+                out Dictionary<string, string>? columnMappingFromView))
             {
-                if (!viewColumn.Equals(sourceColumn))
-                {
-                    requestCtx.ColumnAliasesFromBaseTable.Add(sourceColumn, viewColumn);
-                }
+                requestCtx.ColumnAliasesFromBaseTable =
+                    columnMappingFromView.ToDictionary(x=>x.Value, x=>x.Key);
             }
         }
 

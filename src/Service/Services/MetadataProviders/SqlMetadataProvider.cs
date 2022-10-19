@@ -727,7 +727,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // one column in the view.
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
             {
-                string colName = element.GetProperty("col_name").ToString();
+                string viewColumn = element.GetProperty("col_name").ToString();
                 string sourceColumn = element.GetProperty("source_column").ToString();
                 string sourceTable = element.GetProperty("source_table").ToString();
                 string sourceSchema = element.GetProperty("source_schema").ToString();
@@ -736,16 +736,20 @@ namespace Azure.DataApiBuilder.Service.Services
                 // Store the mapping from view column to corresponding
                 // source table. Using TryAdd because tests may try
                 // to add the same column multiple times.
-                viewDefinition.ColToBaseTableMap.TryAdd(colName, dbTableName);
+                viewDefinition.ColToBaseTableMap.TryAdd(viewColumn, dbTableName);
 
-                // Store mapping from base table to columns.
-                if (viewDefinition.BaseTableToColumnsMap.TryGetValue(dbTableName, out Dictionary<string, string>? viewColToBaseColDict))
+                // Store mapping from base table to columns in case the column
+                // in base table is aliased in the view.
+                if (!viewColumn.Equals(sourceColumn))
                 {
-                    viewColToBaseColDict!.TryAdd(colName, sourceColumn);
-                }
-                else
-                {
-                    viewDefinition.BaseTableToColumnsMap.Add(dbTableName, new Dictionary<string, string> { { colName, sourceColumn } });
+                    if (viewDefinition.BaseTableToColumnsMap.TryGetValue(dbTableName, out Dictionary<string, string>? viewColToBaseColDict))
+                    {
+                        viewColToBaseColDict!.TryAdd(viewColumn, sourceColumn);
+                    }
+                    else
+                    {
+                        viewDefinition.BaseTableToColumnsMap.Add(dbTableName, new Dictionary<string, string> { { viewColumn, sourceColumn } });
+                    }
                 }
 
                 // Store the base table's definition in the dictionary,

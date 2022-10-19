@@ -122,7 +122,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                throw new ArgumentException($"{columnName} is not a valid column of {DatabaseObject.Name}");
+                throw new DataApiBuilderException(
+                    message: $"{columnName} is not a valid column of {DatabaseObject.Name}",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                    );
             }
         }
 

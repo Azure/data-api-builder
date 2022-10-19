@@ -177,8 +177,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 expectedErrorMessage: "Parameter \"{}\" cannot be resolved as column \"id\" with type \"Int32\".",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
-    );
+                );
         }
+
         /// <summary>
         /// DeleteWithSqlInjectionTest attempts to inject a SQL statement
         /// through the primary key route of a delete operation.

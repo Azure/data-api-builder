@@ -569,5 +569,24 @@ namespace Azure.DataApiBuilder.Service.Services
 
             return firstAsUint;
         }
+
+        public static void ValidateDeleteRequestContext(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            if (context.DatabaseObject.SourceType is SourceType.View &&
+                sqlMetadataProvider.GetDatabaseType() is DatabaseType.mssql)
+            {
+                ViewDefinition viewDefinition = ((DatabaseView)context.DatabaseObject).ViewDefinition;
+                if (viewDefinition.BaseTableDefinitions.Count > 1)
+                {
+                    // Delete operation on views based on multiple base tables is not allowed.
+                    throw new DataApiBuilderException(
+                        message: $"{context.EntityName} is not updatable because the operation affects " +
+                        $"multiple base tables",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                        );
+                }
+            }
+        }
     }
 }

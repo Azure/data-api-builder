@@ -84,6 +84,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
         }
+
+        [TestMethod]
+        public virtual async Task DeleteOneInViewTest()
+        {
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1",
+                    queryString: null,
+                    entityNameOrPath: _simple_all_books,
+                    sqlQuery: null,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _simple_subset_stocks,
+                    sqlQuery: null,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
         #endregion
 
         #region Negative Tests
@@ -188,6 +212,39 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
+        }
+
+        [TestMethod]
+        public virtual async Task DeleteOneInViewBadRequestTest()
+        {
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
+                    queryString: null,
+                    entityNameOrPath: _composite_subset_stocksPrice,
+                    sqlQuery: null,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    exceptionExpected: true,
+                    expectedErrorMessage: $"{_composite_subset_stocksPrice} is not updatable because the operation affects " +
+                        $"multiple base tables",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1/pub_id/1234",
+                    queryString: null,
+                    entityNameOrPath: _composite_subset_bookPub,
+                    sqlQuery: null,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    exceptionExpected: true,
+                    expectedErrorMessage: $"{_composite_subset_bookPub} is not updatable because the operation affects " +
+                        $"multiple base tables",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+            ;
         }
 
         #endregion

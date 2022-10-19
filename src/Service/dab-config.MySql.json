@@ -790,7 +790,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "read", "delete" ]
         },
         {
           "role": "authenticated",
@@ -810,7 +810,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "read", "delete" ]
         },
         {
           "role": "authenticated",

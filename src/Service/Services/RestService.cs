@@ -117,6 +117,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         context = new DeleteRequestContext(entityName,
                                                            dbo: dbObject,
                                                            isList: false);
+                        RequestValidator.ValidateDeleteRequestContext(context, _sqlMetadataProvider);
                         break;
                     case Operation.Update:
                     case Operation.UpdateIncremental:
@@ -197,10 +198,10 @@ namespace Azure.DataApiBuilder.Service.Services
         private void PopulateBaseTableDefAndColumnAliasesInReqCtxt(
             RestRequestContext requestCtx)
         {
-            if (this._sqlMetadataProvider.GetDatabaseType() is not DatabaseType.mssql
+            if (_sqlMetadataProvider.GetDatabaseType() is not DatabaseType.mssql
                 || requestCtx.DatabaseObject.SourceType is not SourceType.View)
             {
-                // As of now, support for mutation on views is provided for MsSql only.
+                // As of now DAB supports mutations on views for MsSql only.
                 return;
             }
 

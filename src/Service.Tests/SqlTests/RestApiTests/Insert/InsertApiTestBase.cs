@@ -57,6 +57,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             );
         }
 
+        /// <summary>
+        /// Tests insertion on simple/composite views.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public virtual async Task InsertOneInViewTest()
         {
@@ -575,6 +579,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 );
         }
 
+        /// <summary>
+        /// Test to verify that we throw exception for invalid/bad
+        /// insert requests on views.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public virtual async Task InsertOneInViewBadRequestTest()
         {
@@ -599,7 +608,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedSubStatusCode: "BadRequest"
                 );
 
-            // A request trying to modify fields from multiple base tables will fail .
+            // Request trying to modify fields from multiple base tables will fail .
             requestBody = @"
             {
                 ""categoryid"": 0,

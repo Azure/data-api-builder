@@ -108,8 +108,16 @@ namespace Azure.DataApiBuilder.Service.Models
         /// </summary>
         public ISet<string> CumulativeColumns { get; } = new HashSet<string>();
 
+        /// <summary>
+        /// Holds the SourceDefinition for the base table which is targeted
+        /// by the mutation operation on the view.
+        /// </summary>
         public SourceDefinition? BaseTableForRequestDefinition { get; set; }
 
+        /// <summary>
+        /// Holds the mapping from column name in base table (evaluated for the request),
+        /// to the corresponding column name in the view (which can be an alias).
+        /// </summary>
         public Dictionary<string, string> ColumnAliasesFromBaseTable { get; set; } = new();
 
         /// <summary>

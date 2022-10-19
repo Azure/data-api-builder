@@ -269,6 +269,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 );
         }
 
+        /// <summary>
+        /// Tests successful execution of PUT insert requests which try to
+        /// modify fields belonging to one base table in the view.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public virtual async Task PutOneInsertInViewTest()
         {
@@ -363,6 +368,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 );
         }
 
+        /// <summary>
+        /// Tests successful execution of PUT update requests which try to
+        /// modify fields belonging to one base table in the view.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public virtual async Task PutOneUpdateViewTest()
         {
@@ -783,6 +793,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             );
         }
 
+        /// <summary>
+        /// Test to verify that we throw exception for invalid/bad
+        /// PUT requests on views.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public virtual async Task PutOneInViewBadRequest()
         {

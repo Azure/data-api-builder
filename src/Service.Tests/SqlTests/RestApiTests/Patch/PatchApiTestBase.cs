@@ -199,9 +199,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
         }
 
+        /// <summary>
+        /// Tests to validate that request PATCH requests modifying fields
+        /// from one base table in view and resolving to insert operation
+        /// execute successfully.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public virtual async Task PatchOneInsertInViewTest()
         {
+            // PATCH insert on simple view based on stocks table.
             string requestBody = @"
             {
                ""categoryName"": ""SciFi""
@@ -219,6 +226,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 expectedLocationHeader: expectedLocationHeader
                 );
 
+            // PATCH insert on composite view based on stocks,stocks_price table,
+            // where the fields modified by request resolve to stocks_price table.
             requestBody = @"
             {
                 ""is_wholesale_price"": true
@@ -307,9 +316,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
         }
 
+        /// <summary>
+        /// Tests successful execution of PATCH update requests on views
+        /// when requests try to modify fields belonging to one base table
+        /// in the view.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public virtual async Task PatchOneUpdateViewTest()
         {
+            // PATCH update on simple view based on stocks table.
             string requestBody = @"
             {
                 ""categoryName"": ""Historical""
@@ -325,6 +341,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     expectedStatusCode: HttpStatusCode.OK
                 );
 
+            // PATCH update on composite view based on books,publishers table,
+            // where the fields modified by request resolve to books table.
             requestBody = @"
             {
                 ""title"": ""New Book""
@@ -340,6 +358,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     expectedStatusCode: HttpStatusCode.OK
                 );
 
+            // PATCH update on composite view based on stocks,stocks_price table,
+            // where the fields modified by request resolve to stocks_price table.
             requestBody = @"
             {
                 ""is_wholesale_price"": true,
@@ -586,6 +606,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     );
         }
 
+        /// <summary>
+        /// Test to verify that we throw exception for invalid/bad
+        /// PATCH requests on views.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public virtual async Task PatchOneViewBadRequestTest()
         {
@@ -610,6 +635,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
             );
 
+            // Request missing primary key column for the stocks_price table
+            // will fail.
             requestBody = @"
             {
                 ""is_wholesale_price"": false
@@ -628,6 +655,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
             );
 
+            // Request containing invalid primary key will fail.
             requestBody = @"
             {
                ""name"": ""New publisher in town""

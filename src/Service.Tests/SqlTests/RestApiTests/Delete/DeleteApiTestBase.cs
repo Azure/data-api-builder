@@ -85,9 +85,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 );
         }
 
+        /// <summary>
+        /// Delete tests on views which contain fields from one base table
+        /// should pass.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public virtual async Task DeleteOneInViewTest()
         {
+            // Delete one from view based on books table.
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1",
                     queryString: null,
@@ -98,6 +104,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
 
+            // Delete one from view based on stocks table.
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "categoryid/1/pieceid/1",
                     queryString: null,
@@ -214,9 +221,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 );
         }
 
+        /// <summary>
+        /// Delete tests on views which contain fields from multiple
+        /// base tables should fail.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public virtual async Task DeleteOneInViewBadRequestTest()
         {
+            // Delete one from view based on stocks,stocks_price table.
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
                     queryString: null,
@@ -231,6 +244,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
+            // Delete one from view based on books,publishers table.
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1/pub_id/1234",
                     queryString: null,

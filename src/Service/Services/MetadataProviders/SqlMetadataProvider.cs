@@ -754,7 +754,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 // Store the base table's definition in the dictionary,
                 // if not already added.
-                if (!viewDefinition.BaseTableDefinitions.TryAdd(dbTableName, new()))
+                if (viewDefinition.BaseTableDefinitions.TryAdd(dbTableName, new()))
                 {
                     await PopulateSourceDefinitionAsync(
                         entityName: string.Empty,

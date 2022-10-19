@@ -130,7 +130,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 primaryKeyRoute: "id/2/pub_id/1234",
                 queryString: string.Empty,
                 entityNameOrPath: _composite_subset_bookPub,
-                sqlQuery: GetQuery("FindViewComposite")
+                sqlQuery: GetQuery("FindBooksPubViewComposite")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
+                queryString: string.Empty,
+                entityNameOrPath: _composite_subset_stocksPrice,
+                sqlQuery: GetQuery("FindStocksPriceViewComposite")
             );
         }
 
@@ -174,6 +181,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$filter= id lt 5",
                 entityNameOrPath: _composite_subset_bookPub,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneLtFilterOnView")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
+                queryString: "?$select=phase,price,categoryName",
+                entityNameOrPath: _composite_subset_stocksPrice,
+                sqlQuery: GetQuery("FindTestOnStocksPriceViewWithSelectQueryString")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=phase",
+                entityNameOrPath: _composite_subset_stocksPrice,
+                sqlQuery: GetQuery("FindTestOnStocksPriceViewWithOrderByQueryString")
             );
         }
 

@@ -53,9 +53,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"WHERE categoryid = 2 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "FindViewComposite",
+                "FindBooksPubViewComposite",
                 $"SELECT id, title, pub_id, name FROM {_composite_subset_bookPub} " +
                 $"WHERE id = 2 AND pub_id = 1234 AND name = 'Big Company' AND title = 'Also Awesome book' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindStocksPriceViewComposite",
+                $"SELECT [categoryid], [pieceid], [instant] as phase, [price], [is_wholesale_price], " +
+                $"[categoryName], [piecesRequired] FROM { _composite_subset_stocksPrice } WHERE " +
+                $"[categoryid] = 1 AND [pieceid] = 1  AND [instant] = 'instant2' AND [is_wholesale_price] = 0 " +
+                $"AND [categoryName] = 'SciFi' AND [price] = 42.75 AND [piecesRequired] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -87,6 +95,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "FindTestWithFilterQueryOneLtFilterOnView",
                 $"SELECT [id], [title], [pub_id], [name] FROM { _composite_subset_bookPub } " +
                 $"WHERE id < 5 FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestOnStocksPriceViewWithSelectQueryString",
+                $"SELECT [instant] as phase, [price], [categoryName] " +
+                $"FROM { _composite_subset_stocksPrice } WHERE " +
+                $"[categoryid] = 1 AND [pieceid] = 1  AND [instant] = 'instant2' AND [is_wholesale_price] = 0 " +
+                $"AND [categoryName] = 'SciFi' AND [price] = 42.75 AND [piecesRequired] = 0 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindTestOnStocksPriceViewWithOrderByQueryString",
+                $"SELECT [categoryid], [pieceid], [instant] as phase, [price], [is_wholesale_price], " +
+                $"[categoryName], [piecesRequired] FROM { _composite_subset_stocksPrice } " +
+                $"ORDER BY instant " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindByIdTestWithQueryStringFields",

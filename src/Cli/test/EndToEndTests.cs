@@ -249,7 +249,7 @@ public class EndToEndTests
         Entity entity = runtimeConfig.Entities["todo"];
         Assert.AreEqual("{\"path\":\"/todo\"}", JsonSerializer.Serialize(entity.Rest));
         Assert.IsNotNull(entity.GraphQL);
-        Assert.IsTrue(((JsonElement)entity.GraphQL).Deserialize<bool>());
+        Assert.IsTrue((System.Boolean)entity.GraphQL);
         //The value isn entity.GraphQL is true/false, we expect the serialization to be a string.
         Assert.AreEqual("true", JsonSerializer.Serialize(entity.GraphQL), ignoreCase: true);
         Assert.AreEqual(1, entity.Permissions.Length);
@@ -327,14 +327,18 @@ public class EndToEndTests
         Assert.IsNotNull(output);
         Assert.IsTrue(output!.Contains($"Using config file: {configFileName}"));
         output = process.StandardOutput.ReadLine();
-        Assert.IsNotNull(output);
         if (expectSuccess)
         {
+            Assert.IsNotNull(output);
             Assert.IsTrue(output.Contains("Starting the runtime engine..."));
         }
         else
         {
-            Assert.IsTrue(output.Contains("Failed to start the engine."));
+            Assert.IsNull(output);
+            string? err = process.StandardError.ReadToEnd();
+            Assert.IsNotNull(err);
+            Assert.IsTrue(err.Contains("Invalid connection-string provided in the config."));
+            Assert.IsTrue(err.Contains("Failed to start the engine."));
         }
 
         process.Kill();
@@ -366,6 +370,47 @@ public class EndToEndTests
         process.Kill();
     }
 
+    /// <summary>
+    /// Test to verify that any parsing errors in the config
+    /// are caught before starting the engine.
+    /// </summary>
+    [DataRow(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE, true, DisplayName = "Correct Config")]
+    [DataRow(CONFIG_WITH_INVALID_DEVMODE_REQUEST_AUTH_TYPE, BASIC_ENTITY_WITH_ANONYMOUS_ROLE, false, DisplayName = "Invalid devmode auth request type")]
+    [DataRow(INITIAL_CONFIG, SINGLE_ENTITY_WITH_INVALID_GRAPHQL_TYPE, false, DisplayName = "Invalid GraphQL type for entity")]
+    [DataTestMethod]
+    public void TestExitOfRuntimeEngineWithInvalidConfig(
+        string initialConfig,
+        string entityDetails,
+        bool expectSuccess)
+    {
+        string runtimeConfigJson = AddPropertiesToJson(initialConfig, entityDetails);
+        File.WriteAllText(_testRuntimeConfig, runtimeConfigJson);
+        Process process = StartDabProcess(
+            command: "start",
+            flags: $"--config {_testRuntimeConfig}"
+        );
+
+        string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+        Assert.IsTrue(output.Contains($"Using config file: {_testRuntimeConfig}"));
+        output = process.StandardOutput.ReadLine();
+        if (expectSuccess)
+        {
+            Assert.IsNotNull(output);
+            Assert.IsTrue(output.Contains("Starting the runtime engine..."));
+        }
+        else
+        {
+            Assert.IsNull(output);
+            string? err = process.StandardError.ReadToEnd();
+            Assert.IsTrue(err.Contains($"Deserialization of the configuration file failed."));
+            Assert.IsTrue(err.Contains("Failed to start the engine."));
+        }
+
+        process.Kill();
+
+    }
+
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)
     {
         ILogger logger = new Mock<ILogger>().Object;
@@ -376,7 +421,7 @@ public class EndToEndTests
             return null;
         }
 
-        RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig? runtimeConfig, logger);
+        RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig? runtimeConfig, logger);
 
         if (runtimeConfig is null)
         {

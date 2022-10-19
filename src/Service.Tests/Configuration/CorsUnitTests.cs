@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             Mock<ILogger> logger = new();
             string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
-            RuntimeConfig.TryGetDeserializedConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
+            RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
             HostGlobalSettings hostGlobalSettings =
                 JsonSerializer.Deserialize<HostGlobalSettings>(
                     (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Host],

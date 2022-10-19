@@ -257,10 +257,20 @@ namespace Azure.DataApiBuilder.Service
             bool isRuntimeReady = false;
             if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
             {
+                // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
+                if (!isRuntimeReady)
+                {
+                    // Exiting if config provided is Invalid.
+                    _logger.LogError("Exiting the runtime engine...");
+                    throw new ApplicationException(
+                        "Could not initialize the engine with the runtime config file: " +
+                        $"{runtimeConfigProvider.RuntimeConfigPath!.ConfigFileName}");
+                }
             }
             else
             {
+                // Config provided during runtime.
                 runtimeConfigProvider.RuntimeConfigLoaded += (sender, newConfig) =>
                 {
                     isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
@@ -424,7 +434,7 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
-                RuntimeConfigValidator._isDataSourceValidatedByCLI = false; // Config set  by the runtime needs to be validated again
+
                 runtimeConfigValidator.ValidateConfig();
 
                 if (runtimeConfigProvider.IsDeveloperMode())
@@ -433,7 +443,7 @@ namespace Azure.DataApiBuilder.Service
                     runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 }
 
-                // Pre-process the permissions section in the runtimeconfig.
+                // Pre-process the permissions section in the runtime config.
                 runtimeConfigValidator.ProcessPermissionsInConfig(runtimeConfig);
 
                 ISqlMetadataProvider sqlMetadataProvider =
@@ -473,7 +483,7 @@ namespace Azure.DataApiBuilder.Service
             catch (Exception ex)
             {
                 _logger.LogError($"Unable to complete runtime " +
-                    $"intialization operations due to: \n{ex}");
+                    $"initialization operations due to: \n{ex}");
                 return false;
             }
         }

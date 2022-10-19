@@ -740,6 +740,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             await ExecuteGraphQLIntrospectionQueries(server, client, expectError);
         }
 
+        /// <summary>
+        /// Validates that schema introspection requests fail when allow-introspection is false in the runtime configuration.
+        /// </summary>
+        /// <seealso cref="https://github.com/ChilliCream/hotchocolate/blob/6b2cfc94695cb65e2f68f5d8deb576e48397a98a/src/HotChocolate/Core/src/Abstractions/ErrorCodes.cs#L287"/>
         private static async Task ExecuteGraphQLIntrospectionQueries(TestServer server, HttpClient client, bool expectError)
         {
             string graphQLQueryName = "__schema";

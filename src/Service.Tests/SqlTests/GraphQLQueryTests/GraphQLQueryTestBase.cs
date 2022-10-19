@@ -908,39 +908,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
-
-        /// <summary>
-        /// Validates that schema introspection requests fail when allow-introspection is false in the runtime configuration.
-        /// </summary>
-        /// <seealso cref="https://github.com/ChilliCream/hotchocolate/blob/6b2cfc94695cb65e2f68f5d8deb576e48397a98a/src/HotChocolate/Core/src/Abstractions/ErrorCodes.cs#L287"/>
-        /// <returns></returns>
-        [TestMethod]
-        public async Task TestSchemaIntrospectionQuery()
-        {
-            string graphQLQueryName = "schemaIntrospection";
-            string graphQLQuery = @"{
-                __schema {
-                    types {
-                        name
-                    }
-                }
-            }";
-
-            string expectedErrorMessageFragment = "Introspection is not allowed for the current request.";
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(
-                query: graphQLQuery,
-                queryName: graphQLQueryName,
-                isAuthenticated: false,
-                variables: null,
-                clientRoleHeader: null);
-
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                actual.ToString(),
-                message: expectedErrorMessageFragment,
-                statusCode: ErrorCodes.Validation.IntrospectionNotAllowed
-                );
-        }
         #endregion
 
         #region Negative Tests

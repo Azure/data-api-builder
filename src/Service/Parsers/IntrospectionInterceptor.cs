@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using System.Threading;
-using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Configurations;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
 using Microsoft.AspNetCore.Http;

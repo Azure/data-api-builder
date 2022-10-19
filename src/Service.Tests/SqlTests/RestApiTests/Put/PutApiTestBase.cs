@@ -56,8 +56,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 sqlQuery: GetQuery("PutOne_Update_Default_Test"),
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.OK,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.OK
                 );
 
             requestBody = @"
@@ -75,8 +74,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 sqlQuery: GetQuery("PutOne_Update_CompositeNonAutoGenPK_Test"),
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.OK,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.OK
                 );
 
             // Perform a PUT UPDATE which nulls out a missing field from the request body
@@ -95,8 +93,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 sqlQuery: GetQuery("PutOne_Update_NullOutMissingField_Test"),
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.OK,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.OK
             );
 
             requestBody = @"
@@ -114,8 +111,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 sqlQuery: GetQuery("PutOne_Update_Empty_Test"),
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.OK,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.OK
                 );
         }
 
@@ -363,8 +359,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 sqlQuery: GetQuery("PutOne_Update_Nulled_Test"),
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.OK,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.OK
                 );
         }
 
@@ -830,6 +825,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
             );
+
+            requestBody = @"
+            {
+               ""is_wholesale_price"": true
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/0/pieceid/1/instance/instant3",
+                queryString: null,
+                entityNameOrPath: _composite_subset_stocksPrice,
+                sqlQuery: string.Empty,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: "Primary key column: instance not found in the entity definition.",
+                expectedStatusCode: HttpStatusCode.NotFound,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                );
         }
         #endregion
     }

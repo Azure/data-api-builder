@@ -199,6 +199,43 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
         }
 
+        [TestMethod]
+        public virtual async Task PatchOneInsertInViewTest()
+        {
+            string requestBody = @"
+            {
+               ""categoryName"": ""SciFi""
+            }";
+
+            string expectedLocationHeader = $"categoryid/4/pieceid/1";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: expectedLocationHeader,
+                queryString: null,
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("PatchOneInsertInStocksViewSelected"),
+                operationType: Operation.UpsertIncremental,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+                );
+
+            requestBody = @"
+            {
+                ""is_wholesale_price"": true
+            }";
+            expectedLocationHeader = $"categoryid/0/pieceid/1/phase/instant3";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entityNameOrPath: _composite_subset_stocksPrice,
+                    sqlQuery: GetQuery("PatchOneInsertInStocksPriceCompositeViewTest"),
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
+        }
         /// <summary>
         /// Tests REST PatchOne which results in incremental update
         /// URI Path: PK of existing record.
@@ -270,6 +307,55 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
         }
 
+        [TestMethod]
+        public virtual async Task PatchOneUpdateViewTest()
+        {
+            string requestBody = @"
+            {
+                ""categoryName"": ""Historical""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/2/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _simple_subset_stocks,
+                    sqlQuery: GetQuery("PatchOneUpdateStocksViewSelected"),
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""title"": ""New Book""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1/pub_id/1234",
+                    queryString: null,
+                    entityNameOrPath: _composite_subset_bookPub,
+                    sqlQuery: GetQuery("PatchOneUpdateBooksPubCompositeView"),
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""is_wholesale_price"": true,
+                ""price"" : null
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
+                    queryString: null,
+                    entityNameOrPath: _composite_subset_stocksPrice,
+                    sqlQuery: GetQuery("PatchOneUpdateStocksPriceCompositeView"),
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
         /// <summary>
         /// Tests the PatchOne functionality with a REST PUT request using
         /// headers that include as a key "If-Match" with an item that does exist,
@@ -498,6 +584,67 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
                     expectedStatusCode: HttpStatusCode.BadRequest
                     );
+        }
+
+        [TestMethod]
+        public virtual async Task PatchOneViewBadRequestTest()
+        {
+            // PATCH update trying to modify fields from multiple base table
+            // will result in error.
+            string requestBody = @"
+            {
+                ""categoryName"": ""SciFi"",
+                ""is_wholesale_price"": false
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
+                queryString: string.Empty,
+                entityNameOrPath: _composite_subset_stocksPrice,
+                sqlQuery: string.Empty,
+                operationType: Operation.UpsertIncremental,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: "Not all the fields in the request body belong to the same base table.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+            );
+
+            requestBody = @"
+            {
+                ""is_wholesale_price"": false
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: string.Empty,
+                entityNameOrPath: _composite_subset_stocksPrice,
+                sqlQuery: string.Empty,
+                operationType: Operation.UpsertIncremental,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: "Primary key column(s) provided do not match DB schema.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+            );
+
+            requestBody = @"
+            {
+               ""name"": ""New publisher in town""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1/pubid/1234",
+                queryString: null,
+                entityNameOrPath: _composite_subset_bookPub,
+                sqlQuery: string.Empty,
+                operationType: Operation.UpsertIncremental,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: "Primary key column: pubid not found in the entity definition.",
+                expectedStatusCode: HttpStatusCode.NotFound,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                );
         }
 
         #endregion

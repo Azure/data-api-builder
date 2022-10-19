@@ -35,11 +35,20 @@ Thus a stored procedure entity might look like:
 parameters can either be fixed as above or passed at runtime through
 - query parameters for GET request
 - request body for POST, PUT, PATCH, DELETE
+- For GraphQL, the calling stored-procedure will look something like this passed in the body
+```
+{
+    GetBooks(param1:value, param2:value) {
+        result
+    }
+}
+```
 
 > **Spec Interpretation**: 
 > - since not explicitly stated in the specification, request body for GET will be ignored altogether.
 > - Parameter resolution will go as follows, from highest to lowest priority: request (query string or body) > config defaults > <s> sql defaults </s>
 >   - NOTE: sql defaults not so easy to infer for parameters, so we explicitly require all parameters to be provided either in the request or config in this first version.
+> - if the request doesn't contain the parameter values, default values from the config will be picked up.
 
 ### Stored Procedure Permissions 
 
@@ -122,7 +131,7 @@ Implementation was segmented into 5 main sections:
 > - Added overriden method to map Sql data type returned from metadata into the CLR/.NET type equivalent. Used/necessary for metadata parsing in `FillSchemaForStoredProcedureAsync()` in `SqlMetadataProvider`.
 > - Left as TODOs in MySql and Postgres.
 
-### 3.  Request Context + Validation
+### 3  REST Request Context + Validation
 
 > ### `RestRequestContext.cs`
 > - Since multiple derived classes are implementing/duplicating logic for populating their `FieldValuePairsInBody` dictionary with the Json request body, moved that logic into a method in this class, `PopulateFieldValuePairsInBody`.
@@ -150,7 +159,71 @@ Implementation was segmented into 5 main sections:
 >       - there were missing parameters in the request and no default was found in config
 > - Condition to avoid the `ColumnsPermissionsRequirement` AuthZ check, since specification hasn't defined what this would look like yet 
 
-### 4.  Structure + Query Building
+### 4. GRAPHQL Schema Generation
+
+> ### `GraphQLSchemaCreator.cs`
+> - `GenerateSqlGraphQLObjects` method requires updating to allow it to process stored-procedure (currently it skips).
+> - It will have to call a separate method to generate the inputType for Stored Procedure.
+> **Question**
+> 1. How do we know the result fields since we do not know the result of stored-procedure before hand?
+> - Ask users to provide schema for procedures - Not convenient for users.
+> - Just return the execution results as Text. - We will go for this one, since we will not support
+> pagination/ordering/filtering for stored-procedures in graphQL.
+```
+{StoredProcedureName(param1:value1, param2:value2): String}
+```
+
+> ### `QueryBuilder.cs` and `MutationBuilder.cs`
+> - TBH, both query and mutation doesn't seem to relate to stored-Procedure, but it can be any of the two: Query/Mutation. But for now we are considering it to be a query type.
+> - It will have a method called `GenerateStoredProcedureQuery` to create the graphql schema for our Stored Procedure.
+> - The above method will be similar to `GenerateByPKQuery`,only difference will be that we will use parameters instead of primary keys.
+> - it will contain the input fields, i.e. parameters in case of Stored Procedure.
+> - we will get the default value from config.
+> - For Example: here id represents param
+```
+{
+    "Execute Stored-Procedure GetBook and get results from the database"
+    GetBook("parameters for GetBook stored-procedure" id: String = "1"): String
+}
+```
+
+> **Question**
+> 1.  Should we just keep the return type as String like
+```
+{"Get a book from the database by its ID\/primary key"
+book_by_pk(id: Int!): book}
+```
+> or have a return type with field such as {result: String} like this
+```
+{"Get a list of all the book items from the database"
+books(
+    first: Int
+    after: String
+    filter: bookFilterInput
+    orderBy: bookOrderByInput): bookConnection!}
+
+{"The return object from a filter query that supports a pagination token for paging through results"
+type bookConnection {
+  "The list of items that matched the filter"
+  items: [book!]!
+  "A pagination token to provide to subsequent pages of a query"
+  endCursor: String
+  "Indicates if there are more pages of items to return"
+  hasNextPage: Boolean!
+}}
+```
+> My thoughts: The first one makes more sense since we only need to display the results obtained from the
+> stored procedure call, but the second one is useful if in future we decide to support order/pagination/filter on graphQL
+> requests for stored-procedure.
+> 2. How do we decide if a stored-procedure is Query or mutation?
+> This question made me realize how un-natural it feels to add support for stored procedures in graphQL. Currently I'm not
+> sure if there is a way to figure out if the call would make any changes in the database or not apart from looking at the read/write permissions.
+
+### `SchemaConvertor.cs`
+> - Add directives for parameter fields added for stored-procedure.
+> - Create the directive for parameters for stored-procedure.(**Confirm if that is required**).
+
+### 5.  Structure + Query Building
 
 > ### `SqlExecuteStructure.cs`
 > - Contains all needed info to build an `EXECUTE {stored_proc_name} {parameters}` query
@@ -170,7 +243,7 @@ Implementation was segmented into 5 main sections:
 > ### `MySqlQueryBuilder.cs` & `PostgresQueryBuilder.cs`
 > - Added method stubs as TODOs for `Build(SqlExecuteStructure)`
 
-### 5.  Query Execution + Result Formatting
+### 5. REST Query Execution + Result Formatting
 
 ### `SqlQueryEngine.cs`
 > - Separated `ExecuteAsync(RestRequestContext)` into `ExecuteAsync(FindRequestContext)` and `ExecuteAsync(StoredProcedureRequestContext)`. Seems to be better practice than doing type checking and conditional downcasting.
@@ -188,6 +261,13 @@ Implementation was segmented into 5 main sections:
 >        - Even a stored procedure that returns the results of a SELECT statement will return an empty `204 No Content` response.
 >    - Insert request returns `201 Created` with **first result set** as json response. If none/empty result set, an empty array is returned. Discussion: prefer to instead return no json at all?
 >    - Update/upsert behaves same as insert but with `200 OK` response.
+
+> ### 6. GRAPHQL Query Execution
+
+> ### `ResolverMiddleware.cs` & `SqlQueryEngine.cs`
+> - Call `ExecuteAsync` with `IMiddlewareContext` and `parameters`.
+> - We would have to convert `IMiddlewareContext` to `StoredProcedureRequestContext`, similar to how the `dispatchQuery` method in `RestService.cs` is doing. It converts `RestRequestContext` to `StoredProcedureRequestContext`.
+> - Then we can simply call `ExecuteAsync(StoredProcedureRequestContext context)` and return the parsed json request.
 
 ## TODO
 1. MySql/Postgres support - changes really should be minimal. Foundation is already laid, just may need minor updates to metadata and then obviously adding `Build` methods in respective query builders. 

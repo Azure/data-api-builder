@@ -1,10 +1,10 @@
 using System.Threading.Tasks;
 using System.Threading;
+using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Config;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
 using Microsoft.AspNetCore.Http;
-using Azure.DataApiBuilder.Service.Configurations;
-using Azure.DataApiBuilder.Config;
 
 namespace Azure.DataApiBuilder.Service.Parsers
 {

@@ -269,8 +269,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 baseTableForView,
                 out Dictionary<string, string>? columnMappingFromView))
             {
-                requestCtx.ColumnAliasesFromBaseTable =
-                    columnMappingFromView.ToDictionary(x=>x.Value, x=>x.Key);
+                requestCtx.ColumnAliasesFromBaseTable = columnMappingFromView.ToDictionary(x=>x.Value, x=>x.Key);
             }
         }
 

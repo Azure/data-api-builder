@@ -433,6 +433,31 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
+        /// Validates the delete request context.
+        /// </summary>
+        /// <param name="requestCtx">Delete Request context for request.</param>
+        /// <param name="sqlMetadataProvider">To get the metadata.</param>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static void ValidateDeleteRequestContext(RestRequestContext requestCtx, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            if (requestCtx.DatabaseObject.SourceType is SourceType.View &&
+                sqlMetadataProvider.GetDatabaseType() is DatabaseType.mssql)
+            {
+                ViewDefinition viewDefinition = ((DatabaseView)requestCtx.DatabaseObject).ViewDefinition;
+                if (viewDefinition.BaseTableDefinitions.Count > 1)
+                {
+                    // Delete operation on views based on multiple base tables is not allowed.
+                    throw new DataApiBuilderException(
+                        message: $"{requestCtx.EntityName} is not updatable because the operation affects " +
+                        $"multiple base tables",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                        );
+                }
+            }
+        }
+
+        /// <summary>
         /// Validates a given column by checking that the column's properties
         /// are valid for the provided request body.
         /// </summary>
@@ -568,25 +593,6 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             return firstAsUint;
-        }
-
-        public static void ValidateDeleteRequestContext(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider)
-        {
-            if (context.DatabaseObject.SourceType is SourceType.View &&
-                sqlMetadataProvider.GetDatabaseType() is DatabaseType.mssql)
-            {
-                ViewDefinition viewDefinition = ((DatabaseView)context.DatabaseObject).ViewDefinition;
-                if (viewDefinition.BaseTableDefinitions.Count > 1)
-                {
-                    // Delete operation on views based on multiple base tables is not allowed.
-                    throw new DataApiBuilderException(
-                        message: $"{context.EntityName} is not updatable because the operation affects " +
-                        $"multiple base tables",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
-                        );
-                }
-            }
         }
     }
 }

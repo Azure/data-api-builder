@@ -40,9 +40,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             UpdateOperations = new();
             OutputColumns = GenerateOutputColumns();
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
-
+            SourceDefinition baseTableDefinition = GetUnderlyingBaseTableForRequestDefinition();
             List<string> primaryKeys = sourceDefinition.PrimaryKey;
-            List<string> columns = sourceDefinition.Columns.Keys.ToList();
+
+            // Dictionary to store mapping from column name in entity(table/view)
+            // to column name in base table.
+            Dictionary<string, string> schemaColumnsMap = new();
+            foreach (string key in baseTableDefinition.Columns.Keys)
+            {
+                if (!ColumnAliasesFromBaseTable.TryGetValue(key, out string? field))
+                {
+                    field = key;
+                }
+
+                schemaColumnsMap.Add(field, key);
+            }
+
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 Predicate predicate = CreatePredicateForParam(param);
@@ -54,17 +67,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicates.Add(predicate);
                 }
                 // use columns to determine values to edit
-                else if (columns.Contains(backingColumn!))
+                else
                 {
                     UpdateOperations.Add(predicate);
                 }
 
-                columns.Remove(backingColumn!);
+                schemaColumnsMap.Remove(backingColumn!);
             }
 
             if (!isIncrementalUpdate)
             {
-                AddNullifiedUnspecifiedFields(columns, UpdateOperations, sourceDefinition);
+                AddNullifiedUnspecifiedFields(schemaColumnsMap, UpdateOperations, baseTableDefinition);
             }
 
             if (UpdateOperations.Count == 0)

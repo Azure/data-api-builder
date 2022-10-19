@@ -195,6 +195,12 @@ namespace Azure.DataApiBuilder.Service.Services
             };
         }
 
+        /// <summary>
+        /// Helper method to populate the base table for request's definition
+        /// and column alias mapping in the request context.
+        /// </summary>
+        /// <param name="requestCtx">Current request's context.</param>
+        /// <exception cref="DataApiBuilderException"></exception>
         private void PopulateBaseTableDefAndColumnAliasesInReqCtxt(
             RestRequestContext requestCtx)
         {

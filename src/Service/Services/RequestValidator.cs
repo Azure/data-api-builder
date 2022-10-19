@@ -556,6 +556,13 @@ namespace Azure.DataApiBuilder.Service.Services
             }
         }
 
+        /// <summary>
+        /// Helper method to get the SourceDefinition of the underlying
+        /// base table for the database object. Expects the db object to be
+        /// either view or table.
+        /// </summary>
+        /// <param name="requestCtx">Current request's context.</param>
+        /// <returns>SourceDefinition of the base table(for view)/table.</returns>
         public static SourceDefinition GetBaseTableDefinition(
             RestRequestContext requestCtx)
         {
@@ -566,8 +573,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     return ((DatabaseTable)requestCtx.DatabaseObject).TableDefinition;
                 case SourceType.View:
                     DatabaseView dbObject = (DatabaseView)requestCtx.DatabaseObject;
-                    return requestCtx.BaseTableForRequestDefinition is null ?
-                        dbObject.ViewDefinition : requestCtx.BaseTableForRequestDefinition;
+                    return requestCtx.BaseTableForRequestDefinition ?? dbObject.ViewDefinition;
                 default:
                     return null!;
             }

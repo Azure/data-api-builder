@@ -630,7 +630,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 operationType: Operation.UpsertIncremental,
                 requestBody: requestBody,
                 exceptionExpected: true,
-                expectedErrorMessage: "Not all the fields in the request body belong to the same base table.",
+                expectedErrorMessage: "Operation not allowed.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
             );

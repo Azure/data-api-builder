@@ -625,7 +625,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 operationType: Operation.Insert,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: "Not all the fields in the request body belong to the same base table.",
+                expectedErrorMessage: "Operation not allowed.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest"
                 );

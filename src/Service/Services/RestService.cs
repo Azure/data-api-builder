@@ -254,7 +254,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     // Mutation operation on entity based on multiple base tables
                     // is not allowed.
                     throw new DataApiBuilderException(
-                        message: "Not all the fields in the request body belong to the same base table.",
+                        message: "Operation not allowed.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
                         );
@@ -269,7 +269,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 baseTableForView,
                 out Dictionary<string, string>? columnMappingFromView))
             {
-                requestCtx.ColumnAliasesFromBaseTable = columnMappingFromView.ToDictionary(x=>x.Value, x=>x.Key);
+                requestCtx.ColumnAliasesFromBaseTable = columnMappingFromView.ToDictionary(x => x.Value, x => x.Key);
             }
         }
 

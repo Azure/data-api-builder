@@ -18,7 +18,8 @@ using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
-using Microsoft.AspNetCore.Hosting;
+using Azure.DataApiBuilder.Service.Tests.SqlTests;
+using HotChocolate;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
@@ -236,37 +237,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
-            ConfigurationPostParameters config = GetPostStartupConfigParams(MSSQL_ENVIRONMENT);
+            RuntimeConfig configuration = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: POST_STARTUP_CONFIG_ENTITY,
+                entitySource: POST_STARTUP_CONFIG_ENTITY_SOURCE,
+                roleName: POST_STARTUP_CONFIG_ROLE,
+                operation: Operation.Read,
+                includedCols: new HashSet<string>() { "*" });
+
+            ConfigurationPostParameters config = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration);
 
             HttpResponseMessage preConfigHydradtionResult =
                 await httpClient.GetAsync($"/{POST_STARTUP_CONFIG_ENTITY}");
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, preConfigHydradtionResult.StatusCode);
 
-            // Hydrate configuration post-startup
-            HttpResponseMessage postResult =
-                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
-            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
-
-            // Retry request RETRY_COUNT times in 1 second increments to allow required services
-            // time to instantiate and hydrate permissions.
-            int retryCount = RETRY_COUNT;
-            HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
-            while (retryCount > 0)
-            {
-                // Spot test authorization resolver utilization to ensure configuration is used.
-                HttpResponseMessage postConfigHydradtionResult =
-                    await httpClient.GetAsync($"api/{POST_STARTUP_CONFIG_ENTITY}");
-                responseCode = postConfigHydradtionResult.StatusCode;
-
-                if (postConfigHydradtionResult.StatusCode == HttpStatusCode.ServiceUnavailable)
-                {
-                    retryCount--;
-                    Thread.Sleep(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
-                    continue;
-                }
-
-                break;
-            }
+            HttpStatusCode responseCode = await HydratePostStartupConfiguration(httpClient, config);
 
             // When the authorization resolver is properly configured, authorization will have failed
             // because no auth headers are present.
@@ -703,6 +687,102 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(actualBody.Contains(expectedContent));
         }
 
+        /// <summary>
+        /// Validates that schema introspection requests fail when allow-introspection is false in the runtime configuration.
+        /// </summary>
+        /// <seealso cref="https://github.com/ChilliCream/hotchocolate/blob/6b2cfc94695cb65e2f68f5d8deb576e48397a98a/src/HotChocolate/Core/src/Abstractions/ErrorCodes.cs#L287"/>
+        /// <returns></returns>
+        [DataTestMethod]
+        [DataRow(false, true, "Introspection is not allowed for the current request.", DisplayName = "Disabled introspection returns GraphQL error.")]
+        [DataRow(true, false, null, DisplayName = "Enabled introspection does not return introspection forbidden error.")]
+        public async Task TestSchemaIntrospectionQuery(bool enableIntrospection, bool expectError, string? errorMessage)
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ AllowIntrospection = enableIntrospection }) }
+            };
+
+            DataSource dataSource = new(DatabaseType.mssql)
+            {
+                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
+            };
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource);
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            TestServer server = new(Program.CreateWebHostBuilder(args));
+            HttpClient client = server.CreateClient();
+
+            await ExecuteGraphQLIntrospectionQueries(server, client, expectError);
+
+            client.Dispose();
+            server.Dispose();
+
+            // Instantiate server with no runtime config for post-startup configuration hydration tests.
+            args[0] = $"--ConfigFileName=";
+
+            server = new(Program.CreateWebHostBuilder(args));
+            client = server.CreateClient();
+
+            ConfigurationPostParameters config = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration);
+            HttpStatusCode responseCode = await HydratePostStartupConfiguration(client, config);
+
+            Assert.AreNotEqual(notExpected: HttpStatusCode.ServiceUnavailable, actual: responseCode, message: "Configuration hydration failed.");
+
+            await ExecuteGraphQLIntrospectionQueries(server, client, expectError);
+        }
+
+        private static async Task ExecuteGraphQLIntrospectionQueries(TestServer server, HttpClient client, bool expectError)
+        {
+            string graphQLQueryName = "__schema";
+            string graphQLQuery = @"{
+                __schema {
+                    types {
+                        name
+                    }
+                }
+            }";
+
+            string expectedErrorMessageFragment = "Introspection is not allowed for the current request.";
+
+            try
+            {
+                RuntimeConfigProvider configProvider = server.Services.GetRequiredService<RuntimeConfigProvider>();
+
+                JsonElement actual = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                    client,
+                    configProvider,
+                    query: graphQLQuery,
+                    queryName: graphQLQueryName,
+                    variables: null,
+                    clientRoleHeader: null
+                    );
+
+                if (expectError)
+                {
+                    SqlTestHelper.TestForErrorInGraphQLResponse(
+                        response: actual.ToString(),
+                        message: expectedErrorMessageFragment,
+                        statusCode: ErrorCodes.Validation.IntrospectionNotAllowed
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // ExecuteGraphQLRequestAsync will raise an exception when no "data" key
+                // exists in the GraphQL JSON response.
+                Assert.Fail(message: "No schema metadata in GraphQL response." + ex.Message);
+            }
+        }
+
         private static ConfigurationPostParameters GetCosmosConfigurationParameters()
         {
             string cosmosFile = $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}";
@@ -737,23 +817,103 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// Additional pre-processing performed acquire database connection string from a local file.
         /// </summary>
         /// <returns>ConfigurationPostParameters object.</returns>
-        private static ConfigurationPostParameters GetPostStartupConfigParams(string environment)
+        private static ConfigurationPostParameters GetPostStartupConfigParams(string environment, RuntimeConfig runtimeConfig)
         {
             string connectionString = GetConnectionStringFromEnvironmentConfig(environment);
 
-            RuntimeConfig configuration = AuthorizationHelpers.InitRuntimeConfig(
-                entityName: POST_STARTUP_CONFIG_ENTITY,
-                entitySource: POST_STARTUP_CONFIG_ENTITY_SOURCE,
-                roleName: POST_STARTUP_CONFIG_ROLE,
-                operation: Operation.Read,
-                includedCols: new HashSet<string>() { "*" });
-            string serializedConfiguration = JsonSerializer.Serialize(configuration);
+            string serializedConfiguration = JsonSerializer.Serialize(runtimeConfig);
 
             return new ConfigurationPostParameters(
                 Configuration: serializedConfiguration,
                 Schema: null,
                 ConnectionString: connectionString,
                 AccessToken: null);
+        }
+
+        /// <summary>
+        /// Hydrates configuration after engine has started and triggers service instantiation
+        /// by executing HTTP requests against the engine until a non-503 error is received.
+        /// </summary>
+        /// <param name="httpClient">Client used for request execution.</param>
+        /// <param name="config">Post-startup configuration</param>
+        /// <returns>ServiceUnavailable if service is not successfully hydrated with config</returns>
+        private static async Task<HttpStatusCode> HydratePostStartupConfiguration(HttpClient httpClient, ConfigurationPostParameters config)
+        {
+            // Hydrate configuration post-startup
+            HttpResponseMessage postResult =
+                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
+
+            // Retry request RETRY_COUNT times in 1 second increments to allow required services
+            // time to instantiate and hydrate permissions.
+            int retryCount = RETRY_COUNT;
+            HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
+            while (retryCount > 0)
+            {
+                // Spot test authorization resolver utilization to ensure configuration is used.
+                HttpResponseMessage postConfigHydrationResult =
+                    await httpClient.GetAsync($"api/{POST_STARTUP_CONFIG_ENTITY}");
+                responseCode = postConfigHydrationResult.StatusCode;
+
+                if (postConfigHydrationResult.StatusCode == HttpStatusCode.ServiceUnavailable)
+                {
+                    retryCount--;
+                    Thread.Sleep(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
+                    continue;
+                }
+
+                break;
+            }
+
+            return responseCode;
+        }
+
+        /// <summary>
+        /// Instantiate minimal runtime config with custom global settings.
+        /// </summary>
+        /// <param name="globalSettings">Globla settings config.</param>
+        /// <param name="dataSource">DataSource to pull connectionstring required for engine start.</param>
+        /// <returns></returns>
+        public static RuntimeConfig InitMinimalRuntimeConfig(Dictionary<GlobalSettingsType, object> globalSettings, DataSource dataSource)
+        {
+            PermissionOperation actionForRole = new(
+                Name: Operation.All,
+                Fields: null,
+                Policy: new(request: null, database: null)
+                );
+
+            PermissionSetting permissionForEntity = new(
+                role: "Anonymous",
+                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) }
+                );
+
+            Entity sampleEntity = new(
+                Source: JsonSerializer.SerializeToElement("books"),
+                Rest: null,
+                GraphQL: null,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+                );
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { "Book", sampleEntity }
+            };
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "IntegrationTestMinimalSchema",
+                MsSql: null,
+                CosmosDb: null,
+                PostgreSql: null,
+                MySql: null,
+                DataSource: dataSource,
+                RuntimeSettings: globalSettings,
+                Entities: entityMap
+                );
+
+            runtimeConfig.DetermineGlobalSettings();
+            return runtimeConfig;
         }
 
         /// <summary>

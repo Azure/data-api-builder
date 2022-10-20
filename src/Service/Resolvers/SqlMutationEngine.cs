@@ -567,7 +567,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
         public string ConstructPrimaryKeyRoute(RestRequestContext context, Dictionary<string, object?> entity)
         {
-            bool isEntityBasedOnOneTable = RequestValidator.IsEntityBasedOnOneTable(context);
+            bool isEntityBasedOnOneTable = IsEntityBasedOnOneTable(context);
 
             if (!isEntityBasedOnOneTable)
             {
@@ -595,6 +595,28 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             newPrimaryKeyRoute.Remove(newPrimaryKeyRoute.Length - 1, 1);
 
             return newPrimaryKeyRoute.ToString();
+        }
+
+        /// <summary>
+        /// Helper method to check whether a database table or view is based on
+        /// one base table (always true for database table). The method is only
+        /// called for view/table.
+        /// </summary>
+        /// <param name="context">Current request's context</param>
+        /// <returns></returns>
+        private static bool IsEntityBasedOnOneTable(RestRequestContext context)
+        {
+            SourceType sourceTypeOfEntity = context.DatabaseObject.SourceType;
+            switch (sourceTypeOfEntity)
+            {
+                case SourceType.Table:
+                    return true;
+                case SourceType.View:
+                    ViewDefinition viewDefinition = ((DatabaseView)context.DatabaseObject).ViewDefinition;
+                    return viewDefinition.NumberOfBaseTables == 1;
+                default:
+                    throw new Exception("The method expects only view/table as database object.");
+            }
         }
 
         private static Dictionary<string, object?> PrepareParameters(RestRequestContext context)

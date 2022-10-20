@@ -60,14 +60,11 @@ namespace Azure.DataApiBuilder.Service.Services
             SourceDefinition sourceDefinition = TryGetSourceDefinition(
                 context.EntityName,
                 sqlMetadataProvider);
-            SourceDefinition baseTableDefinition = context.DatabaseObject.SourceType is SourceType.Table ?
-                sourceDefinition : GetBaseTableDefinition(context);
-            bool isEntityBasedOnOneTable = IsEntityBasedOnOneTable(context);
-            int countOfPrimaryKeysInBaseTable = baseTableDefinition.PrimaryKey.Count;
+
+            int countOfPrimaryKeysInSchema = sourceDefinition.PrimaryKey.Count;
             int countOfPrimaryKeysInRequest = context.PrimaryKeyValuePairs.Count;
 
-            if (isEntityBasedOnOneTable && countOfPrimaryKeysInRequest != countOfPrimaryKeysInBaseTable
-                || !isEntityBasedOnOneTable && countOfPrimaryKeysInRequest < countOfPrimaryKeysInBaseTable)
+            if (countOfPrimaryKeysInRequest != countOfPrimaryKeysInSchema)
             {
                 throw new DataApiBuilderException(
                     message: "Primary key column(s) provided do not match DB schema.",
@@ -75,8 +72,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
-            HashSet<string> primaryKeysInTable = new(sourceDefinition.PrimaryKey);
-            List<string> missingKeys = new();
+            List<string> primaryKeysInRequest = new();
             foreach (string pk in context.PrimaryKeyValuePairs.Keys)
             {
                 if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, pk, out string? backingColumn))
@@ -87,15 +83,10 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
                 }
 
-                if (primaryKeysInTable.Contains(backingColumn!))
-                {
-                    primaryKeysInTable.Remove(backingColumn!);
-                }
-                else
-                {
-                    missingKeys.Add(backingColumn!);
-                }
+                primaryKeysInRequest.Add(backingColumn!);
             }
+
+            IEnumerable<string> missingKeys = primaryKeysInRequest.Except(sourceDefinition.PrimaryKey);
 
             // Verify each primary key is present in the object (table/view) definition.
             if (missingKeys.Any())
@@ -106,28 +97,6 @@ namespace Azure.DataApiBuilder.Service.Services
                              " requested were not found in the entity definition.",
                     statusCode: HttpStatusCode.NotFound,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
-            }
-        }
-
-        /// <summary>
-        /// Helper method to check whether a database table or view is based on
-        /// one base table (always true for database table). The method is only
-        /// called for view/table.
-        /// </summary>
-        /// <param name="context">Current request's context</param>
-        /// <returns></returns>
-        public static bool IsEntityBasedOnOneTable(RestRequestContext context)
-        {
-            SourceType sourceTypeOfEntity = context.DatabaseObject.SourceType;
-            switch (sourceTypeOfEntity)
-            {
-                case SourceType.Table:
-                    return true;
-                case SourceType.View:
-                    ViewDefinition viewDefinition = ((DatabaseView)context.DatabaseObject).ViewDefinition;
-                    return viewDefinition.NumberOfBaseTables == 1;
-                default:
-                    throw new Exception("The method expects only view/table as database object.");
             }
         }
 

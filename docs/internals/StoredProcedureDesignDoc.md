@@ -261,6 +261,8 @@ type bookConnection {
 >    - Insert request returns `201 Created` with **first result set** as json response. If none/empty result set, an empty array is returned. Discussion: prefer to instead return no json at all?
 >    - Update/upsert behaves same as insert but with `200 OK` response.
 
+<br/>
+
 > ### 6. GRAPHQL Query Execution
 
 > ### `ResolverMiddleware.cs` & `SqlQueryEngine.cs`

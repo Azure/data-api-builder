@@ -30,12 +30,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
             bool isIncrementalUpdate,
-            SourceDefinition? baseTableForRequestDefinition = null,
-            Dictionary<string, string>? columnAliasesFromBaseTable = null)
+            SourceDefinition? baseTableForRequestDefinition = null)
         : base(sqlMetadataProvider,
               entityName,
-              baseTableForRequestDefinition: baseTableForRequestDefinition,
-              columnAliasesFromBaseTable: columnAliasesFromBaseTable)
+              baseTableForRequestDefinition: baseTableForRequestDefinition)
         {
             UpdateOperations = new();
             OutputColumns = GenerateOutputColumns();
@@ -48,11 +46,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Dictionary<string, string> schemaColumnsMap = new();
             foreach (string key in baseTableDefinition.Columns.Keys)
             {
-                if (!ColumnAliasesFromBaseTable.TryGetValue(key, out string? field))
-                {
-                    field = key;
-                }
-
+                string field = GetColumnAlias(key, baseTableDefinition);
                 schemaColumnsMap.Add(field, key);
             }
 

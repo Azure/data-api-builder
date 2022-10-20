@@ -58,12 +58,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
             bool incrementalUpdate,
-            SourceDefinition? baseTableForRequestDefinition = null,
-            Dictionary<string, string>? columnAliasesFromBaseTable = null)
+            SourceDefinition? baseTableForRequestDefinition = null)
         : base(sqlMetadataProvider,
               entityName: entityName,
-              baseTableForRequestDefinition: baseTableForRequestDefinition,
-              columnAliasesFromBaseTable: columnAliasesFromBaseTable)
+              baseTableForRequestDefinition: baseTableForRequestDefinition)
         {
             UpdateOperations = new();
             InsertColumns = new();
@@ -113,11 +111,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             foreach (string key in baseTableDefinition.Columns.Keys)
             {
-                if (!ColumnAliasesFromBaseTable.TryGetValue(key, out string? field))
-                {
-                    field = key;
-                }
-
+                string field = GetColumnAlias(key, baseTableDefinition);
                 schemaColumnsMap.Add(field, key);
                 if (baseTableDefinition.PrimaryKey.Contains(key))
                 {

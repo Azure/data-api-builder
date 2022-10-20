@@ -44,12 +44,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
-            SourceDefinition? baseTableForRequestDefinition = null,
-            Dictionary<string, string>? columnAliasesFromBaseTable = null
+            SourceDefinition? baseTableForRequestDefinition = null
             )
         : base(sqlMetadataProvider, entityName: entityName,
-              baseTableForRequestDefinition: baseTableForRequestDefinition,
-              columnAliasesFromBaseTable: columnAliasesFromBaseTable)
+              baseTableForRequestDefinition: baseTableForRequestDefinition)
         {
             InsertColumns = new();
             Values = new();

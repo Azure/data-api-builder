@@ -139,13 +139,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider,
             RuntimeConfigProvider runtimeConfigProvider,
-            SourceDefinition? baseTableForRequestDefinition = null,
-            Dictionary<string, string>? columnAliasesFromBaseTable = null) :
+            SourceDefinition? baseTableForRequestDefinition = null) :
             this(sqlMetadataProvider,
                 new IncrementingInteger(),
                 entityName: context.EntityName,
-                baseTableForRequestDefinition: baseTableForRequestDefinition,
-                columnAliasesFromBaseTable: columnAliasesFromBaseTable)
+                baseTableForRequestDefinition: baseTableForRequestDefinition)
         {
             IsListQuery = context.IsMany;
             TableAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
@@ -473,13 +471,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IncrementingInteger counter,
             string entityName = "",
-            SourceDefinition? baseTableForRequestDefinition = null,
-            Dictionary<string, string>? columnAliasesFromBaseTable = null)
+            SourceDefinition? baseTableForRequestDefinition = null)
             : base(sqlMetadataProvider,
                   entityName: entityName,
                   counter: counter,
-                  baseTableForRequestDefinition: baseTableForRequestDefinition,
-                  columnAliasesFromBaseTable: columnAliasesFromBaseTable)
+                  baseTableForRequestDefinition: baseTableForRequestDefinition)
         {
             JoinQueries = new();
             Joins = new();

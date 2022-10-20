@@ -283,8 +283,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         context.EntityName,
                         context.OperationType,
                         parameters,
-                        baseTableForRequestDefinition: context.BaseTableForRequestDefinition,
-                        columnAliasesFromBaseTable: context.ColumnAliasesFromBaseTable);
+                        baseTableForRequestDefinition: context.BaseTableForRequestDefinition);
 
                 if (context.OperationType is Operation.Insert)
                 {
@@ -359,8 +358,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 Operation operationType,
                 IDictionary<string, object?> parameters,
                 IMiddlewareContext? context = null,
-                SourceDefinition? baseTableForRequestDefinition = null,
-                Dictionary<string, string>? columnAliasesFromBaseTable = null)
+                SourceDefinition? baseTableForRequestDefinition = null)
         {
             string queryString;
             Dictionary<string, object?> queryParameters;
@@ -372,8 +370,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         new(entityName,
                         _sqlMetadataProvider,
                         parameters,
-                        baseTableForRequestDefinition,
-                        columnAliasesFromBaseTable) :
+                        baseTableForRequestDefinition) :
                         new(context, entityName, _sqlMetadataProvider, parameters);
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
@@ -384,8 +381,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         _sqlMetadataProvider,
                         parameters,
                         isIncrementalUpdate: false,
-                        baseTableForRequestDefinition,
-                        columnAliasesFromBaseTable);
+                        baseTableForRequestDefinition);
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
                     break;
@@ -395,8 +391,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         _sqlMetadataProvider,
                         parameters,
                         isIncrementalUpdate: true,
-                        baseTableForRequestDefinition,
-                        columnAliasesFromBaseTable);
+                        baseTableForRequestDefinition);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;
@@ -533,8 +528,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         _sqlMetadataProvider,
                         parameters,
                         incrementalUpdate: false,
-                        baseTableForRequestDefinition: context.BaseTableForRequestDefinition,
-                        columnAliasesFromBaseTable: context.ColumnAliasesFromBaseTable);
+                        baseTableForRequestDefinition: context.BaseTableForRequestDefinition);
                 queryString = _queryBuilder.Build(upsertStructure);
                 queryParameters = upsertStructure.Parameters;
             }
@@ -545,8 +539,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         _sqlMetadataProvider,
                         parameters,
                         incrementalUpdate: true,
-                        baseTableForRequestDefinition: context.BaseTableForRequestDefinition,
-                        columnAliasesFromBaseTable: context.ColumnAliasesFromBaseTable);
+                        baseTableForRequestDefinition: context.BaseTableForRequestDefinition);
                 queryString = _queryBuilder.Build(upsertIncrementalStructure);
                 queryParameters = upsertIncrementalStructure.Parameters;
             }

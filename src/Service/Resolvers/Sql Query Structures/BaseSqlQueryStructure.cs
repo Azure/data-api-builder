@@ -60,18 +60,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public SourceDefinition? BaseTableForRequestDefinition { get; set; } = null!;
 
-        /// <summary>
-        /// Holds the mapping from column name in base table (evaluated for the request),
-        /// to the corresponding column name in the view (which can be an alias).
-        /// </summary>
-        public Dictionary<string, string> ColumnAliasesFromBaseTable { get; set; } = new();
-
         public BaseSqlQueryStructure(
             ISqlMetadataProvider sqlMetadataProvider,
             string entityName,
             IncrementingInteger? counter = null,
-            SourceDefinition? baseTableForRequestDefinition = null,
-            Dictionary<string, string>? columnAliasesFromBaseTable = null)
+            SourceDefinition? baseTableForRequestDefinition = null)
             : base(counter)
         {
             SqlMetadataProvider = sqlMetadataProvider;
@@ -93,8 +86,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             TableAlias = string.Empty;
 
             BaseTableForRequestDefinition = baseTableForRequestDefinition;
-            ColumnAliasesFromBaseTable = columnAliasesFromBaseTable is null ?
-                new() : columnAliasesFromBaseTable;
         }
 
         /// <summary>
@@ -212,10 +203,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             SourceDefinition baseTableDefinition = GetUnderlyingBaseTableForRequestDefinition();
             foreach (string columnName in baseTableDefinition.Columns.Keys)
             {
-                if (!ColumnAliasesFromBaseTable.TryGetValue(columnName, out string? columnAlias))
-                {
-                    columnAlias = columnName;
-                }
+                string columnAlias = GetColumnAlias(columnName, baseTableDefinition);
 
                 if (!SqlMetadataProvider.TryGetExposedColumnName(
                     entityName: EntityName,
@@ -234,6 +222,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return outputColumns;
+        }
+
+        public string GetColumnAlias(string columnName, SourceDefinition baseTableDefinition)
+        {
+            if (DatabaseObject.SourceType is SourceType.Table)
+            {
+                return columnName;
+            }
+
+            DatabaseView view = (DatabaseView)DatabaseObject;
+            if (baseTableDefinition.Columns[columnName].ViewToViewColumnNameMap.TryGetValue(view, out string? columnAlias))
+            {
+                return columnAlias;
+            }
+
+            return columnName;
         }
 
         ///<summary>

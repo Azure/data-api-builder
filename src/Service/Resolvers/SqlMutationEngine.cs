@@ -581,7 +581,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             foreach (string primaryKey in baseTableDefinition.PrimaryKey)
             {
                 string primaryKeyAlias =
-                    RequestValidator.GetColumnAliasForDbOject(context, primaryKey, baseTableDefinition);
+                    RequestValidator.GetColumnAliasInDbOject(context, primaryKey, baseTableDefinition);
 
                 // get backing column for lookup, previously validated to be non-null
                 _sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKeyAlias, out string? pkExposedName);

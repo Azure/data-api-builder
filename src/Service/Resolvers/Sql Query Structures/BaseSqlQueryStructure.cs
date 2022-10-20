@@ -203,7 +203,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             SourceDefinition baseTableDefinition = GetUnderlyingBaseTableForRequestDefinition();
             foreach (string columnName in baseTableDefinition.Columns.Keys)
             {
-                string columnAlias = GetColumnAliasForDbOject(columnName, baseTableDefinition);
+                string columnAlias = GetColumnAliasInDbOject(columnName, baseTableDefinition);
 
                 if (!SqlMetadataProvider.TryGetExposedColumnName(
                     entityName: EntityName,
@@ -231,20 +231,24 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="columnName">Name of column in base table.</param>
         /// <param name="baseTableDefinition">SourceDefinition of base table.</param>
         /// <returns></returns>
-        public string GetColumnAliasForDbOject(string columnName, SourceDefinition baseTableDefinition)
+        public string GetColumnAliasInDbOject(string columnName, SourceDefinition baseTableDefinition)
         {
-            if (DatabaseObject.SourceType is SourceType.Table)
+            switch (DatabaseObject.SourceType)
             {
-                return columnName;
-            }
+                case SourceType.Table:
+                    return columnName;
+                case SourceType.View:
+                    DatabaseView view = (DatabaseView)DatabaseObject;
+                    if (baseTableDefinition.Columns[columnName].
+                        ViewToViewColumnNameMap.TryGetValue(view, out string? columnAlias))
+                    {
+                        return columnAlias;
+                    }
 
-            DatabaseView view = (DatabaseView)DatabaseObject;
-            if (baseTableDefinition.Columns[columnName].ViewToViewColumnNameMap.TryGetValue(view, out string? columnAlias))
-            {
-                return columnAlias;
+                    return columnName;
+                default:
+                    throw new Exception("The method expects only view/table as database object.");
             }
-
-            return columnName;
         }
 
         ///<summary>

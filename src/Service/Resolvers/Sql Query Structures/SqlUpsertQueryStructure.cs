@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             foreach (string key in baseTableDefinition.Columns.Keys)
             {
-                string field = GetColumnAliasForDbOject(key, baseTableDefinition);
+                string field = GetColumnAliasInDbOject(key, baseTableDefinition);
                 schemaColumnsMap.Add(field, key);
                 if (baseTableDefinition.PrimaryKey.Contains(key))
                 {

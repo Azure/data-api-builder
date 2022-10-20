@@ -317,7 +317,7 @@ namespace Azure.DataApiBuilder.Service.Services
             HashSet<string> unvalidatedFields = new(fieldsInRequestBody);
             foreach ((string colName, ColumnDefinition colDef) in baseTableDefinition.Columns)
             {
-                string aliasName = GetColumnAliasForDbOject(insertRequestCtx, colName, baseTableDefinition);
+                string aliasName = GetColumnAliasInDbOject(insertRequestCtx, colName, baseTableDefinition);
 
                 // if column is not exposed we skip
                 if (!sqlMetadataProvider.TryGetExposedColumnName(
@@ -395,7 +395,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             foreach ((string colName, ColumnDefinition colDef) in baseTableDefinition.Columns)
             {
-                string aliasName = GetColumnAliasForDbOject(upsertRequestCtx, colName, baseTableDefinition);
+                string aliasName = GetColumnAliasInDbOject(upsertRequestCtx, colName, baseTableDefinition);
 
                 // if column is not exposed we skip
                 if (!sqlMetadataProvider.TryGetExposedColumnName(
@@ -581,23 +581,27 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="columnName">Name of column in base table.</param>
         /// <param name="baseTableDefinition">SourceDefinition of base table.</param>
         /// <returns></returns>
-        public static string GetColumnAliasForDbOject(
+        public static string GetColumnAliasInDbOject(
             RestRequestContext requestCtx,
             string columnName,
             SourceDefinition baseTableDefinition)
         {
-            if (requestCtx.DatabaseObject.SourceType is SourceType.Table)
+            switch (requestCtx.DatabaseObject.SourceType)
             {
-                return columnName;
-            }
+                case SourceType.Table:
+                    return columnName;
+                case SourceType.View:
+                    DatabaseView view = (DatabaseView)requestCtx.DatabaseObject;
+                    if (baseTableDefinition.Columns[columnName].
+                        ViewToViewColumnNameMap.TryGetValue(view, out string? columnAlias))
+                    {
+                        return columnAlias;
+                    }
 
-            DatabaseView view = (DatabaseView)requestCtx.DatabaseObject;
-            if (baseTableDefinition.Columns[columnName].ViewToViewColumnNameMap.TryGetValue(view, out string? columnAlias))
-            {
-                return columnAlias;
+                    return columnName;
+                default:
+                    throw new Exception("The method expects only view/table as database object.");
             }
-
-            return columnName;
         }
 
         /// <summary>

@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Dictionary<string, string> schemaColumnsMap = new();
             foreach (string key in baseTableDefinition.Columns.Keys)
             {
-                string field = GetColumnAliasForDbOject(key, baseTableDefinition);
+                string field = GetColumnAliasInDbOject(key, baseTableDefinition);
                 schemaColumnsMap.Add(field, key);
             }
 

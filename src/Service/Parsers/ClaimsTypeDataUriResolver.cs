@@ -51,6 +51,11 @@ namespace Azure.DataApiBuilder.Service.Parsers
         {
             ConstantNode preConvertedConstant = (ConstantNode)operandToConvert;
 
+            if (preConvertedConstant.Value is null)
+            {
+                return;
+            }
+
             if (targetType == EdmPrimitiveTypeKind.Int32)
             {
                 if (int.TryParse(preConvertedConstant.Value.ToString(), out int result))

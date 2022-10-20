@@ -705,10 +705,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Validates that schema introspection requests fail when allow-introspection is false in the runtime configuration.
+        /// Integration test that validates schema introspection requests fail
+        /// when allow-introspection is false in the runtime configuration.
+        /// TestCategory is required for CI/CD pipeline to inject a connection string.
         /// </summary>
         /// <seealso cref="https://github.com/ChilliCream/hotchocolate/blob/6b2cfc94695cb65e2f68f5d8deb576e48397a98a/src/HotChocolate/Core/src/Abstractions/ErrorCodes.cs#L287"/>
-        /// <returns></returns>
+        [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
         [DataRow(false, true, "Introspection is not allowed for the current request.", DisplayName = "Disabled introspection returns GraphQL error.")]
         [DataRow(true, false, null, DisplayName = "Enabled introspection does not return introspection forbidden error.")]
@@ -744,9 +746,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             server.Dispose();
 
             // Instantiate server with no runtime config for post-startup configuration hydration tests.
-            args[0] = $"--ConfigFileName=";
-
-            server = new(Program.CreateWebHostBuilder(args));
+            server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             client = server.CreateClient();
 
             ConfigurationPostParameters config = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration);

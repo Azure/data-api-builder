@@ -1,3 +1,4 @@
+using System;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 
@@ -77,6 +78,13 @@ namespace Azure.DataApiBuilder.Service.Parsers
             else if (targetType == EdmPrimitiveTypeKind.Boolean)
             {
                 if (bool.TryParse(preConvertedConstant.Value.ToString(), out bool result))
+                {
+                    operandToConvert = new ConstantNode(constantValue: result);
+                }
+            }
+            else if (targetType == EdmPrimitiveTypeKind.Guid)
+            {
+                if (Guid.TryParse(preConvertedConstant.Value.ToString(), out Guid result))
                 {
                     operandToConvert = new ConstantNode(constantValue: result);
                 }

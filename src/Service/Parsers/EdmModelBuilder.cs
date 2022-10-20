@@ -76,9 +76,11 @@ namespace Azure.DataApiBuilder.Service.Parsers
 
                         switch (columnSystemType.Name)
                         {
-                            case "String":
-                            case "Guid":
+                            case "String":                            
                                 type = EdmPrimitiveTypeKind.String;
+                                break;
+                            case "Guid":
+                                type = EdmPrimitiveTypeKind.Guid;
                                 break;
                             case "Byte":
                                 type = EdmPrimitiveTypeKind.Byte;

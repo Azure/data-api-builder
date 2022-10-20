@@ -39,7 +39,6 @@ parameters can either be fixed as above or passed at runtime through
 ```
 {
     GetBooks(param1:value, param2:value) {
-        result
     }
 }
 ```

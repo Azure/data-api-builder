@@ -188,7 +188,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
 
-            AddGraphQL(services, runtimeConfigurationProvider);
+            AddGraphQL(services);
 
             services.AddControllers();
         }
@@ -196,17 +196,13 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Configure GraphQL services within the service collection of the
         /// request pipeline.
+        /// - AllowIntrospection defaulted to false so HotChocolate configures a request validation rule
+        /// that checks for the presence of the GraphQL context key WellKnownContextData.IntrospectionAllowed
+        /// when determining whether to allow introspection requests to proceed.
         /// </summary>
         /// <param name="services">Service Collection</param>
-        /// <param name="configProvider">Runtime configuration provider</param>
-        private void AddGraphQL(IServiceCollection services, RuntimeConfigProvider configProvider)
+        private void AddGraphQL(IServiceCollection services)
         {
-            bool allowIntrospection = false;
-            if (configProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
-            {
-                allowIntrospection = runtimeConfig.GraphQLGlobalSettings.AllowIntrospection;
-            }
-
             services.AddGraphQLServer()
                     .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                     .ConfigureSchema((serviceProvider, schemaBuilder) =>
@@ -214,9 +210,9 @@ namespace Azure.DataApiBuilder.Service
                         GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
                         graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
                     })
-                    .AllowIntrospection(allowIntrospection)
                     .AddHttpRequestInterceptor<IntrospectionInterceptor>()
                     .AddAuthorization()
+                    .AllowIntrospection(false)
                     .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
                     .AddErrorFilter(error =>
                     {

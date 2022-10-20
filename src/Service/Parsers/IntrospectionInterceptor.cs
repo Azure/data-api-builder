@@ -31,6 +31,11 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// Request interceptor allowing GraphQL introspection requests
         /// to continue only if the runtime config (if available) sets allow-introspection
         /// to true.
+        /// AllowIntrospection() adds the key WellKnownContextData.IntrospectionAllowed
+        /// to the GraphQL request context. That way, the IntrospectionAllowed validation rule
+        /// added by .AllowIntrospection(false) in Startup.cs checks for the key on each request,
+        /// and allows introspection if it is present.
+        /// The WellKnownContextData.IntrospectionAllowed key is not configurable in client requests.
         /// Per Hot Chocolate documentation, the base implementation must be called
         /// with the included parameters.
         /// </summary>
@@ -44,11 +49,9 @@ namespace Azure.DataApiBuilder.Service.Parsers
             HttpContext context,
             IRequestExecutor requestExecutor,
             IQueryRequestBuilder requestBuilder,
-            CancellationToken cancellationToken
-            )
+            CancellationToken cancellationToken)
         {
-            if (_runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig) &&
-                runtimeConfig.GraphQLGlobalSettings.AllowIntrospection)
+            if (_runtimeConfigProvider.IsIntrospectionAllowed())
             {
                 requestBuilder.AllowIntrospection();
             }

@@ -275,6 +275,15 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
+        /// Return whether to allow GraphQL introspection using runtime configuration metadata.
+        /// </summary>
+        /// <returns>True if introspection is allowed, otherwise false.</returns>
+        public virtual bool IsIntrospectionAllowed()
+        {
+            return RuntimeConfiguration is not null && RuntimeConfiguration.GraphQLGlobalSettings.AllowIntrospection;
+        }
+
+        /// <summary>
         /// When we are in development mode, we want to honor the default-request-authorization
         /// feature switch value specified in the config file. This gives us the ability to
         /// simulate a request's authenticated/anonymous authentication state in development mode.

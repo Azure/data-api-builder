@@ -44,7 +44,10 @@ namespace Azure.DataApiBuilder.Service.Parsers
             try
             {
                 Uri relativeUri = new(resourcePath + '/' + filterQueryString, UriKind.Relative);
-                ODataUriParser parser = new(_model!, relativeUri);
+                ODataUriParser parser = new(_model!, relativeUri)
+                {
+                    Resolver = new ClaimsTypeDataUriResolver()
+                };
                 return parser.ParseFilter();
             }
             catch (ODataException e)

@@ -1,6 +1,5 @@
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
-using System;
 
 namespace Azure.DataApiBuilder.Service.Parsers
 {
@@ -11,9 +10,10 @@ namespace Azure.DataApiBuilder.Service.Parsers
     public class ClaimsTypeDataUriResolver : ODataUriResolver
     {
         /// <summary>
-        /// Between two nodes in the filter clause, determine which is the node representing an EDM model field (QueryNodeKind.SingleValuePropertyAccess)
-        /// and which node represents the constant likely resolved from access token claims (QueryNodeKind.Constant).
-        /// Overwrites the node from token claims with a new ConstantNode containing the original value cast as the type of the EDM Model field node.
+        /// Between two nodes in the filter clause, determine the:
+        /// - PrimaryOperand: Node representing an OData EDM model object and has Kind == QueryNodeKind.SingleValuePropertyAccess.
+        /// - OperandToConvert: Node representing a constant value and has kind QueryNodeKind.Constant.
+        /// This resolver will overwrite the OperandToConvert node to a new ConstantNode where the value type is that of the PrimaryOperand node.
         /// </summary>
         /// <param name="binaryOperatorKind">the operator kind</param>
         /// <param name="leftNode">the left operand</param>
@@ -21,16 +21,21 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// <param name="typeReference">type reference for the result BinaryOperatorNode.</param>
         public override void PromoteBinaryOperandTypes(BinaryOperatorKind binaryOperatorKind, ref SingleValueNode leftNode, ref SingleValueNode rightNode, out IEdmTypeReference typeReference)
         {
-            // Check for string instances of @claims. directive and try to cast to the type on the other side of the operator.
             if (leftNode.TypeReference.PrimitiveKind() != rightNode.TypeReference.PrimitiveKind())
             {
                 if ((leftNode.Kind == QueryNodeKind.SingleValuePropertyAccess) && (rightNode is ConstantNode))
                 {
-                    TryConvertNodeToTargetType(primaryOperand: ref leftNode, operandToConvert: ref rightNode);
+                    TryConvertNodeToTargetType(
+                        targetType: leftNode.TypeReference.PrimitiveKind(),
+                        operandToConvert: ref rightNode
+                        );
                 }
                 else if (rightNode.Kind == QueryNodeKind.SingleValuePropertyAccess && leftNode is ConstantNode)
                 {
-                    TryConvertNodeToTargetType(primaryOperand: ref rightNode, operandToConvert: ref leftNode);
+                    TryConvertNodeToTargetType(
+                        targetType: rightNode.TypeReference.PrimitiveKind(),
+                        operandToConvert: ref leftNode
+                        );
                 }
             }
 
@@ -38,34 +43,32 @@ namespace Azure.DataApiBuilder.Service.Parsers
         }
 
         /// <summary>
-        /// Helper class which tries to convert the operandToConvert node's value to the value type of
-        /// the primaryOperand node.
+        /// Uses type specific parsers to attempt conversion the supplied node to a new ConstantNode of type targetType.
         /// </summary>
-        /// <param name="primaryOperand">Node representing the EDM Model field</param>
-        /// <param name="operandToConvert">Node representing a constant value (claims resolved node).</param>
-        private static void TryConvertNodeToTargetType(ref SingleValueNode primaryOperand, ref SingleValueNode operandToConvert)
+        /// <param name="targetType">Primitive type (string, bool, int, etc.) of the primary node's value.</param>
+        /// <param name="operandToConvert">Node representing a constant value which should be converted to a ConstantNode of type targetType.</param>
+        private static void TryConvertNodeToTargetType(EdmPrimitiveTypeKind targetType, ref SingleValueNode operandToConvert)
         {
-            ConstantNode operandToConvertAsConstant = (ConstantNode)operandToConvert;
+            ConstantNode preConvertedConstant = (ConstantNode)operandToConvert;
 
-            if (primaryOperand.TypeReference.PrimitiveKind() == EdmPrimitiveTypeKind.Int32)
+            if (targetType == EdmPrimitiveTypeKind.Int32)
             {
-                string? objectValue = operandToConvertAsConstant.Value.ToString();
-                if (objectValue is not null && Int32.TryParse(objectValue, out int result))
+                if (int.TryParse(preConvertedConstant.Value.ToString(), out int result))
                 {
                     operandToConvert = new ConstantNode(constantValue: result);
                 }
             }
-            else if (primaryOperand.TypeReference.PrimitiveKind() == EdmPrimitiveTypeKind.String)
+            else if (targetType == EdmPrimitiveTypeKind.String)
             {
-                string? objectValue = operandToConvertAsConstant.Value.ToString();
+                string? objectValue = preConvertedConstant.Value.ToString();
                 if (objectValue is not null)
                 {
                     operandToConvert = new ConstantNode(constantValue: objectValue);
                 }
             }
-            else if (primaryOperand.TypeReference.PrimitiveKind() == EdmPrimitiveTypeKind.Boolean)
+            else if (targetType == EdmPrimitiveTypeKind.Boolean)
             {
-                if (Boolean.TryParse(operandToConvertAsConstant.Value.ToString(), out bool result))
+                if (bool.TryParse(preConvertedConstant.Value.ToString(), out bool result))
                 {
                     operandToConvert = new ConstantNode(constantValue: result);
                 }

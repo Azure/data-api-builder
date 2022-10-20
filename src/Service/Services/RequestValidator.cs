@@ -118,13 +118,17 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <returns></returns>
         public static bool IsEntityBasedOnOneTable(RestRequestContext context)
         {
-            if (context.DatabaseObject.SourceType is SourceType.Table)
+            SourceType sourceTypeOfEntity = context.DatabaseObject.SourceType;
+            switch (sourceTypeOfEntity)
             {
-                return true;
+                case SourceType.Table:
+                    return true;
+                case SourceType.View:
+                    ViewDefinition viewDefinition = ((DatabaseView)context.DatabaseObject).ViewDefinition;
+                    return viewDefinition.NumberOfBaseTables == 1;
+                default:
+                    throw new Exception("The method expects only view/table as database object.");
             }
-
-            ViewDefinition viewDefinition = ((DatabaseView)context.DatabaseObject).ViewDefinition;
-            return viewDefinition.NumberOfBaseTables == 1;
         }
 
         /// <summary>
@@ -566,7 +570,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     DatabaseView dbObject = (DatabaseView)requestCtx.DatabaseObject;
                     return requestCtx.BaseTableForRequestDefinition ?? dbObject.ViewDefinition;
                 default:
-                    return null!;
+                    throw new Exception("The method expects only view/table as database object.");
             }
         }
 

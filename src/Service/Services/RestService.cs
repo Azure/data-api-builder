@@ -213,10 +213,10 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             ViewDefinition viewDefinition = ((DatabaseView)requestCtx.DatabaseObject).ViewDefinition;
-            Dictionary<string, string> colToBaseTableDetails = viewDefinition.ColToBaseTableMap;
+            Dictionary<string, DatabaseTable> viewColToDatabaseTableMap = viewDefinition.ViewColToDatabaseTableMap;
 
             // A single base table for the current request.
-            string baseTableForView = string.Empty;
+            DatabaseTable? baseTableForView = null;
 
             foreach (string field in requestCtx.FieldValuePairsInBody.Keys)
             {
@@ -232,7 +232,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         );
                 }
 
-                if (!colToBaseTableDetails.TryGetValue(backingColName!, out string? baseTableForField))
+                if (!viewColToDatabaseTableMap.TryGetValue(backingColName!, out DatabaseTable? baseTableForField))
                 {
                     throw new DataApiBuilderException(
                         message: $"{requestCtx.EntityName} is not an updatable entity",
@@ -245,11 +245,11 @@ namespace Azure.DataApiBuilder.Service.Services
                 // evaluate the source table and schema /
                 // ensure that it belongs to the same source table and schema,
                 // if already evaluated.
-                if (string.IsNullOrEmpty(baseTableForView))
+                if (baseTableForView is null)
                 {
                     baseTableForView = baseTableForField;
                 }
-                else if (!baseTableForView.Equals(baseTableForField))
+                else if (baseTableForView != baseTableForField)
                 {
                     // Mutation operation on entity based on multiple base tables
                     // is not allowed.
@@ -262,11 +262,11 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             // This will fail if the request body is empty.
-            requestCtx.BaseTableForRequestDefinition = viewDefinition.BaseTableDefinitions[baseTableForView];
+            requestCtx.BaseTableForRequestDefinition = baseTableForView!.TableDefinition;
 
             // Add mappings from base table column name to view column name to the context.
             if (viewDefinition.BaseTableToColumnsMap.TryGetValue(
-                baseTableForView,
+                baseTableForView.FullName,
                 out Dictionary<string, string>? columnMappingFromView))
             {
                 requestCtx.ColumnAliasesFromBaseTable = columnMappingFromView.ToDictionary(x => x.Value, x => x.Key);

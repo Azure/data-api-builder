@@ -61,6 +61,9 @@ namespace Azure.DataApiBuilder.Service.Services
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
             new(StringComparer.InvariantCulture);
 
+        /// <inheritdoc/>
+        public Dictionary<string, DatabaseObject> SourceToDatabaseObject { get; set; } = new();
+
         private readonly ILogger<ISqlMetadataProvider> _logger;
 
         public SqlMetadataProvider(
@@ -152,6 +155,12 @@ namespace Azure.DataApiBuilder.Service.Services
                     // For stored procedures
                     return null!;
             }
+        }
+
+        /// <inheritdoc/>
+        public DatabaseObject GetDatabaseObject(string objectName)
+        {
+            return SourceToDatabaseObject[objectName];
         }
 
         /// <inheritdoc />
@@ -433,6 +442,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         }
 
                         sourceObjects.Add(entity.SourceName, sourceObject);
+                        SourceToDatabaseObject.Add($"{schemaName}.{dbObjectName}", sourceObject);
                     }
 
                     EntityToDatabaseObject.Add(entityName, sourceObject);
@@ -723,6 +733,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
             using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
 
+            HashSet<string> baseTableNames = new();
             // Iterate through each row returned by the query which corresponds to
             // one column in the view.
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
@@ -733,11 +744,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 string sourceSchema = element.GetProperty("source_schema").ToString();
                 string dbTableName = $"{sourceSchema}.{sourceTable}";
 
-                // Store the mapping from view column to corresponding
-                // source table. Using TryAdd because tests may try
-                // to add the same column multiple times.
-                viewDefinition.ColToBaseTableMap.TryAdd(viewColumn, dbTableName);
-
+                baseTableNames.Add(dbTableName);
                 // Store mapping from base table to columns in case the column
                 // in base table is aliased in the view.
                 if (!viewColumn.Equals(sourceColumn))
@@ -754,16 +761,23 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 // Store the base table's definition in the dictionary,
                 // if not already added.
-                if (viewDefinition.BaseTableDefinitions.TryAdd(dbTableName, new()))
+                DatabaseTable dbTable = new(sourceSchema, sourceTable);
+                if (SourceToDatabaseObject.TryAdd(dbTableName, dbTable))
                 {
+                    Console.WriteLine(dbTableName);
                     await PopulateSourceDefinitionAsync(
                         entityName: string.Empty,
                         schemaName: schemaName,
                         tableName: sourceTable,
-                        sourceDefinition: viewDefinition.BaseTableDefinitions[dbTableName]
+                        sourceDefinition: dbTable.TableDefinition
                         );
                 }
+
+                viewDefinition.ViewColToDatabaseTableMap[viewColumn] =
+                    (DatabaseTable)SourceToDatabaseObject[dbTableName];
             }
+
+            viewDefinition.NumberOfBaseTables = baseTableNames.Count;
         }
 
         /// <summary>
@@ -855,6 +869,14 @@ namespace Azure.DataApiBuilder.Service.Services
             string tableName,
             SourceDefinition sourceDefinition)
         {
+            /*HashSet<DatabaseObject> hs = new();
+            DatabaseObject dbTable = new DatabaseTable("ay", "bh");
+            hs.Add(dbTable);
+            DatabaseObject dbTable2 = new DatabaseTable("ay", "bh");
+            if (hs.Contains(dbTable2))
+            {
+                bool ok = true;
+            }*/
             DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(entityName, schemaName, tableName);
 
             List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);

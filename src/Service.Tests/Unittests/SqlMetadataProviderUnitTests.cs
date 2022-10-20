@@ -154,16 +154,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="baseTableNames">Names of the base tables.</param>
         /// <returns></returns>
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
-        [DataRow("books_view_all", 1, new string[] { "dbo.books" },
-            DisplayName = "Validate view definition on books_view_all")]
-        [DataRow("stocks_view_selected", 1, new string[] { "dbo.stocks" },
-            DisplayName = "Validate view definition on stocks_view_selected")]
-        [DataRow("books_publishers_view_composite", 2, new string[] { "dbo.books", "dbo.publishers" },
-            DisplayName = "Validate view definition on books_publishers_view_composite")]
+        [DataRow("books_view_all", 1, DisplayName = "Validate view definition on books_view_all")]
+        [DataRow("stocks_view_selected", 1, DisplayName = "Validate view definition on stocks_view_selected")]
+        [DataRow("books_publishers_view_composite", 2, DisplayName = "Validate view definition on books_publishers_view_composite")]
         public async Task CheckPopulatedBaseTableDefinitionsForViewAsync(
             string entityName,
-            int expectedBaseTableCount,
-            string[] baseTableNames)
+            int expectedBaseTableCount)
         {
             DatabaseEngine = TestCategory.MSSQL;
             _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
@@ -174,13 +170,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ViewDefinition viewDefinition = (ViewDefinition)_sqlMetadataProvider.GetSourceDefinition(entityName);
 
             // Assert that there are expected number of base tables in view's definition.
-            Assert.AreEqual(expectedBaseTableCount, viewDefinition.BaseTableDefinitions.Count);
-            foreach (string baseTableName in baseTableNames)
-            {
-                // Assert that the base tables in the BaseTableDefinitions are the ones
-                // that are expected.
-                Assert.IsTrue(viewDefinition.BaseTableDefinitions.ContainsKey(baseTableName));
-            }
+            Assert.AreEqual(expectedBaseTableCount, viewDefinition.NumberOfBaseTables);
         }
 
         /// <summary>
@@ -200,14 +190,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ViewDefinition viewDefinition = (ViewDefinition)_sqlMetadataProvider.GetSourceDefinition("books_publishers_view_composite");
 
             // Create the expected column mapping for view columns to source column and table.
-            Dictionary<string, string> expectedColToBaseTableMap = new();
-            expectedColToBaseTableMap.Add("pub_id", "dbo.publishers");
-            expectedColToBaseTableMap.Add("name", "dbo.publishers");
-            expectedColToBaseTableMap.Add("id", "dbo.books");
-            expectedColToBaseTableMap.Add("title", "dbo.books");
+            Dictionary<string, DatabaseTable> expectedViewColToDatabaseTableMap = new();
+            expectedViewColToDatabaseTableMap.Add("pub_id", (DatabaseTable)_sqlMetadataProvider.GetDatabaseObject("dbo.publishers"));
+            expectedViewColToDatabaseTableMap.Add("name", (DatabaseTable)_sqlMetadataProvider.GetDatabaseObject("dbo.publishers"));
+            expectedViewColToDatabaseTableMap.Add("id", (DatabaseTable)_sqlMetadataProvider.GetDatabaseObject("dbo.books"));
+            expectedViewColToDatabaseTableMap.Add("title", (DatabaseTable)_sqlMetadataProvider.GetDatabaseObject("dbo.books"));
 
             // Assert that the expected column mapping and the actual column mapping are same.
-            CollectionAssert.AreEquivalent(expectedColToBaseTableMap, viewDefinition.ColToBaseTableMap);
+            CollectionAssert.AreEquivalent(expectedViewColToDatabaseTableMap, viewDefinition.ViewColToDatabaseTableMap);
         }
     }
 }

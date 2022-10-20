@@ -39,11 +39,20 @@ namespace Azure.DataApiBuilder.Service.Services
         SourceDefinition GetSourceDefinition(string entityName);
 
         /// <summary>
+        /// Obtains the underlying database object for the given objectName.
+        /// </summary>
+        /// <param name="objectName">Name of the database object with schema.</param>
+        /// <returns></returns>
+        DatabaseObject GetDatabaseObject(string objectName);
+
+        /// <summary>
         /// Obtains the underlying StoredProcedureDefinition for the given entity name.
         /// </summary>
         StoredProcedureDefinition GetStoredProcedureDefinition(string entityName);
 
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
+
+        Dictionary<string, DatabaseObject> SourceToDatabaseObject { get; set; }
 
         /// <summary>
         /// Obtains the underlying OData parser.

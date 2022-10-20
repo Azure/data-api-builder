@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             ViewDefinition viewDefinition = ((DatabaseView)context.DatabaseObject).ViewDefinition;
-            return viewDefinition.BaseTableDefinitions.Count == 1;
+            return viewDefinition.NumberOfBaseTables == 1;
         }
 
         /// <summary>
@@ -462,7 +462,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 sqlMetadataProvider.GetDatabaseType() is DatabaseType.mssql)
             {
                 ViewDefinition viewDefinition = ((DatabaseView)requestCtx.DatabaseObject).ViewDefinition;
-                if (viewDefinition.BaseTableDefinitions.Count > 1)
+                if (viewDefinition.NumberOfBaseTables > 1)
                 {
                     // Delete operation on views based on multiple base tables is not allowed.
                     throw new DataApiBuilderException(

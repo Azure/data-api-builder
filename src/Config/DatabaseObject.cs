@@ -139,19 +139,16 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     public class ViewDefinition : SourceDefinition
     {
-        // Stores the mapping from the source table names for the base tables
-        // to the corresponding source definition for the base table.
-        // Definitions for only those base tables will be populated which have
-        // atleast one column in the view's SELECT clause.
-        public Dictionary<string, SourceDefinition> BaseTableDefinitions { get; set; } = new();
-
-        // Stores the mapping from column's name in view to source table (including the schema).
-        public Dictionary<string, string> ColToBaseTableMap { get; set; } = new();
+        // Number of base tables in the view.
+        public int NumberOfBaseTables { get; set; }
 
         // Stores the mapping from source table's name to dictionary of (string,string) in which:
         // key: Name(alias) of the column in view.
         // value: Actual Name of the column in source table
         public Dictionary<string, Dictionary<string, string>> BaseTableToColumnsMap { get; set; } = new();
+
+        // Stores mapping from column name in view to its source database table.
+        public Dictionary<string, DatabaseTable> ViewColToDatabaseTableMap { get; set; } = new();
     }
 
     /// <summary>

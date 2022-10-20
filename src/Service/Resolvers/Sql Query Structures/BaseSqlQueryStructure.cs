@@ -203,7 +203,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             SourceDefinition baseTableDefinition = GetUnderlyingBaseTableForRequestDefinition();
             foreach (string columnName in baseTableDefinition.Columns.Keys)
             {
-                string columnAlias = GetColumnAlias(columnName, baseTableDefinition);
+                string columnAlias = GetColumnAliasForDbOject(columnName, baseTableDefinition);
 
                 if (!SqlMetadataProvider.TryGetExposedColumnName(
                     entityName: EntityName,
@@ -224,7 +224,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return outputColumns;
         }
 
-        public string GetColumnAlias(string columnName, SourceDefinition baseTableDefinition)
+        /// <summary>
+        /// Helper method to get the name of the column in the underlying entity,
+        /// which can be an alias in case of database views.
+        /// </summary>
+        /// <param name="columnName">Name of column in base table.</param>
+        /// <param name="baseTableDefinition">SourceDefinition of base table.</param>
+        /// <returns></returns>
+        public string GetColumnAliasForDbOject(string columnName, SourceDefinition baseTableDefinition)
         {
             if (DatabaseObject.SourceType is SourceType.Table)
             {

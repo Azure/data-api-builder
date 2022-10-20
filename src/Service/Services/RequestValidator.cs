@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="context">Current request's context</param>
         /// <returns></returns>
-        private static bool IsEntityBasedOnOneTable(RestRequestContext context)
+        public static bool IsEntityBasedOnOneTable(RestRequestContext context)
         {
             if (context.DatabaseObject.SourceType is SourceType.Table)
             {
@@ -310,14 +310,9 @@ namespace Azure.DataApiBuilder.Service.Services
             // from the hash set of unvalidated fields.
             // At the end, if we end up with extraneous unvalidated fields, we throw error.
             HashSet<string> unvalidatedFields = new(fieldsInRequestBody);
-            Dictionary<string, string> columnAliasesFromBaseTable = insertRequestCtx.ColumnAliasesFromBaseTable;
             foreach ((string colName, ColumnDefinition colDef) in baseTableDefinition.Columns)
             {
-                if (!columnAliasesFromBaseTable.
-                    TryGetValue(colName, out string? aliasName))
-                {
-                    aliasName = colName;
-                }
+                string aliasName = GetColumnAliasForDbOject(insertRequestCtx, colName, baseTableDefinition);
 
                 // if column is not exposed we skip
                 if (!sqlMetadataProvider.TryGetExposedColumnName(
@@ -388,8 +383,6 @@ namespace Azure.DataApiBuilder.Service.Services
             SourceDefinition baseTableDefinition =
                 GetBaseTableDefinition(upsertRequestCtx);
 
-            Dictionary<string, string> columnAliasesFromBaseTable = upsertRequestCtx.ColumnAliasesFromBaseTable;
-
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
             // At the end, if we end up with extraneous unvalidated fields, we throw error.
@@ -397,11 +390,8 @@ namespace Azure.DataApiBuilder.Service.Services
 
             foreach ((string colName, ColumnDefinition colDef) in baseTableDefinition.Columns)
             {
-                if (!columnAliasesFromBaseTable.
-                    TryGetValue(colName, out string? aliasName))
-                {
-                    aliasName = colName;
-                }
+                string aliasName = GetColumnAliasForDbOject(upsertRequestCtx, colName, baseTableDefinition);
+
                 // if column is not exposed we skip
                 if (!sqlMetadataProvider.TryGetExposedColumnName(
                     entityName: upsertRequestCtx.EntityName,
@@ -577,6 +567,32 @@ namespace Azure.DataApiBuilder.Service.Services
                 default:
                     return null!;
             }
+        }
+
+        /// <summary>
+        /// Helper method to get the name of the column in the underlying entity,
+        /// which can be an alias in case of database views.
+        /// </summary>
+        /// <param name="columnName">Name of column in base table.</param>
+        /// <param name="baseTableDefinition">SourceDefinition of base table.</param>
+        /// <returns></returns>
+        public static string GetColumnAliasForDbOject(
+            RestRequestContext requestCtx,
+            string columnName,
+            SourceDefinition baseTableDefinition)
+        {
+            if (requestCtx.DatabaseObject.SourceType is SourceType.Table)
+            {
+                return columnName;
+            }
+
+            DatabaseView view = (DatabaseView)requestCtx.DatabaseObject;
+            if (baseTableDefinition.Columns[columnName].ViewToViewColumnNameMap.TryGetValue(view, out string? columnAlias))
+            {
+                return columnAlias;
+            }
+
+            return columnName;
         }
 
         /// <summary>

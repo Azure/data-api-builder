@@ -115,12 +115,6 @@ namespace Azure.DataApiBuilder.Service.Models
         public SourceDefinition? BaseTableForRequestDefinition { get; set; }
 
         /// <summary>
-        /// Holds the mapping from column name in base table (evaluated for the request),
-        /// to the corresponding column name in the view (which can be an alias).
-        /// </summary>
-        public Dictionary<string, string> ColumnAliasesFromBaseTable { get; set; } = new();
-
-        /// <summary>
         /// Populates the CumulativeColumns property with a unique list
         /// of all columns present in a request. Primarily used
         /// for authorization purposes.

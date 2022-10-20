@@ -567,18 +567,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
         public string ConstructPrimaryKeyRoute(RestRequestContext context, Dictionary<string, object?> entity)
         {
+            bool isEntityBasedOnOneTable = RequestValidator.IsEntityBasedOnOneTable(context);
+
+            if (!isEntityBasedOnOneTable)
+            {
+                return string.Empty;
+            }
+
             string entityName = context.EntityName;
             SourceDefinition baseTableDefinition = RequestValidator.GetBaseTableDefinition(context);
-            Dictionary<string, string> columnAliasesFromBaseTable = context.ColumnAliasesFromBaseTable;
             StringBuilder newPrimaryKeyRoute = new();
 
             foreach (string primaryKey in baseTableDefinition.PrimaryKey)
             {
-                if (!columnAliasesFromBaseTable.
-                    TryGetValue(primaryKey, out string? primaryKeyAlias))
-                {
-                    primaryKeyAlias = primaryKey;
-                }
+                string primaryKeyAlias =
+                    RequestValidator.GetColumnAliasForDbOject(context, primaryKey, baseTableDefinition);
+
                 // get backing column for lookup, previously validated to be non-null
                 _sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKeyAlias, out string? pkExposedName);
                 newPrimaryKeyRoute.Append(pkExposedName);

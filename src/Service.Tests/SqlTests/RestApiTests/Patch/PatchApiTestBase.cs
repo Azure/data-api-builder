@@ -232,17 +232,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             {
                 ""is_wholesale_price"": true
             }";
-            expectedLocationHeader = $"categoryid/0/pieceid/1/phase/instant3";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: "categoryid/0/pieceid/1/phase/instant3",
                     queryString: null,
                     entityNameOrPath: _composite_subset_stocksPrice,
                     sqlQuery: GetQuery("PatchOneInsertInStocksPriceCompositeViewTest"),
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.Created,
-                    expectedLocationHeader: expectedLocationHeader
+                    expectedStatusCode: HttpStatusCode.Created
                 );
         }
         /// <summary>

@@ -114,7 +114,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 ""name"": ""New Publisher in town""
             }";
 
-            expectedLocationHeader = $"pub_id/{STARTING_ID_FOR_TEST_INSERTS}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
@@ -122,8 +121,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 sqlQuery: GetQuery("InsertOneInBooksPubCompositeView"),
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.Created,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.Created
             );
 
             // Insert on composite view targeting stocks_price table.
@@ -136,7 +134,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 ""phase"": ""instant3""
             }";
 
-            expectedLocationHeader = $"categoryid/0/pieceid/1/phase/instant3";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
@@ -144,8 +141,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 sqlQuery: GetQuery("InsertOneInStocksPriceCompositeView"),
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.Created,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.Created
             );
         }
 

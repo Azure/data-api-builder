@@ -108,7 +108,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             insertPayloadRoot,
                             operationType);
-                        PopulateBaseTableDefAndColumnAliasesInReqCtxt(context);
+                        PopulateBaseTableForRequestDefInReqCtxt(context);
                         RequestValidator.ValidateInsertRequestContext(
                             (InsertRequestContext)context,
                             _sqlMetadataProvider);
@@ -130,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             upsertPayloadRoot,
                             operationType);
-                        PopulateBaseTableDefAndColumnAliasesInReqCtxt(context);
+                        PopulateBaseTableForRequestDefInReqCtxt(context);
                         RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                         break;
                     default:
@@ -197,12 +197,11 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Helper method to populate the base table for request's definition
-        /// and column alias mapping in the request context.
+        /// Helper method to populate the base table's definition for request.
         /// </summary>
         /// <param name="requestCtx">Current request's context.</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        private void PopulateBaseTableDefAndColumnAliasesInReqCtxt(
+        private void PopulateBaseTableForRequestDefInReqCtxt(
             RestRequestContext requestCtx)
         {
             if (_sqlMetadataProvider.GetDatabaseType() is not DatabaseType.mssql
@@ -263,14 +262,6 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // This will fail if the request body is empty.
             requestCtx.BaseTableForRequestDefinition = baseTableForView!.TableDefinition;
-
-            // Add mappings from base table column name to view column name to the context.
-            if (viewDefinition.BaseTableToColumnsMap.TryGetValue(
-                baseTableForView.FullName,
-                out Dictionary<string, string>? columnMappingFromView))
-            {
-                requestCtx.ColumnAliasesFromBaseTable = columnMappingFromView.ToDictionary(x => x.Value, x => x.Key);
-            }
         }
 
         /// <summary>

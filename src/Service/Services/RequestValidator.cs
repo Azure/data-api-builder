@@ -60,7 +60,8 @@ namespace Azure.DataApiBuilder.Service.Services
             SourceDefinition sourceDefinition = TryGetSourceDefinition(
                 context.EntityName,
                 sqlMetadataProvider);
-            SourceDefinition baseTableDefinition = GetBaseTableDefinition(context);
+            SourceDefinition baseTableDefinition = context.DatabaseObject.SourceType is SourceType.Table ?
+                sourceDefinition : GetBaseTableDefinition(context);
             bool isEntityBasedOnOneTable = IsEntityBasedOnOneTable(context);
             int countOfPrimaryKeysInBaseTable = baseTableDefinition.PrimaryKey.Count;
             int countOfPrimaryKeysInRequest = context.PrimaryKeyValuePairs.Count;
@@ -96,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
             }
 
-            // Verify each primary key is present in the table definition.
+            // Verify each primary key is present in the object (table/view) definition.
             if (missingKeys.Any())
             {
                 throw new DataApiBuilderException(

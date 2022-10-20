@@ -142,11 +142,6 @@ namespace Azure.DataApiBuilder.Config
         // Number of base tables in the view.
         public int NumberOfBaseTables { get; set; }
 
-        // Stores the mapping from source table's name to dictionary of (string,string) in which:
-        // key: Name(alias) of the column in view.
-        // value: Actual Name of the column in source table
-        public Dictionary<string, Dictionary<string, string>> BaseTableToColumnsMap { get; set; } = new();
-
         // Stores mapping from column name in view to its source database table.
         public Dictionary<string, DatabaseTable> ViewColToDatabaseTableMap { get; set; } = new();
     }

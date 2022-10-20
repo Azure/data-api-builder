@@ -748,19 +748,6 @@ namespace Azure.DataApiBuilder.Service.Services
                 string dbTableName = $"{sourceSchema}.{sourceTable}";
 
                 baseTableNames.Add(dbTableName);
-                // Store mapping from base table to columns in case the column
-                // in base table is aliased in the view.
-                if (!viewColumn.Equals(sourceColumn))
-                {
-                    if (viewDefinition.BaseTableToColumnsMap.TryGetValue(dbTableName, out Dictionary<string, string>? viewColToBaseColDict))
-                    {
-                        viewColToBaseColDict!.TryAdd(viewColumn, sourceColumn);
-                    }
-                    else
-                    {
-                        viewDefinition.BaseTableToColumnsMap.Add(dbTableName, new Dictionary<string, string> { { viewColumn, sourceColumn } });
-                    }
-                }
 
                 // Store the base table's definition in the dictionary,
                 // if not already added.

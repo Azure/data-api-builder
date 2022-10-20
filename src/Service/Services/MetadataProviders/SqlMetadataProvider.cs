@@ -699,6 +699,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     if (GetDatabaseType() == DatabaseType.mssql)
                     {
                         await PopulateBaseTableDefinitionsForViewAsync(
+                            entityName,
                             GetSchemaName(entityName),
                             GetDatabaseObjectName(entityName),
                             viewDefinition);
@@ -711,10 +712,12 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         private async Task PopulateBaseTableDefinitionsForViewAsync(
+            string entityName,
             string schemaName,
             string viewName,
             SourceDefinition sourceDefinition)
         {
+            DatabaseView view = (DatabaseView)EntityToDatabaseObject[entityName];
             ViewDefinition viewDefinition = (ViewDefinition)sourceDefinition;
             string dbviewName = $"{schemaName}.{viewName}";
 
@@ -764,13 +767,21 @@ namespace Azure.DataApiBuilder.Service.Services
                 DatabaseTable dbTable = new(sourceSchema, sourceTable);
                 if (SourceToDatabaseObject.TryAdd(dbTableName, dbTable))
                 {
-                    Console.WriteLine(dbTableName);
                     await PopulateSourceDefinitionAsync(
                         entityName: string.Empty,
                         schemaName: schemaName,
                         tableName: sourceTable,
                         sourceDefinition: dbTable.TableDefinition
                         );
+                }
+                else
+                {
+                    dbTable = (DatabaseTable)SourceToDatabaseObject[dbTableName];
+                }
+
+                if (!viewColumn.Equals(sourceColumn))
+                {
+                    dbTable.TableDefinition.Columns[sourceColumn].ViewToViewColumnNameMap.Add(view, viewColumn);
                 }
 
                 viewDefinition.ViewColToDatabaseTableMap[viewColumn] =
@@ -869,14 +880,6 @@ namespace Azure.DataApiBuilder.Service.Services
             string tableName,
             SourceDefinition sourceDefinition)
         {
-            /*HashSet<DatabaseObject> hs = new();
-            DatabaseObject dbTable = new DatabaseTable("ay", "bh");
-            hs.Add(dbTable);
-            DatabaseObject dbTable2 = new DatabaseTable("ay", "bh");
-            if (hs.Contains(dbTable2))
-            {
-                bool ok = true;
-            }*/
             DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(entityName, schemaName, tableName);
 
             List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);

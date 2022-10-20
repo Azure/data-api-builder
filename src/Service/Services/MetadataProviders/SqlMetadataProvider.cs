@@ -781,7 +781,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 if (!viewColumn.Equals(sourceColumn))
                 {
-                    dbTable.TableDefinition.Columns[sourceColumn].ViewToViewColumnNameMap.Add(view, viewColumn);
+                    dbTable.TableDefinition.Columns[sourceColumn].ViewToViewColumnNameMap.TryAdd(view, viewColumn);
                 }
 
                 viewDefinition.ViewColToDatabaseTableMap[viewColumn] =

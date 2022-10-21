@@ -753,7 +753,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.AreEqual(expected: HttpStatusCode.OK, actual: responseCode, message: "Configuration hydration failed.");
 
                 await ExecuteGraphQLIntrospectionQueries(server, client, expectError);
-            }           
+            }
         }
 
         /// <summary>

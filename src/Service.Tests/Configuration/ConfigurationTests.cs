@@ -737,24 +737,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
-            TestServer server = new(Program.CreateWebHostBuilder(args));
-            HttpClient client = server.CreateClient();
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                await ExecuteGraphQLIntrospectionQueries(server, client, expectError);
+            }
 
-            await ExecuteGraphQLIntrospectionQueries(server, client, expectError);
+            // Instantiate new server with no runtime config for post-startup configuration hydration tests.
+            using (TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>())))
+            using (HttpClient client = server.CreateClient())
+            {
+                ConfigurationPostParameters config = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration);
+                HttpStatusCode responseCode = await HydratePostStartupConfiguration(client, config);
 
-            client.Dispose();
-            server.Dispose();
+                Assert.AreEqual(expected: HttpStatusCode.OK, actual: responseCode, message: "Configuration hydration failed.");
 
-            // Instantiate server with no runtime config for post-startup configuration hydration tests.
-            server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
-            client = server.CreateClient();
-
-            ConfigurationPostParameters config = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration);
-            HttpStatusCode responseCode = await HydratePostStartupConfiguration(client, config);
-
-            Assert.AreNotEqual(notExpected: HttpStatusCode.ServiceUnavailable, actual: responseCode, message: "Configuration hydration failed.");
-
-            await ExecuteGraphQLIntrospectionQueries(server, client, expectError);
+                await ExecuteGraphQLIntrospectionQueries(server, client, expectError);
+            }           
         }
 
         /// <summary>

@@ -8,7 +8,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
     /// Custom OData Resolver which attempts to assist with processing resolved token claims
     /// within an authorization policy string that will be used to create an OData filter clause.
     /// This resolver's type coercion is meant to be utilized for authorization policy processing
-    /// and URL query string processing.
+    /// and NOT URL query string processing.
     /// </summary>
     /// <seealso cref="https://devblogs.microsoft.com/odata/tutorial-sample-odatauriparser-extension-support/#write-customized-extensions-from-scratch"/>
     public class ClaimsTypeDataUriResolver : ODataUriResolver

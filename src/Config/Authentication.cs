@@ -32,6 +32,7 @@ namespace Azure.DataApiBuilder.Config
     public enum EasyAuthType
     {
         StaticWebApps,
-        AppService
+        AppService,
+        DevModeAuthenticateAllRequests
     }
 }

@@ -269,11 +269,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// When we are in development mode, we want to honor the default-request-authorization
+        /// When we are in development mode, we want to honor the authenticate-devmode-requests
         /// feature switch value specified in the config file. This gives us the ability to
         /// simulate a request's authenticated/anonymous authentication state in development mode.
+        /// Requires:
+        /// - HostGlobalSettings.Mode is Development
+        /// 
         /// </summary>
-        /// <returns></returns>
+        /// <returns>True when authenticate-devmode-requests is enabled</returns>
         public virtual bool IsAuthenticatedDevModeRequest()
         {
             if (RuntimeConfiguration is null)
@@ -281,7 +284,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 return false;
             }
 
+            if (RuntimeConfiguration.AuthNConfig is null)
+            {
+                return false;
+            }
+
             return IsDeveloperMode() &&
+                RuntimeConfiguration.AuthNConfig.IsEasyAuthAuthenticationProvider() &&
                 RuntimeConfiguration.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is true;
         }
     }

@@ -21,24 +21,22 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     /// </summary>
     public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthenticationOptions>
     {
-        private RuntimeConfigProvider _runtimeConfigProvider;
         /// <summary>
         /// Constructor for the EasyAuthAuthenticationHandler.
         /// Note the parameters are required by the base class.
         /// </summary>
-        /// <param name="options">Easy Auth authentication options.</param>
+        /// <param name="options">EasyAuth authentication options.</param>
         /// <param name="logger">Logger factory.</param>
         /// <param name="encoder">URL encoder.</param>
         /// <param name="clock">System clock.</param>
         public EasyAuthAuthenticationHandler(
             RuntimeConfigProvider runtimeConfigProvider,
             IOptionsMonitor<EasyAuthAuthenticationOptions> options,
-              ILoggerFactory logger,
-              UrlEncoder encoder,
-              ISystemClock clock
-           ) : base(options, logger, encoder, clock)
+            ILoggerFactory logger,
+            UrlEncoder encoder,
+            ISystemClock clock
+            ) : base(options, logger, encoder, clock)
         {
-            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         /// <summary>
@@ -46,8 +44,6 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         /// parses the header and authenticates the user within a ClaimsPrincipal object.
         /// The ClaimsPrincipal is a security principal usable by middleware to identify the
         /// authenticated user.
-        /// When EasyAuth.DevModeAuthenticateAllRequests is configured attempt to inject
-        /// a bare-bones authenticated user IF the dev mode authenticate-devmode-requests config flag is true
         /// </summary>
         /// <returns>An authentication result to ASP.NET Core library authentication mechanisms</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -58,7 +54,6 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 {
                     EasyAuthType.StaticWebApps => StaticWebAppsAuthentication.Parse(Context, Logger),
                     EasyAuthType.AppService => AppServiceAuthentication.Parse(Context, Logger),
-                    EasyAuthType.DevModeAuthenticateAllRequests => new(authenticationType: "DEVMODEPROVIDER"),
                     _ => null
                 };
 

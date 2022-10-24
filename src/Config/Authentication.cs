@@ -13,9 +13,25 @@ namespace Azure.DataApiBuilder.Config
         Jwt? Jwt = null)
     {
         public const string CLIENT_PRINCIPAL_HEADER = "X-MS-CLIENT-PRINCIPAL";
+
+        /// <summary>
+        /// Returns whether the configured Provider matches an
+        /// EasyAuth authentication type.
+        /// </summary>
+        /// <returns>True if Provider is an EasyAuth type.</returns>
         public bool IsEasyAuthAuthenticationProvider()
         {
             return Enum.GetNames(typeof(EasyAuthType)).Any(x => x.Equals(Provider, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>
+        /// Returns whether the configured Provider value matches
+        /// the AuthenticateDevModeRquests EasyAuth type.
+        /// </summary>
+        /// <returns>True when development mode should authenticate all requests.</returns>
+        public bool IsAuthenticationSimulatorEnabled()
+        {
+            return Provider.Equals(SimulatorType.Simulator.ToString(), StringComparison.OrdinalIgnoreCase);
         }
     }
 
@@ -27,12 +43,20 @@ namespace Azure.DataApiBuilder.Config
     public record Jwt(string Audience, string Issuer);
 
     /// <summary>
-    /// Different modes in which the runtime can run.
+    /// Various EasyAuth modes in which the runtime can run.
     /// </summary>
     public enum EasyAuthType
     {
         StaticWebApps,
         AppService,
-        DevModeAuthenticateAllRequests
+        AuthenticateDevModeRquests
+    }
+
+    /// <summary>
+    /// Simulator authentication mode in which the runtime can run.
+    /// </summary>
+    public enum SimulatorType
+    {
+        Simulator
     }
 }

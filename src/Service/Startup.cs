@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.AuthenticationHelpers;
+using Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -359,10 +360,10 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
         private static void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
         {
-            if (runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            if (runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig) &&
+                runtimeConfig.AuthNConfig != null)
             {
-                if (runtimeConfig!.AuthNConfig != null &&
-                    !runtimeConfig.IsEasyAuthAuthenticationProvider())
+                if (runtimeConfig.IsJwtConfiguredIdentityProvider())
                 {
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(options =>
@@ -371,13 +372,18 @@ namespace Azure.DataApiBuilder.Service
                         options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
                     });
                 }
-                else if (runtimeConfig!.AuthNConfig != null)
+                else if (runtimeConfig.AuthNConfig.IsEasyAuthAuthenticationProvider())
                 {
                     services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddEasyAuthAuthentication(
                             (EasyAuthType)Enum.Parse(typeof(EasyAuthType),
                                 runtimeConfig.AuthNConfig.Provider,
                                 ignoreCase: true));
+                }
+                else if (runtimeConfig.AuthNConfig.IsAuthenticationSimulatorEnabled())
+                {
+                    services.AddAuthentication(SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                        .AddSimulatorAuthentication(SimulatorType.Simulator);
                 }
                 else
                 {

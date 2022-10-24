@@ -37,6 +37,10 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     {
                         options.EasyAuthProvider = EasyAuthType.AppService;
                     }
+                    else if (easyAuthAuthenticationProvider is EasyAuthType.AuthenticateDevModeRquests)
+                    {
+                        options.EasyAuthProvider = EasyAuthType.AuthenticateDevModeRquests;
+                    }
                 });
             return builder;
         }

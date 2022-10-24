@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using Azure.DataApiBuilder.Config;
@@ -257,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             return RuntimeConfiguration;
         }
 
-        public virtual bool TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig)
+        public virtual bool TryGetRuntimeConfiguration([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
         {
             runtimeConfig = RuntimeConfiguration;
             return RuntimeConfiguration is not null;
@@ -269,7 +270,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// When we are in development mode, we want to honor the authenticate-devmode-requests
+        /// When in development mode, honor the authenticate-devmode-requests
         /// feature switch value specified in the config file. This gives us the ability to
         /// simulate a request's authenticated/anonymous authentication state in development mode.
         /// Requires:
@@ -290,8 +291,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
 
             return IsDeveloperMode() &&
-                RuntimeConfiguration.AuthNConfig.IsEasyAuthAuthenticationProvider() &&
-                RuntimeConfiguration.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is true;
+                RuntimeConfiguration.AuthNConfig.IsAuthenticationSimulatorEnabled();
         }
     }
 }

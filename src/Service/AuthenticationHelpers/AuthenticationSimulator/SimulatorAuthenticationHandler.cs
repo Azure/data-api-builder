@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.AspNetCore.Authentication;
@@ -23,7 +20,6 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimul
     /// </summary>
     public class SimulatorAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
     {
-        private RuntimeConfigProvider _runtimeConfigProvider;
         public const string SIMULATOR_PROVIDER = "Simulator";
 
         /// <summary>
@@ -43,7 +39,6 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimul
             ISystemClock clock
             ) : base(options, logger, encoder, clock)
         {
-            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         /// <summary>

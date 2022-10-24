@@ -276,7 +276,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 runtimeConfig.AuthNConfig is not null &&
                 runtimeConfig.AuthNConfig.Jwt is not null &&
                 !string.IsNullOrEmpty(runtimeConfig.AuthNConfig.Jwt.Issuer);
-            if ((!runtimeConfig.IsJwtConfiguredIdentityProvider()) &&
+            if ((runtimeConfig.IsJwtConfiguredIdentityProvider()) &&
                 (!isAudienceSet || !isIssuerSet))
             {
                 throw new NotSupportedException("Audience and Issuer must be set when a JWT identity Provider.");

@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimul
     /// <summary>
     /// This class is used to best integrate with ASP.NET Core AuthenticationHandler base class.
     ///     Ref: https://github.com/dotnet/aspnetcore/blob/main/src/Security/Authentication/Core/src/AuthenticationHandler.cs
-    /// When "EasyAuth" is configured, this handler authenticates the user once per request,
+    /// When "Simulator" is configured, this handler authenticates the user once per request,
     /// and utilizes the base class default handler for
     /// - AuthenticateAsync: Authenticates the current request.
     /// - Forbid Async: Creates 403 HTTP Response.
@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimul
         public const string SIMULATOR_PROVIDER = "Simulator";
 
         /// <summary>
-        /// Constructor for the EasyAuthAuthenticationHandler.
+        /// Constructor for the SimulatorAuthenticationHandler.
         /// Note the parameters are required by the base class.
         /// </summary>
         /// <param name="runtimeConfigProvider">Runtime configuration provider.</param>
@@ -42,12 +42,10 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimul
         }
 
         /// <summary>
-        /// Gets any authentication data for a request. When an EasyAuth header is present,
+        /// Gets any authentication data for a request. When a client rolel header is present,
         /// parses the header and authenticates the user within a ClaimsPrincipal object.
         /// The ClaimsPrincipal is a security principal usable by middleware to identify the
         /// authenticated user.
-        /// When EasyAuth.AuthenticateDevModeRquests is configured attempt to inject
-        /// a bare-bones authenticated user IF the dev mode authenticate-devmode-requests config flag is true
         /// </summary>
         /// <returns>An authentication result to ASP.NET Core library authentication mechanisms</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()

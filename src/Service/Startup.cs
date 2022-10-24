@@ -360,8 +360,7 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
         private static void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
         {
-            if (runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig) &&
-                runtimeConfig.AuthNConfig != null)
+            if (runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig) && runtimeConfig.AuthNConfig != null)
             {
                 if (runtimeConfig.IsJwtConfiguredIdentityProvider())
                 {
@@ -372,7 +371,7 @@ namespace Azure.DataApiBuilder.Service
                         options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
                     });
                 }
-                else if (runtimeConfig.AuthNConfig.IsEasyAuthAuthenticationProvider())
+                else if (runtimeConfig.IsEasyAuthAuthenticationProvider())
                 {
                     services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddEasyAuthAuthentication(
@@ -380,7 +379,7 @@ namespace Azure.DataApiBuilder.Service
                                 runtimeConfig.AuthNConfig.Provider,
                                 ignoreCase: true));
                 }
-                else if (runtimeConfig.AuthNConfig.IsAuthenticationSimulatorEnabled())
+                else if (runtimeConfig.IsAuthenticationSimulatorEnabled())
                 {
                     services.AddAuthentication(SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddSimulatorAuthentication(SimulatorType.Simulator);

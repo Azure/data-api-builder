@@ -202,5 +202,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             return string.Join(", ", builtColumns);
         }
+
+        /// <inheritdoc/>
+        public string BuildViewColumnsDetailsQuery(int numberOfParameters)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

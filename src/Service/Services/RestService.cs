@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             RestRequestContext context;
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
-            if (dbObject.ObjectType is SourceType.StoredProcedure)
+            if (dbObject.SourceType is SourceType.StoredProcedure)
             {
                 PopulateStoredProcedureContext(operationType,
                     dbObject,
@@ -169,7 +169,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // The final authorization check on columns occurs after the request is fully parsed and validated.
             // Stored procedures do not yet have semantics defined for column-level permissions
-            if (dbObject.ObjectType is not SourceType.StoredProcedure)
+            if (dbObject.SourceType is not SourceType.StoredProcedure)
             {
                 await AuthorizationCheckForRequirementAsync(resource: context, requirement: new ColumnsPermissionsRequirement());
             }

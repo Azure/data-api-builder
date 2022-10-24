@@ -1,8 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
-  "$id": "urn:dab:config:schema:draft-01",
+  "$id": {
+    "$ref": "#/additionalProperties/version"
+  },
   "title": "Data API Builder",
   "description": "Schema for Data API Builder engine",
+  "additionalProperties": {
+    "version": "urn:dab:config:schema:draft-major.minor.patch"
+  },
   "type": "object",
   "properties": {
     "data-source": {
@@ -65,6 +70,16 @@
             }
           }
         },
+        "graphql": {
+          "type": "object",
+          "description": "Global GraphQL endpoint configuration",
+          "properties": {
+            "allow-introspection": {
+              "type": "boolean",
+              "description": "Allow querying of the underlying GraphQL schema."
+            }
+          }
+        },
         "host": {
           "type": "object",
           "description": "Global hosting configuration",
@@ -117,6 +132,11 @@
                   }
                 }
               }
+            },
+            "authenticate-devmode-requests": {
+              "type": "boolean",
+              "description": "Whether to automatically authenticate all requests when host mode is set to development.",
+              "default": false
             }
           }
         }

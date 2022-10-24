@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             };
 
             _server = new(Program.CreateWebHostBuilder(args));
-            _client = _server.CreateClient(); ;
+            _client = _server.CreateClient();
         }
 
         /// <summary>

@@ -1,7 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
@@ -19,7 +18,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using static Azure.DataApiBuilder.Service.AuthenticationHelpers.StaticWebAppsAuthentication;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication
 {
@@ -69,8 +67,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Mock<RuntimeConfigPath> runtimeConfigPath = new();
             Mock<RuntimeConfigProvider> runtimeConfigProvider = new(runtimeConfigPath.Object,
                 configProviderLogger.Object);
-/*            runtimeConfigProvider.Setup(x => x.IsAuthenticatedDevModeRequest()).
-                Returns(treatAsAuthenticatedRequest);*/
 
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>

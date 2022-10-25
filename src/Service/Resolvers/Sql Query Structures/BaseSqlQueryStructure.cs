@@ -125,7 +125,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                throw new ArgumentException($"{columnName} is not a valid column of {DatabaseObject.Name}");
+                throw new DataApiBuilderException(
+                    message: $"{columnName} is not a valid column of {DatabaseObject.Name}",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                    );
             }
         }
 
@@ -205,17 +209,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 return ParseParamAsSystemType(param, systemType);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is FormatException || e is ArgumentNullException || e is OverflowException)
             {
-                if (e is FormatException ||
-                    e is ArgumentNullException ||
-                    e is OverflowException)
-                {
-                    throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
-                        $"with type \"{systemType.Name}\".");
-                }
-
-                throw;
+                throw new DataApiBuilderException(
+                    message: $"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
+                        $"with type \"{systemType.Name}\".",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    innerException: e);
             }
         }
 

@@ -705,6 +705,73 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Tests that the custom path rewriting middleware properly rewrites the
+        /// first segment of a path (/segment1/.../segmentN) to match the custom
+        /// configured GraphQLEndpoint.
+        /// </summary>
+        /// <param name="graphQLConfiguredPath"></param>
+        /// <param name="requestPath"></param>
+        /// <param name="expectedStatusCode"></param>
+        /// <returns></returns>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow("/graphql", "/gql", HttpStatusCode.BadRequest, DisplayName = "Request to non-configured graphQL endpoint is handled by REST controller.")]
+        [DataRow("/graphql", "/graphql", HttpStatusCode.OK,DisplayName = "Request to configured default GraphQL endpoint succeeds, path not rewritten.")]
+        [DataRow("/gql", "/gql", HttpStatusCode.OK, DisplayName = "GraphQL request path rewritten to match default configured GraphQL endpoint.")]
+        [DataRow("/gql", "/api/book", HttpStatusCode.NotFound, DisplayName = "Non-GraphQL request's path is not rewritten and is handled by REST controller.")]
+        [DataRow("/gql", "/graphql", HttpStatusCode.NotFound, DisplayName = "Requests to default graphQL endpoint fail when configured endpoint differs.")]
+        public async Task TestPathRewriteMiddlewareForGraphQL(
+            string graphQLConfiguredPath,
+            string requestPath,
+            HttpStatusCode expectedStatusCode)
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Path = graphQLConfiguredPath, AllowIntrospection = true }) }
+            };
+
+            DataSource dataSource = new(DatabaseType.mssql)
+            {
+                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
+            };
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource);
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string query = @"{
+                    book_by_pk(id: 1) {
+                       id,
+                       title,
+                       publisher_id
+                    }
+                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage request = new(HttpMethod.Post, requestPath)
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                string body = await response.Content.ReadAsStringAsync();
+
+                Assert.AreEqual(expectedStatusCode, response.StatusCode);
+            }
+        }
+
+        /// <summary>
         /// Integration test that validates schema introspection requests fail
         /// when allow-introspection is false in the runtime configuration.
         /// TestCategory is required for CI/CD pipeline to inject a connection string.
@@ -910,7 +977,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Entity sampleEntity = new(
                 Source: JsonSerializer.SerializeToElement("books"),
                 Rest: null,
-                GraphQL: null,
+                GraphQL: JsonSerializer.SerializeToElement(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "books"))),
                 Permissions: new PermissionSetting[] { permissionForEntity },
                 Relationships: null,
                 Mappings: null

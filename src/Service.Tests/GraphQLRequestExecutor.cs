@@ -29,8 +29,8 @@ namespace Azure.DataApiBuilder.Service.Tests
                 };
 
             string graphQLEndpoint = configProvider
-                .GetRuntimeConfiguration()
-                .GraphQLGlobalSettings.Path;
+                    .GetRuntimeConfiguration()
+                    .GraphQLGlobalSettings.Path;
 
             HttpRequestMessage request = new(HttpMethod.Post, graphQLEndpoint)
             {

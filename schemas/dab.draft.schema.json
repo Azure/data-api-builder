@@ -77,6 +77,10 @@
             "allow-introspection": {
               "type": "boolean",
               "description": "Allow querying of the underlying GraphQL schema."
+            },
+            "path": {
+              "default": "/graphql",
+              "type": "string"
             }
           }
         },

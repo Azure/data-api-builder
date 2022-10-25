@@ -11,9 +11,14 @@ namespace Azure.DataApiBuilder.Service.Services
 {
     /// <summary>
     /// Rewrites the first segment of a URL path (/segment1/segment2/segmentN)
-    /// for GraphQL requests to adhere the runtime configuration defined GraphQL endpoint.
+    /// to the default GraphQL endpoint value when the first segment
+    /// matches the value of the GraphQL endpoint defined in runtime config.
+    /// A URL rewrite occurs server-side and is not visible to the client.
+    /// Because the default mapped GraphQL endpoint path cannot be changed after startup,
+    /// the path rewrite middleware is requiredPath rewrites 
     /// </summary>
     /// <seealso cref="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/middleware/write?view=aspnetcore-6.0"/>
+    /// <seealso cref="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/url-rewriting?view=aspnetcore-6.0#url-redirect-and-url-rewrite"/>
     public class PathRewriteMiddleware
     {
         private readonly RequestDelegate _nextMiddleware;

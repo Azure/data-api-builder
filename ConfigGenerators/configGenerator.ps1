@@ -49,6 +49,8 @@ foreach($databaseType in $databaseTypes){
         $configFile = "dab-config.Cosmos.json";
     }
 
+    # If a config file with the same name exists, it is deleted to avoid writing to
+    # the same config file
     if(Test-Path $configFile){
         Remove-Item $configFile;
     }

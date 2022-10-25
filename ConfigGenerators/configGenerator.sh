@@ -49,6 +49,8 @@ do
         configFile="dab-config.Cosmos.json";
     fi
 
+    # If a config file with the same name exists, it is deleted to avoid writing to
+    # the same config file
     if [ -f $configFile ]; then
         rm $configFile;
     fi

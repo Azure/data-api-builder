@@ -32,7 +32,6 @@
       <Exec Command="powershell.exe -command ..\..\..\ConfigGenerators\configGenerator.ps1 " Condition=" '$(OS)' == 'Windows_NT' And '$(generateConfigFiles)' == 'true' "/>
       <Exec Command="bash ../../../ConfigGenerators/configGenerator.sh" Condition=" '$(OS)' != 'Windows_NT' And '$(generateConfigFiles)' == 'true' " />
       <Copy SourceFiles="@(ConfigFiles)"  DestinationFolder="..\..\out\tests\$(TargetFramework)" />
-      <Copy SourceFiles="@(ConfigFiles)"  DestinationFolder="..\..\out\engine\$(TargetFramework)" />
   </Target>
 
 </Project>

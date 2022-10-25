@@ -643,7 +643,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string actionJson = @"{
                                         ""action"": " + $"\"{operationName}\"" + @",
                                         ""policy"": {
-                                            ""database"": ""@claims.id eq @item.id""
+                                            ""database"": null
                                           },
                                         ""fields"": {
                                             ""include"": [""*""]

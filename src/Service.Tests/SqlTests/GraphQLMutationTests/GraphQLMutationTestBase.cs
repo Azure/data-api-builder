@@ -84,28 +84,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts new book with an auto generated primary key
-        /// <code>Check: </code> If book with the given title is inserted in the database.
-        /// </summary>
-        public async Task InsertMutationForVariableNotNullDefault(string dbQuery)
-        {
-            string graphQLMutationName = "createSupportedType";
-            string graphQLMutation = @"
-                mutation {
-                  createSupportedType (item: {int_types : 0 guid_types: null } ) {
-                    id
-                    guid_types
-                  }
-                }
-            ";
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            GraphQLResponse response = JsonSerializer.Deserialize<GraphQLResponse>(actual);
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
-                response.Error.Extensions.Code);
-        }
-
-        /// <summary>
         /// <code>Do: </code>Update book in database and return its updated fields
         /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
         /// and if the mutation query has returned the values correctly
@@ -316,6 +294,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         #endregion
 
         #region Negative Tests
+
+        /// <summary>
+        /// <code>Do: </code> Attempts to insert a new row with a null value for a variable default column.
+        /// <code>Check: </code> Even though the operation is expected to fail,.
+        /// the failure happens in the database, not with GraphQL schema error.
+        /// This verifies that since the column has a default value on the database,
+        /// the GraphQL schema input field type is nullable even though the underlying column type is not.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationForVariableNotNullDefault()
+        {
+            string graphQLMutationName = "createSupportedType";
+            string graphQLMutation = @"
+                mutation {
+                  createSupportedType (item: {int_types : 0 guid_types: null } ) {
+                    id
+                    guid_types
+                  }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                actual.ToString(),
+                statusCode: $"{DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed}");
+        }
 
         /// <summary>
         /// <code>Do: </code>insert a new Book with an invalid foreign key

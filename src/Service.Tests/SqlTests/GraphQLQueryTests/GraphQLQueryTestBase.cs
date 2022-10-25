@@ -948,26 +948,5 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
         #endregion
     }
-
-    public class GraphQLResponse
-    {
-        public GraphQLError Error { get; private set; }
-
-        public object Data { get; private set; }
-    }
-
-    public class GraphQLError
-    {
-        public string Message { get; private set; }
-
-        public GraphQLErrorDabExtension Extensions { get; private set; }
-    }
-
-    public class GraphQLErrorDabExtension
-    {
-        public string Message { get; private set; }
-        public string StackTrace { get; private set; }
-        public string Code { get; private set; }
-    }
 }
 

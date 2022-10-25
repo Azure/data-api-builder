@@ -56,7 +56,6 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Rewritten Path: No rewrite
         /// </summary>
         /// <param name="httpContext">Request metadata.</param>
-        /// <returns></returns>
         public async Task InvokeAsync(HttpContext httpContext)
         {
             if (httpContext.Request.Path.HasValue)
@@ -78,6 +77,12 @@ namespace Azure.DataApiBuilder.Service.Services
             await _nextMiddleware(httpContext);
         }
 
+        /// <summary>
+        /// When configuration exists and the GraphQL endpoint is enabled,
+        /// return the configured GraphQL endpoint path. 
+        /// </summary>
+        /// <param name="graphQLRoute">The configured GraphQL route path</param>
+        /// <returns>True when graphQLRoute is defined, otherwise false.</returns>
         private bool TryGetGraphQLRouteFromConfig([NotNullWhen(true)] out string? graphQLRoute)
         {
             if (_runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? config) &&

@@ -186,31 +186,17 @@ Implementation was segmented into 5 main sections:
 }
 ```
 
-> **Question**
-> 1.  Should we just keep the return type as String like
-```
-{"Get a book from the database by its ID\/primary key"
-book_by_pk(id: Int!): book}
-```
-> or have a return type with field such as {result: String} like this
-```
-{"Get a list of all the book items from the database"
-books(
-    first: Int
-    after: String
-    filter: bookFilterInput
-    orderBy: bookOrderByInput): bookConnection!}
+> ### Example
+> Consider stored-procedure `GetBooks` and `GetBook`. the former has no param, while the later has one param, which not provided will pick the value from config.
+> Below is the generated documentation from GraphQL
+![image](https://user-images.githubusercontent.com/102276754/197724270-241e37e6-6459-4cce-a959-19a5031b63d1.png)
 
-{"The return object from a filter query that supports a pagination token for paging through results"
-type bookConnection {
-  "The list of items that matched the filter"
-  items: [book!]!
-  "A pagination token to provide to subsequent pages of a query"
-  endCursor: String
-  "Indicates if there are more pages of items to return"
-  hasNextPage: Boolean!
-}}
-```
+
+
+> **Question/Thoughts**
+> 1. we just keep the return type as String like
+
+
 > My thoughts: The first one makes more sense since we only need to display the results obtained from the
 > stored procedure call, but the second one is useful if in future we decide to support order/pagination/filter on graphQL
 > requests for stored-procedure.

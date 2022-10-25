@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests

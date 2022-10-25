@@ -1,5 +1,10 @@
+# This script can be used for generating the config files
 $PSDefaultParameterValues['*:Encoding'] = 'utf8';
 
+# This script can be invoked with either 0 or 1 argument.
+# The argument represents the database type. Valid arguments are MsSql, MySql, PostgreSql and Cosmos
+# When invoked with a database type, config file for that database type will be generated.
+# When invoked without any arguments, config files for all the database types will be generated.
 $databaseTypes = @();
 if($args.Count -eq 0){
     $databaseTypes = "MsSql", "MySql", "PostgreSql", "Cosmos";
@@ -7,24 +12,25 @@ if($args.Count -eq 0){
 elseif($args.Count -eq 1){
     $databaseType = $args[0];
     if(-not( ($databaseType -eq "MsSql") -or ($databaseType -eq "MySql") -or ($databaseType -eq "PostgreSql") -or ($databaseType -eq "Cosmos"))){
-        throw "Valid arguements are MsSql, Mysql, PostgreSql or Cosmos";
+        throw "Valid arguments are MsSql, Mysql, PostgreSql or Cosmos";
     }
     $databaseTypes += $databaseType;
 }
 else{
-    throw "Please run with 0 or 1 arguements";
+    throw "Please run with 0 or 1 arguments";
 }
 
 $cliBuildOutputPath = $PSScriptRoot + "\..\src\out\cli\";
-
 $commandsFilesBasePath = $PSScriptRoot;
 
 #Fetching the absolute path of dab.dll from build output directory
 $pathToDabDLL = Get-ChildItem -Path $cliBuildOutputPath -Recurse -include "dab.dll" | ForEach-Object{$_.FullName};
 
+#Change the working directory to where the config file needs to be generated.
 $workingDirectory = $PSScriptRoot + "\..\src\Service\";
 Set-Location $workingDirectory;
 
+#Generates the config files for the selected database types.
 foreach($databaseType in $databaseTypes){
     if($databaseType -eq "MsSql"){
         $commandFile = "MsSqlCommands.txt";
@@ -48,10 +54,9 @@ foreach($databaseType in $databaseTypes){
     }
 
     $commandsFileWithPath = $commandsFilesBasePath + "\" + $commandFile;
-    #Generating the config files using dab commands
+    #The dab commands are run using the DLL executable
     foreach($command in Get-Content $commandsFileWithPath){
         $commandToExecute = "dotnet " + $pathToDabDLL + " " + $command;
         Invoke-Expression $commandToExecute;
     }
-
 }

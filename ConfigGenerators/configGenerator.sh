@@ -1,6 +1,11 @@
 #!/bin/bash
+# This script can be used for generating the config files
 databaseTypes=();
 
+# This script can be invoked with either 0 or 1 argument.
+# The argument represents the database type. Valid arguments are MsSql, MySql, PostgreSql and Cosmos
+# When invoked with a database type, config file for that database type will be generated.
+# When invoked without any arguments, config files for all the database types will be generated.
 if [[ $# -eq 0 ]]; then
     databaseTypes=("MsSql" "MySql" "PostgreSql" "Cosmos")
 elif [[ $# -eq 1 ]]; then
@@ -22,10 +27,12 @@ commandFilesBasePath=$absolutePath;
 
 #Fetching the path of dab dll file
 pathToDLL=$(find $cliOutputPath -name dab.dll)
-workingDirectory="$absolutePath/../src/Service/"
 
+#Change the working directory to where the config file needs to be generated.
+workingDirectory="$absolutePath/../src/Service/"
 cd $workingDirectory;
 
+#Generates the config files for the selected database types.
 for databaseType in ${databaseTypes[@]}
 do
     if [[ $databaseType == "MsSql" ]]; then 
@@ -48,6 +55,7 @@ do
 
     commandFileNameWithPath="$commandFilesBasePath/$commandFile";
     
+    #The dab commands are run using the DLL executable
     while read -r command; do
         command="dotnet ${pathToDLL} ${command}";
         eval $command;

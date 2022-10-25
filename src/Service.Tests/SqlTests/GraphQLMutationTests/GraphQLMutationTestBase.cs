@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
@@ -80,6 +81,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Inserts new book with an auto generated primary key
+        /// <code>Check: </code> If book with the given title is inserted in the database.
+        /// </summary>
+        public async Task InsertMutationForVariableNotNullDefault(string dbQuery)
+        {
+            string graphQLMutationName = "createSupportedType";
+            string graphQLMutation = @"
+                mutation {
+                  createSupportedType (item: {int_types : 0 guid_types: null } ) {
+                    id
+                    guid_types
+                  }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            GraphQLResponse response = JsonSerializer.Deserialize<GraphQLResponse>(actual);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+                response.Error.Extensions.Code);
         }
 
         /// <summary>

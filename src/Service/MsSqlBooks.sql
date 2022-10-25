@@ -124,7 +124,7 @@ CREATE TABLE type_table(
     boolean_types bit,
     datetime_types datetime,
     bytearray_types varbinary(max),
-    guid_types uniqueidentifier DEFAULT newid()
+    guid_types uniqueidentifier not null DEFAULT newid()
 );
 
 CREATE TABLE trees (

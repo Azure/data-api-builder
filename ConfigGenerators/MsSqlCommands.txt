@@ -45,6 +45,7 @@ update Book --config "dab-config.MsSql.json" --relationship publishers --target.
 update Book --config "dab-config.MsSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
 update Book --config "dab-config.MsSql.json" --relationship reviews --target.entity Review --cardinality many
 update Book --config "dab-config.MsSql.json" --relationship authors --target.entity Author --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id"
+update Book --config "dab-config.MsSql.json" --map "id:id,title:title"
 update Book --config "dab-config.MsSql.json" --permissions "policy_tester_01:create,delete"
 update Book --config "dab-config.MsSql.json" --permissions "policy_tester_01:update" --fields.include "*"
 update Book --config "dab-config.MsSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.title eq 'Policy-Test-01'"
@@ -81,9 +82,9 @@ update stocks_price --config "dab-config.MsSql.json" --permissions "authenticate
 update Comic --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship series --target.entity series --cardinality one
 update series --config "dab-config.MsSql.json" --relationship comics --target.entity Comic --cardinality many
 update Broker --config "dab-config.MsSql.json" --permissions "authenticated:create,update,read,delete" --graphql false
-update Tree --config "dab-config.MsSql.json" --rest true --permissions "authenticated:create,read,update,delete"
-update Shrub --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
-update Fungus --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true
+update Tree --config "dab-config.MsSql.json" --rest true --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
+update Shrub --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"
+update Fungus --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --map "spores:hazards" --rest true
 update Fungus --config "dab-config.MsSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'"
 update books_view_all --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update stocks_view_selected --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
@@ -100,6 +101,6 @@ update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_upd
 update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:read" --fields.exclude "*"
 update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:delete" --fields.include "*" --policy-database "@item.id eq 1"
 update Journal --config "dab-config.MsSql.json" --permissions "authorizationHandlerTester:read"
-update ArtOfWar --config "dab-config.MsSql.json" --permissions "authenticated:*"
+update ArtOfWar --config "dab-config.MsSql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
 update GetBook --config "dab-config.MsSql.json" --permissions "authenticated:*"
 update GetBooks --config "dab-config.MsSql.json" --permissions "authenticated:*"

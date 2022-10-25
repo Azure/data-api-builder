@@ -92,10 +92,6 @@
           "linking.source.fields": [ "book_id" ],
           "linking.target.fields": [ "author_id" ]
         }
-      },
-      "mappings": {
-        "id": "id",
-        "title": "title"
       }
     },
     "BookWebsitePlacement": {
@@ -257,11 +253,7 @@
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
-      ],
-      "mappings": {
-        "species": "Scientific Name",
-        "region": "United State's Region"
-      }
+      ]
     },
     "Shrub": {
       "source": "trees",
@@ -275,10 +267,7 @@
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
-      ],
-      "mappings": {
-        "species": "fancyName"
-      }
+      ]
     },
     "Fungus": {
       "source": "fungi",
@@ -292,10 +281,7 @@
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
-      ],
-      "mappings": {
-        "spores": "hazards"
-      }
+      ]
     },
     "Empty": {
       "source": "empty_table",

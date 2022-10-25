@@ -25,41 +25,14 @@
   </ItemGroup>
 
   <ItemGroup>
-      <ConfigFiles Include="dab-config*.json" />
+      <ConfigFiles Include="..\..\Service\dab-config*.json" />
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-
-    <PropertyGroup>
-      <DllFilePath>$(BaseOutputPath)$(Configuration)\$(TargetFramework)\dab.dll</DllFilePath>
-    </PropertyGroup>
-
-    <ReadLinesFromFile File="..\..\..\CommandFiles\MsSqlCommands.txt">
-      <Output TaskParameter="Lines" ItemName="MsSqlCommands" />
-    </ReadLinesFromFile>
-
-    <ReadLinesFromFile File="..\..\..\CommandFiles\MySqlCommands.txt">
-      <Output TaskParameter="Lines" ItemName="MySqlCommands" />
-    </ReadLinesFromFile>
-
-    <ReadLinesFromFile File="..\..\..\CommandFiles\PostgreSqlCommands.txt">
-      <Output TaskParameter="Lines" ItemName="PostgreSqlCommands" />
-    </ReadLinesFromFile>
-
-    <ReadLinesFromFile File="..\..\..\CommandFiles\CosmosCommands.txt">
-      <Output TaskParameter="Lines" ItemName="CosmosCommands" />
-    </ReadLinesFromFile>
-
-    <Delete Files="@(ConfigFiles)" />
-
-    <Exec Command="dotnet $(DllFilePath) %(MsSqlCommands.Identity)" UseUtf8Encoding="Always" />
-    <Exec Command="dotnet $(DllFilePath) %(MySqlCommands.Identity)" UseUtf8Encoding="Always" />
-    <Exec Command="dotnet $(DllFilePath) %(PostgreSqlCommands.Identity)" UseUtf8Encoding="Always" />
-    <Exec Command="dotnet $(DllFilePath) %(CosmosCommands.Identity)" UseUtf8Encoding="Always" />
-
-    <Copy SourceFiles="@(ConfigFiles)" DestinationFolder="..\..\out\tests\$(TargetFramework)" />
-    <Move SourceFiles="@(ConfigFiles)" DestinationFolder="..\..\Service" />
-
+  <Target Name="GenerateConfigFiles" AfterTargets="PostBuildEvent">
+      <Exec Command="powershell.exe -command ..\..\..\ConfigGenerators\configGenerator.ps1 " Condition=" '$(OS)' == 'Windows_NT' And '$(generateConfigFiles)' == 'true' "/>
+      <Exec Command="bash ../../../ConfigGenerators/configGenerator.sh" Condition=" '$(OS)' != 'Windows_NT' And '$(generateConfigFiles)' == 'true' " />
+      <Copy SourceFiles="@(ConfigFiles)"  DestinationFolder="..\..\out\tests\$(TargetFramework)" />
+      <Copy SourceFiles="@(ConfigFiles)"  DestinationFolder="..\..\out\engine\$(TargetFramework)" />
   </Target>
 
 </Project>

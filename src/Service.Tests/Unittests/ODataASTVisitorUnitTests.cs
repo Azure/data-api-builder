@@ -245,7 +245,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string tableName,
             bool isList = false)
         {
-            DatabaseObject dbo = new()
+            DatabaseObject dbo = new DatabaseTable()
             {
                 SchemaName = schemaName,
                 Name = tableName

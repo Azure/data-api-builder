@@ -34,10 +34,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             UpdateOperations = new();
             OutputColumns = GenerateOutputColumns();
-            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
+            SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
 
-            List<string> primaryKeys = tableDefinition.PrimaryKey;
-            List<string> columns = tableDefinition.Columns.Keys.ToList();
+            List<string> primaryKeys = sourceDefinition.PrimaryKey;
+            List<string> columns = sourceDefinition.Columns.Keys.ToList();
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 Predicate predicate = CreatePredicateForParam(param);
@@ -59,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (!isIncrementalUpdate)
             {
-                AddNullifiedUnspecifiedFields(columns, UpdateOperations, tableDefinition);
+                AddNullifiedUnspecifiedFields(columns, UpdateOperations, sourceDefinition);
             }
 
             if (UpdateOperations.Count == 0)
@@ -83,13 +83,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             : base(sqlMetadataProvider, entityName: entityName)
         {
             UpdateOperations = new();
-            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
-            List<string> columns = tableDefinition.Columns.Keys.ToList();
+            SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
+            List<string> columns = sourceDefinition.Columns.Keys.ToList();
             OutputColumns = GenerateOutputColumns();
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 // primary keys used as predicates
-                if (tableDefinition.PrimaryKey.Contains(param.Key))
+                if (sourceDefinition.PrimaryKey.Contains(param.Key))
                 {
                     Predicates.Add(CreatePredicateForParam(param));
                 }
@@ -120,11 +120,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private Predicate CreatePredicateForParam(KeyValuePair<string, object?> param)
         {
-            TableDefinition tableDefinition = GetUnderlyingTableDefinition();
+            SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
             Predicate predicate;
             // since we have already validated param we know backing column exists
             SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
-            if (param.Value is null && !tableDefinition.Columns[backingColumn!].IsNullable)
+            if (param.Value is null && !sourceDefinition.Columns[backingColumn!].IsNullable)
             {
                 throw new DataApiBuilderException(
                     message: $"Cannot set argument {param.Key} to null.",

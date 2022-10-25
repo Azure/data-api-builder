@@ -252,7 +252,14 @@ Implementation was segmented into 5 main sections:
 > ### `ResolverMiddleware.cs` & `SqlQueryEngine.cs`
 > - Call `ExecuteAsync` with `IMiddlewareContext` and `parameters`.
 > - We would have to convert `IMiddlewareContext` to `StoredProcedureRequestContext`, similar to how the `dispatchQuery` method in `RestService.cs` is doing. It converts `RestRequestContext` to `StoredProcedureRequestContext`.
-> - Then we can simply call `ExecuteAsync(StoredProcedureRequestContext context)` and return the parsed json request.
+> - Then we can simply call `ExecuteAsync(StoredProcedureRequestContext context)` and return the parsed json request as String.
+
+> ### Example 
+> 1. With param as id
+> ![image](https://user-images.githubusercontent.com/102276754/197740155-d6b800aa-acda-4fe2-a82c-1c0fdc45696f.png)
+> 2. No param
+> ![image](https://user-images.githubusercontent.com/102276754/197740411-747be3e1-a8df-4dc7-8d87-0521b63169da.png)
+
 
 ## TODO
 1. MySql/Postgres support - changes really should be minimal. Foundation is already laid, just may need minor updates to metadata and then obviously adding `Build` methods in respective query builders. 

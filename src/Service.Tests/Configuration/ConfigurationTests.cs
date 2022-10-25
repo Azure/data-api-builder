@@ -716,7 +716,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow("/graphql", "/gql", HttpStatusCode.BadRequest, DisplayName = "Request to non-configured graphQL endpoint is handled by REST controller.")]
-        [DataRow("/graphql", "/graphql", HttpStatusCode.OK,DisplayName = "Request to configured default GraphQL endpoint succeeds, path not rewritten.")]
+        [DataRow("/graphql", "/graphql", HttpStatusCode.OK, DisplayName = "Request to configured default GraphQL endpoint succeeds, path not rewritten.")]
         [DataRow("/gql", "/gql", HttpStatusCode.OK, DisplayName = "GraphQL request path rewritten to match default configured GraphQL endpoint.")]
         [DataRow("/gql", "/api/book", HttpStatusCode.NotFound, DisplayName = "Non-GraphQL request's path is not rewritten and is handled by REST controller.")]
         [DataRow("/gql", "/graphql", HttpStatusCode.NotFound, DisplayName = "Requests to default graphQL endpoint fail when configured endpoint differs.")]
@@ -885,6 +885,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// But when a graphql request is coming in, that's when it throws an 401 exception.
         /// To prevent this, CosmosClientProvider parses the token and retrieves the "exp" property from the token,
         /// if it's not valid, then we will throw an exception from our code before it initiating a client.
+        /// Uses a valid fake JWT access token for testing purposes.
         /// </summary>
         /// <returns>ConfigurationPostParameters object</returns>
         private static ConfigurationPostParameters GetCosmosConfigurationParametersWithAccessToken()
@@ -894,7 +895,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 File.ReadAllText(cosmosFile),
                 File.ReadAllText("schema.gql"),
                 "AccountEndpoint=https://localhost:8081/;",
-                // This is a valid fake JWT token for testing purposes
                 AccessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxMjMzNDQ1Nn0.1cdRZfqwndt67f-sHKgOfEgTfO9xDyGFl6_d-RRyf4U");
         }
 

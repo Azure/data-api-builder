@@ -113,7 +113,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// the mutation query will return the review Id with the content of the review added
         /// </summary>
         [TestMethod]
-        public async Task InsertMutationForVariableNotNullDefaultValue()
+        public async Task InsertMutationForVariableNotNullDefault()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -128,7 +128,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    LIMIT 1) AS subq
             ";
 
-            await InsertMutationForVariableNotNullDefaultValue(postgresQuery);
+            await InsertMutationForVariableNotNullDefault(postgresQuery);
         }
 
         /// <summary>

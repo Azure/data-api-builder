@@ -14,8 +14,6 @@
       "enabled": false
     },
     "graphql": {
-      "enabled": true,
-      "path": "/graphql",
       "allow-introspection": true
     },
     "host": {
@@ -67,7 +65,7 @@
         }
       ]
     },
-    "Star": {
+    "StarAlias": {
       "source": "graphqldb.star",
       "rest": false,
       "graphql": {

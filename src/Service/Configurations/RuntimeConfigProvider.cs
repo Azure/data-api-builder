@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using Azure.DataApiBuilder.Config;
@@ -130,6 +131,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     out runtimeConfig,
                     ConfigProviderLogger))
             {
+                runtimeConfig!.MapGraphQLSingularTypeToEntityName();
                 if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
                 {
                     runtimeConfig!.ConnectionString = configPath.CONNSTRING;
@@ -221,6 +223,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     ConfigProviderLogger!))
             {
                 RuntimeConfiguration = runtimeConfig;
+                RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName();
                 RuntimeConfiguration!.ConnectionString = connectionString;
 
                 if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmos)
@@ -257,7 +260,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
             return RuntimeConfiguration;
         }
 
-        public virtual bool TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig)
+        /// <summary>
+        /// Attempt to acquire runtime configuration metadata.
+        /// </summary>
+        /// <param name="runtimeConfig">Populated runtime configuartion, if present.</param>
+        /// <returns>True when runtime config is provided, otherwise false.</returns>
+        public virtual bool TryGetRuntimeConfiguration([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
         {
             runtimeConfig = RuntimeConfiguration;
             return RuntimeConfiguration is not null;
@@ -266,6 +274,15 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public virtual bool IsDeveloperMode()
         {
             return RuntimeConfiguration?.HostGlobalSettings.Mode is HostModeType.Development;
+        }
+
+        /// <summary>
+        /// Return whether to allow GraphQL introspection using runtime configuration metadata.
+        /// </summary>
+        /// <returns>True if introspection is allowed, otherwise false.</returns>
+        public virtual bool IsIntrospectionAllowed()
+        {
+            return RuntimeConfiguration is not null && RuntimeConfiguration.GraphQLGlobalSettings.AllowIntrospection;
         }
 
         /// <summary>

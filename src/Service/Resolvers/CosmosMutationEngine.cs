@@ -230,8 +230,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context,
             IDictionary<string, object?> parameters)
         {
-            string entityName = context.Selection.Field.Type.NamedType().Name.Value;
-
+            string graphQLType = context.Selection.Field.Type.NamedType().Name.Value;
+            string entityName = _metadataProvider.GetEntityName(graphQLType);
             string databaseName = _metadataProvider.GetSchemaName(entityName);
             string containerName = _metadataProvider.GetDatabaseObjectName(entityName);
 

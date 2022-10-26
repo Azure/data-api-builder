@@ -98,13 +98,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
 
             SetUpSQLMetadataProvider();
-            // Setup AuthorizationService to always return Authorized.
-            _authorizationService = new Mock<IAuthorizationService>();
-            _authorizationService.Setup(x => x.AuthorizeAsync(
-                It.IsAny<ClaimsPrincipal>(),
-                It.IsAny<object>(),
-                It.IsAny<IEnumerable<IAuthorizationRequirement>>()
-                ).Result).Returns(AuthorizationResult.Success);
 
             // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
             _httpContextAccessor = new Mock<IHttpContextAccessor>();

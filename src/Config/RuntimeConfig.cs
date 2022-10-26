@@ -157,9 +157,9 @@ namespace Azure.DataApiBuilder.Config
 
                     string? graphQLType = (graphQL.Type is SingularPlural) ? ((SingularPlural)graphQL.Type).Singular : graphQL.Type.ToString();
 
-                    if (graphQLType is not null && !GraphQLSingularTypeToEntityNameMap.ContainsKey(graphQLType))
+                    if (graphQLType is not null)
                     {
-                        GraphQLSingularTypeToEntityNameMap.Add(graphQLType, entityName);
+                        GraphQLSingularTypeToEntityNameMap.TryAdd(graphQLType, entityName);
                     }
                 }
             }

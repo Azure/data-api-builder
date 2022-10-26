@@ -224,7 +224,7 @@ query {{
         public async Task GetByPrimaryKeyWhenEntityNameDoesntMatchGraphQLType()
         {
             // Run query
-            // _idList is the mock data that's generated for testing purpose, randomly pick the first id here to query.
+            // _idList is the mock data that's generated for testing purpose, arbitrarilys pick the first id here to query.
             string id = _idList[0];
             string query = @$"
 query {{

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text.Json;
@@ -107,17 +106,19 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             insertPayloadRoot,
                             operationType);
-                        PopulateBaseTableForRequestDefInReqCtxt(context);
-                        RequestValidator.ValidateInsertRequestContext(
+                        if (context.DatabaseObject.SourceType is SourceType.Table)
+                        {
+                            RequestValidator.ValidateInsertRequestContext(
                             (InsertRequestContext)context,
                             _sqlMetadataProvider);
+                        }
+
                         break;
                     case Operation.Delete:
                         RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                         context = new DeleteRequestContext(entityName,
                                                            dbo: dbObject,
                                                            isList: false);
-                        RequestValidator.ValidateDeleteRequestContext(context, _sqlMetadataProvider);
                         break;
                     case Operation.Update:
                     case Operation.UpdateIncremental:
@@ -129,8 +130,12 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             upsertPayloadRoot,
                             operationType);
-                        PopulateBaseTableForRequestDefInReqCtxt(context);
-                        RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
+                        if (context.DatabaseObject.SourceType is SourceType.Table)
+                        {
+                            RequestValidator.
+                                ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
+                        }
+
                         break;
                     default:
                         throw new DataApiBuilderException(
@@ -193,74 +198,6 @@ namespace Azure.DataApiBuilder.Service.Services
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             };
-        }
-
-        /// <summary>
-        /// Helper method to populate the base table's definition for request.
-        /// </summary>
-        /// <param name="requestCtx">Current request's context.</param>
-        /// <exception cref="DataApiBuilderException"></exception>
-        private void PopulateBaseTableForRequestDefInReqCtxt(
-            RestRequestContext requestCtx)
-        {
-            if (_sqlMetadataProvider.GetDatabaseType() is not DatabaseType.mssql
-                || requestCtx.DatabaseObject.SourceType is not SourceType.View)
-            {
-                // As of now DAB supports mutations on views for MsSql only.
-                return;
-            }
-
-            ViewDefinition viewDefinition = ((DatabaseView)requestCtx.DatabaseObject).ViewDefinition;
-            Dictionary<string, DatabaseTable> viewColToDatabaseTableMap = viewDefinition.ViewColToDatabaseTableMap;
-
-            // A single base table for the current request.
-            DatabaseTable? baseTableForView = null;
-
-            foreach (string field in requestCtx.FieldValuePairsInBody.Keys)
-            {
-                if (!_sqlMetadataProvider.
-                    TryGetBackingColumn(requestCtx.EntityName, field, out string? backingColName))
-                {
-                    // If there is no backing column for a field in request body,
-                    // the field is invalid.
-                    throw new DataApiBuilderException(
-                        message: $"Invalid request body. Contained unexpected field: {field}.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
-                        );
-                }
-
-                if (!viewColToDatabaseTableMap.TryGetValue(backingColName!, out DatabaseTable? baseTableForField))
-                {
-                    throw new DataApiBuilderException(
-                        message: $"{requestCtx.EntityName} is not an updatable entity",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
-                        );
-                }
-
-                // If the column is a field present in the request body
-                // evaluate the source table and schema /
-                // ensure that it belongs to the same source table and schema,
-                // if already evaluated.
-                if (baseTableForView is null)
-                {
-                    baseTableForView = baseTableForField;
-                }
-                else if (baseTableForView != baseTableForField)
-                {
-                    // Mutation operation on entity based on multiple base tables
-                    // is not allowed.
-                    throw new DataApiBuilderException(
-                        message: "Operation not allowed.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
-                        );
-                }
-            }
-
-            // This will fail if the request body is empty.
-            requestCtx.BaseTableForRequestDefinition = baseTableForView!.TableDefinition;
         }
 
         /// <summary>

@@ -66,14 +66,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PatchOneInsertInStocksPriceCompositeViewTest",
-                $"SELECT [categoryid], [pieceid], [instant] as phase, [price], [is_wholesale_price] " +
-                $"FROM { _composite_subset_stocksPrice } WHERE [categoryid] = 0 AND [pieceid] = 1 " +
-                $"AND [instant] = 'instant3' AND [is_wholesale_price] = 1 " +
-                $"AND [categoryName] = '' AND [price] is NULL AND [piecesRequired] = 0 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
                 "PatchOne_Insert_Nulled_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
@@ -121,21 +113,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 $"SELECT [categoryid], [pieceid], [categoryName], [piecesAvailable] " +
                 $"FROM {_simple_subset_stocks} WHERE categoryid = 2 AND pieceid = 1 " +
                 $"AND [categoryName] = 'Historical' AND [piecesAvailable] = 0 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOneUpdateBooksPubCompositeView",
-                $"SELECT [id], [title] FROM { _composite_subset_bookPub } " +
-                $"WHERE [id] = 1 AND [pub_id] = 1234 AND " +
-                $"[name] = 'Big Company' AND [title] = 'New Book' " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOneUpdateStocksPriceCompositeView",
-                $"SELECT [categoryid], [pieceid], [instant] as phase, [price], [is_wholesale_price] " +
-                $"FROM { _composite_subset_stocksPrice } WHERE [categoryid] = 1 AND [pieceid] = 1 " +
-                $"AND [instant] = 'instant2' AND [is_wholesale_price] = 1 " +
-                $"AND [categoryName] = 'SciFi' AND [price] is NULL AND [piecesRequired] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

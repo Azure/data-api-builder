@@ -138,12 +138,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public SqlQueryStructure(
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider,
-            RuntimeConfigProvider runtimeConfigProvider,
-            SourceDefinition? baseTableForRequestDefinition = null) :
+            RuntimeConfigProvider runtimeConfigProvider) :
             this(sqlMetadataProvider,
                 new IncrementingInteger(),
-                entityName: context.EntityName,
-                baseTableForRequestDefinition: baseTableForRequestDefinition)
+                entityName: context.EntityName)
         {
             IsListQuery = context.IsMany;
             TableAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
@@ -470,12 +468,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private SqlQueryStructure(
             ISqlMetadataProvider sqlMetadataProvider,
             IncrementingInteger counter,
-            string entityName = "",
-            SourceDefinition? baseTableForRequestDefinition = null)
+            string entityName = "")
             : base(sqlMetadataProvider,
                   entityName: entityName,
-                  counter: counter,
-                  baseTableForRequestDefinition: baseTableForRequestDefinition)
+                  counter: counter)
         {
             JoinQueries = new();
             Joins = new();

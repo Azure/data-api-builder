@@ -71,20 +71,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PutOneUpdateBooksPubCompositeView",
-                $"SELECT [pub_id], [name] FROM { _composite_subset_bookPub } " +
-                $"WHERE [id] = 1 AND [pub_id] = 1234 AND [name] = 'New publisher name' " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOneUpdateStocksPriceCompositeView",
-                $"SELECT [categoryid], [pieceid], [instant] as phase, [price], [is_wholesale_price] " +
-                $"FROM { _composite_subset_stocksPrice } WHERE [categoryid] = 1 AND [pieceid] = 1 " +
-                $"AND [instant] = 'instant2' AND [is_wholesale_price] = 1 " +
-                $"AND [categoryName] = 'SciFi' AND [price] is NULL AND [piecesRequired] = 0 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
                 "PutOne_Update_With_Mapping_Test",
                 $"SELECT [treeId], [species] AS [Scientific Name], [region] AS " +
                 $"[United State's Region], [height] FROM { _integrationMappingTable } " +
@@ -148,14 +134,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable] " +
                 $"FROM { _simple_subset_stocks } WHERE [categoryid] = 4 " +
                 $"AND [pieceid] = 1 AND [categoryName] = 'SciFi' AND [piecesAvailable] = 0 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PutOneInsertInStocksPriceCompositeView",
-                $"SELECT [categoryid], [pieceid], [instant] as phase, [price], [is_wholesale_price] " +
-                $"FROM { _composite_subset_stocksPrice } WHERE [categoryid] = 0 AND [pieceid] = 1 " +
-                $"AND [instant] = 'instant3' AND [is_wholesale_price] = 1 " +
-                $"AND [categoryName] = '' AND [price] is NULL AND [piecesRequired] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

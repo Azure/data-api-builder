@@ -1,6 +1,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -71,7 +72,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 ""publisher_id"": 1234
             }";
 
-            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
@@ -79,8 +79,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 sqlQuery: GetQuery("InsertOneInBooksViewAll"),
                 operationType: Operation.Insert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.Created,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.Created
             );
 
             // Insertion on a simple view based on one table where not
@@ -93,52 +92,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 ""categoryName"": ""SciFi""
             }";
 
-            expectedLocationHeader = $"categoryid/4/pieceid/1";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
                 entityNameOrPath: _simple_subset_stocks,
                 sqlQuery: GetQuery("InsertOneInStocksViewSelected"),
-                operationType: Operation.Insert,
-                requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.Created,
-                expectedLocationHeader: expectedLocationHeader
-            );
-
-            // Insert on composite view targeting publishers table.
-            // The join condition for the view won't be matched for the
-            // inserted row and hence we will have to query the publishers table
-            // for expected result.
-            requestBody = @"
-            {
-                ""name"": ""New Publisher in town""
-            }";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: null,
-                queryString: null,
-                entityNameOrPath: _composite_subset_bookPub,
-                sqlQuery: GetQuery("InsertOneInBooksPubCompositeView"),
-                operationType: Operation.Insert,
-                requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.Created
-            );
-
-            // Insert on composite view targeting stocks_price table.
-            // The join condition for the view will have a match for the
-            // inserted row and hence we will query the view for expected result.
-            requestBody = @"
-            {
-                ""categoryid"": 0,
-                ""pieceid"": 1,
-                ""phase"": ""instant3""
-            }";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: null,
-                queryString: null,
-                entityNameOrPath: _composite_subset_stocksPrice,
-                sqlQuery: GetQuery("InsertOneInStocksPriceCompositeView"),
                 operationType: Operation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created
@@ -583,29 +541,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         [TestMethod]
         public virtual async Task InsertOneInViewBadRequestTest()
         {
-            // Non-nullable column books.publisher_id is not selected in
-            // the view and hence insert operation on view resolving to
-            // books table will fail.
-            string requestBody = @"
-            {
-                ""title"" : ""AwesomeBook""
-            }";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: string.Empty,
-                entityNameOrPath: _composite_subset_bookPub,
-                sqlQuery: string.Empty,
-                operationType: Operation.Insert,
-                exceptionExpected: true,
-                requestBody: requestBody,
-                expectedErrorMessage: "Cannot perform this operation on the underlying base table.",
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: "BadRequest"
-                );
-
             // Request trying to modify fields from multiple base tables will fail .
-            requestBody = @"
+            string requestBody = @"
             {
                 ""categoryid"": 0,
                 ""pieceid"": 1,
@@ -621,15 +558,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 operationType: Operation.Insert,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: "Operation not allowed.",
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: "BadRequest"
+                expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_stocksPrice}' is not updatable " +
+                $"because the modification affects multiple base tables.",
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
                 );
 
             // The field instant is exposed as 'phase'. If we reference
             // it by 'instant' or any other name, we would get an error
             // for including an invalid field in request body.
-            requestBody = @"
+            /*requestBody = @"
             {
                 ""categoryid"": 0,
                 ""pieceid"": 1,
@@ -646,7 +584,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Contained unexpected field: instant.",
                 expectedStatusCode: HttpStatusCode.BadRequest
-            );
+            );*/
         }
 
         /// <summary>

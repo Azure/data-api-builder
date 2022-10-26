@@ -238,10 +238,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     operationType: Operation.Delete,
                     requestBody: null,
                     exceptionExpected: true,
-                    expectedErrorMessage: $"{_composite_subset_stocksPrice} is not updatable because the operation affects " +
-                        $"multiple base tables",
-                    expectedStatusCode: HttpStatusCode.BadRequest,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                    expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_stocksPrice}' is not updatable " +
+                    "because the modification affects multiple base tables.",
+                    expectedStatusCode: HttpStatusCode.InternalServerError,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
                 );
 
             // Delete one from view based on books,publishers table.
@@ -253,10 +253,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     operationType: Operation.Delete,
                     requestBody: null,
                     exceptionExpected: true,
-                    expectedErrorMessage: $"{_composite_subset_bookPub} is not updatable because the operation affects " +
-                        $"multiple base tables",
-                    expectedStatusCode: HttpStatusCode.BadRequest,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                    expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
+                    "because the modification affects multiple base tables.",
+                    expectedStatusCode: HttpStatusCode.InternalServerError,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
                 );
             ;
         }

@@ -29,26 +29,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
-            bool isIncrementalUpdate,
-            SourceDefinition? baseTableForRequestDefinition = null)
+            bool isIncrementalUpdate)
         : base(sqlMetadataProvider,
-              entityName,
-              baseTableForRequestDefinition: baseTableForRequestDefinition)
+              entityName)
         {
             UpdateOperations = new();
             OutputColumns = GenerateOutputColumns();
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
-            SourceDefinition baseTableDefinition = GetUnderlyingBaseTableForRequestDefinition();
             List<string> primaryKeys = sourceDefinition.PrimaryKey;
-
-            // Dictionary to store mapping from column name in entity(table/view)
-            // to column name in base table.
-            Dictionary<string, string> schemaColumnsMap = new();
-            foreach (string key in baseTableDefinition.Columns.Keys)
-            {
-                string field = GetColumnAliasInDbOject(key, baseTableDefinition);
-                schemaColumnsMap.Add(field, key);
-            }
+            List<string> columns = sourceDefinition.Columns.Keys.ToList();
 
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
@@ -61,17 +50,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicates.Add(predicate);
                 }
                 // use columns to determine values to edit
-                else
+                else if (columns.Contains(backingColumn!))
                 {
                     UpdateOperations.Add(predicate);
                 }
 
-                schemaColumnsMap.Remove(backingColumn!);
+                columns.Remove(backingColumn!);
             }
 
             if (!isIncrementalUpdate)
             {
-                AddNullifiedUnspecifiedFields(schemaColumnsMap, UpdateOperations, baseTableDefinition);
+                AddNullifiedUnspecifiedFields(columns, UpdateOperations, sourceDefinition);
             }
 
             if (UpdateOperations.Count == 0)

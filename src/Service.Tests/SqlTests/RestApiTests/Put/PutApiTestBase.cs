@@ -285,31 +285,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                ""categoryName"": ""SciFi""
             }";
 
-            string expectedLocationHeader = $"categoryid/4/pieceid/1";
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: expectedLocationHeader,
+                primaryKeyRoute: "categoryid/4/pieceid/1",
                 queryString: null,
                 entityNameOrPath: _simple_subset_stocks,
                 sqlQuery: GetQuery("PutOneInsertInStocksViewSelected"),
-                operationType: Operation.Upsert,
-                requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.Created,
-                expectedLocationHeader: expectedLocationHeader
-                );
-
-            // Put insert on composite view targeting stocks_price table.
-            // The join condition for the view will have a match for the
-            // inserted row and hence we will query the view for expected result.
-            requestBody = @"
-            {
-               ""is_wholesale_price"": true
-            }";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "categoryid/0/pieceid/1/phase/instant3",
-                queryString: null,
-                entityNameOrPath: _composite_subset_stocksPrice,
-                sqlQuery: GetQuery("PutOneInsertInStocksPriceCompositeView"),
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created
@@ -385,38 +365,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: null,
                     entityNameOrPath: _simple_subset_stocks,
                     sqlQuery: GetQuery("PutOneUpdateStocksViewSelected"),
-                    operationType: Operation.Upsert,
-                    requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.OK
-                );
-
-            // Put update on composite view resolving to publishers table.
-            requestBody = @"
-            {
-                ""name"": ""New publisher name""
-            }";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/1/pub_id/1234",
-                    queryString: null,
-                    entityNameOrPath: _composite_subset_bookPub,
-                    sqlQuery: GetQuery("PutOneUpdateBooksPubCompositeView"),
-                    operationType: Operation.Upsert,
-                    requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.OK
-                );
-
-            // Put update on composite view resolving to stocks_price table.
-            requestBody = @"
-            {
-                ""is_wholesale_price"": true
-            }";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
-                    queryString: null,
-                    entityNameOrPath: _composite_subset_stocksPrice,
-                    sqlQuery: GetQuery("PutOneUpdateStocksPriceCompositeView"),
                     operationType: Operation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
@@ -815,28 +763,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
                 exceptionExpected: true,
-                expectedErrorMessage: "Operation not allowed.",
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
-            );
-
-            // PUT update missing value for non-nullable field categoryName.
-            requestBody = @"
-            {
-                ""piecesAvailable"": 4
-            }";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "categoryid/1/pieceid/1",
-                queryString: string.Empty,
-                entityNameOrPath: _simple_subset_stocks,
-                sqlQuery: string.Empty,
-                operationType: Operation.Upsert,
-                requestBody: requestBody,
-                exceptionExpected: true,
-                expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_stocksPrice}' is not updatable " +
+                "because the modification affects multiple base tables.",
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
             );
 
             requestBody = @"
@@ -855,6 +785,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 expectedErrorMessage: "Primary key column: instance not found in the entity definition.",
                 expectedStatusCode: HttpStatusCode.NotFound,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                );
+
+            // Put update on composite view resolving to stocks_price table.
+            requestBody = @"
+            {
+                ""is_wholesale_price"": true
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
+                    queryString: null,
+                    entityNameOrPath: _composite_subset_stocksPrice,
+                    sqlQuery: string.Empty,
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    exceptionExpected: true,
+                    expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_stocksPrice}' is not updatable " +
+                    "because the modification affects multiple base tables.",
+                    expectedStatusCode: HttpStatusCode.InternalServerError,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
                 );
         }
         #endregion

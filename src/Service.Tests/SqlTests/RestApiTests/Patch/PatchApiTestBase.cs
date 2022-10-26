@@ -214,33 +214,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                ""categoryName"": ""SciFi""
             }";
 
-            string expectedLocationHeader = $"categoryid/4/pieceid/1";
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: expectedLocationHeader,
+                primaryKeyRoute: "categoryid/4/pieceid/1",
                 queryString: null,
                 entityNameOrPath: _simple_subset_stocks,
                 sqlQuery: GetQuery("PatchOneInsertInStocksViewSelected"),
                 operationType: Operation.UpsertIncremental,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
-                expectedLocationHeader: expectedLocationHeader
-                );
-
-            // PATCH insert on composite view based on stocks,stocks_price table,
-            // where the fields modified by request resolve to stocks_price table.
-            requestBody = @"
-            {
-                ""is_wholesale_price"": true
-            }";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "categoryid/0/pieceid/1/phase/instant3",
-                    queryString: null,
-                    entityNameOrPath: _composite_subset_stocksPrice,
-                    sqlQuery: GetQuery("PatchOneInsertInStocksPriceCompositeViewTest"),
-                    operationType: Operation.UpsertIncremental,
-                    requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.Created
+                expectedLocationHeader: string.Empty
                 );
         }
         /// <summary>
@@ -334,41 +316,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _simple_subset_stocks,
                     sqlQuery: GetQuery("PatchOneUpdateStocksViewSelected"),
-                    operationType: Operation.UpsertIncremental,
-                    requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.OK
-                );
-
-            // PATCH update on composite view based on books,publishers table,
-            // where the fields modified by request resolve to books table.
-            requestBody = @"
-            {
-                ""title"": ""New Book""
-            }";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/1/pub_id/1234",
-                    queryString: null,
-                    entityNameOrPath: _composite_subset_bookPub,
-                    sqlQuery: GetQuery("PatchOneUpdateBooksPubCompositeView"),
-                    operationType: Operation.UpsertIncremental,
-                    requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.OK
-                );
-
-            // PATCH update on composite view based on stocks,stocks_price table,
-            // where the fields modified by request resolve to stocks_price table.
-            requestBody = @"
-            {
-                ""is_wholesale_price"": true,
-                ""price"" : null
-            }";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
-                    queryString: null,
-                    entityNameOrPath: _composite_subset_stocksPrice,
-                    sqlQuery: GetQuery("PatchOneUpdateStocksPriceCompositeView"),
                     operationType: Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
@@ -628,10 +575,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 operationType: Operation.UpsertIncremental,
                 requestBody: requestBody,
                 exceptionExpected: true,
-                expectedErrorMessage: "Operation not allowed.",
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_stocksPrice}' is not updatable " +
+                "because the modification affects multiple base tables.",
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
             );
+
+            // PATCH update on composite view based on books,publishers table.
+            requestBody = @"
+            {
+                ""title"": ""New Book""
+            }";
 
             // Request missing primary key column for the stocks_price table
             // will fail.
@@ -652,25 +606,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
             );
-
-            // Request containing invalid primary key will fail.
-            requestBody = @"
-            {
-               ""name"": ""New publisher in town""
-            }";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/1/pubid/1234",
-                queryString: null,
-                entityNameOrPath: _composite_subset_bookPub,
-                sqlQuery: string.Empty,
-                operationType: Operation.UpsertIncremental,
-                requestBody: requestBody,
-                exceptionExpected: true,
-                expectedErrorMessage: "Primary key column: pubid not found in the entity definition.",
-                expectedStatusCode: HttpStatusCode.NotFound,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
-                );
         }
 
         #endregion

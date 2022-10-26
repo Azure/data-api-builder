@@ -40,20 +40,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "InsertOneInBooksPubCompositeView",
-                $"SELECT [id] as pub_id, [name] FROM { _foreignKeyTableName } " +
-                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [name] = 'New Publisher in town' " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "InsertOneInStocksPriceCompositeView",
-                $"SELECT [categoryid], [pieceid], [instant] as phase, [price], [is_wholesale_price] " +
-                $"FROM { _composite_subset_stocksPrice } WHERE [categoryid] = 0 AND [pieceid] = 1 " +
-                $"AND [instant] = 'instant3' AND [is_wholesale_price] is NULL " +
-                $"AND [categoryName] = '' AND [price] is NULL AND [piecesRequired] = 0 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
                 "InsertOneUniqueCharactersTest",
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform

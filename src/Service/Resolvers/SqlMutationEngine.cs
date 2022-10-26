@@ -282,8 +282,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     await PerformMutationOperation(
                         context.EntityName,
                         context.OperationType,
-                        parameters,
-                        baseTableForRequestDefinition: context.BaseTableForRequestDefinition);
+                        parameters);
 
                 if (context.OperationType is Operation.Insert)
                 {
@@ -357,8 +356,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 string entityName,
                 Operation operationType,
                 IDictionary<string, object?> parameters,
-                IMiddlewareContext? context = null,
-                SourceDefinition? baseTableForRequestDefinition = null)
+                IMiddlewareContext? context = null)
         {
             string queryString;
             Dictionary<string, object?> queryParameters;
@@ -369,8 +367,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     SqlInsertStructure insertQueryStruct = context is null ?
                         new(entityName,
                         _sqlMetadataProvider,
-                        parameters,
-                        baseTableForRequestDefinition) :
+                        parameters) :
                         new(context, entityName, _sqlMetadataProvider, parameters);
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
@@ -380,8 +377,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         new(entityName,
                         _sqlMetadataProvider,
                         parameters,
-                        isIncrementalUpdate: false,
-                        baseTableForRequestDefinition);
+                        isIncrementalUpdate: false);
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
                     break;
@@ -390,8 +386,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         new(entityName,
                         _sqlMetadataProvider,
                         parameters,
-                        isIncrementalUpdate: true,
-                        baseTableForRequestDefinition);
+                        isIncrementalUpdate: true);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;
@@ -527,8 +522,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         new(entityName,
                         _sqlMetadataProvider,
                         parameters,
-                        incrementalUpdate: false,
-                        baseTableForRequestDefinition: context.BaseTableForRequestDefinition);
+                        incrementalUpdate: false);
                 queryString = _queryBuilder.Build(upsertStructure);
                 queryParameters = upsertStructure.Parameters;
             }
@@ -538,8 +532,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         new(entityName,
                         _sqlMetadataProvider,
                         parameters,
-                        incrementalUpdate: true,
-                        baseTableForRequestDefinition: context.BaseTableForRequestDefinition);
+                        incrementalUpdate: true);
                 queryString = _queryBuilder.Build(upsertIncrementalStructure);
                 queryParameters = upsertIncrementalStructure.Parameters;
             }
@@ -567,24 +560,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
         public string ConstructPrimaryKeyRoute(RestRequestContext context, Dictionary<string, object?> entity)
         {
-            bool isEntityBasedOnOneTable = IsEntityBasedOnOneTable(context);
-
-            if (!isEntityBasedOnOneTable)
+            if (context.DatabaseObject.SourceType is SourceType.View)
             {
                 return string.Empty;
             }
 
             string entityName = context.EntityName;
-            SourceDefinition baseTableDefinition = RequestValidator.GetBaseTableDefinition(context);
+            SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
             StringBuilder newPrimaryKeyRoute = new();
 
-            foreach (string primaryKey in baseTableDefinition.PrimaryKey)
+            foreach (string primaryKey in sourceDefinition.PrimaryKey)
             {
-                string primaryKeyAlias =
-                    RequestValidator.GetColumnAliasInDbOject(context, primaryKey, baseTableDefinition);
-
                 // get backing column for lookup, previously validated to be non-null
-                _sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKeyAlias, out string? pkExposedName);
+                _sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? pkExposedName);
                 newPrimaryKeyRoute.Append(pkExposedName);
                 newPrimaryKeyRoute.Append("/");
                 newPrimaryKeyRoute.Append(entity[pkExposedName!]!.ToString());
@@ -595,28 +583,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             newPrimaryKeyRoute.Remove(newPrimaryKeyRoute.Length - 1, 1);
 
             return newPrimaryKeyRoute.ToString();
-        }
-
-        /// <summary>
-        /// Helper method to check whether a database table or view is based on
-        /// one base table (always true for database table). The method is only
-        /// called for view/table.
-        /// </summary>
-        /// <param name="context">Current request's context</param>
-        /// <returns></returns>
-        private static bool IsEntityBasedOnOneTable(RestRequestContext context)
-        {
-            SourceType sourceTypeOfEntity = context.DatabaseObject.SourceType;
-            switch (sourceTypeOfEntity)
-            {
-                case SourceType.Table:
-                    return true;
-                case SourceType.View:
-                    ViewDefinition viewDefinition = ((DatabaseView)context.DatabaseObject).ViewDefinition;
-                    return viewDefinition.NumberOfBaseTables == 1;
-                default:
-                    throw new Exception("The method expects only view/table as database object.");
-            }
         }
 
         private static Dictionary<string, object?> PrepareParameters(RestRequestContext context)

@@ -91,7 +91,7 @@ CREATE TABLE stocks(
 CREATE TABLE stocks_price(
     categoryid int NOT NULL,
     pieceid int NOT NULL,
-    instant varchar(10) NOT NULL,
+    instant datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     price double,
     is_wholesale_price boolean,
     PRIMARY KEY(categoryid, pieceid, instant)

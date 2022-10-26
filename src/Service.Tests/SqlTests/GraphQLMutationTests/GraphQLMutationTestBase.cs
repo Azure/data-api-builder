@@ -83,11 +83,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code>Update book in database and return its updated fields
-        /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
-        /// and if the mutation query has returned the values correctly
+        /// <code>Do: </code> Inserts new stock price with default current timestamp as the instant
+        /// and return the inserted instant
+        /// <code>Check: </code> If stock price with the given (category, piece id) is present in the database then
+        /// the mutation query will return the price with the instant added.
         /// </summary>
-        public async Task UpdateMutation(string dbQuery)
+        public async Task InsertMutationForVariableNotNullDefaultValue(string dbQuery)
+        {
+            string graphQLMutationName = "createstocks_price";
+            string graphQLMutation = @"
+                mutation {
+                  createstocks_price(item: { categoryid: 100 pieceid: 99 price: 50.0 is_wholesale_price: true } ) {
+                    categoryid
+                    pieceid
+                    instant
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+/// <summary>
+/// <code>Do: </code>Update book in database and return its updated fields
+/// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
+/// and if the mutation query has returned the values correctly
+/// </summary>
+public async Task UpdateMutation(string dbQuery)
         {
             string graphQLMutationName = "updatebook";
             string graphQLMutation = @"
@@ -302,14 +327,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// the GraphQL schema input field type is nullable even though the underlying column type is not.
         /// </summary>
         [TestMethod]
-        public async Task InsertMutationForVariableNotNullDefault()
+        public async Task TestTryInsertMutationForVariableNotNullDefault()
         {
             string graphQLMutationName = "createSupportedType";
             string graphQLMutation = @"
                 mutation {
-                  createSupportedType (item: {int_types : 0 guid_types: null } ) {
+                  createSupportedType (item: { datetime_types: null } ) {
                     id
-                    guid_types
+                    datetime_types
                   }
                 }
             ";

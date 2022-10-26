@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WHERE `id` = 5001
                         AND `title` = 'My New Book'
                         AND `publisher_id` = 1234
-                    ORDER BY `id` LIMIT 1
+                    ORDER BY `id` asc LIMIT 1
                     ) AS `subq`
             ";
 
@@ -249,7 +249,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WHERE `table0`.`id` = 801
                         AND `table0`.`title` = 'New Magazine 2'
                         AND `table0`.`issue_number` IS NULL
-                    ORDER BY `table0`.`id` LIMIT 1
+                    ORDER BY `table0`.`id` asc LIMIT 1
                     ) AS `subq2`
             ";
 
@@ -270,7 +270,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     FROM `magazines` AS `table0`
                     WHERE `table0`.`id` = 1
                         AND `table0`.`issue_number` IS NULL
-                    ORDER BY `table0`.`id` LIMIT 1
+                    ORDER BY `table0`.`id` asc LIMIT 1
                     ) AS `subq2`
             ";
 
@@ -293,7 +293,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WHERE `table0`.`id` = 1
                         AND `table0`.`title` = 'Newest Magazine'
                         AND `table0`.`issue_number` = 1234
-                    ORDER BY `table0`.`id` LIMIT 1
+                    ORDER BY `table0`.`id` asc LIMIT 1
                     ) AS `subq2`
             ";
 
@@ -317,7 +317,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WHERE `id` = 5001
                         AND `title` = 'My New Book'
                         AND `publisher_id` = 1234
-                    ORDER BY `id` LIMIT 1
+                    ORDER BY `id` asc LIMIT 1
                     ) AS `subq`
             ";
 

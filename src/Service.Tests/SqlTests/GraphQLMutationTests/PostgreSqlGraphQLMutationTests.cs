@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 5001
                      AND title = 'My New Book'
                      AND publisher_id = 1234
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -76,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 5001
                      AND title = 'My New Book'
                      AND publisher_id = 1234
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -100,7 +100,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 5001
                      AND content = 'Its a classic'
                      AND book_id = 1
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -122,7 +122,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                           table0.publisher_id AS publisher_id
                    FROM books AS table0
                    WHERE id = 1
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                           table0.publisher_id AS publisher_id
                    FROM books AS table0
                    WHERE id = 1
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -199,12 +199,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                         (SELECT table1.name AS name
                          FROM publishers AS table1
                          WHERE table1.id = table0.publisher_id
-                         ORDER BY table1.id
+                         ORDER BY table1.id asc
                          LIMIT 1) AS subq2) AS table1_subq ON TRUE
                    WHERE table0.id = 5001
                      AND table0.title = 'My New Book'
                      AND table0.publisher_id = 1234
-                   ORDER BY table0.id
+                   ORDER BY table0.id asc
                    LIMIT 1) AS subq3
             ";
 
@@ -227,7 +227,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 800
                      AND title = 'New Magazine'
                      AND issue_number IS NULL
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -250,7 +250,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 801
                      AND title = 'New Magazine 2'
                      AND issue_number IS NULL
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -271,7 +271,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    FROM foo.magazines AS table0
                    WHERE id = 1
                      AND issue_number IS NULL
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -294,7 +294,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 1
                      AND title = 'Newest Magazine'
                      AND issue_number = 1234
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -318,7 +318,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 5001
                      AND title = 'My New Book'
                      AND publisher_id = 1234
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 

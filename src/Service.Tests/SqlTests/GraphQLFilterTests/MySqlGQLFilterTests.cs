@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                     SELECT " + string.Join(", ", queriedColumns) + @"
                     FROM `" + table + @"` AS `table0`
                     WHERE " + predicate + @"
-                    ORDER BY " + orderBy + @" LIMIT 100
+                    ORDER BY " + orderBy + @" asc LIMIT 100
                     ) AS `subq3`
             ";
         }

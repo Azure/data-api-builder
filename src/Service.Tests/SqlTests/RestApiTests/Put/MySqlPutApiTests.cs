@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                       SELECT *
                       FROM " + _integrationTableName + @"
                       WHERE id = 1 and title = 'The Return of the King'
-                      ORDER BY id
+                      ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
             },

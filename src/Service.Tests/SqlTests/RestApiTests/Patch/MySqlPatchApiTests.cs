@@ -117,7 +117,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                       SELECT *
                       FROM " + _integrationTableName + @"
                       WHERE id = 1 and title = 'The Hobbit Returns to The Shire' and publisher_id = 1234
-                      ORDER BY id
+                      ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
             },

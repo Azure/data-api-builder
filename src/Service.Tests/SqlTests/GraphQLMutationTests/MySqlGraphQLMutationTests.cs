@@ -108,6 +108,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await InsertMutationForConstantdefaultValue(mySqlQuery);
         }
 
+        /// <inheritdoc/>
+        [TestMethod]
+        public async Task InsertMutationForVariableNotNullDefault()
+        {
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('categoryid', `subq`.`categoryid`, 'pieceid', `subq`.`pieceid`,
+                                   'instant', `subq`.`instant`) AS `data`
+                FROM (
+                    SELECT `table0`.`categoryid` AS `categoryid`,
+                        `table0`.`pieceid` AS `pieceid`
+                        `table0`.`instant` AS `instant`
+                    FROM `stocks_price` AS `table0`
+                    WHERE `categoryid` = 100
+                        AND `pieceid` = 99
+                    ORDER BY `id` LIMIT 1
+                    ) AS `subq`
+            ";
+
+            await InsertMutationForVariableNotNullDefault(mySqlQuery);
+        }
+
         /// <summary>
         /// <code>Do: </code>Update book in database and return its updated fields
         /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database

@@ -83,12 +83,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts new stock price with default current timestamp as the instant
-        /// and return the inserted instant
-        /// <code>Check: </code> If stock price with the given (category, piece id) is present in the database then
-        /// the mutation query will return the price with the instant added.
+        /// <code>Do: </code> Inserts new stock price with default current timestamp as the value of 
+        /// 'instant' column and returns the inserted row.
+        /// <code>Check: </code> If stock price with the given (category, piece id) is successfully inserted
+        /// in the database by the mutation with a default value for 'instant'.
         /// </summary>
-        public async Task InsertMutationForVariableNotNullDefaultValue(string dbQuery)
+        public async Task InsertMutationForVariableNotNullDefault(string dbQuery)
         {
             string graphQLMutationName = "createstocks_price";
             string graphQLMutation = @"
@@ -107,12 +107,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
-/// <summary>
-/// <code>Do: </code>Update book in database and return its updated fields
-/// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
-/// and if the mutation query has returned the values correctly
-/// </summary>
-public async Task UpdateMutation(string dbQuery)
+        /// <summary>
+        /// <code>Do: </code>Update book in database and return its updated fields
+        /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
+        /// and if the mutation query has returned the values correctly
+        /// </summary>
+        public async Task UpdateMutation(string dbQuery)
         {
             string graphQLMutationName = "updatebook";
             string graphQLMutation = @"
@@ -321,8 +321,8 @@ public async Task UpdateMutation(string dbQuery)
 
         /// <summary>
         /// <code>Do: </code> Attempts to insert a new row with a null value for a variable default column.
-        /// <code>Check: </code> Even though the operation is expected to fail,.
-        /// the failure happens in the database, not with GraphQL schema error.
+        /// <code>Check: </code> Even though the operation is expected to fail,
+        /// the failure happens in the database, not with a GraphQL schema error.
         /// This verifies that since the column has a default value on the database,
         /// the GraphQL schema input field type is nullable even though the underlying column type is not.
         /// </summary>

@@ -1472,6 +1472,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Tests that a cast failure of primary key value type results in HTTP 400 Bad Request.
+        /// e.g. Attempt to cast a string '{}' to the 'id' column type of int will fail.
+        /// </summary>
+        [TestMethod]
+        public async Task FindWithUncastablePKValue()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/{}",
+                queryString: string.Empty,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: null,
+                exceptionExpected: true,
+                expectedErrorMessage: "Parameter \"{}\" cannot be resolved as column \"id\" with type \"Int32\".",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for FindById operation with attempts at
         /// Sql Injection in the primary key route.
         /// </summary>

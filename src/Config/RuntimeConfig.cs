@@ -133,27 +133,29 @@ namespace Azure.DataApiBuilder.Config
         /// This is used for looking up top-level entity name with GraphQL type, GraphQL type is not matching any of the top level entity name.
         /// Use singular field to find the top level entity name, then do the look up from the entities dictionary
         /// </summary>
-        public void MappingGraphQLSingularTypeToEntityName()
+        public void MapGraphQLSingularTypeToEntityName()
         {
             foreach (KeyValuePair<string, Entity> item in Entities)
             {
                 Entity entity = item.Value;
                 string entityName = item.Key;
 
-                if (entity?.GraphQL != null
-                    && entity.GraphQL.GetType() == typeof(GraphQLEntitySettings))
+                if (entity.GraphQL != null
+                    && entity.GraphQL is GraphQLEntitySettings)
                 {
                     GraphQLEntitySettings? graphQL = entity.GraphQL as GraphQLEntitySettings;
-                    SingularPlural? graphQLType = graphQL?.Type as SingularPlural;
 
-                    if (graphQLType is null || graphQLType.Singular is null)
+                    if (graphQL is null || graphQL.Type is null
+                        || (graphQL.Type is not SingularPlural && graphQL.Type is not string))
                     {
                         continue;
                     }
 
-                    if (!GraphQLSingularTypeToEntityNameMap.ContainsKey(graphQLType.Singular))
+                    string? graphQLType = (graphQL.Type is SingularPlural) ? ((SingularPlural)graphQL.Type).Singular : graphQL.Type.ToString();
+
+                    if (graphQLType is not null && !GraphQLSingularTypeToEntityNameMap.ContainsKey(graphQLType))
                     {
-                        GraphQLSingularTypeToEntityNameMap.Add(graphQLType.Singular, entityName);
+                        GraphQLSingularTypeToEntityNameMap.Add(graphQLType, entityName);
                     }
                 }
             }

@@ -132,7 +132,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 runtimeConfig!.DetermineGlobalSettings();
                 runtimeConfig!.DetermineGraphQLEntityNames();
-                runtimeConfig!.MappingGraphQLSingularTypeToEntityName();
+                runtimeConfig!.MapGraphQLSingularTypeToEntityName();
 
                 if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
                 {
@@ -227,7 +227,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 RuntimeConfiguration = runtimeConfig;
                 RuntimeConfiguration!.DetermineGlobalSettings();
                 RuntimeConfiguration!.DetermineGraphQLEntityNames();
-                RuntimeConfiguration!.MappingGraphQLSingularTypeToEntityName();
+                RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName();
                 RuntimeConfiguration!.ConnectionString = connectionString;
 
                 if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmos)

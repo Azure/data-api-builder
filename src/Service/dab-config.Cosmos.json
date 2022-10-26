@@ -67,7 +67,7 @@
         }
       ]
     },
-    "Star": {
+    "StarAlias": {
       "source": "graphqldb.star",
       "rest": false,
       "graphql": {

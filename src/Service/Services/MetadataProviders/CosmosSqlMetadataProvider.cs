@@ -200,8 +200,8 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             {
                 throw new DataApiBuilderException(
                     "GraphQL type doesn't match any entity name or singular type in the runtime config.",
-                    System.Net.HttpStatusCode.InternalServerError,
-                    DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    System.Net.HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
             return entityName!;

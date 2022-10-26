@@ -216,15 +216,15 @@ query {{
         }
 
         /// <summary>
-        /// This is to exercise the senario when graphQL type and top level entity name in the runtim config aren't match.
+        /// This is to exercise the scenario when the GraphQL type and top-level entity name in the runtime config do not match.
         /// "Star" is a GraphQL type, in the runtime config, the top level entity name is "StarAlias"
-        /// The matching is using the runtime config entity singular type name instead when there is no match found
+        /// A match is attempted using the runtime config entity singular type name when there is no match found with the GraphQL type name.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public async Task GetByPrimaryKeyWhenEntityNameDoesntMatchGraphQLType()
         {
             // Run query
+            // _idList is the mock data that's generated for testing purpose, randomly pick the first id here to query.
             string id = _idList[0];
             string query = @$"
 query {{

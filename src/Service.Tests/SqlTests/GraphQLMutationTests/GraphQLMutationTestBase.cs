@@ -332,10 +332,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string graphQLMutationName = "createSupportedType";
             string graphQLMutation = @"
                 mutation {
-                  createSupportedType (item: { datetime_types: null } ) {
-                    id
-                    datetime_types
-                  }
+                    createstocks_price(item: { categoryid: 100 pieceid: 99 instant: null } ) {
+                    categoryid
+                    pieceid
+                    instant
+                    }
                 }
             ";
 

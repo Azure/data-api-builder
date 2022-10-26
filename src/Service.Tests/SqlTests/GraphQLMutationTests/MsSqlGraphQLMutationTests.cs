@@ -109,8 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         {
             string msSqlQuery = @"
                 SELECT TOP 1 [table0].[categoryid] AS [categoryid],
-                    [table0].[pieceid] AS [pieceid],
-                    [table0].[instant] AS [instant]
+                    [table0].[pieceid] AS [pieceid]
                 FROM [stocks_price] AS [table0]
                 WHERE [table0].[categoryid] = 100
                     AND [table0].[pieceid] = 99

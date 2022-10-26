@@ -113,16 +113,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         public async Task InsertMutationForVariableNotNullDefault()
         {
             string mySqlQuery = @"
-                SELECT JSON_OBJECT('categoryid', `subq`.`categoryid`, 'pieceid', `subq`.`pieceid`,
-                                   'instant', `subq`.`instant`) AS `data`
+                SELECT JSON_OBJECT('categoryid', `subq`.`categoryid`, 'pieceid', `subq`.`pieceid`) AS `data`
                 FROM (
                     SELECT `table0`.`categoryid` AS `categoryid`,
-                        `table0`.`pieceid` AS `pieceid`,
-                        `table0`.`instant` AS `instant`
+                           `table0`.`pieceid` AS `pieceid`
                     FROM `stocks_price` AS `table0`
                     WHERE `categoryid` = 100
                         AND `pieceid` = 99
-                    ORDER BY `id` LIMIT 1
+                    ORDER BY `categoryid` LIMIT 1
                     ) AS `subq`
             ";
 

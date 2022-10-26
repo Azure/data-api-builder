@@ -7,8 +7,8 @@
  <!-- Dependency versions -->
  <PropertyGroup>
     <HotChocolateVersion>12.8.2</HotChocolateVersion>
-    <CosmosVersion>3.23.0</CosmosVersion>
-    <SqlVersion>4.0.0</SqlVersion>
+    <CosmosVersion>3.20.0</CosmosVersion>
+    <SqlVersion>3.0.0</SqlVersion>
     <ConfigVersion>6.0.0-preview.3.21201.4</ConfigVersion>
     <PostgresVersion>5.0.10</PostgresVersion>
     <ODataVersion>7.9.0</ODataVersion>

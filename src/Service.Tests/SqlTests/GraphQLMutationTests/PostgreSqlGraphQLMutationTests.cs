@@ -107,7 +107,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await InsertMutationForConstantdefaultValue(postgresQuery);
         }
 
-
         /// <summary>
         /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
         /// <code>Check: </code> If book with the given id is present in the database then

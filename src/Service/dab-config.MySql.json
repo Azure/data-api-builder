@@ -10,8 +10,6 @@
       "path": "/api"
     },
     "graphql": {
-      "enabled": true,
-      "path": "/graphql",
       "allow-introspection": true
     },
     "host": {

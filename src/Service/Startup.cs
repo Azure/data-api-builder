@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Services.MetadataProviders;
@@ -192,6 +193,14 @@ namespace Azure.DataApiBuilder.Service
             services.AddControllers();
         }
 
+        /// <summary>
+        /// Configure GraphQL services within the service collection of the
+        /// request pipeline.
+        /// - AllowIntrospection defaulted to false so HotChocolate configures a request validation rule
+        /// that checks for the presence of the GraphQL context key WellKnownContextData.IntrospectionAllowed
+        /// when determining whether to allow introspection requests to proceed.
+        /// </summary>
+        /// <param name="services">Service Collection</param>
         private void AddGraphQL(IServiceCollection services)
         {
             services.AddGraphQLServer()
@@ -201,7 +210,9 @@ namespace Azure.DataApiBuilder.Service
                         GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
                         graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
                     })
+                    .AddHttpRequestInterceptor<IntrospectionInterceptor>()
                     .AddAuthorization()
+                    .AllowIntrospection(false)
                     .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
                     .AddErrorFilter(error =>
                     {

@@ -117,7 +117,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                                    'instant', `subq`.`instant`) AS `data`
                 FROM (
                     SELECT `table0`.`categoryid` AS `categoryid`,
-                        `table0`.`pieceid` AS `pieceid`
+                        `table0`.`pieceid` AS `pieceid`,
                         `table0`.`instant` AS `instant`
                     FROM `stocks_price` AS `table0`
                     WHERE `categoryid` = 100

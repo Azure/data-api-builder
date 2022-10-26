@@ -53,8 +53,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public string? DbPolicyPredicates { get; set; }
 
-        public SourceDefinition? BaseTableForRequestDefinition { get; set; } = null!;
-
         public BaseSqlQueryStructure(
             ISqlMetadataProvider sqlMetadataProvider,
             string entityName,

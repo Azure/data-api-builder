@@ -59,8 +59,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
             bool incrementalUpdate)
-        : base(sqlMetadataProvider,
-              entityName: entityName)
+        : base(sqlMetadataProvider, entityName: entityName)
         {
             UpdateOperations = new();
             InsertColumns = new();

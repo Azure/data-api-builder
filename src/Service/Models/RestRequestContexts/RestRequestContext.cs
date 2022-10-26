@@ -109,12 +109,6 @@ namespace Azure.DataApiBuilder.Service.Models
         public ISet<string> CumulativeColumns { get; } = new HashSet<string>();
 
         /// <summary>
-        /// Holds the SourceDefinition for the base table which is targeted
-        /// by the mutation operation on the view.
-        /// </summary>
-        public SourceDefinition? BaseTableForRequestDefinition { get; set; }
-
-        /// <summary>
         /// Populates the CumulativeColumns property with a unique list
         /// of all columns present in a request. Primarily used
         /// for authorization purposes.

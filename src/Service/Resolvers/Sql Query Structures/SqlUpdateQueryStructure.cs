@@ -30,15 +30,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IDictionary<string, object?> mutationParams,
             bool isIncrementalUpdate)
-        : base(sqlMetadataProvider,
-              entityName)
+        : base(sqlMetadataProvider, entityName)
         {
             UpdateOperations = new();
             OutputColumns = GenerateOutputColumns();
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
+
             List<string> primaryKeys = sourceDefinition.PrimaryKey;
             List<string> columns = sourceDefinition.Columns.Keys.ToList();
-
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 Predicate predicate = CreatePredicateForParam(param);

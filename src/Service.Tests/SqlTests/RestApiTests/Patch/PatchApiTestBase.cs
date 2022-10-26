@@ -581,12 +581,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
             );
 
-            // PATCH update on composite view based on books,publishers table.
-            requestBody = @"
-            {
-                ""title"": ""New Book""
-            }";
-
             // Request missing primary key column for the stocks_price table
             // will fail.
             requestBody = @"

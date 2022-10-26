@@ -469,9 +469,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IncrementingInteger counter,
             string entityName = "")
-            : base(sqlMetadataProvider,
-                  entityName: entityName,
-                  counter: counter)
+            : base(sqlMetadataProvider, entityName: entityName, counter: counter)
         {
             JoinQueries = new();
             Joins = new();

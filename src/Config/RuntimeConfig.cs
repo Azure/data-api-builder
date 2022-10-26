@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
@@ -124,7 +125,10 @@ namespace Azure.DataApiBuilder.Config
         {
             foreach (Entity entity in Entities.Values)
             {
-                entity.ProcessGraphQLNamingConfig();
+                if (!entity.TryProcessGraphQLNamingConfig())
+                {
+                    throw new NotSupportedException("The runtime does not support this GraphQL settings type for an entity.");
+                }
             }
         }
 
@@ -165,28 +169,67 @@ namespace Azure.DataApiBuilder.Config
         /// Try to deserialize the given json string into its object form.
         /// </summary>
         /// <typeparam name="T">The object type.</typeparam>
-        /// <param name="configJson">Json string to be deserialized.</param>
+        /// <param name="jsonString">Json string to be deserialized.</param>
         /// <param name="deserializedConfig">Deserialized json object upon success.</param>
         /// <returns>True on success, false otherwise.</returns>
-        public static bool TryGetDeserializedConfig<T>(
-            string configJson,
-            out T? deserializedConfig,
+        public static bool TryGetDeserializedJsonString<T>(
+            string jsonString,
+            out T? deserializedJsonString,
             ILogger logger)
         {
             try
             {
-                deserializedConfig = JsonSerializer.Deserialize<T>(configJson, SerializerOptions);
+                deserializedJsonString = JsonSerializer.Deserialize<T>(jsonString, SerializerOptions);
                 return true;
             }
             catch (JsonException ex)
             {
                 // until this function is refactored to exist in RuntimeConfigProvider
                 // we must use Console for logging.
-                logger.LogError($"Deserialization of the configuration file failed.\n" +
+                logger.LogError($"Deserialization of the json string failed.\n" +
                     $"Message:\n {ex.Message}\n" +
                     $"Stack Trace:\n {ex.StackTrace}");
 
-                deserializedConfig = default(T);
+                deserializedJsonString = default(T);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Try to deserialize the given json string into its object form.
+        /// </summary>
+        /// <param name="configJson">Json string to be deserialized.</param>
+        /// <param name="deserializedRuntimeConfig">Deserialized json object upon success.</param>
+        /// <returns>True on success, false otherwise.</returns>
+        public static bool TryGetDeserializedRuntimeConfig(
+            string configJson,
+            [NotNullWhen(true)] out RuntimeConfig? deserializedRuntimeConfig,
+            ILogger? logger)
+        {
+            try
+            {
+                deserializedRuntimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(configJson, SerializerOptions);
+                deserializedRuntimeConfig!.DetermineGlobalSettings();
+                deserializedRuntimeConfig!.DetermineGraphQLEntityNames();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                string errorMessage = $"Deserialization of the configuration file failed.\n" +
+                        $"Message:\n {ex.Message}\n" +
+                        $"Stack Trace:\n {ex.StackTrace}";
+
+                if (logger is null)
+                {
+                    // logger can be null when called from CLI
+                    Console.Error.WriteLine(errorMessage);
+                }
+                else
+                {
+                    logger.LogError(errorMessage);
+                }
+
+                deserializedRuntimeConfig = null;
                 return false;
             }
         }

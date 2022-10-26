@@ -284,7 +284,7 @@ EXEC('CREATE VIEW stocks_view_selected AS SELECT
       categoryid,pieceid,categoryName,piecesAvailable
       FROM dbo.stocks');
 EXEC('CREATE VIEW books_publishers_view_composite as SELECT
-      publishers.name,books.id,books.publisher_id
+      publishers.name,books.id, publishers.id as publisher_id
       FROM dbo.books,dbo.publishers
       where publishers.id = books.publisher_id');
 EXEC('CREATE PROCEDURE get_book_by_id @id int AS

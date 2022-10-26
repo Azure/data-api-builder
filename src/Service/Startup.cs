@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Services.MetadataProviders;
@@ -192,6 +193,14 @@ namespace Azure.DataApiBuilder.Service
             services.AddControllers();
         }
 
+        /// <summary>
+        /// Configure GraphQL services within the service collection of the
+        /// request pipeline.
+        /// - AllowIntrospection defaulted to false so HotChocolate configures a request validation rule
+        /// that checks for the presence of the GraphQL context key WellKnownContextData.IntrospectionAllowed
+        /// when determining whether to allow introspection requests to proceed.
+        /// </summary>
+        /// <param name="services">Service Collection</param>
         private void AddGraphQL(IServiceCollection services)
         {
             services.AddGraphQLServer()
@@ -201,7 +210,9 @@ namespace Azure.DataApiBuilder.Service
                         GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
                         graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
                     })
+                    .AddHttpRequestInterceptor<IntrospectionInterceptor>()
                     .AddAuthorization()
+                    .AllowIntrospection(false)
                     .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
                     .AddErrorFilter(error =>
                     {
@@ -242,10 +253,20 @@ namespace Azure.DataApiBuilder.Service
             bool isRuntimeReady = false;
             if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
             {
+                // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
+                if (!isRuntimeReady)
+                {
+                    // Exiting if config provided is Invalid.
+                    _logger.LogError("Exiting the runtime engine...");
+                    throw new ApplicationException(
+                        "Could not initialize the engine with the runtime config file: " +
+                        $"{runtimeConfigProvider.RuntimeConfigPath!.ConfigFileName}");
+                }
             }
             else
             {
+                // Config provided during runtime.
                 runtimeConfigProvider.RuntimeConfigLoaded += (sender, newConfig) =>
                 {
                     isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
@@ -316,8 +337,24 @@ namespace Azure.DataApiBuilder.Service
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapGraphQL("/graphql");
-                endpoints.MapBananaCakePop();
+
+                endpoints.MapGraphQL("/graphql").WithOptions(new GraphQLServerOptions
+                {
+                    Tool = {
+                        // Determines if accessing the endpoint from a browser
+                        // will load the GraphQL Banana Cake Pop IDE.
+                        Enable = runtimeConfigProvider.IsDeveloperMode() || env.IsDevelopment()
+                    }
+                });
+
+                // In development mode, BCP is enabled at /graphql endpoint by default.
+                // Need to disable mapping BCP explicitly as well to avoid ability to query
+                // at an additional endpoint: /graphql/ui.
+                endpoints.MapBananaCakePop().WithOptions(new GraphQLToolOptions
+                {
+                    Enable = false
+                });
+
                 endpoints.MapHealthChecks("/");
             });
         }
@@ -393,7 +430,7 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
-                RuntimeConfigValidator._isDataSourceValidatedByCLI = false; // Config set  by the runtime needs to be validated again
+
                 runtimeConfigValidator.ValidateConfig();
 
                 if (runtimeConfigProvider.IsDeveloperMode())
@@ -402,7 +439,7 @@ namespace Azure.DataApiBuilder.Service
                     runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 }
 
-                // Pre-process the permissions section in the runtimeconfig.
+                // Pre-process the permissions section in the runtime config.
                 runtimeConfigValidator.ProcessPermissionsInConfig(runtimeConfig);
 
                 ISqlMetadataProvider sqlMetadataProvider =
@@ -442,7 +479,7 @@ namespace Azure.DataApiBuilder.Service
             catch (Exception ex)
             {
                 _logger.LogError($"Unable to complete runtime " +
-                    $"intialization operations due to: \n{ex}");
+                    $"initialization operations due to: \n{ex}");
                 return false;
             }
         }

@@ -644,6 +644,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// Tests that a cast failure of primary key value type results in HTTP 400 Bad Request.
+        /// e.g. Attempt to cast a string '{}' to the 'publisher_id' column type of int will fail.
+        /// </summary>
+        [TestMethod]
+        public async Task PutWithUncastablePKValue()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""BookTitle"",
+                ""publisher_id"": ""StringFailsToCastToInt""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: string.Empty,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: null,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: "Parameter \"StringFailsToCastToInt\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
         /// Tests the Put functionality with a REST PUT request
         /// with the request body having null value for non-nullable column
         /// We expect a failure and so no sql query is provided.

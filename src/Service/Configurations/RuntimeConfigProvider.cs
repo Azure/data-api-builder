@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using Azure.DataApiBuilder.Config;
@@ -25,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <summary>
         /// Represents the path to the runtime configuration file.
         /// </summary>
-        protected RuntimeConfigPath? RuntimeConfigPath { get; private set; }
+        public RuntimeConfigPath? RuntimeConfigPath { get; private set; }
 
         /// <summary>
         /// Represents the loaded and deserialized runtime configuration.
@@ -125,15 +126,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
             string? runtimeConfigJson = GetRuntimeConfigJsonString(configFileName);
 
             if (!string.IsNullOrEmpty(runtimeConfigJson) &&
-                RuntimeConfig.TryGetDeserializedConfig(
+                RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     runtimeConfigJson,
                     out runtimeConfig,
-                    ConfigProviderLogger!))
+                    ConfigProviderLogger))
             {
-                runtimeConfig!.DetermineGlobalSettings();
-                runtimeConfig!.DetermineGraphQLEntityNames();
                 runtimeConfig!.MapGraphQLSingularTypeToEntityName();
-
                 if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
                 {
                     runtimeConfig!.ConnectionString = configPath.CONNSTRING;
@@ -219,14 +217,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
             }
 
-            if (RuntimeConfig.TryGetDeserializedConfig(
+            if (RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     configuration,
                     out RuntimeConfig? runtimeConfig,
                     ConfigProviderLogger!))
             {
                 RuntimeConfiguration = runtimeConfig;
-                RuntimeConfiguration!.DetermineGlobalSettings();
-                RuntimeConfiguration!.DetermineGraphQLEntityNames();
                 RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName();
                 RuntimeConfiguration!.ConnectionString = connectionString;
 
@@ -264,7 +260,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
             return RuntimeConfiguration;
         }
 
-        public virtual bool TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig)
+        /// <summary>
+        /// Attempt to acquire runtime configuration metadata.
+        /// </summary>
+        /// <param name="runtimeConfig">Populated runtime configuartion, if present.</param>
+        /// <returns>True when runtime config is provided, otherwise false.</returns>
+        public virtual bool TryGetRuntimeConfiguration([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
         {
             runtimeConfig = RuntimeConfiguration;
             return RuntimeConfiguration is not null;
@@ -273,6 +274,15 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public virtual bool IsDeveloperMode()
         {
             return RuntimeConfiguration?.HostGlobalSettings.Mode is HostModeType.Development;
+        }
+
+        /// <summary>
+        /// Return whether to allow GraphQL introspection using runtime configuration metadata.
+        /// </summary>
+        /// <returns>True if introspection is allowed, otherwise false.</returns>
+        public virtual bool IsIntrospectionAllowed()
+        {
+            return RuntimeConfiguration is not null && RuntimeConfiguration.GraphQLGlobalSettings.AllowIntrospection;
         }
 
         /// <summary>

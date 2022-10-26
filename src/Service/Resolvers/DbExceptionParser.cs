@@ -40,7 +40,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return new DataApiBuilderException(
                 message: message,
                 statusCode: GetHttpStatusCodeForException(e),
-                subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed
+                subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed,
+                innerException: e
             );
         }
 

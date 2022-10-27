@@ -250,21 +250,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         [TestMethod]
         public virtual async Task DeleteOneInViewBadRequestTest()
         {
-            // Delete one from view based on stocks,stocks_price table.
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
-                    queryString: null,
-                    entityNameOrPath: _composite_subset_stocksPrice,
-                    sqlQuery: null,
-                    operationType: Operation.Delete,
-                    requestBody: null,
-                    exceptionExpected: true,
-                    expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_stocksPrice}' is not updatable " +
-                    "because the modification affects multiple base tables.",
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
-                );
-
             // Delete one from view based on books,publishers table.
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "id/1/pub_id/1234",

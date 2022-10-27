@@ -191,6 +191,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
+        /// Tests that a cast failure of primary key value type results in HTTP 400 Bad Request.
+        /// e.g. Attempt to cast a string '{}' to the 'id' column type of int will fail.
+        /// </summary>
+        [TestMethod]
+        public async Task DeleteWithUncastablePKValue()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/{}",
+                queryString: string.Empty,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: string.Empty,
+                operationType: Operation.Delete,
+                requestBody: string.Empty,
+                exceptionExpected: true,
+                expectedErrorMessage: "Parameter \"{}\" cannot be resolved as column \"id\" with type \"Int32\".",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
+        /// <summary>
         /// DeleteWithSqlInjectionTest attempts to inject a SQL statement
         /// through the primary key route of a delete operation.
         /// </summary>

@@ -409,6 +409,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
+        /// Tests that a cast failure of primary key value type results in HTTP 400 Bad Request.
+        /// e.g. Attempt to cast a string '{}' to the 'publisher_id' column type of int will fail.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertWithUncastablePKValue()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""BookTitle"",
+                ""publisher_id"": ""StringFailsToCastToInt""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: null,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: "Parameter \"StringFailsToCastToInt\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
         /// Tests the InsertOne functionality with a missing field in the request body:
         /// A non-nullable field in the Json Body is missing.
         /// </summary>

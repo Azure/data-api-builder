@@ -907,7 +907,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
-
         #endregion
 
         #region Negative Tests

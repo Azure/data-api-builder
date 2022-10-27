@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -29,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                       SELECT *
                       FROM " + _integrationTableName + @"
                       WHERE id = 1 and title = 'The Return of the King'
-                      ORDER BY id
+                      ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -244,6 +245,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 "
             }
         };
+
+        #region Overriden tests
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInsertInViewTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneUpdateViewTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInViewBadRequest()
+        {
+            throw new NotImplementedException();
+        }
+        #endregion
 
         #region Test Fixture Setup
 

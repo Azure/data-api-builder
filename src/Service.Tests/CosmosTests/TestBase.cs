@@ -41,7 +41,7 @@ type Planet @model(name:""Planet"") {
     stars: [Star]
 }
 
-type Star @model(name:""Star"") {
+type Star @model(name:""StarAlias"") {
     id : ID,
     name : String
 }";
@@ -61,7 +61,7 @@ type Star @model(name:""Star"") {
 
             //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.
             Mock<IAuthorizationResolver> authorizationResolverCosmos = new();
-            authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet", "Star" }));
+            authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet", "StarAlias" }));
 
             _application = new WebApplicationFactory<Startup>()
                 .WithWebHostBuilder(builder =>

@@ -256,10 +256,19 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
+                if (_logger is not null && runtimeConfigProvider.RuntimeConfigPath is not null)
+                {
+                    _logger.LogInformation($"Loading config file: {runtimeConfigProvider.RuntimeConfigPath!.ConfigFileName}");
+                }
+
                 if (!isRuntimeReady)
                 {
                     // Exiting if config provided is Invalid.
-                    _logger.LogError("Exiting the runtime engine...");
+                    if (_logger is not null)
+                    {
+                        _logger.LogError("Exiting the runtime engine...");
+                    }
+
                     throw new ApplicationException(
                         "Could not initialize the engine with the runtime config file: " +
                         $"{runtimeConfigProvider.RuntimeConfigPath!.ConfigFileName}");

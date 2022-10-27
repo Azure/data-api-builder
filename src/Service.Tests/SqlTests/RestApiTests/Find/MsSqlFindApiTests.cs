@@ -59,14 +59,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "FindStocksPriceViewComposite",
-                $"SELECT [categoryid], [pieceid], [instant] as phase, [price], [is_wholesale_price], " +
-                $"[categoryName], [piecesRequired] FROM { _composite_subset_stocksPrice } WHERE " +
-                $"[categoryid] = 1 AND [pieceid] = 1  AND [instant] = 'instant2' AND [is_wholesale_price] = 0 " +
-                $"AND [categoryName] = 'SciFi' AND [price] = 42.75 AND [piecesRequired] = 0 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
                 "FindTestWithFilterQueryOneGeFilterOnView",
                 $"SELECT * FROM { _simple_all_books } " +
                 $"WHERE id >= 4 " +
@@ -95,21 +87,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "FindTestWithFilterQueryOneLtFilterOnView",
                 $"SELECT [id], [title], [pub_id], [name] FROM { _composite_subset_bookPub } " +
                 $"WHERE id < 5 FOR JSON PATH, INCLUDE_NULL_VALUES"
-            },
-            {
-                "FindTestOnStocksPriceViewWithSelectQueryString",
-                $"SELECT [instant] as phase, [price], [categoryName] " +
-                $"FROM { _composite_subset_stocksPrice } WHERE " +
-                $"[categoryid] = 1 AND [pieceid] = 1  AND [instant] = 'instant2' AND [is_wholesale_price] = 0 " +
-                $"AND [categoryName] = 'SciFi' AND [price] = 42.75 AND [piecesRequired] = 0 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "FindTestOnStocksPriceViewWithOrderByQueryString",
-                $"SELECT [categoryid], [pieceid], [instant] as phase, [price], [is_wholesale_price], " +
-                $"[categoryName], [piecesRequired] FROM { _composite_subset_stocksPrice } " +
-                $"ORDER BY instant " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindByIdTestWithQueryStringFields",

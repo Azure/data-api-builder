@@ -588,42 +588,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             // will result in error.
             string requestBody = @"
             {
-                ""categoryName"": ""SciFi"",
-                ""is_wholesale_price"": false
+                ""name"": ""new publisher"",
+                ""title"": ""new Book""
             }";
 
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
+                primaryKeyRoute: "id/1/pub_id/1234",
                 queryString: string.Empty,
-                entityNameOrPath: _composite_subset_stocksPrice,
+                entityNameOrPath: _composite_subset_bookPub,
                 sqlQuery: string.Empty,
                 operationType: Operation.UpsertIncremental,
                 requestBody: requestBody,
                 exceptionExpected: true,
-                expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_stocksPrice}' is not updatable " +
+                expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
                 "because the modification affects multiple base tables.",
                 expectedStatusCode: HttpStatusCode.InternalServerError,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
-            );
-
-            // Request missing primary key column for the stocks_price table
-            // will fail.
-            requestBody = @"
-            {
-                ""is_wholesale_price"": false
-            }";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "categoryid/1/pieceid/1",
-                queryString: string.Empty,
-                entityNameOrPath: _composite_subset_stocksPrice,
-                sqlQuery: string.Empty,
-                operationType: Operation.UpsertIncremental,
-                requestBody: requestBody,
-                exceptionExpected: true,
-                expectedErrorMessage: "Primary key column(s) provided do not match DB schema.",
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
             );
         }
 

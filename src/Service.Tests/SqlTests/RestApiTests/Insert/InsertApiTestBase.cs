@@ -570,21 +570,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             // Request trying to modify fields from multiple base tables will fail .
             string requestBody = @"
             {
-                ""categoryid"": 0,
-                ""pieceid"": 1,
-                ""phase"": ""instant3"",
-                ""categoryName"": ""SciFi""
+                ""name"": ""new publisher"",
+                ""title"": ""New Book""
             }";
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
-                entityNameOrPath: _composite_subset_stocksPrice,
+                entityNameOrPath: _composite_subset_bookPub,
                 sqlQuery: string.Empty,
                 operationType: Operation.Insert,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_stocksPrice}' is not updatable " +
+                expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
                 $"because the modification affects multiple base tables.",
                 expectedStatusCode: HttpStatusCode.InternalServerError,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()

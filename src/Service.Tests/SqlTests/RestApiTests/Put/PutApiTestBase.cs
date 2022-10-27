@@ -777,61 +777,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             // will result in error.
             string requestBody = @"
             {
-                ""categoryName"": ""SciFi"",
-                ""is_wholesale_price"": false
+                ""name"": ""new publisher"",
+                ""title"": ""new Book""
             }";
 
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
+                primaryKeyRoute: "id/1/pub_id/1234",
                 queryString: string.Empty,
-                entityNameOrPath: _composite_subset_stocksPrice,
+                entityNameOrPath: _composite_subset_bookPub,
                 sqlQuery: string.Empty,
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
                 exceptionExpected: true,
-                expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_stocksPrice}' is not updatable " +
+                expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
                 "because the modification affects multiple base tables.",
                 expectedStatusCode: HttpStatusCode.InternalServerError,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
             );
-
-            requestBody = @"
-            {
-               ""is_wholesale_price"": true
-            }";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "categoryid/0/pieceid/1/instance/instant3",
-                queryString: null,
-                entityNameOrPath: _composite_subset_stocksPrice,
-                sqlQuery: string.Empty,
-                operationType: Operation.Upsert,
-                requestBody: requestBody,
-                exceptionExpected: true,
-                expectedErrorMessage: "Primary key column: instance not found in the entity definition.",
-                expectedStatusCode: HttpStatusCode.NotFound,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
-                );
-
-            // Put update on composite view resolving to stocks_price table.
-            requestBody = @"
-            {
-                ""is_wholesale_price"": true
-            }";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "categoryid/1/pieceid/1/phase/instant2",
-                    queryString: null,
-                    entityNameOrPath: _composite_subset_stocksPrice,
-                    sqlQuery: string.Empty,
-                    operationType: Operation.Upsert,
-                    requestBody: requestBody,
-                    exceptionExpected: true,
-                    expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_stocksPrice}' is not updatable " +
-                    "because the modification affects multiple base tables.",
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
-                );
         }
         #endregion
     }

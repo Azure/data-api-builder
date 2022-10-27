@@ -91,21 +91,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
-                "FindStocksPriceViewComposite",
-                @"
-                  SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'phase', phase, 'price', price,
-                  'is_wholesale_price', if(is_wholesale_price mod 2 = 0, false, true) is true,
-                  'categoryName', categoryName, 'piecesRequired', piecesRequired) AS data
-                  FROM (
-                      SELECT categoryid, pieceid, instant as phase, price, is_wholesale_price,
-                      categoryName, piecesRequired
-                      FROM " + _composite_subset_stocksPrice + @"
-                      WHERE categoryid = 1 AND pieceid = 1 AND instant = 'instant2'
-                      AND price = 42.75 AND is_wholesale_price = false AND categoryName = 'SciFi'
-                      AND piecesRequired = 0
-                  ) AS subq"
-            },
-            {
                 "FindTestWithFilterQueryOneGeFilterOnView",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
@@ -159,32 +144,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       FROM " + _composite_subset_bookPub + @"
                       WHERE id < 5
                       ORDER BY id
-                  ) AS subq"
-            },
-            {
-                "FindTestOnStocksPriceViewWithSelectQueryString",
-                @"
-                  SELECT JSON_OBJECT('phase', phase, 'price', price, 'categoryName', categoryName) AS data
-                  FROM (
-                      SELECT instant as phase, price, categoryName
-                      FROM " + _composite_subset_stocksPrice + @"
-                      WHERE categoryid = 1 AND pieceid = 1 AND instant = 'instant2'
-                      AND price = 42.75 AND is_wholesale_price = false AND categoryName = 'SciFi'
-                      AND piecesRequired = 0
-                      LIMIT 1
-                  ) AS subq"
-            },
-            {
-                "FindTestOnStocksPriceViewWithOrderByQueryString",
-                @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'phase', phase, 'price', price,
-                  'is_wholesale_price', if(is_wholesale_price mod 2 = 0, false, true) is true,
-                  'categoryName', categoryName, 'piecesRequired', piecesRequired)) AS data
-                  FROM (
-                      SELECT categoryid, pieceid, instant as phase, price, is_wholesale_price,
-                      categoryName, piecesRequired
-                      FROM " + _composite_subset_stocksPrice + @"
-                      ORDER BY instant ASC LIMIT 2
                   ) AS subq"
             },
             {

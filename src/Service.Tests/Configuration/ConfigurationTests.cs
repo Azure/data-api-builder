@@ -706,20 +706,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// Tests that the custom path rewriting middleware properly rewrites the
-        /// first segment of a path (/segment1/.../segmentN) to match the custom
-        /// configured GraphQLEndpoint.
+        /// first segment of a path (/segment1/.../segmentN) when the segment matches
+        /// the custom configured GraphQLEndpoint.
+        /// Note: The GraphQL service is always internally mapped to /graphql
         /// </summary>
-        /// <param name="graphQLConfiguredPath"></param>
-        /// <param name="requestPath"></param>
-        /// <param name="expectedStatusCode"></param>
-        /// <returns></returns>
+        /// <param name="graphQLConfiguredPath">The custom configured GraphQL path in configuration</param>
+        /// <param name="requestPath">The path used in the web request executed in the test.</param>
+        /// <param name="expectedStatusCode">Expected Http success/error code</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow("/graphql", "/gql", HttpStatusCode.BadRequest, DisplayName = "Request to non-configured graphQL endpoint is handled by REST controller.")]
         [DataRow("/graphql", "/graphql", HttpStatusCode.OK, DisplayName = "Request to configured default GraphQL endpoint succeeds, path not rewritten.")]
-        [DataRow("/gql", "/gql", HttpStatusCode.OK, DisplayName = "GraphQL request path rewritten to match default configured GraphQL endpoint.")]
+        [DataRow("/gql", "/gql/additionalURLsegment", HttpStatusCode.OK, DisplayName = "GraphQL request path (with extra segments) rewritten to match internally set GraphQL endpoint /graphql.")]
+        [DataRow("/gql", "/gql", HttpStatusCode.OK, DisplayName = "GraphQL request path rewritten to match internally set GraphQL endpoint /graphql.")]
         [DataRow("/gql", "/api/book", HttpStatusCode.NotFound, DisplayName = "Non-GraphQL request's path is not rewritten and is handled by REST controller.")]
-        [DataRow("/gql", "/graphql", HttpStatusCode.NotFound, DisplayName = "Requests to default graphQL endpoint fail when configured endpoint differs.")]
+        [DataRow("/gql", "/graphql", HttpStatusCode.NotFound, DisplayName = "Requests to default/internally set graphQL endpoint fail when configured endpoint differs.")]
         public async Task TestPathRewriteMiddlewareForGraphQL(
             string graphQLConfiguredPath,
             string requestPath,

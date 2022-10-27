@@ -14,8 +14,8 @@ namespace Azure.DataApiBuilder.Service.Services
     /// to the default GraphQL endpoint value when the first segment
     /// matches the value of the GraphQL endpoint defined in runtime config.
     /// A URL rewrite occurs server-side and is not visible to the client.
-    /// Because the default mapped GraphQL endpoint path cannot be changed after startup,
-    /// the path rewrite middleware is requiredPath rewrites 
+    /// The path rewrite middleware allows the engine to honor a custom GraphQL endpoint
+    /// because the default mapped GraphQL endpoint cannot be changed after startup.
     /// </summary>
     /// <seealso cref="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/middleware/write?view=aspnetcore-6.0"/>
     /// <seealso cref="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/url-rewriting?view=aspnetcore-6.0#url-redirect-and-url-rewrite"/>
@@ -46,10 +46,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Terminates a request with HTTP 404 Not Found when the URL's first segment matches:
         /// the default graphQL path, but the default path is not used (customized).
         /// GraphQL Configured Endpoint: /gql
-        /// Request: /gql/.../segmentN
-        /// Rewritten Path: /graphql/.../segmentN
-        /// GraphQL Configured Endpoint: /gql
-        /// Request: /graphql/.../segmentN
+        /// Request: /gql/.../segmentN | /graphql/.../segmentN
         /// Rewritten Path: /graphql/.../segmentN
         /// GraphQL Configured Endpoint: /graphql
         /// Request: /graphql/.../segmentN | /apiEndpoint/.../segmentN
@@ -62,9 +59,9 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 if (TryGetGraphQLRouteFromConfig(out string? graphQLRoute) && graphQLRoute != DEFAULT_GRAPHQL_PATH)
                 {
-                    if (httpContext.Request.Path.StartsWithSegments(graphQLRoute, comparisonType: StringComparison.OrdinalIgnoreCase))
+                    if (httpContext.Request.Path.StartsWithSegments(graphQLRoute, comparisonType: StringComparison.OrdinalIgnoreCase, out PathString remaining))
                     {
-                        httpContext.Request.Path = new PathString(value: DEFAULT_GRAPHQL_PATH);
+                        httpContext.Request.Path = new PathString(value: DEFAULT_GRAPHQL_PATH + remaining);
                     }
                     else if (httpContext.Request.Path.StartsWithSegments(DEFAULT_GRAPHQL_PATH, comparisonType: StringComparison.OrdinalIgnoreCase))
                     {

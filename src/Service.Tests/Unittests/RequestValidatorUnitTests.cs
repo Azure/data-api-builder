@@ -63,8 +63,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                               => _ = _defaultMapping[entity].TryGetValue(exposedField, out backingColumn)))
                               .Returns((string entity, string exposedField, string backingColumn)
                               => _defaultMapping[entity].TryGetValue(exposedField, out backingColumn));
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "id/1";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -92,8 +94,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                               => _ = _defaultMapping[entity].TryGetValue(exposedField, out backingColumn)))
                               .Returns((string entity, string exposedField, string backingColumn)
                               => _defaultMapping[entity].TryGetValue(exposedField, out backingColumn));
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "id/2/isbn/12345";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -122,8 +126,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                               => _ = _defaultMapping[entity].TryGetValue(exposedField, out backingColumn)))
                               .Returns((string entity, string exposedField, string backingColumn)
                               => _defaultMapping[entity].TryGetValue(exposedField, out backingColumn));
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             ;
             string primaryKeyRoute = "isbn/12345/id/2";
@@ -179,8 +185,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             };
 
             _mockMetadataStore.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(tableDef);
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "name/Catch22";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -229,8 +237,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             };
 
             _mockMetadataStore.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(tableDef);
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "name/1";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -250,10 +260,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 PrimaryKey = new(primaryKeys)
             };
-
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             _mockMetadataStore.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "id/12345/name/2";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -276,10 +287,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 PrimaryKey = new(primaryKeys)
             };
-
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             _mockMetadataStore.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "id/12345/isbn/2/name/TwoTowers";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);

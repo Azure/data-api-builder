@@ -47,7 +47,7 @@ type Foo @model(name: ""Foo""){
                     roles: rolesDefinedInPermissions)
                 );
 
-            if (mutationRoot.Definitions.Count() > 0)
+            if (rolesDefinedInPermissions.Length > 0)
             {
                 ObjectTypeDefinitionNode mutation = MutationBuilderTests.GetMutationNode(mutationRoot);
                 // Iterate over the mutations created by MutationBuilder.Build()

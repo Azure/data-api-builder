@@ -311,16 +311,7 @@ namespace Cli
         {
             string[]? corsOriginArray = corsOrigin is null ? new string[] { } : corsOrigin.ToArray();
             Cors cors = new(Origins: corsOriginArray);
-
-            AuthenticationConfig authenticationConfig;
-            if (devModeDefaultAuth.GetValueOrDefault())
-            {
-                authenticationConfig = new(Provider: SimulatorType.Simulator.ToString());
-            }
-            else
-            {
-                authenticationConfig = new(Provider: EasyAuthType.StaticWebApps.ToString());
-            }
+            AuthenticationConfig authenticationConfig = new(Provider: EasyAuthType.StaticWebApps.ToString();
 
             return new HostGlobalSettings(
                 Mode: hostMode,

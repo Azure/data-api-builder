@@ -289,7 +289,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// simulate a request's authenticated/anonymous authentication state in development mode.
         /// Requires:
         /// - HostGlobalSettings.Mode is Development
-        /// 
         /// </summary>
         /// <returns>True when authenticate-devmode-requests is enabled</returns>
         public virtual bool IsAuthenticatedDevModeRequest()
@@ -305,7 +304,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
 
             return IsDeveloperMode() &&
-                RuntimeConfiguration.AuthNConfig.IsAuthenticationSimulatorEnabled();
+                RuntimeConfiguration.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is true;
         }
     }
 }

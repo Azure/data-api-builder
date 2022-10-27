@@ -267,6 +267,63 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             StringValues headerValue = GetChallengeHeader(postMiddlewareContext);
             Assert.IsTrue(headerValue[0].Contains("invalid_token"));
         }
+
+        /// <summary>
+        /// Validates that a request is appropriately treated as anonymous/authenticated
+        /// in development mode depending on the runtime config flag: authenticate-devmode-requests,
+        /// referred to test display names as DevModeAuthNFlag
+        /// </summary>
+        /// <param name="treatDevModeRequestAsAuthenticated">Boolean value indicating whether to treat the
+        /// request as authenticated by default.
+        /// Equivalent to setting the runtime config flag "authenticate-devmode-requests"</param>
+        /// <param name="expectedClientRoleHeader">Expected value of X-MS-API-ROLE header.</param>
+        /// <param name="clientRoleHeader">Value of X-MS-API-ROLE header specified in request.</param>
+        /// <returns></returns>
+        [DataTestMethod]
+        [DataRow(true, "Authenticated", null,
+            DisplayName = "Jwt- Authenticated Request when DevModeAuthNFlag set and null client role header")]
+        [DataRow(true, "Authenticated", "Authenticated",
+            DisplayName = "Jwt- Authenticated Request when DevModeAuthNFlag set and sys role in client role header")]
+        [DataRow(true, "author", "author",
+            DisplayName = "Jwt- Authenticated Request when DevModeAuthNFlag set " +
+            "and honor the clientRoleHeader")]
+        [DataRow(true, "Anonymous", "Anonymous",
+            DisplayName = "Jwt- Authenticated Request when DevModeAuthNFlag set " +
+            "and honor the clientRoleHeader even when specified as sys role anonymous")]
+        [DataRow(false, "Anonymous", null,
+            DisplayName = "Jwt- Anonymous Request when DevModeAuthNFlag not set and no client role header")]
+        [DataRow(false, "Anonymous", "author",
+            DisplayName = "Jwt- Anonymous Request when DevModeAuthNFlag not set and ignore client role header")]
+        [DataRow(false, "Anonymous", "Authenticated",
+            DisplayName = "Jwt- Anonymous Request when DevModeAuthNFlag not set and ignore system role in client role header")]
+        public async Task TestAuthenticatedRequestInDevelopmentModeJwt(
+            bool treatDevModeRequestAsAuthenticated,
+            string expectedClientRoleHeader,
+            string clientRoleHeader)
+        {
+            RsaSecurityKey key = new(RSA.Create(2048));
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(key: key,
+                    token: null,
+                    clientRoleHeader: clientRoleHeader,
+                    treatDevModeRequestAsAuthenticated: treatDevModeRequestAsAuthenticated);
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.AreEqual(
+                expected: (int)HttpStatusCode.OK,
+                actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(
+                expected: expectedClientRoleHeader,
+                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString());
+
+            // Validates that AuthenticationMiddleware adds the clientRoleHeader as a role claim
+            // ONLY when the DevModeAuthNFlag is set.
+            if (clientRoleHeader is not null)
+            {
+                Assert.AreEqual(
+                    expected: treatDevModeRequestAsAuthenticated,
+                    actual: postMiddlewareContext.User.IsInRole(clientRoleHeader));
+            }
+        }
         #endregion
 
         #region Helper Methods
@@ -276,13 +333,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// </summary>
         /// <param name="key"></param>
         /// <returns>IHost</returns>
-        private static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key)
+        private static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key,
+            bool treatDevModeRequestAsAuthenticated)
         {
             // Setup RuntimeConfigProvider object for the pipeline.
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             Mock<RuntimeConfigPath> runtimeConfigPath = new();
             Mock<RuntimeConfigProvider> runtimeConfigProvider = new(runtimeConfigPath.Object,
                 configProviderLogger.Object);
+            runtimeConfigProvider.Setup(x => x.IsAuthenticatedDevModeRequest()).
+               Returns(treatDevModeRequestAsAuthenticated);
 
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>
@@ -351,9 +411,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         private static async Task<HttpContext> SendRequestAndGetHttpContextState(
             SecurityKey key,
             string token,
-            string? clientRoleHeader = null)
+            string? clientRoleHeader = null,
+            bool treatDevModeRequestAsAuthenticated = false)
         {
-            using IHost host = await CreateWebHostCustomIssuer(key);
+            using IHost host = await CreateWebHostCustomIssuer(key,
+                treatDevModeRequestAsAuthenticated);
             TestServer server = host.GetTestServer();
 
             return await server.SendAsync(context =>

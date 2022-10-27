@@ -244,6 +244,53 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
         }
+
+        /// <summary>
+        /// Test to validate that the request is appropriately treated as anonymous/authenticated
+        /// in development mode depending on the value feature switch we have in the config file.
+        /// </summary>
+        /// <param name="treatRequestAsAuthenticated">Boolean value indicating whether to treat the
+        /// request as authenticated by default.</param>
+        /// <param name="expectedClientRoleHeader">Expected value of X-MS-API-ROLE header.</param>
+        /// <param name="clientRoleHeader">Value of X-MS-API-ROLE header specified in request.</param>
+        /// <returns></returns>
+        [DataTestMethod]
+        [DataRow(true, "Authenticated", null,
+            DisplayName = "EasyAuth- Treat request as authenticated in development mode")]
+        [DataRow(false, "Anonymous", null,
+            DisplayName = "EasyAuth- Treat request as anonymous in development mode")]
+        [DataRow(true, "author", "author",
+            DisplayName = "EasyAuth- Treat request as authenticated in development mode " +
+            "and honor the clientRoleHeader")]
+        [DataRow(true, "Anonymous", "Anonymous",
+            DisplayName = "EasyAuth- Treat request as authenticated in development mode " +
+            "and honor the clientRoleHeader even when specified as anonymous")]
+        public async Task TestAuthenticatedRequestInDevelopmentMode(
+            bool treatDevModeRequestAsAuthenticated,
+            string expectedClientRoleHeader,
+            string clientRoleHeader)
+        {
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(
+                    token: null,
+                    easyAuthType: EasyAuthType.StaticWebApps,
+                    clientRoleHeader: clientRoleHeader,
+                    treatRequestAsAuthenticated: treatDevModeRequestAsAuthenticated);
+
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: expectedClientRoleHeader,
+                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString());
+
+            // Validates that AuthenticationMiddleware adds the clientRoleHeader as a role claim
+            // ONLY when the DevModeAuthNFlag is set.
+            if (clientRoleHeader is not null)
+            {
+                Assert.AreEqual(
+                    expected: treatDevModeRequestAsAuthenticated,
+                    actual: postMiddlewareContext.User.IsInRole(clientRoleHeader));
+            }
+        }
         #endregion
 
         #region Helper Methods
@@ -261,6 +308,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Mock<RuntimeConfigPath> runtimeConfigPath = new();
             Mock<RuntimeConfigProvider> runtimeConfigProvider = new(runtimeConfigPath.Object,
                 configProviderLogger.Object);
+            runtimeConfigProvider.Setup(x => x.IsAuthenticatedDevModeRequest()).
+                Returns(treatAsAuthenticatedRequest);
 
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>

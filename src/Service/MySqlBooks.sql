@@ -91,7 +91,7 @@ CREATE TABLE stocks(
 CREATE TABLE stocks_price(
     categoryid int NOT NULL,
     pieceid int NOT NULL,
-    instant varchar(10) NOT NULL,
+    instant datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     price double,
     is_wholesale_price boolean,
     PRIMARY KEY(categoryid, pieceid, instant)
@@ -221,7 +221,7 @@ INSERT INTO comics(id, title, categoryName, series_id)
 VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'FairyTales', 3001), (3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');
 INSERT INTO brokers(`ID Number`, `First Name`, `Last Name`) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
-INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, 'instant1', 100.57, true), (1, 1, 'instant2', 42.75, false);
+INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES (2, 1, 100.57, true), (1, 1, 42.75, false);
 INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types, datetime_types, bytearray_types) VALUES
     (1, 1, 1, 1, 1, '', 0.33, 0.33, 0.333333, true, '1999-01-08 10:23:54', 0xABCDEF0123),
     (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, false, '1999-01-08 10:23:00', 0x98AB7511AABB1234),
@@ -252,10 +252,9 @@ prepare stmt2 from 'CREATE VIEW stocks_view_selected AS SELECT
                     FROM stocks';
 
 prepare stmt3 from 'CREATE VIEW books_publishers_view_composite as SELECT
-                    publishers.name,books.id,publishers.id as publisher_id
+                    books.id,books.title,publishers.name,publishers.id as pub_id
                     FROM books,publishers
                     where publishers.id = books.publisher_id';
-
 execute stmt1;
 execute stmt2;
 execute stmt3;

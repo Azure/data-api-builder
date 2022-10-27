@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -244,6 +245,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 "
             }
         };
+
+        #region Overriden tests
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInsertInViewTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneUpdateViewTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInViewBadRequest()
+        {
+            throw new NotImplementedException();
+        }
+        #endregion
 
         #region Test Fixture Setup
 

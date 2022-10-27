@@ -390,7 +390,7 @@ namespace Azure.DataApiBuilder.Service
                                 runtimeConfig.AuthNConfig.Provider,
                                 ignoreCase: true));
                 }
-                else if (runtimeConfig.IsAuthenticationSimulatorEnabled())
+                else if (runtimeConfigurationProvider.IsDeveloperMode() && runtimeConfig.IsAuthenticationSimulatorEnabled())
                 {
                     services.AddAuthentication(SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddSimulatorAuthentication();

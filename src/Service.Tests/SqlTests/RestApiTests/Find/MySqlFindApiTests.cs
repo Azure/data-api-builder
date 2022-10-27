@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       SELECT *
                       FROM " + _integrationTableName + @"
                       WHERE id = 2
-                      ORDER BY id
+                      ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       SELECT *
                       FROM " + _simple_all_books + @"
                       WHERE id = 2
-                      ORDER BY id
+                      ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       FROM " + _composite_subset_bookPub + @"
                       WHERE id = 2 AND title = 'Also Awesome book' AND 
                       pub_id = 1234 AND name = 'Big Company' 
-                      ORDER BY id
+                      ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -98,7 +98,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       SELECT *
                       FROM " + _simple_all_books + @"
                       WHERE id >= 4
-                      ORDER BY id
+                      ORDER BY id asc
                   ) AS subq"
             },
             {
@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       SELECT *
                       FROM " + _simple_all_books + @"
                       WHERE id = 1
-                      ORDER BY id
+                      ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       SELECT *
                       FROM " + _composite_subset_bookPub + @"
                       WHERE id < 5
-                      ORDER BY id
+                      ORDER BY id asc
                   ) AS subq"
             },
             {
@@ -153,7 +153,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     FROM (
                         SELECT `table0`.`id` AS `id`
                         FROM `" + _integrationTableName + @"` AS `table0`
-                        ORDER BY `table0`.`id`
+                        ORDER BY `table0`.`id` asc
                         LIMIT 100
                         ) AS `subq1`"
             },
@@ -164,7 +164,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      ORDER BY id
+                      ORDER BY id asc
                       LIMIT 100
                   ) AS subq"
             },
@@ -176,7 +176,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT id, title
                         FROM " + _integrationTableName + @"
                         WHERE id = 1
-                        ORDER BY id
+                        ORDER BY id asc
                         LIMIT 1
                     ) AS subq
                 "
@@ -189,7 +189,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE id = 1
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -201,7 +201,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE id = 2
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -213,7 +213,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE id > 3
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -225,7 +225,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE id >= 4
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -237,7 +237,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE id < 5
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -249,7 +249,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE id <= 4
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -261,7 +261,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE id != 3
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -273,7 +273,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE not (id < 2)
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -285,7 +285,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE NOT (title IS NULL)
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -297,7 +297,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE title IS NOT NULL
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -309,7 +309,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE id < 3 AND id > 1
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -321,7 +321,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE id < 3 OR id > 4
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -333,7 +333,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE id < 4 AND id > 1 AND title != 'Awesome book'
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -345,7 +345,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE id = 1 OR id = 2 OR id = 3
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -357,7 +357,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE (id > 2 AND id < 4) OR (title = 'Awesome book')
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -369,7 +369,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE (NOT (id < 3) OR (id < 4) or NOT (title = 'Awesome book'))
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -381,7 +381,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE id = (publisher_id > 1)
-                        ORDER BY id
+                        ORDER BY id asc
                     ) AS subq
                 "
             },
@@ -392,7 +392,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     FROM (
                         SELECT id, title
                         FROM " + _integrationTableName + @"
-                        ORDER BY id
+                        ORDER BY id asc
                         LIMIT 100
                     ) AS subq
                 "
@@ -405,7 +405,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         SELECT id, content
                         FROM reviews" + @"
                         WHERE id = 567 AND book_id = 1
-                        ORDER BY id
+                        ORDER BY id asc
                         LIMIT 1
                     ) AS subq
                 "
@@ -417,7 +417,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      ORDER BY id
+                      ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -428,7 +428,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _tableWithCompositePrimaryKey + @"
-                      ORDER BY book_id, id
+                      ORDER BY book_id asc, id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -440,7 +440,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       SELECT *
                       FROM " + _integrationTableName + @"
                       WHERE id > 7
-                      ORDER BY id
+                      ORDER BY id asc
                       LIMIT 100
                   ) AS subq"
             },
@@ -452,7 +452,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       SELECT *
                       FROM " + _tableWithCompositePrimaryKey + @"
                       WHERE book_id > 1 OR (book_id = 1 AND id > 567)
-                      ORDER BY book_id, id
+                      ORDER BY book_id asc, id asc
                       LIMIT 100
                   ) AS subq"
             },
@@ -463,7 +463,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      ORDER BY id
+                      ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -474,7 +474,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _tableWithCompositePrimaryKey + @"
-                      ORDER BY book_id, id
+                      ORDER BY book_id asc, id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -485,7 +485,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      ORDER BY title, id
+                      ORDER BY title asc, id asc
                       LIMIT 100
                   ) AS subq"
             },
@@ -496,7 +496,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationMappingTable + @"
-                      ORDER BY species
+                      ORDER BY species asc
                       LIMIT 100
                   ) AS subq"
             },
@@ -507,7 +507,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationTableHasColumnWithSpace + @"
-                      ORDER BY `ID Number`
+                      ORDER BY `ID Number` asc
                       LIMIT 100
                   ) AS subq"
             },
@@ -518,7 +518,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationTableHasColumnWithSpace + @"
-                      ORDER BY `Last Name`
+                      ORDER BY `Last Name` asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -529,7 +529,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      ORDER BY publisher_id desc, id
+                      ORDER BY publisher_id desc, id asc
                       LIMIT 100
                   ) AS subq"
             },
@@ -540,7 +540,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      ORDER BY title, id
+                      ORDER BY title asc, id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -551,7 +551,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT id, title, publisher_id
                       FROM " + _integrationTableName + @"
-                      ORDER BY id desc, publisher_id
+                      ORDER BY id desc, publisher_id asc
                       LIMIT 100
                   ) AS subq"
             },
@@ -562,7 +562,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT id, title, publisher_id
                       FROM " + _integrationTableName + @"
-                      ORDER BY publisher_id, id desc
+                      ORDER BY publisher_id asc, id desc
                       LIMIT 100
                   ) AS subq"
             },
@@ -573,7 +573,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      ORDER BY id
+                      ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -584,7 +584,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      ORDER BY id
+                      ORDER BY id asc
                       LIMIT 2
                   ) AS subq"
             },
@@ -595,7 +595,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationTieBreakTable + @"
-                      ORDER BY birthdate, name, id desc
+                      ORDER BY birthdate asc, name asc, id desc
                       LIMIT 2
                   ) AS subq"
             },
@@ -608,7 +608,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       FROM " + _integrationTieBreakTable + @"
                       WHERE ((birthdate > '2001-01-01') OR(birthdate = '2001-01-01' AND name > 'Aniruddh') OR
                       (birthdate = '2001-01-01' AND name = 'Aniruddh' AND id > 125))
-                      ORDER BY birthdate, name, id
+                      ORDER BY birthdate asc, name asc, id asc
                       LIMIT 2
                   ) AS subq"
             },
@@ -619,7 +619,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _tableWithCompositePrimaryKey + @"
-                      ORDER BY id desc, book_id
+                      ORDER BY id desc, book_id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -630,7 +630,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _tableWithCompositePrimaryKey + @"
-                      ORDER BY book_id, id
+                      ORDER BY book_id asc, id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -663,7 +663,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _tableWithCompositePrimaryKey + @"
-                      ORDER BY content desc, book_id, id
+                      ORDER BY content desc, book_id asc, id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -711,7 +711,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationMappingTable + @"
-                      ORDER BY species ASC
+                      ORDER BY species asc
                       LIMIT 100
                   ) AS subq"
             },
@@ -722,7 +722,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationMappingTable + @"
-                      ORDER BY species
+                      ORDER BY species asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -734,7 +734,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       SELECT *
                       FROM " + _integrationMappingTable + @"
                       WHERE treeId < 2
-                      ORDER BY species, treeId
+                      ORDER BY species asc, treeId asc
                       LIMIT 101
                   ) AS subq"
             }

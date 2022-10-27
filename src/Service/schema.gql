@@ -15,7 +15,7 @@ type Planet @model(name:"Planet"){
     stars: [Star]
 }
 
-type Star @model(name:"Star"){
+type Star @model(name:"StarAlias"){
     id : ID,
     name : String
 }

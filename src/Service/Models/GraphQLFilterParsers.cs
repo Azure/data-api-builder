@@ -83,7 +83,7 @@ namespace Azure.DataApiBuilder.Service.Models
                         return Parse(ctx,
                             filterArgumentObject.Fields[name],
                             subfields,
-                            schemaName, sourceName + "." + name, sourceAlias + "." + name, table, processLiterals);
+                            schemaName, sourceName + "." + name, sourceAlias + "." + name, sourceDefinition, processLiterals);
                     }
                     else
                     {

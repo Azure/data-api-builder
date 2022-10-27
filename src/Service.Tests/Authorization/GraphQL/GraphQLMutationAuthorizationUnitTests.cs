@@ -17,7 +17,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// Ensures the authorize directive is present on the ObjectTypeDefinition
         /// with the expected collection of roles resolved from the EntityPermissionsMap.
         /// </summary>
-        /// <param name="roles"></param>
+        /// <param name="operationType"></param>
+        /// <param name="rolesDefinedInPermissions"></param>
         /// <param name="expectedAuthorizeDirective"></param>
         [DataRow(Operation.Create, new string[] { }, "",
             DisplayName = "No Roles -> Expects no objectTypeDefinition created")]
@@ -46,24 +47,19 @@ type Foo @model(name: ""Foo""){
                     roles: rolesDefinedInPermissions)
                 );
 
-            ObjectTypeDefinitionNode mutation = MutationBuilderTests.GetMutationNode(mutationRoot);
-
-            // No roles defined for entity means that create mutation
-            // will NOT be generated, since it's inaccessible.
-            // Consequently, no @authorize directive will be present.
-            //
-            if (rolesDefinedInPermissions.Length == 0)
+            if (mutationRoot.Definitions.Count() > 0)
             {
-                Assert.IsTrue(mutation.Fields.Select(f => f.Name.Value == "createFoo").Count() == 0, message: $"{operationType} FieldDefinition Generated Unexpectedly.");
-            }
-            else
-            {
+                ObjectTypeDefinitionNode mutation = MutationBuilderTests.GetMutationNode(mutationRoot);
                 // Iterate over the mutations created by MutationBuilder.Build()
                 //
                 foreach (FieldDefinitionNode mutationField in mutation.Fields)
                 {
                     GraphQLTestHelpers.ValidateAuthorizeDirectivePresence(GraphQLUtils.OBJECT_TYPE_MUTATION, rolesDefinedInPermissions, mutationField);
                 }
+            }
+            else
+            {
+                Assert.AreEqual(rolesDefinedInPermissions.Length, mutationRoot.Definitions.Count());
             }
         }
     }

@@ -406,7 +406,7 @@ namespace Azure.DataApiBuilder.Service
                 }
                 else
                 {
-                    // Condition met when Jwt section (audience/authority), EasyAuth types, or Simulator
+                    // Condition met when Jwt section (audience/authority), EasyAuth types, or Simulator (in development mode)
                     // values are not used in the authentication section.
                     throw new DataApiBuilderException(
                         message: "Authentication configuration not supported.",

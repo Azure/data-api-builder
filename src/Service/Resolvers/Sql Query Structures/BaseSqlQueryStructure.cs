@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="leftoverSchemaColumns"></param>
         /// <param name="updateOperations">List of Predicates representing UpdateOperations.</param>
-        /// <param name="sourceDefinition">The definition for the table.</param>
+        /// <param name="sourceDefinition">The definition for the entity (table/view).</param>
         public void AddNullifiedUnspecifiedFields(
             List<string> leftoverSchemaColumns,
             List<Predicate> updateOperations,
@@ -176,7 +176,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             List<LabelledColumn> outputColumns = new();
             foreach (string columnName in GetUnderlyingSourceDefinition().Columns.Keys)
             {
-                // if column is not exposed we skip
                 if (!SqlMetadataProvider.TryGetExposedColumnName(
                     entityName: EntityName,
                     backingFieldName: columnName,

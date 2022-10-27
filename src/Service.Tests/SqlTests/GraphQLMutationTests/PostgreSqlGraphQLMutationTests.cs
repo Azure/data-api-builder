@@ -108,6 +108,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
+        /// <code>Check: </code> If book with the given id is present in the database then
+        /// the mutation query will return the review Id with the content of the review added
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationForVariableNotNullDefault()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.categoryid AS categoryid,
+                          table0.pieceid AS pieceid
+                   FROM stocks_price AS table0
+                   WHERE categoryid = 100
+                     AND pieceid = 99
+                   ORDER BY categoryid
+                   LIMIT 1) AS subq
+            ";
+
+            await InsertMutationForVariableNotNullDefault(postgresQuery);
+        }
+
+        /// <summary>
         /// <code>Do: </code>Update book in database and return its updated fields
         /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
         /// and if the mutation query has returned the values correctly

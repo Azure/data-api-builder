@@ -78,13 +78,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "
             },
             {
-                "FindViewComposite",
+                "FindBooksPubViewComposite",
                 @"
-                  SELECT JSON_OBJECT('id', id, 'name', name, 'publisher_id', publisher_id) AS data
+                  SELECT JSON_OBJECT('id', id, 'title', title, 'name', name, 'pub_id', pub_id) AS data
                   FROM (
                       SELECT *
                       FROM " + _composite_subset_bookPub + @"
-                      WHERE id = 2 AND publisher_id = 1234
+                      WHERE id = 2 AND title = 'Also Awesome book' AND 
+                      pub_id = 1234 AND name = 'Big Company' 
                       ORDER BY id
                       LIMIT 1
                   ) AS subq"
@@ -137,7 +138,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithFilterQueryOneLtFilterOnView",
                 @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('name', name, 'id', id, 'publisher_id', publisher_id)) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'pub_id', pub_id, 'name', name)) AS data
                   FROM (
                       SELECT *
                       FROM " + _composite_subset_bookPub + @"

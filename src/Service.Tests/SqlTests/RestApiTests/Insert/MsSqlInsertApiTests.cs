@@ -26,6 +26,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "InsertOneInBooksViewAll",
+                $"SELECT [id], [title], [publisher_id] FROM { _simple_all_books } " +
+                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'My New Book' " +
+                $"AND [publisher_id] = 1234 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneInStocksViewSelected",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable] " +
+                $"FROM { _simple_subset_stocks } WHERE [categoryid] = 4 " +
+                $"AND [pieceid] = 1 AND [categoryName] = 'SciFi' AND [piecesAvailable] = 0 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "InsertOneUniqueCharactersTest",
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform

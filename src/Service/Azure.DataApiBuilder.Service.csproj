@@ -35,9 +35,6 @@
     <Content Include="MySqlBooks.sql">
         <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
-    <Content Update="dab-config*.json">
-      <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
-    </Content>
     <Content Update="appsettings*.json">
       <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
     </Content>
@@ -52,14 +49,10 @@
 
   <ItemGroup>
     <Watch Remove="dab-config.Cosmos.json" />
-    <Watch Remove="dab-config.Cosmos.overrides.example.json" />
     <Watch Remove="dab-config.json" />
-    <Watch Remove="dab-config.Mssql.json" />
-    <Watch Remove="dab-config.MsSql.overrides.example.json" />
-    <Watch Remove="dab-config.Mysql.json" />
-    <Watch Remove="dab-config.MySql.overrides.example.json" />
-    <Watch Remove="dab-config.Postgresql.json" />
-    <Watch Remove="dab-config.PostgreSql.overrides.example.json" />
+    <Watch Remove="dab-config.MsSql.json" />
+    <Watch Remove="dab-config.MySql.json" />
+    <Watch Remove="dab-config.PostgreSql.json" />
   </ItemGroup>
 
 
@@ -84,6 +77,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="System.IO.Abstractions" Version="$(SystemIOAbstractionsVersion)" />
+      
   </ItemGroup>
   <ItemGroup>
     <ProjectCapability Include="CSharp;Managed;ClassDesigner" />
@@ -93,4 +87,5 @@
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
     <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
   </ItemGroup>
+    
 </Project>

@@ -85,11 +85,8 @@
         }
       }
     },
-    "Star": {
-      "source": {
-        "type": "table",
-        "object": "graphqldb.star"
-      },
+    "StarAlias": {
+      "source": "graphqldb.star",
       "rest": false,
       "permissions": [
         {

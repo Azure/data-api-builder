@@ -1323,6 +1323,9 @@ namespace Azure.DataApiBuilder.Service.Services
         public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
             => throw new NotImplementedException();
 
+        /// <inheritdoc />
+        public string GetEntityName(string graphQLType)
+            => throw new NotImplementedException();
     }
 }
 

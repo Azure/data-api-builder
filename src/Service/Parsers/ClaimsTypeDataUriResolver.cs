@@ -47,15 +47,15 @@ namespace Azure.DataApiBuilder.Service.Parsers
         }
 
         /// <summary>
-        /// Uses type specific parsers to attempt conversion the supplied node to a new ConstantNode of type targetType.
+        /// Uses type specific parsers to attempt converting the supplied node to a new ConstantNode of type targetType.
         /// </summary>
         /// <param name="targetType">Primitive type (string, bool, int, etc.) of the primary node's value.</param>
         /// <param name="operandToConvert">Node representing a constant value which should be converted to a ConstantNode of type targetType.</param>
         private static void TryConvertNodeToTargetType(EdmPrimitiveTypeKind targetType, ref SingleValueNode operandToConvert)
         {
-            ConstantNode preConvertedConstant = (ConstantNode)operandToConvert;
+            ConstantNode? preConvertedConstant = operandToConvert as ConstantNode;
 
-            if (preConvertedConstant.Value is null)
+            if (preConvertedConstant?.Value is null)
             {
                 return;
             }

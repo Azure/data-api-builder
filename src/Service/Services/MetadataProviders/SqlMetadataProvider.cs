@@ -74,6 +74,7 @@ namespace Azure.DataApiBuilder.Service.Services
             _databaseType = runtimeConfig.DatabaseType;
             _entities = runtimeConfig.Entities;
             _logger = logger;
+            bool loggedRestDisabled = false;
             foreach (KeyValuePair<string, Entity> entity in _entities)
             {
                 entity.Value.TryPopulateSourceFields();
@@ -81,7 +82,14 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     _logger.LogInformation($"{entity.Key} path: {runtimeConfigProvider.RestPath}/{entity.Value.SourceName}");
                 }
-
+                else
+                {
+                    if (loggedRestDisabled is false)
+                    {
+                        _logger.LogInformation("REST is disabled");
+                        loggedRestDisabled = true;
+                    }
+                }
             }
 
             ConnectionString = runtimeConfig.ConnectionString;

@@ -81,6 +81,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     _logger.LogInformation($"{entity.Key} path: {runtimeConfigProvider.RestPath}/{entity.Value.SourceName}");
                 }
+
             }
 
             ConnectionString = runtimeConfig.ConnectionString;

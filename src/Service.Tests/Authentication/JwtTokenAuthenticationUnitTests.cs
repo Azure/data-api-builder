@@ -342,7 +342,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Mock<RuntimeConfigProvider> runtimeConfigProvider = new(runtimeConfigPath.Object,
                 configProviderLogger.Object);
             runtimeConfigProvider.Setup(x => x.IsAuthenticatedDevModeRequest()).
-               Returns(treatDevModeRequestAsAuthenticated);
+                Returns(treatDevModeRequestAsAuthenticated);
 
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>
@@ -414,8 +414,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             string? clientRoleHeader = null,
             bool treatDevModeRequestAsAuthenticated = false)
         {
-            using IHost host = await CreateWebHostCustomIssuer(key,
-                treatDevModeRequestAsAuthenticated);
+            using IHost host = await CreateWebHostCustomIssuer(key, treatDevModeRequestAsAuthenticated);
             TestServer server = host.GetTestServer();
 
             return await server.SendAsync(context =>

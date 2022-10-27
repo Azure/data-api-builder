@@ -47,8 +47,9 @@ type Foo @model(name: ""Foo""){
                     roles: rolesDefinedInPermissions)
                 );
 
-            if (mutationRoot.Definitions.Count() > 0)
+            if (rolesDefinedInPermissions.Length > 0)
             {
+                Assert.IsTrue(mutationRoot.Definitions.Count() > 0);
                 ObjectTypeDefinitionNode mutation = MutationBuilderTests.GetMutationNode(mutationRoot);
                 // Iterate over the mutations created by MutationBuilder.Build()
                 //
@@ -59,7 +60,7 @@ type Foo @model(name: ""Foo""){
             }
             else
             {
-                Assert.AreEqual(rolesDefinedInPermissions.Length, mutationRoot.Definitions.Count());
+                Assert.AreEqual(0, mutationRoot.Definitions.Count());
             }
         }
     }

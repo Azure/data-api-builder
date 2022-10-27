@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         public async Task TestAuthenticatedRequestInDevelopmentMode(string clientRoleHeader)
         {
             HttpContext postMiddlewareContext =
-                await SendRequestAndGetHttpContextState(clientRoleHeader: clientRoleHeader);
+                await SendRequestAndGetHttpContextState(clientRole: clientRoleHeader);
 
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
@@ -113,21 +113,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// test EasyAuth authentication mechanisms.
         /// Sends a request with an EasyAuth header to the TestServer created.
         /// </summary>
-        /// <param name="token">The EasyAuth header value(base64 encoded token) to test against the TestServer</param>
-        /// <param name="sendAuthorizationHeader">Whether to add authorization header to header dictionary</param>
+        /// <param name="clientRole">Name of role to include in header.</param>
         /// <returns></returns>
-        public static async Task<HttpContext> SendRequestAndGetHttpContextState(string? clientRoleHeader = null)
+        public static async Task<HttpContext> SendRequestAndGetHttpContextState(string? clientRole = null)
         {
             using IHost host = await CreateWebHostAuthenticationSimulator();
             TestServer server = host.GetTestServer();
 
             return await server.SendAsync(context =>
             {
-                if (clientRoleHeader is not null)
+                if (clientRole is not null)
                 {
-                    KeyValuePair<string, StringValues> easyAuthHeader =
-                        new(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader);
-                    context.Request.Headers.Add(easyAuthHeader);
+                    KeyValuePair<string, StringValues> clientRoleHeader =
+                        new(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRole);
+                    context.Request.Headers.Add(clientRoleHeader);
                 }
 
                 context.Request.Scheme = "https";

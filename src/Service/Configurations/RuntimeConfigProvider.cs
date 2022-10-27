@@ -144,6 +144,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     {
                         ConfigProviderLogger.LogInformation($"GraphQL path: {runtimeConfig.GraphQLGlobalSettings.Path}");
                     }
+                    else
+                    {
+                        ConfigProviderLogger.LogInformation($"GraphQL is disabled.");
+                    }
 
                     if (runtimeConfig.AuthNConfig is not null)
                     {

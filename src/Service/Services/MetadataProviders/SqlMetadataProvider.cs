@@ -81,6 +81,9 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     _logger.LogInformation($"{entity.Key} path: {runtimeConfigProvider.RestPath}/{entity.Value.SourceName}");
                 }
+                else{
+                    _logger.LogInformation($"REST calls are disabled for Entity: {entity.Key}");
+                }
             }
 
             ConnectionString = runtimeConfig.ConnectionString;

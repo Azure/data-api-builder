@@ -2,5 +2,5 @@ init --config "dab-config.Cosmos.json" --database-type "cosmos" --connection-str
 add Planet --config "dab-config.Cosmos.json" --source "graphqldb.planet" --permissions "anonymous:create,read,update,delete" --rest false --graphql "Planet:Planets"
 update Planet --config "dab-config.Cosmos.json" --permissions "authenticated:create,read,update,delete"
 add Character --config "dab-config.Cosmos.json" --source "graphqldb.character" --permissions "authenticated:create,read,update,delete" --rest false --graphql "Character:Characters"
-add Star --config "dab-config.Cosmos.json" --source "graphqldb.star" --permissions "anonymous:create,read,update,delete" --rest false --graphql "Star:Stars"
-update Star --config "dab-config.Cosmos.json" --source "graphqldb.star" --permissions "authenticated:create,read,update,delete"
+add StarAlias --config "dab-config.Cosmos.json" --source "graphqldb.star" --permissions "anonymous:create,read,update,delete" --rest false --graphql "Star:Stars"
+update StarAlias --config "dab-config.Cosmos.json" --source "graphqldb.star" --permissions "authenticated:create,read,update,delete"

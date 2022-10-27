@@ -16,7 +16,6 @@ add Fungus --config "dab-config.MsSql.json" --source fungi --permissions "anonym
 add books_view_all --config "dab-config.MsSql.json" --source books_view_all --source.type "view" --permissions "anonymous:*"
 add stocks_view_selected --config "dab-config.MsSql.json" --source stocks_view_selected --source.type "view" --permissions "anonymous:*"
 add books_publishers_view_composite --config "dab-config.MsSql.json" --source books_publishers_view_composite --source.type "view" --permissions "anonymous:*" --rest true --graphql true
-add stocks_price_view_composite --config "dab-config.MsSql.json" --source stocks_price_view_composite --source.type "view" --permissions "anonymous:*" --rest true --graphql true
 add Empty --config "dab-config.MsSql.json" --source "empty_table" --permissions "authenticated:create,read,update,delete" --rest true
 add Notebook --config "dab-config.MsSql.json" --source "notebooks" --permissions "anonymous:read" --rest true --graphql true --fields.include "*" --policy-database "@item ne 1"
 add Journal --config "dab-config.MsSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
@@ -105,4 +104,3 @@ update Journal --config "dab-config.MsSql.json" --permissions "authorizationHand
 update ArtOfWar --config "dab-config.MsSql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
 update GetBook --config "dab-config.MsSql.json" --permissions "authenticated:*"
 update GetBooks --config "dab-config.MsSql.json" --permissions "authenticated:*"
-update stocks_price_view_composite --config "dab-config.MsSql.json" --map "instant:phase"

@@ -4,7 +4,7 @@ namespace Azure.DataApiBuilder.Config
     /// Authentication configuration.
     /// </summary>
     /// <param name="Provider">Identity Provider. Default is StaticWebApps.
-    /// With EasyAuth, no Audience or Issuer are expected.
+    /// With EasyAuth and Simulator, no Audience or Issuer are expected.
     /// </param>
     /// <param name="Jwt">Settings enabling validation of the received JWT token.
     /// Required only when Provider is other than EasyAuth.</param>

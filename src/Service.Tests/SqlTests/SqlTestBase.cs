@@ -261,11 +261,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                             _sqlMetadataLogger);
                     break;
                 case TestCategory.MYSQL:
-                    Mock<ILogger<QueryExecutor<MySqlConnection>>> mySqlQueryExecutorLogger = new();
+                    Mock<ILogger<MySqlQueryExecutor>> mySqlQueryExecutorLogger = new();
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new MySqlDbExceptionParser(_runtimeConfigProvider);
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(
+                    _queryExecutor = new MySqlQueryExecutor(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
                         mySqlQueryExecutorLogger.Object);

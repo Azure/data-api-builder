@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Service
                     case DatabaseType.postgresql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<NpgsqlConnection>>(serviceProvider);
                     case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<MySqlConnection>>(serviceProvider);
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryExecutor>(serviceProvider);
                     default:
                         throw new NotSupportedException(
                             runtimeConfig.DatabaseTypeNotSupportedMessage);

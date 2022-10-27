@@ -53,9 +53,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"WHERE categoryid = 2 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "FindViewComposite",
-                $"SELECT name ,id, publisher_id FROM {_composite_subset_bookPub} " +
-                $"WHERE id=2 AND publisher_id = 1234 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                "FindBooksPubViewComposite",
+                $"SELECT id, title, pub_id, name FROM {_composite_subset_bookPub} " +
+                $"WHERE id = 2 AND pub_id = 1234 AND name = 'Big Company' AND title = 'Also Awesome book' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindTestWithFilterQueryOneGeFilterOnView",
@@ -84,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             },
             {
                 "FindTestWithFilterQueryOneLtFilterOnView",
-                $"SELECT[id], [name],[publisher_id] FROM { _composite_subset_bookPub } " +
+                $"SELECT [id], [title], [pub_id], [name] FROM { _composite_subset_bookPub } " +
                 $"WHERE id < 5 FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {

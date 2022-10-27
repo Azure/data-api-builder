@@ -86,9 +86,9 @@ namespace Azure.DataApiBuilder.Service.Services
                 primaryKeysInRequest.Add(backingColumn!);
             }
 
-            // Verify each primary key is present in the table definition.
             IEnumerable<string> missingKeys = primaryKeysInRequest.Except(sourceDefinition.PrimaryKey);
 
+            // Verify each primary key is present in the object (table/view) definition.
             if (missingKeys.Any())
             {
                 throw new DataApiBuilderException(
@@ -285,7 +285,6 @@ namespace Azure.DataApiBuilder.Service.Services
             // from the hash set of unvalidated fields.
             // At the end, if we end up with extraneous unvalidated fields, we throw error.
             HashSet<string> unvalidatedFields = new(fieldsInRequestBody);
-
             foreach (KeyValuePair<string, ColumnDefinition> column in sourceDefinition.Columns)
             {
                 // if column is not exposed we skip
@@ -343,6 +342,7 @@ namespace Azure.DataApiBuilder.Service.Services
             ISqlMetadataProvider sqlMetadataProvider)
         {
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
+
             SourceDefinition sourceDefinition =
                 TryGetSourceDefinition(upsertRequestCtx.EntityName, sqlMetadataProvider);
 

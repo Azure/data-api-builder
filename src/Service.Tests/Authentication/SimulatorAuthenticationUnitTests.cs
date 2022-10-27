@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Tests.Authentication.Helpers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -59,56 +60,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
 
         #region Helper Methods
         /// <summary>
-        /// Configures test server with bare minimum middleware
-        /// </summary>
-        /// <returns>IHost</returns>
-        public static async Task<IHost> CreateWebHostAuthenticationSimulator()
-        {
-            // Setup RuntimeConfigProvider object for the pipeline.
-            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            Mock<RuntimeConfigPath> runtimeConfigPath = new();
-            Mock<RuntimeConfigProvider> runtimeConfigProvider = new(runtimeConfigPath.Object,
-                configProviderLogger.Object);
-
-            return await new HostBuilder()
-                .ConfigureWebHost(webBuilder =>
-                {
-                    webBuilder
-                        .UseTestServer()
-                        .ConfigureServices(services =>
-                        {
-                            services.AddAuthentication(defaultScheme: SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                                    .AddSimulatorAuthentication();
-                            services.AddSingleton(runtimeConfigProvider.Object);
-                            services.AddAuthorization();
-                        })
-                        .ConfigureLogging(o =>
-                        {
-                            o.AddFilter(levelFilter => levelFilter <= LogLevel.Information);
-                            o.AddDebug();
-                            o.AddConsole();
-                        })
-                        .Configure(app =>
-                        {
-                            app.UseAuthentication();
-                            app.UseClientRoleHeaderAuthenticationMiddleware();
-                            app.UseAuthorization();
-                            app.UseClientRoleHeaderAuthorizationMiddleware();
-
-                            // app.Run acts as terminating middleware to return 200 if we reach it. Without this,
-                            // the Middleware pipeline will return 404 by default.
-                            app.Run(async (context) =>
-                            {
-                                context.Response.StatusCode = (int)HttpStatusCode.OK;
-                                await context.Response.WriteAsync("Successfully injected authenticated user.");
-                                await context.Response.StartAsync();
-                            });
-                        });
-                })
-                .StartAsync();
-        }
-
-        /// <summary>
         /// Creates the TestServer with the minimum middleware setup necessary to
         /// test EasyAuth authentication mechanisms.
         /// Sends a request with an EasyAuth header to the TestServer created.
@@ -117,7 +68,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// <returns></returns>
         public static async Task<HttpContext> SendRequestAndGetHttpContextState(string? clientRole = null)
         {
-            using IHost host = await CreateWebHostAuthenticationSimulator();
+            using IHost host = await WebHostBuilderHelper.CreateWebHost(
+                provider: SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME,
+                treatAsAuthenticatedRequest: false,
+                useAuthorizationMiddleware: true);
+
             TestServer server = host.GetTestServer();
 
             return await server.SendAsync(context =>

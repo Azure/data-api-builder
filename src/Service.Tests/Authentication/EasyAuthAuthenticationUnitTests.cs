@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Tests.Authentication.Helpers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -295,68 +296,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
 
         #region Helper Methods
         /// <summary>
-        /// Configures test server with bare minimum middleware
-        /// </summary>
-        /// <returns>IHost</returns>
-        public static async Task<IHost> CreateWebHostEasyAuth(
-            EasyAuthType easyAuthType,
-            bool treatAsAuthenticatedRequest,
-            bool useAuthorizationMiddleware)
-        {
-            // Setup RuntimeConfigProvider object for the pipeline.
-            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            Mock<RuntimeConfigPath> runtimeConfigPath = new();
-            Mock<RuntimeConfigProvider> runtimeConfigProvider = new(runtimeConfigPath.Object,
-                configProviderLogger.Object);
-            runtimeConfigProvider.Setup(x => x.IsAuthenticatedDevModeRequest()).
-                Returns(treatAsAuthenticatedRequest);
-
-            return await new HostBuilder()
-                .ConfigureWebHost(webBuilder =>
-                {
-                    webBuilder
-                        .UseTestServer()
-                        .ConfigureServices(services =>
-                        {
-                            services.AddAuthentication(defaultScheme: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                                    .AddEasyAuthAuthentication(easyAuthType);
-                            services.AddSingleton(runtimeConfigProvider.Object);
-
-                            if (useAuthorizationMiddleware)
-                            {
-                                services.AddAuthorization();
-                            }
-                        })
-                        .ConfigureLogging(o =>
-                        {
-                            o.AddFilter(levelFilter => levelFilter <= LogLevel.Information);
-                            o.AddDebug();
-                            o.AddConsole();
-                        })
-                        .Configure(app =>
-                        {
-                            app.UseAuthentication();
-                            app.UseClientRoleHeaderAuthenticationMiddleware();
-
-                            if (useAuthorizationMiddleware)
-                            {
-                                app.UseAuthorization();
-                                app.UseClientRoleHeaderAuthorizationMiddleware();
-                            }
-                            // app.Run acts as terminating middleware to return 200 if we reach it. Without this,
-                            // the Middleware pipeline will return 404 by default.
-                            app.Run(async (context) =>
-                            {
-                                context.Response.StatusCode = (int)HttpStatusCode.OK;
-                                await context.Response.WriteAsync("Successfully validated token!");
-                                await context.Response.StartAsync();
-                            });
-                        });
-                })
-                .StartAsync();
-        }
-
-        /// <summary>
         /// Creates the TestServer with the minimum middleware setup necessary to
         /// test EasyAuth authentication mechanisms.
         /// Sends a request with an EasyAuth header to the TestServer created.
@@ -372,7 +311,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             bool treatRequestAsAuthenticated = false,
             bool useAuthorizationMiddleware = false)
         {
-            using IHost host = await CreateWebHostEasyAuth(easyAuthType, treatRequestAsAuthenticated, useAuthorizationMiddleware);
+            using IHost host = await WebHostBuilderHelper.CreateWebHost(easyAuthType.ToString(), treatRequestAsAuthenticated, useAuthorizationMiddleware);
             TestServer server = host.GetTestServer();
 
             return await server.SendAsync(context =>

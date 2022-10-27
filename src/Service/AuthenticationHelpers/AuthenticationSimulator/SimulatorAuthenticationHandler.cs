@@ -20,8 +20,6 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimul
     /// </summary>
     public class SimulatorAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
     {
-        public const string SIMULATOR_PROVIDER = "Simulator";
-
         /// <summary>
         /// Constructor for the SimulatorAuthenticationHandler.
         /// Note the parameters are required by the base class.
@@ -50,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimul
         /// <returns>An authentication result to ASP.NET Core library authentication mechanisms</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            ClaimsIdentity identity = new(authenticationType: SIMULATOR_PROVIDER);
+            ClaimsIdentity identity = new(authenticationType: SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME);
             identity.AddClaim(new Claim(ClaimTypes.Role, AuthorizationResolver.ROLE_ANONYMOUS));
             identity.AddClaim(new Claim(ClaimTypes.Role, AuthorizationResolver.ROLE_AUTHENTICATED));
 

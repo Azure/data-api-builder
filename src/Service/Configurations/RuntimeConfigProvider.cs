@@ -62,7 +62,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (TryLoadRuntimeConfigValue())
             {
                 ConfigProviderLogger.LogInformation("Runtime config loaded from file.");
-                ConfigProviderLogger.LogInformation("");
             }
             else
             {

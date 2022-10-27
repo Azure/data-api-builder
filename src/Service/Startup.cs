@@ -255,7 +255,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
-                if (_logger is not null)
+                if (_logger is not null && runtimeConfigProvider.RuntimeConfigPath is not null)
                 {
                     if (runtimeConfigProvider.RuntimeConfigPath is not null)
                     {

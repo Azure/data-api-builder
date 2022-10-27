@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 SELECT to_jsonb(subq) AS DATA
                 FROM
                   (SELECT table0.categoryid AS category_id,
-                          table0.pieceid AS pieceid,
+                          table0.pieceid AS pieceid
                    FROM stocks_price AS table0
                    WHERE categoryid = 100
                      AND pieceid = 99

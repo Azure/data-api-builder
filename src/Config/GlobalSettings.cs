@@ -8,6 +8,9 @@ namespace Azure.DataApiBuilder.Config
     public record GlobalSettings
     {
         public const string JSON_PROPERTY_NAME = "runtime";
+        public const string GRAPHQL_DEFAULT_PATH = "/graphql";
+        public const string REST_DEFAULT_PATH = "/api";
+
     }
 
     /// <summary>
@@ -27,7 +30,7 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="Path">The URL prefix path at which endpoints
     /// for all entities will be exposed.</param>
     public record RestGlobalSettings(
-        string Path = "/api"
+        string Path = GlobalSettings.REST_DEFAULT_PATH
         ) : ApiSettings(Enabled: true, Path);
 
     /// <summary>

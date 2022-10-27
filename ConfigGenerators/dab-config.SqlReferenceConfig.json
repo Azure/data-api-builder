@@ -1,8 +1,8 @@
 {
-  "$schema": "../schemas/dab.draft-01.schema.json",
+  "$schema": "dab.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "DO NOT EDIT, look at CONTRIBUTING.md on how to run tests"
+    "connection-string": "Connection String"
   },
   "mssql": {
     "set-session-context": false

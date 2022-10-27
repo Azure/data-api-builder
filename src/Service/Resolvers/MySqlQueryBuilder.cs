@@ -328,11 +328,5 @@ WHERE
 
             return defaultValue;
         }
-
-        /// <inheritdoc/>
-        public string BuildViewColumnsDetailsQuery(int numberOfParameters)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

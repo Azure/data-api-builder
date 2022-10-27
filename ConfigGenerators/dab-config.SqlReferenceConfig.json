@@ -760,7 +760,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "*" ]
         },
         {
           "role": "authenticated",
@@ -780,7 +780,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "*" ]
         },
         {
           "role": "authenticated",
@@ -800,13 +800,36 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "*" ]
         },
         {
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
       ],
+      "relationships": {
+      }
+    },
+    "stocks_price_view_composite": {
+      "source": {
+        "object": "stocks_price_view_composite",
+        "type": "view"
+      },
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "instant": "phase"
+      },
       "relationships": {
       }
     },

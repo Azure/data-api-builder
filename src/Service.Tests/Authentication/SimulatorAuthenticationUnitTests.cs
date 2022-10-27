@@ -1,30 +1,21 @@
 #nullable enable
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Service.Authorization;
-using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Tests.Authentication.Helpers;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication
 {
     /// <summary>
     /// Tests the behavior of using SimulatorAuthenticationHandler
-    /// for authentication and that it properly injects and authenticated
+    /// for authentication and that it properly injects an authenticated
     /// ClaimsPrincipal object with role membership containing the client role header
     /// value, if present.
     /// </summary>
@@ -62,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// <summary>
         /// Creates the TestServer with the minimum middleware setup necessary to
         /// test EasyAuth authentication mechanisms.
-        /// Sends a request with an EasyAuth header to the TestServer created.
+        /// Sends a request with a clientRoleHeader to the TestServer created.
         /// </summary>
         /// <param name="clientRole">Name of role to include in header.</param>
         /// <returns></returns>

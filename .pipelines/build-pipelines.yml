@@ -19,6 +19,7 @@ variables:
   # The counter is reset when the minor version is updated.
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
   isReleaseBuild: $(isNugetRelease)
+  additionalProperties.version: 'urn:dab:config:schema:draft-$(major).$(minor).$(patch)'
 
 steps:
 - task: NuGetAuthenticate@1
@@ -39,6 +40,13 @@ steps:
     echo dabVersion = $dabVersion
     echo "##vso[task.setvariable variable=dabVersion]$dabVersion"
   displayName: Set dab version
+
+- task: FileTransform@1.206.0
+  displayName: 'Version stamp dab.draft.schema.json'
+  inputs:
+    folderPath: '$(System.DefaultWorkingDirectory)'
+    fileType: 'json'
+    targetFiles: 'schemas/dab.draft.schema.json'
 
 - task: UseDotNet@2
   displayName: Setup .NET SDK v6.0.x
@@ -108,6 +116,13 @@ steps:
     targetType: 'filePath'
     filePath: $(System.DefaultWorkingDirectory)/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -Package
+
+- task: PowerShell@2
+  displayName: "Smoke Test for DAB CLI"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/dab-smoke-test-script.ps1
+    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(Agent.OS)  $(dabVersion)
 
 # Sign the binaries that were generated per platform
 - template: templates/code-signing.yml

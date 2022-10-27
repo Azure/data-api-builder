@@ -235,12 +235,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
             mockDictionaryForEntityDatabaseObject.Add(
                 "SampleEntity1",
-                new DatabaseObject("dbo", "TEST_SOURCE1")
+                new DatabaseTable("dbo", "TEST_SOURCE1")
             );
 
             mockDictionaryForEntityDatabaseObject.Add(
                 "SampleEntity2",
-                new DatabaseObject("dbo", "TEST_SOURCE2")
+                new DatabaseTable("dbo", "TEST_SOURCE2")
             );
 
             _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
@@ -248,7 +248,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // To mock the schema name and dbObjectName for linkingObject
             _sqlMetadataProvider.Setup<(string, string)>(x =>
-                x.ParseSchemaAndDbObjectName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
+                x.ParseSchemaAndDbTableName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
 
             // Exception thrown as foreignKeyPair not found in the DB.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -260,12 +260,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Mocking ForeignKeyPair to be defined In DB
             _sqlMetadataProvider.Setup<bool>(x =>
                 x.VerifyForeignKeyExistsInDB(
-                    new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE1")
+                    new DatabaseTable("dbo", "TEST_SOURCE_LINK"), new DatabaseTable("dbo", "TEST_SOURCE1")
                 )).Returns(true);
 
             _sqlMetadataProvider.Setup<bool>(x =>
                 x.VerifyForeignKeyExistsInDB(
-                    new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE2")
+                    new DatabaseTable("dbo", "TEST_SOURCE_LINK"), new DatabaseTable("dbo", "TEST_SOURCE2")
                 )).Returns(true);
 
             // Since, we have defined the relationship in Database,
@@ -338,12 +338,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
             mockDictionaryForEntityDatabaseObject.Add(
                 "SampleEntity1",
-                new DatabaseObject("dbo", "TEST_SOURCE1")
+                new DatabaseTable("dbo", "TEST_SOURCE1")
             );
 
             mockDictionaryForEntityDatabaseObject.Add(
                 "SampleEntity2",
-                new DatabaseObject("dbo", "TEST_SOURCE2")
+                new DatabaseTable("dbo", "TEST_SOURCE2")
             );
 
             _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
@@ -351,17 +351,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // To mock the schema name and dbObjectName for linkingObject
             _sqlMetadataProvider.Setup<(string, string)>(x =>
-                x.ParseSchemaAndDbObjectName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
+                x.ParseSchemaAndDbTableName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
 
             // Mocking ForeignKeyPair to be defined In DB
             _sqlMetadataProvider.Setup<bool>(x =>
                 x.VerifyForeignKeyExistsInDB(
-                    new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE1")
+                    new DatabaseTable("dbo", "TEST_SOURCE_LINK"), new DatabaseTable("dbo", "TEST_SOURCE1")
                 )).Returns(isForeignKeyPairBetSourceAndLinkingObject);
 
             _sqlMetadataProvider.Setup<bool>(x =>
                 x.VerifyForeignKeyExistsInDB(
-                    new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE2")
+                    new DatabaseTable("dbo", "TEST_SOURCE_LINK"), new DatabaseTable("dbo", "TEST_SOURCE2")
                 )).Returns(isForeignKeyPairBetTargetAndLinkingObject);
 
             if (isValidScenario)
@@ -424,12 +424,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
             mockDictionaryForEntityDatabaseObject.Add(
                 "SampleEntity1",
-                new DatabaseObject("dbo", "TEST_SOURCE1")
+                new DatabaseTable("dbo", "TEST_SOURCE1")
             );
 
             mockDictionaryForEntityDatabaseObject.Add(
                 "SampleEntity2",
-                new DatabaseObject("dbo", "TEST_SOURCE2")
+                new DatabaseTable("dbo", "TEST_SOURCE2")
             );
 
             _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
@@ -446,12 +446,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Mocking ForeignKeyPair to be defined In DB
             _sqlMetadataProvider.Setup<bool>(x =>
                 x.VerifyForeignKeyExistsInDB(
-                    new DatabaseObject("dbo", "TEST_SOURCE1"), new DatabaseObject("dbo", "TEST_SOURCE2")
+                    new DatabaseTable("dbo", "TEST_SOURCE1"), new DatabaseTable("dbo", "TEST_SOURCE2")
                 )).Returns(true);
 
             _sqlMetadataProvider.Setup<bool>(x =>
                 x.VerifyForeignKeyExistsInDB(
-                    new DatabaseObject("dbo", "TEST_SOURCE2"), new DatabaseObject("dbo", "TEST_SOURCE1")
+                    new DatabaseTable("dbo", "TEST_SOURCE2"), new DatabaseTable("dbo", "TEST_SOURCE1")
                 )).Returns(true);
 
             // No Exception is thrown as foreignKey Pair was found in the DB between

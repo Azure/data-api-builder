@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
@@ -42,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// <code>Do: </code> Fills the table definition with information of the foreign keys
         /// for all the tables based on the entities relationship.
-        /// <code>Check: </code> Making sure no exception is thrown if there are no Foriegn Keys.
+        /// <code>Check: </code> Making sure no exception is thrown if there are no Foreign Keys.
         /// </summary>
         [TestMethod, TestCategory(TestCategory.POSTGRESQL)]
         public async Task CheckNoExceptionForNoForeignKey()
@@ -122,6 +124,90 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
             }
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Load runtimeConfig and set up the source fields for the entities.
+        /// <code>Check: </code>  Verifies that source object is correctly parsed.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task CheckCorrectParsingForStoredProcedure()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
+            SetUpSQLMetadataProvider();
+
+            await _sqlMetadataProvider.InitializeAsync();
+
+            Entity entity = _runtimeConfig.Entities["GetBooks"];
+            Assert.AreEqual("get_books", entity.SourceName);
+            Assert.AreEqual(SourceType.StoredProcedure, entity.ObjectType);
+        }
+
+        /// <summary>
+        /// Test to verify that all the base tables which have a column in select clause
+        /// for the view are present in the base table definitions for the view's
+        /// definition.
+        /// </summary>
+        /// <param name="entityName">Name of the view.</param>
+        /// <param name="expectedBaseTableCount">Expected number of base tables.</param>
+        /// <param name="baseTableNames">Names of the base tables.</param>
+        /// <returns></returns>
+        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [DataRow("books_view_all", 1, new string[] { "dbo.books" },
+            DisplayName = "Validate view definition on books_view_all")]
+        [DataRow("stocks_view_selected", 1, new string[] { "dbo.stocks" },
+            DisplayName = "Validate view definition on stocks_view_selected")]
+        [DataRow("books_publishers_view_composite", 2, new string[] { "dbo.books", "dbo.publishers" },
+            DisplayName = "Validate view definition on books_publishers_view_composite")]
+        public async Task CheckPopulatedBaseTableDefinitionsForViewAsync(
+            string entityName,
+            int expectedBaseTableCount,
+            string[] baseTableNames)
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
+            SetUpSQLMetadataProvider();
+
+            await _sqlMetadataProvider.InitializeAsync();
+            ViewDefinition viewDefinition = (ViewDefinition)_sqlMetadataProvider.GetSourceDefinition(entityName);
+
+            // Assert that there are expected number of base tables in view's definition.
+            Assert.AreEqual(expectedBaseTableCount, viewDefinition.BaseTableDefinitions.Count);
+            foreach (string baseTableName in baseTableNames)
+            {
+                // Assert that the base tables in the BaseTableDefinitions are the ones
+                // that are expected.
+                Assert.IsTrue(viewDefinition.BaseTableDefinitions.ContainsKey(baseTableName));
+            }
+        }
+
+        /// <summary>
+        /// Test to verify that the mappings generated for columns in view to corresponding
+        /// source column and table are correct.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task CheckPopulatedColToBaseTableDetailsForViewAsync()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
+            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
+            SetUpSQLMetadataProvider();
+
+            await _sqlMetadataProvider.InitializeAsync();
+            ViewDefinition viewDefinition = (ViewDefinition)_sqlMetadataProvider.GetSourceDefinition("books_publishers_view_composite");
+
+            // Create the expected column mapping for view columns to source column and table.
+            Dictionary<string, Tuple<string, string>> expectedColToBaseTableDetails = new();
+            expectedColToBaseTableDetails.Add("publisher_id", new Tuple<string, string>("id", "dbo.publishers"));
+            expectedColToBaseTableDetails.Add("name", new Tuple<string, string>("name", "dbo.publishers"));
+            expectedColToBaseTableDetails.Add("id", new Tuple<string, string>("id", "dbo.books"));
+
+            // Assert that the expected column mapping and the actual column mapping are same.
+            CollectionAssert.AreEquivalent(expectedColToBaseTableDetails, viewDefinition.ColToBaseTableDetails);
         }
     }
 }

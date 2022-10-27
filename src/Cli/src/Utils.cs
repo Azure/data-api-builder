@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -14,6 +15,7 @@ namespace Cli
     public class Utils
     {
         public const string WILDCARD = "*";
+        public static readonly string SEPARATOR = ":";
 
         /// <summary>
         /// Creates the rest object which can be either a boolean value
@@ -61,9 +63,9 @@ namespace Cli
             else
             {
                 string singular, plural;
-                if (graphQL.Contains(":"))
+                if (graphQL.Contains(SEPARATOR))
                 {
-                    string[] arr = graphQL.Split(":");
+                    string[] arr = graphQL.Split(SEPARATOR);
                     if (arr.Length != 2)
                     {
                         Console.Error.WriteLine($"Invalid format for --graphql. Accepted values are true/false," +
@@ -257,7 +259,7 @@ namespace Cli
             mappings = new();
             foreach (string item in mappingList)
             {
-                string[] map = item.Split(":");
+                string[] map = item.Split(SEPARATOR);
                 if (map.Length != 2)
                 {
                     Console.Error.WriteLine("Invalid format for --map");
@@ -482,6 +484,172 @@ namespace Cli
             }
 
             return !string.IsNullOrEmpty(runtimeConfigFile);
+        }
+
+        /// <summary>
+        /// Checks if config can be correctly parsed by deserializing the
+        /// json config into runtime config object.
+        /// Also checks that connection-string is not null or empty whitespace
+        /// </summary>
+        public static bool CanParseConfigCorrectly(string configFile)
+        {
+            if (!TryReadRuntimeConfig(configFile, out string runtimeConfigJson))
+            {
+                Console.Error.WriteLine($"Failed to read the config file: {configFile}.");
+                return false;
+            }
+
+            if (!RuntimeConfig.TryGetDeserializedRuntimeConfig(
+                    runtimeConfigJson,
+                    out RuntimeConfig? deserializedRuntimeConfig,
+                    logger: null))
+            {
+                Console.Error.WriteLine($"Failed to parse the config file: {configFile}.");
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.ConnectionString))
+            {
+                Console.Error.WriteLine($"Invalid connection-string provided in the config.");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// This method checks that parameter is only used with Stored Procedure, while
+        /// key-fields only with table/views.
+        /// </summary>
+        /// <param name="sourceType">type of the source object.</param>
+        /// <param name="parameters">IEnumerable string containing parameters for stored-procedure.</param>
+        /// <param name="keyFields">IEnumerable string containing key columns for table/view.</param>
+        /// <returns> Returns true when successful else on failure, returns false.</returns>
+        public static bool VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
+            SourceType sourceType,
+            IEnumerable<string>? parameters,
+            IEnumerable<string>? keyFields)
+        {
+            if (SourceType.StoredProcedure.Equals(sourceType))
+            {
+                if (keyFields is not null && keyFields.Any())
+                {
+                    Console.Error.WriteLine("Stored Procedures don't support keyfields.");
+                    return false;
+                }
+            }
+            else
+            {
+                if (parameters is not null && parameters.Any())
+                {
+                    Console.Error.WriteLine("Tables/Views don't support parameters.");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Creates source object by using valid type, params, and keyfields.
+        /// </summary>
+        /// <param name="name">Name of the source.</param>
+        /// <param name="type">Type of the soure. i.e, table,view, and stored-procedure.</param>
+        /// <param name="parameters">Dictionary for parameters if source is stored-procedure</param>
+        /// <param name="keyFields">Array of string containing key columns for table/view type.</param>
+        /// <param name="sourceObject">Outputs the created source object.
+        /// It can be null, string, or DatabaseObjectSource</param>
+        /// <returns>True in case of succesful creation of source object.</returns>
+        public static bool TryCreateSourceObject(
+            string name,
+            SourceType type,
+            Dictionary<string, object>? parameters,
+            string[]? keyFields,
+            [NotNullWhen(true)] out object? sourceObject)
+        {
+
+            // If type is Table along with that parameter and keyfields is null then return the source as string.
+            if (SourceType.Table.Equals(type) && parameters is null && keyFields is null)
+            {
+                sourceObject = name;
+                return true;
+            }
+
+            sourceObject = new DatabaseObjectSource(
+                Type: type,
+                Name: name,
+                Parameters: parameters,
+                KeyFields: keyFields
+            );
+
+            return true;
+        }
+
+        /// <summary>
+        /// This method tries to parse the source parameters Dictionary from IEnumerable list
+        /// by splitting each item of the list on ':', where first item is param name and the
+        /// and the second item is the value. for any other item it should fail.
+        /// If Parameter List is null, no parsing happens and sourceParameter is returned as null.
+        /// </summary>
+        /// <param name="parametersList">List of ':' separated values indicating key and value.</param>
+        /// <param name="mappings">Output a Dictionary of parameters and their values.</param>
+        /// <returns> Returns true when successful else on failure, returns false.</returns>
+        public static bool TryParseSourceParameterDictionary(
+            IEnumerable<string>? parametersList,
+            out Dictionary<string, object>? sourceParameters)
+        {
+            sourceParameters = null;
+            if (parametersList is null)
+            {
+                return true;
+            }
+
+            sourceParameters = new(StringComparer.OrdinalIgnoreCase);
+            foreach (string param in parametersList)
+            {
+                string[] items = param.Split(SEPARATOR);
+                if (items.Length != 2)
+                {
+                    sourceParameters = null;
+                    Console.Error.WriteLine("Invalid format for --source.params");
+                    Console.WriteLine("Correct source parameter syntax: --source.params \"key1:value1,key2:value2,...\".");
+                    return false;
+                }
+
+                string paramKey = items[0];
+                object paramValue = ParseStringValue(items[1]);
+
+                sourceParameters.Add(paramKey, paramValue);
+            }
+
+            if (!sourceParameters.Any())
+            {
+                sourceParameters = null;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Converts string into either integer, double, or boolean value.
+        /// If the given string is neither of the above, it returns as string.
+        /// </summary>
+        private static object ParseStringValue(string stringValue)
+        {
+            if (int.TryParse(stringValue, out int integerValue))
+            {
+                return integerValue;
+            }
+            else if (double.TryParse(stringValue, out double floatingValue))
+            {
+                return floatingValue;
+            }
+            else if (Boolean.TryParse(stringValue, out bool booleanValue))
+            {
+                return booleanValue;
+            }
+
+            return stringValue;
         }
 
         /// <summary>

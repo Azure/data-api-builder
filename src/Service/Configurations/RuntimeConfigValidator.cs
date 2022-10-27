@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         // Only characters from a-z,A-Z,0-9,.,_ are allowed to be present within the claimType.
         private static readonly string _invalidClaimChars = @"[^a-zA-Z0-9_\.]+";
 
-        // Regex to check occurence of any character not among [a-z,A-Z,0-9,.,_] in the claimType.
+        // Regex to check occurrence of any character not among [a-z,A-Z,0-9,.,_] in the claimType.
         // The claimType is invalid if there is a match found.
         private static readonly Regex _invalidClaimCharsRgx = new(_invalidClaimChars, RegexOptions.Compiled);
 
@@ -59,14 +59,33 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
 
-            if (string.IsNullOrWhiteSpace(runtimeConfig.DatabaseType.ToString()))
-            {
-                const string databaseTypeNotSpecified =
-                    "The database-type should be provided with the runtime config.";
-                _logger.LogCritical(databaseTypeNotSpecified);
-                throw new NotSupportedException(databaseTypeNotSpecified);
-            }
+            ValidateDataSourceInConfig(
+                runtimeConfig,
+                _fileSystem,
+                _logger);
 
+            ValidateAuthenticationConfig();
+
+            // Running these graphQL validations only in development mode to ensure
+            // fast startup of engine in production mode.
+            if (runtimeConfig.GraphQLGlobalSettings.Enabled
+                 && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
+            {
+                ValidateEntityNamesInConfig(runtimeConfig.Entities);
+                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
+            }
+        }
+
+        /// <summary>
+        /// Throws exception if Invalid connection-string or database type
+        /// is present in the config
+        /// </summary>
+        public static void ValidateDataSourceInConfig(
+            RuntimeConfig runtimeConfig,
+            IFileSystem fileSystem,
+            ILogger logger)
+        {
+            // Connection string can't be null or empty
             if (string.IsNullOrWhiteSpace(runtimeConfig.ConnectionString))
             {
                 throw new DataApiBuilderException(
@@ -75,6 +94,29 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
+            ValidateDatabaseType(runtimeConfig, fileSystem, logger);
+        }
+
+        /// <summary>
+        /// Throws exception if database type is incorrectly configured
+        /// in the config. 
+        /// </summary>
+        public static void ValidateDatabaseType(
+            RuntimeConfig runtimeConfig,
+            IFileSystem fileSystem,
+            ILogger logger)
+        {
+            // Database Type cannot be null or empty
+            if (string.IsNullOrWhiteSpace(runtimeConfig.DatabaseType.ToString()))
+            {
+                const string databaseTypeNotSpecified =
+                    "The database-type should be provided with the runtime config.";
+                logger.LogCritical(databaseTypeNotSpecified);
+                throw new NotSupportedException(databaseTypeNotSpecified);
+            }
+
+            // Schema file should be present in the directory if not specified in the config
+            // when using cosmos database.
             if (runtimeConfig.DatabaseType is DatabaseType.cosmos)
             {
                 if (runtimeConfig.CosmosDb is null)
@@ -89,22 +131,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
                     }
 
-                    if (!_fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    if (!fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
                     {
                         throw new FileNotFoundException($"The GraphQL schema file at '{runtimeConfig.CosmosDb.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
                     }
                 }
-            }
-
-            ValidateAuthenticationConfig();
-
-            // Running these graphQL validations only in development mode to ensure
-            // fast startup of engine in production mode.
-            if (runtimeConfig.GraphQLGlobalSettings.Enabled
-                 && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
-            {
-                ValidateEntityNamesInConfig(runtimeConfig.Entities);
-                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
             }
         }
 
@@ -224,11 +255,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
 
-            // Validate that the user has not specified the devmode-authenticate-all-requests
-            // feature switch when in hostmode is production.
+            // Validate that the user has not set the devmode-authenticate-all-requests
+            // feature switch when hostmode is production.
 
             if (runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production
-                && runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is not null)
+                && runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is not null
+                && runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is true)
             {
                 throw new DataApiBuilderException(
                     message: $"Default state of authentication cannot be set for requests in production mode.",
@@ -297,12 +329,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             {
                                 configOperation = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
                             }
-                            catch
+                            catch (Exception e)
                             {
                                 throw new DataApiBuilderException(
                                     message: $"One of the action specified for entity:{entityName} is not well formed.",
                                     statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError,
+                                    innerException: e);
                             }
 
                             actionOp = configOperation.Name;
@@ -385,6 +418,15 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     continue;
                 }
 
+                if (entity.ObjectType is not SourceType.Table && entity.Relationships is not null
+                    && entity.Relationships.Count > 0)
+                {
+                    throw new DataApiBuilderException(
+                            message: $"Cannot define relationship for entity: {entity}",
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
+
                 foreach ((string relationshipName, Relationship relationship) in entity.Relationships)
                 {
                     // Validate if entity referenced in relationship is defined in the config.
@@ -408,13 +450,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                     if (relationship.LinkingObject is not null)
                     {
-                        (string linkingObjectSchema, string linkingObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(relationship.LinkingObject)!;
-                        DatabaseObject linkingDatabaseObject = new(linkingObjectSchema, linkingObjectName);
+                        (string linkingTableSchema, string linkingTableName) = sqlMetadataProvider.ParseSchemaAndDbTableName(relationship.LinkingObject)!;
+                        DatabaseTable linkingDatabaseObject = new(linkingTableSchema, linkingTableName);
 
                         if (relationship.LinkingSourceFields is null || relationship.SourceFields is null)
                         {
                             if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject,
-                                sqlMetadataProvider.EntityToDatabaseObject[entityName]))
+                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[entityName]))
                             {
                                 throw new DataApiBuilderException(
                                 message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
@@ -427,7 +469,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         if (relationship.LinkingTargetFields is null || relationship.TargetFields is null)
                         {
                             if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject,
-                                sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity]))
+                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity]))
                             {
                                 throw new DataApiBuilderException(
                                 message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
@@ -442,8 +484,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         && (relationship.SourceFields is null || relationship.TargetFields is null))
                     {
                         if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(
-                                sqlMetadataProvider.EntityToDatabaseObject[entityName],
-                                sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity])
+                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[entityName],
+                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity])
                             )
                         {
                             throw new DataApiBuilderException(

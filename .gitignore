@@ -13,10 +13,6 @@ log.txt
 appsettings.*.json
 dab-config.*.json
 *.dab-config.json
-!dab-config.PostgreSql.json
-!dab-config.MsSql.json
-!dab-config.MySql.json
-!dab-config.Cosmos.json
 !dab-config.*.example.json
 
 *.cd

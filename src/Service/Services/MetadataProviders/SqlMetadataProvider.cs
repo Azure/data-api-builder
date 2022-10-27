@@ -7,7 +7,6 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -60,9 +59,6 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
             new(StringComparer.InvariantCulture);
-
-        /// <inheritdoc/>
-        public Dictionary<string, DatabaseObject> SourceToDatabaseObject { get; set; } = new();
 
         private readonly ILogger<ISqlMetadataProvider> _logger;
 
@@ -155,12 +151,6 @@ namespace Azure.DataApiBuilder.Service.Services
                     // For stored procedures
                     return null!;
             }
-        }
-
-        /// <inheritdoc/>
-        public DatabaseObject GetDatabaseObject(string objectName)
-        {
-            return SourceToDatabaseObject[objectName];
         }
 
         /// <inheritdoc />
@@ -442,7 +432,6 @@ namespace Azure.DataApiBuilder.Service.Services
                         }
 
                         sourceObjects.Add(entity.SourceName, sourceObject);
-                        SourceToDatabaseObject.Add($"{schemaName}.{dbObjectName}", sourceObject);
                     }
 
                     EntityToDatabaseObject.Add(entityName, sourceObject);
@@ -695,87 +684,10 @@ namespace Azure.DataApiBuilder.Service.Services
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         viewDefinition);
-
-                    if (GetDatabaseType() == DatabaseType.mssql)
-                    {
-                        await PopulateBaseTableDefinitionsForViewAsync(
-                            entityName,
-                            GetSchemaName(entityName),
-                            GetDatabaseObjectName(entityName),
-                            viewDefinition);
-                    }
                 }
             }
 
             await PopulateForeignKeyDefinitionAsync();
-
-        }
-
-        private async Task PopulateBaseTableDefinitionsForViewAsync(
-            string entityName,
-            string schemaName,
-            string viewName,
-            SourceDefinition sourceDefinition)
-        {
-            DatabaseView view = (DatabaseView)EntityToDatabaseObject[entityName];
-            ViewDefinition viewDefinition = (ViewDefinition)sourceDefinition;
-            string dbviewName = $"{schemaName}.{viewName}";
-
-            // Get query parameters and generate query to get columns' details
-            // of the view.
-            // Parameters : dbViewName = dbViewName, is_hidden = 0, is_computed_column = 0
-            object[] paramValues = { dbviewName, 0, 0 };
-            Dictionary<string, object> parameters = GetQueryParams(paramName: "param", paramValues: paramValues);
-            string queryForColumnDetails = SqlQueryBuilder.BuildViewColumnsDetailsQuery(
-                numberOfParameters: 3);
-
-            // Execute the query to get columns' details.
-            JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
-                sqltext: queryForColumnDetails,
-                parameters: parameters!,
-                dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
-            using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
-
-            HashSet<string> baseTableNames = new();
-            // Iterate through each row returned by the query which corresponds to
-            // one column in the view.
-            foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
-            {
-                string viewColumn = element.GetProperty("col_name").ToString();
-                string sourceColumn = element.GetProperty("source_column").ToString();
-                string sourceTable = element.GetProperty("source_table").ToString();
-                string sourceSchema = element.GetProperty("source_schema").ToString();
-                string dbTableName = $"{sourceSchema}.{sourceTable}";
-
-                baseTableNames.Add(dbTableName);
-
-                // Store the base table's definition in the dictionary,
-                // if not already added.
-                DatabaseTable dbTable = new(sourceSchema, sourceTable);
-                if (SourceToDatabaseObject.TryAdd(dbTableName, dbTable))
-                {
-                    await PopulateSourceDefinitionAsync(
-                        entityName: string.Empty,
-                        schemaName: schemaName,
-                        tableName: sourceTable,
-                        sourceDefinition: dbTable.TableDefinition
-                        );
-                }
-                else
-                {
-                    dbTable = (DatabaseTable)SourceToDatabaseObject[dbTableName];
-                }
-
-                if (!viewColumn.Equals(sourceColumn))
-                {
-                    dbTable.TableDefinition.Columns[sourceColumn].ViewToViewColumnNameMap.TryAdd(view, viewColumn);
-                }
-
-                viewDefinition.ViewColToDatabaseTableMap[viewColumn] =
-                    (DatabaseTable)SourceToDatabaseObject[dbTableName];
-            }
-
-            viewDefinition.NumberOfBaseTables = baseTableNames.Count;
         }
 
         /// <summary>

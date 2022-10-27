@@ -23,9 +23,6 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         /// <inheritdoc />
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
 
-        /// <inheritdoc/>
-        public Dictionary<string, DatabaseObject> SourceToDatabaseObject { get; set; } = new();
-
         public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
         {
             _fileSystem = fileSystem;
@@ -102,10 +99,6 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotSupportedException("Cosmos backends don't support direct table definitions. Definitions are provided via the GraphQL schema");
         }
 
-        public DatabaseObject GetDatabaseObject(string objectName)
-        {
-            throw new NotImplementedException();
-        }
         public StoredProcedureDefinition GetStoredProcedureDefinition(string entityName)
         {
             // There's a lot of unimplemented methods here, maybe need to rethink the current interface implementation

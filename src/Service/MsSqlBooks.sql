@@ -99,7 +99,7 @@ CREATE TABLE stocks(
 CREATE TABLE stocks_price(
     categoryid int NOT NULL,
     pieceid int NOT NULL,
-    instant varchar(10) NOT NULL,
+    instant datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     price float,
     is_wholesale_price bit,
     PRIMARY KEY(categoryid, pieceid, instant)
@@ -274,7 +274,7 @@ SET IDENTITY_INSERT series OFF
 INSERT INTO comics(id, title, categoryName, series_id) 
 VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'FairyTales', 3001),(3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');
-INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, 'instant1', 100.57, 1), (1, 1, 'instant2', 42.75, 0);
+INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES (2, 1, 100.57, 1), (1, 1, 42.75, 0);
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
 INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');

@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 SELECT TOP 100 " + string.Join(", ", queriedColumns) + @"
                 FROM " + schemaAndTable + @" AS [table0]
                 WHERE " + predicate + @"
-                ORDER BY " + orderBy + @"
+                ORDER BY " + orderBy + @" asc
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES
             ";

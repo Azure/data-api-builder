@@ -94,8 +94,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string graphQLMutation = @"
                 mutation {
                   createstocks_price(item: { categoryid: 100 pieceid: 99 price: 50.0 is_wholesale_price: true } ) {
-                    categoryid
                     pieceid
+                    categoryid
                     }
                 }
             ";

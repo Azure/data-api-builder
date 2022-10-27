@@ -44,10 +44,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <summary>
         /// Tests REST and GraphQL requests against the engine when configured
         /// with the authentication simulator.
-        /// Validate that requests receive authorization failures if the clientRole
-        /// used does not match role permissions, and succeed otherwise.
-        /// Authentication errors (HTTP 401 Unauthorized) are not expected since the
-        /// simulator authenticates all requests.
+        /// - Ensures authentication errors (HTTP 401 Unauthorized) are not returned
+        /// because the Simulator provider guarantees that all requests are authenticated
+        /// and not necessarily authorized.
+        /// - Test entity: Journal
+        /// - The role AuthorizationHandlerTester has read permissions on Journal
+        /// and the roles Anonymous and Authenticated do not have read permissions on Journal.
+        /// - Validate that requests fails authorization (HTTP 403 Forbidden) if the clientRole
+        /// used does not match role permissions, and succeed (HTTP 200 OK) otherwise.
         /// </summary>
         /// <param name="clientRole">Role for which the engine should evaluate authorization.</param>
         /// <param name="expectError">Whether an error is expected for the requests.</param>
@@ -55,8 +59,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <returns></returns>
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
-        [DataRow("Authenticated", true, HttpStatusCode.Forbidden, DisplayName = "Simulator - Authenticated")]
-        [DataRow("AuthorizationHandlerTester", false, HttpStatusCode.OK, DisplayName = "Simulator - Successful access with role: AuthorizationHandlerTester")]
+        [DataRow("Anonymous", true, HttpStatusCode.Forbidden, DisplayName = "Simulator - Anonymous role does not have proper permissions.")]
+        [DataRow("Authenticated", true, HttpStatusCode.Forbidden, DisplayName = "Simulator - Authenticated but Authenticated role does not have proper permissions.")]
+        [DataRow("authorizationHandlerTester", false, HttpStatusCode.OK, DisplayName = "Simulator - Successful access with role: AuthorizationHandlerTester")]
         public async Task TestSimulatorRequests(string clientRole, bool expectError, HttpStatusCode expectedStatusCode)
         {
             string graphQLQueryName = "journal_by_pk";
@@ -90,9 +95,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 SqlTestHelper.PerformTestEqualJsonStrings(expectedResult, actual.ToString());
             }
 
-            // Validate that REST request:
-            // - Succeed with 200 OK
-            // - Fail with 403 Forbidden
             HttpRequestMessage request = new(HttpMethod.Get, "api/Journal");
             request.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRole);
             HttpResponseMessage response = await _client.SendAsync(request);
@@ -104,7 +106,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(MSSQL_ENVIRONMENT);
             RuntimeConfig config = configProvider.GetRuntimeConfiguration();
 
-            AuthenticationConfig authenticationConfig = new(Provider: SimulatorType.Simulator.ToString());
+            AuthenticationConfig authenticationConfig = new(Provider: AuthenticationConfig.SIMULATOR_AUTHENTICATION);
             HostGlobalSettings customHostGlobalSettings = config.HostGlobalSettings with { Authentication = authenticationConfig };
             JsonElement serializedCustomHostGlobalSettings =
                 JsonSerializer.SerializeToElement(customHostGlobalSettings, RuntimeConfig.SerializerOptions);

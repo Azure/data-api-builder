@@ -22,8 +22,10 @@ using Moq;
 namespace Azure.DataApiBuilder.Service.Tests.Authentication
 {
     /// <summary>
-    /// Tests how the runtime handles the presence/no presence of an EasyAuth header
-    /// when EasyAuth is configured for authentication.
+    /// Tests the behavior of using SimulatorAuthenticationHandler
+    /// for authentication and that it properly injects and authenticated
+    /// ClaimsPrincipal object with role membership containing the client role header
+    /// value, if present.
     /// </summary>
     [TestClass]
     public class SimulatorAuthenticationUnitTests
@@ -76,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                         .ConfigureServices(services =>
                         {
                             services.AddAuthentication(defaultScheme: SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                                    .AddSimulatorAuthentication(SimulatorType.Simulator);
+                                    .AddSimulatorAuthentication();
                             services.AddSingleton(runtimeConfigProvider.Object);
                             services.AddAuthorization();
                         })

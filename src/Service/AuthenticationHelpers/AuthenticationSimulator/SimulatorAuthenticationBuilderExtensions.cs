@@ -1,4 +1,3 @@
-using Azure.DataApiBuilder.Config;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator
@@ -16,8 +15,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimul
         /// <param name="builder">Authentication builder.</param>
         /// <param name="SimulatorAuthenticationProvider">Simulator provider type. StaticWebApps or AppService</param>
         /// <returns>The builder, to chain commands.</returns>
-        public static AuthenticationBuilder AddSimulatorAuthentication(
-             this AuthenticationBuilder builder, SimulatorType SimulatorAuthenticationProvider)
+        public static AuthenticationBuilder AddSimulatorAuthentication(this AuthenticationBuilder builder)
         {
             if (builder is null)
             {

@@ -13,6 +13,7 @@ namespace Azure.DataApiBuilder.Config
         Jwt? Jwt = null)
     {
         public const string CLIENT_PRINCIPAL_HEADER = "X-MS-CLIENT-PRINCIPAL";
+        public const string SIMULATOR_AUTHENTICATION = "Simulator";
 
         /// <summary>
         /// Returns whether the configured Provider matches an
@@ -31,7 +32,7 @@ namespace Azure.DataApiBuilder.Config
         /// <returns>True when development mode should authenticate all requests.</returns>
         public bool IsAuthenticationSimulatorEnabled()
         {
-            return Provider.Equals(SimulatorType.Simulator.ToString(), StringComparison.OrdinalIgnoreCase);
+            return Provider.Equals(SIMULATOR_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);
         }
     }
 
@@ -48,15 +49,6 @@ namespace Azure.DataApiBuilder.Config
     public enum EasyAuthType
     {
         StaticWebApps,
-        AppService,
-        AuthenticateDevModeRquests
-    }
-
-    /// <summary>
-    /// Simulator authentication mode in which the runtime can run.
-    /// </summary>
-    public enum SimulatorType
-    {
-        Simulator
+        AppService
     }
 }

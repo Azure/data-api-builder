@@ -72,16 +72,24 @@ namespace Azure.DataApiBuilder.Service.Services
             _runtimeConfigProvider = runtimeConfigProvider;
             _databaseType = runtimeConfig.DatabaseType;
             _entities = runtimeConfig.Entities;
-            foreach (Entity entity in _entities.Values)
+            _logger = logger;
+            foreach (KeyValuePair<string, Entity> entity in _entities)
             {
-                entity.TryPopulateSourceFields();
+                entity.Value.TryPopulateSourceFields();
+                if (runtimeConfigProvider.GetRuntimeConfiguration().RestGlobalSettings.Enabled)
+                {
+                    _logger.LogInformation($"{entity.Key} path: {runtimeConfigProvider.RestPath}/{entity.Value.SourceName}");
+                }
+                else
+                {
+                    _logger.LogInformation($"REST calls are disabled for Entity: {entity.Key}");
+                }
             }
 
             ConnectionString = runtimeConfig.ConnectionString;
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             QueryExecutor = queryExecutor;
-            _logger = logger;
         }
 
         /// <inheritdoc />

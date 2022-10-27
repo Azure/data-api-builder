@@ -16,7 +16,7 @@ add Fungus --config "dab-config.MySql.json" --source fungi --permissions "anonym
 add books_view_all --config "dab-config.MySql.json" --source books_view_all --source.type "view" --permissions "anonymous:read"
 add stocks_view_selected --config "dab-config.MySql.json" --source stocks_view_selected --source.type "view" --permissions "anonymous:read"
 add books_publishers_view_composite --config "dab-config.MySql.json" --source books_publishers_view_composite --source.type "view" --permissions "anonymous:read" --rest true --graphql true
-add stocks_price_view_composite --config "dab-config.MySql.json" --source stocks_price_view_composite --source.type "view" --permissions "anonymous:*" --map "instant:phase" --rest true --graphql true
+add stocks_price_view_composite --config "dab-config.MySql.json" --source stocks_price_view_composite --source.type "view" --permissions "anonymous:*" --rest true --graphql true
 add Empty --config "dab-config.MySql.json" --source "empty_table" --permissions "authenticated:create,read,update,delete" --rest true
 add Notebook --config "dab-config.MySql.json" --source "notebooks" --permissions "anonymous:read" --rest true --graphql true --fields.include "*" --policy-database "@item ne 1"
 add Journal --config "dab-config.MySql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
@@ -101,3 +101,4 @@ update Journal --config "dab-config.MySql.json" --permissions "policy_tester_upd
 update Journal --config "dab-config.MySql.json" --permissions "policy_tester_update_noread:delete" --fields.include "*" --policy-database "@item.id eq 1"
 update Journal --config "dab-config.MySql.json" --permissions "authorizationHandlerTester:read"
 update ArtOfWar --config "dab-config.MySql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
+update stocks_price_view_composite --config "dab-config.MySql.json" --map "instant:phase"

@@ -103,7 +103,7 @@ namespace Azure.DataApiBuilder.Service.Models
             return MakeChainPredicate(predicates, PredicateOperation.AND);
         }
 
-        static bool IsSingularType(string name) 
+        static bool IsSingularType(string name)
         {
             return new string[] { "StringFilterInput", "IntFilterInput", "BoolFilterInput", "IdFilterInput" }.Contains(name);
         }

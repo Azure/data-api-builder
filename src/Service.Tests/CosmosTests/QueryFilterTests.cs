@@ -2,7 +2,6 @@ using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Resolvers;
-using HotChocolate;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -572,7 +571,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                  }
             }";
 
-             string dbQuery = "SELECT top 1 c.id, c.name, c.character FROM c where c.character.name = \"planet character\"";
+            string dbQuery = "SELECT top 1 c.id, c.name, c.character FROM c where c.character.name = \"planet character\"";
             //string dbQuery = "select c.name from c where c.character.name = \"planet character\"";
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }

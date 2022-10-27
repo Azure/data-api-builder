@@ -70,6 +70,16 @@
             }
           }
         },
+        "graphql": {
+          "type": "object",
+          "description": "Global GraphQL endpoint configuration",
+          "properties": {
+            "allow-introspection": {
+              "type": "boolean",
+              "description": "Allow querying of the underlying GraphQL schema."
+            }
+          }
+        },
         "host": {
           "type": "object",
           "description": "Global hosting configuration",

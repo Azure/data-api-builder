@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimul
         }
 
         /// <summary>
-        /// Gets any authentication data for a request. When a client rolel header is present,
+        /// Gets any authentication data for a request. When a client role header is present,
         /// parses the header and authenticates the user within a ClaimsPrincipal object.
         /// The ClaimsPrincipal is a security principal usable by middleware to identify the
         /// authenticated user.

@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.Identity;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
 
@@ -18,7 +17,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         // This is the same scope for any Azure SQL database that is
         // required to request a default azure credential access token
         // for a managed identity.
-        public const string DATABASE_SCOPE = @"https://database.windows.net/.default";
+        public const string DATABASE_SCOPE = @"https://ossrdbms-aad.database.windows.net/.default";
 
         /// <summary>
         /// The managed identity Access Token string obtained
@@ -91,11 +90,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         private static bool ShouldManagedIdentityAccessBeAttempted(string connString)
         {
-            SqlConnectionStringBuilder connStringBuilder = new(connString);
-            return string.IsNullOrEmpty(connStringBuilder.UserID) &&
-                string.IsNullOrEmpty(connStringBuilder.Password) &&
-                connStringBuilder.Authentication == SqlAuthenticationMethod.NotSpecified &&
-                !connStringBuilder.IntegratedSecurity;
+            MySqlConnectionStringBuilder connStringBuilder = new(connString);
+            return !string.IsNullOrEmpty(connStringBuilder.UserID) &&
+                string.IsNullOrEmpty(connStringBuilder.Password);
         }
 
         /// <summary>

@@ -65,7 +65,8 @@ namespace Cli.Tests
                 ""path"": ""/api""
               },
               ""graphql"": {
-                ""path"": ""/graphql""
+                ""path"": ""/graphql"",
+                ""allow-introspection"": true
               },
               ""host"": {
                 ""mode"": ""development"",
@@ -94,7 +95,8 @@ namespace Cli.Tests
                 ""path"": ""/api""
               },
               ""graphql"": {
-                ""path"": ""/graphql""
+                ""path"": ""/graphql"",
+                ""allow-introspection"": true
               },
               ""host"": {
                 ""mode"": ""development"",
@@ -326,7 +328,8 @@ namespace Cli.Tests
             ""path"": ""/api""
           },
           ""graphql"": {
-            ""path"": ""/graphql""
+            ""path"": ""/graphql"",
+            ""allow-introspection"": true
           },
           ""host"": {
             ""mode"": ""production"",

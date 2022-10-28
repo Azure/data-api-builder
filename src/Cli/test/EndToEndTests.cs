@@ -21,10 +21,9 @@ public class EndToEndTests
         Program.Main(args);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
-        runtimeConfig!.DetermineGlobalSettings();
-        runtimeConfig!.DetermineGraphQLEntityNames();
 
         Assert.IsNotNull(runtimeConfig);
+        Assert.IsTrue(runtimeConfig.GraphQLGlobalSettings.AllowIntrospection);
         Assert.AreEqual(DatabaseType.cosmos, runtimeConfig.DatabaseType);
         Assert.IsNotNull(runtimeConfig.CosmosDb);
         Assert.AreEqual("graphqldb", runtimeConfig.CosmosDb.Database);

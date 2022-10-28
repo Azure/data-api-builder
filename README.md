@@ -62,4 +62,4 @@ If you want to propose a completely new feature, please create an RFC item. Good
 
 - [Microsoft REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md)
 - [Microsoft Azure REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/azure/Guidelines.md)
-- [GraphQL] (https://graphql.org/)
+- [GraphQL](https://graphql.org/)

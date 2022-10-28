@@ -1,13 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
-using System.IO.Abstractions;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Configurations;
 using Humanizer;
-using Microsoft.Extensions.Logging;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>
@@ -490,41 +487,30 @@ namespace Cli
         }
 
         /// <summary>
-        /// Reads the config and calls the method to validate 
-        /// connection-string and database-type
+        /// Checks if config can be correctly parsed by deserializing the
+        /// json config into runtime config object.
+        /// Also checks that connection-string is not null or empty whitespace
         /// </summary>
-        public static bool CanStartEngineWithConfig(string configFile)
+        public static bool CanParseConfigCorrectly(string configFile)
         {
-            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
-            {
-                builder.AddConsole();
-            });
-
-            ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
-
             if (!TryReadRuntimeConfig(configFile, out string runtimeConfigJson))
             {
+                Console.Error.WriteLine($"Failed to read the config file: {configFile}.");
                 return false;
             }
 
-            if (!RuntimeConfig.TryGetDeserializedConfig(runtimeConfigJson, out RuntimeConfig? runtimeConfig, logger))
+            if (!RuntimeConfig.TryGetDeserializedRuntimeConfig(
+                    runtimeConfigJson,
+                    out RuntimeConfig? deserializedRuntimeConfig,
+                    logger: null))
             {
+                Console.Error.WriteLine($"Failed to parse the config file: {configFile}.");
                 return false;
             }
 
-            try
+            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.ConnectionString))
             {
-                RuntimeConfigValidator._isDataSourceValidatedByCLI = false;
-                RuntimeConfigValidator.ValidateDataSourceInConfig(
-                    runtimeConfig!,
-                    new FileSystem(),
-                    logger);
-
-                RuntimeConfigValidator._isDataSourceValidatedByCLI = true;
-            }
-            catch (Exception e)
-            {
-                Console.Error.WriteLine(e.Message);
+                Console.Error.WriteLine($"Invalid connection-string provided in the config.");
                 return false;
             }
 

@@ -12,7 +12,6 @@
       "path": "/api"
     },
     "graphql": {
-      "path": "/graphql",
       "allow-introspection": true
     },
     "host": {
@@ -752,7 +751,10 @@
       ]
     },
     "books_view_all": {
-      "source": "books_view_all",
+      "source": {
+        "object": "books_view_all",
+        "type": "view"
+      },
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -769,7 +771,10 @@
       }
     },
     "stocks_view_selected": {
-      "source": "stocks_view_selected",
+      "source": {
+        "object": "stocks_view_selected",
+        "type": "view"
+      },
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -786,7 +791,10 @@
       }
     },
     "books_publishers_view_composite": {
-      "source": "books_publishers_view_composite",
+      "source": {
+        "object": "books_publishers_view_composite",
+        "type": "view"
+      },
       "rest": true,
       "graphql": true,
       "permissions": [

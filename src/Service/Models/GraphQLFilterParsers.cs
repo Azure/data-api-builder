@@ -22,17 +22,17 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <param name="ctx">The GraphQL context, used to get the query variables</param>
         /// <param name="filterArgumentSchema">An IInputField object which describes the schema of the filter argument</param>
         /// <param name="fields">The fields in the *FilterInput being processed</param>
-        /// <param name="tableAlias">The table alias underlyin the *FilterInput being processed</param>
-        /// <param name="table">The table underlying the *FilterInput being processed</param>
+        /// <param name="sourceAlias">The source alias underlyin the *FilterInput being processed</param>
+        /// <param name="sourceDefinition">Definition of the table/view underlying the *FilterInput being processed</param>
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
         public static Predicate Parse(
             IMiddlewareContext ctx,
             IInputField filterArgumentSchema,
             List<ObjectFieldNode> fields,
             string schemaName,
-            string tableName,
-            string tableAlias,
-            TableDefinition table,
+            string sourceName,
+            string sourceAlias,
+            SourceDefinition sourceDefinition,
             Func<object, string> processLiterals)
         {
             InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
@@ -68,9 +68,9 @@ namespace Azure.DataApiBuilder.Service.Models
                         filterArgumentSchema: filterArgumentSchema,
                         otherPredicates,
                         schemaName,
-                        tableName,
-                        tableAlias,
-                        table,
+                        sourceName,
+                        sourceAlias,
+                        sourceDefinition,
                         op,
                         processLiterals)));
                 }
@@ -84,22 +84,22 @@ namespace Azure.DataApiBuilder.Service.Models
                             filterArgumentObject.Fields[name],
                             subfields,
                             schemaName,
-                            tableName + "." + name,
-                            tableAlias + "." + name,
-                            table,
+                            sourceName + "." + name,
+                            sourceAlias + "." + name,
+                            sourceDefinition,
                             processLiterals)));
                     }
                     else
                     {
                         predicates.Push(new PredicateOperand(ParseScalarType(
-                            ctx,
-                            argumentSchema: filterArgumentObject.Fields[name],
-                            name,
-                            subfields,
-                            schemaName,
-                            tableName,
-                            tableAlias,
-                            processLiterals)));
+                        ctx,
+                        argumentSchema: filterArgumentObject.Fields[name],
+                        name,
+                        subfields,
+                        schemaName,
+                        sourceName,
+                        sourceAlias,
+                        processLiterals)));
                     }
                 }
             }
@@ -154,7 +154,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <param name="schemaName">The db schema name to which the table belongs</param>
         /// <param name="tableName">The name of the table underlying the *FilterInput being processed</param>
         /// <param name="tableAlias">The alias of the table underlying the *FilterInput being processed</param>
-        /// <param name="table">The table underlying the *FilterInput being processed</param>
+        /// <param name="sourceDefinition">Definition of the table/view underlying the *FilterInput being processed</param>
         /// <param name="op">The operation (and or or)</param>
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
         private static Predicate ParseAndOr(
@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Service.Models
             string schemaName,
             string tableName,
             string tableAlias,
-            TableDefinition table,
+            SourceDefinition sourceDefinition,
             PredicateOperation op,
             Func<object, string> processLiterals)
         {
@@ -188,7 +188,7 @@ namespace Azure.DataApiBuilder.Service.Models
                 }
 
                 List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
-                operands.Add(new PredicateOperand(Parse(ctx, filterArgumentSchema, subfields, schemaName, tableName, tableAlias, table, processLiterals)));
+                operands.Add(new PredicateOperand(Parse(ctx, filterArgumentSchema, subfields, schemaName, tableName, tableAlias, sourceDefinition, processLiterals)));
             }
 
             return MakeChainPredicate(operands, op);

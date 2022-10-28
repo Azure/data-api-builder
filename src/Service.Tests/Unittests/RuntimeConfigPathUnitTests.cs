@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
      }
 }";
             Mock<ILogger<RuntimeConfigProvider>> logger = new();
-            Assert.IsFalse(RuntimeConfig.TryGetDeserializedConfig
+            Assert.IsFalse(RuntimeConfig.TryGetDeserializedRuntimeConfig
                              (configJson,
                              out RuntimeConfig deserializedConfig,
                              logger.Object));

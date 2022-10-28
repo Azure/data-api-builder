@@ -28,11 +28,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         // Only characters from a-z,A-Z,0-9,.,_ are allowed to be present within the claimType.
         private static readonly string _invalidClaimChars = @"[^a-zA-Z0-9_\.]+";
 
-        // To make sure validation once done by CLI for connection string and databaseType is not repeated
-        // by engine for the same config. Default value is false.
-        public static bool _isDataSourceValidatedByCLI;
-
-        // Regex to check occurence of any character not among [a-z,A-Z,0-9,.,_] in the claimType.
+        // Regex to check occurrence of any character not among [a-z,A-Z,0-9,.,_] in the claimType.
         // The claimType is invalid if there is a match found.
         private static readonly Regex _invalidClaimCharsRgx = new(_invalidClaimChars, RegexOptions.Compiled);
 
@@ -89,12 +85,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
             IFileSystem fileSystem,
             ILogger logger)
         {
-            // No Need to Validated Again if Validated by CLI
-            if (_isDataSourceValidatedByCLI)
-            {
-                return;
-            }
-
             // Connection string can't be null or empty
             if (string.IsNullOrWhiteSpace(runtimeConfig.ConnectionString))
             {
@@ -428,6 +418,15 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     continue;
                 }
 
+                if (entity.ObjectType is not SourceType.Table && entity.Relationships is not null
+                    && entity.Relationships.Count > 0)
+                {
+                    throw new DataApiBuilderException(
+                            message: $"Cannot define relationship for entity: {entity}",
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
+
                 foreach ((string relationshipName, Relationship relationship) in entity.Relationships)
                 {
                     // Validate if entity referenced in relationship is defined in the config.
@@ -451,13 +450,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                     if (relationship.LinkingObject is not null)
                     {
-                        (string linkingObjectSchema, string linkingObjectName) = sqlMetadataProvider.ParseSchemaAndDbObjectName(relationship.LinkingObject)!;
-                        DatabaseObject linkingDatabaseObject = new(linkingObjectSchema, linkingObjectName);
+                        (string linkingTableSchema, string linkingTableName) = sqlMetadataProvider.ParseSchemaAndDbTableName(relationship.LinkingObject)!;
+                        DatabaseTable linkingDatabaseObject = new(linkingTableSchema, linkingTableName);
 
                         if (relationship.LinkingSourceFields is null || relationship.SourceFields is null)
                         {
                             if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject,
-                                sqlMetadataProvider.EntityToDatabaseObject[entityName]))
+                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[entityName]))
                             {
                                 throw new DataApiBuilderException(
                                 message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
@@ -470,7 +469,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         if (relationship.LinkingTargetFields is null || relationship.TargetFields is null)
                         {
                             if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject,
-                                sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity]))
+                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity]))
                             {
                                 throw new DataApiBuilderException(
                                 message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
@@ -485,8 +484,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         && (relationship.SourceFields is null || relationship.TargetFields is null))
                     {
                         if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(
-                                sqlMetadataProvider.EntityToDatabaseObject[entityName],
-                                sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity])
+                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[entityName],
+                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity])
                             )
                         {
                             throw new DataApiBuilderException(

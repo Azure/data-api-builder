@@ -812,9 +812,9 @@ namespace Cli
                 return false;
             }
 
-            if (!CanStartEngineWithConfig(runtimeConfigFile))
+            // Validates that config file has data and follows the correct json schema
+            if (!CanParseConfigCorrectly(runtimeConfigFile))
             {
-                Console.Error.WriteLine("Config is not valid.");
                 return false;
             }
 

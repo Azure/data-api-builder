@@ -196,5 +196,20 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // If at least one parameter added, remove trailing comma and space, else return empty string
             return parameterList.Length > 0 ? parameterList[..^2] : parameterList;
         }
+
+        /// <inheritdoc/>
+        public string BuildViewColumnsDetailsQuery(int numberOfParameters)
+        {
+            string[] paramNames = CreateParams(kindOfParam: "@param", numberOfParameters);
+            int currentParamIdx = 0;
+            string query = "SELECT name as col_name, source_column, source_table, source_schema " +
+                           "FROM sys.dm_exec_describe_first_result_set (" +
+                           $"N'SELECT * from '+ {paramNames[currentParamIdx++]}, null, 1) " +
+                           $"WHERE is_hidden = {paramNames[currentParamIdx++]} AND " +
+                           $"is_computed_column = {paramNames[currentParamIdx++]} " +
+                           $"AND source_column is not NULL AND source_table is not NULL " +
+                           $"AND source_schema is not NULL";
+            return query;
+        }
     }
 }

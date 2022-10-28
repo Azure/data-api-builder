@@ -252,7 +252,7 @@ prepare stmt2 from 'CREATE VIEW stocks_view_selected AS SELECT
                     FROM stocks';
 
 prepare stmt3 from 'CREATE VIEW books_publishers_view_composite as SELECT
-                    publishers.name,books.id,books.publisher_id
+                    publishers.name,books.id,publishers.id as publisher_id
                     FROM books,publishers
                     where publishers.id = books.publisher_id';
 

@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class RequestContextUnitTests
     {
-        private static DatabaseObject _defaultDbObject = new()
+        private static DatabaseObject _defaultDbObject = new DatabaseTable()
         {
             SchemaName = string.Empty,
             Name = string.Empty,

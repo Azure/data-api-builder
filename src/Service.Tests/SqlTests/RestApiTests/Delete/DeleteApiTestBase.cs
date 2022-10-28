@@ -84,6 +84,37 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
         }
+
+        /// <summary>
+        /// Delete tests on views which contain fields from one base table
+        /// should pass.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task DeleteOneInViewTest()
+        {
+            // Delete one from view based on books table.
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1",
+                    queryString: null,
+                    entityNameOrPath: _simple_all_books,
+                    sqlQuery: null,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+
+            // Delete one from view based on stocks table.
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _simple_subset_stocks,
+                    sqlQuery: null,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
         #endregion
 
         #region Negative Tests
@@ -209,6 +240,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
+        }
+
+        /// <summary>
+        /// Delete tests on views which contain fields from multiple
+        /// base tables should fail.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task DeleteOneInViewBadRequestTest()
+        {
+            // Delete one from view based on books,publishers table.
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1/pub_id/1234",
+                    queryString: null,
+                    entityNameOrPath: _composite_subset_bookPub,
+                    sqlQuery: null,
+                    operationType: Operation.Delete,
+                    requestBody: null,
+                    exceptionExpected: true,
+                    expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
+                    "because the modification affects multiple base tables.",
+                    expectedStatusCode: HttpStatusCode.InternalServerError,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                );
+            ;
         }
 
         #endregion

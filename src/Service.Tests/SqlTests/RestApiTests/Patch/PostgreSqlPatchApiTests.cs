@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -168,6 +169,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 $"VALUES (1000,'The Hobbit Returns to The Shire',1234)"
             }
         };
+
+        #region Overriden tests
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOneInsertInViewTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOneUpdateViewTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOneViewBadRequestTest()
+        {
+            throw new NotImplementedException();
+        }
+        #endregion
 
         #region Test Fixture Setup
 

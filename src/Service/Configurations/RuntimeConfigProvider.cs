@@ -308,12 +308,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <returns>True when authenticate-devmode-requests is enabled</returns>
         public virtual bool IsAuthenticatedDevModeRequest()
         {
-            if (RuntimeConfiguration is null)
-            {
-                return false;
-            }
-
-            if (RuntimeConfiguration.AuthNConfig is null)
+            if (RuntimeConfiguration?.AuthNConfig == null)
             {
                 return false;
             }

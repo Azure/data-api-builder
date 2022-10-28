@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                           `table0`.`title` AS `title`
                    FROM `books` AS `table0`
                    WHERE 1 = 1
-                   ORDER BY `table0`.`id`
+                   ORDER BY `table0`.`id` asc
                    LIMIT 100) AS `subq1`";
 
             await MultipleResultQuery(mySqlQuery);
@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                           `table0`.`title` AS `title`
                    FROM `books` AS `table0`
                    WHERE 1 = 1
-                   ORDER BY `table0`.`id`
+                   ORDER BY `table0`.`id` asc
                    LIMIT 100) AS `subq1`";
 
             await MultipleResultQueryWithVariables(mySqlQuery);
@@ -74,13 +74,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                                     SELECT `table2`.`id` AS `id`
                                     FROM `books` AS `table2`
                                     WHERE `table1`.`book_id` = `table2`.`id`
-                                    ORDER BY `table2`.`id` LIMIT 1
+                                    ORDER BY `table2`.`id` asc LIMIT 1
                                     ) AS `subq9`) AS `table2_subq` ON TRUE
                             WHERE `table0`.`id` = `table1`.`book_id`
-                            ORDER BY `table1`.`id` LIMIT 1
+                            ORDER BY `table1`.`id` asc LIMIT 1
                             ) AS `subq10`) AS `table1_subq` ON TRUE
                     WHERE `table0`.`id` = 1
-                    ORDER BY `table0`.`id` LIMIT 100
+                    ORDER BY `table0`.`id` asc LIMIT 100
                     ) AS `subq11`
             ";
 
@@ -96,7 +96,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                   (SELECT `table0`.`title` AS `title`
                    FROM `books` AS `table0`
                    WHERE `table0`.`id` = 2
-                   ORDER BY `table0`.`id`
+                   ORDER BY `table0`.`id` asc
                    LIMIT 1) AS `subq2`
             ";
 
@@ -113,8 +113,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     FROM `reviews` AS `table0`
                     WHERE `table0`.`id` = 568
                         AND `table0`.`book_id` = 1
-                    ORDER BY `table0`.`book_id`,
-                        `table0`.`id` LIMIT 1
+                    ORDER BY `table0`.`book_id` asc,
+                        `table0`.`id` asc LIMIT 1
                     ) AS `subq3`
             ";
 
@@ -180,7 +180,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                         `table0`.`issue_number` AS `issue_number`
                     FROM `magazines` AS `table0`
                     WHERE 1 = 1
-                    ORDER BY `table0`.`id` LIMIT 100
+                    ORDER BY `table0`.`id` asc LIMIT 100
                     ) AS `subq1`
             ";
 
@@ -200,7 +200,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                         `table0`.`username` AS `username`
                     FROM `website_users` AS `table0`
                     WHERE 1 = 1
-                    ORDER BY `table0`.`id` LIMIT 100
+                    ORDER BY `table0`.`id` asc LIMIT 100
                     ) AS `subq1`
             ";
 
@@ -222,7 +222,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                           `table0`.`title` AS `book_title`
                    FROM `books` AS `table0`
                    WHERE 1 = 1
-                   ORDER BY `table0`.`id`
+                   ORDER BY `table0`.`id` asc
                    LIMIT 2) AS `subq1`";
 
             await TestAliasSupportForGraphQLQueryFields(mySqlQuery);
@@ -243,7 +243,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                           `table0`.`title` AS `title`
                    FROM `books` AS `table0`
                    WHERE 1 = 1
-                   ORDER BY `table0`.`id`
+                   ORDER BY `table0`.`id` asc
                    LIMIT 2) AS `subq1`";
 
             await TestSupportForMixOfRawDbFieldFieldAndAlias(mySqlQuery);
@@ -368,7 +368,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                           `table0`.`title` AS `title`
                    FROM `books` AS `table0`
                    WHERE 1 = 1
-                   ORDER BY `table0`.`id`
+                   ORDER BY `table0`.`id` asc
                    LIMIT 100) AS `subq1`";
 
             await TestQueryWithExplicitlyNullArguments(mySqlQuery);

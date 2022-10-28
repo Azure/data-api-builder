@@ -78,6 +78,44 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test that permission configuration validation fails when a database policy
+        /// is defined for the Create operation.
+        /// </summary>
+        /// <param name="dbPolicy">Database policy.</param>
+        /// <param name="action">The action to be validated.</param>
+        /// <param name="errorExpected">Whether an error is expected.</param>
+        [DataTestMethod]
+        [DataRow("1 eq @item.col1", Operation.Create, true, DisplayName = "Database Policy defined for Create fails")]
+        [DataRow("", Operation.Create, true, DisplayName = "Database Policy left empty for Create fails")]
+        [DataRow(null, Operation.Create, false, DisplayName = "Database Policy NOT defined for Create passes")]
+        [DataRow("1 eq @item.col2", Operation.Read, false, DisplayName = "Database Policy defined for Read passes")]
+        [DataRow("2 eq @item.col3", Operation.Update, false, DisplayName = "Database Policy defined for Update passes")]
+        [DataRow("2 eq @item.col3", Operation.Delete, false, DisplayName = "Database Policy defined for Delete passes")]
+        public void AddDatabasePolicyToCreateOperationPermission(string dbPolicy, Operation action, bool errorExpected)
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE,
+                operation: action,
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
+                databasePolicy: dbPolicy
+                );
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+
+            try
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+                Assert.IsFalse(errorExpected, message: "Validation expected to have failed.");
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.IsTrue(errorExpected, message: "Validation expected to have passed.");
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+        }
+
+        /// <summary>
         /// Test method to check that Exception is thrown when Target Entity used in relationship is not defined in the config.
         /// </summary>
         [TestMethod]
@@ -605,7 +643,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string actionJson = @"{
                                         ""action"": " + $"\"{operationName}\"" + @",
                                         ""policy"": {
-                                            ""database"": ""@claims.id eq @item.id""
+                                            ""database"": null
                                           },
                                         ""fields"": {
                                             ""include"": [""*""]

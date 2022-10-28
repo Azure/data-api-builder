@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                         .UseTestServer()
                         .ConfigureServices(services =>
                         {
-                            if (provider == SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                            if (string.Equals(provider, SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME, StringComparison.OrdinalIgnoreCase))
                             {
                                 services.AddAuthentication(defaultScheme: SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
                                     .AddSimulatorAuthentication();

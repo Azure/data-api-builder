@@ -9,7 +9,7 @@ using MySqlConnector;
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
     /// <summary>
-    /// Specialized QueryExecutor for MsSql mainly providing methods to
+    /// Specialized QueryExecutor for MySql mainly providing methods to
     /// handle connecting to the database with a managed identity.
     /// /// </summary>
     public class MySqlQueryExecutor : QueryExecutor<MySqlConnection>
@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// Modifies the properties of the supplied connection to support managed identity access.
-        /// In the case of MsSql, gets access token if deemed necessary and sets it on the connection.
+        /// In the case of MySql, gets access token if deemed necessary and sets it on the connection.
         /// The supplied connection is assumed to already have the same connection string
         /// provided in the runtime configuration.
         /// </summary>

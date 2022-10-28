@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -21,6 +22,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
                 "
             }
         };
+
+        #region Overriden tests
+        [TestMethod]
+        [Ignore]
+        public override Task DeleteOneInViewBadRequestTest()
+        {
+            throw new NotImplementedException();
+        }
+        #endregion
 
         #region Test Fixture Setup
 

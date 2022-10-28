@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
 
                 ObjectType realType = GraphQLUtils.UnderlyingGraphQLEntityType(underlyingType.Fields[QueryBuilder.PAGINATION_FIELD_NAME].Type);
-                string entityName = realType.Name;
+                string entityName = _metadataProvider.GetEntityName(realType.Name);
 
                 Database = _metadataProvider.GetSchemaName(entityName);
                 Container = _metadataProvider.GetDatabaseObjectName(entityName);
@@ -74,8 +74,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                                                                                               tableName: _containerAlias,
                                                                                                               columnName: string.Empty,
                                                                                                               label: x.GetNodes().First().ToString())));
-
-                string entityName = underlyingType.Name;
+                string entityName = _metadataProvider.GetEntityName(underlyingType.Name);
 
                 Database = _metadataProvider.GetSchemaName(entityName);
                 Container = _metadataProvider.GetDatabaseObjectName(entityName);

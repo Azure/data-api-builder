@@ -60,6 +60,7 @@ do
     #The dab commands are run using the DLL executable
     while read -r command; do
         command="dotnet ${pathToDLL} ${command}";
+        echo $command;
         eval $command;
     done <$commandFileNameWithPath;
 

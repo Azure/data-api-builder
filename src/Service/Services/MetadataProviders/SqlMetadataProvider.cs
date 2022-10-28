@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 entity.Value.TryPopulateSourceFields();
                 if (runtimeConfigProvider.GetRuntimeConfiguration().RestGlobalSettings.Enabled)
                 {
-                    _logger.LogInformation($"{entity.Key} path: {runtimeConfigProvider.RestPath}/{entity.Value.SourceName}");
+                    _logger.LogInformation($"{entity.Key} path: {runtimeConfigProvider.RestPath}/{entity.Key}");
                 }
                 else
                 {

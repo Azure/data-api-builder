@@ -192,8 +192,27 @@ The `source` property tells Data API builder what is the underlying database obj
 }
 ```
 
-> **IMPORTANT**: A table or a view defined as the source must have a primary key to be usable by Data API Builder
+> **NOTE**:
+- A table or a view defined as the source must have a primary key to be usable by Data API Builder.
+- Source can either be string or DatabaseSourceObject (with properties such as source-type, parameters, and key-fields).
+- parameters is an optional property only for Stored-Procedure.
+- key-fields is an optional property only for Table/view.
+- By Default if `type` is not specified, it is inferred as Table.
 
+```json
+{
+	"object": "bookView",
+	"type": "view"
+}
+```
+
+```json
+{
+	"object": "bookTable",
+	"type": "table",
+	"key-fields":["col1", "col2"]
+}
+```
 ### Relationships
 
 The `relationships` section defines how an entity is related to other exposed entities and optionally provide details on what underlying database objects can be used to support such relationships. Objects defined in the `relationship` section will be exposed as GraphQL field in the related entity. The format is the following:

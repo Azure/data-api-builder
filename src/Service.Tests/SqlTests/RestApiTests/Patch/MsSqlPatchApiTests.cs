@@ -59,6 +59,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PatchOneInsertInStocksViewSelected",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable] " +
+                $"FROM { _simple_subset_stocks } WHERE [categoryid] = 4 " +
+                $"AND [pieceid] = 1 AND [categoryName] = 'SciFi' AND [piecesAvailable] = 0 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PatchOne_Insert_Nulled_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
@@ -99,6 +106,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = '' " +
                 $"AND [piecesAvailable]= 10 AND [piecesRequired] = 0 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchOneUpdateStocksViewSelected",
+                $"SELECT [categoryid], [pieceid], [categoryName], [piecesAvailable] " +
+                $"FROM {_simple_subset_stocks} WHERE categoryid = 2 AND pieceid = 1 " +
+                $"AND [categoryName] = 'Historical' AND [piecesAvailable] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

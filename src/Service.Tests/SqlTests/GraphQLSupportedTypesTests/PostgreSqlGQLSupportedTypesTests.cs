@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                   (SELECT " + string.Join(", ", queriedColumns.Select(c => ProperlyFormatTypeTableColumn(c) + $" AS {c}")) + @"
                    FROM public.type_table AS table0
                    WHERE id = " + id + @"
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq3
             ";
         }

@@ -8,7 +8,6 @@ using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
-using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Azure.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -140,12 +139,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Test to validate that when a query succcessfully executes within allowed number of retries, we get back the result
         /// without giving anymore retries.
         /// </summary>
-        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        [TestMethod, TestCategory(TestCategory.MYSQL)]
         public async Task TestRetryPolicySuccessfullyExecutingQueryAfterNAttempts()
         {
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MYSQL);
             Mock<ILogger<QueryExecutor<MySqlConnection>>> queryExecutorLogger = new();
-            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+            DbExceptionParser dbExceptionParser = new MySqlDbExceptionParser(runtimeConfigProvider);
             Mock<MySqlQueryExecutor> queryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object);
 
             // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.

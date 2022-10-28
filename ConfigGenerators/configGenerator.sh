@@ -25,7 +25,7 @@ absolutePath="$( cd "$(dirname "$0")" ; pwd -P )";
 cliOutputPath="$absolutePath/../src/out/cli";
 commandFilesBasePath=$absolutePath;
 
-#Fetching the path of dab dll file
+#Finding the path of dab dll file, piped to `head` to pick up only the first match.
 pathToDLL=$(find $cliOutputPath -name dab.dll | head -n 1)
 
 #Change the working directory to where the config file needs to be generated.

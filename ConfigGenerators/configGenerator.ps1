@@ -60,7 +60,6 @@ foreach($databaseType in $databaseTypes){
     #The dab commands are run using the DLL executable
     foreach($command in Get-Content $commandsFileWithPath){
         $commandToExecute = "dotnet " + $pathToDabDLL + " " + $command;
-        Write-Output $commandToExecute
         Invoke-Expression $commandToExecute;
     }
 }

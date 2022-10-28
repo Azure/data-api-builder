@@ -385,10 +385,32 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                     ValidateClaimsInPolicy(configOperation.Policy.Database);
                                 }
                             }
+
+                            if (!IsValidDatabasePolicyForAction(configOperation))
+                            {
+                                throw new DataApiBuilderException(
+                                    message: $"The Create action does not support defining a database policy." +
+                                    $" entity:{entityName}, role:{permissionSetting.Role}, action:{configOperation.Name}",
+                                    statusCode: HttpStatusCode.ServiceUnavailable,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            }
                         }
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// A database policy can only be defined for a PermissionOperation when
+        /// the operation type is read, update, delete.
+        /// A create operation (database record insert) does not support query predicates
+        /// such as "WHERE name = 'xyz'"
+        /// </summary>
+        /// <param name="permission"></param>
+        /// <returns></returns>
+        public bool IsValidDatabasePolicyForAction(PermissionOperation permission)
+        {
+            return !(permission.Policy?.Database != null && permission.Name == Operation.Create);
         }
 
         /// <summary>

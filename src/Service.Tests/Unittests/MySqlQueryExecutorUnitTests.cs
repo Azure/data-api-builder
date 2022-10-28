@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
-using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.Identity;
 using Microsoft.Extensions.Logging;

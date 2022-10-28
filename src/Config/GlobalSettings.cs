@@ -39,7 +39,6 @@ namespace Azure.DataApiBuilder.Config
     public record GraphQLGlobalSettings
         (string Path = "/graphql",
          [property: JsonPropertyName("allow-introspection")]
-         [property: JsonIgnore]
          bool AllowIntrospection = true)
         : ApiSettings(Enabled: true, Path);
 

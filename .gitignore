@@ -13,6 +13,7 @@ log.txt
 appsettings.*.json
 dab-config.*.json
 *.dab-config.json
+!dab-config.*reference.json
 !dab-config.*.example.json
 
 *.cd

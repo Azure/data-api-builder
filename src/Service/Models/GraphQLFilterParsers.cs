@@ -78,12 +78,16 @@ namespace Azure.DataApiBuilder.Service.Models
                 {
                     List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
 
-                    if (!IsSingularType(filterInputObjectType.Name))
+                    if (!IsScalarType(filterInputObjectType.Name))
                     {
-                        return Parse(ctx,
+                        predicates.Push(new PredicateOperand(Parse(ctx,
                             filterArgumentObject.Fields[name],
                             subfields,
-                            schemaName, tableName + "." + name, tableAlias + "." + name, table, processLiterals);
+                            schemaName,
+                            tableName + "." + name,
+                            tableAlias + "." + name,
+                            table,
+                            processLiterals)));
                     }
                     else
                     {
@@ -103,9 +107,9 @@ namespace Azure.DataApiBuilder.Service.Models
             return MakeChainPredicate(predicates, PredicateOperation.AND);
         }
 
-        static bool IsSingularType(string name) 
+        static bool IsScalarType(string name) 
         {
-            return new string[] { "StringFilterInput", "IntFilterInput", "BoolFilterInput", "IdFilterInput" }.Contains(name);
+            return new string[] {"StringFilterInput", "IntFilterInput", "BoolFilterInput", "IdFilterInput"}.Contains(name);
         }
 
         /// <summary>

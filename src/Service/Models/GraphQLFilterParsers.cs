@@ -107,9 +107,9 @@ namespace Azure.DataApiBuilder.Service.Models
             return MakeChainPredicate(predicates, PredicateOperation.AND);
         }
 
-        static bool IsScalarType(string name) 
+        static bool IsScalarType(string name)
         {
-            return new string[] {"StringFilterInput", "IntFilterInput", "BoolFilterInput", "IdFilterInput"}.Contains(name);
+            return new string[] { "StringFilterInput", "IntFilterInput", "BoolFilterInput", "IdFilterInput" }.Contains(name);
         }
 
         /// <summary>

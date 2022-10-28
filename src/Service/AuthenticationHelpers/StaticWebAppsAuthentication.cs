@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 {
@@ -67,10 +68,13 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     return identity;
                 }
 
-                identity = new(principal.IdentityProvider);
+                identity = new(principal.IdentityProvider, nameType: ClaimTypes.Name , roleType: AuthenticationConfig.ROLE_CLAIM_TYPE);
                 identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, principal.UserId ?? string.Empty));
                 identity.AddClaim(new Claim(ClaimTypes.Name, principal.UserDetails ?? string.Empty));
-                identity.AddClaims(principal.UserRoles.Select(r => new Claim(ClaimTypes.Role, r)));
+
+                // output identity.Claims
+                // [0] { Type = "role", Value = "roleName" }
+                identity.AddClaims(principal.UserRoles.Select(roleName => new Claim(AuthenticationConfig.ROLE_CLAIM_TYPE, roleName)));
 
                 // Copy all SWA token claims to .NET ClaimsIdentity object.
                 if (principal.Claims is not null && principal.Claims.Any())

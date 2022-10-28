@@ -380,6 +380,13 @@ namespace Azure.DataApiBuilder.Service
                     {
                         options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
                         options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
+                        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
+                        {
+                            // The following lines code instruct the asp.net core middleware
+                            // to use the data in the "roles" claim for User.IsInrole()
+                            // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole?view=net-6.0#remarks
+                            RoleClaimType = AuthenticationConfig.ROLE_CLAIM_TYPE
+                        };
                     });
                 }
                 else if (runtimeConfig!.AuthNConfig != null)

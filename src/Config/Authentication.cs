@@ -13,6 +13,7 @@ namespace Azure.DataApiBuilder.Config
         Jwt? Jwt = null)
     {
         public const string CLIENT_PRINCIPAL_HEADER = "X-MS-CLIENT-PRINCIPAL";
+        public const string ROLE_CLAIM_TYPE = "roles";
         public bool IsEasyAuthAuthenticationProvider()
         {
             return Enum.GetNames(typeof(EasyAuthType)).Any(x => x.Equals(Provider, StringComparison.OrdinalIgnoreCase));

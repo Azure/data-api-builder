@@ -24,7 +24,7 @@ $cliBuildOutputPath = $PSScriptRoot + "\..\src\out\cli\";
 $commandsFilesBasePath = $PSScriptRoot;
 
 #Fetching the absolute path of dab.dll from build output directory
-$pathToDabDLL = Get-ChildItem -Path $cliBuildOutputPath -Recurse -include "dab.dll" | ForEach-Object{$_.FullName};
+$pathToDabDLL = Get-ChildItem -Path $cliBuildOutputPath -Recurse -include "dab.dll" | Select-Object -ExpandProperty FullName -First 1
 
 #Change the working directory to where the config file needs to be generated.
 $workingDirectory = $PSScriptRoot + "\..\src\Service\";
@@ -56,9 +56,11 @@ foreach($databaseType in $databaseTypes){
     }
 
     $commandsFileWithPath = $commandsFilesBasePath + "\" + $commandFile;
+
     #The dab commands are run using the DLL executable
     foreach($command in Get-Content $commandsFileWithPath){
         $commandToExecute = "dotnet " + $pathToDabDLL + " " + $command;
+        Write-Output $commandToExecute
         Invoke-Expression $commandToExecute;
     }
 }

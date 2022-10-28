@@ -30,7 +30,6 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         /// <param name="encoder">URL encoder.</param>
         /// <param name="clock">System clock.</param>
         public EasyAuthAuthenticationHandler(
-            RuntimeConfigProvider runtimeConfigProvider,
             IOptionsMonitor<EasyAuthAuthenticationOptions> options,
             ILoggerFactory logger,
             UrlEncoder encoder,

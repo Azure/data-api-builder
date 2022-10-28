@@ -45,9 +45,12 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimul
         /// The ClaimsPrincipal is a security principal usable by middleware to identify the
         /// authenticated user.
         /// </summary>
+        /// <seealso cref="https://github.com/microsoft/referencesource/blob/master/mscorlib/system/security/claims/ClaimsIdentity.cs"/>
+        /// <seealso cref="https://github.com/dotnet/aspnetcore/blob/v6.0.10/src/Http/Authentication.Abstractions/src/AuthenticationTicket.cs"/>
         /// <returns>An authentication result to ASP.NET Core library authentication mechanisms</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+            // ClaimsIdentity will be authenticated when authenticationType is provided
             ClaimsIdentity identity = new(authenticationType: SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME);
             identity.AddClaim(new Claim(ClaimTypes.Role, AuthorizationResolver.ROLE_ANONYMOUS));
             identity.AddClaim(new Claim(ClaimTypes.Role, AuthorizationResolver.ROLE_AUTHENTICATED));
@@ -60,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimul
             ClaimsPrincipal claimsPrincipal = new(identity);
 
             // AuthenticationTicket is Asp.Net Core Abstraction of Authentication information
-            // Ref: aspnetcore/src/Http/Authentication.Abstractions/src/AuthenticationTicket.cs 
+            // of the authenticated user.
             AuthenticationTicket ticket = new(claimsPrincipal, EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME);
             AuthenticateResult success = AuthenticateResult.Success(ticket);
             return Task.FromResult(success);

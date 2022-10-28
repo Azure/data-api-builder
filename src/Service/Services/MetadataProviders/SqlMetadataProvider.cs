@@ -288,9 +288,20 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private void GenerateRestPathToEntityMap()
         {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
+            string graphQLGlobalPath = runtimeConfig.GraphQLGlobalSettings.Path;
             foreach (string entityName in _entities.Keys)
             {
                 Entity entity = _entities[entityName];
+                if (entity.Rest is RestEntitySettings restSettings &&
+                    string.Equals(restSettings.Path.ToString(), graphQLGlobalPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new DataApiBuilderException(
+                        message: "Entity's REST path conflicts with configured GraphQL global path configuration.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
+
                 string path = GetEntityPath(entity, entityName).TrimStart('/');
 
                 if (!string.IsNullOrEmpty(path))

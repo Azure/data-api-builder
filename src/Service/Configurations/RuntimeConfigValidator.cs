@@ -71,6 +71,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (runtimeConfig.GraphQLGlobalSettings.Enabled
                  && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
             {
+                ValidateGlobalEndpointRouteConfig(runtimeConfig);
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
                 ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
             }
@@ -247,6 +248,31 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 throw new DataApiBuilderException(
                     message: $"Entity {entityName} contains characters disallowed by GraphQL.",
                     statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
+        }
+
+        /// <summary>
+        /// Ensure the global REST and GraphQL endpoints do not conflict if both
+        /// are enabled.
+        /// </summary>
+        /// <param name="runtimeConfig"></param>
+        public static void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
+        {
+            // Do not check for conflicts if GraphQL or REST endpoints are disabled.
+            if (!runtimeConfig.GraphQLGlobalSettings.Enabled || !runtimeConfig.RestGlobalSettings.Enabled)
+            {
+                return;
+            }
+
+            if (string.Equals(
+                a: runtimeConfig.GraphQLGlobalSettings.Path,
+                b: runtimeConfig.RestGlobalSettings.Path,
+                comparisonType: StringComparison.OrdinalIgnoreCase))
+            {
+                throw new DataApiBuilderException(
+                    message: $"Conflicting GraphQL and REST path configuration.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
         }

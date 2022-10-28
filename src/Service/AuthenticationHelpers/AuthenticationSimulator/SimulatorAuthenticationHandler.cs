@@ -52,8 +52,6 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimul
         {
             // ClaimsIdentity will be authenticated when authenticationType is provided
             ClaimsIdentity identity = new(authenticationType: SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME);
-            identity.AddClaim(new Claim(ClaimTypes.Role, AuthorizationResolver.ROLE_ANONYMOUS));
-            identity.AddClaim(new Claim(ClaimTypes.Role, AuthorizationResolver.ROLE_AUTHENTICATED));
 
             if (Context.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues clientRoleHeader))
             {

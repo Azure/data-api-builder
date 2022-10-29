@@ -55,19 +55,17 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="httpContext">Request metadata.</param>
         public async Task InvokeAsync(HttpContext httpContext)
         {
-            if (httpContext.Request.Path.HasValue)
+            if (httpContext.Request.Path.HasValue &&
+                TryGetGraphQLRouteFromConfig(out string? graphQLRoute) && graphQLRoute != DEFAULT_GRAPHQL_PATH)
             {
-                if (TryGetGraphQLRouteFromConfig(out string? graphQLRoute) && graphQLRoute != DEFAULT_GRAPHQL_PATH)
+                if (httpContext.Request.Path.StartsWithSegments(graphQLRoute, comparisonType: StringComparison.OrdinalIgnoreCase, out PathString remaining))
                 {
-                    if (httpContext.Request.Path.StartsWithSegments(graphQLRoute, comparisonType: StringComparison.OrdinalIgnoreCase, out PathString remaining))
-                    {
-                        httpContext.Request.Path = new PathString(value: DEFAULT_GRAPHQL_PATH + remaining);
-                    }
-                    else if (httpContext.Request.Path.StartsWithSegments(DEFAULT_GRAPHQL_PATH, comparisonType: StringComparison.OrdinalIgnoreCase))
-                    {
-                        httpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    }
+                    httpContext.Request.Path = new PathString(value: DEFAULT_GRAPHQL_PATH + remaining);
+                }
+                else if (httpContext.Request.Path.StartsWithSegments(DEFAULT_GRAPHQL_PATH, comparisonType: StringComparison.OrdinalIgnoreCase))
+                {
+                    httpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
                 }
             }
 

@@ -964,22 +964,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <returns></returns>
         public static RuntimeConfig InitMinimalRuntimeConfig(Dictionary<GlobalSettingsType, object> globalSettings, DataSource dataSource)
         {
-            PermissionOperation actionForRole = new(
-                Name: Operation.All,
-                Fields: null,
-                Policy: new(request: null, database: null)
-                );
-
-            PermissionSetting permissionForEntity = new(
-                role: "Anonymous",
-                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) }
-                );
-
             Entity sampleEntity = new(
                 Source: JsonSerializer.SerializeToElement("books"),
                 Rest: null,
                 GraphQL: JsonSerializer.SerializeToElement(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "books"))),
-                Permissions: new PermissionSetting[] { permissionForEntity },
+                Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
                 Mappings: null
                 );
@@ -1002,6 +991,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             runtimeConfig.DetermineGlobalSettings();
             return runtimeConfig;
+        }
+
+        /// <summary>
+        /// Gets PermissionSetting object allowed to perform all actions.
+        /// </summary>
+        /// <param name="roleName">Name of role to assign to permission</param>
+        /// <returns>PermissionSetting</returns>
+        public static PermissionSetting GetMinimalPermissionConfig(string roleName)
+        {
+            PermissionOperation actionForRole = new(
+                Name: Operation.All,
+                Fields: null,
+                Policy: new(request: null, database: null)
+                );
+
+            return new PermissionSetting(
+                role: roleName,
+                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) }
+                );
         }
 
         /// <summary>

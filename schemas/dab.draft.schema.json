@@ -154,8 +154,61 @@
           "type": "object",
           "properties": {
             "source": {
-              "type": "string",
-              "description": "The object in the backend database that is mapped to the entity"
+              "oneOf": [
+                {
+                  "type": "string",
+                  "description": "The object in the backend database that is mapped to the entity"
+                },
+                {
+                  "type": "object",
+                  "description": "The object in the backend database that is mapped to the entity",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "table",
+                        "view",
+                        "stored-procedure"
+                      ],
+                      "description": "Database object type"
+                    },
+                    "object": {
+                      "type": "string",
+                      "description": "Database object name"
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "description": "Dictionary of parameters and their values",
+                      "patternProperties": {
+                        "^.*$": {
+                          "oneOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "key-fields": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "List of fields to be used as primary keys"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "object"
+                  ]
+                }
+              ]
             },
             "rest": {
               "oneOf": [

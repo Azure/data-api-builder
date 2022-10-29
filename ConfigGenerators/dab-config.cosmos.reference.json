@@ -1,0 +1,119 @@
+{
+  "$schema": "dab.draft-01.schema.json",
+  "data-source": {
+    "database-type": "cosmos",
+    "connection-string": "Connection String"
+  },
+  "cosmos": {
+    "database": "graphqldb",
+    "container": "planet",
+    "schema": "schema.gql"
+  },
+  "runtime": {
+    "rest": {
+      "path": "/api"
+    },
+    "graphql": {
+      "path": "/graphql"
+    },
+    "host": {
+      "mode": "development",
+      "authenticate-devmode-requests": false,
+      "cors": {
+        "origins": [
+          "http://localhost:5000"
+        ],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "StaticWebApps"
+      }
+    }
+  },
+  "entities": {
+    "Planet": {
+      "source": {
+        "type": "table",
+        "object": "graphqldb.planet"
+      },
+      "rest": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "graphql": {
+        "type": {
+          "singular": "Planet",
+          "plural": "Planets"
+        }
+      }
+    },
+    "Character": {
+      "source": "graphqldb.character",
+      "rest": false,
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "graphql": {
+        "type": {
+          "singular": "Character",
+          "plural": "Characters"
+        }
+      }
+    },
+    "StarAlias": {
+      "source": "graphqldb.star",
+      "rest": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "graphql": {
+        "type": {
+          "singular": "Star",
+          "plural": "Stars"
+        }
+      }
+    }
+  }
+}

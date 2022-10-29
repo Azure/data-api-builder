@@ -290,6 +290,9 @@ namespace Azure.DataApiBuilder.Service
 
             app.UseHttpsRedirection();
 
+            // URL Rewrite middleware MUST be called prior to UseRouting().
+            // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location
+            app.UsePathRewriteMiddleware();
             app.UseRouting();
 
             // Adding CORS Middleware
@@ -348,7 +351,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 endpoints.MapControllers();
 
-                endpoints.MapGraphQL("/graphql").WithOptions(new GraphQLServerOptions
+                endpoints.MapGraphQL(GlobalSettings.GRAPHQL_DEFAULT_PATH).WithOptions(new GraphQLServerOptions
                 {
                     Tool = {
                         // Determines if accessing the endpoint from a browser

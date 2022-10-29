@@ -15,7 +15,9 @@ namespace Azure.DataApiBuilder.Service.Services
     /// matches the value of the GraphQL endpoint defined in runtime config.
     /// A URL rewrite occurs server-side and is not visible to the client.
     /// The path rewrite middleware allows the engine to honor a custom GraphQL endpoint
-    /// because the default mapped GraphQL endpoint cannot be changed after startup.
+    /// because the default mapped GraphQL endpoint cannot be changed after startup, though
+    /// requests still need to be directed to the /graphql endpoint as it is explicitly
+    /// used to configure HotChocolate
     /// </summary>
     /// <seealso cref="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/middleware/write?view=aspnetcore-6.0"/>
     /// <seealso cref="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/url-rewriting?view=aspnetcore-6.0#url-redirect-and-url-rewrite"/>

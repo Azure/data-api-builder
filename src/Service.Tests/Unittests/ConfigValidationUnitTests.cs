@@ -990,6 +990,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: ex.StatusCode);
                     Assert.AreEqual(expected: expectedErrorMessage, actual: ex.Message);
                 }
+                else
+                {
+                    Assert.Fail(message: "Global endpoint route config validation not expected to fail.");
+                }
             }
         }
 

@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 SELECT TOP 1 " + string.Join(", ", queriedColumns) + @"
                 FROM type_table AS [table0]
                 WHERE id = " + id + @"
-                ORDER BY id
+                ORDER BY id asc
                 FOR JSON PATH,
                     WITHOUT_ARRAY_WRAPPER,
                     INCLUDE_NULL_VALUES

@@ -131,6 +131,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     out runtimeConfig,
                     ConfigProviderLogger))
             {
+                runtimeConfig!.MapGraphQLSingularTypeToEntityName();
                 if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
                 {
                     runtimeConfig!.ConnectionString = configPath.CONNSTRING;
@@ -139,6 +140,19 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 if (ConfigProviderLogger is not null)
                 {
                     ConfigProviderLogger.LogInformation($"Runtime configuration has been successfully loaded.");
+                    if (runtimeConfig.GraphQLGlobalSettings.Enabled)
+                    {
+                        ConfigProviderLogger.LogInformation($"GraphQL path: {runtimeConfig.GraphQLGlobalSettings.Path}");
+                    }
+                    else
+                    {
+                        ConfigProviderLogger.LogInformation($"GraphQL is disabled.");
+                    }
+
+                    if (runtimeConfig.AuthNConfig is not null)
+                    {
+                        ConfigProviderLogger.LogInformation($"{runtimeConfig.AuthNConfig.Provider}");
+                    }
                 }
 
                 return true;
@@ -222,6 +236,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     ConfigProviderLogger!))
             {
                 RuntimeConfiguration = runtimeConfig;
+                RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName();
                 RuntimeConfiguration!.ConnectionString = connectionString;
 
                 if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmos)
@@ -284,14 +299,16 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// When we are in development mode, we want to honor the default-request-authorization
+        /// When in development mode, honor the authenticate-devmode-requests
         /// feature switch value specified in the config file. This gives us the ability to
         /// simulate a request's authenticated/anonymous authentication state in development mode.
+        /// Requires:
+        /// - HostGlobalSettings.Mode is Development
         /// </summary>
-        /// <returns></returns>
+        /// <returns>True when authenticate-devmode-requests is enabled</returns>
         public virtual bool IsAuthenticatedDevModeRequest()
         {
-            if (RuntimeConfiguration is null)
+            if (RuntimeConfiguration?.AuthNConfig == null)
             {
                 return false;
             }

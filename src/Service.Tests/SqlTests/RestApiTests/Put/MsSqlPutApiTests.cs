@@ -64,6 +64,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PutOneUpdateStocksViewSelected",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable] " +
+                $"FROM { _simple_subset_stocks } WHERE [categoryid] = 2 " +
+                $"AND [pieceid] = 1 AND [categoryName] = 'Historical' AND [piecesAvailable] is NULL " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PutOne_Update_With_Mapping_Test",
                 $"SELECT [treeId], [species] AS [Scientific Name], [region] AS " +
                 $"[United State's Region], [height] FROM { _integrationMappingTable } " +
@@ -120,6 +127,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 4 AND [pieceid] = 1 AND [categoryName] = '' " +
                 $"AND [piecesAvailable] = 2 AND [piecesRequired] = 3 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOneInsertInStocksViewSelected",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable] " +
+                $"FROM { _simple_subset_stocks } WHERE [categoryid] = 4 " +
+                $"AND [pieceid] = 1 AND [categoryName] = 'SciFi' AND [piecesAvailable] = 0 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

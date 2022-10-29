@@ -267,7 +267,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&
                         PostgresQueryBuilder.IsInsert(resultRow)))
                     {
-                        string primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRow);
+                        string primaryKeyRoute = ConstructPrimaryKeyRoute(context, resultRow);
                         // location will be updated in rest controller where httpcontext is available
                         return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value);
                     }
@@ -294,7 +294,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
 
                     Dictionary<string, object?> resultRow = resultRowAndProperties.Item1;
-                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRow);
+                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context, resultRow);
                     // location will be updated in rest controller where httpcontext is available
                     return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value);
                 }
@@ -365,7 +365,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 case Operation.Insert:
                 case Operation.Create:
                     SqlInsertStructure insertQueryStruct = context is null ?
-                        new(entityName, _sqlMetadataProvider, parameters) :
+                        new(entityName,
+                        _sqlMetadataProvider,
+                        parameters) :
                         new(context, entityName, _sqlMetadataProvider, parameters);
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
@@ -556,8 +558,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <remarks> This function expects the Json element entity to contain all the properties
         /// that make up the primary keys.</remarks>
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
-        public string ConstructPrimaryKeyRoute(string entityName, Dictionary<string, object?> entity)
+        public string ConstructPrimaryKeyRoute(RestRequestContext context, Dictionary<string, object?> entity)
         {
+            if (context.DatabaseObject.SourceType is SourceType.View)
+            {
+                return string.Empty;
+            }
+
+            string entityName = context.EntityName;
             SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
             StringBuilder newPrimaryKeyRoute = new();
 

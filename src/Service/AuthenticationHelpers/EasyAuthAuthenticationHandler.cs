@@ -24,16 +24,16 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         /// Constructor for the EasyAuthAuthenticationHandler.
         /// Note the parameters are required by the base class.
         /// </summary>
-        /// <param name="options">Easy Auth authentication options.</param>
+        /// <param name="options">EasyAuth authentication options.</param>
         /// <param name="logger">Logger factory.</param>
         /// <param name="encoder">URL encoder.</param>
         /// <param name="clock">System clock.</param>
         public EasyAuthAuthenticationHandler(
             IOptionsMonitor<EasyAuthAuthenticationOptions> options,
-              ILoggerFactory logger,
-              UrlEncoder encoder,
-              ISystemClock clock
-           ) : base(options, logger, encoder, clock)
+            ILoggerFactory logger,
+            UrlEncoder encoder,
+            ISystemClock clock
+            ) : base(options, logger, encoder, clock)
         {
         }
 

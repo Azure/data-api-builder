@@ -991,6 +991,51 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Tests whether conflicting global REST/GraphQL fail config validation.
+        /// </summary>
+        /// <param name="graphQLConfiguredPath">GraphQL global path</param>
+        /// <param name="restConfiguredPath">REST global path</param>
+        /// <param name="expectError">Exception expected</param>
+        [DataTestMethod]
+        [DataRow("/graphql", "/graphql", true)]
+        [DataRow("/api", "/api", true)]
+        [DataRow("/graphql", "/api", false)]
+        public void TestGlobalRouteValidation(string graphQLConfiguredPath, string restConfiguredPath, bool expectError)
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Path = graphQLConfiguredPath, AllowIntrospection = true }) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Path = restConfiguredPath }) }
+
+            };
+
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(globalSettings: settings, dataSource: null);
+            string expectedErrorMessage = "Conflicting GraphQL and REST path configuration.";
+
+            try
+            {
+                RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(configuration);
+
+                if (expectError)
+                {
+                    Assert.Fail(message: "Global endpoint route config validation expected to fail.");
+                }
+            }
+            catch (DataApiBuilderException ex)
+            {
+                if (expectError)
+                {
+                    Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: ex.StatusCode);
+                    Assert.AreEqual(expected: expectedErrorMessage, actual: ex.Message);
+                }
+                else
+                {
+                    Assert.Fail(message: "Global endpoint route config validation not expected to fail.");
+                }
+            }
+        }
+
+        /// <summary>
         /// A test helper method to validate the exception thrown when entities generate
         /// queries with the same name.
         /// </summary>

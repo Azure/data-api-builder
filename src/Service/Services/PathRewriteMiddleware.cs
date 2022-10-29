@@ -46,18 +46,25 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Terminates a request with HTTP 404 Not Found when the URL's first segment matches:
         /// the default graphQL path, but the default path is not used (customized).
         /// GraphQL Configured Endpoint: /gql
-        /// Request: /gql/.../segmentN | /graphql/.../segmentN
+        /// Request Example 1: /gql/.../segmentN
+        /// Request Example 2: /graphql/.../segmentN
         /// Rewritten Path: /graphql/.../segmentN
         /// GraphQL Configured Endpoint: /graphql
-        /// Request: /graphql/.../segmentN | /apiEndpoint/.../segmentN
+        /// Request Example 1: /graphql/.../segmentN | /apiEndpoint/.../segmentN
         /// Rewritten Path: No rewrite
         /// </summary>
         /// <param name="httpContext">Request metadata.</param>
         public async Task InvokeAsync(HttpContext httpContext)
         {
+            // Only attempt to rewrite the URL when the developer configured GraphQL path differs
+            // from the internally set default path of /graphql
             if (httpContext.Request.Path.HasValue &&
                 TryGetGraphQLRouteFromConfig(out string? graphQLRoute) && graphQLRoute != DEFAULT_GRAPHQL_PATH)
             {
+                // Only attempt to rewrite when the request path begins with the developer
+                // configured GrahpQL path.
+                // When the request path matches the internal /graphql path when a developer
+                // configured the path differently, fail the request.
                 if (httpContext.Request.Path.StartsWithSegments(graphQLRoute, comparisonType: StringComparison.OrdinalIgnoreCase, out PathString remaining))
                 {
                     httpContext.Request.Path = new PathString(value: DEFAULT_GRAPHQL_PATH + remaining);

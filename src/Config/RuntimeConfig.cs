@@ -250,8 +250,21 @@ namespace Azure.DataApiBuilder.Config
         {
             // by default, if there is no AuthenticationSection,
             // EasyAuth StaticWebApps is the authentication scheme.
-            return AuthNConfig is null ||
-                   AuthNConfig!.IsEasyAuthAuthenticationProvider();
+            return AuthNConfig != null &&
+                   AuthNConfig.IsEasyAuthAuthenticationProvider();
+        }
+
+        public bool IsAuthenticationSimulatorEnabled()
+        {
+            return AuthNConfig != null &&
+                AuthNConfig!.IsAuthenticationSimulatorEnabled();
+        }
+
+        public bool IsJwtConfiguredIdentityProvider()
+        {
+            return AuthNConfig != null &&
+                !AuthNConfig.IsEasyAuthAuthenticationProvider() &&
+                !AuthNConfig.IsAuthenticationSimulatorEnabled();
         }
 
         [JsonIgnore]

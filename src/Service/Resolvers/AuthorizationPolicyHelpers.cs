@@ -86,7 +86,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 // Parse and save the values that are needed to later generate SQL query predicates
                 // FilterClauseInDbPolicy is an Abstract Syntax Tree representing the parsed policy text.
-                return sqlMetadataProvider.GetODataParser().GetFilterClause(dbPolicyClause, $"{entityName}.{resourcePath}");
+                return sqlMetadataProvider.GetODataParser().GetFilterClause(
+                    filterQueryString: dbPolicyClause,
+                    resourcePath: $"{entityName}.{resourcePath}",
+                    customResolver: new ClaimsTypeDataUriResolver());
             }
 
             return null;

@@ -38,16 +38,14 @@ jobs:
     inputs:
       dockerVersion: 17.09.0-ce
       releaseType: stable
-  
-  - bash: |
-      env
-    displayname: Print env variables
 
   - bash: |
       docker run -d -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=$(DockerSQLpass)" -p 1433:1433 --name customerdb mcr.microsoft.com/mssql/server:2019-latest
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu SQL Server Image Docker
-  
+    env:
+      DockerSQLpass: foo  
+
   - task: DotNetCoreCLI@2
     displayName: Build
     inputs:

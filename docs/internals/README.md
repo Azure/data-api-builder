@@ -34,7 +34,7 @@ The account should have access to all entities that are defined in the runtime c
 
 #### 2.2 Supply a `connection-string` for the respective `database-type`
 
-Project startup requires a config that can be generated using dab-cli.
+Project startup requires a config that can be generated using dab.
 
 ##### Use Cli-tool to Generate the config
 Below command will let you generate the config file with the required database-type and connection-string (**Note:** --name denotes name of the generated config, do not add extension).
@@ -136,7 +136,7 @@ When we do `dab init`, it will automatically generate the default Host settings 
 
 #### Setting up Role and Actions
 
-Dab-cli allows us to specify role and actions for every entity using the --permission option. permissions can only be specified with add/update command.
+dab allows us to specify role and actions for every entity using the --permission option. permissions can only be specified with add/update command.
 ```
 dab add <<enity_name>> --source <<xxx>> --permissions "<<role>>:<<actions>>" --fields.include <<a,b,c>> --fields.exclude <<x,y,z>>
 ```

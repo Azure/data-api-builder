@@ -234,7 +234,9 @@ For local development, the required config files can be generated along with the
 2. Update the **connection-string** property of the **init** command.
 3. Execute the command `dotnet build -p:generateConfigFiles=true`. This builds the project and generates the config files.
 4. The runtime can be run using the above mentioned steps.
-5. After performing the code changes, the build can be performed using one of the two ways.   
+5. After performing the code changes, the build can be performed using one of the two ways.
+  - If there are changes to the dab commands, execute `dotnet build -p:generateConfigFiles=true`
+  - If there are no changes to the dab commands, execute `dotnet build` 
 
 #### Which configuration file is used?
 

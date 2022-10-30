@@ -48,13 +48,8 @@
 
 
   <ItemGroup>
-    <Watch Remove="dab-config.Cosmos.json" />
     <Watch Remove="dab-config.json" />
-    <Watch Remove="dab-config.MsSql.json" />
-    <Watch Remove="dab-config.MySql.json" />
-    <Watch Remove="dab-config.PostgreSql.json" />
   </ItemGroup>
-
 
   <ItemGroup>
     <PackageReference Include="HotChocolate" Version="$(HotChocolateVersion)" />

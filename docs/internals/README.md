@@ -34,12 +34,12 @@ The account should have access to all entities that are defined in the runtime c
 
 #### 2.2 Supply a `connection-string` for the respective `database-type`
 
-Project startup requires a config that can be generated using hawaii-cli.
+Project startup requires a config that can be generated using dab-cli.
 
 ##### Use Cli-tool to Generate the config
 Below command will let you generate the config file with the required database-type and connection-string (**Note:** --name denotes name of the generated config, do not add extension).
 ```
-hawaii init --name dab-config.XXX --database-type <<DBTYPE>> --connection-string <<CONNSTRING>>
+dab init --name dab-config.XXX --database-type <<DBTYPE>> --connection-string <<CONNSTRING>>
 ```
 
 In your editor of choice, you can locate template configuration files in the `DataGateway.Service` directory of the form `dab-config.XXX.json`.
@@ -114,7 +114,7 @@ Schema and data population files are included that are necessary for running sam
 
 **Cli-tool**:
 
-When we do `hawaii init`, it will automatically generate the default Host settings with default authentication(**Note:** --host-mode is an optional flag that takes in the environment: Production/Development. Updating other keys are not supported currently). Below is the default Host setting that is generated with host-mode as Development. by Default authentication-provider will be "EasyAuth".
+When we do `dab init`, it will automatically generate the default Host settings with default authentication(**Note:** --host-mode is an optional flag that takes in the environment: Production/Development. Updating other keys are not supported currently). Below is the default Host setting that is generated with host-mode as Development. by Default authentication-provider will be "EasyAuth".
 
 ```json
     "host": {
@@ -136,9 +136,9 @@ When we do `hawaii init`, it will automatically generate the default Host settin
 
 #### Setting up Role and Actions
 
-Hawaii-cli allows us to specify role and actions for every entity using the --permission option. permissions can only be specified with add/update command.
+Dab-cli allows us to specify role and actions for every entity using the --permission option. permissions can only be specified with add/update command.
 ```
-hawaii add <<enity_name>> --source <<xxx>> --permissions "<<role>>:<<actions>>" --fields.include <<a,b,c>> --fields.exclude <<x,y,z>>
+dab add <<enity_name>> --source <<xxx>> --permissions "<<role>>:<<actions>>" --fields.include <<a,b,c>> --fields.exclude <<x,y,z>>
 ```
 **NOTE:**
 `<<role>>` here can be **anonymous/authenticated**.
@@ -146,9 +146,9 @@ hawaii add <<enity_name>> --source <<xxx>> --permissions "<<role>>:<<actions>>" 
 
 Example:
 ```
-hawaii add MY_ENTITY -s "my_source" --permissions "anonymous:read"
-hawaii update MY_ENTITY --permissions "authenticated:create,update"
-hawaii update MY_ENTITY --permissions "authenticated:delete" --fields.include "*" --fields.exclude "id,date"
+dab add MY_ENTITY -s "my_source" --permissions "anonymous:read"
+dab update MY_ENTITY --permissions "authenticated:create,update"
+dab update MY_ENTITY --permissions "authenticated:delete" --fields.include "*" --fields.exclude "id,date"
 ```
 **Generated Config:**
 ```
@@ -226,9 +226,19 @@ HTTP requests must have the `Authorization` HTTP header set with the value `Bear
 4. Select **Build Solution** (Do not select rebuild, as any changes to configuration files may not be reflected in the build folder.)
 5. Start runtime
 
+#### Local Development
+
+For local development, the required config files can be generated along with the build.
+
+1. The **ConfigGenerators** directory contains the DAB commands for each database type.
+2. Update the **connection-string** property of the **init** command.
+3. Execute the command `dotnet build -p:generateConfigFiles=true`. This builds the project and generates the config files.
+4. The runtime can be run using the above mentioned steps.
+5. After performing the code changes, the build can be performed using one of the two ways.   
+
 #### Which configuration file is used?
 
-1. Hawaii runtime determines the name of the configuration file based on environment values, following the same behavior offered by ASP.NET Core for the `appsettings.json` file. It expects the configuration file in the same directory as the runtime.
+1. DAB runtime determines the name of the configuration file based on environment values, following the same behavior offered by ASP.NET Core for the `appsettings.json` file. It expects the configuration file in the same directory as the runtime.
 
 2. The precedence followed is in the following order from high to low:
 

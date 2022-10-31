@@ -133,6 +133,39 @@ namespace Azure.DataApiBuilder.Config
         }
 
         /// <summary>
+        /// Mapping GraphQL singular type To each entity name.
+        /// This is used for looking up top-level entity name with GraphQL type, GraphQL type is not matching any of the top level entity name.
+        /// Use singular field to find the top level entity name, then do the look up from the entities dictionary
+        /// </summary>
+        public void MapGraphQLSingularTypeToEntityName()
+        {
+            foreach (KeyValuePair<string, Entity> item in Entities)
+            {
+                Entity entity = item.Value;
+                string entityName = item.Key;
+
+                if (entity.GraphQL != null
+                    && entity.GraphQL is GraphQLEntitySettings)
+                {
+                    GraphQLEntitySettings? graphQL = entity.GraphQL as GraphQLEntitySettings;
+
+                    if (graphQL is null || graphQL.Type is null
+                        || (graphQL.Type is not SingularPlural && graphQL.Type is not string))
+                    {
+                        continue;
+                    }
+
+                    string? graphQLType = (graphQL.Type is SingularPlural) ? ((SingularPlural)graphQL.Type).Singular : graphQL.Type.ToString();
+
+                    if (graphQLType is not null)
+                    {
+                        GraphQLSingularTypeToEntityNameMap.TryAdd(graphQLType, entityName);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Try to deserialize the given json string into its object form.
         /// </summary>
         /// <typeparam name="T">The object type.</typeparam>
@@ -210,12 +243,28 @@ namespace Azure.DataApiBuilder.Config
         [JsonIgnore]
         public HostGlobalSettings HostGlobalSettings { get; private set; } = new();
 
+        [JsonIgnore]
+        public Dictionary<string, string> GraphQLSingularTypeToEntityNameMap { get; private set; } = new();
+
         public bool IsEasyAuthAuthenticationProvider()
         {
             // by default, if there is no AuthenticationSection,
             // EasyAuth StaticWebApps is the authentication scheme.
-            return AuthNConfig is null ||
-                   AuthNConfig!.IsEasyAuthAuthenticationProvider();
+            return AuthNConfig != null &&
+                   AuthNConfig.IsEasyAuthAuthenticationProvider();
+        }
+
+        public bool IsAuthenticationSimulatorEnabled()
+        {
+            return AuthNConfig != null &&
+                AuthNConfig!.IsAuthenticationSimulatorEnabled();
+        }
+
+        public bool IsJwtConfiguredIdentityProvider()
+        {
+            return AuthNConfig != null &&
+                !AuthNConfig.IsEasyAuthAuthenticationProvider() &&
+                !AuthNConfig.IsAuthenticationSimulatorEnabled();
         }
 
         [JsonIgnore]

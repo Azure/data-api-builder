@@ -53,9 +53,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"WHERE categoryid = 2 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "FindViewComposite",
-                $"SELECT name ,id, publisher_id FROM {_composite_subset_bookPub} " +
-                $"WHERE id=2 AND publisher_id = 1234 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                "FindBooksPubViewComposite",
+                $"SELECT id, title, pub_id, name FROM {_composite_subset_bookPub} " +
+                $"WHERE id = 2 AND pub_id = 1234 AND name = 'Big Company' AND title = 'Also Awesome book' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindTestWithFilterQueryOneGeFilterOnView",
@@ -84,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             },
             {
                 "FindTestWithFilterQueryOneLtFilterOnView",
-                $"SELECT[id], [name],[publisher_id] FROM { _composite_subset_bookPub } " +
+                $"SELECT [id], [title], [pub_id], [name] FROM { _composite_subset_bookPub } " +
                 $"WHERE id < 5 FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
@@ -217,107 +218,107 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithFirstSingleKeyPagination",
                 $"SELECT TOP 1 * FROM { _integrationTableName } " +
-                $"ORDER BY id " +
+                $"ORDER BY id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFirstMultiKeyPagination",
                 $"SELECT TOP 1 * FROM REVIEWS " +
                 $"WHERE 1=1 " +
-                $"ORDER BY book_id, id " +
+                $"ORDER BY book_id asc, id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithAfterSingleKeyPagination",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE id > 7 " +
-                $"ORDER BY id " +
+                $"ORDER BY id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithAfterMultiKeyPagination",
                 $"SELECT * FROM REVIEWS " +
                 "WHERE book_id > 1 OR (book_id = 1 AND id > 567) " +
-                $"ORDER BY book_id, id " +
+                $"ORDER BY book_id asc, id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithPaginationVerifSinglePrimaryKeyInAfter",
                 $"SELECT TOP 1 * FROM { _integrationTableName } " +
-                $"ORDER BY id " +
+                $"ORDER BY id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithPaginationVerifMultiplePrimaryKeysInAfter",
                 $"SELECT TOP 1 * FROM REVIEWS " +
-                $"ORDER BY book_id, id " +
+                $"ORDER BY book_id asc, id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithQueryStringAllFieldsOrderByAsc",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"ORDER BY title, id " +
+                $"ORDER BY title asc, id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc",
                 $"SELECT [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
-                $"ORDER BY species " +
+                $"ORDER BY species asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithQueryStringSpaceInNamesOrderByAsc",
                 $"SELECT * FROM { _integrationTableHasColumnWithSpace } " +
-                $"ORDER BY [ID Number] " +
+                $"ORDER BY [ID Number] asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFirstAndSpacedColumnOrderBy",
                 $"SELECT TOP 1 * FROM { _integrationTableHasColumnWithSpace } " +
-                $"ORDER BY [Last Name] " +
+                $"ORDER BY [Last Name] asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithQueryStringAllFieldsOrderByDesc",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"ORDER BY publisher_id desc, id " +
+                $"ORDER BY publisher_id desc, id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFirstSingleKeyPaginationAndOrderBy",
                 $"SELECT TOP 1 * FROM { _integrationTableName } " +
-                $"ORDER BY title, id " +
+                $"ORDER BY title asc, id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestVerifyMaintainColumnOrderForOrderBy",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"ORDER BY id desc, publisher_id " +
+                $"ORDER BY id desc, publisher_id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestVerifyMaintainColumnOrderForOrderByInReverse",
                 $"SELECT * FROM { _integrationTableName } " +
-                $"ORDER BY publisher_id, id desc " +
+                $"ORDER BY publisher_id asc, id desc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFirstSingleKeyIncludedInOrderByAndPagination",
                 $"SELECT TOP 1 * FROM { _integrationTableName } " +
-                $"ORDER BY id " +
+                $"ORDER BY id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
 
             {
                 "FindTestWithFirstTwoOrderByAndPagination",
                 $"SELECT TOP 2 * FROM { _integrationTableName } " +
-                $"ORDER BY id " +
+                $"ORDER BY id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy",
                 $"SELECT TOP 2 * FROM { _integrationTieBreakTable } " +
-                $"ORDER BY birthdate, name, id desc " +
+                $"ORDER BY birthdate asc, name asc, id desc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
@@ -325,19 +326,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"SELECT TOP 2 * FROM { _integrationTieBreakTable } " +
                 $"WHERE ((birthdate > '2001-01-01') OR (birthdate = '2001-01-01' AND name > 'Aniruddh') " +
                 $"OR (birthdate = '2001-01-01' AND name = 'Aniruddh' AND id > 125)) " +
-                $"ORDER BY birthdate, name, id " +
+                $"ORDER BY birthdate asc, name asc, id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination",
                 $"SELECT TOP 1 * FROM { _tableWithCompositePrimaryKey } " +
-                $"ORDER BY id desc, book_id " +
+                $"ORDER BY id desc, book_id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination",
                 $"SELECT TOP 1 * FROM { _tableWithCompositePrimaryKey } " +
-                $"ORDER BY book_id, id " +
+                $"ORDER BY book_id asc, id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
@@ -356,7 +357,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "FindTestWithFirstMultiKeyPaginationAndOrderBy",
                 $"SELECT TOP 1 * FROM { _tableWithCompositePrimaryKey } " +
                 $"WHERE 1=1 " +
-                $"ORDER BY content desc, book_id, id " +
+                $"ORDER BY content desc, book_id asc, id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
@@ -383,20 +384,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithDifferentMappedFieldsAndOrderBy",
                 $"SELECT [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
-                $"ORDER BY [trees].[species] " +
+                $"ORDER BY [trees].[species] asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy",
                 $"SELECT TOP 1 [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
-                $"ORDER BY [trees].[species] " +
+                $"ORDER BY [trees].[species] asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy",
                 $"SELECT TOP 101 [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
                 $"WHERE [trees].[treeId] < 2 " +
-                $"ORDER BY [trees].[species], [trees].[treeId] " +
+                $"ORDER BY [trees].[species] asc, [trees].[treeId] asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             }
         };

@@ -21,14 +21,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task MultipleResultQuery()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id LIMIT 100) as table0";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id asc LIMIT 100) as table0";
             await MultipleResultQuery(postgresQuery);
         }
 
         [TestMethod]
         public async Task MultipleResultQueryWithVariables()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id LIMIT 100) as table0";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id asc LIMIT 100) as table0";
             await MultipleResultQueryWithVariables(postgresQuery);
         }
 
@@ -106,7 +106,7 @@ FROM
                     SELECT table0.title AS title
                     FROM books AS table0
                     WHERE id = 2
-                    ORDER BY id
+                    ORDER BY id asc
                     LIMIT 1
                 ) AS subq
             ";
@@ -123,7 +123,7 @@ FROM
                     SELECT table0.content AS content
                     FROM reviews AS table0
                     WHERE id = 568 AND book_id = 1
-                    ORDER BY id, book_id
+                    ORDER BY id asc, book_id asc
                     LIMIT 1
                 ) AS subq
             ";
@@ -161,7 +161,7 @@ FROM
         [TestMethod]
         public async Task TestQueryingTypeWithNullableIntFields()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title, \"issue_number\" FROM foo.magazines ORDER BY id LIMIT 100) as table0";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title, \"issue_number\" FROM foo.magazines ORDER BY id asc LIMIT 100) as table0";
             await TestQueryingTypeWithNullableIntFields(postgresQuery);
 
         }
@@ -172,7 +172,7 @@ FROM
         [TestMethod]
         public async Task TestQueryingTypeWithNullableStringFields()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, username FROM website_users ORDER BY id LIMIT 100) as table0";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, username FROM website_users ORDER BY id asc LIMIT 100) as table0";
             await TestQueryingTypeWithNullableStringFields(postgresQuery);
         }
 
@@ -195,7 +195,7 @@ FROM
     FROM
       books
     ORDER BY
-      id
+      id asc
     LIMIT 2
   ) as table0";
             await TestAliasSupportForGraphQLQueryFields(postgresQuery);
@@ -220,7 +220,7 @@ FROM
                     FROM
                       books
                     ORDER BY
-                      id
+                      id asc
                     LIMIT
                       2
                   ) as table0";
@@ -286,7 +286,7 @@ FROM
         [TestMethod]
         public async Task TestQueryWithExplicitlyNullArguments()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id LIMIT 100) as table0";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id asc LIMIT 100) as table0";
             await TestQueryWithExplicitlyNullArguments(postgresQuery);
         }
 

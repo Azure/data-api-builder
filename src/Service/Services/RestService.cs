@@ -77,6 +77,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             RestRequestContext context;
+
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
             if (dbObject.SourceType is SourceType.StoredProcedure)
             {
@@ -105,9 +106,13 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             insertPayloadRoot,
                             operationType);
-                        RequestValidator.ValidateInsertRequestContext(
+                        if (context.DatabaseObject.SourceType is SourceType.Table)
+                        {
+                            RequestValidator.ValidateInsertRequestContext(
                             (InsertRequestContext)context,
                             _sqlMetadataProvider);
+                        }
+
                         break;
                     case Operation.Delete:
                         RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
@@ -125,7 +130,12 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             upsertPayloadRoot,
                             operationType);
-                        RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
+                        if (context.DatabaseObject.SourceType is SourceType.Table)
+                        {
+                            RequestValidator.
+                                ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
+                        }
+
                         break;
                     default:
                         throw new DataApiBuilderException(
@@ -161,7 +171,10 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 // Parse and save the values that are needed to later generate queries in the given RestRequestContext.
                 // DbPolicyClause is an Abstract Syntax Tree representing the parsed policy text.
-                context.DbPolicyClause = _sqlMetadataProvider.GetODataParser().GetFilterClause(dbPolicy, $"{context.EntityName}.{context.DatabaseObject.FullName}");
+                context.DbPolicyClause = _sqlMetadataProvider.GetODataParser().GetFilterClause(
+                    filterQueryString: dbPolicy,
+                    resourcePath: $"{context.EntityName}.{context.DatabaseObject.FullName}",
+                    customResolver: new ClaimsTypeDataUriResolver());
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context.

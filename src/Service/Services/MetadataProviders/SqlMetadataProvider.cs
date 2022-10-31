@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 entity.Value.TryPopulateSourceFields();
                 if (runtimeConfigProvider.GetRuntimeConfiguration().RestGlobalSettings.Enabled)
                 {
-                    _logger.LogInformation($"{entity.Key} path: {runtimeConfigProvider.RestPath}/{entity.Value.SourceName}");
+                    _logger.LogInformation($"{entity.Key} path: {runtimeConfigProvider.RestPath}/{entity.Key}");
                 }
                 else
                 {
@@ -295,15 +295,47 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private void GenerateRestPathToEntityMap()
         {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
+            string graphQLGlobalPath = runtimeConfig.GraphQLGlobalSettings.Path;
+
             foreach (string entityName in _entities.Keys)
             {
                 Entity entity = _entities[entityName];
                 string path = GetEntityPath(entity, entityName).TrimStart('/');
+                ValidateEntityandGraphQLPathUniqueness(path, graphQLGlobalPath);
 
                 if (!string.IsNullOrEmpty(path))
                 {
                     EntityPathToEntityName[path] = entityName;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Validate that an Entity's REST path does not conflict with the developer configured
+        /// or the internal default GraphQL path (/graphql).
+        /// </summary>
+        /// <param name="path">Entity's calculated REST path.</param>
+        /// <param name="graphQLGlobalPath">Developer configured GraphQL Path</param>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static void ValidateEntityandGraphQLPathUniqueness(string path, string graphQLGlobalPath)
+        {
+            // Handle case when path does not have forward slash (/) prefix
+            // by adding one if not present or ignoring an existing slash.
+            // entityName -> /entityName
+            // /entityName -> /entityName (no change)
+            if (!string.IsNullOrWhiteSpace(path) && path[0] != '/')
+            {
+                path = '/' + path;
+            }
+
+            if (string.Equals(path, graphQLGlobalPath, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, GlobalSettings.GRAPHQL_DEFAULT_PATH, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new DataApiBuilderException(
+                    message: "Entity's REST path conflicts with GraphQL reserved paths.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
         }
 

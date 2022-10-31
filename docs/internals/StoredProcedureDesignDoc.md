@@ -262,7 +262,7 @@ Implementation was segmented into 5 main sections:
 > 2. No param
 > ![image](https://user-images.githubusercontent.com/102276754/197740411-747be3e1-a8df-4dc7-8d87-0521b63169da.png)
 > 3. Mutaion operation
-> 
+> ![image](https://user-images.githubusercontent.com/102276754/198975915-f8fefd85-6f8e-4b1b-8fc3-be156084e6ae.png)
 
 
 ## TODO

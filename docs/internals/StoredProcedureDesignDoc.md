@@ -130,7 +130,7 @@ Implementation was segmented into 5 main sections:
 > - Added overriden method to map Sql data type returned from metadata into the CLR/.NET type equivalent. Used/necessary for metadata parsing in `FillSchemaForStoredProcedureAsync()` in `SqlMetadataProvider`.
 > - Left as TODOs in MySql and Postgres.
 
-### 3  REST Request Context + Validation
+### 3. REST Request Context + Validation
 
 > ### `RestRequestContext.cs`
 > - Since multiple derived classes are implementing/duplicating logic for populating their `FieldValuePairsInBody` dictionary with the Json request body, moved that logic into a method in this class, `PopulateFieldValuePairsInBody`.
@@ -261,7 +261,7 @@ Implementation was segmented into 5 main sections:
 > ![image](https://user-images.githubusercontent.com/102276754/197740155-d6b800aa-acda-4fe2-a82c-1c0fdc45696f.png)
 > 2. No param
 > ![image](https://user-images.githubusercontent.com/102276754/197740411-747be3e1-a8df-4dc7-8d87-0521b63169da.png)
-> 3. Mutaion operation
+> 3. Mutation operation
 > ![image](https://user-images.githubusercontent.com/102276754/198975915-f8fefd85-6f8e-4b1b-8fc3-be156084e6ae.png)
 
 

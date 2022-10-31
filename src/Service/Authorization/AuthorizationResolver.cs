@@ -463,7 +463,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 string type = claim.Properties.TryGetValue(SHORT_CLAIM_TYPE_NAME, out string? shortName) ? shortName : claim.Type;
                 // Don't add roles to the claims dictionary and don't throw an exception in the case of multiple role claims,
                 // since a user can have multiple roles assigned and role resolution happens beforehand
-                if (claim.Type is not ClaimTypes.Role && !claimsInRequestContext.TryAdd(type, claim))
+                if (claim.Type is not AuthenticationConfig.ROLE_CLAIM_TYPE && !claimsInRequestContext.TryAdd(type, claim))
                 {
                     // If there are duplicate claims present in the request, return an exception.
                     throw new DataApiBuilderException(

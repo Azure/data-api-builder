@@ -29,8 +29,9 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// </summary>
         /// <param name="filterQueryString">Represents the $filter part of the query string</param>
         /// <param name="resourcePath">Represents the resource path, in our case the entity name.</param>
+        /// <param name="customResolver">ODataUriResolver resolving different kinds of Uri parsing context.</param>
         /// <returns>An AST FilterClause that represents the filter portion of the WHERE clause.</returns>
-        public FilterClause GetFilterClause(string filterQueryString, string resourcePath)
+        public FilterClause GetFilterClause(string filterQueryString, string resourcePath, ODataUriResolver? customResolver = null)
         {
             if (_model == null)
             {
@@ -45,6 +46,12 @@ namespace Azure.DataApiBuilder.Service.Parsers
             {
                 Uri relativeUri = new(resourcePath + '/' + filterQueryString, UriKind.Relative);
                 ODataUriParser parser = new(_model!, relativeUri);
+
+                if (customResolver is not null)
+                {
+                    parser.Resolver = customResolver;
+                }
+
                 return parser.ParseFilter();
             }
             catch (ODataException e)

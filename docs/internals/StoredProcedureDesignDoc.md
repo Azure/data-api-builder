@@ -33,9 +33,9 @@ Thus a stored procedure entity might look like:
 }
 ```
 parameters can either be fixed as above or passed at runtime through
-- query parameters for GET request
-- request body for POST, PUT, PATCH, DELETE
-- For GraphQL, the calling stored-procedure will look something like this passed in the body
+- [REST] query parameters for GET request
+- [REST] request body for POST, PUT, PATCH, DELETE
+- [GRAPHQL] the calling stored-procedure will look something like this passed in the body
 ```
 {
     GetBooks(param1:value, param2:value) {
@@ -173,7 +173,10 @@ Implementation was segmented into 5 main sections:
 ```
 
 > ### `QueryBuilder.cs` and `MutationBuilder.cs`
-> - TBH, both query and mutation doesn't seem to relate to stored-Procedure, but it can be any of the two: Query/Mutation. But for now we are considering it to be a query type.
+> - TBH, both query and mutation doesn't seem to relate to stored-Procedure, but every GraphQL request has to be one of the two: Query/Mutation.
+> - Q. How the engine will know if a stored-procedure is Query or Mutation?
+> - If any roles in the permission has only READ access, then it's a Query, else Mutation.
+> #### Query
 > - It will have a method called `GenerateStoredProcedureQuery` to create the graphql schema for our Stored Procedure.
 > - The above method will be similar to `GenerateByPKQuery`,only difference will be that we will use parameters instead of primary keys.
 > - it will contain the input fields, i.e. parameters in case of Stored Procedure.
@@ -185,24 +188,23 @@ Implementation was segmented into 5 main sections:
     GetBook("parameters for GetBook stored-procedure" id: String = "1"): String
 }
 ```
+> #### Mutation
+> - It will have a method called `GenerateStoredProcedureMutation` to create the graphql schema for our Stored Procedure.
+> - The above method will be similar to `GenerateStoredProcedureQuery`, except how the results will be formed.
+> - We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes of the DbDataReader.
+> - So, we will check this fields similar to how it is done for the REST calls.
+```
+{
+    "Execute Stored-Procedure GetBook and get results from the database"
+    InsertBook("parameters for GetBook stored-procedure" name: String): String
+}
+```
 
 > ### Example
 > Consider stored-procedure `GetBooks` and `GetBook`. the former has no param, while the later has one param, which not provided will pick the value from config.
 > Below is the generated documentation from GraphQL
 ![image](https://user-images.githubusercontent.com/102276754/197724270-241e37e6-6459-4cce-a959-19a5031b63d1.png)
 
-
-
-> **Question/Thoughts**
-> 1. we just keep the return type as String like
-
-
-> My thoughts: The first one makes more sense since we only need to display the results obtained from the
-> stored procedure call, but the second one is useful if in future we decide to support order/pagination/filter on graphQL
-> requests for stored-procedure.
-> 2. How do we decide if a stored-procedure is Query or mutation?
-> This question made me realize how un-natural it feels to add support for stored procedures in graphQL. Currently I'm not
-> sure if there is a way to figure out if the call would make any changes in the database or not apart from looking at the read/write permissions.
 
 ### `SchemaConvertor.cs`
 > - Add directives for parameter fields added for stored-procedure.
@@ -249,7 +251,7 @@ Implementation was segmented into 5 main sections:
 
 ### 6. GRAPHQL Query Execution
 
-> ### `ResolverMiddleware.cs` & `SqlQueryEngine.cs`
+> ### `ResolverMiddleware.cs`, `SqlQueryEngine.cs`, and `SqlMutationEngine.cs`
 > - Call `ExecuteAsync` with `IMiddlewareContext` and `parameters`.
 > - We would have to convert `IMiddlewareContext` to `StoredProcedureRequestContext`, similar to how the `dispatchQuery` method in `RestService.cs` is doing. It converts `RestRequestContext` to `StoredProcedureRequestContext`.
 > - Then we can simply call `ExecuteAsync(StoredProcedureRequestContext context)` and return the parsed json request as String.
@@ -259,6 +261,8 @@ Implementation was segmented into 5 main sections:
 > ![image](https://user-images.githubusercontent.com/102276754/197740155-d6b800aa-acda-4fe2-a82c-1c0fdc45696f.png)
 > 2. No param
 > ![image](https://user-images.githubusercontent.com/102276754/197740411-747be3e1-a8df-4dc7-8d87-0521b63169da.png)
+> 3. Mutaion operation
+> 
 
 
 ## TODO

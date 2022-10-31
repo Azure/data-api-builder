@@ -46,11 +46,6 @@
     <Watch Include="**\*.json;**\*.gql" Exclude="obj\**\*;bin\**\*" />
   </ItemGroup>
 
-
-  <ItemGroup>
-    <Watch Remove="dab-config.json" />
-  </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="HotChocolate" Version="$(HotChocolateVersion)" />
     <PackageReference Include="HotChocolate.AspNetCore" Version="$(HotChocolateVersion)" />

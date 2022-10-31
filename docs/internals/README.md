@@ -226,15 +226,16 @@ HTTP requests must have the `Authorization` HTTP header set with the value `Bear
 4. Select **Build Solution** (Do not select rebuild, as any changes to configuration files may not be reflected in the build folder.)
 5. Start runtime
 
-#### Local Development
+#### An alternative way to Build and Generate Config Files
 
-For local development, the required config files can be generated along with the build.
+The following steps outline an alternative way of building the project. This is particularly useful for development in local.
 
-1. The **ConfigGenerators** directory contains the DAB commands for each database type.
-2. Update the **connection-string** property of the **init** command.
-3. Execute the command `dotnet build -p:generateConfigFiles=true`. This builds the project and generates the config files.
-4. Now, the DAB can be started using one of the available methods.
-5. After performing the code changes, the build can be performed using one of the two commands. If there are changes to the dab commands, execute `dotnet build -p:generateConfigFiles=true`. If not, executing `dotnet build` will suffice.
+1. The **ConfigGenerators** directory contains text files with DAB commands for each database type.
+2. Based on your choice of database, in the respective text file, update the **connection-string** property of the **init** command.
+3. Execute the command `dotnet build -p:generateConfigFiles=true`. This builds the project and generates the config files. The generated config files can be used to start DAB.
+4. After performing the code changes, the build can be performed using one of the two commands. If there are changes to the dab commands, execute `dotnet build -p:generateConfigFiles=true`. If not, executing `dotnet build` will suffice.
+5. DAB can be started using one of the various methods outlined in this document.
+
 
 #### Which configuration file is used?
 

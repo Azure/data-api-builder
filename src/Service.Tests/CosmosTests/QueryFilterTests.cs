@@ -548,6 +548,61 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 
+        /// <summary>
+        /// Test filters on nested object
+        /// </summary>
+        [TestMethod]
+        public async Task TestFilterOnNestedFields()
+        {
+            string gqlQuery = @"{
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {character : {name : {eq : ""planet character""}}})
+                { 
+                    items {
+                        id
+                        name
+                        character {
+                                id
+                                type
+                                name
+                                homePlanet
+                                primaryFunction
+                            }
+                    }
+                 }
+            }";
+
+            string dbQuery = "SELECT top 1 c.id, c.name, c.character FROM c where c.character.name = \"planet character\"";
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
+        /// Test filters on nested object with and
+        /// </summary>
+        [TestMethod]
+        public async Task TestFilterOnNestedFieldsWithAnd()
+        {
+            string gqlQuery = @"{
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {character : {name : {eq : ""planet character""}}
+                    and: [{name: {eq: ""Endor""}} ]  })
+                { 
+                    items {
+                        id
+                        name
+                        character {
+                                id
+                                type
+                                name
+                                homePlanet
+                                primaryFunction
+                            }
+                    }
+                 }
+            }";
+
+            string dbQuery = "SELECT top 1 c.id, c.name, c.character FROM c where c.character.name = \"planet character\" and c.name=\"Endor\"";
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
         [ClassCleanup]
         public static void TestFixtureTearDown()
         {

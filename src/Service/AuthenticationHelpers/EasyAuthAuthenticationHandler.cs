@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -95,7 +96,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             bool isUserAnonymousOnly = false;
             foreach (Claim claim in claims)
             {
-                if (claim.Type is ClaimTypes.Role)
+                if (claim.Type is AuthenticationConfig.ROLE_CLAIM_TYPE)
                 {
                     if (claim.Value.Equals(AuthorizationType.Anonymous.ToString(),
                         StringComparison.OrdinalIgnoreCase))

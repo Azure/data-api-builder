@@ -13,7 +13,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9
 		..\ConfigGenerators\MySqlCommands.txt = ..\ConfigGenerators\MySqlCommands.txt
 		..\ConfigGenerators\PostgreSqlCommands.txt = ..\ConfigGenerators\PostgreSqlCommands.txt
 		..\ConfigGenerators\DefaultConfigCommands.txt = ..\ConfigGenerators\DefaultConfigCommands.txt
-		Service\dab-config.json = Service\dab-config.json
 		..\schemas\dab.draft.schema.json = ..\schemas\dab.draft.schema.json
 		..\ConfigGenerators\configGenerator.ps1 = ..\ConfigGenerators\configGenerator.ps1
 		..\ConfigGenerators\configGenerator.sh = ..\ConfigGenerators\configGenerator.sh

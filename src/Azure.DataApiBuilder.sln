@@ -8,7 +8,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Servic
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configs", "Configs", "{EFA9C661-D8FD-469A-9372-284387C4BEFC}"
 	ProjectSection(SolutionItems) = preProject
+		..\ConfigGenerators\CosmosCommands.txt = ..\ConfigGenerators\CosmosCommands.txt
+		..\ConfigGenerators\MsSqlCommands.txt = ..\ConfigGenerators\MsSqlCommands.txt
+		..\ConfigGenerators\MySqlCommands.txt = ..\ConfigGenerators\MySqlCommands.txt
+		..\ConfigGenerators\PostgreSqlCommands.txt = ..\ConfigGenerators\PostgreSqlCommands.txt
+		..\ConfigGenerators\DefaultConfigCommands.txt = ..\ConfigGenerators\DefaultConfigCommands.txt
 		Service\dab-config.json = Service\dab-config.json
+		..\schemas\dab.draft.schema.json = ..\schemas\dab.draft.schema.json
+		..\ConfigGenerators\configGenerator.ps1 = ..\ConfigGenerators\configGenerator.ps1
+		..\ConfigGenerators\configGenerator.sh = ..\ConfigGenerators\configGenerator.sh
 		Service\schema.gql = Service\schema.gql
 	EndProjectSection
 EndProject

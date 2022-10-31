@@ -7,7 +7,7 @@ $PSDefaultParameterValues['*:Encoding'] = 'utf8';
 # When invoked without any arguments, config files for all the database types will be generated.
 $databaseTypes = @();
 if($args.Count -eq 0){
-    $databaseTypes = "MsSql", "MySql", "PostgreSql", "Cosmos";
+    $databaseTypes = "MsSql", "MySql", "PostgreSql", "Cosmos", "Default";
 }
 elseif($args.Count -eq 1){
     $databaseType = $args[0];
@@ -44,9 +44,13 @@ foreach($databaseType in $databaseTypes){
         $commandFile = "PostgreSqlCommands.txt";
         $configFile = "dab-config.PostgreSql.json";
     }
-    else{
+    elseif($databaseType -eq "Cosmos"){
         $commandFile = "CosmosCommands.txt";
         $configFile = "dab-config.Cosmos.json";
+    }
+    else{
+        $commandFile = "DefaultConfigCommands.txt";
+        $configFile = "dab-config.json";
     }
 
     # If a config file with the same name exists, it is deleted to avoid writing to

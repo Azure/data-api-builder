@@ -199,18 +199,29 @@ The `source` property tells Data API builder what is the underlying database obj
 - key-fields is an optional property only for Table/view.
 - By Default if `type` is not specified, it is inferred as Table.
 
+- Examples:
+1. **View**
 ```json
 {
 	"object": "bookView",
-	"type": "view"
+	"type": "view",
+	"key-fields":["id", "regNo"]
 }
 ```
 
+2. **Table with KeyFields**
 ```json
 {
 	"object": "bookTable",
 	"type": "table",
-	"key-fields":["col1", "col2"]
+	"key-fields":["id", "regNo"]
+}
+```
+
+3. **Table without KeyFields**
+```json
+{
+	"source": "bookTable"
 }
 ```
 ### Relationships

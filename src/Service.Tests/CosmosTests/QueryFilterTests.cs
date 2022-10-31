@@ -572,12 +572,11 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQuery = "SELECT top 1 c.id, c.name, c.character FROM c where c.character.name = \"planet character\"";
-            //string dbQuery = "select c.name from c where c.character.name = \"planet character\"";
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 
         /// <summary>
-        /// Test filters on nested object
+        /// Test filters on nested object with and
         /// </summary>
         [TestMethod]
         public async Task TestFilterOnNestedFieldsWithAnd()

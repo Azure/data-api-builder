@@ -18,7 +18,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="field">Field to check</param>
         /// <param name="definitions">The other named types in the schema</param>
         /// <returns>true if the field is allowed, false if it is not.</returns>
-        private static bool FieldAllowedOnUpdateInput(FieldDefinitionNode field, DatabaseType databaseType, IEnumerable<HotChocolate.Language.IHasName> definitions)
+        private static bool FieldAllowedOnUpdateInput(FieldDefinitionNode field, IEnumerable<HotChocolate.Language.IHasName> definitions)
         {
             if (IsBuiltInType(field.Type))
             {
@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             IEnumerable<InputValueDefinitionNode> inputFields =
                 objectTypeDefinitionNode.Fields
-                .Where(f => FieldAllowedOnUpdateInput(f, databaseType, definitions))
+                .Where(f => FieldAllowedOnUpdateInput(f, definitions))
                 .Select(f =>
                 {
                     if (!IsBuiltInType(f.Type))

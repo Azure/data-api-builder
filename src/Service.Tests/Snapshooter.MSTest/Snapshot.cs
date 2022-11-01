@@ -378,7 +378,7 @@ namespace Snapshooter.MSTest
         {
             get
             {
-                var snapshotSerializer =
+                SnapshotSerializer snapshotSerializer =
                     new SnapshotSerializer(new GlobalSnapshotSettingsResolver());
 
                 return

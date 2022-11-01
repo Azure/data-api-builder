@@ -1,0 +1,271 @@
+﻿schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Author @model {
+  id: ID
+  first_name: String
+  middle_name: String
+  last_name: String
+  Books: [Book]
+}
+
+"The return object from a filter query that supports a pagination token for paging through results"
+type AuthorConnection {
+  "The list of items that matched the filter"
+  items: [Author!]!
+  "A pagination token to provide to subsequent pages of a query"
+  endCursor: String
+  "Indicates if there are more pages of items to return"
+  hasNextPage: Boolean!
+}
+
+type Book @model {
+  id: ID
+  title: String
+  Authors: [Author]
+}
+
+"The return object from a filter query that supports a pagination token for paging through results"
+type BookConnection {
+  "The list of items that matched the filter"
+  items: [Book!]!
+  "A pagination token to provide to subsequent pages of a query"
+  endCursor: String
+  "Indicates if there are more pages of items to return"
+  hasNextPage: Boolean!
+}
+
+type Mutation {
+  "Creates a new Author"
+  createAuthor("Input representing all the fields for creating Author" item: CreateAuthorInput!): Author
+  "Updates a Author"
+  updateAuthor("One of the ids of the item being updated." id: ID! "One of the ids of the item being updated." _partitionKeyValue: String! "Input representing all the fields for updating Author" item: UpdateAuthorInput!): Author
+  "Delete a Author"
+  deleteAuthor("One of the ids of the item being deleted." id: ID! "One of the ids of the item being deleted." _partitionKeyValue: String!): Author
+  "Creates a new Book"
+  createBook("Input representing all the fields for creating Book" item: CreateBookInput!): Book
+  "Updates a Book"
+  updateBook("One of the ids of the item being updated." id: ID! "One of the ids of the item being updated." _partitionKeyValue: String! "Input representing all the fields for updating Book" item: UpdateBookInput!): Book
+  "Delete a Book"
+  deleteBook("One of the ids of the item being deleted." id: ID! "One of the ids of the item being deleted." _partitionKeyValue: String!): Book
+}
+
+type Query {
+  "Get a list of all the Author items from the database"
+  authors("The number of items to return from the page start point" first: Int "A pagination token from a previous query to continue through a paginated list" after: String "Filter options for query" filter: AuthorFilterInput "Ordering options for query" orderBy: AuthorOrderByInput): AuthorConnection!
+  "Get a Author from the database by its ID\/primary key"
+  author_by_pk(id: ID _partitionKeyValue: String): Author
+  "Get a list of all the Book items from the database"
+  books("The number of items to return from the page start point" first: Int "A pagination token from a previous query to continue through a paginated list" after: String "Filter options for query" filter: BookFilterInput "Ordering options for query" orderBy: BookOrderByInput): BookConnection!
+  "Get a Book from the database by its ID\/primary key"
+  book_by_pk(id: ID _partitionKeyValue: String): Book
+}
+
+"Filter input for Author GraphQL type"
+input AuthorFilterInput {
+  "Filter options for id"
+  id: IdFilterInput
+  "Filter options for first_name"
+  first_name: StringFilterInput
+  "Filter options for middle_name"
+  middle_name: StringFilterInput
+  "Filter options for last_name"
+  last_name: StringFilterInput
+  "Filter options for Books"
+  Books: BookFilterInput
+  "Conditions to be treated as AND operations"
+  and: [AuthorFilterInput]
+  "Conditions to be treated as OR operations"
+  or: [AuthorFilterInput]
+}
+
+"Order by input for Author GraphQL type"
+input AuthorOrderByInput {
+  "Order by options for id"
+  id: OrderBy
+  "Order by options for first_name"
+  first_name: OrderBy
+  "Order by options for middle_name"
+  middle_name: OrderBy
+  "Order by options for last_name"
+  last_name: OrderBy
+  "Order by options for Books"
+  Books: BookOrderByInput
+  "Conditions to be treated as AND operations"
+  and: [AuthorOrderByInput]
+  "Conditions to be treated as OR operations"
+  or: [AuthorOrderByInput]
+}
+
+"Filter input for Book GraphQL type"
+input BookFilterInput {
+  "Filter options for id"
+  id: IdFilterInput
+  "Filter options for title"
+  title: StringFilterInput
+  "Filter options for Authors"
+  Authors: AuthorFilterInput
+  "Conditions to be treated as AND operations"
+  and: [BookFilterInput]
+  "Conditions to be treated as OR operations"
+  or: [BookFilterInput]
+}
+
+"Order by input for Book GraphQL type"
+input BookOrderByInput {
+  "Order by options for id"
+  id: OrderBy
+  "Order by options for title"
+  title: OrderBy
+  "Order by options for Authors"
+  Authors: AuthorOrderByInput
+  "Conditions to be treated as AND operations"
+  and: [BookOrderByInput]
+  "Conditions to be treated as OR operations"
+  or: [BookOrderByInput]
+}
+
+"Input type for creating Author"
+input CreateAuthorInput {
+  "Input for field id on type CreateAuthorInput"
+  id: ID
+  "Input for field first_name on type CreateAuthorInput"
+  first_name: String
+  "Input for field middle_name on type CreateAuthorInput"
+  middle_name: String
+  "Input for field last_name on type CreateAuthorInput"
+  last_name: String
+}
+
+"Input type for creating Book"
+input CreateBookInput {
+  "Input for field id on type CreateBookInput"
+  id: ID
+  "Input for field title on type CreateBookInput"
+  title: String
+}
+
+input DefaultValue @oneOf {
+  Byte: Byte
+  Short: Short
+  Int: Int
+  Long: Long
+  String: String
+  Boolean: Boolean
+  Single: Single
+  Float: Float
+  Decimal: Decimal
+  DateTime: DateTime
+  ByteArray: ByteArray
+}
+
+"Input type for adding ID filters"
+input IdFilterInput {
+  "Equals"
+  eq: ID
+  "Not Equals"
+  neq: ID
+  "Not null test"
+  isNull: Boolean
+}
+
+"Input type for adding String filters"
+input StringFilterInput {
+  "Equals"
+  eq: String
+  "Contains"
+  contains: String
+  "Not Contains"
+  notContains: String
+  "Starts With"
+  startsWith: String
+  "Ends With"
+  endsWith: String
+  "Not Equals"
+  neq: String
+  "Case Insensitive"
+  caseInsensitive: Boolean = false
+  "Not null test"
+  isNull: Boolean
+}
+
+"Input type for updating Author"
+input UpdateAuthorInput {
+  "Input for field id on type UpdateAuthorInput"
+  id: ID
+  "Input for field first_name on type UpdateAuthorInput"
+  first_name: String
+  "Input for field middle_name on type UpdateAuthorInput"
+  middle_name: String
+  "Input for field last_name on type UpdateAuthorInput"
+  last_name: String
+}
+
+"Input type for updating Book"
+input UpdateBookInput {
+  "Input for field id on type UpdateBookInput"
+  id: ID
+  "Input for field title on type UpdateBookInput"
+  title: String
+}
+
+enum ApplyPolicy {
+  BEFORE_RESOLVER
+  AFTER_RESOLVER
+}
+
+enum OrderBy {
+  ASC
+  DESC
+}
+
+directive @authorize("The name of the authorization policy that determines access to the annotated resource." policy: String "Roles that are allowed to access the annotated resource." roles: [String!] "Defines when when the resolver shall be executed.By default the resolver is executed after the policy has determined that the current user is allowed to access the field." apply: ApplyPolicy! = BEFORE_RESOLVER) repeatable on SCHEMA | OBJECT | FIELD_DEFINITION
+
+"Indicates that a field is auto generated by the database."
+directive @autoGenerated on FIELD_DEFINITION
+
+"The default value to be used when creating an item."
+directive @defaultValue(value: DefaultValue) on FIELD_DEFINITION
+
+"The `@defer` directive may be provided for fragment spreads and inline fragments to inform the executor to delay the execution of the current fragment to indicate deprioritization of the current fragment. A query with `@defer` directive will cause the request to potentially return multiple responses, where non-deferred data is delivered in the initial response and data deferred is delivered in a subsequent response. `@include` and `@skip` take precedence over `@defer`."
+directive @defer("If this argument label has a value other than null, it will be passed on to the result of this defer directive. This label is intended to give client applications a way to identify to which fragment a deferred result belongs to." label: String "Deferred when true." if: Boolean) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+"A directive to indicate the type maps to a storable entity not a nested entity."
+directive @model("Underlying name of the database entity." name: String) on OBJECT
+
+"The `@oneOf` directive is used within the type system definition language\n to indicate:\n\n - an Input Object is a Oneof Input Object, or\n - an Object Type's Field is a Oneof Field."
+directive @oneOf on INPUT_OBJECT
+
+"A directive to indicate the primary key field of an item."
+directive @primaryKey("The underlying database type." databaseType: String) on FIELD_DEFINITION
+
+"A directive to indicate the relationship between two tables"
+directive @relationship("The name of the entity the relationship targets" target: String "The relationship cardinality" cardinality: String) on FIELD_DEFINITION
+
+"The `@specifiedBy` directive is used within the type system definition language to provide a URL for specifying the behavior of custom scalar definitions."
+directive @specifiedBy("The specifiedBy URL points to a human-readable specification. This field will only read a result for scalar types." url: String!) on SCALAR
+
+"The `@stream` directive may be provided for a field of `List` type so that the backend can leverage technology such as asynchronous iterators to provide a partial list in the initial response, and additional list items in subsequent responses. `@include` and `@skip` take precedence over `@stream`."
+directive @stream("If this argument label has a value other than null, it will be passed on to the result of this stream directive. This label is intended to give client applications a way to identify to which fragment a streamed result belongs to." label: String "The initial elements that shall be send down to the consumer." initialCount: Int! = 0 "Streamed when true." if: Boolean) on FIELD
+
+"The `Byte` scalar type represents non-fractional whole numeric values. Byte can represent values between 0 and 255."
+scalar Byte
+
+scalar ByteArray
+
+"The `DateTime` scalar represents an ISO-8601 compliant date time type."
+scalar DateTime @specifiedBy(url: "https:\/\/www.graphql-scalars.com\/date-time")
+
+"The built-in `Decimal` scalar type."
+scalar Decimal
+
+"The `Long` scalar type represents non-fractional signed whole 64-bit numeric values. Long can represent values between -(2^63) and 2^63 - 1."
+scalar Long
+
+"The `Short` scalar type represents non-fractional signed whole 16-bit numeric values. Short can represent values between -(2^15) and 2^15 - 1."
+scalar Short
+
+"IEEE 754 32 bit float"
+scalar Single

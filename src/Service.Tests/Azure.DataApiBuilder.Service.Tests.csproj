@@ -25,6 +25,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="System.IO.Abstractions.TestingHelpers" Version="$(SystemIOAbstractionsVersion)" />
+    <PackageReference Include="Snapshooter" Version="0.8.0-preview.1" />
   </ItemGroup>
 
   <ItemGroup>

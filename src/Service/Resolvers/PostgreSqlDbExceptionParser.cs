@@ -33,7 +33,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                     // exclusion_violation, The EXCLUDE constraint ensures that if any two rows are compared on the specified column(s)
                     // or expression(s) using the specified operator(s), atleast one of those operator comparisons will return false or null.
-                    "23P01"
+                    "23P01",
+
+                    // object_not_in_prerequisite_state
+                    "55000"
                 })
         {
             TransientErrorCodes = new()

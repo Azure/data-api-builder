@@ -584,7 +584,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 requestBody: requestBody,
                 expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
                 $"because the modification affects multiple base tables.",
-                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
                 );
         }

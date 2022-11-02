@@ -35,7 +35,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         protected override string Build(Column column)
         {
-            return _containerAlias + "." + column.ColumnName;
+            string alias = _containerAlias;
+            if (column.TableAlias != null)
+            {
+                alias = column.TableAlias;
+            }
+
+            return alias + "." + column.ColumnName;
         }
 
         protected override string Build(KeysetPaginationPredicate? predicate)

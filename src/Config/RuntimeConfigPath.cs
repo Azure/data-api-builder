@@ -188,7 +188,7 @@ namespace Azure.DataApiBuilder.Config
                 return $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
             }
         }
-        
+
         /// <summary>
         /// Generates the config file name and a corresponding overridden file name,
         /// With precedence given to overridden file name, returns that name

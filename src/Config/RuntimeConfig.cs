@@ -71,7 +71,7 @@ namespace Azure.DataApiBuilder.Config
         Dictionary<string, Entity> Entities)
     {
         public const string SCHEMA_PROPERTY_NAME = "$schema";
-        public const string SCHEMA = "dab.draft-01.schema.json";
+        public const string SCHEMA = "dab.draft.schema.json";
 
         // use camel case
         // convert Enum to strings

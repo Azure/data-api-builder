@@ -49,7 +49,7 @@ namespace Cli.Tests
         }
 
         public const string SAMPLE_SCHEMA_DATA_SOURCE = @"
-          ""$schema"": ""dab.draft-01.schema.json"",
+          ""$schema"": ""dab.draft.schema.json"",
             ""data-source"": {
               ""database-type"": ""mssql"",
               ""connection-string"": ""testconnectionstring""
@@ -318,7 +318,7 @@ namespace Cli.Tests
 
         public const string CONFIG_WITH_SINGLE_ENTITY = @"
           {
-        ""$schema"": ""dab.draft-01.schema.json"",
+        ""$schema"": ""dab.draft.schema.json"",
         ""data-source"": {
           ""database-type"": ""mssql"",
           ""connection-string"": ""localhost:5000""

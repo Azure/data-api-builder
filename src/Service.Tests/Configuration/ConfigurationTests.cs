@@ -456,7 +456,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void TestReadingRuntimeConfig()
         {
             Mock<ILogger> logger = new();
-            string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
+            string jsonString = File.ReadAllText( $"{RuntimeConfigPath.CONFIGFILE_NAME}." + $"{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}");
             RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
             Assert.IsNotNull(runtimeConfig.Schema);
             Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));

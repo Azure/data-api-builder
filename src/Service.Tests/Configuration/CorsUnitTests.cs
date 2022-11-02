@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void TestCorsConfigReadCorrectly()
         {
             Mock<ILogger> logger = new();
-            string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
+            string jsonString = File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}." + $"{TestCategory.COSMOS}{RuntimeConfigPath.CONFIG_EXTENSION}");
             RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
             HostGlobalSettings hostGlobalSettings =
                 JsonSerializer.Deserialize<HostGlobalSettings>(

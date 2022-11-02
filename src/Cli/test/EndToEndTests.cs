@@ -275,9 +275,9 @@ public class EndToEndTests
         Assert.AreEqual("{\"id\":\"identity\",\"name\":\"Company Name\"}", JsonSerializer.Serialize(entity.Mappings));
     }
 
-    // <summary>
-    // Test to verify the engine gets started using start command
-    // </summary>
+    /// <summary>
+    /// Test to verify the engine starts with the right log level using start command
+    /// </summary>
     [DataTestMethod]
     [DataRow("", true, false, DisplayName = "No logging from command line.")]
     [DataRow("--verbose", true, false, DisplayName = "Verbose logging from command line.")]
@@ -302,13 +302,14 @@ public class EndToEndTests
     [DataRow("--LogLevel eRROR", false, true, DisplayName = "Case sensitivity: LogLevel Error from command line.")]
     [DataRow("--LogLevel CrItIcal", false, true, DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
     [DataRow("--LogLevel NONE", false, true, DisplayName = "Case sensitivity: LogLevel None from command line.")]
-    public void TestStartEngine(string logging, bool useDefaultConfig, bool expectSuccess)
+    public void TestStartEngine(string logging, bool useInvalidConfig, bool expectSuccess)
     {
         string configFileName;
-        if (useDefaultConfig)
+        if (useInvalidConfig)
         {
-            // default config contains empty connection-string
-            configFileName = RuntimeConfigPath.DefaultName;
+            // Invalid config with an empty connection string.
+            configFileName = RuntimeConfigPath.InvalidConfigFileName;
+            WriteJsonContentToFile(configFileName,CONFIG_WTIH_INVALID_CONNECTION_STRING );
         }
         else
         {

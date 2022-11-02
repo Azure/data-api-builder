@@ -49,10 +49,22 @@ namespace Cli.Tests
         }
 
         public const string SAMPLE_SCHEMA_DATA_SOURCE = @"
-          ""$schema"": ""dab.draft-01.schema.json"",
+          ""$schema"": ""dab.draft.schema.json"",
             ""data-source"": {
               ""database-type"": ""mssql"",
               ""connection-string"": ""testconnectionstring""
+            }
+        ";
+
+        /// <summary>
+        /// Sample data source element with an empty connection string. 
+        /// Used for generating an invalid config for tests. 
+        /// </summary>
+        public const string SAMPLE_SCHEMA_DATA_SOURCE_WITH_EMPTY_CONNSTRING = @"
+          ""$schema"": ""dab.draft.schema.json"",
+            ""data-source"": {
+              ""database-type"": ""mssql"",
+              ""connection-string"": """"
             }
         ";
 
@@ -101,6 +113,34 @@ namespace Cli.Tests
               ""host"": {
                 ""mode"": ""development"",
                 ""authenticate-devmode-requests"": ""false"",
+                ""cors"": {
+                  ""origins"": [],
+                  ""allow-credentials"": false
+                },
+                ""authentication"": {
+                  ""provider"": ""StaticWebApps""
+                }
+              }
+            },
+            ""entities"": {}" +
+          "}";
+
+        /// <summary>
+        /// Initial config with an empty connection string
+        /// </summary>
+        public const string CONFIG_WTIH_INVALID_CONNECTION_STRING = "{" +
+            SAMPLE_SCHEMA_DATA_SOURCE_WITH_EMPTY_CONNSTRING + "," +
+            @"
+            ""runtime"": {
+              ""rest"": {
+                ""path"": ""/api""
+              },
+              ""graphql"": {
+                ""path"": ""/graphql"",
+                ""allow-introspection"": true
+              },
+              ""host"": {
+                ""mode"": ""development"",
                 ""cors"": {
                   ""origins"": [],
                   ""allow-credentials"": false
@@ -318,7 +358,7 @@ namespace Cli.Tests
 
         public const string CONFIG_WITH_SINGLE_ENTITY = @"
           {
-        ""$schema"": ""dab.draft-01.schema.json"",
+        ""$schema"": ""dab.draft.schema.json"",
         ""data-source"": {
           ""database-type"": ""mssql"",
           ""connection-string"": ""localhost:5000""

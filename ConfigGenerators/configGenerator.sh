@@ -7,7 +7,7 @@ databaseTypes=();
 # When invoked with a database type, config file for that database type will be generated.
 # When invoked without any arguments, config files for all the database types will be generated.
 if [[ $# -eq 0 ]]; then
-    databaseTypes=("MsSql" "MySql" "PostgreSql" "Cosmos" "Default")
+    databaseTypes=("MsSql" "MySql" "PostgreSql" "Cosmos")
 elif [[ $# -eq 1 ]]; then
     databaseType=$1;
     if ! { [ $databaseType == "MsSql" ] || [ $databaseType == "MySql" ] || [ $databaseType == "PostgreSql" ] || [ $databaseType == "Cosmos" ]; }; then
@@ -44,12 +44,9 @@ do
     elif [[ $databaseType == "PostgreSql" ]]; then
         commandFile="PostgreSqlCommands.txt";
         configFile="dab-config.PostgreSql.json";
-    elif [[ $databaseType == "Cosmos" ]]; then 
+    else [[ $databaseType == "Cosmos" ]]; then 
         commandFile="CosmosCommands.txt";
         configFile="dab-config.Cosmos.json";
-    else 
-        commandFile="DefaultConfigCommands.txt";
-        configFile="dab-config.json";
     fi
 
     # If a config file with the same name exists, it is deleted to avoid writing to

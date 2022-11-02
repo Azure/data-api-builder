@@ -196,6 +196,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 "
             },
             {
+                "PutOneInsertInStocksViewSelected",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE categoryid = 4 AND pieceid = 1
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "PutOneUpdateStocksViewSelected",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE categoryid = 2 AND pieceid = 1
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
                 "UpdateSqlInjectionQuery1",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -245,27 +269,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             }
         };
 
+        [TestMethod]
+        public async Task PutOneInViewBadRequest()
+        {
+            string expectedErrorMessage = $"55000: cannot update view \"{_composite_subset_bookPub}\"";
+            await base.PutOneInViewBadRequest(expectedErrorMessage);
+        }
+
         #region Overriden tests
-        [TestMethod]
-        [Ignore]
-        public override Task PutOneInsertInViewTest()
-        {
-            throw new NotImplementedException();
-        }
 
-        [TestMethod]
-        [Ignore]
-        public override Task PutOneUpdateViewTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PutOneInViewBadRequest()
-        {
-            throw new NotImplementedException();
-        }
         #endregion
 
         #region Test Fixture Setup

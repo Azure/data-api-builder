@@ -23,20 +23,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
             }
         };
 
-        #region Overriden tests
         [TestMethod]
-        [Ignore]
-        public override Task DeleteOneInViewTest()
+        public async Task DeleteOneInViewBadRequestTest()
         {
-            throw new NotImplementedException();
+            string expectedErrorMessage = $"55000: cannot delete from view \"{_composite_subset_bookPub}\"";
+            await base.DeleteOneInViewBadRequestTest(expectedErrorMessage);
         }
 
-        [TestMethod]
-        [Ignore]
-        public override Task DeleteOneInViewBadRequestTest()
-        {
-            throw new NotImplementedException();
-        }
+        #region Overriden tests
+
         #endregion
 
         #region Test Fixture Setup

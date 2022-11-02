@@ -155,8 +155,38 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         AND title = ' '' UNION SELECT * FROM books/*'
                     ) AS subq
                 "
-            }
+            },
+            {
+                "InsertOneInBooksViewAll",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _simple_all_books + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                    ) AS subq
+                "
+            },
+            {
+                "InsertOneInStocksViewSelected",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE categoryid = 4 AND pieceid = 1
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
         };
+
+        [TestMethod]
+        public async Task InsertOneInViewBadRequestTest()
+        {
+            string expectedErrorMessage = $"55000: cannot insert into view \"{_composite_subset_bookPub}\"";
+            await base.InsertOneInViewBadRequestTest(expectedErrorMessage);
+        }
 
         #region Overriden tests
         /// <inheritdoc/>
@@ -186,19 +216,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             );
         }
 
-        [TestMethod]
-        [Ignore]
-        public override Task InsertOneInViewTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task InsertOneInViewBadRequestTest()
-        {
-            throw new NotImplementedException();
-        }
         #endregion
 
         #region Test Fixture Setup

@@ -290,6 +290,20 @@ FROM
             await TestQueryWithExplicitlyNullArguments(postgresQuery);
         }
 
+        [TestMethod]
+        public async Task TestQueryOnBasicView()
+        {
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books_view_all ORDER BY id ASC LIMIT 5) as table0";
+            await base.TestQueryOnBasicView(postgresQuery);
+        }
+
+        [TestMethod]
+        public async Task TestQueryOnCompositeView()
+        {
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, name FROM books_publishers_view_composite ORDER BY id ASC LIMIT 5) as table0";
+            await base.TestQueryOnCompositeView(postgresQuery);
+        }
+
         #endregion
     }
 }

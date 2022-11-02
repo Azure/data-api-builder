@@ -13,9 +13,11 @@ add stocks_price --config "dab-config.MsSql.json" --source stocks_price --permis
 add Tree --config "dab-config.MsSql.json" --source trees --permissions "anonymous:create,read,update,delete"
 add Shrub --config "dab-config.MsSql.json" --source trees --permissions "anonymous:create,read,update,delete" --rest plants
 add Fungus --config "dab-config.MsSql.json" --source fungi --permissions "anonymous:create,read,update,delete" --graphql "fungus:fungi"
-add books_view_all --config "dab-config.MsSql.json" --source books_view_all --source.type "view" --permissions "anonymous:*"
-add stocks_view_selected --config "dab-config.MsSql.json" --source stocks_view_selected --source.type "view" --permissions "anonymous:*"
+add books_view_all --config "dab-config.MsSql.json" --source books_view_all --source.type "view" --permissions "anonymous:*" --rest true --graphql true
+add books_view_with_mapping --config "dab-config.MsSql.json" --source books_view_with_mapping --source.type "view" --permissions "anonymous:*" --rest true --graphql true
+add stocks_view_selected --config "dab-config.MsSql.json" --source stocks_view_selected --source.type "view" --permissions "anonymous:*" --rest true --graphql true
 add books_publishers_view_composite --config "dab-config.MsSql.json" --source books_publishers_view_composite --source.type "view" --permissions "anonymous:*" --rest true --graphql true
+add books_publishers_view_composite_insertable --config "dab-config.MsSql.json" --source books_publishers_view_composite_insertable --source.type "view" --permissions "anonymous:*" --rest true --graphql true
 add Empty --config "dab-config.MsSql.json" --source "empty_table" --permissions "authenticated:create,read,update,delete" --rest true
 add Notebook --config "dab-config.MsSql.json" --source "notebooks" --permissions "anonymous:read" --rest true --graphql true --fields.include "*" --policy-database "@item ne 1"
 add Journal --config "dab-config.MsSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
@@ -89,6 +91,7 @@ update Fungus --config "dab-config.MsSql.json" --permissions "policy_tester_01:r
 update books_view_all --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update stocks_view_selected --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
 update books_publishers_view_composite --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
+update books_view_with_mapping --config "dab-config.MsSql.json" --map "id:book_id" --source.key-fields "id" 
 update BookWebsitePlacement --config "dab-config.MsSql.json" --relationship books --target.entity Book --cardinality one
 update SupportedType --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update" 
 update Author --config "dab-config.MsSql.json" --relationship books --target.entity Book --cardinality many --linking.object book_author_link

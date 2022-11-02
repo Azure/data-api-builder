@@ -256,7 +256,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             },
             {
                 "FindTestWithIntTypeNullValuesOrderByAsc",
-                $"SELECT * FROM type_table " +
+                $"SELECT id, int_types FROM type_table " +
                 $"ORDER BY int_types asc, id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },

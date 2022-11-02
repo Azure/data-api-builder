@@ -376,7 +376,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data
                   FROM (
-                      SELECT *
+                      SELECT id, int_types
                       FROM " + _integrationTypeTable + @"
                       ORDER BY int_types asc, id asc
                   ) AS subq"

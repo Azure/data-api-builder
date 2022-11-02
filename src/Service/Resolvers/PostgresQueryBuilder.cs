@@ -105,22 +105,37 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         public string Build(SqlUpsertQueryStructure structure)
         {
+            // https://stackoverflow.com/questions/42668720/check-if-postgres-query-inserted-or-updated-via-upsert
+            // relying on xmax to detect insert vs update breaks for views
+
+            string updateQuery = $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                $"SET {Build(structure.UpdateOperations, ", ")} " +
+                $"WHERE {Build(structure.Predicates)} " +
+                $"RETURNING {Build(structure.OutputColumns)}, '{UPDATE_UPSERT}' AS {UPSERT_IDENTIFIER_COLUMN_NAME}";
+
             if (structure.IsFallbackToUpdate)
             {
-                return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                    $"SET {Build(structure.UpdateOperations, ", ")} " +
-                    $"WHERE {Build(structure.Predicates)} " +
-                    $"RETURNING {Build(structure.OutputColumns)}, '{UPDATE_UPSERT}' AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
+                return updateQuery + ";";
             }
             else
             {
-                return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
-                    $"VALUES ({string.Join(", ", (structure.Values))}) " +
-                    $"ON CONFLICT ({Build(structure.PrimaryKey())}) DO UPDATE " +
-                    $"SET {Build(structure.UpdateOperations, ", ")} " +
-                    $"RETURNING {Build(structure.OutputColumns)}, " +
-                    $"case when xmax::text::int > 0 then '{UPDATE_UPSERT}' else '{INSERT_UPSERT}' end AS {UPSERT_IDENTIFIER_COLUMN_NAME};";
+                return $"WITH update_cte AS ( {updateQuery} ), insert_cte AS ( " +
+                    $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
+                    $"SELECT {string.Join(", ", (structure.Values))} " +
+                    $"WHERE NOT EXISTS (SELECT 1 FROM update_cte) " +
+                    $"RETURNING {Build(structure.OutputColumns)}, '{INSERT_UPSERT}' AS {UPSERT_IDENTIFIER_COLUMN_NAME} ) " +
+                    $"SELECT {BuildListOfLabels(structure.OutputColumns)}, {UPSERT_IDENTIFIER_COLUMN_NAME} FROM update_cte UNION " +
+                    $"SELECT {BuildListOfLabels(structure.OutputColumns)}, {UPSERT_IDENTIFIER_COLUMN_NAME} FROM insert_cte;";
             }
+        }
+
+        /// <summary>
+        /// Build list of LabelledColumns as:
+        /// "{label1}", "{label2}" ...
+        /// </summary>
+        private string BuildListOfLabels(List<LabelledColumn> labelledColumns)
+        {
+            return Build(labelledColumns.Select(labelledColumn => labelledColumn.Label).ToList());
         }
 
         /// <summary>

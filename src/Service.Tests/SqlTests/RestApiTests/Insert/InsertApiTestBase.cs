@@ -565,7 +565,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public virtual async Task InsertOneInViewBadRequestTest()
+        public virtual async Task InsertOneInViewBadRequestTest(string expectedErrorMessage)
         {
             // Request trying to modify fields from multiple base tables will fail .
             string requestBody = @"
@@ -582,8 +582,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 operationType: Operation.Insert,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
-                $"because the modification affects multiple base tables.",
+                expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
                 );

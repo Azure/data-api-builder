@@ -1,4 +1,4 @@
-init --config "dab-config.MySql.json" --database-type mysql --connection-string "server=localhost;database=datagatewaytest;Allow User Variables=true;uid=root;pwd=REPLACEME" --host-mode Development --authenticate-devmode-requests false --cors-origin "http://localhost:5000"
+﻿init --config "dab-config.MySql.json" --database-type mysql --connection-string "server=localhost;database=datagatewaytest;Allow User Variables=true;uid=root;pwd=REPLACEME" --host-mode Development --authenticate-devmode-requests false --cors-origin "http://localhost:5000"
 add Publisher --config "dab-config.MySql.json" --source publishers --permissions "anonymous:read"
 add Stock --config "dab-config.MySql.json" --source stocks --permissions "anonymous:create,read,update"
 add Book --config "dab-config.MySql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
@@ -21,6 +21,7 @@ add Notebook --config "dab-config.MySql.json" --source "notebooks" --permissions
 add Journal --config "dab-config.MySql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
 add ArtOfWar --config "dab-config.MySql.json" --source "aow" --rest true --permissions "anonymous:*"
 add series --config "dab-config.MySql.json" --source "series" --permissions "anonymous:*"
+add TypeTable --config "dab-config.MySql.json" --source "type_table" --source.type "table" --permissions "anonymous:read" --rest true --graphql true
 update Publisher --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
 update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_01:create,delete"
 update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_01:update" --fields.include "*"

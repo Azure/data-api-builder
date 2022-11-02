@@ -526,6 +526,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation using sorting
+        /// with integer type and null values.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithIntTypeNullValuesOrderByAsc()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=int_types",
+                entityNameOrPath: _integrationTypeEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithIntTypeNullValuesOrderByAsc))
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation for all records.
         /// order by title in ascending order.
         /// </summary>

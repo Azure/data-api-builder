@@ -255,6 +255,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithIntTypeNullValuesOrderByAsc",
+                $"SELECT * FROM type_table " +
+                $"ORDER BY int_types asc, id asc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithQueryStringAllFieldsOrderByAsc",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"ORDER BY title asc, id asc " +

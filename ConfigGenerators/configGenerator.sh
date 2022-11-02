@@ -44,7 +44,7 @@ do
     elif [[ $databaseType == "PostgreSql" ]]; then
         commandFile="PostgreSqlCommands.txt";
         configFile="dab-config.PostgreSql.json";
-    else [[ $databaseType == "Cosmos" ]]; then 
+    else 
         commandFile="CosmosCommands.txt";
         configFile="dab-config.Cosmos.json";
     fi

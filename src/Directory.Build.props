@@ -10,7 +10,6 @@
     <CosmosVersion>3.20.0</CosmosVersion>
     <SqlVersion>3.0.0</SqlVersion>
     <ConfigVersion>6.0.0-preview.3.21201.4</ConfigVersion>
-    <DotNetVersion>5.0.15</DotNetVersion>
     <PostgresVersion>5.0.10</PostgresVersion>
     <ODataVersion>7.9.0</ODataVersion>
     <MySQLVersion>2.1.5</MySQLVersion>

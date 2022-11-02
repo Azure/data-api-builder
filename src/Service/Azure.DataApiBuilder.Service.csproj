@@ -60,7 +60,7 @@
     <PackageReference Include="HotChocolate" Version="$(HotChocolateVersion)" />
     <PackageReference Include="HotChocolate.AspNetCore" Version="$(HotChocolateVersion)" />
     <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="$(HotChocolateVersion)" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(DotNetVersion)" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.15" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="$(CosmosVersion)" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="$(SqlVersion)" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="$(ConfigVersion)" />

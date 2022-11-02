@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow("Test1", "Test1")]
         public void EntityNameBecomesObjectName(string entityName, string expected)
         {
-            DatabaseObject dbObject = new() { TableDefinition = new() };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = new() };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 entityName,
@@ -58,13 +58,13 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow("Test", "Test")]
         public void ColumnNameBecomesFieldName(string columnName, string expected)
         {
-            TableDefinition table = new();
+            SourceDefinition table = new();
             table.Columns.Add(columnName, new ColumnDefinition
             {
                 SystemType = typeof(string)
             });
 
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [TestMethod]
         public void PrimaryKeyColumnHasAppropriateDirective()
         {
-            TableDefinition table = new();
+            SourceDefinition table = new();
 
             string columnName = "columnName";
             table.Columns.Add(columnName, new ColumnDefinition
@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             });
             table.PrimaryKey.Add(columnName);
 
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [TestMethod]
         public void MultiplePrimaryKeysAllMappedWithDirectives()
         {
-            TableDefinition table = new();
+            SourceDefinition table = new();
 
             for (int i = 0; i < 5; i++)
             {
@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 table.PrimaryKey.Add(columnName);
             }
 
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
@@ -142,14 +142,14 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         {
             int customColumnCount = 5;
 
-            TableDefinition table = new();
+            SourceDefinition table = new();
 
             for (int i = 0; i < customColumnCount; i++)
             {
                 table.Columns.Add($"col{i}", new ColumnDefinition { SystemType = typeof(string) });
             }
 
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
@@ -177,7 +177,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow(typeof(byte[]), BYTEARRAY_TYPE)]
         public void SystemTypeMapsToCorrectGraphQLType(Type systemType, string graphQLType)
         {
-            TableDefinition table = new();
+            SourceDefinition table = new();
 
             string columnName = "columnName";
             table.Columns.Add(columnName, new ColumnDefinition
@@ -185,7 +185,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 SystemType = systemType
             });
 
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
@@ -203,7 +203,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [TestMethod]
         public void NullColumnBecomesNullField()
         {
-            TableDefinition table = new();
+            SourceDefinition table = new();
 
             string columnName = "columnName";
             table.Columns.Add(columnName, new ColumnDefinition
@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 IsNullable = true,
             });
 
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
@@ -230,7 +230,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [TestMethod]
         public void NonNullColumnBecomesNonNullField()
         {
-            TableDefinition table = new();
+            SourceDefinition table = new();
 
             string columnName = "columnName";
             table.Columns.Add(columnName, new ColumnDefinition
@@ -239,7 +239,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 IsNullable = false,
             });
 
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
@@ -304,12 +304,12 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [TestMethod]
         public void WhenForeignKeyDefinedButNoRelationship_GraphQLWontModelIt()
         {
-            TableDefinition table = GenerateTableWithForeignKeyDefinition();
+            SourceDefinition table = GenerateTableWithForeignKeyDefinition();
 
             Entity configEntity = GenerateEmptyEntity() with { Relationships = new() };
             Entity relationshipEntity = GenerateEmptyEntity();
 
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             ObjectTypeDefinitionNode od =
                 SchemaConverter.FromDatabaseObject(
@@ -343,11 +343,11 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow("entities", "", "entities", DisplayName = "Plural top-level entity name and empty singular name not singularized")]
         public void SingularNamingRulesDeterminedByRuntimeConfig(string entityName, string singular, string expected)
         {
-            TableDefinition table = new();
+            SourceDefinition table = new();
 
             Entity configEntity = GenerateEmptyEntity() with { GraphQL = new GraphQLEntitySettings(new SingularPlural(singular, null)) };
 
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 entityName,
@@ -369,7 +369,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [TestMethod]
         public void AutoGeneratedFieldHasDirectiveIndicatingSuch()
         {
-            TableDefinition table = new();
+            SourceDefinition table = new();
             string columnName = "columnName";
             table.Columns.Add(columnName, new ColumnDefinition
             {
@@ -378,7 +378,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 IsAutoGenerated = true,
             });
 
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             Entity configEntity = GenerateEmptyEntity();
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
@@ -420,7 +420,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 defaultValue = Convert.FromBase64String(defaultValue.ToString());
             }
 
-            TableDefinition table = new();
+            SourceDefinition table = new();
             string columnName = "columnName";
             table.Columns.Add(columnName, new ColumnDefinition
             {
@@ -429,7 +429,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 DefaultValue = defaultValue
             });
 
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             Entity configEntity = GenerateEmptyEntity();
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
@@ -464,7 +464,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow(new string[] { "role1", "role2", "role3" }, DisplayName = "Multiple non-system roles defined for field, @authorize directive added.")]
         public void AutoGeneratedFieldHasAuthorizeDirective(string[] rolesForField)
         {
-            TableDefinition table = new();
+            SourceDefinition table = new();
             string columnName = "columnName";
             table.Columns.Add(columnName, new ColumnDefinition
             {
@@ -473,7 +473,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 IsAutoGenerated = true,
             });
 
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             Entity configEntity = GenerateEmptyEntity();
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
@@ -504,7 +504,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow(new string[] { "authenticated", "anonymous" }, DisplayName = "Anonymous and authenticated are present and randomly ordered, anonymous wins.")]
         public void FieldWithAnonymousAccessHasNoAuthorizeDirective(string[] rolesForField)
         {
-            TableDefinition table = new();
+            SourceDefinition table = new();
             string columnName = "columnName";
             table.Columns.Add(columnName, new ColumnDefinition
             {
@@ -514,7 +514,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             });
 
             Entity configEntity = GenerateEmptyEntity();
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "entity",
@@ -546,7 +546,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow(new string[] { "role1", "role2" }, true, DisplayName = "Authorize directive present for listed roles.")]
         public void EntityObjectTypeDefinition_AuthorizeDirectivePresence(string[] roles, bool authorizeDirectiveExpected)
         {
-            TableDefinition table = new();
+            SourceDefinition table = new();
             string columnName = "columnName";
             table.Columns.Add(columnName, new ColumnDefinition
             {
@@ -555,7 +555,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 IsAutoGenerated = true,
             });
 
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             Entity configEntity = GenerateEmptyEntity();
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
@@ -594,7 +594,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow(new string[] { "authenticated" }, new string[] { "anonymous" }, true, false, DisplayName = "Authorize Directive on entity, not on fields")]
         public void EntityObjectTypeDefinition_AuthorizeDirectivePresenceMixed(string[] rolesForEntity, string[] rolesForFields, bool authorizeDirectiveExpectedEntity, bool authorizeDirectiveExpectedFields)
         {
-            TableDefinition table = new();
+            SourceDefinition table = new();
             string columnName = "columnName";
             table.Columns.Add(columnName, new ColumnDefinition
             {
@@ -604,7 +604,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             });
 
             Entity configEntity = GenerateEmptyEntity();
-            DatabaseObject dbObject = new() { TableDefinition = table };
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "entity",
@@ -689,7 +689,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
         private static ObjectTypeDefinitionNode GenerateObjectWithRelationship(Cardinality cardinality, bool isNullableRelationship = false)
         {
-            TableDefinition table = GenerateTableWithForeignKeyDefinition(isNullableRelationship);
+            SourceDefinition table = GenerateTableWithForeignKeyDefinition(isNullableRelationship);
 
             Dictionary<string, Relationship> relationships =
                 new()
@@ -709,7 +709,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
             Entity relationshipEntity = GenerateEmptyEntity();
 
-            DatabaseObject dbObject = new()
+            DatabaseObject dbObject = new DatabaseTable()
             { SchemaName = SCHEMA_NAME, Name = TABLE_NAME, TableDefinition = table };
 
             return SchemaConverter.FromDatabaseObject(
@@ -726,9 +726,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         /// </summary>
         /// <param name="isNullable">whether the foreign key column can be null</param>
         /// <returns></returns>
-        private static TableDefinition GenerateTableWithForeignKeyDefinition(bool isNullable = false)
+        private static SourceDefinition GenerateTableWithForeignKeyDefinition(bool isNullable = false)
         {
-            TableDefinition table = new();
+            SourceDefinition table = new();
             table.Columns.Add(COLUMN_NAME, new ColumnDefinition
             {
                 SystemType = typeof(string),
@@ -744,8 +744,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             {
                 Pair = new()
                 {
-                    ReferencingDbObject = new(SCHEMA_NAME, TABLE_NAME),
-                    ReferencedDbObject = new(SCHEMA_NAME, REFERENCED_TABLE)
+                    ReferencingDbTable = new DatabaseTable(SCHEMA_NAME, TABLE_NAME),
+                    ReferencedDbTable = new DatabaseTable(SCHEMA_NAME, REFERENCED_TABLE)
                 },
                 ReferencingColumns = new List<string> { REF_COLNAME },
                 ReferencedColumns = new List<string> { REFD_COLNAME }

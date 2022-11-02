@@ -134,10 +134,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             );
 
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/2",
+                primaryKeyRoute: "id/2/pub_id/1234",
                 queryString: string.Empty,
                 entityNameOrPath: _composite_subset_bookPub,
-                sqlQuery: GetQuery("FindViewComposite")
+                sqlQuery: GetQuery("FindBooksPubViewComposite")
             );
         }
 
@@ -1115,14 +1115,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
 
-            //"?$filter=not (categoryid gt 1)",
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$filter=not (title gt 1)",
+                queryString: "?$filter=not (titl gt 1)",
                 entityNameOrPath: _composite_subset_bookPub,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
-                expectedErrorMessage: $"Could not find a property named 'title' on type 'default_namespace.{_composite_subset_bookPub}.{GetDefaultSchemaForEdmModel()}books_publishers_view_composite'.",
+                expectedErrorMessage: $"Could not find a property named 'titl' on type 'default_namespace.{_composite_subset_bookPub}.{GetDefaultSchemaForEdmModel()}books_publishers_view_composite'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
         }
@@ -1454,6 +1453,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: null,
                 exceptionExpected: true,
                 expectedErrorMessage: "A query parameter without a key is not supported.",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests that a cast failure of primary key value type results in HTTP 400 Bad Request.
+        /// e.g. Attempt to cast a string '{}' to the 'id' column type of int will fail.
+        /// </summary>
+        [TestMethod]
+        public async Task FindWithUncastablePKValue()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/{}",
+                queryString: string.Empty,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: null,
+                exceptionExpected: true,
+                expectedErrorMessage: "Parameter \"{}\" cannot be resolved as column \"id\" with type \"Int32\".",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

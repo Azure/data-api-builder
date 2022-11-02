@@ -1,17 +1,17 @@
 {
-  "$schema": "../schemas/dab.draft-01.schema.json",
+  "$schema": "dab.draft-01.schema.json",
   "data-source": {
-    "database-type": "postgresql",
-"connection-string": "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME"
+    "database-type": "mssql",
+    "connection-string": "Connection String"
+  },
+  "mssql": {
+    "set-session-context": false
   },
   "runtime": {
     "rest": {
-      "enabled": true,
       "path": "/api"
     },
     "graphql": {
-      "enabled": true,
-      "path": "/graphql",
       "allow-introspection": true
     },
     "host": {
@@ -383,36 +383,6 @@
               }
             }
           ]
-        },
-        {
-          "role": "policy_tester_update_noread",
-          "actions": [
-            "create",
-            {
-              "action": "update",
-              "fields": {
-                "include": [ "*" ]
-              },
-              "policy": {
-                "database": "@item.id eq 9"
-              }
-            },
-            {
-              "action": "read",
-              "fields": {
-                "exclude": [ "*" ]
-              }
-            },
-            {
-              "action": "delete",
-              "fields": {
-                "include": [ "*" ]
-              },
-              "policy": {
-                "database": "@item.id eq 9"
-              }
-            }
-          ]
         }
       ],
       "relationships": {
@@ -577,8 +547,8 @@
         }
       ]
     },
-    "stocks_price": {
-      "source": "stocks_price",
+    "SupportedType": {
+      "source": "type_table",
       "rest": false,
       "permissions": [
         {
@@ -591,8 +561,8 @@
         }
       ]
     },
-    "SupportedType": {
-      "source": "type_table",
+    "stocks_price": {
+      "source": "stocks_price",
       "rest": false,
       "permissions": [
         {
@@ -626,7 +596,7 @@
     "Shrub": {
       "source": "trees",
       "rest": {
-        "path":  "plants"
+        "path": "plants"
       },
       "permissions": [
         {
@@ -782,20 +752,19 @@
     },
     "books_view_all": {
       "source": {
-        "type": "view",
         "object": "books_view_all",
-        "key-fields": ["id"]
+        "type": "view"
       },
       "rest": true,
       "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "*" ]
         },
         {
           "role": "authenticated",
-          "actions": [ "read", "create", "update", "delete" ]
+          "actions": [ "create", "read", "update", "delete" ]
         }
       ],
       "relationships": {
@@ -826,16 +795,15 @@
     },
     "stocks_view_selected": {
       "source": {
-        "type": "view",
         "object": "stocks_view_selected",
-        "key-fields": ["categoryid", "pieceid"]
+        "type": "view"
       },
       "rest": true,
       "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "*" ]
         },
         {
           "role": "authenticated",
@@ -847,16 +815,15 @@
     },
     "books_publishers_view_composite": {
       "source": {
-        "type": "view",
         "object": "books_publishers_view_composite",
-        "key-fields": ["id"]
+        "type": "view"
       },
       "rest": true,
       "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "*" ]
         },
         {
           "role": "authenticated",
@@ -867,23 +834,42 @@
       }
     },
     "books_publishers_view_composite_insertable": {
-      "source": {
-        "type": "view",
-        "object": "books_publishers_view_composite_insertable",
-        "key-fields": ["id"]
-      },
+      "source": "books_publishers_view_composite_insertable",
       "rest": true,
       "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read", "create" ]
+          "actions": [ "read" ]
         },
         {
           "role": "authenticated",
           "actions": [ "read", "create" ]
         }
       ],
+      "relationships": {
+      }
+    },
+    "stocks_price_view_composite": {
+      "source": {
+        "object": "stocks_price_view_composite",
+        "type": "view"
+      },
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ],
+      "mappings": {
+        "instant": "phase"
+      },
       "relationships": {
       }
     },
@@ -923,6 +909,42 @@
           "target.entity": "Comic"
         }
       }
+    },
+    "GetBooks": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "get_books"
+      },
+      "rest": true,
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
+        }
+      ]
+    },
+    "GetBook": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "get_book_by_id"
+      },
+      "rest": true,
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
+        }
+      ]
     }
   }
 }

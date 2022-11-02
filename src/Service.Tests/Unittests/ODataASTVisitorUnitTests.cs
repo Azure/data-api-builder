@@ -6,6 +6,7 @@ using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -99,6 +100,50 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 );
         }
 
+        [DataTestMethod]
+        // Constant on left side and OData EDM object on right side of binary operator. (L->R)
+        [DataRow("'1' eq int_types", false, DisplayName = "L->R: Cast token claim of type string to integer, left to right ")]
+        [DataRow("'13B4F4EC-C45B-46EC-99F2-77BC22A256A7' eq guid_types", false, DisplayName = "L->R: Cast token claim of type string to GUID")]
+        [DataRow("'true' eq boolean_types", false, DisplayName = "L->R: Cast token claim of type string to bool (true)")]
+        [DataRow("'false' eq boolean_types", false, DisplayName = "L->R: Cast token claim of type string to bool (false)")]
+        [DataRow("1 eq string_types", false, DisplayName = "L->R: Cast token claim of type int to string")]
+        [DataRow("true eq string_types", false, DisplayName = "L->R: Cast token claim of type bool to string")]
+        // Constant on right side and OData EDM object on left side of binary operator. (R->L)
+        [DataRow("int_types eq '1'", false, DisplayName = "R->L: Cast token claim of type string to integer")]
+        [DataRow("guid_types eq '13B4F4EC-C45B-46EC-99F2-77BC22A256A7'", false, DisplayName = "R->L: Cast token claim of type string to GUID")]
+        [DataRow("boolean_types eq 'true'", false, DisplayName = "R->L: Cast token claim of type string to bool (true)")]
+        [DataRow("boolean_types eq 'false'", false, DisplayName = "R->L: Cast token claim of type string to bool (false)")]
+        [DataRow("string_types eq 1", false, DisplayName = "R->L: Cast token claim of type int to string")]
+        [DataRow("string_types eq true", false, DisplayName = "R->L: Cast token claim of type bool to string")]
+        // Comparisons expected to fail due to inability to cast
+        [DataRow("boolean_types eq 2", true, DisplayName = "Fail to cast arbitrary int to bool")]
+        [DataRow("guid_types eq 1", true, DisplayName = "Fail to cast arbitrary int to GUID")]
+        [DataRow("guid_types eq 'stringConstant'", true, DisplayName = "Fail to cast arbitrary string to GUID")]
+        public void CustomODataUriParserResolverTest(string resolvedAuthZPolicyText, bool errorExpected)
+        {
+            // Arrange
+            string entityName = "SupportedType";
+            string tableName = "type_table";
+            string filterQueryString = "?$filter=" + resolvedAuthZPolicyText;
+            string expectedErrorMessageFragment = "A binary operator with incompatible types was detected.";
+
+            //Act + Assert
+            try
+            {
+                FilterClause ast = _sqlMetadataProvider
+                    .GetODataParser()
+                    .GetFilterClause(
+                        filterQueryString,
+                        resourcePath: $"{entityName}.{DEFAULT_SCHEMA_NAME}.{tableName}",
+                        customResolver: new ClaimsTypeDataUriResolver());
+                Assert.IsFalse(errorExpected, message: "Filter clause creation was expected to fail.");
+            }
+            catch (Exception e) when (e is DataApiBuilderException || e is ODataException)
+            {
+                Assert.IsTrue(errorExpected, message: "Filter clause creation was not expected to fail.");
+                Assert.IsTrue(e.Message.Contains(expectedErrorMessageFragment));
+            }
+        }
         #endregion
         #region Negative Tests
         /// <summary>
@@ -245,12 +290,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string tableName,
             bool isList = false)
         {
-            DatabaseObject dbo = new()
+            DatabaseObject dbo = new DatabaseTable()
             {
                 SchemaName = schemaName,
                 Name = tableName
             };
             FindRequestContext context = new(entityName, dbo, isList);
+
             Mock<SqlQueryStructure> structure = new(context, _sqlMetadataProvider, _runtimeConfigProvider);
             return new ODataASTVisitor(structure.Object, _sqlMetadataProvider);
         }

@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 WHERE [table0].[id] = 5001
                     AND [table0].[title] = 'My New Book'
                     AND [table0].[publisher_id] = 1234
-                ORDER BY [id]
+                ORDER BY [id] asc
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 WHERE [table0].[id] = 5001
                     AND [table0].[title] = 'My New Book'
                     AND [table0].[publisher_id] = 1234
-                ORDER BY [id]
+                ORDER BY [id] asc
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
@@ -94,13 +94,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 WHERE [table0].[id] = 5001
                     AND [table0].[content] = 'Its a classic'
                     AND [table0].[book_id] = 1
-                ORDER BY [id]
+                ORDER BY [id] asc
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
             ";
 
             await InsertMutationForConstantdefaultValue(msSqlQuery);
+        }
+
+        /// <inheritdoc/>
+        [TestMethod]
+        public async Task InsertMutationForVariableNotNullDefault()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 1 [table0].[categoryid] AS [categoryid],
+                    [table0].[pieceid] AS [pieceid]
+                FROM [stocks_price] AS [table0]
+                WHERE [table0].[categoryid] = 100
+                    AND [table0].[pieceid] = 99
+                ORDER BY [categoryid]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await InsertMutationForVariableNotNullDefault(msSqlQuery);
         }
 
         /// <summary>
@@ -118,7 +137,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 WHERE [books].[id] = 1
                     AND [books].[title] = 'Even Better Title'
                     AND [books].[publisher_id] = 2345
-                ORDER BY [books].[id]
+                ORDER BY [books].[id] asc
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
@@ -139,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     [publisher_id]
                 FROM [books]
                 WHERE [books].[id] = 1
-                ORDER BY [books].[id]
+                ORDER BY [books].[id] asc
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
@@ -195,7 +214,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     SELECT TOP 1 [table1].[name] AS [name]
                     FROM [publishers] AS [table1]
                     WHERE [table0].[publisher_id] = [table1].[id]
-                    ORDER BY [id]
+                    ORDER BY [id] asc
                     FOR JSON PATH,
                         INCLUDE_NULL_VALUES,
                         WITHOUT_ARRAY_WRAPPER
@@ -203,7 +222,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 WHERE [table0].[id] = 5001
                     AND [table0].[title] = 'My New Book'
                     AND [table0].[publisher_id] = 1234
-                ORDER BY [id]
+                ORDER BY [id] asc
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
@@ -226,7 +245,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 WHERE [foo].[magazines].[id] = 800
                     AND [foo].[magazines].[title] = 'New Magazine'
                     AND [foo].[magazines].[issue_number] IS NULL
-                ORDER BY [foo].[magazines].[id]
+                ORDER BY [foo].[magazines].[id] asc
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
@@ -249,7 +268,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 WHERE [foo].[magazines].[id] = 801
                     AND [foo].[magazines].[title] = 'New Magazine 2'
                     AND [foo].[magazines].[issue_number] IS NULL
-                ORDER BY [foo].[magazines].[id]
+                ORDER BY [foo].[magazines].[id] asc
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
@@ -270,7 +289,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 FROM [foo].[magazines]
                 WHERE [foo].[magazines].[id] = 1
                     AND [foo].[magazines].[issue_number] IS NULL
-                ORDER BY [foo].[magazines].[id]
+                ORDER BY [foo].[magazines].[id] asc
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
@@ -293,7 +312,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 WHERE [foo].[magazines].[id] = 1
                     AND [foo].[magazines].[title] = 'Newest Magazine'
                     AND [foo].[magazines].[issue_number] = 1234
-                ORDER BY [foo].[magazines].[id]
+                ORDER BY [foo].[magazines].[id] asc
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
@@ -317,7 +336,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 WHERE [table0].[id] = 5001
                     AND [table0].[title] = 'My New Book'
                     AND [table0].[publisher_id] = 1234
-                ORDER BY [id]
+                ORDER BY [id] asc
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER

@@ -88,7 +88,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new DataApiBuilderException(
                     message: ex.Message,
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    innerException: ex);
             }
         }
 
@@ -97,7 +98,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public ColumnDefinition GetColumnDefinition(string columnName)
         {
-            return GetUnderlyingTableDefinition().Columns[columnName];
+            return GetUnderlyingSourceDefinition().Columns[columnName];
         }
     }
 }

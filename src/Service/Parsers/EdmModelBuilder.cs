@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
             {
                 // Do not add stored procedures, which do not have table definitions or conventional columns, to edm model
                 // As of now, no ODataFilterParsing will be supported for stored procedure result sets
-                if (entityAndDbObject.Value.ObjectType is not SourceType.StoredProcedure)
+                if (entityAndDbObject.Value.SourceType is not SourceType.StoredProcedure)
                 {
                     // given an entity Publisher with schema.table of dbo.publishers
                     // entitySourceName = dbo.publishers
@@ -60,12 +60,14 @@ namespace Azure.DataApiBuilder.Service.Parsers
                     EdmEntityType newEntity = new(DEFAULT_NAMESPACE, newEntityKey);
                     _entities.Add(newEntityKey, newEntity);
 
-                    TableDefinition tableDefinition = entityAndDbObject.Value.TableDefinition;
+                    SourceDefinition sourceDefinition
+                        = sqlMetadataProvider.GetSourceDefinition(entityAndDbObject.Key);
+
                     // each column represents a property of the current entity we are adding
-                    foreach (string column in tableDefinition.Columns.Keys)
+                    foreach (string column in sourceDefinition.Columns.Keys)
                     {
                         // need to convert our column system type to an Edm type
-                        Type columnSystemType = tableDefinition.Columns[column].SystemType;
+                        Type columnSystemType = sourceDefinition.Columns[column].SystemType;
                         EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.None;
                         if (columnSystemType.IsArray)
                         {
@@ -75,8 +77,10 @@ namespace Azure.DataApiBuilder.Service.Parsers
                         switch (columnSystemType.Name)
                         {
                             case "String":
-                            case "Guid":
                                 type = EdmPrimitiveTypeKind.String;
+                                break;
+                            case "Guid":
+                                type = EdmPrimitiveTypeKind.Guid;
                                 break;
                             case "Byte":
                                 type = EdmPrimitiveTypeKind.Byte;
@@ -114,7 +118,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
                         // which is on a per entity basis.
                         // if column is in our list of keys we add as a key to entity
                         string exposedColumnName;
-                        if (tableDefinition.PrimaryKey.Contains(column))
+                        if (sourceDefinition.PrimaryKey.Contains(column))
                         {
                             sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out exposedColumnName!);
                             newEntity.AddKeys(newEntity.AddStructuralProperty(name: exposedColumnName,
@@ -154,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
             // that has a key, then an entity set can be thought of as a table made up of those rows.
             foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
-                if (entityAndDbObject.Value.ObjectType != SourceType.StoredProcedure)
+                if (entityAndDbObject.Value.SourceType != SourceType.StoredProcedure)
                 {
                     string entityName = $"{entityAndDbObject.Value.FullName}";
                     container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);

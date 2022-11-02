@@ -2,7 +2,7 @@
 
 Entities configured to be available via GraphQL will be available at the path 
 
-```
+```text
 http://<dab-server>/graphql
 ```
 
@@ -39,7 +39,7 @@ Each entity has support for the following actions:
 
 Data API Builder, unless otherwise specified, will use the *singular* name of an entity whenever a single item is expected to be returned, and will use the *plural* name of an entity whenever a list of items is expected to be returned. For example the `book` entity will have:
 
-- `book_by_pk()`: to return zero or one entity 
+- `book_by_pk()`: to return zero or one entity
 - `books()`: to return a list of zero or more entities
 
 ### Pagination
@@ -67,7 +67,7 @@ All query types returning zero or more items support pagination:
 
 Every entity support retrieval of a specific item via its Primary Key, using the following query format:
 
-```
+```graphql
 <entity>_by_pk(<pk_colum>:<pk_value>)
 {
     <fields>
@@ -89,10 +89,10 @@ for example:
 Every entity also support a generic query pattern so that you can ask for  only the items you want, in the order you want, using the following parameters:
 
 - [`filter`](#filter): filters the returned items
-- [`orderBy`](#orderBy): defines how the returned data will be sorted
+- [`orderBy`](#orderby): defines how the returned data will be sorted
 - [`first` and `after`](#first-and-after): returns only the top `n` items
 
-for example: 
+for example:
 
 ```graphql
 {
@@ -219,14 +219,86 @@ query {
 
 ## Mutations
 
+For each entity, mutations to support create, update and delete operations are automatically created. The mutation operation will be created using the following name pattern: `entity<operation>`. For example, for the `book` entity, the mutations would be:
+
+- `createbook`: create a new book
+- `updatebook`: update an existing book
+- `deletebook`: delete the specified book
+
 ### Create
 
-WIP
+To create a new element of the desired entity, the `create<entity>` mutation is provided. The create mutation requires the `item` parameter, where values for entity's mandatory fields, to be used when creating the new item, are specified.
+
+```graphql
+create<entity>(item: <entity_fields>)
+{
+    <fields>
+}
+```
+
+for example:
+
+```graphql
+mutation {
+  createbook(item: {
+    id: 2000,
+    title: "Leviathan Wakes"    
+  }) {
+    id
+    title
+  }  
+}
+```
 
 ### Update
 
-WIP
+To create a new element of the desired entity, the `update<entity>` mutation is provided. The update mutation requires two parameters:
+
+- `<primary_key>`, the key-value list of primary key columns and related values to identify the element to be updated
+- `item`: parameter, with entity's mandatory fields values, to be used when updating the specified item
+
+```graphql
+update<entity>(<pk_colum>:<pk_value>, [<pk_colum>:<pk_value> ... <pk_colum>:<pk_value>,] item: <entity_fields>)
+{
+    <fields>
+}
+```
+
+for example:
+
+```graphql
+mutation {
+  updatebook(id: 2000, item: {
+    year: 2011,
+    pages: 577    
+  }) {
+    id
+    title
+    year
+    pages
+  }
+}
+```
 
 ### Delete
 
-WIP
+To delete a new element of the desired entity, the `delete<entity>` mutation is provided. The primary key of the element to be deleted is the required parameter.
+
+```graphql
+delete<entity>(<pk_colum>:<pk_value>, [<pk_colum>:<pk_value> ... <pk_colum>:<pk_value>,])
+{
+    <fields>
+}
+```
+
+for example:
+
+```graphql
+mutation {
+  deletebook(id: 1234)
+  {
+    id
+    title
+  }  
+}
+```

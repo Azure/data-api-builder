@@ -134,7 +134,9 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </remarks>
         private static object PreParseLeaf(IMiddlewareContext context, string leafJson)
         {
-            return context.Selection.Field.Type switch
+            IType leafType = context.Selection.Field.Type is NonNullType
+                 ? context.Selection.Field.Type.NullableType() : context.Selection.Field.Type;
+            return leafType switch
             {
                 ByteType => byte.Parse(leafJson),
                 SingleType => Single.Parse(leafJson),

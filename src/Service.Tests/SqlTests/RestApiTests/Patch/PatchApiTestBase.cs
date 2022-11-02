@@ -200,6 +200,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
+        /// Tests to validate that request PATCH requests modifying fields
+        /// from one base table in view and resolving to insert operation
+        /// execute successfully.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task PatchOneInsertInViewTest()
+        {
+            // PATCH insert on simple view based on stocks table.
+            string requestBody = @"
+            {
+               ""categoryName"": ""SciFi""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/4/pieceid/1",
+                queryString: null,
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("PatchOneInsertInStocksViewSelected"),
+                operationType: Operation.UpsertIncremental,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: string.Empty
+                );
+        }
+        /// <summary>
         /// Tests REST PatchOne which results in incremental update
         /// URI Path: PK of existing record.
         /// Req Body: Valid Parameter with intended update.
@@ -270,6 +296,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
         }
 
+        /// <summary>
+        /// Tests successful execution of PATCH update requests on views
+        /// when requests try to modify fields belonging to one base table
+        /// in the view.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task PatchOneUpdateViewTest()
+        {
+            // PATCH update on simple view based on stocks table.
+            string requestBody = @"
+            {
+                ""categoryName"": ""Historical""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/2/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _simple_subset_stocks,
+                    sqlQuery: GetQuery("PatchOneUpdateStocksViewSelected"),
+                    operationType: Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
         /// <summary>
         /// Tests the PatchOne functionality with a REST PUT request using
         /// headers that include as a key "If-Match" with an item that does exist,
@@ -474,6 +525,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
+        /// Tests that a cast failure of primary key value type results in HTTP 400 Bad Request.
+        /// e.g. Attempt to cast a string '{}' to the 'publisher_id' column type of int will fail.
+        /// </summary>
+        [TestMethod]
+        public async Task PatchWithUncastablePKValue()
+        {
+            string requestBody = @"
+            {
+                ""publisher_id"": ""StringFailsToCastToInt""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: string.Empty,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: null,
+                operationType: Operation.UpsertIncremental,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: "Parameter \"StringFailsToCastToInt\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
         /// Tests the Patch functionality with a REST PATCH request
         /// without a primary key route. We expect a failure and so
         /// no sql query is provided.
@@ -498,6 +574,37 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
                     expectedStatusCode: HttpStatusCode.BadRequest
                     );
+        }
+
+        /// <summary>
+        /// Test to verify that we throw exception for invalid/bad
+        /// PATCH requests on views.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task PatchOneViewBadRequestTest()
+        {
+            // PATCH update trying to modify fields from multiple base table
+            // will result in error.
+            string requestBody = @"
+            {
+                ""name"": ""new publisher"",
+                ""title"": ""new Book""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1/pub_id/1234",
+                queryString: string.Empty,
+                entityNameOrPath: _composite_subset_bookPub,
+                sqlQuery: string.Empty,
+                operationType: Operation.UpsertIncremental,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
+                "because the modification affects multiple base tables.",
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+            );
         }
 
         #endregion

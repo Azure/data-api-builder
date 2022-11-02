@@ -31,11 +31,12 @@ namespace Azure.DataApiBuilder.Service.Services
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider)
         {
+            SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(context.EntityName);
             foreach (string field in context.FieldsToBeReturned)
             {
                 // Get backing column and check that column is valid
                 if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, field, out string? backingColumn) ||
-                    !sqlMetadataProvider.GetTableDefinition(context.EntityName).Columns.ContainsKey(backingColumn!))
+                    !sourceDefinition.Columns.ContainsKey(backingColumn!))
                 {
                     throw new DataApiBuilderException(
                         message: "Invalid field to be returned requested: " + field,
@@ -56,9 +57,11 @@ namespace Azure.DataApiBuilder.Service.Services
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-            TableDefinition tableDefinition = TryGetTableDefinition(context.EntityName, sqlMetadataProvider);
+            SourceDefinition sourceDefinition = TryGetSourceDefinition(
+                context.EntityName,
+                sqlMetadataProvider);
 
-            int countOfPrimaryKeysInSchema = tableDefinition.PrimaryKey.Count;
+            int countOfPrimaryKeysInSchema = sourceDefinition.PrimaryKey.Count;
             int countOfPrimaryKeysInRequest = context.PrimaryKeyValuePairs.Count;
 
             if (countOfPrimaryKeysInRequest != countOfPrimaryKeysInSchema)
@@ -83,9 +86,9 @@ namespace Azure.DataApiBuilder.Service.Services
                 primaryKeysInRequest.Add(backingColumn!);
             }
 
-            // Verify each primary key is present in the table definition.
-            IEnumerable<string> missingKeys = primaryKeysInRequest.Except(tableDefinition.PrimaryKey);
+            IEnumerable<string> missingKeys = primaryKeysInRequest.Except(sourceDefinition.PrimaryKey);
 
+            // Verify each primary key is present in the object (table/view) definition.
             if (missingKeys.Any())
             {
                 throw new DataApiBuilderException(
@@ -186,12 +189,13 @@ namespace Azure.DataApiBuilder.Service.Services
                     using JsonDocument payload = JsonDocument.Parse(requestBody);
                     mutationPayloadRoot = payload.RootElement.Clone();
                 }
-                catch (JsonException)
+                catch (JsonException ex)
                 {
                     throw new DataApiBuilderException(
                         message: REQUEST_BODY_INVALID_JSON_ERR_MESSAGE,
                         statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                        innerException: ex
                         );
                 }
 
@@ -274,15 +278,14 @@ namespace Azure.DataApiBuilder.Service.Services
             ISqlMetadataProvider sqlMetadataProvider)
         {
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
-            TableDefinition tableDefinition =
-                TryGetTableDefinition(insertRequestCtx.EntityName, sqlMetadataProvider);
+            SourceDefinition sourceDefinition =
+                TryGetSourceDefinition(insertRequestCtx.EntityName, sqlMetadataProvider);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
             // At the end, if we end up with extraneous unvalidated fields, we throw error.
             HashSet<string> unvalidatedFields = new(fieldsInRequestBody);
-
-            foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
+            foreach (KeyValuePair<string, ColumnDefinition> column in sourceDefinition.Columns)
             {
                 // if column is not exposed we skip
                 if (!sqlMetadataProvider.TryGetExposedColumnName(
@@ -339,15 +342,16 @@ namespace Azure.DataApiBuilder.Service.Services
             ISqlMetadataProvider sqlMetadataProvider)
         {
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
-            TableDefinition tableDefinition =
-                TryGetTableDefinition(upsertRequestCtx.EntityName, sqlMetadataProvider);
+
+            SourceDefinition sourceDefinition =
+                TryGetSourceDefinition(upsertRequestCtx.EntityName, sqlMetadataProvider);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
             // At the end, if we end up with extraneous unvalidated fields, we throw error.
             HashSet<string> unValidatedFields = new(fieldsInRequestBody);
 
-            foreach (KeyValuePair<string, ColumnDefinition> column in tableDefinition.Columns)
+            foreach (KeyValuePair<string, ColumnDefinition> column in sourceDefinition.Columns)
             {
                 // if column is not exposed we skip
                 if (!sqlMetadataProvider.TryGetExposedColumnName(
@@ -362,7 +366,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // if a PK is autogenerated here, because an UPSERT request may only need to update a
                 // record. If an insert occurs on a table with autogenerated primary key,
                 // a database error will be returned.
-                if (tableDefinition.PrimaryKey.Contains(column.Key))
+                if (sourceDefinition.PrimaryKey.Contains(column.Key))
                 {
                     continue;
                 }
@@ -458,19 +462,23 @@ namespace Azure.DataApiBuilder.Service.Services
         /// enables referencing DB schema.</param>
         /// <exception cref="DataApiBuilderException"></exception>
 
-        private static TableDefinition TryGetTableDefinition(string entityName, ISqlMetadataProvider sqlMetadataProvider)
+        private static SourceDefinition TryGetSourceDefinition(
+            string entityName,
+            ISqlMetadataProvider sqlMetadataProvider)
         {
             try
             {
-                TableDefinition tableDefinition = sqlMetadataProvider.GetTableDefinition(entityName);
-                return tableDefinition;
+                SourceDefinition sourceDefinition =
+                    sqlMetadataProvider.GetSourceDefinition(entityName);
+                return sourceDefinition;
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException ex)
             {
                 throw new DataApiBuilderException(
-                    message: $"TableDefinition for entity: {entityName} does not exist.",
+                    message: $"Source definition for entity: {entityName} does not exist.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    innerException: ex);
             }
         }
 
@@ -485,12 +493,13 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 return sqlMetadataProvider.GetStoredProcedureDefinition(entityName);
             }
-            catch (InvalidCastException)
+            catch (InvalidCastException ex)
             {
                 throw new DataApiBuilderException(
                     message: $"Underlying database object for entity {entityName} does not exist.",
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    innerException: ex);
             }
         }
 

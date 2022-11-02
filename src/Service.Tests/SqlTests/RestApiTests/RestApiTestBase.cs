@@ -42,6 +42,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationProcedureFindOne_ProcName = "get_book_by_id";
         protected static readonly string _integrationMappingDifferentEntityPath = "plants";
         protected static readonly string _Composite_NonAutoGenPK_EntityPath = "commodities";
+        protected static readonly string _integrationTypeEntity = "SupportedType";
+        protected static readonly string _integrationTypeTable = "type_table";
 
         public abstract string GetQuery(string key);
     }

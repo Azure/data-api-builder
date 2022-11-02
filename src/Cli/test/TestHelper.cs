@@ -5,6 +5,15 @@ namespace Cli.Tests
         // Config file name for tests
         public static string _testRuntimeConfig = "dab-config-test.json";
 
+        // Name of an invalid config file that can be used for tests.
+        public static string InvalidConfigFileName
+        {
+            get
+            {
+                return "dab-config.invalid.json";
+            }
+        }
+
         /// <summary>
         /// Adds the entity properties to the configuration and returns the updated configuration json as a string.
         /// </summary>

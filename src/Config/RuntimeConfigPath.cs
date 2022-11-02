@@ -188,16 +188,7 @@ namespace Azure.DataApiBuilder.Config
                 return $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
             }
         }
-
-        // Name of an invalid config file that can be used for tests.
-        public static string InvalidConfigFileName
-        {
-            get
-            {
-                return "dab-config.invalid.json";
-            }
-        }
-
+        
         /// <summary>
         /// Generates the config file name and a corresponding overridden file name,
         /// With precedence given to overridden file name, returns that name

@@ -308,8 +308,8 @@ public class EndToEndTests
         if (useInvalidConfig)
         {
             // Invalid config with an empty connection string.
-            configFileName = RuntimeConfigPath.InvalidConfigFileName;
-            WriteJsonContentToFile(configFileName,CONFIG_WTIH_INVALID_CONNECTION_STRING );
+            configFileName = InvalidConfigFileName;
+            WriteJsonContentToFile(configFileName, CONFIG_WTIH_INVALID_CONNECTION_STRING);
         }
         else
         {

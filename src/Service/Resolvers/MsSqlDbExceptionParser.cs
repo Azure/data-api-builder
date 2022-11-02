@@ -15,27 +15,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // HashSet of Error codes ('Number') which are to be considered as bad requests.
             new()
             {
-                // A column insert or update conflicts with a rule imposed by a previous CREATE RULE statement. The statement was terminated.
-                // The conflict occurred in database '%.*ls', table '%.*ls', column '%.*ls'.
-                "513",
-
-                // Cannot insert the value NULL into column '%.*ls', table '%.*ls'; column does not allow nulls. %ls fails.
-                "515",
-
-                // Cannot insert explicit value for identity column in table '%.*ls' when IDENTITY_INSERT is set to OFF.
-                "544",
-
-                // Explicit value must be specified for identity column in table '%.*ls'
-                // either when IDENTITY_INSERT is set to ON or when a replication user is inserting into a NOT FOR REPLICATION identity column.
-                "545",
-
-                // The %ls statement conflicted with the %ls constraint "%.*ls".
-                // The conflict occurred in database "%.*ls", table "%.*ls"%ls%.*ls%ls.
-                "547",
-
-                // The insert failed. It conflicted with an identity range check constraint in database '%.*ls',
-                // replicated table '%.*ls'%ls%.*ls%ls.
-                "548"
+                "157", "158", "169", "404", "412", "414", "415",
+                "489", "513", "515", "544", "545", "547", "548",
+                "550", "611", "681", "1060", "2627", "4005", "4006",
+                "4007", "4403", "4405", "4406", "4417", "4418", "4420",
+                "4421", "4423", "4426", "4431", "4432", "4433", "4434",
+                "4435", "4436", "4437", "4438", "4439", "4440", "4441",
+                "4442", "4443", "4444", "4445", "4446", "4447", "4448",
+                "4450", "4451", "4452", "4453", "4454", "4455", "4456",
+                "4457", "4933", "4934", "4936", "4988", "8102"
             })
         {
             TransientErrorCodes = new(){

@@ -1,6 +1,8 @@
 DROP VIEW IF EXISTS books_view_all;
+DROP VIEW IF EXISTS books_view_with_mapping;
 DROP VIEW IF EXISTS stocks_view_selected;
 DROP VIEW IF EXISTS books_publishers_view_composite;
+DROP VIEW IF EXISTS books_publishers_view_composite_insertable;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -217,7 +219,7 @@ INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 
 INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
 INSERT INTO magazines(id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
 INSERT INTO series(id, name) VALUES (3001, 'Foundation'), (3002, 'Hyperion Cantos');
-INSERT INTO comics(id, title, categoryName, series_id) 
+INSERT INTO comics(id, title, categoryName, series_id)
 VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'FairyTales', 3001), (3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');
 INSERT INTO brokers(`ID Number`, `First Name`, `Last Name`) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
@@ -247,14 +249,24 @@ ALTER TABLE type_table AUTO_INCREMENT = 5001;
 
 prepare stmt1 from  'CREATE VIEW books_view_all AS SELECT * FROM books';
 
-prepare stmt2 from 'CREATE VIEW stocks_view_selected AS SELECT
+prepare stmt2 from  'CREATE VIEW books_view_with_mapping AS SELECT * FROM books';
+
+prepare stmt3 from 'CREATE VIEW stocks_view_selected AS SELECT
                     categoryid,pieceid,categoryName,piecesAvailable
                     FROM stocks';
 
-prepare stmt3 from 'CREATE VIEW books_publishers_view_composite as SELECT
+prepare stmt4 from 'CREATE VIEW books_publishers_view_composite as SELECT
                     books.id,books.title,publishers.name,publishers.id as pub_id
                     FROM books,publishers
                     where publishers.id = books.publisher_id';
+
+prepare stmt5 from 'CREATE VIEW books_publishers_view_composite_insertable as SELECT
+                    books.id, books.title, publishers.name, books.publisher_id
+                    FROM books,publishers
+                    where publishers.id = books.publisher_id';
+
 execute stmt1;
 execute stmt2;
 execute stmt3;
+execute stmt4;
+execute stmt5;

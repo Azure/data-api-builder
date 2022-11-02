@@ -374,10 +374,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Resolves a JsonElement representing a variable to the appropriate type
         /// </summary>
         /// <exception cref="ArgumentException" />
-        public static object ResolveJsonElementToScalarVariable(JsonElement element) => element.ValueKind switch
+        public static object? ResolveJsonElementToScalarVariable(JsonElement element) => element.ValueKind switch
         {
             JsonValueKind.String => element.GetString()!,
             JsonValueKind.Number => element.GetInt64(),
+            JsonValueKind.Null => null,
             JsonValueKind.True => true,
             JsonValueKind.False => false,
             _ => throw new ArgumentException("Unexpected JsonElement value"),

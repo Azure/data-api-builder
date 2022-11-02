@@ -18,7 +18,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="HotChocolate" Version="12.15.0" />
+    <PackageReference Include="HotChocolate" Version="$(HotChocolateVersion)" />
     <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     <PackageReference Include="StyleCop.Analyzers" Version="$(StyleCopAnalyzerVersion)">
       <PrivateAssets>all</PrivateAssets>

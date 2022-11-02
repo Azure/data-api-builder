@@ -206,10 +206,6 @@ Implementation was segmented into 5 main sections:
 ![image](https://user-images.githubusercontent.com/102276754/197724270-241e37e6-6459-4cce-a959-19a5031b63d1.png)
 
 
-### `SchemaConvertor.cs`
-> - Add directives for parameter fields added for stored-procedure.
-> - Create the directive for parameters for stored-procedure.(**Confirm if that is required**).
-
 ### 5.  Structure + Query Building
 
 > ### `SqlExecuteStructure.cs`

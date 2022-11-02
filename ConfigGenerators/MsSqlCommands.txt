@@ -93,7 +93,7 @@ update stocks_view_selected --config "dab-config.MsSql.json" --permissions "auth
 update books_publishers_view_composite --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
 update books_view_with_mapping --config "dab-config.MsSql.json" --map "id:book_id" --source.key-fields "id" 
 update BookWebsitePlacement --config "dab-config.MsSql.json" --relationship books --target.entity Book --cardinality one
-update SupportedType --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update" --rest false
+update SupportedType --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update" 
 update Author --config "dab-config.MsSql.json" --relationship books --target.entity Book --cardinality many --linking.object book_author_link
 update Notebook --config "dab-config.MsSql.json" --permissions "anonymous:create,update,delete"
 update Empty --config "dab-config.MsSql.json" --permissions "anonymous:read"

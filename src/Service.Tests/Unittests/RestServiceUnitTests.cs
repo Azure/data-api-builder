@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     public class RestServiceUnitTests
     {
         private static RestService _restService;
-        private static string _testCategory = "mssql";
+        private static string _testCategory = "MsSql";
 
         #region Positive Cases
 

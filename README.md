@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Latest version of Data API builder is  **0.2.52** (aka **Sept2022** release)
+Latest version of Data API builder is  **0.3.7** (aka **Oct2022** release)
 
 ## About
 

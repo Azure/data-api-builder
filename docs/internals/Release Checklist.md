@@ -1,7 +1,5 @@
 # Release Checklist
 
-
-
 ## Pre-Build Tasks
 
 - [ ] Make sure that the rolling build after the latest desired commit required for the release is green. You can do so by navigating to the root of the repo in GitHub to check the commit banner for successful pipeline execution: ![Main Branch Pipeline Status](MainRepoPipelineExecutionStatus.png)

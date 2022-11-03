@@ -20,7 +20,7 @@ Depending on the permission defined on the entity in the configuration file, the
 - [PATCH](#patch): Update an item
 - [DELETE](#delete): Delete an item
 
-## Resultset format
+## Result set format
 
 The returned result is a JSON object with this format:
 
@@ -124,7 +124,7 @@ The value of the `orderby` parameter is a comma-separated list of expressions us
 
 Each expression in the `orderby` parameter value may include the suffix `desc` to ask for a descending order, separated from the expression by one or more spaces.
 
-For example: 
+For example:
 
 ```
 http://localhost:5000/api/author?$orderby=first_name desc, last_name
@@ -256,10 +256,19 @@ The result will be something like:
 }
 ```
 
+## DELETE
+
+With DELETE you can delete the item of the specified entity. 
+The query pattern is:
+
+```
+http://<dab-server>/api/<entity>/<primary-key-column>/<primary-key-value>
+```
+
 for example:
 
 ```
 DELETE /api/book/id/2001
 ```
 
-The result will be an empty response with status code 204 
+If successful, the result will be an empty response with status code 204.

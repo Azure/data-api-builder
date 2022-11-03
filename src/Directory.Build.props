@@ -13,9 +13,10 @@
     <PostgresVersion>5.0.10</PostgresVersion>
     <ODataVersion>7.9.0</ODataVersion>
     <MySQLVersion>2.1.5</MySQLVersion>
-    <NetCoreAutorizationVersion>3.1.4</NetCoreAutorizationVersion>
+    <DotNetVersion>6.0.10</DotNetVersion>
     <HumanizerVersion>2.14.1</HumanizerVersion>
-    <SystemIOAbstractionsVersion>17.0.4</SystemIOAbstractionsVersion>
+    <MSTestVersion>2.2.10</MSTestVersion>
+    <SystemIOAbstractionsVersion>17.2.3</SystemIOAbstractionsVersion>
     <NewtonsoftJsonVersion>13.0.1</NewtonsoftJsonVersion>
     <StyleCopAnalyzerVersion>1.1.118</StyleCopAnalyzerVersion>
     <CommandLineParserVersion>2.9.1</CommandLineParserVersion>

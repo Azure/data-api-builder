@@ -35,9 +35,13 @@ To use the JWT provider, you need to configure the `runtime.host.authentication`
 }
 ```
 
+The supported provider are the following:
+
+- [Azure AD](./authentication-azure-ad.md)
+
 ## Roles Selection
 
-Once a request has been authenticated via any of the available options, the roles defined in the token will be used to help determine how permission rules will be evaluated to [authorize](./authorization.md) the request. Any authenticated request will be automatically assigned to the `authenticated` system role, unless a user role is requested to be used, as described in the [Authorization](./authentication.md) document.
+Once a request has been authenticated via any of the available options, the roles defined in the token will be used to help determine how permission rules will be evaluated to [authorize](./authorization.md) the request. Any authenticated request will be automatically assigned to the `authenticated` system role, unless a user role is requested to be used, as described in the [Authorization](./authorization.md.md) document.
 
 ## Anonymous Requests
 

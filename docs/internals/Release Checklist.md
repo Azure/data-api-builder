@@ -41,7 +41,6 @@ After a successful build, complete the following steps:
   ![GitHub Release Target Branch Hash](GitHub-Release-TargetBranch.png)
   - Provide a description to the release. This list is arbitrary and a good source of content can be sourced from PRs included in this release. **Make sure to reference the PR for each item.**
   - Publish the release.
-  
 
 ## Guidelines for versioning
 

@@ -57,26 +57,26 @@
 
 
   <ItemGroup>
-    <PackageReference Include="HotChocolate" Version="$(HotChocolateVersion)" />
-    <PackageReference Include="HotChocolate.AspNetCore" Version="$(HotChocolateVersion)" />
-    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="$(HotChocolateVersion)" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(DotNetVersion)" />
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="$(CosmosVersion)" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="$(SqlVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="$(ConfigVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="$(ConfigVersion)" />
-    <PackageReference Include="MSTest.TestFramework" Version="$(MSTestVersion)" />
-    <PackageReference Include="MySqlConnector" Version="$(MySQLVersion)" />
-    <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
-    <PackageReference Include="Npgsql" Version="$(PostgresVersion)" />
-    <PackageReference Include="Microsoft.OData.Edm" Version="$(ODataVersion)" />
-    <PackageReference Include="Microsoft.OData.Core" Version="$(ODataVersion)" />
-    <PackageReference Include="Polly" Version="$(PollyVersion)" />
-    <PackageReference Include="StyleCop.Analyzers" Version="$(StyleCopAnalyzerVersion)">
+    <PackageReference Include="HotChocolate" />
+    <PackageReference Include="HotChocolate.AspNetCore" />
+    <PackageReference Include="HotChocolate.AspNetCore.Authorization" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="MSTest.TestFramework" />
+    <PackageReference Include="MySqlConnector" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Microsoft.OData.Edm" />
+    <PackageReference Include="Microsoft.OData.Core" />
+    <PackageReference Include="Polly" />
+    <PackageReference Include="StyleCop.Analyzers" >
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="System.IO.Abstractions" Version="$(SystemIOAbstractionsVersion)" />
+    <PackageReference Include="System.IO.Abstractions" />
       
   </ItemGroup>
   <ItemGroup>

@@ -402,6 +402,14 @@ namespace Azure.DataApiBuilder.Service
                 }
                 else if (runtimeConfig.IsEasyAuthAuthenticationProvider())
                 {
+                    if (!runtimeConfigurationProvider.IsDeveloperMode() && !AppServicesAuthenticationInformation.IsAppServicesAadAuthenticationEnabled)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "EasyAuth is configured in Production mode while AppService environment is not detected.",
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+
                     services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddEasyAuthAuthentication(
                             (EasyAuthType)Enum.Parse(typeof(EasyAuthType),

@@ -34,7 +34,7 @@ curl --request GET \
   --url http://localhost:5000/api/books \
 ```
 
-To set the role context to any other role, including the system role `Anonymous`, the X-MS-API-ROLE header must be included with the desired role:
+To set the role context to any other role, including the system role `Anonymous`, the `X-MS-API-ROLE` header must be included with the desired role:
 
 ```bash
 curl --request GET \
@@ -90,7 +90,7 @@ Expected elements of the client principal object are the following:
 |userRoles|An array of the user's assigned roles.|
 |claims|An array of claims returned by your custom authentication provider.|
 
-In order to be passed into the X-MS-CLIENT-PRINCIPAL header, the JSON data must be Base64-encoded. You can use any online or offline tool to do that. A recommended tool is the [DevToys](https://github.com/veler/DevToys) tool. A sample Base64 encoded payload that contains the JSON used before as example is the following:
+In order to be passed into the `X-MS-CLIENT-PRINCIPAL` header, the JSON data must be Base64-encoded. You can use any online or offline tool to do that. A recommended tool is the [DevToys](https://github.com/veler/DevToys) tool. A sample Base64 encoded payload that contains the JSON used before as example is the following:
 
 ```text
 eyAgDQogICJpZGVudGl0eVByb3ZpZGVyIjogInRlc3QiLA0KICAidXNlcklkIjogIjEyMzQ1IiwNCiAgInVzZXJEZXRhaWxzIjogImpvaG5AY29udG9zby5jb20iLA0KICAidXNlclJvbGVzIjogWyJhdXRob3IiLCAiZWRpdG9yIl0sDQogICJjbGFpbXMiOiBbew0KICAgICJ0eXAiOiAiRmlyc3ROYW1lIiwNCiAgICAidmFsIjogIkpvaG4iDQogIH0sDQogIHsNCiAgICAidHlwIjogIkxhc3ROYW1lIiwNCiAgICAidmFsIjogIkRvZSINCiAgfV0NCn0=

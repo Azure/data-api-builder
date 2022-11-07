@@ -190,6 +190,12 @@ namespace Azure.DataApiBuilder.Service.Authorization
                             // - For other operation types, columnsToCheck is a result of identifying
                             // any reference to a column in all parts of a request (body, URL, querystring)
                             IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedExposedColumns(entityName, roleName, operation);
+                            if (fieldsReturnedForFind.Count() == 0)
+                            {
+                                // Read operation with no accessible field fails authorization.
+                                context.Fail();
+                            }
+
                             restContext.UpdateReturnFields(fieldsReturnedForFind);
                         }
                         else

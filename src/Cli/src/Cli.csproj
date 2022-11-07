@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -16,8 +16,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommandLineParser" Version="$(CommandLineParserVersion)" />
-    <PackageReference Include="Humanizer.Core" Version="$(HumanizerVersion)" />
+    <PackageReference Include="CommandLineParser" />
+    <PackageReference Include="Humanizer.Core" />
   </ItemGroup>
 
   <ItemGroup>

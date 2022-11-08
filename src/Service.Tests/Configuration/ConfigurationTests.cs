@@ -705,6 +705,74 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Tests that the custom path rewriting middleware properly rewrites the
+        /// first segment of a path (/segment1/.../segmentN) when the segment matches
+        /// the custom configured GraphQLEndpoint.
+        /// Note: The GraphQL service is always internally mapped to /graphql
+        /// </summary>
+        /// <param name="graphQLConfiguredPath">The custom configured GraphQL path in configuration</param>
+        /// <param name="requestPath">The path used in the web request executed in the test.</param>
+        /// <param name="expectedStatusCode">Expected Http success/error code</param>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow("/graphql", "/gql", HttpStatusCode.BadRequest, DisplayName = "Request to non-configured graphQL endpoint is handled by REST controller.")]
+        [DataRow("/graphql", "/graphql", HttpStatusCode.OK, DisplayName = "Request to configured default GraphQL endpoint succeeds, path not rewritten.")]
+        [DataRow("/gql", "/gql/additionalURLsegment", HttpStatusCode.OK, DisplayName = "GraphQL request path (with extra segments) rewritten to match internally set GraphQL endpoint /graphql.")]
+        [DataRow("/gql", "/gql", HttpStatusCode.OK, DisplayName = "GraphQL request path rewritten to match internally set GraphQL endpoint /graphql.")]
+        [DataRow("/gql", "/api/book", HttpStatusCode.NotFound, DisplayName = "Non-GraphQL request's path is not rewritten and is handled by REST controller.")]
+        [DataRow("/gql", "/graphql", HttpStatusCode.NotFound, DisplayName = "Requests to default/internally set graphQL endpoint fail when configured endpoint differs.")]
+        public async Task TestPathRewriteMiddlewareForGraphQL(
+            string graphQLConfiguredPath,
+            string requestPath,
+            HttpStatusCode expectedStatusCode)
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Path = graphQLConfiguredPath, AllowIntrospection = true }) }
+            };
+
+            DataSource dataSource = new(DatabaseType.mssql)
+            {
+                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
+            };
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource);
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string query = @"{
+                    book_by_pk(id: 1) {
+                       id,
+                       title,
+                       publisher_id
+                    }
+                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage request = new(HttpMethod.Post, requestPath)
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                string body = await response.Content.ReadAsStringAsync();
+
+                Assert.AreEqual(expectedStatusCode, response.StatusCode);
+            }
+        }
+
+        /// <summary>
         /// Integration test that validates schema introspection requests fail
         /// when allow-introspection is false in the runtime configuration.
         /// TestCategory is required for CI/CD pipeline to inject a connection string.
@@ -818,6 +886,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// But when a graphql request is coming in, that's when it throws an 401 exception.
         /// To prevent this, CosmosClientProvider parses the token and retrieves the "exp" property from the token,
         /// if it's not valid, then we will throw an exception from our code before it initiating a client.
+        /// Uses a valid fake JWT access token for testing purposes.
         /// </summary>
         /// <returns>ConfigurationPostParameters object</returns>
         private static ConfigurationPostParameters GetCosmosConfigurationParametersWithAccessToken()
@@ -827,7 +896,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 File.ReadAllText(cosmosFile),
                 File.ReadAllText("schema.gql"),
                 "AccountEndpoint=https://localhost:8081/;",
-                // This is a valid fake JWT token for testing purposes
                 AccessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxMjMzNDQ1Nn0.1cdRZfqwndt67f-sHKgOfEgTfO9xDyGFl6_d-RRyf4U");
         }
 
@@ -896,22 +964,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <returns></returns>
         public static RuntimeConfig InitMinimalRuntimeConfig(Dictionary<GlobalSettingsType, object> globalSettings, DataSource dataSource)
         {
-            PermissionOperation actionForRole = new(
-                Name: Operation.All,
-                Fields: null,
-                Policy: new(request: null, database: null)
-                );
-
-            PermissionSetting permissionForEntity = new(
-                role: "Anonymous",
-                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) }
-                );
-
             Entity sampleEntity = new(
                 Source: JsonSerializer.SerializeToElement("books"),
                 Rest: null,
-                GraphQL: null,
-                Permissions: new PermissionSetting[] { permissionForEntity },
+                GraphQL: JsonSerializer.SerializeToElement(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "books"))),
+                Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
                 Mappings: null
                 );
@@ -934,6 +991,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             runtimeConfig.DetermineGlobalSettings();
             return runtimeConfig;
+        }
+
+        /// <summary>
+        /// Gets PermissionSetting object allowed to perform all actions.
+        /// </summary>
+        /// <param name="roleName">Name of role to assign to permission</param>
+        /// <returns>PermissionSetting</returns>
+        public static PermissionSetting GetMinimalPermissionConfig(string roleName)
+        {
+            PermissionOperation actionForRole = new(
+                Name: Operation.All,
+                Fields: null,
+                Policy: new(request: null, database: null)
+                );
+
+            return new PermissionSetting(
+                role: roleName,
+                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) }
+                );
         }
 
         /// <summary>

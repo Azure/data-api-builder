@@ -248,7 +248,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public virtual async Task DeleteOneInViewBadRequestTest()
+        public virtual async Task DeleteOneInViewBadRequestTest(string expectedErrorMessage)
         {
             // Delete one from view based on books,publishers table.
             await SetupAndRunRestApiTest(
@@ -259,9 +259,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     operationType: Operation.Delete,
                     requestBody: null,
                     exceptionExpected: true,
-                    expectedErrorMessage: $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
-                    "because the modification affects multiple base tables.",
-                    expectedStatusCode: HttpStatusCode.InternalServerError,
+                    expectedErrorMessage: expectedErrorMessage,
+                    expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
                 );
             ;

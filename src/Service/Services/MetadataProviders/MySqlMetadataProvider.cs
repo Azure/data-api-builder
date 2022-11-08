@@ -35,8 +35,7 @@ namespace Azure.DataApiBuilder.Service.Services
             string schemaName,
             string tableName)
         {
-            using MySqlConnection conn = new();
-            conn.ConnectionString = ConnectionString;
+            using MySqlConnection conn = new(ConnectionString);
             await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();
 
@@ -73,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 string[] schemaNames,
                 string[] tableNames)
         {
-            using MySqlConnection conn = new(ConnectionString);
+            MySqlConnectionStringBuilder connBuilder = new(ConnectionString);
             Dictionary<string, object?> parameters = new();
 
             string[] databaseNameParams =
@@ -87,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             for (int i = 0; i < schemaNames.Count(); ++i)
             {
-                parameters.Add(databaseNameParams[i], conn.Database);
+                parameters.Add(databaseNameParams[i], connBuilder.Database);
             }
 
             for (int i = 0; i < tableNames.Count(); ++i)

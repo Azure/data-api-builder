@@ -295,15 +295,47 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private void GenerateRestPathToEntityMap()
         {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
+            string graphQLGlobalPath = runtimeConfig.GraphQLGlobalSettings.Path;
+
             foreach (string entityName in _entities.Keys)
             {
                 Entity entity = _entities[entityName];
                 string path = GetEntityPath(entity, entityName).TrimStart('/');
+                ValidateEntityandGraphQLPathUniqueness(path, graphQLGlobalPath);
 
                 if (!string.IsNullOrEmpty(path))
                 {
                     EntityPathToEntityName[path] = entityName;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Validate that an Entity's REST path does not conflict with the developer configured
+        /// or the internal default GraphQL path (/graphql).
+        /// </summary>
+        /// <param name="path">Entity's calculated REST path.</param>
+        /// <param name="graphQLGlobalPath">Developer configured GraphQL Path</param>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static void ValidateEntityandGraphQLPathUniqueness(string path, string graphQLGlobalPath)
+        {
+            // Handle case when path does not have forward slash (/) prefix
+            // by adding one if not present or ignoring an existing slash.
+            // entityName -> /entityName
+            // /entityName -> /entityName (no change)
+            if (!string.IsNullOrWhiteSpace(path) && path[0] != '/')
+            {
+                path = '/' + path;
+            }
+
+            if (string.Equals(path, graphQLGlobalPath, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, GlobalSettings.GRAPHQL_DEFAULT_PATH, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new DataApiBuilderException(
+                    message: "Entity's REST path conflicts with GraphQL reserved paths.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
         }
 
@@ -665,13 +697,13 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private async Task PopulateObjectDefinitionForEntities()
         {
-            foreach ((string entityName, Entity procedureEntity) in _entities)
+            foreach ((string entityName, Entity entity) in _entities)
             {
-                SourceType entitySourceType = procedureEntity.ObjectType;
+                SourceType entitySourceType = entity.ObjectType;
                 if (entitySourceType is SourceType.StoredProcedure)
                 {
                     await FillSchemaForStoredProcedureAsync(
-                        procedureEntity,
+                        entity,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         GetStoredProcedureDefinition(entityName));
@@ -682,7 +714,8 @@ namespace Azure.DataApiBuilder.Service.Services
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
-                        GetSourceDefinition(entityName));
+                        GetSourceDefinition(entityName),
+                        entity.KeyFields);
                 }
                 else
                 {
@@ -691,7 +724,8 @@ namespace Azure.DataApiBuilder.Service.Services
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
-                        viewDefinition);
+                        viewDefinition,
+                        entity.KeyFields);
                 }
             }
 
@@ -785,21 +819,28 @@ namespace Azure.DataApiBuilder.Service.Services
             string entityName,
             string schemaName,
             string tableName,
-            SourceDefinition sourceDefinition)
+            SourceDefinition sourceDefinition,
+            string[]? runtimeConfigKeyFields)
         {
             DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(entityName, schemaName, tableName);
 
             List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);
+            if (runtimeConfigKeyFields is null || runtimeConfigKeyFields.Length == 0)
+            {
+                sourceDefinition.PrimaryKey = new(primaryKeys.Select(primaryKey => primaryKey.ColumnName));
+            }
+            else
+            {
+                sourceDefinition.PrimaryKey = new(runtimeConfigKeyFields);
+            }
 
-            if (primaryKeys.Count == 0)
+            if (sourceDefinition.PrimaryKey.Count == 0)
             {
                 throw new DataApiBuilderException(
                        message: $"Primary key not configured on the given database object {tableName}",
                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
-
-            sourceDefinition.PrimaryKey = new(primaryKeys.Select(primaryKey => primaryKey.ColumnName));
 
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();

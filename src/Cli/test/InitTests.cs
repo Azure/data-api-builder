@@ -28,7 +28,7 @@ namespace Cli.Tests
 
             _basicRuntimeConfig =
             @"{
-                ""$schema"": ""dab.draft-01.schema.json"",
+                ""$schema"": ""dab.draft.schema.json"",
                 ""data-source"": {
                     ""database-type"": ""mssql"",
                     ""connection-string"": ""testconnectionstring""
@@ -67,7 +67,7 @@ namespace Cli.Tests
 
             _basicRuntimeConfig =
             @"{
-                ""$schema"": ""dab.draft-01.schema.json"",
+                ""$schema"": ""dab.draft.schema.json"",
                 ""data-source"": {
                     ""database-type"": ""mssql"",
                     ""connection-string"": """"
@@ -104,7 +104,7 @@ namespace Cli.Tests
                 devModeDefaultAuth: null);
 
             _basicRuntimeConfig = @"{
-                ""$schema"": ""dab.draft-01.schema.json"",
+                ""$schema"": ""dab.draft.schema.json"",
                 ""data-source"": {
                     ""database-type"": ""cosmos"",
                     ""connection-string"": ""testconnectionstring""

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
@@ -56,7 +57,6 @@ namespace Azure.DataApiBuilder.Service.Models
                 bool fieldIsOr = string.Equals(name, $"{PredicateOperation.OR}", StringComparison.OrdinalIgnoreCase);
 
                 InputObjectType filterInputObjectType = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentObject.Fields[name]);
-
                 if (fieldIsAnd || fieldIsOr)
                 {
                     PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
@@ -80,10 +80,49 @@ namespace Azure.DataApiBuilder.Service.Models
 
                     if (!IsSingularType(filterInputObjectType.Name))
                     {
-                        return Parse(ctx,
-                            filterArgumentObject.Fields[name],
-                            subfields,
-                            schemaName, sourceName + "." + name, sourceAlias + "." + name, sourceDefinition, processLiterals);
+                        // For SQL,
+                        if (sourceDefinition.PrimaryKey.Count != 0)
+                        {
+                            // if there are primary keys on the source, we need to perform a join
+                            // between the source and the non-scalar filter entity.
+                            InputField filterField = filterArgumentObject.Fields[name];
+
+                            string? targetEntityForFilter;
+                            _ = RelationshipDirectiveType.Target(filterField);
+
+                            /* if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
+                             {
+                                 EntityName = modelName;
+                             }
+
+                             DatabaseObject.SchemaName = sqlMetadataProvider.GetSchemaName(EntityName);
+                             DatabaseObject.Name = sqlMetadataProvider.GetDatabaseObjectName(EntityName);
+                             Predicate predicateOnExists = Parse(
+                                 ctx,
+                                 argumentSchema: filterArgumentObject.Fields[name],
+                                 fields: subfields,
+                                 );*/
+                            // Recursively parse and obtain the predicates for the Exists clause subquery
+                            // Create a SqlQueryStructure as the predicate operand of Exists predicate with no order by, no limit, select 1
+                            // - with predicates = the predicate obtained from recursively parsing
+                            // Add JoinPredicates to the subquery query structure so a predicate connecting
+                            // the outer table is added to the where clause of subquery
+                            // make chained predicate using this exists predicate and return.
+                            // Handle Exist clause while Building each of the Predicates.
+                            // Build the Exists predicate subquery using special Build of SqlQueryStructure
+
+                            // Recursively parse and obtain the predicates for the join subquery to add to the Joins property of type List<SqlJoinStructure>
+                            // - with predicates = the predicate obtained from recursively parsing and a predicate relating the two entities
+                            // continue with rest of the filters
+                            // Handle join clause while Building the original query structure
+                        }
+                        else
+                        {
+                            return Parse(ctx,
+                                filterArgumentObject.Fields[name],
+                                subfields,
+                                schemaName, sourceName + "." + name, sourceAlias + "." + name, sourceDefinition, processLiterals);
+                        }
                     }
                     else
                     {

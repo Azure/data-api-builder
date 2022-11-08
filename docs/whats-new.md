@@ -2,6 +2,10 @@
 
 The full list of release notes for this version is available here: [version 0.3.7 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.3.7-alpha)
 
+## Public JSON Schema
+
+https://dataapibuilder.blob.core.windows.net/schemas/v0.3.7-alpha/dab.draft.schema.json
+
 ## Azure Active Directory Authentication
 
 Azure AD is now fully working. Read how to use it here: [Authentication with Azure AD](./authentication-azure-ad.md)

@@ -68,6 +68,18 @@ The configuration file has a `$schema` property as the first property in the con
 "$schema": "..."
 ```
 
+From version 0.3.7 schema is available at:
+
+```txt
+https://dataapibuilder.blob.core.windows.net/schemas/<VERSION>-alpha/dab.draft.schema.json
+```
+
+make sure to replace the **VERSION** placeholder with the version you want to use, for example:
+
+```txt
+https://dataapibuilder.blob.core.windows.net/schemas/v0.3.7-alpha/dab.draft.schema.json
+```
+
 ### Data Source
 
 The `data-source` element contains the information needed to connect to the backend database.

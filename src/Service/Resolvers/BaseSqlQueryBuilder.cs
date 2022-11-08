@@ -72,8 +72,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             StringBuilder result = new();
             for (int i = 0; i <= untilIndex; i++)
             {
-                string op = i == untilIndex ? GetComparisonFromDirection(columns[i].Direction) : "=";
-                result.Append($"{Build(columns[i], printDirection: false)} {op} {columns[i].ParamName}");
+                // Combine op and param to accomodate "is NULL" which is used for
+                // params that have value of NULL.
+                string opAndParam = i == untilIndex ?
+                    $"{GetComparisonFromDirection(columns[i].Direction)} {columns[i].ParamName}" :
+                    columns[i].Value is not null ?
+                    $"= {columns[i].ParamName}" : "is NULL";
+                result.Append($"{Build(columns[i], printDirection: false)} {opAndParam}");
 
                 if (i < untilIndex)
                 {

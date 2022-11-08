@@ -71,6 +71,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (runtimeConfig.GraphQLGlobalSettings.Enabled
                  && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
             {
+                ValidateGlobalEndpointRouteConfig(runtimeConfig);
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
                 ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
             }
@@ -251,6 +252,31 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
         }
 
+        /// <summary>
+        /// Ensure the global REST and GraphQL endpoints do not conflict if both
+        /// are enabled.
+        /// </summary>
+        /// <param name="runtimeConfig"></param>
+        public static void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
+        {
+            // Do not check for conflicts if GraphQL or REST endpoints are disabled.
+            if (!runtimeConfig.GraphQLGlobalSettings.Enabled || !runtimeConfig.RestGlobalSettings.Enabled)
+            {
+                return;
+            }
+
+            if (string.Equals(
+                a: runtimeConfig.GraphQLGlobalSettings.Path,
+                b: runtimeConfig.RestGlobalSettings.Path,
+                comparisonType: StringComparison.OrdinalIgnoreCase))
+            {
+                throw new DataApiBuilderException(
+                    message: $"Conflicting GraphQL and REST path configuration.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
+        }
+
         private void ValidateAuthenticationConfig()
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
@@ -276,14 +302,16 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 runtimeConfig.AuthNConfig is not null &&
                 runtimeConfig.AuthNConfig.Jwt is not null &&
                 !string.IsNullOrEmpty(runtimeConfig.AuthNConfig.Jwt.Issuer);
-            if (!runtimeConfig.IsEasyAuthAuthenticationProvider() && (!isAudienceSet || !isIssuerSet))
+            if ((runtimeConfig.IsJwtConfiguredIdentityProvider()) &&
+                (!isAudienceSet || !isIssuerSet))
             {
-                throw new NotSupportedException("Audience and Issuer must be set when not using EasyAuth.");
+                throw new NotSupportedException("Audience and Issuer must be set when using a JWT identity Provider.");
             }
 
-            if (runtimeConfig!.IsEasyAuthAuthenticationProvider() && (isAudienceSet || isIssuerSet))
+            if ((!runtimeConfig.IsJwtConfiguredIdentityProvider()) &&
+                (isAudienceSet || isIssuerSet))
             {
-                throw new NotSupportedException("Audience and Issuer should not be set and are not used with EasyAuth.");
+                throw new NotSupportedException("Audience and Issuer can not be set when a JWT identity provider is not configured.");
             }
         }
 

@@ -66,6 +66,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
+                "FindViewWithKeyAndMapping",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('book_id', id)) AS data
+                  FROM (
+                      SELECT id
+                      FROM " + _book_view_with_key_and_mapping + @"
+                      ORDER BY id
+                      LIMIT 100
+                  ) AS subq"
+            },
+            {
                 "FindViewSelected",
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
@@ -476,6 +487,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       FROM " + _tableWithCompositePrimaryKey + @"
                       ORDER BY book_id asc, id asc
                       LIMIT 1
+                  ) AS subq"
+            },
+            {
+                "FindTestWithIntTypeNullValuesOrderByAsc",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'int_types', int_types)) AS data
+                  FROM (
+                      SELECT id, int_types
+                      FROM " + _integrationTypeTable + @"
+                      ORDER BY int_types asc, id asc
+                      LIMIT 100
                   ) AS subq"
             },
             {

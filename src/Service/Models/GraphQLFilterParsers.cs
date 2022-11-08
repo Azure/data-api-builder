@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Models
                 {
                     List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
 
-                    if (!IsSingularType(filterInputObjectType.Name))
+                    if (!IsScalarType(filterInputObjectType.Name))
                     {
                         // For SQL,
                         if (sourceDefinition.PrimaryKey.Count != 0)
@@ -118,23 +118,27 @@ namespace Azure.DataApiBuilder.Service.Models
                         }
                         else
                         {
-                            return Parse(ctx,
+                            predicates.Push(new PredicateOperand(Parse(ctx,
                                 filterArgumentObject.Fields[name],
                                 subfields,
-                                schemaName, sourceName + "." + name, sourceAlias + "." + name, sourceDefinition, processLiterals);
-                        }
+                                schemaName,
+                                sourceName + "." + name,
+                                sourceAlias + "." + name,
+                                sourceDefinition,
+                                processLiterals)));
+                         }
                     }
                     else
                     {
                         predicates.Push(new PredicateOperand(ParseScalarType(
-                            ctx,
-                            argumentSchema: filterArgumentObject.Fields[name],
-                            name,
-                            subfields,
-                            schemaName,
-                            sourceName,
-                            sourceAlias,
-                            processLiterals)));
+                        ctx,
+                        argumentSchema: filterArgumentObject.Fields[name],
+                        name,
+                        subfields,
+                        schemaName,
+                        sourceName,
+                        sourceAlias,
+                        processLiterals)));
                     }
                 }
             }
@@ -142,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.Models
             return MakeChainPredicate(predicates, PredicateOperation.AND);
         }
 
-        static bool IsSingularType(string name)
+        static bool IsScalarType(string name)
         {
             return new string[] { "StringFilterInput", "IntFilterInput", "BoolFilterInput", "IdFilterInput" }.Contains(name);
         }

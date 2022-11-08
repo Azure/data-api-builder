@@ -71,7 +71,7 @@ namespace Azure.DataApiBuilder.Config
         Dictionary<string, Entity> Entities)
     {
         public const string SCHEMA_PROPERTY_NAME = "$schema";
-        public const string SCHEMA = "dab.draft-01.schema.json";
+        public const string SCHEMA = "dab.draft.schema.json";
 
         // use camel case
         // convert Enum to strings
@@ -250,8 +250,21 @@ namespace Azure.DataApiBuilder.Config
         {
             // by default, if there is no AuthenticationSection,
             // EasyAuth StaticWebApps is the authentication scheme.
-            return AuthNConfig is null ||
-                   AuthNConfig!.IsEasyAuthAuthenticationProvider();
+            return AuthNConfig != null &&
+                   AuthNConfig.IsEasyAuthAuthenticationProvider();
+        }
+
+        public bool IsAuthenticationSimulatorEnabled()
+        {
+            return AuthNConfig != null &&
+                AuthNConfig!.IsAuthenticationSimulatorEnabled();
+        }
+
+        public bool IsJwtConfiguredIdentityProvider()
+        {
+            return AuthNConfig != null &&
+                !AuthNConfig.IsEasyAuthAuthenticationProvider() &&
+                !AuthNConfig.IsAuthenticationSimulatorEnabled();
         }
 
         [JsonIgnore]

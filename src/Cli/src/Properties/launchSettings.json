@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Cli": {
+      "commandName": "Project",
+      "commandLineArgs": "-p:generateConfigFiles=true"
+    }
+  }
+}

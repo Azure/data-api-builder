@@ -113,14 +113,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Build column as
         /// [{tableAlias}].[{ColumnName}]
-        /// or if TableAlias is empty, as
+        /// or if SourceAlias is empty, as
         /// [{schema}].[{table}].[{ColumnName}]
         /// or if schema is empty, as
         /// [{table}].[{ColumnName}]
         /// </summary>
         protected virtual string Build(Column column)
         {
-            // If the table alias is not empty, we return [{TableAlias}].[{Column}]
+            // If the table alias is not empty, we return [{SourceAlias}].[{Column}]
             if (!string.IsNullOrEmpty(column.TableAlias))
             {
                 return $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}";
@@ -139,8 +139,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// Build orderby column as
-        /// {TableAlias}.{ColumnName} {direction}
-        /// If TableAlias is null
+        /// {SourceAlias}.{ColumnName} {direction}
+        /// If SourceAlias is null
         /// {ColumnName} {direction}
         /// </summary>
         protected virtual string Build(OrderByColumn column, bool printDirection = true)
@@ -282,7 +282,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// Write the join in sql
-        /// INNER JOIN {TableName} AS {TableAlias} ON {JoinPredicates}
+        /// INNER JOIN {TableName} AS {SourceAlias} ON {JoinPredicates}
         /// </summary>
         protected string Build(SqlJoinStructure join)
         {

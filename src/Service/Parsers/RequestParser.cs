@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// so any instance of a null key will result in a bad request.
         /// </summary>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
-        /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds many of the components needed to parse the query.</param>
+        /// <param name="sqlMetadataProvider">The MetadataProvider holds many of the components needed to parse the query.</param>
         /// <seealso cref="https://docs.microsoft.com/dotnet/api/system.collections.specialized.namevaluecollection?view=net-6.0#remarks"/>
         public static void ParseQueryString(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider)
         {

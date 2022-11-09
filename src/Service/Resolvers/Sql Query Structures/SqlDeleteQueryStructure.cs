@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
 
                 // primary keys used as predicates
-                SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+                MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 if (primaryKeys.Contains(backingColumn!))
                 {
                     Predicates.Add(new Predicate(

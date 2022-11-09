@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
-                SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+                MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 PopulateColumnsAndParams(backingColumn!, param.Value);
             }
         }

@@ -25,17 +25,20 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly CosmosClientProvider _clientProvider;
         private readonly ISqlMetadataProvider _metadataStoreProvider;
         private readonly CosmosQueryBuilder _queryBuilder;
+        private readonly GQLFilterParser _gQLFilterParser;
 
         // <summary>
         // Constructor.
         // </summary>
         public CosmosQueryEngine(
             CosmosClientProvider clientProvider,
-            ISqlMetadataProvider metadataStoreProvider)
+            ISqlMetadataProvider metadataStoreProvider,
+            GQLFilterParser gQLFilterParser)
         {
             _clientProvider = clientProvider;
             _metadataStoreProvider = metadataStoreProvider;
             _queryBuilder = new CosmosQueryBuilder();
+            _gQLFilterParser = gQLFilterParser;
         }
 
         /// <summary>
@@ -49,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
-            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider);
+            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider, _gQLFilterParser);
 
             string requestContinuation = null;
             string queryString = _queryBuilder.Build(structure);

@@ -184,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Without use of delegate the out param will
         /// not be populated with the correct value.
         /// This delegate is for the callback used
-        /// with the mocked SqlMetadataProvider.
+        /// with the mocked MetadataProvider.
         /// </summary>
         /// <param name="entityPath">The entity path.</param>
         /// <param name="entity">Name of entity.</param>

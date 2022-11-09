@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
+using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
@@ -13,9 +13,20 @@ namespace Azure.DataApiBuilder.Service.Models
     /// <summary>
     /// Contains methods to parse a GQL filter parameter
     /// </summary>
-    public static class GQLFilterParser
+    public class GQLFilterParser
     {
         public static readonly string NullStringValue = "NULL";
+
+        private readonly ISqlMetadataProvider _metadataProvider;
+
+        /// <summary>
+        /// Constructor for the filter parser.
+        /// </summary>
+        /// <param name="metadataProvider">The metadata provider of the respective database.</param>
+        public GQLFilterParser(ISqlMetadataProvider metadataProvider)
+        {
+            _metadataProvider = metadataProvider;
+        }
 
         /// <summary>
         /// Parse a predicate for a *FilterInput input type
@@ -23,19 +34,21 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <param name="ctx">The GraphQL context, used to get the query variables</param>
         /// <param name="filterArgumentSchema">An IInputField object which describes the schema of the filter argument</param>
         /// <param name="fields">The fields in the *FilterInput being processed</param>
-        /// <param name="sourceAlias">The source alias underlyin the *FilterInput being processed</param>
-        /// <param name="sourceDefinition">Definition of the table/view underlying the *FilterInput being processed</param>
-        /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
-        public static Predicate Parse(
+        /// <param name="queryStructure">The query structure for the entity being filtered providing
+        /// the source alias of the underlying *FilterInput being processed,
+        /// source definition of the table/view of the underlying *FilterInput being processed,
+        /// and the function that parametrizes literals before they are written in string predicate operands.</param>
+        public Predicate Parse(
             IMiddlewareContext ctx,
             IInputField filterArgumentSchema,
             List<ObjectFieldNode> fields,
-            string schemaName,
-            string sourceName,
-            string sourceAlias,
-            SourceDefinition sourceDefinition,
-            Func<object, string> processLiterals)
+            BaseQueryStructure queryStructure)
         {
+            string schemaName = queryStructure.DatabaseObject.SchemaName;
+            string sourceName = queryStructure.DatabaseObject.Name;
+            string sourceAlias = queryStructure.SourceAlias;
+            SourceDefinition sourceDefinition = queryStructure.GetUnderlyingSourceDefinition();
+
             InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
 
             List<PredicateOperand> predicates = new();
@@ -67,12 +80,8 @@ namespace Azure.DataApiBuilder.Service.Models
                         argumentSchema: filterArgumentObject.Fields[name],
                         filterArgumentSchema: filterArgumentSchema,
                         otherPredicates,
-                        schemaName,
-                        sourceName,
-                        sourceAlias,
-                        sourceDefinition,
-                        op,
-                        processLiterals)));
+                        queryStructure,
+                        op)));
                 }
                 else
                 {
@@ -80,65 +89,26 @@ namespace Azure.DataApiBuilder.Service.Models
 
                     if (!IsScalarType(filterInputObjectType.Name))
                     {
-                        // For SQL,
-                        if (sourceDefinition.PrimaryKey.Count != 0)
-                        {
-                            // if there are primary keys on the source, we need to perform a join
-                            // between the source and the non-scalar filter entity.
-                            InputField filterField = filterArgumentObject.Fields[name];
-
-                            string? targetEntityForFilter;
-                            _ = RelationshipDirectiveType.Target(filterField);
-
-                            /* if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
-                             {
-                                 EntityName = modelName;
-                             }
-
-                             DatabaseObject.SchemaName = sqlMetadataProvider.GetSchemaName(EntityName);
-                             DatabaseObject.Name = sqlMetadataProvider.GetDatabaseObjectName(EntityName);
-                             Predicate predicateOnExists = Parse(
-                                 ctx,
-                                 argumentSchema: filterArgumentObject.Fields[name],
-                                 fields: subfields,
-                                 );*/
-                            // Recursively parse and obtain the predicates for the Exists clause subquery
-                            // Create a SqlQueryStructure as the predicate operand of Exists predicate with no order by, no limit, select 1
-                            // - with predicates = the predicate obtained from recursively parsing
-                            // Add JoinPredicates to the subquery query structure so a predicate connecting
-                            // the outer table is added to the where clause of subquery
-                            // make chained predicate using this exists predicate and return.
-                            // Handle Exist clause while Building each of the Predicates.
-                            // Build the Exists predicate subquery using special Build of SqlQueryStructure
-
-                            // Recursively parse and obtain the predicates for the join subquery to add to the Joins property of type List<SqlJoinStructure>
-                            // - with predicates = the predicate obtained from recursively parsing and a predicate relating the two entities
-                            // continue with rest of the filters
-                            // Handle join clause while Building the original query structure
-                        }
-                        else
-                        {
-                            predicates.Push(new PredicateOperand(Parse(ctx,
-                                filterArgumentObject.Fields[name],
-                                subfields,
-                                schemaName,
-                                sourceName + "." + name,
-                                sourceAlias + "." + name,
-                                sourceDefinition,
-                                processLiterals)));
-                         }
+                        queryStructure.DatabaseObject.Name = sourceName + "." + name;
+                        queryStructure.SourceAlias = sourceName + "." + name;
+                        predicates.Push(new PredicateOperand(Parse(ctx,
+                            filterArgumentObject.Fields[name],
+                            subfields,
+                            queryStructure)));
                     }
                     else
                     {
-                        predicates.Push(new PredicateOperand(ParseScalarType(
-                        ctx,
-                        argumentSchema: filterArgumentObject.Fields[name],
-                        name,
-                        subfields,
-                        schemaName,
-                        sourceName,
-                        sourceAlias,
-                        processLiterals)));
+                        predicates.Push(
+                            new PredicateOperand(
+                                ParseScalarType(
+                                    ctx,
+                                    argumentSchema: filterArgumentObject.Fields[name],
+                                    name,
+                                    subfields,
+                                    schemaName,
+                                    sourceName,
+                                    sourceAlias,
+                                    queryStructure.MakeParamWithValue)));
                     }
                 }
             }
@@ -196,17 +166,13 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <param name="sourceDefinition">Definition of the table/view underlying the *FilterInput being processed</param>
         /// <param name="op">The operation (and or or)</param>
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
-        private static Predicate ParseAndOr(
+        private Predicate ParseAndOr(
             IMiddlewareContext ctx,
             IInputField argumentSchema,
             IInputField filterArgumentSchema,
             List<IValueNode> fields,
-            string schemaName,
-            string tableName,
-            string tableAlias,
-            SourceDefinition sourceDefinition,
-            PredicateOperation op,
-            Func<object, string> processLiterals)
+            BaseQueryStructure baseQuery,
+            PredicateOperation op)
         {
             if (fields.Count == 0)
             {
@@ -227,7 +193,11 @@ namespace Azure.DataApiBuilder.Service.Models
                 }
 
                 List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
-                operands.Add(new PredicateOperand(Parse(ctx, filterArgumentSchema, subfields, schemaName, tableName, tableAlias, sourceDefinition, processLiterals)));
+                operands.Add(new PredicateOperand(
+                    Parse(ctx,
+                        filterArgumentSchema,
+                        subfields,
+                        baseQuery)));
             }
 
             return MakeChainPredicate(operands, op);

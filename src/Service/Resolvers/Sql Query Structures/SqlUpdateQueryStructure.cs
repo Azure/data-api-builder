@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 Predicate predicate = CreatePredicateForParam(param);
                 // since we have already validated mutationParams we know backing column exists
-                SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+                MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 // primary keys used as predicates
                 if (primaryKeys.Contains(backingColumn!))
                 {
@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
             Predicate predicate;
             // since we have already validated param we know backing column exists
-            SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+            MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
             if (param.Value is null && !sourceDefinition.Columns[backingColumn!].IsNullable)
             {
                 throw new DataApiBuilderException(

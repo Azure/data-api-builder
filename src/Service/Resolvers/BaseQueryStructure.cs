@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Models;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Types;
 
@@ -9,6 +11,24 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 {
     public class BaseQueryStructure
     {
+        /// <summary>
+        /// The Entity associated with this query.
+        /// </summary>
+        public string EntityName { get; protected set; }
+
+        /// <summary>
+        /// The alias of the main entity to be queried.
+        /// </summary>
+        public virtual string SourceAlias { get; set; }
+
+        protected ISqlMetadataProvider MetadataProvider { get; }
+
+        /// <summary>
+        /// The DatabaseObject associated with the entity, represents the
+        /// databse object to be queried.
+        /// </summary>
+        public DatabaseObject DatabaseObject { get; protected set; } = null!;
+
         /// <summary>
         /// The columns which the query selects
         /// </summary>
@@ -31,13 +51,39 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public List<Predicate> Predicates { get; }
 
+        public GQLFilterParser GraphQLFilterParser { get; protected set; }
+
         public BaseQueryStructure(
+            ISqlMetadataProvider metadataProvider,
+            GQLFilterParser gQLFilterParser,
+            string entityName,
             IncrementingInteger? counter = null)
         {
             Columns = new();
             Predicates = new();
             Parameters = new();
             Counter = counter ?? new IncrementingInteger();
+            MetadataProvider = metadataProvider;
+            GraphQLFilterParser = gQLFilterParser;
+
+            // Default the alias to the empty string since this base construtor
+            // is called for requests other than Find operations. We only use
+            // SourceAlias for Find, so we leave empty here and then populate
+            // in the Find specific contructor.
+            SourceAlias = string.Empty;
+
+            if (!string.IsNullOrEmpty(entityName))
+            {
+                EntityName = entityName;
+                DatabaseObject = MetadataProvider.EntityToDatabaseObject[entityName];
+            }
+            else
+            {
+                EntityName = string.Empty;
+                // This is the cosmos db metadata scenario
+                // where the table name is the Source Alias i.e. container alias
+                DatabaseObject = new DatabaseTable(string.Empty, SourceAlias);
+            }
         }
 
         /// <summary>
@@ -49,6 +95,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string paramName = $"param{Counter.Next()}";
             Parameters.Add(paramName, value);
             return paramName;
+        }
+
+        /// <summary>
+        /// Creates a unique table alias.
+        /// </summary>
+        public string CreateTableAlias()
+        {
+            return $"table{Counter.Next()}";
+        }
+
+        /// <summary>
+        /// Returns the SourceDefinitionDefinition for the entity(table/view) of this query.
+        /// </summary>
+        public SourceDefinition GetUnderlyingSourceDefinition()
+        {
+            return MetadataProvider.GetSourceDefinition(EntityName);
         }
 
         /// <summary>

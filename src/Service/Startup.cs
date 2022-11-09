@@ -291,6 +291,9 @@ namespace Azure.DataApiBuilder.Service
 
             app.UseHttpsRedirection();
 
+            // URL Rewrite middleware MUST be called prior to UseRouting().
+            // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location
+            app.UsePathRewriteMiddleware();
             app.UseRouting();
 
             // Adding CORS Middleware
@@ -349,7 +352,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 endpoints.MapControllers();
 
-                endpoints.MapGraphQL("/graphql").WithOptions(new GraphQLServerOptions
+                endpoints.MapGraphQL(GlobalSettings.GRAPHQL_DEFAULT_PATH).WithOptions(new GraphQLServerOptions
                 {
                     Tool = {
                         // Determines if accessing the endpoint from a browser
@@ -390,6 +393,12 @@ namespace Azure.DataApiBuilder.Service
                     {
                         options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
                         options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
+                        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
+                        {
+                            // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInrole()
+                            // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole?view=net-6.0#remarks
+                            RoleClaimType = AuthenticationConfig.ROLE_CLAIM_TYPE
+                        };
                     });
                 }
                 else if (runtimeConfig.IsEasyAuthAuthenticationProvider())

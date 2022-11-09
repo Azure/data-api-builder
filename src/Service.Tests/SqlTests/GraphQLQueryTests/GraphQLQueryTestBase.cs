@@ -907,6 +907,51 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
+
+        /// <summary>
+        /// Query a simple view (contains columns from one table)
+        /// </summary>
+        [TestMethod]
+        public virtual async Task TestQueryOnBasicView(string dbQuery)
+        {
+            string graphQLQueryName = "books_view_alls";
+            string graphQLQuery = @"{
+                books_view_alls(first: 5) {
+                    items {
+                        id
+                        title
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// Query a composite view (contains columns from multiple tables)
+        /// </summary>
+        [TestMethod]
+        public virtual async Task TestQueryOnCompositeView(string dbQuery)
+        {
+            string graphQLQueryName = "books_publishers_view_composites";
+            string graphQLQuery = @"{
+                books_publishers_view_composites(first: 5) {
+                    items {
+                        id
+                        name
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
         #endregion
 
         #region Negative Tests

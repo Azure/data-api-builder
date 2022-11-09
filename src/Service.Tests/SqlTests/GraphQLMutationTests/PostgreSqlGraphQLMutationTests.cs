@@ -348,6 +348,103 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await TestAliasSupportForGraphQLMutationQueryFields(postgresQuery);
         }
 
+        /// <summary>
+        /// <code>Do: </code>insert into a simple view
+        /// <code>Check: </code> that the new entry is in the view
+        /// </summary>
+        [TestMethod]
+        public async Task InsertIntoSimpleView()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.title AS title
+                   FROM books_view_all AS table0
+                   WHERE id = 5001
+                     AND title = 'Book View'
+                     AND publisher_id = 1234
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            await InsertIntoSimpleView(postgresQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Update a simple view
+        /// <code>Check: </code> the updated entry is present in the view
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateSimpleView()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.title AS title
+                   FROM books_view_all AS table0
+                   WHERE id = 1
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            await UpdateSimpleView(postgresQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Delete an entry from a simple view
+        /// <code>Check: </code>if the mutation returned result is as expected and if the entry that id has been deleted
+        /// </summary>
+        [TestMethod]
+        public async Task DeleteFromSimpleView()
+        {
+            string postgresQueryForResult = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.title AS title
+                   FROM books_view_all AS table0
+                   WHERE id = 1
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            string postgresQueryToVerifyDeletion = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT COUNT(*) AS COUNT
+                   FROM books_view_all AS table0
+                   WHERE id = 1) AS subq
+            ";
+
+            await DeleteFromSimpleView(postgresQueryForResult, postgresQueryToVerifyDeletion);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>insert into an "insertable" complex view
+        /// <code>Check: </code> that the new entry is in the view
+        /// </summary>
+        [TestMethod]
+        public async Task InsertIntoInsertableComplexView()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.title AS title,
+                          table0.publisher_id AS publisher_id
+                   FROM books_publishers_view_composite_insertable AS table0
+                   WHERE id = 5001
+                     AND title = 'Book Complex View'
+                     AND publisher_id = 1234
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            await InsertIntoInsertableComplexView(postgresQuery);
+        }
+
         #endregion
 
         #region Negative Tests

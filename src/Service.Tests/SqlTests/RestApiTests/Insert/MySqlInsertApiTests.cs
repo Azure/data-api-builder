@@ -199,7 +199,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
 
         [TestMethod]
         [Ignore]
-        public override Task InsertOneInViewBadRequestTest()
+        public override Task InsertOneInViewBadRequestTest(string expectedErrorMessage)
         {
             throw new NotImplementedException();
         }

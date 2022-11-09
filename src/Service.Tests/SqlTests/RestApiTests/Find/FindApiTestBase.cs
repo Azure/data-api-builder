@@ -120,6 +120,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             );
 
             await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=book_id",
+                entityNameOrPath: _book_view_with_key_and_mapping,
+                sqlQuery: GetQuery("FindViewWithKeyAndMapping")
+            );
+
+            await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/2/pieceid/1",
                 queryString: string.Empty,
                 entityNameOrPath: _simple_subset_stocks,
@@ -534,7 +541,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$orderby=int_types",
+                queryString: "?$select=id,int_types&$orderby=int_types",
                 entityNameOrPath: _integrationTypeEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithIntTypeNullValuesOrderByAsc))
             );

@@ -13,6 +13,11 @@ add stocks_price --config "dab-config.PostgreSql.json" --source stocks_price --p
 add Tree --config "dab-config.PostgreSql.json" --source trees --permissions "anonymous:create,read,update,delete"
 add Shrub --config "dab-config.PostgreSql.json" --source trees --permissions "anonymous:create,read,update,delete" --rest plants
 add Fungus --config "dab-config.PostgreSql.json" --source fungi --permissions "anonymous:create,read,update,delete" --graphql "fungus:fungi"
+add books_view_all --config "dab-config.PostgreSql.json" --source books_view_all --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
+add books_view_with_mapping --config "dab-config.PostgreSql.json" --source books_view_with_mapping --source.type "view" --permissions "anonymous:*" --rest true --graphql true
+add stocks_view_selected --config "dab-config.PostgreSql.json" --source stocks_view_selected --source.type "view" --source.key-fields "categoryid,pieceid" --permissions "anonymous:*" --rest true --graphql true
+add books_publishers_view_composite --config "dab-config.PostgreSql.json" --source books_publishers_view_composite --source.type "view" --source.key-fields "id,pub_id" --permissions "anonymous:*" --rest true --graphql true
+add books_publishers_view_composite_insertable --config "dab-config.PostgreSql.json" --source books_publishers_view_composite_insertable --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
 add Empty --config "dab-config.PostgreSql.json" --source "empty_table" --permissions "authenticated:create,read,update,delete" --rest true
 add Notebook --config "dab-config.PostgreSql.json" --source "notebooks" --permissions "anonymous:read" --rest true --graphql true --fields.include "*" --policy-database "@item ne 1"
 add Journal --config "dab-config.PostgreSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
@@ -83,8 +88,9 @@ update Tree --config "dab-config.PostgreSql.json" --rest true --permissions "aut
 update Shrub --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"
 update Fungus --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --map "spores:hazards" --rest true
 update Fungus --config "dab-config.PostgreSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'"
+update books_view_with_mapping --config "dab-config.PostgreSql.json" --source.key-fields "id" --map "id:book_id"
 update BookWebsitePlacement --config "dab-config.PostgreSql.json" --relationship books --target.entity Book --cardinality one
-update SupportedType --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,delete,update" --rest false
+update SupportedType --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,delete,update" 
 update Author --config "dab-config.PostgreSql.json" --relationship books --target.entity Book --cardinality many --linking.object book_author_link
 update Notebook --config "dab-config.PostgreSql.json" --permissions "anonymous:create,update,delete"
 update Journal --config "dab-config.PostgreSql.json" --permissions "policy_tester_noupdate:update" --fields.include "*" --policy-database "@item.id ne 1"

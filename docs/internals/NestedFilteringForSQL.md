@@ -90,7 +90,7 @@ Nested Filtering is useful to minimize the amount of data that is transferred as
     - MsSql
     For Azure SQL, the corresponding SQL query for the above example is:
 
-    Option 1:
+    Option 1: Using `EXISTS` Clause
     ```sql
     SELECT 
     TOP 100 [table0].[id] AS [id], 
@@ -117,7 +117,7 @@ Nested Filtering is useful to minimize the amount of data that is transferred as
     The plan seen for this query with `EXISTS` clause looks like:
     ![Exists_subquery_plan](./nested-filter-exists-subquery-plan.png)
 
-    Option 2:
+    Option 2: Using `INNER JOIN`
     ```sql
     SELECT 
     TOP 100 [table0].[id] AS [id], 

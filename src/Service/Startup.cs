@@ -256,6 +256,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
+                Console.WriteLine($"{runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString}");
                 if (_logger is not null && runtimeConfigProvider.RuntimeConfigPath is not null)
                 {
                     _logger.LogInformation($"Loading config file: {runtimeConfigProvider.RuntimeConfigPath!.ConfigFileName}");

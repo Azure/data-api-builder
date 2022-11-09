@@ -1,7 +1,15 @@
 # Known Issues and Limitations
 
-## Cannot filter field of nested objects in a many-to-many relationship
-TDB
+## Table with triggers error out on UPDATE
 
-## Cannot add details on many-to-many relationshop when creating or updating an item via GraphQL
-TDB
+See issue [#452](https://github.com/Azure/data-api-builder/issues/452)
+
+## Filtering using nested object fields
+
+Support filtering using nested object property in GraphQL is limited to Cosmos DB at the moment.
+
+- [Cannot filter using fields in relationship](https://github.com/Azure/data-api-builder/issues/825)
+
+## Mutations not correctly created for many-to-many relationship
+
+See issue [#479](https://github.com/Azure/data-api-builder/issues/479)

@@ -4,11 +4,15 @@ The full list of release notes for this version is available here: [version 0.3.
 
 ## Public JSON Schema
 
+JSON Schema has been published here:
+
+```text
 https://dataapibuilder.blob.core.windows.net/schemas/v0.3.7-alpha/dab.draft.schema.json
+```
 
-## Azure Active Directory Authentication
+This will give you intellisense if you are using an IDE, like VS Code, that supports JSON Schemas. Take a look at `basic-empty-dab-config.json` in the `samples` folder, to have a starting point when manually creating the `dab-config.json` file.
 
-Azure AD is now fully working. Read how to use it here: [Authentication with Azure AD](./authentication-azure-ad.md)
+Please note that if you are using DAB CLI to create and manage the `dab-config.json` file, DAB CLI is not yet creating the configuration file using the aforementioned reference to the JSON schema file.
 
 ## View Support
 
@@ -18,7 +22,7 @@ Views are now supported both in REST and GraphQL. If you have a view, for exampl
 dab add BookDetail --source dbo.vw_books_details --source.type View --source.key-fields "id" --permissions "anonymous:read"
 ```
 
-the `source.key-fields` option is used to specify which fields from the view are used to uniquely identify an item, so that navigation by primary key can be implemented also for views.
+the `source.key-fields` option is used to specify which fields from the view are used to uniquely identify an item, so that navigation by primary key can be implemented also for views. Is responsibility of the developer configuring DAB to enable or disable actions (for example, the `insert` action) depending on if the view is updatable or not.
 
 ## Stored Procedures Support
 
@@ -31,6 +35,20 @@ dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_au
 
 The parameter can be passed in the URL query string when calling the REST endpoint:
 
-```
+```text
 http://<dab-server>/api/GetCowrittenBooksByAuthor?author=isaac%20asimov
 ```
+
+Is responsibility of the developer configuring DAB to enable or disable actions (for example, the `insert` action) to allow or deny specific HTTP verbs to be used when calling the stored procedure. For example, for the stored procedure used in the example, given that its purpose is to return some data, it would make sense to only allow the `read` action.
+
+## Azure Active Directory Authentication
+
+Azure AD authentication is now fully working. Read how to use it here: [Authentication with Azure AD](./authentication-azure-ad.md)
+
+## New "Simulator" Authentication Provider for local authentication
+
+To simplify testing of authenticated requests when developing locally, a new `simulator` authentication provider has been created; `simulator` is a configurable authentication provider which instructs the Data API Builder engine to treat all requests as authenticated. More details here: [Local Authentication](./local-authentication.md)
+
+## Support for filter on nested objects within a document
+
+TDB

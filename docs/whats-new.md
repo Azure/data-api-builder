@@ -51,4 +51,13 @@ To simplify testing of authenticated requests when developing locally, a new `si
 
 ## Support for filter on nested objects within a document
 
-TDB
+With Azure Cosmos DB, You can use the object or array relationship defined in your schema which enables to do filter operations on the nested objects.
+
+```graphql
+query {
+  books(first: 1, filter : { author : { profile : { twitter : {eq : ""@founder""}}}})
+    id
+    name
+  }
+}
+```

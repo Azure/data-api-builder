@@ -35,7 +35,7 @@ To use the JWT provider, you need to configure the `runtime.host.authentication`
 }
 ```
 
-The supported provider are the following:
+The supported providers are the following:
 
 - [Azure AD](./authentication-azure-ad.md)
 

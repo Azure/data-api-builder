@@ -7,7 +7,7 @@
 
 ### Configuration
 
-Views can be used similarly to how a table can be used in Data API Builder. View usage must be defined specifying that the source type for the entity is `view` and then the `key-fields` must be provided, so that Data API Builder knows how it can identify and return a single item, if needed.
+Views can be used similar to how a table can be used in Data API Builder. View usage must be defined by specifying the source type for the entity as `view`. Along with that `key-fields` must be provided, so that Data API Builder knows how it can identify and return a single item, if needed.
 
 If you have a view, for example [`dbo.vw_books_details`](../samples/getting-started/azure-sql-db/library.azure-sql.sql#L112) it can be exposed using the following `dab` command:
 

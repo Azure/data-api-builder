@@ -234,7 +234,7 @@ More details on how to use Views and Stored Procedure in the related documentati
 
 ### Relationships
 
-The `relationships` section defines how an entity is related to other exposed entities and optionally provide details on what underlying database objects can be used to support such relationships. Objects defined in the `relationship` section will be exposed as GraphQL field in the related entity. The format is the following:
+The `relationships` section defines how an entity is related to other exposed entities, and optionally provides details on what underlying database objects can be used to support such relationships. Objects defined in the `relationship` section will be exposed as GraphQL field in the related entity. The format is the following:
 
 ```json
 "relationships": {

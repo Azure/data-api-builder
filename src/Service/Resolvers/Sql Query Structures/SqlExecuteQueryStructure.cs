@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
@@ -27,9 +28,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public SqlExecuteStructure(
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
-            IDictionary<string, object?> requestParams,
-            GQLFilterParser gQLFilterParser)
-        : base(sqlMetadataProvider, gQLFilterParser, entityName: entityName)
+            IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
+            IDictionary<string, object?> requestParams)
+        : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
         {
             StoredProcedureDefinition storedProcedureDefinition = GetUnderlyingStoredProcedureDefinition();
             ProcedureParameters = new();

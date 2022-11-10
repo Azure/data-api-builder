@@ -41,8 +41,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,
-            ILogger<SqlQueryEngine> logger,
             GQLFilterParser gQLFilterParser,
+            ILogger<SqlQueryEngine> logger,
             RuntimeConfigProvider runtimeConfigProvider)
         {
             _queryExecutor = queryExecutor;
@@ -141,7 +141,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context)
         {
-            SqlExecuteStructure structure = new(context.EntityName, _sqlMetadataProvider, context.ResolvedParameters, _gQLFilterParser);
+            SqlExecuteStructure structure = new(
+                context.EntityName,
+                _sqlMetadataProvider,
+                _authorizationResolver,
+                _gQLFilterParser,
+                context.ResolvedParameters);
             using JsonDocument queryJson = await ExecuteAsync(structure);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty result set, return an empty json array

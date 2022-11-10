@@ -36,6 +36,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<SqlMutationEngine> _logger;
+        private readonly GQLFilterParser _gQLFilterParser;
         public const string IS_FIRST_RESULT_SET = "IsFirstResultSet";
 
         /// <summary>
@@ -47,6 +48,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IQueryBuilder queryBuilder,
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
             IHttpContextAccessor httpContextAccessor,
             ILogger<SqlMutationEngine> logger)
         {
@@ -57,6 +59,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             _authorizationResolver = authorizationResolver;
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
+            _gQLFilterParser = gQLFilterParser;
         }
 
         /// <summary>
@@ -150,7 +153,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context)
         {
-            SqlExecuteStructure executeQueryStructure = new(context.EntityName, _sqlMetadataProvider, context.ResolvedParameters!);
+            SqlExecuteStructure executeQueryStructure = new(
+                context.EntityName,
+                _sqlMetadataProvider,
+                _authorizationResolver,
+                _gQLFilterParser,
+                context.ResolvedParameters);
             string queryText = _queryBuilder.Build(executeQueryStructure);
             _logger.LogInformation(queryText);
 
@@ -367,8 +375,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     SqlInsertStructure insertQueryStruct = context is null ?
                         new(entityName,
                         _sqlMetadataProvider,
+                        _authorizationResolver,
+                        _gQLFilterParser,
                         parameters) :
-                        new(context, entityName, _sqlMetadataProvider, parameters);
+                        new(context,
+                            entityName,
+                            _sqlMetadataProvider,
+                            _authorizationResolver,
+                            _gQLFilterParser, parameters);
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
@@ -376,6 +390,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     SqlUpdateStructure updateStructure =
                         new(entityName,
                         _sqlMetadataProvider,
+                        _authorizationResolver,
+                        _gQLFilterParser,
                         parameters,
                         isIncrementalUpdate: false);
                     queryString = _queryBuilder.Build(updateStructure);
@@ -385,6 +401,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     SqlUpdateStructure updateIncrementalStructure =
                         new(entityName,
                         _sqlMetadataProvider,
+                        _authorizationResolver,
+                        _gQLFilterParser,
                         parameters,
                         isIncrementalUpdate: true);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
@@ -401,6 +419,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         context,
                         entityName,
                         _sqlMetadataProvider,
+                        _authorizationResolver,
+                        _gQLFilterParser,
                         parameters);
                     AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
                         Operation.Update,
@@ -476,6 +496,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             SqlDeleteStructure deleteStructure =
                 new(entityName,
                 _sqlMetadataProvider,
+                _authorizationResolver,
+                _gQLFilterParser,
                 parameters);
             AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
                 Operation.Delete,
@@ -521,6 +543,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 SqlUpsertQueryStructure upsertStructure =
                         new(entityName,
                         _sqlMetadataProvider,
+                        _authorizationResolver,
+                        _gQLFilterParser,
                         parameters,
                         incrementalUpdate: false);
                 queryString = _queryBuilder.Build(upsertStructure);
@@ -531,6 +555,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 SqlUpsertQueryStructure upsertIncrementalStructure =
                         new(entityName,
                         _sqlMetadataProvider,
+                        _authorizationResolver,
+                        _gQLFilterParser,
                         parameters,
                         incrementalUpdate: true);
                 queryString = _queryBuilder.Build(upsertIncrementalStructure);

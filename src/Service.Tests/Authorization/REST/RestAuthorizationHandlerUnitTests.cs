@@ -234,16 +234,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         // Negative tests where authorization fails for Find requests with no $f filter query string parameter
         [DataRow(new string[] { "col1", "col2", "col3", "col4", "col5" }, DisplayName = "Find - Request all allowed + 1 disallowed column(s)")]
         [DataRow(new string[] { "col1", "col5", "col6", "col7", "col9" }, DisplayName = "Find - Request 1 allowed + > 1 disallowed column(s)")]
+        [DataRow(new string[] { }, true, false, DisplayName = "Find - Request on entity with no included columns. The request url contains no key,select,orderby,filter.")]
         #pragma warning restore format
         [TestMethod]
-        public async Task FindColumnPermissionsTests(string[] columnsRequestedInput)
+        public async Task FindColumnPermissionsTests(string[] columnsRequestedInput,
+            bool areNoAllowedExposedColumns = false,
+            bool expectedAuthorizationResult = true)
         {
             IEnumerable<string> columnsRequested = new List<string>(
                 columnsRequestedInput);
-            IEnumerable<string> allowedColumns = new List<string>(
-               new string[] { "col1", "col2", "col3", "col4" });
+            IEnumerable<string> allowedColumns =
+                new List<string>(new string[] { "col1", "col2", "col3", "col4" });
+
             bool areColumnsAllowed = true;
-            bool expectedAuthorizationResult = true;
 
             // Creates Mock AuthorizationResolver to return a preset result based on [TestMethod] input.
             Mock<IAuthorizationResolver> authorizationResolver = new();
@@ -257,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 Operation.Read
-                )).Returns(allowedColumns);
+                )).Returns(areNoAllowedExposedColumns ? new List<string>() : allowedColumns);
 
             string httpMethod = HttpConstants.GET;
             HttpContext httpContext = CreateHttpContext(httpMethod);

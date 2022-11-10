@@ -126,17 +126,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         }
 
-        /// <inheritdoc />
-        public string Build(SqlExistsQueryStructure structure)
-        {
-            string predicates = JoinPredicateStrings(
-                       structure.DbPolicyPredicates,
-                       Build(structure.Predicates));
-
-            return $"SELECT 1 FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                    $"WHERE {predicates} ";
-        }
-
         /// <summary>
         /// Labels with which columns can be marked in the OUTPUT clause
         /// </summary>

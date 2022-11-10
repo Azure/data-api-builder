@@ -26,6 +26,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public abstract string QuoteIdentifier(string ident);
 
+        /// <inheritdoc />
+        public virtual string Build(SqlExistsQueryStructure structure)
+        {
+            string predicates = JoinPredicateStrings(
+                       structure.DbPolicyPredicates,
+                       Build(structure.Predicates));
+
+            return $"SELECT 1 " +
+                   $"FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                   $"WHERE {predicates}";
+        }
+
         /// <summary>
         /// Builds a database specific keyset pagination predicate
         /// </summary>

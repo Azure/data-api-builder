@@ -47,6 +47,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlExecuteStructure structure);
 
         /// <summary>
+        /// Builds the query of an EXISTS clause.
+        /// query.
+        /// </summary>
+        public string Build(SqlExistsQueryStructure structure);
+
+        /// <summary>
         /// Builds the query to obtain foreign key information with the given
         /// number of parameters.
         /// </summary>

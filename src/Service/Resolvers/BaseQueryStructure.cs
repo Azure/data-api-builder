@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -51,20 +52,32 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public List<Predicate> Predicates { get; }
 
+        /// <summary>
+        /// Used for parsing graphql filter arguments.
+        /// </summary>
         public GQLFilterParser GraphQLFilterParser { get; protected set; }
+
+        /// <summary>
+        /// Authorization Resolver used within SqlQueryStructure to get and apply
+        /// authorization policies to requests.
+        /// </summary>
+        public IAuthorizationResolver AuthorizationResolver { get; }
 
         public BaseQueryStructure(
             ISqlMetadataProvider metadataProvider,
+            IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            string entityName,
+            List<Predicate>? predicates = null,
+            string entityName = "",
             IncrementingInteger? counter = null)
         {
             Columns = new();
-            Predicates = new();
             Parameters = new();
+            Predicates = predicates ?? new();
             Counter = counter ?? new IncrementingInteger();
             MetadataProvider = metadataProvider;
             GraphQLFilterParser = gQLFilterParser;
+            AuthorizationResolver = authorizationResolver;
 
             // Default the alias to the empty string since this base construtor
             // is called for requests other than Find operations. We only use

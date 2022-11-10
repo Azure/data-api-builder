@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
@@ -26,6 +28,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly ISqlMetadataProvider _metadataStoreProvider;
         private readonly CosmosQueryBuilder _queryBuilder;
         private readonly GQLFilterParser _gQLFilterParser;
+        private readonly IAuthorizationResolver _authorizationResolver;
 
         // <summary>
         // Constructor.
@@ -33,12 +36,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public CosmosQueryEngine(
             CosmosClientProvider clientProvider,
             ISqlMetadataProvider metadataStoreProvider,
+            IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser)
         {
             _clientProvider = clientProvider;
             _metadataStoreProvider = metadataStoreProvider;
             _queryBuilder = new CosmosQueryBuilder();
             _gQLFilterParser = gQLFilterParser;
+            _authorizationResolver = authorizationResolver;
         }
 
         /// <summary>
@@ -52,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
-            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider, _gQLFilterParser);
+            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
 
             string requestContinuation = null;
             string queryString = _queryBuilder.Build(structure);
@@ -136,7 +141,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
-            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider);
+            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
 
             Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
             QueryDefinition querySpec = new(_queryBuilder.Build(structure));

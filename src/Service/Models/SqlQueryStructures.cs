@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
+using Azure.DataApiBuilder.Service.Resolvers;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Azure.DataApiBuilder.Service.Models
 {
@@ -96,7 +98,7 @@ namespace Azure.DataApiBuilder.Service.Models
         None,
         Equal, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, NotEqual,
         AND, OR, LIKE, NOT_LIKE,
-        IS, IS_NOT
+        IS, IS_NOT, EXISTS
     }
 
     /// <summary>
@@ -118,6 +120,8 @@ namespace Azure.DataApiBuilder.Service.Models
         /// </summary>
         private readonly Predicate? _predicateOperand;
 
+        private readonly BaseSqlQueryStructure? _queryStructure;
+
         /// <summary>
         /// Initialize operand as Column
         /// </summary>
@@ -129,6 +133,22 @@ namespace Azure.DataApiBuilder.Service.Models
             }
 
             _columnOperand = column;
+            _stringOperand = null;
+            _predicateOperand = null;
+        }
+
+        /// <summary>
+        /// Initialize operand as a query structure.
+        /// </summary>
+        public PredicateOperand(BaseSqlQueryStructure? queryStructure)
+        {
+            if (queryStructure == null)
+            {
+                throw new ArgumentNullException("A query predicate operand cannot be created with a null query.");
+            }
+
+            _columnOperand = null;
+            _queryStructure = queryStructure;
             _stringOperand = null;
             _predicateOperand = null;
         }
@@ -209,11 +229,13 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <summary>
         /// Left operand of the expression
         /// </summary>
-        public PredicateOperand Left { get; }
+        public PredicateOperand? Left { get; }
+
         /// <summary>
         /// Right operand of the expression
         /// </summary>
         public PredicateOperand Right { get; }
+
         /// <summary>
         /// Enum representing the operator of the expression
         /// </summary>
@@ -221,7 +243,7 @@ namespace Azure.DataApiBuilder.Service.Models
 
         public bool AddParenthesis { get; }
 
-        public Predicate(PredicateOperand left, PredicateOperation op, PredicateOperand right, bool addParenthesis = false)
+        public Predicate(PredicateOperand? left, PredicateOperation op, PredicateOperand right, bool addParenthesis = false)
         {
             Left = left;
             Right = right;
@@ -234,7 +256,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// </summary>
         public bool IsNested()
         {
-            return Left.IsPredicate() || Right.IsPredicate();
+            return Left is not null ? Left.IsPredicate() || Right.IsPredicate() : Right.IsPredicate();
         }
 
         /// <summary>

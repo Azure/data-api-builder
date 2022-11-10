@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -26,8 +27,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public SqlExecuteStructure(
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
-            IDictionary<string, object?> requestParams)
-        : base(sqlMetadataProvider, entityName: entityName)
+            IDictionary<string, object?> requestParams,
+            GQLFilterParser gQLFilterParser)
+        : base(sqlMetadataProvider, gQLFilterParser, entityName: entityName)
         {
             StoredProcedureDefinition storedProcedureDefinition = GetUnderlyingStoredProcedureDefinition();
             ProcedureParameters = new();
@@ -71,7 +73,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
                 }
-
             }
         }
 

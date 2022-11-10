@@ -245,6 +245,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     return "IS";
                 case PredicateOperation.IS_NOT:
                     return "IS NOT";
+                case PredicateOperation.EXISTS:
+                    return "EXISTS";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }
@@ -261,14 +263,26 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new ArgumentNullException(nameof(predicate));
             }
 
-            string predicateString = $"{Build(predicate.Left)} {Build(predicate.Op)} {Build(predicate.Right)}";
+            StringBuilder predicateString = new();
+
+            if (predicate.Left is not null)
+            {
+                // For Binary predicates:
+                 predicateString.Append($"{Build(predicate.Left)} {Build(predicate.Op)} {Build(predicate.Right)}");
+            }
+            else
+            {
+                // For Unary predicates, there is always a paranthesis around the operand.
+                predicateString.Append($"{Build(predicate.Op)} ( {Build(predicate.Right)} )");
+            }
+
             if (predicate.AddParenthesis)
             {
                 return "(" + predicateString + ")";
             }
             else
             {
-                return predicateString;
+                return predicateString.ToString();
             }
         }
 

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
@@ -33,8 +34,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IMiddlewareContext context,
             IDictionary<string, object> parameters,
             ISqlMetadataProvider metadataProvider,
+            IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser)
-            : base(metadataProvider, gQLFilterParser, entityName: string.Empty)
+            : base(metadataProvider, authorizationResolver, gQLFilterParser, entityName: string.Empty)
         {
             _context = context;
             SourceAlias = _containerAlias;

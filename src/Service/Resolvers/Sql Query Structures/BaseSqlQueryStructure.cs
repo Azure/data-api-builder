@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
@@ -36,13 +37,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string? DbPolicyPredicates { get; set; }
 
         public BaseSqlQueryStructure(
-            ISqlMetadataProvider sqlMetadataProvider,
+            ISqlMetadataProvider metadataProvider,
+            IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            string entityName,
+            List<Predicate>? predicates = null,
+            string entityName = "",
             IncrementingInteger? counter = null)
-            : base(sqlMetadataProvider, gQLFilterParser, entityName, counter)
+            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
         {
-
         }
 
         /// <summary>

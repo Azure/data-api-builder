@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
@@ -89,12 +92,70 @@ namespace Azure.DataApiBuilder.Service.Models
 
                     if (!IsScalarType(filterInputObjectType.Name))
                     {
-                        queryStructure.DatabaseObject.Name = sourceName + "." + name;
-                        queryStructure.SourceAlias = sourceName + "." + name;
-                        predicates.Push(new PredicateOperand(Parse(ctx,
-                            filterArgumentObject.Fields[name],
-                            subfields,
-                            queryStructure)));
+                        // For SQL i.e. when there are primary keys on the source, we need to perform a join
+                        // between the parent entity being filtered and the related entity representing the
+                        // non-scalar filter input.
+                        if (sourceDefinition.PrimaryKey.Count != 0)
+                        {
+                            InputField filterField = filterArgumentObject.Fields[name];
+
+                            string? targetGraphQLTypeForFilter = RelationshipDirectiveType.Target(filterField);
+
+                            if (targetGraphQLTypeForFilter is null)
+                            {
+                                throw new DataApiBuilderException(
+                                    message: "The GraphQL schema is missing the relationship directive on input field.",
+                                    statusCode: HttpStatusCode.InternalServerError,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                            }
+
+                            string nestedFilterEntityName = _metadataProvider.GetEntityName(targetGraphQLTypeForFilter);
+                            DatabaseObject databaseObjectForNestedFilter =
+                                _metadataProvider.GetDatabaseObjectForGraphQLType(targetGraphQLTypeForFilter);
+
+                            List<Predicate> predicatesForExistsQuery = new();
+
+                            // Create an SqlExistsQueryStructure as the predicate operand of Exists predicate
+                            // This query structure has no order by, no limit and selects 1
+                            // its predicates are obtained from recursively parsing the nested filter
+                            // and an additional predicate to reflect the join between main query and this exists subquery.
+                            SqlExistsQueryStructure existsQuery = new(
+                                ctx,
+                                _metadataProvider,
+                                queryStructure.AuthorizationResolver,
+                                this,
+                                predicatesForExistsQuery,
+                                nestedFilterEntityName,
+                                queryStructure.Counter);
+
+                            // Recursively parse and obtain the predicates for the Exists clause subquery
+                            Predicate existsQueryFilterPredicate = Parse(ctx,
+                                    filterArgumentObject.Fields[name],
+                                    subfields,
+                                    existsQuery);
+                            predicatesForExistsQuery.Push(existsQueryFilterPredicate);
+
+                            // Add JoinPredicates to the subquery query structure so a predicate connecting
+                            // the outer table is added to the where clause of subquery
+                            predicatesForExistsQuery.Push(queryStructure.CreateJoinPredicates());
+
+                            // Build the exists clause subquery so that it becomes its text becomes the right operand
+                            PredicateOperand right = new(existsQuery);
+
+                            // Create a new unary Exists Predicate chain it with rest of the existing predicates.
+                            Predicate existsPredicate = new(left: null, PredicateOperation.EXISTS, right);
+
+                            predicates.Push(new PredicateOperand(existsPredicate));
+                        }
+                        else
+                        {
+                            queryStructure.DatabaseObject.Name = sourceName + "." + name;
+                            queryStructure.SourceAlias = sourceName + "." + name;
+                            predicates.Push(new PredicateOperand(Parse(ctx,
+                                filterArgumentObject.Fields[name],
+                                subfields,
+                                queryStructure)));
+                        }
                     }
                     else
                     {

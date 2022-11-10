@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.Resolvers;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Azure.DataApiBuilder.Service.Models
 {

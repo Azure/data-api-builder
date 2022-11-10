@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -5,7 +6,6 @@ using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
-using System.Collections.Generic;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// WHERE[table1].[column] = <value>
     /// )
     /// </summary>
-    public class SqlExistsQueryStructure: BaseSqlQueryStructure
+    public class SqlExistsQueryStructure : BaseSqlQueryStructure
     {
         /// <summary>
         /// Constructor for Exists query.

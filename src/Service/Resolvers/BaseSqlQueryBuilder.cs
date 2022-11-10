@@ -268,7 +268,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             if (predicate.Left is not null)
             {
                 // For Binary predicates:
-                 predicateString.Append($"{Build(predicate.Left)} {Build(predicate.Op)} {Build(predicate.Right)}");
+                predicateString.Append($"{Build(predicate.Left)} {Build(predicate.Op)} {Build(predicate.Right)}");
             }
             else
             {

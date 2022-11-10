@@ -14,9 +14,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// e.g.
     /// EXISTS (
     /// SELECT 1
-    /// FROM <sourcename>
-    /// AS [table1]
-    /// WHERE[table1].[column] = <value>
+    /// FROM <sourcename> AS <sourcealias>
+    /// WHERE <sourcealias>.[column] = <value>
     /// )
     /// </summary>
     public class SqlExistsQueryStructure : BaseSqlQueryStructure

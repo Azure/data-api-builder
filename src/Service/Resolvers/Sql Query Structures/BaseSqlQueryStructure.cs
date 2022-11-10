@@ -126,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="targetEntityName"></param>
         /// <param name="subtableAlias"></param>
         /// <param name="subQuery"></param>
-        public void AddJoinPredicatesForSubQuery(
+        public void AddJoinPredicatesForRelatedEntity(
             string targetEntityName,
             string subtableAlias,
             BaseSqlQueryStructure subQuery)

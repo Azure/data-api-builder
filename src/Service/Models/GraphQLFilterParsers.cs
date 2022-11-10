@@ -137,11 +137,12 @@ namespace Azure.DataApiBuilder.Service.Models
 
                             // Add JoinPredicates to the subquery query structure so a predicate connecting
                             // the outer table is added to the where clause of subquery
-                            predicatesForExistsQuery.Push(
-                                existsQuery.AddJoinPredicatesForSubQuery(
-                                    ));
+                            existsQuery.AddJoinPredicatesForRelatedEntity(
+                                queryStructure.EntityName,
+                                queryStructure.SourceAlias,
+                                existsQuery);
 
-                            // Build the exists clause subquery so that it becomes its text becomes the right operand
+                            // The right operand is the SqlExistsQueryStructure.
                             PredicateOperand right = new(existsQuery);
 
                             // Create a new unary Exists Predicate chain it with rest of the existing predicates.

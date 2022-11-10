@@ -660,7 +660,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     string targetEntityName = subunderlyingType.Name;
                     string subtableAlias = subquery.SourceAlias;
 
-                    AddJoinPredicatesForSubQuery(targetEntityName, subtableAlias, subquery);
+                    AddJoinPredicatesForRelatedEntity(targetEntityName, subtableAlias, subquery);
 
                     string subqueryAlias = $"{subtableAlias}_subq";
                     JoinQueries.Add(subqueryAlias, subquery);

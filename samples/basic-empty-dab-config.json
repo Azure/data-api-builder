@@ -1,5 +1,5 @@
 {
-    "$schema": "../schemas/dab.draft-01.schema.json",
+    "$schema": "https://dataapibuilder.blob.core.windows.net/schemas/v0.3.7-alpha/dab.draft.schema.json",
     "data-source": {
         "database-type": "",
         "connection-string": ""

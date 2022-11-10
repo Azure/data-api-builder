@@ -74,7 +74,7 @@ echo "configure webapp appsettings" | tee -a log.txt
 az webapp config appsettings set -g $RESOURCE_GROUP -n $APP_NAME --settings WEBSITES_PORT=5000 \
     -o json >> log.txt
 
-DAB_CONFIG_FILE_NAME=${DAB_CONFIG_FILE##*/}
+DAB_CONFIG_FILE_NAME=${DAB_CONFIG_FILE}
 echo "updating webapp siteConfig to use $DAB_CONFIG_FILE_NAME" | tee -a log.txt
 az webapp update -g $RESOURCE_GROUP -n $APP_NAME --set siteConfig.appCommandLine="dotnet Azure.DataApiBuilder.Service.dll --ConfigFileName /App/config/$DAB_CONFIG_FILE_NAME" \
     -o json >> log.txt

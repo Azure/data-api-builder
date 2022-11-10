@@ -1,4 +1,4 @@
-# Views ans Stored Procedures
+# Views and Stored Procedures
 
 - [Views](#views)
 - [Stored Procedures](#stored-procedures)
@@ -43,7 +43,7 @@ A view, from a GraphQL perspective, behaves like a table. All GraphQL operations
 
 ## Stored procedures
 
-Stored procedures con be used as objects related to entities exposed by Data API Builder. Stored Procedure usage must be defined specifying that the source type for the entity is `stored-procedure`.
+Stored procedures can be used as objects related to entities exposed by Data API Builder. Stored Procedure usage must be defined specifying that the source type for the entity is `stored-procedure`.
 
 If you have a stored procedure, for example [`dbo.stp_get_all_cowritten_books_by_author`](../samples/getting-started/azure-sql-db/library.azure-sql.sql#L138) it can be exposed using the following `dab` command:
 
@@ -73,7 +73,7 @@ The `parameters` object is optional, and is used to provide default values to be
 
 **ATTENTION**: Only the first result set returned by the stored procedure will be used by Data API Builder.
 
-Please note that **you should configure the permission accordingly with the stored procedure behavior**. For example, if a Stored Procedure create a new item in the database, it is recommended to allow only the action `insert` for such stored procedure. If, like in the sample, a stored procedure returns some data, it is recommended to allow only the action `read`. In general the recommendation is to align the allowed actions to what the stored procedure does, so to provide a consistent experience to the developer.
+Please note that **you should configure the permission accordingly with the stored procedure behavior**. For example, if a Stored Procedure create a new item in the database, it is recommended to allow only the action `create` for such stored procedure. If, like in the sample, a stored procedure returns some data, it is recommended to allow only the action `read`. In general the recommendation is to align the allowed actions to what the stored procedure does, so to provide a consistent experience to the developer.
 
 ### REST support for stored procedures
 

@@ -31,7 +31,7 @@ Views are now supported both in REST and GraphQL. If you have a view, for exampl
 dab add BookDetail --source dbo.vw_books_details --source.type View --source.key-fields "id" --permissions "anonymous:read"
 ```
 
-the `source.key-fields` option is used to specify which fields from the view are used to uniquely identify an item, so that navigation by primary key can be implemented also for views. Is responsibility of the developer configuring DAB to enable or disable actions (for example, the `insert` action) depending on if the view is updatable or not.
+the `source.key-fields` option is used to specify which fields from the view are used to uniquely identify an item, so that navigation by primary key can be implemented also for views. Its the responsibility of the developer configuring DAB to enable or disable actions (for example, the `create` action) depending on if the view is updatable or not.
 
 ### Stored Procedures Support
 
@@ -48,7 +48,7 @@ The parameter can be passed in the URL query string when calling the REST endpoi
 http://<dab-server>/api/GetCowrittenBooksByAuthor?author=isaac%20asimov
 ```
 
-Is responsibility of the developer configuring DAB to enable or disable actions (for example, the `insert` action) to allow or deny specific HTTP verbs to be used when calling the stored procedure. For example, for the stored procedure used in the example, given that its purpose is to return some data, it would make sense to only allow the `read` action.
+Its the responsibility of the developer configuring DAB to enable or disable actions (for example, the `create` action) to allow or deny specific HTTP verbs to be used when calling the stored procedure. For example, for the stored procedure used in the example, given that its purpose is to return some data, it would make sense to only allow the `read` action.
 
 ### Azure Active Directory Authentication
 

@@ -15,12 +15,12 @@ One way to get a JWT token that can be used to send authenticate request to Data
 
 1. [Configure AZ CLI to get an authentication token](#configure-az-cli-to-get-an-authentication-token)
 
-Now that you have a way to get an valid JWT token, you can use it call a Data API Builder endpoint:
+Now that you have a way to get a valid JWT token, you can use it to call a Data API Builder endpoint:
 
 1. [Update Data API Builder configuration file](#update-data-api-builder-configuration-file)
 1. [Send authenticated request to Data API Builder](#send-authenticated-request-to-data-api-builder)
 
-You may prefer to use a third party application like PostMan to send authenticated request to Data API Builder:
+If you prefer to use a third party application like PostMan to send authenticated request to Data API Builder, follow these steps:
 
 1. [Create Postman Client App Registration](#create-postman-client-app-registration)
 1. [Postman Configuration](#postman-configuration)
@@ -79,7 +79,7 @@ Note: The following steps can also be found in the Microsoft Doc: [QuickStart: C
    2. Select a role: choose a role you want to assign to your account. (Note: if you don't see your role, wait a few minutes for Azure AD replication to finish from when you added the role to your App Registration earlier.)
    3. Repeat this step for all the roles you want to add to your account.
 
-Where is the`APP_ID` is the "Application (client) ID" and the `TENANT_ID` is the "Directory (tenant) ID". Both values can be found in the App Registration overview page in the Azure Active Directory blade.
+Where the`APP_ID` is the "Application (client) ID" and the `TENANT_ID` is the "Directory (tenant) ID". Both values can be found in the App Registration overview page in the Azure Active Directory blade.
 
 ## Configure AZ CLI to get an authentication token
 
@@ -95,7 +95,7 @@ It should return an error like the following:
 AADSTS65001: The user or administrator has not consented to use the application with ID '<AZ CLI Application ID GUID>' named 'Microsoft Azure CLI'. Send an interactive authorization request for this user and resource.
 ```
 
-The \<AZ CLI Application ID GUID\>, which represents AZ CLI, must be allowed to authenticate against the Data API Builder Azure AD Application. To do that, search for the "Data API Builder" application in the Azure Portal or go to the Azure Active Directory portal blade and the select **App Registrations**. Select the "Data API Builder" application and then:
+The \<AZ CLI Application ID GUID\>, which represents AZ CLI, must be allowed to authenticate against the Data API Builder Azure AD Application. To do that, search for the "Data API Builder" application in the Azure Portal or go to the Azure Active Directory portal blade and select **App Registrations**. Select the "Data API Builder" application and then:
 
 1. Navigate to **Expose an API** from your App Registration overview page.
    1. Under *Authorized client applications*, select **Add a client application**
@@ -132,7 +132,7 @@ You can now use the generated Bearer Token to send authenticated request against
 
 ## Update Data API Builder configuration file
 
-Update the `dab-config.json` file so that in the authentication you'll have something like:
+Update the `dab-config.json` file so that in the `authentication` section you'll have something like:
 
 ```json
 "authentication": {
@@ -168,7 +168,7 @@ You can use any HTTP client now to send an authenticated request. Firstly get th
 az account get-access-token --scope api://<Application ID>/Endpoint.Access --query "accessToken" -o tsv
 ```
 
-then you can use the obtained access token to issue a request to a protected endpoint:
+then you can use the obtained access token to issue a successful authenticated request to a protected endpoint:
 
 ```sh
 curl -k -r GET -H 'Authorization: Bearer ey...xA' -H 'X-MS-API-ROLE: Sample.Role' https://localhost:5001/api/Book

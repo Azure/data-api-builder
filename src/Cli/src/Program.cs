@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CommandLine;
 using static Cli.Utils;
 
@@ -27,6 +28,7 @@ namespace Cli
                     bool isSuccess = ConfigGenerator.TryGenerateConfig(options);
                     if (isSuccess)
                     {
+                        Console.WriteLine($"CONNECTION STRING = {options.ConnectionString}");
                         Console.WriteLine($"Config file generated.");
                         Console.WriteLine($"SUGGESTION: Use 'dab add <options>' to add new entities in your config.");
                     }
@@ -72,7 +74,7 @@ namespace Cli
                         Console.Error.WriteLine("Failed to start the engine.");
                     }
                 });
-
+            
             return result is Parsed<object> ? 0 : -1;
         }
     }

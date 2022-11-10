@@ -243,8 +243,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         {
             IEnumerable<string> columnsRequested = new List<string>(
                 columnsRequestedInput);
-            IEnumerable<string> allowedColumns =
-                new List<string>(new string[] { "col1", "col2", "col3", "col4" });
+            IEnumerable<string> allowedColumns = new List<string>();
+
+            if (!areNoAllowedExposedColumns)
+            {
+                allowedColumns = new List<string>(new string[] { "col1", "col2", "col3", "col4" });
+            }
 
             bool areColumnsAllowed = true;
 
@@ -260,7 +264,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 Operation.Read
-                )).Returns(areNoAllowedExposedColumns ? new List<string>() : allowedColumns);
+                )).Returns(allowedColumns);
 
             string httpMethod = HttpConstants.GET;
             HttpContext httpContext = CreateHttpContext(httpMethod);

@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// The alias of the entity as used in the generated query.
         /// </summary>
-        public virtual string SourceAlias { get; set; }
+        public string SourceAlias { get; set; }
 
         /// <summary>
         /// The metadata provider of the respective database.

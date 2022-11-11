@@ -19,8 +19,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IMiddlewareContext _context;
         private readonly string _containerAlias = "c";
 
-        public override string SourceAlias { get => base.SourceAlias; set => base.SourceAlias = value; }
-
         public bool IsPaginated { get; internal set; }
 
         public string Container { get; internal set; }

@@ -566,6 +566,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                                 name
                                 homePlanet
                                 primaryFunction
+                                star{
+                                   name
+                                }
                             }
                     }
                  }
@@ -594,12 +597,45 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                                 name
                                 homePlanet
                                 primaryFunction
+                                star{
+                                   name
+                                }
                             }
                     }
                  }
             }";
 
             string dbQuery = "SELECT top 1 c.id, c.name, c.character FROM c where c.character.name = \"planet character\" and c.name=\"Endor\"";
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
+        /// Test filters on nested object
+        /// </summary>
+        [TestMethod]
+        public async Task TestFilterOnInnerNestedFields()
+        {
+            string gqlQuery = @"{
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {character : {star : {name : {eq : ""Endor_star""}}}})
+                { 
+                    items {
+                        id
+                        name
+                        character {
+                                id
+                                type
+                                name
+                                homePlanet
+                                primaryFunction
+                                star{
+                                    name
+                                }
+                            }
+                    }
+                 }
+            }";
+
+            string dbQuery = "SELECT top 1 c.id, c.name, c.character FROM c where c.character.star.name = \"Endor_star\"";
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 

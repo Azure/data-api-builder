@@ -13,15 +13,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     public class BaseQueryStructure
     {
         /// <summary>
-        /// The Entity associated with this query.
+        /// The Entity name associated with this query as appears in the config file.
         /// </summary>
         public string EntityName { get; protected set; }
 
         /// <summary>
-        /// The alias of the main entity to be queried.
+        /// The alias of the entity as used in the generated query.
         /// </summary>
         public virtual string SourceAlias { get; set; }
 
+        /// <summary>
+        /// The metadata provider of the respective database.
+        /// </summary>
         protected ISqlMetadataProvider MetadataProvider { get; }
 
         /// <summary>
@@ -58,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public GQLFilterParser GraphQLFilterParser { get; protected set; }
 
         /// <summary>
-        /// Authorization Resolver used within SqlQueryStructure to get and apply
+        /// Authorization Resolver used to get and apply
         /// authorization policies to requests.
         /// </summary>
         protected IAuthorizationResolver AuthorizationResolver { get; }
@@ -93,9 +96,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             else
             {
                 EntityName = string.Empty;
-                // This is the cosmos db metadata scenario
-                // where the table name is the Source Alias i.e. container alias
-                DatabaseObject = new DatabaseTable(string.Empty, SourceAlias);
+                DatabaseObject =
+                    new DatabaseTable(schemaName: string.Empty, tableName: string.Empty);
             }
         }
 

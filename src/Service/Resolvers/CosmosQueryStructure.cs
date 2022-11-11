@@ -40,6 +40,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             _context = context;
             SourceAlias = _containerAlias;
+            DatabaseObject.Name = _containerAlias;
             Init(parameters);
         }
 

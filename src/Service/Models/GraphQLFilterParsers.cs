@@ -17,15 +17,11 @@ namespace Azure.DataApiBuilder.Service.Models
     {
         public static readonly string NullStringValue = "NULL";
 
-        private readonly ISqlMetadataProvider _metadataProvider;
-
         /// <summary>
         /// Constructor for the filter parser.
         /// </summary>
-        /// <param name="metadataProvider">The metadata provider of the respective database.</param>
-        public GQLFilterParser(ISqlMetadataProvider metadataProvider)
+        public GQLFilterParser()
         {
-            _metadataProvider = metadataProvider;
         }
 
         /// <summary>

@@ -210,6 +210,15 @@ namespace Azure.DataApiBuilder.Service.Models
         }
 
         /// <summary>
+        /// Resolve operand as a BaseSqlQueryStructure
+        /// </summary>
+        /// <returns> null if operand is not intialized as BaseSqlQueryStructure </returns>
+        public BaseSqlQueryStructure? AsSqlQueryStructure()
+        {
+            return _queryStructure;
+        }
+
+        /// <summary>
         /// Used to check if the predicate operand is a predicate itself
         /// </summary>
         public bool IsPredicate()

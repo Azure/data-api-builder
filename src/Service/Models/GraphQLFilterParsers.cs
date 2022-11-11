@@ -99,9 +99,9 @@ namespace Azure.DataApiBuilder.Service.Models
                         {
                             InputField filterField = filterArgumentObject.Fields[name];
 
-                            string? targetGraphQLTypeForFilter = RelationshipDirectiveType.Target(filterField);
+                            string? targetGraphQLTypeNameForFilter = RelationshipDirectiveType.Target(filterField);
 
-                            if (targetGraphQLTypeForFilter is null)
+                            if (targetGraphQLTypeNameForFilter is null)
                             {
                                 throw new DataApiBuilderException(
                                     message: "The GraphQL schema is missing the relationship directive on input field.",
@@ -109,9 +109,9 @@ namespace Azure.DataApiBuilder.Service.Models
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                             }
 
-                            string nestedFilterEntityName = _metadataProvider.GetEntityName(targetGraphQLTypeForFilter);
+                            string nestedFilterEntityName = _metadataProvider.GetEntityName(targetGraphQLTypeNameForFilter);
                             DatabaseObject databaseObjectForNestedFilter =
-                                _metadataProvider.GetDatabaseObjectForGraphQLType(targetGraphQLTypeForFilter);
+                                _metadataProvider.GetDatabaseObjectForGraphQLType(targetGraphQLTypeNameForFilter);
 
                             List<Predicate> predicatesForExistsQuery = new();
 
@@ -130,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Models
 
                             // Recursively parse and obtain the predicates for the Exists clause subquery
                             Predicate existsQueryFilterPredicate = Parse(ctx,
-                                    filterArgumentObject.Fields[name],
+                                    filterField,
                                     subfields,
                                     existsQuery);
                             predicatesForExistsQuery.Push(existsQueryFilterPredicate);
@@ -149,6 +149,10 @@ namespace Azure.DataApiBuilder.Service.Models
                             Predicate existsPredicate = new(left: null, PredicateOperation.EXISTS, right);
 
                             predicates.Push(new PredicateOperand(existsPredicate));
+                            foreach ((string key, object? value) in existsQuery.Parameters)
+                            {
+                                queryStructure.Parameters.Add(key, value);
+                            }
                         }
                         else
                         {

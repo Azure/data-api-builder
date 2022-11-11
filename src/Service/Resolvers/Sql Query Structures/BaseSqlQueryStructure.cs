@@ -24,12 +24,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     public abstract class BaseSqlQueryStructure : BaseQueryStructure
     {
         /// <summary>
-        /// The underlying type of the type returned by this query see, the
-        /// comment on UnderlyingGraphQLEntityType to understand what an underlying type is.
-        /// </summary>
-        protected ObjectType _underlyingFieldType = null!;
-
-        /// <summary>
         /// All tables/views that should be in the FROM clause of the query.
         /// All these objects are linked via an INNER JOIN.
         /// </summary>
@@ -132,8 +126,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             BaseSqlQueryStructure subQuery)
         {
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
+            DatabaseObject relatedEntityDbObject = MetadataProvider.EntityToDatabaseObject[targetEntityName];
             if (sourceDefinition.SourceEntityRelationshipMap.TryGetValue(
-                _underlyingFieldType.Name, out RelationshipMetadata? relationshipMetadata)
+                EntityName, out RelationshipMetadata? relationshipMetadata)
                 && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
                     out List<ForeignKeyDefinition>? foreignKeyDefinitions))
             {
@@ -161,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                 foreignKeyDefinition.ReferencedColumns));
                         }
                     }
-                    else if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(subQuery.DatabaseObject))
+                    else if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(relatedEntityDbObject))
                     {
                         // Case where fk in nested entity references the parent entity.
                         if (foreignKeyDefinition.ReferencingColumns.Count() > 0

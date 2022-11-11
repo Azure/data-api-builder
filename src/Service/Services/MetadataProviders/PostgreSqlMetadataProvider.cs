@@ -9,7 +9,7 @@ using Npgsql;
 namespace Azure.DataApiBuilder.Service.Services
 {
     /// <summary>
-    /// PostgreSql specific override for MetadataProvider.
+    /// PostgreSql specific override for SqlMetadataProvider.
     /// All the method definitions from base class are sufficient
     /// this class is only created for symmetricity with MySql
     /// and ease of expanding the generics specific to PostgreSql.

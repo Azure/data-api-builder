@@ -12,7 +12,7 @@ using MySqlConnector;
 namespace Azure.DataApiBuilder.Service.Services
 {
     /// <summary>
-    /// MySQL specific override for MetadataProvider
+    /// MySQL specific override for SqlMetadataProvider
     /// </summary>
     public class MySqlMetadataProvider : SqlMetadataProvider<MySqlConnection, MySqlDataAdapter, MySqlCommand>, ISqlMetadataProvider
     {

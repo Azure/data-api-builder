@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace Azure.DataApiBuilder.Service.Services
 {
     /// <summary>
-    /// MsSQL specific override for MetadataProvider.
+    /// MsSQL specific override for SqlMetadataProvider.
     /// All the method definitions from base class are sufficient
     /// this class is only created for symmetricity with MySql
     /// and ease of expanding the generics specific to MsSql.

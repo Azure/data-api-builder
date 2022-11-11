@@ -28,12 +28,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public class SqlQueryStructure : BaseSqlQueryStructure
     {
-        /// <summary>
-        /// Authorization Resolver used within SqlQueryStructure to get and apply
-        /// authorization policies to requests.
-        /// </summary>
-        protected IAuthorizationResolver AuthorizationResolver { get; }
-
         public const string DATA_IDENT = "data";
 
         /// <summary>

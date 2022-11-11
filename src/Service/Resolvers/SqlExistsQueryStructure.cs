@@ -34,6 +34,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IncrementingInteger? counter = null)
             : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
         {
+            SourceAlias = CreateTableAlias();
             // Get HttpContext from IMiddlewareContext and fail if resolved value is null.
             if (!ctx.ContextData.TryGetValue(nameof(HttpContext), out object? httpContextValue))
             {

@@ -69,16 +69,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private uint? _limit = DEFAULT_LIST_LIMIT;
 
         /// <summary>
-        /// The underlying type of the type returned by this query see, the
-        /// comment on UnderlyingGraphQLEntityType to understand what an underlying type is.
-        /// </summary>
-        ObjectType _underlyingFieldType = null!;
-
-        /// <summary>
         /// If this query is built because of a GraphQL query (as opposed to
         /// REST), then this is set to the resolver context of that query.
         /// </summary>
         IMiddlewareContext? _ctx;
+
+        /// <summary>
+        /// The underlying type of the type returned by this query see, the
+        /// comment on UnderlyingGraphQLEntityType to understand what an underlying type is.
+        /// </summary>
+        ObjectType _underlyingFieldType = null!;
 
         /// <summary>
         /// Used to cache the primary key as a list of OrderByColumn

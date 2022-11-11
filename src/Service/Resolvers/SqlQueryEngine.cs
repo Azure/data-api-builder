@@ -125,6 +125,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             SqlQueryStructure structure = new(
                 context,
                 _sqlMetadataProvider,
+                _authorizationResolver,
                 _runtimeConfigProvider,
                 _gQLFilterParser);
             using JsonDocument queryJson = await ExecuteAsync(structure);

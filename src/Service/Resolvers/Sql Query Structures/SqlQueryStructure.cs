@@ -134,12 +134,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public SqlQueryStructure(
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider,
+            IAuthorizationResolver authorizationResolver,
             RuntimeConfigProvider runtimeConfigProvider,
-            GQLFilterParser gQLFilterParser) :
-                this(sqlMetadataProvider,
-                    new IncrementingInteger(),
-                    gQLFilterParser,
-                    entityName: context.EntityName)
+            GQLFilterParser gQLFilterParser)
+            : this(sqlMetadataProvider,
+                authorizationResolver,
+                gQLFilterParser,
+                predicates: null,
+                entityName: context.EntityName,
+                counter: new IncrementingInteger())
         {
             IsListQuery = context.IsMany;
             SourceAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
@@ -293,10 +296,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 IncrementingInteger counter,
                 RuntimeConfigProvider runtimeConfigProvider,
                 GQLFilterParser gQLFilterParser,
-                string entityName = ""
-        ) : this(sqlMetadataProvider, counter, gQLFilterParser, entityName: entityName)
+                string entityName = "")
+            : this (sqlMetadataProvider,
+                  authorizationResolver,
+                  gQLFilterParser,
+                  predicates: null,
+                  entityName: entityName,
+                  counter)
         {
-            AuthorizationResolver = authorizationResolver;
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
             _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
@@ -462,11 +469,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// constructors.
         /// </summary>
         private SqlQueryStructure(
-            ISqlMetadataProvider sqlMetadataProvider,
-            IncrementingInteger counter,
+            ISqlMetadataProvider metadataProvider,
+            IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            string entityName = "")
-            : base(sqlMetadataProvider, gQLFilterParser, entityName: entityName, counter: counter)
+            List<Predicate>? predicates = null,
+            string entityName = "",
+            IncrementingInteger? counter = null)
+            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
         {
             JoinQueries = new();
             Joins = new();
@@ -656,7 +665,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
 
                     IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
-                    SqlQueryStructure subquery = new(_ctx, subqueryParams, MetadataProvider, AuthorizationResolver, subschemaField, field, Counter, runtimeConfigProvider);
+                    SqlQueryStructure subquery = new(
+                        _ctx,
+                        subqueryParams,
+                        MetadataProvider,
+                        AuthorizationResolver,
+                        subschemaField,
+                        field,
+                        Counter,
+                        runtimeConfigProvider,
+                        GraphQLFilterParser);
 
                     if (PaginationMetadata.IsPaginated)
                     {

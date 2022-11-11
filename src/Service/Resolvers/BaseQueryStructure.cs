@@ -67,11 +67,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            string entityName,
+            List<Predicate>? predicates = null,
+            string entityName = "",
             IncrementingInteger? counter = null)
         {
             Columns = new();
-            Predicates = new();
+            Predicates = predicates ?? new();
             Parameters = new();
             Counter = counter ?? new IncrementingInteger();
             MetadataProvider = metadataProvider;

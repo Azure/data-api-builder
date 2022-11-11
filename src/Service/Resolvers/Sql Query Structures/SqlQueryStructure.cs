@@ -297,7 +297,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 RuntimeConfigProvider runtimeConfigProvider,
                 GQLFilterParser gQLFilterParser,
                 string entityName = "")
-            : this (sqlMetadataProvider,
+            : this(sqlMetadataProvider,
                   authorizationResolver,
                   gQLFilterParser,
                   predicates: null,

@@ -234,18 +234,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         // Negative tests where authorization fails for Find requests with no $f filter query string parameter
         [DataRow(new string[] { "col1", "col2", "col3", "col4", "col5" }, DisplayName = "Find - Request all allowed + 1 disallowed column(s)")]
         [DataRow(new string[] { "col1", "col5", "col6", "col7", "col9" }, DisplayName = "Find - Request 1 allowed + > 1 disallowed column(s)")]
-        [DataRow(new string[] { }, true, false, DisplayName = "Find - Request on entity with no included columns. The request url contains no key,select,orderby,filter.")]
+        [DataRow(new string[] { }, false, false, DisplayName = "Find - Request on entity with no included columns. The request url contains no key,select,orderby,filter.")]
         #pragma warning restore format
         [TestMethod]
         public async Task FindColumnPermissionsTests(string[] columnsRequestedInput,
-            bool areNoAllowedExposedColumns = false,
+            bool areAllowedExposedColumns = true,
             bool expectedAuthorizationResult = true)
         {
             IEnumerable<string> columnsRequested = new List<string>(
                 columnsRequestedInput);
             IEnumerable<string> allowedColumns = new List<string>();
 
-            if (!areNoAllowedExposedColumns)
+            if (areAllowedExposedColumns)
             {
                 allowedColumns = new List<string>(new string[] { "col1", "col2", "col3", "col4" });
             }

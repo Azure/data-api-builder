@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
         #region Overriden tests
         [TestMethod]
         [Ignore]
-        public override Task DeleteOneInViewBadRequestTest()
+        public override Task DeleteOneInViewBadRequestTest(string expectedErrorMessage)
         {
             throw new NotImplementedException();
         }

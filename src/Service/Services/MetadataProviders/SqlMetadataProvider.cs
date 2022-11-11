@@ -697,13 +697,13 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private async Task PopulateObjectDefinitionForEntities()
         {
-            foreach ((string entityName, Entity procedureEntity) in _entities)
+            foreach ((string entityName, Entity entity) in _entities)
             {
-                SourceType entitySourceType = procedureEntity.ObjectType;
+                SourceType entitySourceType = entity.ObjectType;
                 if (entitySourceType is SourceType.StoredProcedure)
                 {
                     await FillSchemaForStoredProcedureAsync(
-                        procedureEntity,
+                        entity,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         GetStoredProcedureDefinition(entityName));
@@ -714,7 +714,8 @@ namespace Azure.DataApiBuilder.Service.Services
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
-                        GetSourceDefinition(entityName));
+                        GetSourceDefinition(entityName),
+                        entity.KeyFields);
                 }
                 else
                 {
@@ -723,7 +724,8 @@ namespace Azure.DataApiBuilder.Service.Services
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
-                        viewDefinition);
+                        viewDefinition,
+                        entity.KeyFields);
                 }
             }
 
@@ -817,21 +819,28 @@ namespace Azure.DataApiBuilder.Service.Services
             string entityName,
             string schemaName,
             string tableName,
-            SourceDefinition sourceDefinition)
+            SourceDefinition sourceDefinition,
+            string[]? runtimeConfigKeyFields)
         {
             DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(entityName, schemaName, tableName);
 
             List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);
+            if (runtimeConfigKeyFields is null || runtimeConfigKeyFields.Length == 0)
+            {
+                sourceDefinition.PrimaryKey = new(primaryKeys.Select(primaryKey => primaryKey.ColumnName));
+            }
+            else
+            {
+                sourceDefinition.PrimaryKey = new(runtimeConfigKeyFields);
+            }
 
-            if (primaryKeys.Count == 0)
+            if (sourceDefinition.PrimaryKey.Count == 0)
             {
                 throw new DataApiBuilderException(
                        message: $"Primary key not configured on the given database object {tableName}",
                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
-
-            sourceDefinition.PrimaryKey = new(primaryKeys.Select(primaryKey => primaryKey.ColumnName));
 
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();

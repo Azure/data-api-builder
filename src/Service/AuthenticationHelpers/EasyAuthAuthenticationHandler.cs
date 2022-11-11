@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             bool isUserAnonymousOnly = false;
             foreach (Claim claim in claims)
             {
-                if (claim.Type is ClaimTypes.Role)
+                if (claim.Type is AuthenticationConfig.ROLE_CLAIM_TYPE)
                 {
                     if (claim.Value.Equals(AuthorizationType.Anonymous.ToString(),
                         StringComparison.OrdinalIgnoreCase))

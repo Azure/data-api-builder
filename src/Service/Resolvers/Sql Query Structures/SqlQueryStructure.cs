@@ -513,8 +513,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 foreach (PaginationColumn column in afterJsonValues)
                 {
                     column.TableAlias = TableAlias;
-                    column.ParamName = "@" + MakeParamWithValue(
-                            GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName));
+                    column.ParamName = column.Value is not null ?
+                        "@" + MakeParamWithValue(GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName)) :
+                        "@" + MakeParamWithValue(null);
                 }
             }
             catch (ArgumentException ex)

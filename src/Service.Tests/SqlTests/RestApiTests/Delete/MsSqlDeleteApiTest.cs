@@ -45,6 +45,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
 
         #endregion
 
+        [TestMethod]
+        public async Task DeleteOneInViewBadRequestTest()
+        {
+            string expectedErrorMessage = $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
+                                           "because the modification affects multiple base tables.";
+            await base.DeleteOneInViewBadRequestTest(expectedErrorMessage);
+        }
+
         #region RestApiTestBase Overrides
 
         public override string GetQuery(string key)

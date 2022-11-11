@@ -68,6 +68,18 @@ The configuration file has a `$schema` property as the first property in the con
 "$schema": "..."
 ```
 
+From version 0.3.7 schema is available at:
+
+```txt
+https://dataapibuilder.blob.core.windows.net/schemas/<VERSION>-alpha/dab.draft.schema.json
+```
+
+make sure to replace the **VERSION** placeholder with the version you want to use, for example:
+
+```txt
+https://dataapibuilder.blob.core.windows.net/schemas/v0.3.7-alpha/dab.draft.schema.json
+```
+
 ### Data Source
 
 The `data-source` element contains the information needed to connect to the backend database.
@@ -101,13 +113,13 @@ This section contains options that will affect the runtime behavior and/or all e
     "path": "/graphql",
   },
   "host": {
-    "mode": ["production" | "development"],
+    "mode": "production" | "development",
     "cors": {
       "origins": <array of string>,
-      "credentials": [true | false]
+      "credentials": true | false
     },
     "authentication":{
-      "provider": ["StaticWebApps" | "AppService" | "AzureAD"],
+      "provider": "StaticWebApps" | "AppService" | "AzureAD" | "Simulator",
       "jwt": {
         "audience": "",
         "issuer": ""
@@ -186,58 +198,54 @@ which instructs Data API builder runtime to expose the GraphQL type for the rela
 
 The `source` property tells Data API builder what is the underlying database object to which the exposed entity is connected to.
 
+The simplest option is to specify just the name of the table or the collection:
+
 ```json
 {
   "source": "dbo.users"
 }
 ```
 
-> **NOTE**:
-- A table or a view defined as the source must have a primary key to be usable by Data API Builder.
-- Source can either be string or DatabaseSourceObject (with properties such as source-type, parameters, and key-fields).
-- parameters is an optional property only for Stored-Procedure.
-- key-fields is an optional property only for Table/view.
-- By Default if `type` is not specified, it is inferred as Table.
+a more complete option is to specify the full description of the database if that is not a table or a collection:
 
-- Examples:
-1. **View**
 ```json
 {
-	"object": "bookView",
-	"type": "view",
-	"key-fields":["id", "regNo"]
+  "source": {
+    "object": <string>
+    "type": "view" | "stored-procedure" | "table",
+    "key-fields": <array-of-strings>
+    "parameters": {
+        "<name>": <value>,
+        ...
+        "<name>": <value>
+    }        
+  }
 }
 ```
 
-2. **Table with KeyFields**
-```json
-{
-	"object": "bookTable",
-	"type": "table",
-	"key-fields":["id", "regNo"]
-}
-```
+where
 
-3. **Table without KeyFields**
-```json
-{
-	"source": "bookTable"
-}
-```
++ `object` is the name of the database object to be used
++ `type` describes if the object is a table, a view or a stored procedure
++ `key-fields` is a list of columns to be used to uniquely identify an item. Needed if type is `view` or if type is `table` and there is no Primary Key defined on it
++ `parameters` is optional and can be used if type is `stored-procedure`. The key-value pairs specified in this object will be used to supply values to stored procedures parameters, in case those are not specified in the HTTP request
+
+More details on how to use Views and Stored Procedure in the related documentation [Views and Stored Procedures](./views-and-stored-procedures.md)
+
 ### Relationships
 
-The `relationships` section defines how an entity is related to other exposed entities and optionally provide details on what underlying database objects can be used to support such relationships. Objects defined in the `relationship` section will be exposed as GraphQL field in the related entity. The format is the following:
+The `relationships` section defines how an entity is related to other exposed entities, and optionally provides details on what underlying database objects can be used to support such relationships. Objects defined in the `relationship` section will be exposed as GraphQL field in the related entity. The format is the following:
 
 ```json
 "relationships": {
   "<relationship-name>": {
-    "cardinality": ["one"|"many"],
+    "cardinality": "one" | "many",
     "target.entity": "<entity-name>",
-    "source.fields": [<array-of-strings>],
-    "target.fields": [<array-of-strings>],
+    "source.fields": <array-of-strings>,
+    "target.fields": <array-of-strings>,
     "linking.[object|entity]": "<entity-or-db-object-name",
-    "linking.source.fields": [<array-of-strings>],
-    "linking.target.fields": [<array-of-strings>]
+    "linking.source.fields": <array-of-strings>,
+    "linking.target.fields": <array-of-strings>
   }
 }
 ```
@@ -469,4 +477,3 @@ Data API Builder will take the value of the claim named `UserId` and it will com
 
 + Binary operators [BinaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.binaryoperatorkind?view=odata-core-7.0) such as `and`, `or`, `eq`, `gt`, `lt`, and more.
 + Unary operators [UnaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.unaryoperatorkind?view=odata-core-7.0) such as the negate (`-`) and `not` operators.
-

@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public abstract string QuoteIdentifier(string ident);
 
         /// <inheritdoc />
-        public virtual string Build(SqlExistsQueryStructure structure)
+        public virtual string Build(BaseSqlQueryStructure structure)
         {
             string predicates = JoinPredicateStrings(
                        structure.DbPolicyPredicates,
@@ -35,6 +35,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             return $"SELECT 1 " +
                    $"FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                   $"AS {QuoteIdentifier(structure.SourceAlias)}" +
                    $"WHERE {predicates}";
         }
 
@@ -208,6 +209,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Column? c;
             string? s;
             Predicate? p;
+            BaseSqlQueryStructure? sqlQueryStructure;
             if ((c = operand.AsColumn()) != null)
             {
                 return Build(c);
@@ -219,6 +221,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             else if ((p = operand.AsPredicate()) != null)
             {
                 return Build(p);
+            }
+            else if ((sqlQueryStructure = operand.AsSqlQueryStructure()) is not null)
+            {
+                return Build(sqlQueryStructure);
             }
             else
             {

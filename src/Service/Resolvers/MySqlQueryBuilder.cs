@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public override string Build(SqlExistsQueryStructure structure)
+        public override string Build(BaseSqlQueryStructure structure)
         {
             string predicates = JoinPredicateStrings(
                        structure.DbPolicyPredicates,

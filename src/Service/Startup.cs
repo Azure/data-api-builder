@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
@@ -177,6 +178,7 @@ namespace Azure.DataApiBuilder.Service
             });
 
             services.AddSingleton<GraphQLSchemaCreator>();
+            services.AddSingleton<GQLFilterParser>();
             services.AddSingleton<RestService>();
             services.AddSingleton<IFileSystem, FileSystem>();
 

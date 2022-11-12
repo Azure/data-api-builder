@@ -90,7 +90,7 @@ Nested Filtering is useful to minimize the amount of data that is transferred as
     - MsSql
     For Azure SQL, the corresponding SQL query for the above example is:
 
-    Option 1:
+    Option 1: Using `EXISTS` Clause
     ```sql
     SELECT 
     TOP 100 [table0].[id] AS [id], 
@@ -117,7 +117,7 @@ Nested Filtering is useful to minimize the amount of data that is transferred as
     The plan seen for this query with `EXISTS` clause looks like:
     ![Exists_subquery_plan](./nested-filter-exists-subquery-plan.png)
 
-    Option 2:
+    Option 2: Using `INNER JOIN`
     ```sql
     SELECT 
     TOP 100 [table0].[id] AS [id], 
@@ -141,16 +141,49 @@ Nested Filtering is useful to minimize the amount of data that is transferred as
     The plan seen for this inner join query looks like:
     ![Inner_join_query_plan](./nested-filter-inner-join-plan.png)
 
-As you can see, there are two scans involved in option 1 with `EXISTS` subquery whereas option 2 with `INNER JOIN` involves one scan and one seek. Since scans are costlier than seeks, we choose option 2 with inner joins for generating the equivalent SQL query for such a GraphQL request involing nested filters.
+As you can see, there are two scans involved in option 1 with `EXISTS` subquery whereas option 2 with `INNER JOIN` involves one scan and one seek. 
 
-## Implementation Details
+Although scans are costlier than seeks, they are not always bad. The option 2 is only valid when the cardinality of the relationship is one:one. In case of many-* relationships, we need to tweak the query to include DISTINCT and GROUP BY clauses for accurate results. Due to this added complexity, we choose option 1.
 
+    ```sql
+    SELECT DISTINCT
+    TOP 100 [table0].[id] AS [id], 
+    [table0].[title] AS [title]
+    FROM 
+    [dbo].[comics] AS [table0]
+    INNER JOIN 
+      [dbo].[series] AS [table1] ON 
+      [table0].[series_id] = [table1].[id]
+      AND [table1].[name] = 'Foundation'
+    WHERE 
+    1 = 1
+    GROUP BY [table0].[id]
+    ORDER BY 
+    [table0].[id] ASC FOR JSON PATH, 
+    INCLUDE_NULL_VALUES
+    ```
+
+
+## Implementation Details for Option 1 Exists clause
+- When we parse the GraphQL filter arguments, we can identify if it is a nested filter object when the type of filter input is not a scalar i.e. NOT any of String, Boolean, Integer or Id filter input.
+- Once the nested filtering scenario is identified, we need to identify if it is a relational database(SQL) scenario or non-relational. If the source definition of the entity that is being filtered has non-zero primary key count, it is a SQL scenario.
+- Create an SqlExistsQueryStructure as the predicate operand of Exists predicate. This query structure has no order by, no limit and selects 1.
+- Its predicates are obtained from recursively parsing the nested filter and an additional predicate to reflect the join between main query and this exists subquery.
+- Recursively parse and obtain the predicates for the Exists clause subquery
+- Add JoinPredicates to the subquery query structure so a predicate connecting the outer table is added to the where clause of subquery
+- Create a new unary Exists Predicate and chain it with rest of the existing predicates, then continue with rest of the filter predicates.
+- Handle Exist clause while Building each of the Predicates.
+- Build the Exists predicate subquery using the overloaded function Build for `SqlExistsQueryStructure` to take the form: 
+`SELECT 1 FROM <nestedsourcename> WHERE <predicates> AND <parent_pk> = <nestedsource_pk>` The join predicates will be different based on the kind of relationship
+and might involve an inner join if there is an associative table.
+
+## Implementation for Option 2 Inner Join (Not chosen)
 - When we parse the GraphQL filter arguments, we can identify if it is a nested filter object when the type of filter input is not a scalar i.e. NOT any of String, Boolean, Integer or Id filter input. 
 - Once the nested filtering scenario is identified, we need to identify if it is a relational database(SQL) scenario or non-relational. If the source definition of the entity that is being filtered has non-zero primary key count, it is a SQL scenario. 
 - Create a `SqlJoinStructure` for the nested filter object e.g. `series` so as to join with the parent entity - `comics`. The join predicate will be equality of primary keys of the nested and parent entities.
 - Add this `SqlJoinStructure` to the `Joins` list property of the `SqlQueryStructure` representing the parent (`comics`).
 - Recursively parse and obtain the predicates on the nested filter object while passing the original `Joins` property to subsequent recursive calls.
 - All additional scalar predicates obtained from recursively parsing the nested filter object are added to the `SqlJoinStructure` corresponding to that nested filter.
-- Create `SqlJoinStructure` for each subsequent recursive nested filter with join predicates between the caller and the called entities. For example, if `series` were to be further filtered based on its related `author` entity, we would create the `SqlJoinStructure` for `author` with have join predicates between primary key of `series` and `author`. However, we add this `SqlJoinStructure` to the same `Joins` property of the original parent entity that is passed down. This flattens all the inner joins and all the additional scalar predicates are appropriately added to the correct `SqlJoinStructure`.
+- Create `SqlJoinStructure` for each subsequent recursive nested filter with join predicates between the caller and the called entities. For example, if `series` were to be further filtered based on its related `author` entity, we would create the `SqlJoinStructure` for `author` with join predicates between primary key of `series` and `author`. However, we add this `SqlJoinStructure` to the same `Joins` property of the original parent entity that is passed down. This flattens all the inner joins and all the additional scalar predicates are appropriately added to the correct `SqlJoinStructure`.
 - Continue with rest of the filters on the parent entity and eventually return a chain of predicates from the filter parser. If there were only nested filters, we wouldn't see any additional `WHERE` clause predicates - only joins.
-- Build the join clause while building the original query structure by an `INNER JOIN`s for each of the `SqlJoinStructure` in the `Joins` list property.
+- Build the join clause while building the original query structure with `INNER JOIN`s for each of the `SqlJoinStructure`s in the `Joins` list property.

@@ -43,7 +43,11 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                     name = "planet character",
                     type = "Mars",
                     homePlanet = 1,
-                    primaryFunction = "test function"
+                    primaryFunction = "test function",
+                    star = new
+                    {
+                        name = name + "_star"
+                    }
                 }
             };
         }

@@ -14,7 +14,7 @@ variables:
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
   major: 0
-  minor: 3
+  minor: 4
   # Maintain a separate patch value between CI and PR runs.
   # The counter is reset when the minor version is updated.
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
@@ -80,7 +80,7 @@ steps:
     command: custom
     custom: pack
     projects: '**/*.sln'
-    arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion)' 
+    arguments: '-p:generateConfigFiles=true --configuration $(buildConfiguration) -p:Version=$(dabVersion)' 
 
 - task: DotNetCoreCLI@2
   displayName: "Run Unit Tests"

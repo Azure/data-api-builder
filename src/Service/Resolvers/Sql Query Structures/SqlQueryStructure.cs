@@ -146,19 +146,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IsListQuery = context.IsMany;
             TableAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
             AddFields(context, sqlMetadataProvider);
-            if (Columns.Count == 0)
-            {
-                SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
-                foreach (KeyValuePair<string, ColumnDefinition> column in sourceDefinition.Columns)
-                {
-                    // We only include columns that are exposed for use in requests
-                    if (sqlMetadataProvider.TryGetExposedColumnName(EntityName, column.Key, out string? name))
-                    {
-                        AddColumn(column.Key, name!);
-                    }
-                }
-            }
-
             foreach (KeyValuePair<string, object> predicate in context.PrimaryKeyValuePairs)
             {
                 sqlMetadataProvider.TryGetBackingColumn(EntityName, predicate.Key, out string? backingColumn);
@@ -513,8 +500,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 foreach (PaginationColumn column in afterJsonValues)
                 {
                     column.TableAlias = TableAlias;
-                    column.ParamName = "@" + MakeParamWithValue(
-                            GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName));
+                    column.ParamName = column.Value is not null ?
+                        "@" + MakeParamWithValue(GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName)) :
+                        "@" + MakeParamWithValue(null);
                 }
             }
             catch (ArgumentException ex)

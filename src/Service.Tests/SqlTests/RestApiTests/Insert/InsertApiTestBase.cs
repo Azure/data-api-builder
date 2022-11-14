@@ -1,6 +1,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -54,6 +55,51 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
+        /// Tests insertion on simple/composite views.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task InsertOneInViewTest()
+        {
+            // Insert on simple view containing all fields from base table.
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _simple_all_books,
+                sqlQuery: GetQuery("InsertOneInBooksViewAll"),
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created
+            );
+
+            // Insertion on a simple view based on one table where not
+            // all the fields from base table are selected in view.
+            // The missing field has to be nullable or has default value.
+            requestBody = @"
+            {
+                ""categoryid"": 4,
+                ""pieceid"": 1,
+                ""categoryName"": ""SciFi""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("InsertOneInStocksViewSelected"),
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created
             );
         }
 
@@ -363,6 +409,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
+        /// Tests that a cast failure of primary key value type results in HTTP 400 Bad Request.
+        /// e.g. Attempt to cast a string '{}' to the 'publisher_id' column type of int will fail.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertWithUncastablePKValue()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""BookTitle"",
+                ""publisher_id"": ""StringFailsToCastToInt""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: null,
+                operationType: Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: "Parameter \"StringFailsToCastToInt\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
         /// Tests the InsertOne functionality with a missing field in the request body:
         /// A non-nullable field in the Json Body is missing.
         /// </summary>
@@ -484,6 +556,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: "BadRequest",
                 expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        /// <summary>
+        /// Test to verify that we throw exception for invalid/bad
+        /// insert requests on views.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task InsertOneInViewBadRequestTest(string expectedErrorMessage)
+        {
+            // Request trying to modify fields from multiple base tables will fail .
+            string requestBody = @"
+            {
+                ""name"": ""new publisher"",
+                ""title"": ""New Book""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _composite_subset_bookPub,
+                sqlQuery: string.Empty,
+                operationType: Operation.Insert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: expectedErrorMessage,
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
                 );
         }
 

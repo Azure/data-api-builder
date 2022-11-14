@@ -166,8 +166,43 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 $"INSERT INTO { _integrationTableName } " +
                 $"(id, title, publisher_id)" +
                 $"VALUES (1000,'The Hobbit Returns to The Shire',1234)"
+            },
+            {
+                "PatchOneInsertInStocksViewSelected",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE categoryid = 4 AND pieceid = 1
+                        LIMIT 1
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOneUpdateStocksViewSelected",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE categoryid = 2 AND pieceid = 1
+                        LIMIT 1
+                    ) AS subq
+                "
             }
         };
+
+        [TestMethod]
+        public async Task PatchOneViewBadRequestTest()
+        {
+            string expectedErrorMessage = $"55000: cannot update view \"{_composite_subset_bookPub}\"";
+            await base.PatchOneViewBadRequestTest(expectedErrorMessage);
+        }
+
+        #region Overriden tests
+
+        #endregion
 
         #region Test Fixture Setup
 

@@ -10,6 +10,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
     {
         protected static readonly string _integrationEntityName = "Book";
         protected static readonly string _integrationTableName = "books";
+        protected static readonly string _foreignKeyTableName = "publishers";
         protected static readonly string _entityWithCompositePrimaryKey = "Review";
         protected static readonly string _tableWithCompositePrimaryKey = "reviews";
         protected const int STARTING_ID_FOR_TEST_INSERTS = 5001;
@@ -33,6 +34,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _emptyTableEntityName = "Empty";
         protected static readonly string _emptyTableTableName = "empty_table";
         protected static readonly string _simple_all_books = "books_view_all";
+        protected static readonly string _book_view_with_key_and_mapping = "books_view_with_mapping";
         protected static readonly string _simple_subset_stocks = "stocks_view_selected";
         protected static readonly string _composite_subset_bookPub = "books_publishers_view_composite";
         protected static readonly string _integrationProcedureFindMany_EntityName = "GetBooks";
@@ -41,6 +43,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationProcedureFindOne_ProcName = "get_book_by_id";
         protected static readonly string _integrationMappingDifferentEntityPath = "plants";
         protected static readonly string _Composite_NonAutoGenPK_EntityPath = "commodities";
+        protected static readonly string _integrationTypeEntity = "SupportedType";
+        protected static readonly string _integrationTypeTable = "type_table";
 
         public abstract string GetQuery(string key);
     }

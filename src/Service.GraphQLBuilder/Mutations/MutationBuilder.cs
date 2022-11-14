@@ -50,12 +50,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 }
             }
 
-            List<IDefinitionNode> definitionNodes = new()
+            List<IDefinitionNode> definitionNodes = new();
+            // Only add mutation type if we have fields authorized for mutation operations
+            if (mutationFields.Count() > 0)
             {
-                new ObjectTypeDefinitionNode(null, new NameNode("Mutation"), null, new List<DirectiveNode>(), new List<NamedTypeNode>(), mutationFields),
-            };
+                definitionNodes.Add(new ObjectTypeDefinitionNode(null, new NameNode("Mutation"), null, new List<DirectiveNode>(), new List<NamedTypeNode>(), mutationFields));
+                definitionNodes.AddRange(inputs.Values);
+            }
 
-            definitionNodes.AddRange(inputs.Values);
             return new(definitionNodes);
         }
 

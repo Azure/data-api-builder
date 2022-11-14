@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 5001
                      AND title = 'My New Book'
                      AND publisher_id = 1234
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -76,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 5001
                      AND title = 'My New Book'
                      AND publisher_id = 1234
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -100,11 +100,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 5001
                      AND content = 'Its a classic'
                      AND book_id = 1
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
             await InsertMutationForConstantdefaultValue(postgresQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
+        /// <code>Check: </code> If book with the given id is present in the database then
+        /// the mutation query will return the review Id with the content of the review added
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationForVariableNotNullDefault()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.categoryid AS categoryid,
+                          table0.pieceid AS pieceid
+                   FROM stocks_price AS table0
+                   WHERE categoryid = 100
+                     AND pieceid = 99
+                   ORDER BY categoryid
+                   LIMIT 1) AS subq
+            ";
+
+            await InsertMutationForVariableNotNullDefault(postgresQuery);
         }
 
         /// <summary>
@@ -122,7 +145,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                           table0.publisher_id AS publisher_id
                    FROM books AS table0
                    WHERE id = 1
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -143,7 +166,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                           table0.publisher_id AS publisher_id
                    FROM books AS table0
                    WHERE id = 1
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -199,12 +222,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                         (SELECT table1.name AS name
                          FROM publishers AS table1
                          WHERE table1.id = table0.publisher_id
-                         ORDER BY table1.id
+                         ORDER BY table1.id asc
                          LIMIT 1) AS subq2) AS table1_subq ON TRUE
                    WHERE table0.id = 5001
                      AND table0.title = 'My New Book'
                      AND table0.publisher_id = 1234
-                   ORDER BY table0.id
+                   ORDER BY table0.id asc
                    LIMIT 1) AS subq3
             ";
 
@@ -227,7 +250,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 800
                      AND title = 'New Magazine'
                      AND issue_number IS NULL
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -250,7 +273,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 801
                      AND title = 'New Magazine 2'
                      AND issue_number IS NULL
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -271,7 +294,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    FROM foo.magazines AS table0
                    WHERE id = 1
                      AND issue_number IS NULL
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -294,7 +317,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 1
                      AND title = 'Newest Magazine'
                      AND issue_number = 1234
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
@@ -318,11 +341,108 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    WHERE id = 5001
                      AND title = 'My New Book'
                      AND publisher_id = 1234
-                   ORDER BY id
+                   ORDER BY id asc
                    LIMIT 1) AS subq
             ";
 
             await TestAliasSupportForGraphQLMutationQueryFields(postgresQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>insert into a simple view
+        /// <code>Check: </code> that the new entry is in the view
+        /// </summary>
+        [TestMethod]
+        public async Task InsertIntoSimpleView()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.title AS title
+                   FROM books_view_all AS table0
+                   WHERE id = 5001
+                     AND title = 'Book View'
+                     AND publisher_id = 1234
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            await InsertIntoSimpleView(postgresQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Update a simple view
+        /// <code>Check: </code> the updated entry is present in the view
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateSimpleView()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.title AS title
+                   FROM books_view_all AS table0
+                   WHERE id = 1
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            await UpdateSimpleView(postgresQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Delete an entry from a simple view
+        /// <code>Check: </code>if the mutation returned result is as expected and if the entry that id has been deleted
+        /// </summary>
+        [TestMethod]
+        public async Task DeleteFromSimpleView()
+        {
+            string postgresQueryForResult = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.title AS title
+                   FROM books_view_all AS table0
+                   WHERE id = 1
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            string postgresQueryToVerifyDeletion = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT COUNT(*) AS COUNT
+                   FROM books_view_all AS table0
+                   WHERE id = 1) AS subq
+            ";
+
+            await DeleteFromSimpleView(postgresQueryForResult, postgresQueryToVerifyDeletion);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>insert into an "insertable" complex view
+        /// <code>Check: </code> that the new entry is in the view
+        /// </summary>
+        [TestMethod]
+        public async Task InsertIntoInsertableComplexView()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.title AS title,
+                          table0.publisher_id AS publisher_id
+                   FROM books_publishers_view_composite_insertable AS table0
+                   WHERE id = 5001
+                     AND title = 'Book Complex View'
+                     AND publisher_id = 1234
+                   ORDER BY id
+                   LIMIT 1) AS subq
+            ";
+
+            await InsertIntoInsertableComplexView(postgresQuery);
         }
 
         #endregion

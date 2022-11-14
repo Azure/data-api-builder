@@ -330,12 +330,6 @@ WHERE
         }
 
         /// <inheritdoc/>
-        public string BuildViewColumnsDetailsQuery(int numberOfParameters)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc/>
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
         {
             throw new NotImplementedException();

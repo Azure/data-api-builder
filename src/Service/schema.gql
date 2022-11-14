@@ -3,7 +3,8 @@ type Character @model(name:"Character") {
     name : String,
     type: String,
     homePlanet: Int,
-    primaryFunction: String
+    primaryFunction: String,
+    star: Star
 }
 
 type Planet @model(name:"Planet"){
@@ -15,7 +16,7 @@ type Planet @model(name:"Planet"){
     stars: [Star]
 }
 
-type Star @model(name:"Star"){
+type Star @model(name:"StarAlias"){
     id : ID,
     name : String
 }

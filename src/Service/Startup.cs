@@ -6,9 +6,11 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.AuthenticationHelpers;
+using Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Services.MetadataProviders;
@@ -192,6 +194,14 @@ namespace Azure.DataApiBuilder.Service
             services.AddControllers();
         }
 
+        /// <summary>
+        /// Configure GraphQL services within the service collection of the
+        /// request pipeline.
+        /// - AllowIntrospection defaulted to false so HotChocolate configures a request validation rule
+        /// that checks for the presence of the GraphQL context key WellKnownContextData.IntrospectionAllowed
+        /// when determining whether to allow introspection requests to proceed.
+        /// </summary>
+        /// <param name="services">Service Collection</param>
         private void AddGraphQL(IServiceCollection services)
         {
             services.AddGraphQLServer()
@@ -201,7 +211,9 @@ namespace Azure.DataApiBuilder.Service
                         GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
                         graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
                     })
+                    .AddHttpRequestInterceptor<IntrospectionInterceptor>()
                     .AddAuthorization()
+                    .AllowIntrospection(false)
                     .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
                     .AddErrorFilter(error =>
                     {
@@ -244,10 +256,19 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
+                if (_logger is not null && runtimeConfigProvider.RuntimeConfigPath is not null)
+                {
+                    _logger.LogInformation($"Loading config file: {runtimeConfigProvider.RuntimeConfigPath!.ConfigFileName}");
+                }
+
                 if (!isRuntimeReady)
                 {
                     // Exiting if config provided is Invalid.
-                    _logger.LogError("Exiting the runtime engine...");
+                    if (_logger is not null)
+                    {
+                        _logger.LogError("Exiting the runtime engine...");
+                    }
+
                     throw new ApplicationException(
                         "Could not initialize the engine with the runtime config file: " +
                         $"{runtimeConfigProvider.RuntimeConfigPath!.ConfigFileName}");
@@ -269,6 +290,9 @@ namespace Azure.DataApiBuilder.Service
 
             app.UseHttpsRedirection();
 
+            // URL Rewrite middleware MUST be called prior to UseRouting().
+            // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location
+            app.UsePathRewriteMiddleware();
             app.UseRouting();
 
             // Adding CORS Middleware
@@ -327,7 +351,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 endpoints.MapControllers();
 
-                endpoints.MapGraphQL("/graphql").WithOptions(new GraphQLServerOptions
+                endpoints.MapGraphQL(GlobalSettings.GRAPHQL_DEFAULT_PATH).WithOptions(new GraphQLServerOptions
                 {
                     Tool = {
                         // Determines if accessing the endpoint from a browser
@@ -359,19 +383,24 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
         private static void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
         {
-            if (runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            if (runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig) && runtimeConfig.AuthNConfig != null)
             {
-                if (runtimeConfig!.AuthNConfig != null &&
-                    !runtimeConfig.IsEasyAuthAuthenticationProvider())
+                if (runtimeConfig.IsJwtConfiguredIdentityProvider())
                 {
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(options =>
                     {
                         options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
                         options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
+                        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
+                        {
+                            // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInrole()
+                            // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole?view=net-6.0#remarks
+                            RoleClaimType = AuthenticationConfig.ROLE_CLAIM_TYPE
+                        };
                     });
                 }
-                else if (runtimeConfig!.AuthNConfig != null)
+                else if (runtimeConfig.IsEasyAuthAuthenticationProvider())
                 {
                     services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddEasyAuthAuthentication(
@@ -379,11 +408,19 @@ namespace Azure.DataApiBuilder.Service
                                 runtimeConfig.AuthNConfig.Provider,
                                 ignoreCase: true));
                 }
+                else if (runtimeConfigurationProvider.IsDeveloperMode() && runtimeConfig.IsAuthenticationSimulatorEnabled())
+                {
+                    services.AddAuthentication(SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                        .AddSimulatorAuthentication();
+                }
                 else
                 {
-                    // Set default authentication scheme when runtime configuration
-                    // does not contain authentication settings.
-                    SetStaticWebAppsAuthentication(services);
+                    // Condition met when Jwt section (audience/authority), EasyAuth types, or Simulator (in development mode)
+                    // values are not used in the authentication section.
+                    throw new DataApiBuilderException(
+                        message: "Authentication configuration not supported.",
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
             }
             else

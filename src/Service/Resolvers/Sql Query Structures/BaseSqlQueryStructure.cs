@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="leftoverSchemaColumns"></param>
         /// <param name="updateOperations">List of Predicates representing UpdateOperations.</param>
-        /// <param name="sourceDefinition">The definition for the table.</param>
+        /// <param name="sourceDefinition">The definition for the entity (table/view).</param>
         public void AddNullifiedUnspecifiedFields(
             List<string> leftoverSchemaColumns,
             List<Predicate> updateOperations,
@@ -125,7 +125,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                throw new ArgumentException($"{columnName} is not a valid column of {DatabaseObject.Name}");
+                throw new DataApiBuilderException(
+                    message: $"{columnName} is not a valid column of {DatabaseObject.Name}",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                    );
             }
         }
 
@@ -172,7 +176,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             List<LabelledColumn> outputColumns = new();
             foreach (string columnName in GetUnderlyingSourceDefinition().Columns.Keys)
             {
-                // if column is not exposed we skip
                 if (!SqlMetadataProvider.TryGetExposedColumnName(
                     entityName: EntityName,
                     backingFieldName: columnName,
@@ -205,17 +208,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 return ParseParamAsSystemType(param, systemType);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is FormatException || e is ArgumentNullException || e is OverflowException)
             {
-                if (e is FormatException ||
-                    e is ArgumentNullException ||
-                    e is OverflowException)
-                {
-                    throw new ArgumentException($"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
-                        $"with type \"{systemType.Name}\".");
-                }
-
-                throw;
+                throw new DataApiBuilderException(
+                    message: $"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
+                        $"with type \"{systemType.Name}\".",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    innerException: e);
             }
         }
 

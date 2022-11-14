@@ -113,17 +113,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             {
                 // Assert that the expectedLocation and actualLocation are equal in case of
                 // POST operation.
-                if (httpMethod == HttpMethod.Post)
+                if (!string.IsNullOrEmpty(expectedLocationHeader))
                 {
                     // Find the actual location using the response and request uri.
-                    // Response uri = Request uri + "/" + actualLocation
-                    // For eg. POST Request URI: http://localhost/api/Review
-                    // 201 Created Response URI: http://localhost/api/Review/book_id/1/id/5001
+                    // Response LocalPath = Request LocalPath + "/" + actualLocationPath
+                    // For eg. POST Request LocalPath: /api/Review
+                    // 201 Created Response LocalPath: /api/Review/book_id/1/id/5001
                     // therefore, actualLocation = book_id/1/id/5001
-                    string responseUri = (response.Headers.Location.OriginalString);
-                    string requestUri = request.RequestUri.OriginalString;
-                    string actualLocation = responseUri.Substring(requestUri.Length + 1);
-                    Assert.AreEqual(expectedLocationHeader, actualLocation);
+                    string responseLocalPath = (response.Headers.Location.LocalPath);
+                    string requestLocalPath = request.RequestUri.LocalPath;
+                    string actualLocationPath = responseLocalPath.Substring(requestLocalPath.Length + 1);
+                    Assert.AreEqual(expectedLocationHeader, actualLocationPath);
                 }
 
                 // Assert the number of records received is equal to expected number of records.
@@ -133,7 +133,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Assert.AreEqual(actualAsDict[jsonResultTopLevelKey].Length, verifyNumRecords);
                 }
 
-                Assert.IsTrue(JsonStringsDeepEqual(expected, responseBody));
+                PerformTestEqualJsonStrings(expected, responseBody);
             }
             else
             {

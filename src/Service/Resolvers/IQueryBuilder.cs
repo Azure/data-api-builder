@@ -53,14 +53,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string BuildForeignKeyInfoQuery(int numberOfParameters, bool developerMode, ILogger logger);
 
         /// <summary>
-        /// Builds the query to obtain details about the source table,source column etc
-        /// for each column present in a view.
-        /// </summary>
-        /// <param name="numberOfParameters"></param>
-        /// <returns></returns>
-        public string BuildViewColumnsDetailsQuery(int numberOfParameters);
-
-        /// <summary>
         /// Builds the query to obtain details about the result set for stored-procedure
         /// </summary>
         /// <param name="databaseObjectName">Name of stored-procedure</param>

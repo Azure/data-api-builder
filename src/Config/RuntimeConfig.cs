@@ -71,7 +71,7 @@ namespace Azure.DataApiBuilder.Config
         Dictionary<string, Entity> Entities)
     {
         public const string SCHEMA_PROPERTY_NAME = "$schema";
-        public const string SCHEMA = "dab.draft-01.schema.json";
+        public const string SCHEMA = "dab.draft.schema.json";
 
         // use camel case
         // convert Enum to strings
@@ -128,6 +128,39 @@ namespace Azure.DataApiBuilder.Config
                 if (!entity.TryProcessGraphQLNamingConfig())
                 {
                     throw new NotSupportedException("The runtime does not support this GraphQL settings type for an entity.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Mapping GraphQL singular type To each entity name.
+        /// This is used for looking up top-level entity name with GraphQL type, GraphQL type is not matching any of the top level entity name.
+        /// Use singular field to find the top level entity name, then do the look up from the entities dictionary
+        /// </summary>
+        public void MapGraphQLSingularTypeToEntityName()
+        {
+            foreach (KeyValuePair<string, Entity> item in Entities)
+            {
+                Entity entity = item.Value;
+                string entityName = item.Key;
+
+                if (entity.GraphQL != null
+                    && entity.GraphQL is GraphQLEntitySettings)
+                {
+                    GraphQLEntitySettings? graphQL = entity.GraphQL as GraphQLEntitySettings;
+
+                    if (graphQL is null || graphQL.Type is null
+                        || (graphQL.Type is not SingularPlural && graphQL.Type is not string))
+                    {
+                        continue;
+                    }
+
+                    string? graphQLType = (graphQL.Type is SingularPlural) ? ((SingularPlural)graphQL.Type).Singular : graphQL.Type.ToString();
+
+                    if (graphQLType is not null)
+                    {
+                        GraphQLSingularTypeToEntityNameMap.TryAdd(graphQLType, entityName);
+                    }
                 }
             }
         }
@@ -210,12 +243,28 @@ namespace Azure.DataApiBuilder.Config
         [JsonIgnore]
         public HostGlobalSettings HostGlobalSettings { get; private set; } = new();
 
+        [JsonIgnore]
+        public Dictionary<string, string> GraphQLSingularTypeToEntityNameMap { get; private set; } = new();
+
         public bool IsEasyAuthAuthenticationProvider()
         {
             // by default, if there is no AuthenticationSection,
             // EasyAuth StaticWebApps is the authentication scheme.
-            return AuthNConfig is null ||
-                   AuthNConfig!.IsEasyAuthAuthenticationProvider();
+            return AuthNConfig != null &&
+                   AuthNConfig.IsEasyAuthAuthenticationProvider();
+        }
+
+        public bool IsAuthenticationSimulatorEnabled()
+        {
+            return AuthNConfig != null &&
+                AuthNConfig!.IsAuthenticationSimulatorEnabled();
+        }
+
+        public bool IsJwtConfiguredIdentityProvider()
+        {
+            return AuthNConfig != null &&
+                !AuthNConfig.IsEasyAuthAuthenticationProvider() &&
+                !AuthNConfig.IsAuthenticationSimulatorEnabled();
         }
 
         [JsonIgnore]

@@ -161,6 +161,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// All these entities will create queries with the following field names
         /// pk query name: book_by_pk
         /// List query name: books
+        /// NOTE: we don't do this check for storedProcedure, because the name of the query is same
+        /// as that provided in the config, and two different entity can't have same name in the config.
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
         /// <exception cref="DataApiBuilderException"></exception>
@@ -170,7 +172,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             foreach ((string entityName, Entity entity) in entityCollection)
             {
-                if (entity.GraphQL is null
+                entity.TryPopulateSourceFields();
+                if (
+                    entity.ObjectType is SourceType.StoredProcedure ||
+                    entity.GraphQL is null
                     || (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
                 {
                     continue;
@@ -206,6 +211,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             foreach (string entityName in entityCollection.Keys)
             {
                 Entity entity = entityCollection[entityName];
+                entity.TryPopulateSourceFields();
 
                 if (entity.GraphQL is null)
                 {

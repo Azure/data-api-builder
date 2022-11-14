@@ -334,5 +334,11 @@ WHERE
         {
             throw new NotImplementedException();
         }
+
+        /// <inheritdoc/>
+        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

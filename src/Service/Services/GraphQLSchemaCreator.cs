@@ -134,8 +134,7 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 // Skip creating the GraphQL object for the current entity due to configuration
                 // explicitly excluding the entity from the GraphQL endpoint.
-                if (entity.ObjectType is SourceType.StoredProcedure
-                    || entity.GraphQL is not null && entity.GraphQL is bool graphql && graphql == false)
+                if (entity.GraphQL is not null && entity.GraphQL is bool graphql && graphql == false)
                 {
                     continue;
                 }
@@ -147,18 +146,22 @@ namespace Azure.DataApiBuilder.Service.Services
                     IEnumerable<string> rolesAllowedForEntity = _authorizationResolver.GetRolesForEntity(entityName);
                     Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
                     SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
-                    foreach (string column in sourceDefinition.Columns.Keys)
+                    if (databaseObject.SourceType is not SourceType.StoredProcedure)
                     {
-                        IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Operation.Read);
-                        if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
+                        foreach (string column in sourceDefinition.Columns.Keys)
                         {
-                            throw new DataApiBuilderException(
-                                message: "Column already processed for building ObjectTypeDefinition authorization definition.",
-                                statusCode: System.Net.HttpStatusCode.InternalServerError,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
-                                );
+                            IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Operation.Read);
+                            if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
+                            {
+                                throw new DataApiBuilderException(
+                                    message: "Column already processed for building ObjectTypeDefinition authorization definition.",
+                                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
+                                    );
+                            }
                         }
                     }
+                    
 
                     // The roles allowed for Fields are the roles allowed to READ the fields, so any role that has a read definition for the field.
                     // Only add objectTypeDefinition for GraphQL if it has a role definition defined for access.
@@ -173,7 +176,11 @@ namespace Azure.DataApiBuilder.Service.Services
                             rolesAllowedForFields
                         );
 
-                        InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
+                        if (databaseObject.SourceType is not SourceType.StoredProcedure)
+                        {
+                            InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
+                        }
+                        
                         objectTypes.Add(entityName, node);
                     }
                 }

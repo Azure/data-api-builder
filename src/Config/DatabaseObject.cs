@@ -77,13 +77,19 @@ namespace Azure.DataApiBuilder.Config
         public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
     }
 
-    public class StoredProcedureDefinition
+    public class StoredProcedureDefinition: SourceDefinition
     {
         /// <summary>
         /// The list of input parameters
         /// Key: parameter name, Value: ParameterDefinition object
         /// </summary>
         public Dictionary<string, ParameterDefinition> Parameters { get; set; } = new();
+
+        /// <summary>
+        /// The list of fields with their type in the Stored Procedure result
+        /// Key: ResultSet field name, Value: ResultSet field Type
+        /// </summary>
+        public Dictionary<string, Type> ResultSet { get; set; } = new();
     }
 
     public class ParameterDefinition
@@ -131,6 +137,21 @@ namespace Azure.DataApiBuilder.Config
                                          Columns.TryGetValue(column, out ColumnDefinition? definition) && definition.IsNullable)
                                  .Where(isNullable => isNullable == true)
                                  .Any();
+        }
+
+        /// <summary>
+        /// Get the underlying SourceDefinition based on database object source type
+        /// </summary>
+        public static SourceDefinition GetSourceDefinitionForDatabaseObject(DatabaseObject databaseObject)
+        {
+            return databaseObject.SourceType switch
+            {
+                SourceType.Table => ((DatabaseTable)databaseObject).TableDefinition,
+                SourceType.View => ((DatabaseView)databaseObject).ViewDefinition,
+                SourceType.StoredProcedure => ((DatabaseStoredProcedure)databaseObject).StoredProcedureDefinition,
+                _ => throw new Exception(
+                        message: $"Unsupported SourceType. It can either be Table,View, or Stored Procedure.")
+            };
         }
     }
 

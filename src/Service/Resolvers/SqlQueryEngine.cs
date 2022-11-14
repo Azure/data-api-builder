@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Models;
@@ -62,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider, _authorizationResolver, _runtimeConfigProvider);
-
+        
             if (structure.PaginationMetadata.IsPaginated)
             {
                 return new Tuple<JsonDocument, IMetadata>(
@@ -78,27 +79,39 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Executes the given IMiddlewareContext of the GraphQL and expecting a
+        /// Executes the given IMiddlewareContext of the GraphQL and expecting result of stored-procedure execution as
         /// list of Jsons and the relevant pagination metadata back.
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider, _authorizationResolver, _runtimeConfigProvider);
-            string queryString = _queryBuilder.Build(structure);
-            _logger.LogInformation(queryString);
-            List<JsonDocument> jsonListResult =
-                 await _queryExecutor.ExecuteQueryAsync(
-                     queryString,
-                     structure.Parameters,
-                     _queryExecutor.GetJsonResultAsync<List<JsonDocument>>);
-
-            if (jsonListResult is null)
+            _sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(context.Field.Name.Value, out DatabaseObject? databaseObject);
+            if(databaseObject is not null && databaseObject.SourceType is SourceType.StoredProcedure)
             {
-                return new Tuple<IEnumerable<JsonDocument>, IMetadata>(new List<JsonDocument>(), null);
+                SqlExecuteStructure sqlExecuteStructure = new(context.FieldSelection.Name.Value, _sqlMetadataProvider, parameters);
+
+                return new Tuple<IEnumerable<JsonDocument>, IMetadata>(
+                        SqlPaginationUtil.FormatStoredProcedureResultAsJsonList(await ExecuteAsync(sqlExecuteStructure)),
+                        PaginationMetadata.MakeEmptyPaginationMetadata());
             }
             else
             {
-                return new Tuple<IEnumerable<JsonDocument>, IMetadata>(jsonListResult, structure.PaginationMetadata);
+                SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider, _authorizationResolver, _runtimeConfigProvider);
+                string queryString = _queryBuilder.Build(structure);
+                _logger.LogInformation(queryString);
+                List<JsonDocument> jsonListResult =
+                    await _queryExecutor.ExecuteQueryAsync(
+                        queryString,
+                        structure.Parameters,
+                        _queryExecutor.GetJsonResultAsync<List<JsonDocument>>);
+
+                if (jsonListResult is null)
+                {
+                    return new Tuple<IEnumerable<JsonDocument>, IMetadata>(new List<JsonDocument>(), null);
+                }
+                else
+                {
+                    return new Tuple<IEnumerable<JsonDocument>, IMetadata>(jsonListResult, structure.PaginationMetadata);
+                }
             }
         }
 

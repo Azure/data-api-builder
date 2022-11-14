@@ -61,6 +61,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string BuildViewColumnsDetailsQuery(int numberOfParameters);
 
         /// <summary>
+        /// Builds the query to obtain details about the result set for stored-procedure
+        /// </summary>
+        /// <param name="databaseObjectName">Name of stored-procedure</param>
+        /// <returns></returns>
+        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName);
+
+        /// <summary>
         /// Adds database specific quotes to string identifier
         /// </summary>
         public string QuoteIdentifier(string identifier);

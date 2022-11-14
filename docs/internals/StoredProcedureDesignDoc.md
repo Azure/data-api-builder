@@ -35,11 +35,19 @@ Thus a stored procedure entity might look like:
 parameters can either be fixed as above or passed at runtime through
 - query parameters for GET request
 - request body for POST, PUT, PATCH, DELETE
+- For GraphQL, the stored-procedure will look something like this passed in the body
+```
+{
+    GetBooks(param1:value, param2:value) {}
+}
+```
 
 > **Spec Interpretation**: 
 > - since not explicitly stated in the specification, request body for GET will be ignored altogether.
 > - Parameter resolution will go as follows, from highest to lowest priority: request (query string or body) > config defaults > <s> sql defaults </s>
 >   - NOTE: sql defaults not so easy to infer for parameters, so we explicitly require all parameters to be provided either in the request or config in this first version.
+> - GRAPHQL
+> - if the request doesn't contain the parameter values, default values from the config will be picked up.
 
 ### Stored Procedure Permissions 
 
@@ -94,6 +102,8 @@ Implementation was segmented into 5 main sections:
 > - Stored procedures must be specified as "stored-procedure" source type
 >     - See [sample source config](#sample-source)
 > - Unfortunately, System.Text.Json does not natively support Kebab-casing for converting hyphenated strings ("stored-procedure") to a CamelCase enum (StoredProcedure). As such, Newtonsoft is used for deserialization. If we want to migrate to System.Text.Json, we either need to change the spec and only accept non-hyphenated strings or write our own custom string-to-enum converter, which was out of scope for v1.
+> GRAPHQL
+> - No change required here.
 
 ### 2.  Metadata Validation
 
@@ -105,6 +115,13 @@ Implementation was segmented into 5 main sections:
 >     - `ParameterDefinition` class houses all useful parameter metadata, such as its data type in sql, corresponding CLR/.NET data type, whether it has a default value specified in config, and the default value config defines. It also holds parameter type (IN/OUT), but this isn't currently being used.
 
 <br/>
+
+> ### `RuntimeConfigValidator.cs`
+> - `ValidateEntitiesDoNotGenerateDuplicateQueries` should skip check for Stored-Procedures.
+
+
+> ### `SchemaConverter.cs` and `GraphQLSchemaCreator.cs`
+> - Generate a GraphQL object type from a SQL table/view/stored-procedure definition, combined with the runtime config entity information
 
 > ### `SqlMetadataProvider.cs`
 > - Problem: when we draw metadata from the database schema, we implicitly check if each entity specified in config exists in the database. Path: in `Startup.cs`, the `PerformOnConfigChangeAsync()` method invokes `InitializeAsync()` of the metadata provider bound at runtime, which then invokes `PopulateTableDefinitionForEntities()`. Several steps down the stack `FillSchemaForTableAsync()` is called, which performs a `SELECT * FROM {table_name}` for the given entity and adds the resulting `DataTable` object to the `EntitiesDataSet` class variable. Unfortunately, stored procedure metadata cannot be queried using the same syntax. As such, running the select statement on a stored procedure source name will cause a Sql exception to surface and result in runtime initialization failure.
@@ -159,6 +176,9 @@ Implementation was segmented into 5 main sections:
 > - Request validation should ensure all parameters in metadata are either in the request or config, and `ProcedureParameters` gets populated by first checking the request and then defaulting to the config for each metadata parameter. On parameterizing, we try to parse each provided parameter as the `SystemType` for each parameter as defined in metadata. Thus, this is actually where we do type checking, rather than in request validation, to avoid code duplication. 
 
 <br/>
+
+> ### `QueryBuilder.cs`
+> - It should not generate Both FindAll and FindByPK query for Stored-Procedure.
 
 > ### `MsSqlQueryBuilder.cs`
 > - Added the `Build(SqlExecuteStructure)` that builds the query string for execute requests as `EXECUTE {schema_name}.{stored_proc_name} {parameters}`

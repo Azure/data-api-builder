@@ -110,6 +110,28 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
+        /// Takes the result from DB as JsonDocument and formats it in a way that can be filtered by column
+        /// name. It parses the Json document into a list of Dictionary with key as result_column_name
+        /// with it's corresponding value.
+        /// </summary>
+        public static List<JsonDocument> FormatStoredProcedureResultAsJsonList(JsonDocument jsonDocument)
+        {
+            if (jsonDocument is null)
+            {
+                return new List<JsonDocument>();
+            }
+
+            List<JsonDocument> resultJson = new();
+            List<Dictionary<string,object>> resultList = JsonSerializer.Deserialize<List<Dictionary<string,object>>>(jsonDocument.RootElement.ToString())!;
+            foreach(Dictionary<string,object> dict in resultList)
+            {
+                resultJson.Add(JsonDocument.Parse(JsonSerializer.Serialize(dict)));
+            }
+
+            return resultJson;
+        }
+
+        /// <summary>
         /// Extracts the columns from the json element needed for pagination, represents them as a string in json format and base64 encodes.
         /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
         /// without needing to understand how it works.

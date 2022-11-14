@@ -142,16 +142,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
-            switch (databaseObject!.SourceType)
-            {
-                case SourceType.Table:
-                    return ((DatabaseTable)databaseObject).TableDefinition;
-                case SourceType.View:
-                    return ((DatabaseView)databaseObject).ViewDefinition;
-                default:
-                    // For stored procedures
-                    return null!;
-            }
+            return SourceDefinition.GetSourceDefinitionForDatabaseObject(databaseObject);
         }
 
         /// <inheritdoc />
@@ -668,6 +659,14 @@ namespace Azure.DataApiBuilder.Service.Services
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         GetStoredProcedureDefinition(entityName));
+                    
+                    if (GetDatabaseType() == DatabaseType.mssql)
+                    {
+                        await PopulateResultSetDefinitionsForStoredProcedureAsync(
+                            GetSchemaName(entityName),
+                            GetDatabaseObjectName(entityName),
+                            GetStoredProcedureDefinition(entityName));
+                    }
                 }
                 else if (entitySourceType is SourceType.Table)
                 {
@@ -697,6 +696,41 @@ namespace Azure.DataApiBuilder.Service.Services
 
             await PopulateForeignKeyDefinitionAsync();
 
+        }
+
+        /// <summary>
+        /// Queries DB to get the result fields name and type to
+        /// populate the result set definition for entities specified as stored procedures
+        /// </summary>
+        private async Task PopulateResultSetDefinitionsForStoredProcedureAsync(
+            string schemaName,
+            string storedProcedureName,
+            SourceDefinition sourceDefinition)
+        {
+            StoredProcedureDefinition storedProcedureDefinition = (StoredProcedureDefinition)sourceDefinition;
+            string dbStoredProcedureName = $"{schemaName}.{storedProcedureName}";
+            // Generate query to get result set details
+            // of the stored procedure.
+            string queryForResultSetDetails = SqlQueryBuilder.BuildStoredProcedureResultDetailsQuery(
+                dbStoredProcedureName);
+
+            // Execute the query to get columns' details.
+            JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
+                sqltext: queryForResultSetDetails,
+                parameters: null!,
+                dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
+            using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
+
+            // Iterate through each row returned by the query which corresponds to
+            // one row in the result set.
+            foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
+            {
+                string resultFieldName = element.GetProperty("result_field_name").ToString();
+                Type resultFieldType = SqlToCLRType(element.GetProperty("system_type_name").ToString());
+
+                // Store the dictionary containing result set field with it's type
+                storedProcedureDefinition.ResultSet.Add(resultFieldName, resultFieldType);
+            }
         }
 
         private async Task PopulateBaseTableDefinitionsForViewAsync(

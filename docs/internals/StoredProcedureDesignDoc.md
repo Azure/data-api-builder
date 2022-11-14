@@ -107,9 +107,9 @@ Implementation was segmented into 5 main sections:
 
 > ### `DatabaseObject.cs`
 > - Tables and views have metadata that does not apply to stored procedures, most notably Columns, Primary Keys, and Relationships.
-> - As such, we create a `StoredProcedureDefinition` class to hold procedure-relevant info - i.e. procedure parameter metadata. 
+> - As such, we create a `StoredProcedureDefinition` class to hold procedure-relevant info - i.e. procedure parameter metadata.
 >     - We also add an `ObjectType` attribute on a `DatabaseObject` for more robust checking of whether it represents a table, view, or stored procedure vs. just null-checking the `TableDefinition` and `StoredProcedureDefinition` attributes. 
->     - The `StoredProcedureDefinition` class houses a Dictionary, `Parameters`, of strings to `ParameterDefinition`s, where the strings are procedure parameter names as defined in sql. 
+>     - The `StoredProcedureDefinition` class houses a Dictionary, `Parameters`, of strings to `ParameterDefinition`s, where the strings are procedure parameter names as defined in sql and `ResultSet` containing resultSet fieldName and ResultSet fieldType of the stpred procedure result.
 >     - `ParameterDefinition` class houses all useful parameter metadata, such as its data type in sql, corresponding CLR/.NET data type, whether it has a default value specified in config, and the default value config defines. It also holds parameter type (IN/OUT), but this isn't currently being used.
 
 <br/>
@@ -123,6 +123,7 @@ Implementation was segmented into 5 main sections:
 >        - `SELECT * FROM INFORMATION_SCHEMA.PARAMETERS WHERE SPECIFIC_NAME = {procedure_name}`
 > - Using metadata, we first verify procedures specified in config are present in the database. Then, we verify all parameters for each procedure specified in config are actually present in the database, otherwise we fail runtime initialization. We also verify that any parameters specified in config match the type retrieved from the parameter metadata. 
 >     - TODO: more logic is needed for determining whether a value specified in config can be parsed into the metadata type. For example, providing a string in config might be parse-able into a datetime value, but right now it will be rejected. We should relax this constraint at runtime initialization and potentially fall back to request-time validation.
+> - For finding the coulmns in the result set of a stored Procedure, we retrieve metadata using `sys.dm_exec_describe_first_result_set_for_object`.
 
 <br/>
 
@@ -161,21 +162,16 @@ Implementation was segmented into 5 main sections:
 ### 4. GRAPHQL Schema Generation
 
 > ### `GraphQLSchemaCreator.cs`
-> - `GenerateSqlGraphQLObjects` method requires updating to allow it to process stored-procedure (currently it skips).
-> - It will have to call a separate method to generate the inputType for Stored Procedure.
-> **Question**
-> 1. How do we know the result fields since we do not know the result of stored-procedure before hand?
-> - Ask users to provide schema for procedures - Not convenient for users.
-> - Just return the execution results as Text. - We will go for this one, since we will not support
-> pagination/ordering/filtering for stored-procedures in graphQL.
+> - `GenerateSqlGraphQLObjects` method requires updating to allow it to process stored-procedure.
+> - Here we create StoredProcedure GraphQL Object Types.
+
 ```
-{StoredProcedureName(param1:value1, param2:value2): String}
+{StoredProcedureName(param1:value1, param2:value2): StoredProcedureName}
 ```
 
 > ### `QueryBuilder.cs` and `MutationBuilder.cs`
-> - TBH, both query and mutation doesn't seem to relate to stored-Procedure, but every GraphQL request has to be one of the two: Query/Mutation.
-> - Q. How the engine will know if a stored-procedure is Query or Mutation?
-> - If any roles in the permission has only READ access, then it's a Query, else Mutation.
+> - We will allow only single CRUD action to be specified in the config for StoredProcedure.
+> - If any roles in the permission has READ access, then it's a Query, else Mutation.
 > #### Query
 > - It will have a method called `GenerateStoredProcedureQuery` to create the graphql schema for our Stored Procedure.
 > - The above method will be similar to `GenerateByPKQuery`,only difference will be that we will use parameters instead of primary keys.
@@ -185,7 +181,7 @@ Implementation was segmented into 5 main sections:
 ```
 {
     "Execute Stored-Procedure GetBook and get results from the database"
-    GetBook("parameters for GetBook stored-procedure" id: String = "1"): String
+    GetBook("parameters for GetBook stored-procedure" id: String = "1"): GetBook
 }
 ```
 > #### Mutation
@@ -203,7 +199,7 @@ Implementation was segmented into 5 main sections:
 > ### Example
 > Consider stored-procedure `GetBooks` and `GetBook`. the former has no param, while the later has one param, which not provided will pick the value from config.
 > Below is the generated documentation from GraphQL
-![image](https://user-images.githubusercontent.com/102276754/197724270-241e37e6-6459-4cce-a959-19a5031b63d1.png)
+!![image](https://user-images.githubusercontent.com/102276754/201593001-46f34d0b-0290-4946-901d-42f6f32b546b.png)
 
 
 ### 5.  Structure + Query Building
@@ -226,7 +222,7 @@ Implementation was segmented into 5 main sections:
 > ### `MySqlQueryBuilder.cs` & `PostgresQueryBuilder.cs`
 > - Added method stubs as TODOs for `Build(SqlExecuteStructure)`
 
-### 5. REST Query Execution + Result Formatting
+### 6. REST Query Execution + Result Formatting
 
 ### `SqlQueryEngine.cs`
 > - Separated `ExecuteAsync(RestRequestContext)` into `ExecuteAsync(FindRequestContext)` and `ExecuteAsync(StoredProcedureRequestContext)`. Seems to be better practice than doing type checking and conditional downcasting.
@@ -245,7 +241,7 @@ Implementation was segmented into 5 main sections:
 >    - Insert request returns `201 Created` with **first result set** as json response. If none/empty result set, an empty array is returned. Discussion: prefer to instead return no json at all?
 >    - Update/upsert behaves same as insert but with `200 OK` response.
 
-### 6. GRAPHQL Query Execution
+### 7. GRAPHQL Query Execution
 
 > ### `ResolverMiddleware.cs`, `SqlQueryEngine.cs`, and `SqlMutationEngine.cs`
 > - Call `ExecuteAsync` with `IMiddlewareContext` and `parameters`.
@@ -254,9 +250,9 @@ Implementation was segmented into 5 main sections:
 
 > ### Example 
 > 1. With param as id
-> ![image](https://user-images.githubusercontent.com/102276754/197740155-d6b800aa-acda-4fe2-a82c-1c0fdc45696f.png)
+> ![image](https://user-images.githubusercontent.com/102276754/201590249-57c03f98-2a88-4acd-a951-3e8779df4f4d.png)
 > 2. No param
-> ![image](https://user-images.githubusercontent.com/102276754/197740411-747be3e1-a8df-4dc7-8d87-0521b63169da.png)
+> ![image](https://user-images.githubusercontent.com/102276754/201590101-59931ff4-fba8-4901-8a18-9f8a4ffd2cfa.png)
 > 3. Mutation operation
 > ![image](https://user-images.githubusercontent.com/102276754/198975915-f8fefd85-6f8e-4b1b-8fc3-be156084e6ae.png)
 

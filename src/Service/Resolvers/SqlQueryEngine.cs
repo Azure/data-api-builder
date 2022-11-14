@@ -5,8 +5,8 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider, _authorizationResolver, _runtimeConfigProvider);
-        
+
             if (structure.PaginationMetadata.IsPaginated)
             {
                 return new Tuple<JsonDocument, IMetadata>(
@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             _sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(context.Field.Name.Value, out DatabaseObject? databaseObject);
-            if(databaseObject is not null && databaseObject.SourceType is SourceType.StoredProcedure)
+            if (databaseObject is not null && databaseObject.SourceType is SourceType.StoredProcedure)
             {
                 SqlExecuteStructure sqlExecuteStructure = new(context.FieldSelection.Name.Value, _sqlMetadataProvider, parameters);
 

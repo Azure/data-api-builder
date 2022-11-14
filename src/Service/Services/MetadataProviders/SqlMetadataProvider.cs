@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -14,7 +15,6 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Extensions.Logging;
-using System.Text.Json.Nodes;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -699,7 +699,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         GetStoredProcedureDefinition(entityName));
-                    
+
                     if (GetDatabaseType() == DatabaseType.mssql)
                     {
                         await PopulateResultSetDefinitionsForStoredProcedureAsync(

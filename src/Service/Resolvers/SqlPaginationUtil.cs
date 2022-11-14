@@ -122,8 +122,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             List<JsonDocument> resultJson = new();
-            List<Dictionary<string,object>> resultList = JsonSerializer.Deserialize<List<Dictionary<string,object>>>(jsonDocument.RootElement.ToString())!;
-            foreach(Dictionary<string,object> dict in resultList)
+            List<Dictionary<string, object>> resultList = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonDocument.RootElement.ToString())!;
+            foreach (Dictionary<string, object> dict in resultList)
             {
                 resultJson.Add(JsonDocument.Parse(JsonSerializer.Serialize(dict)));
             }

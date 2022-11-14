@@ -161,7 +161,6 @@ namespace Azure.DataApiBuilder.Service.Services
                             }
                         }
                     }
-                    
 
                     // The roles allowed for Fields are the roles allowed to READ the fields, so any role that has a read definition for the field.
                     // Only add objectTypeDefinition for GraphQL if it has a role definition defined for access.
@@ -180,7 +179,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         {
                             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
                         }
-                        
+
                         objectTypes.Add(entityName, node);
                     }
                 }

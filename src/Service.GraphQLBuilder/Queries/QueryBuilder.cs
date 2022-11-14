@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 
                     if (rolesAllowedForRead.Count() > 0)
                     {
-                        if(entity.ObjectType is SourceType.StoredProcedure)
+                        if (entity.ObjectType is SourceType.StoredProcedure)
                         {
                             queryFields.Add(GenerateStoredProcedureQuery(name, entity, rolesAllowedForRead));
                         }
@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                             queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, entity, rolesAllowedForRead));
                         }
                     }
-                    
+
                     returnTypes.Add(returnType);
                 }
             }
@@ -96,7 +96,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     inputValues.Add(
                         new(
                             location: null,
-                            new (param),
+                            new(param),
                             new StringValueNode($"parameters for {name.Value} stored-procedure"),
                             new NamedTypeNode("String"),
                             defaultValue: new StringValueNode($"{entity.Parameters[param]}"),

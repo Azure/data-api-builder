@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Config
         public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
     }
 
-    public class StoredProcedureDefinition: SourceDefinition
+    public class StoredProcedureDefinition : SourceDefinition
     {
         /// <summary>
         /// The list of input parameters

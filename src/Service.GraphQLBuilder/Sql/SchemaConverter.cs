@@ -6,7 +6,6 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
-using Azure.DataApiBuilder.Service;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
@@ -42,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
             if (databaseObject.SourceType is SourceType.StoredProcedure)
             {
-                nameNode = new (entityName);
+                nameNode = new(entityName);
                 Dictionary<string, Type> resultSet = ((StoredProcedureDefinition)sourceDefinition).ResultSet;
 
                 foreach ((string fieldName, Type fieldType) in resultSet)
@@ -55,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         new List<InputValueDefinitionNode>(),
                         nodeFieldType,
                         new List<DirectiveNode>());
-                    
+
                     fields.Add(fieldName, field);
                 }
             }
@@ -79,25 +78,25 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
                     if (column.DefaultValue is not null)
                     {
-                    IValueNode arg = column.DefaultValue switch
-                    {
-                        byte value => new ObjectValueNode(new ObjectFieldNode(BYTE_TYPE, new IntValueNode(value))),
-                        short value => new ObjectValueNode(new ObjectFieldNode(SHORT_TYPE, new IntValueNode(value))),
-                        int value => new ObjectValueNode(new ObjectFieldNode(INT_TYPE, value)),
-                        long value => new ObjectValueNode(new ObjectFieldNode(LONG_TYPE, new IntValueNode(value))),
-                        string value => new ObjectValueNode(new ObjectFieldNode(STRING_TYPE, value)),
-                        bool value => new ObjectValueNode(new ObjectFieldNode(BOOLEAN_TYPE, value)),
-                        float value => new ObjectValueNode(new ObjectFieldNode(SINGLE_TYPE, new SingleType().ParseValue(value))),
-                        double value => new ObjectValueNode(new ObjectFieldNode(FLOAT_TYPE, value)),
-                        decimal value => new ObjectValueNode(new ObjectFieldNode(DECIMAL_TYPE, new FloatValueNode(value))),
-                        DateTime value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseResult(value))),
-                        DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseValue(value))),
-                        byte[] value => new ObjectValueNode(new ObjectFieldNode(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(value))),
-                        _ => throw new DataApiBuilderException(
-                            message: $"The type {column.DefaultValue.GetType()} is not supported as a GraphQL default value",
-                            statusCode: HttpStatusCode.InternalServerError,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping)
-                    };
+                        IValueNode arg = column.DefaultValue switch
+                        {
+                            byte value => new ObjectValueNode(new ObjectFieldNode(BYTE_TYPE, new IntValueNode(value))),
+                            short value => new ObjectValueNode(new ObjectFieldNode(SHORT_TYPE, new IntValueNode(value))),
+                            int value => new ObjectValueNode(new ObjectFieldNode(INT_TYPE, value)),
+                            long value => new ObjectValueNode(new ObjectFieldNode(LONG_TYPE, new IntValueNode(value))),
+                            string value => new ObjectValueNode(new ObjectFieldNode(STRING_TYPE, value)),
+                            bool value => new ObjectValueNode(new ObjectFieldNode(BOOLEAN_TYPE, value)),
+                            float value => new ObjectValueNode(new ObjectFieldNode(SINGLE_TYPE, new SingleType().ParseValue(value))),
+                            double value => new ObjectValueNode(new ObjectFieldNode(FLOAT_TYPE, value)),
+                            decimal value => new ObjectValueNode(new ObjectFieldNode(DECIMAL_TYPE, new FloatValueNode(value))),
+                            DateTime value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseResult(value))),
+                            DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseValue(value))),
+                            byte[] value => new ObjectValueNode(new ObjectFieldNode(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(value))),
+                            _ => throw new DataApiBuilderException(
+                                message: $"The type {column.DefaultValue.GetType()} is not supported as a GraphQL default value",
+                                statusCode: HttpStatusCode.InternalServerError,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping)
+                        };
 
                         directives.Add(new DirectiveNode(DefaultValueDirectiveType.DirectiveName, new ArgumentNode("value", arg)));
                     }

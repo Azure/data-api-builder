@@ -246,7 +246,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
                     }
 
-                    CosmosDbOptions? cosmosDb = RuntimeConfiguration.CosmosDb! with { GraphQLSchema = schema };
+                    CosmosDbOptions? cosmosDb = RuntimeConfiguration.DataSource.CosmosDbNoSql! with { GraphQLSchema = schema };
                     RuntimeConfiguration = RuntimeConfiguration with { CosmosDb = cosmosDb };
                 }
             }

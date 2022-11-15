@@ -25,10 +25,10 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig);
         Assert.IsTrue(runtimeConfig.GraphQLGlobalSettings.AllowIntrospection);
         Assert.AreEqual(DatabaseType.cosmos, runtimeConfig.DatabaseType);
-        Assert.IsNotNull(runtimeConfig.CosmosDb);
-        Assert.AreEqual("graphqldb", runtimeConfig.CosmosDb.Database);
-        Assert.AreEqual("planet", runtimeConfig.CosmosDb.Container);
-        Assert.AreEqual("schema.gql", runtimeConfig.CosmosDb.GraphQLSchemaPath);
+        Assert.IsNotNull(runtimeConfig.DataSource.CosmosDbNoSql);
+        Assert.AreEqual("graphqldb", runtimeConfig.DataSource.CosmosDbNoSql.Database);
+        Assert.AreEqual("planet", runtimeConfig.DataSource.CosmosDbNoSql.Container);
+        Assert.AreEqual("schema.gql", runtimeConfig.DataSource.CosmosDbNoSql.GraphQLSchemaPath);
         Assert.IsNotNull(runtimeConfig.RuntimeSettings);
         Assert.AreEqual(true, runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated);
         JsonElement jsonRestSettings = (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Rest];

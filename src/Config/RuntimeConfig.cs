@@ -54,21 +54,12 @@ namespace Azure.DataApiBuilder.Config
     public record RuntimeConfig(
         [property: JsonPropertyName(RuntimeConfig.SCHEMA_PROPERTY_NAME)] string Schema,
         [property: JsonPropertyName(DataSource.JSON_PROPERTY_NAME)] DataSource DataSource,
-        [property: JsonPropertyName(CosmosDbOptions.JSON_PROPERTY_NAME)]
-        CosmosDbOptions? CosmosDb,
-        [property: JsonPropertyName(MsSqlOptions.JSON_PROPERTY_NAME)]
-        [property: JsonIgnore]
-        MsSqlOptions? MsSql,
-        [property: JsonPropertyName(PostgreSqlOptions.JSON_PROPERTY_NAME)]
-        [property: JsonIgnore]
-        PostgreSqlOptions? PostgreSql,
-        [property: JsonPropertyName(MySqlOptions.JSON_PROPERTY_NAME)]
-        [property: JsonIgnore]
-        MySqlOptions? MySql,
         [property: JsonPropertyName(GlobalSettings.JSON_PROPERTY_NAME)]
         Dictionary<GlobalSettingsType, object>? RuntimeSettings,
         [property: JsonPropertyName(Entity.JSON_PROPERTY_NAME)]
-        Dictionary<string, Entity> Entities)
+        Dictionary<string, Entity> Entities,
+        [property: JsonPropertyName(CosmosDbOptions.JSON_PROPERTY_NAME)]
+        CosmosDbOptions? CosmosDb = null)
     {
         public const string SCHEMA_PROPERTY_NAME = "$schema";
         public const string SCHEMA = "dab.draft.schema.json";
@@ -211,6 +202,7 @@ namespace Azure.DataApiBuilder.Config
                 deserializedRuntimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(configJson, SerializerOptions);
                 deserializedRuntimeConfig!.DetermineGlobalSettings();
                 deserializedRuntimeConfig!.DetermineGraphQLEntityNames();
+                deserializedRuntimeConfig.DataSource.PopulateDbSpecificOptions();
                 return true;
             }
             catch (Exception ex)

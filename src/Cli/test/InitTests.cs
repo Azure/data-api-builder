@@ -107,7 +107,12 @@ namespace Cli.Tests
                 ""$schema"": ""dab.draft.schema.json"",
                 ""data-source"": {
                     ""database-type"": ""cosmos"",
-                    ""connection-string"": ""testconnectionstring""
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"": {
+                    ""database"": ""testdb"",
+                    ""container"": ""testcontainer"",
+                    ""schema"": ""schemafile""
+                }
                 },
                 ""cosmos"": {
                     ""database"": ""testdb"",

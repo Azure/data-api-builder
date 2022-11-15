@@ -3,6 +3,7 @@ using Azure.DataApiBuilder.Config;
 using HotChocolate.Language;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.Queries.QueryBuilder;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 {
@@ -41,6 +42,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
                     if (entities[dbEntityName].ObjectType is SourceType.StoredProcedure)
                     {
+                        Operation storedProcedureOperation = GetOperationTypeForStoredProcedure(dbEntityName, entityPermissionsMap);
+                        if (storedProcedureOperation is not Operation.Read) {
+                            AddMutationsForStoredProcedure(dbEntityName, storedProcedureOperation, entityPermissionsMap, name, entities, mutationFields);
+                        }
+
                         continue;
                     }
 
@@ -59,6 +65,21 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             return new(definitionNodes);
+        }
+
+        private static Operation GetOperationTypeForStoredProcedure(
+            string dbEntityName,
+            Dictionary<string, EntityMetadata>? entityPermissionsMap
+        )
+        {
+            if (entityPermissionsMap![dbEntityName].OperationToRolesMap.Count == 1) {
+                return entityPermissionsMap[dbEntityName].OperationToRolesMap.First().Key;
+            }
+            else
+            {
+                throw new Exception("Stored Procedure cannot have more than one operation.");
+            }
+
         }
 
         /// <summary>
@@ -106,6 +127,66 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         throw new ArgumentOutOfRangeException(paramName: "action", message: "Invalid argument value provided.");
                 }
             }
+        }
+
+        private static void AddMutationsForStoredProcedure(
+            string dbEntityName,
+            Operation operation,
+            Dictionary<string, EntityMetadata>? entityPermissionsMap,
+            NameNode name,
+            IDictionary<string, Entity> entities,
+            List<FieldDefinitionNode> mutationFields
+            )
+        {
+            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: operation, entityPermissionsMap);
+            if (rolesAllowedForMutation.Count() > 0)
+            {
+                mutationFields.Add(GenerateStoredProcedureMutation(name, entities[dbEntityName], rolesAllowedForMutation));
+            }
+        }
+
+        /// <summary>
+        /// Generates the StoredProcedure Query with input types, description, and return type.
+        /// </summary>
+        public static FieldDefinitionNode GenerateStoredProcedureMutation(
+            NameNode name,
+            Entity entity,
+            IEnumerable<string>? rolesAllowedForMutation = null)
+        {
+            List<InputValueDefinitionNode> inputValues = new();
+            List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+
+            if (entity.Parameters is not null)
+            {
+                foreach (string param in entity.Parameters.Keys)
+                {
+                    inputValues.Add(
+                        new(
+                            location: null,
+                            new(param),
+                            new StringValueNode($"parameters for {name.Value} stored-procedure"),
+                            new NamedTypeNode("String"),
+                            defaultValue: new StringValueNode($"{entity.Parameters[param]}"),
+                            new List<DirectiveNode>())
+                        );
+                }
+            }
+
+            if (CreateAuthorizationDirectiveIfNecessary(
+                    rolesAllowedForMutation,
+                    out DirectiveNode? authorizeDirective))
+            {
+                fieldDefinitionNodeDirectives.Add(authorizeDirective!);
+            }
+
+            return new(
+                location: null,
+                new NameNode(name.Value),
+                new StringValueNode($"Execute Stored-Procedure {name.Value}."),
+                inputValues,
+                new NonNullTypeNode(new NamedTypeNode(name)),
+                fieldDefinitionNodeDirectives
+            );
         }
 
         public static Operation DetermineMutationOperationTypeBasedOnInputType(string inputTypeName)

@@ -44,18 +44,33 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 nameNode = new(entityName);
                 Dictionary<string, Type> resultSet = ((StoredProcedureDefinition)sourceDefinition).ResultSet;
 
-                foreach ((string fieldName, Type fieldType) in resultSet)
+                if (resultSet.Count == 0)
                 {
-                    NamedTypeNode nodeFieldType = new(GetGraphQLTypeForColumnType(fieldType));
                     FieldDefinitionNode field = new(
                         location: null,
-                        new(fieldName),
+                        new("result"),
                         description: null,
                         new List<InputValueDefinitionNode>(),
-                        nodeFieldType,
+                        new StringType().ToTypeNode(),
                         new List<DirectiveNode>());
 
-                    fields.Add(fieldName, field);
+                    fields.Add("result", field);
+                }
+                else
+                {
+                    foreach ((string fieldName, Type fieldType) in resultSet)
+                    {
+                        NamedTypeNode nodeFieldType = new(GetGraphQLTypeForColumnType(fieldType));
+                        FieldDefinitionNode field = new(
+                            location: null,
+                            new(fieldName),
+                            description: null,
+                            new List<InputValueDefinitionNode>(),
+                            nodeFieldType,
+                            new List<DirectiveNode>());
+
+                        fields.Add(fieldName, field);
+                    }
                 }
             }
             else

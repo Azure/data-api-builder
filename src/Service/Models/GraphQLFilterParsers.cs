@@ -86,11 +86,13 @@ namespace Azure.DataApiBuilder.Service.Models
                     if (!IsScalarType(filterInputObjectType.Name))
                     {
                         queryStructure.DatabaseObject.Name = sourceName + "." + name;
-                        queryStructure.SourceAlias = sourceName + "." + name;
+                        queryStructure.SourceAlias = sourceAlias + "." + name;
                         predicates.Push(new PredicateOperand(Parse(ctx,
                             filterArgumentObject.Fields[name],
                             subfields,
                             queryStructure)));
+                        queryStructure.DatabaseObject.Name = sourceName;
+                        queryStructure.SourceAlias = sourceAlias;
                     }
                     else
                     {

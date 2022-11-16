@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -90,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 SqlExecuteStructure sqlExecuteStructure = new(context.FieldSelection.Name.Value, _sqlMetadataProvider, parameters);
 
                 return new Tuple<IEnumerable<JsonDocument>, IMetadata>(
-                        SqlPaginationUtil.FormatStoredProcedureResultAsJsonList(await ExecuteAsync(sqlExecuteStructure)),
+                        FormatStoredProcedureResultAsJsonList(await ExecuteAsync(sqlExecuteStructure)),
                         PaginationMetadata.MakeEmptyPaginationMetadata());
             }
             else

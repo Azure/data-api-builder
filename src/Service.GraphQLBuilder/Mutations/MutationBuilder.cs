@@ -3,7 +3,6 @@ using Azure.DataApiBuilder.Config;
 using HotChocolate.Language;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.Queries.QueryBuilder;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 {
@@ -43,7 +42,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     if (entities[dbEntityName].ObjectType is SourceType.StoredProcedure)
                     {
                         Operation storedProcedureOperation = GetOperationTypeForStoredProcedure(dbEntityName, entityPermissionsMap);
-                        if (storedProcedureOperation is not Operation.Read) {
+                        if (storedProcedureOperation is not Operation.Read)
+                        {
                             AddMutationsForStoredProcedure(dbEntityName, storedProcedureOperation, entityPermissionsMap, name, entities, mutationFields);
                         }
 
@@ -72,7 +72,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             Dictionary<string, EntityMetadata>? entityPermissionsMap
         )
         {
-            if (entityPermissionsMap![dbEntityName].OperationToRolesMap.Count == 1) {
+            if (entityPermissionsMap![dbEntityName].OperationToRolesMap.Count == 1)
+            {
                 return entityPermissionsMap[dbEntityName].OperationToRolesMap.First().Key;
             }
             else
@@ -141,53 +142,53 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: operation, entityPermissionsMap);
             if (rolesAllowedForMutation.Count() > 0)
             {
-                mutationFields.Add(GenerateStoredProcedureMutation(name, entities[dbEntityName], rolesAllowedForMutation));
+                mutationFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entities[dbEntityName], rolesAllowedForMutation));
             }
         }
 
         /// <summary>
         /// Generates the StoredProcedure Query with input types, description, and return type.
         /// </summary>
-        public static FieldDefinitionNode GenerateStoredProcedureMutation(
-            NameNode name,
-            Entity entity,
-            IEnumerable<string>? rolesAllowedForMutation = null)
-        {
-            List<InputValueDefinitionNode> inputValues = new();
-            List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+        // public static FieldDefinitionNode GenerateStoredProcedureMutation(
+        //     NameNode name,
+        //     Entity entity,
+        //     IEnumerable<string>? rolesAllowedForMutation = null)
+        // {
+        //     List<InputValueDefinitionNode> inputValues = new();
+        //     List<DirectiveNode> fieldDefinitionNodeDirectives = new();
 
-            if (entity.Parameters is not null)
-            {
-                foreach (string param in entity.Parameters.Keys)
-                {
-                    inputValues.Add(
-                        new(
-                            location: null,
-                            new(param),
-                            new StringValueNode($"parameters for {name.Value} stored-procedure"),
-                            new NamedTypeNode("String"),
-                            defaultValue: new StringValueNode($"{entity.Parameters[param]}"),
-                            new List<DirectiveNode>())
-                        );
-                }
-            }
+        //     if (entity.Parameters is not null)
+        //     {
+        //         foreach (string param in entity.Parameters.Keys)
+        //         {
+        //             inputValues.Add(
+        //                 new(
+        //                     location: null,
+        //                     new(param),
+        //                     new StringValueNode($"parameters for {name.Value} stored-procedure"),
+        //                     new NamedTypeNode("String"),
+        //                     defaultValue: new StringValueNode($"{entity.Parameters[param]}"),
+        //                     new List<DirectiveNode>())
+        //                 );
+        //         }
+        //     }
 
-            if (CreateAuthorizationDirectiveIfNecessary(
-                    rolesAllowedForMutation,
-                    out DirectiveNode? authorizeDirective))
-            {
-                fieldDefinitionNodeDirectives.Add(authorizeDirective!);
-            }
+        //     if (CreateAuthorizationDirectiveIfNecessary(
+        //             rolesAllowedForMutation,
+        //             out DirectiveNode? authorizeDirective))
+        //     {
+        //         fieldDefinitionNodeDirectives.Add(authorizeDirective!);
+        //     }
 
-            return new(
-                location: null,
-                new NameNode(name.Value),
-                new StringValueNode($"Execute Stored-Procedure {name.Value}."),
-                inputValues,
-                new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
-                fieldDefinitionNodeDirectives
-            );
-        }
+        //     return new(
+        //         location: null,
+        //         new NameNode(name.Value),
+        //         new StringValueNode($"Execute Stored-Procedure {name.Value}."),
+        //         inputValues,
+        //         new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
+        //         fieldDefinitionNodeDirectives
+        //     );
+        // }
 
         public static Operation DetermineMutationOperationTypeBasedOnInputType(string inputTypeName)
         {

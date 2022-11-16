@@ -44,6 +44,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 nameNode = new(entityName);
                 Dictionary<string, Type> resultSet = ((StoredProcedureDefinition)sourceDefinition).ResultSet;
 
+                // When the result set is not defined, it could be a mutation operation with no returning columns
+                // Here we create a field called result which will be an empty array.
                 if (resultSet.Count == 0)
                 {
                     FieldDefinitionNode field = new(

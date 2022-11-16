@@ -21,7 +21,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
-using System.Text.Json.Nodes;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -68,7 +67,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>JSON object result and its related pagination metadata</returns>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
         {
-
             if (context.Selection.Type.IsListType())
             {
                 throw new NotSupportedException("Returning list types from mutations not supported");
@@ -320,32 +318,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             // if we have not yet returned, record is null
             return null;
-        }
-
-        private async Task<JsonDocument> ExecuteAsync(SqlExecuteStructure structure)
-        {
-            string queryString = _queryBuilder.Build(structure);
-            _logger.LogInformation(queryString);
-
-            // JsonArray resultArray =
-            //     await _queryExecutor.ExecuteQueryAsync(
-            //         queryString,
-            //         structure.Parameters,
-            //         _queryExecutor.GetJsonArrayAsync);
-
-            JsonDocument jsonDocument = null;
-
-            // If result set is non-empty, parse rows from json array into JsonDocument
-            // if (resultArray is not null && resultArray.Count > 0)
-            // {
-            //     jsonDocument = JsonDocument.Parse(resultArray.ToJsonString());
-            // }
-            // else
-            // {
-            //     _logger.LogInformation("Did not return enough rows.");
-            // }
-
-            return jsonDocument;
         }
 
         /// <summary>

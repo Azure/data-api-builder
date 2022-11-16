@@ -99,6 +99,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
         [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests")]
         [DataRow("")]
+        [Ignore]
         public async Task CheckExceptionForBadConnectionStringForMySql(string connectionString)
         {
             DatabaseEngine = TestCategory.MYSQL;
@@ -111,7 +112,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             catch (DataApiBuilderException ex)
             {
-                System.Console.WriteLine(ex.Message);
                 // use contains to correctly cover db/user unique error messaging
                 Assert.IsTrue(ex.Message.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);

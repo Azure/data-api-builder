@@ -67,8 +67,9 @@ namespace Cli.Tests
         ";
 
         /// <summary>
-        /// Data source property of the config json with an invalid connection string. This is used for constructing the required config json strings
-        /// for unit tests. Config json constructed using this data source element will fail validations because as connection string
+        /// Data source property of the config json with an invalid connection string. This is used for
+        /// constructing the required config json strings for unit tests. Config json constructed using
+        /// this data source element will fail validations as empty connection string
         /// is not allowed
         /// </summary>
         public const string SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING = SCHEMA_PROPERTY + "," + @"

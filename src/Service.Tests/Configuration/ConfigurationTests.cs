@@ -457,7 +457,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void TestReadingRuntimeConfig()
         {
             Mock<ILogger> logger = new();
-            string jsonString = File.ReadAllText("dab-config.MsSql.json");
+            string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
             RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
             Assert.IsNotNull(runtimeConfig.Schema);
             Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
@@ -584,8 +584,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// has highest precedence irrespective of what the connection string is in the config file.
         /// Verifying the Exception thrown.
         /// </summary>
-        [TestMethod("Validates that environment variable DAB_CONNSTRING has highest precedence.")]
-        [Ignore]
+        [TestMethod("Validates that environment variable DAB_CONNSTRING has highest precedence."), TestCategory(TestCategory.COSMOS)]
         public void TestConnectionStringEnvVarHasHighestPrecedence()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);

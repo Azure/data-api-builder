@@ -78,50 +78,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             return new(definitionNodes);
         }
 
-        /// <summary>
-        /// Generates the StoredProcedure Query with input types, description, and return type.
-        /// </summary>
-        // public static FieldDefinitionNode GenerateStoredProcedureQuery(
-        //     NameNode name,
-        //     Entity entity,
-        //     IEnumerable<string>? rolesAllowedForRead = null)
-        // {
-        //     List<InputValueDefinitionNode> inputValues = new();
-        //     List<DirectiveNode> fieldDefinitionNodeDirectives = new();
-
-        //     if (entity.Parameters is not null)
-        //     {
-        //         foreach (string param in entity.Parameters.Keys)
-        //         {
-        //             inputValues.Add(
-        //                 new(
-        //                     location: null,
-        //                     new(param),
-        //                     new StringValueNode($"parameters for {name.Value} stored-procedure"),
-        //                     new NamedTypeNode("String"),
-        //                     defaultValue: new StringValueNode($"{entity.Parameters[param]}"),
-        //                     new List<DirectiveNode>())
-        //                 );
-        //         }
-        //     }
-
-        //     if (CreateAuthorizationDirectiveIfNecessary(
-        //             rolesAllowedForRead,
-        //             out DirectiveNode? authorizeDirective))
-        //     {
-        //         fieldDefinitionNodeDirectives.Add(authorizeDirective!);
-        //     }
-
-        //     return new(
-        //         location: null,
-        //         new NameNode(name.Value),
-        //         new StringValueNode($"Execute Stored-Procedure {name.Value} and get results from the database"),
-        //         inputValues,
-        //         new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
-        //         fieldDefinitionNodeDirectives
-        //     );
-        // }
-
         public static FieldDefinitionNode GenerateByPKQuery(
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             NameNode name,

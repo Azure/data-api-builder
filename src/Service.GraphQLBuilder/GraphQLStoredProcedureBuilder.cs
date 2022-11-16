@@ -7,6 +7,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 {
     public static class GraphQLStoredProcedureBuilder
     {
+        /// <summary>
+        /// Helper function to create StoredProcedure Schema for GraphQL.
+        /// It uses the parameters to build the arguments and returns a list
+        /// of the StoredProcedure GraphQL object.
+        /// </summary>
         public static FieldDefinitionNode GenerateStoredProcedureSchema(
             NameNode name,
             Entity entity,

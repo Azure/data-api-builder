@@ -67,6 +67,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             return new(definitionNodes);
         }
 
+        /// <summary>
+        /// Tries to fetch the Operation Type for Stored Procedure.
+        /// Stored Procedure currently support only 1 CRUD operation at a time.
+        /// </summary>
         private static Operation GetOperationTypeForStoredProcedure(
             string dbEntityName,
             Dictionary<string, EntityMetadata>? entityPermissionsMap
@@ -130,6 +134,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
         }
 
+        /// <summary>
+        /// Helper method to add the new StoredProcedure in the mutation fields
+        /// of GraphQL Schema
+        /// </summary>
         private static void AddMutationsForStoredProcedure(
             string dbEntityName,
             Operation operation,
@@ -145,50 +153,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 mutationFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entities[dbEntityName], rolesAllowedForMutation));
             }
         }
-
-        /// <summary>
-        /// Generates the StoredProcedure Query with input types, description, and return type.
-        /// </summary>
-        // public static FieldDefinitionNode GenerateStoredProcedureMutation(
-        //     NameNode name,
-        //     Entity entity,
-        //     IEnumerable<string>? rolesAllowedForMutation = null)
-        // {
-        //     List<InputValueDefinitionNode> inputValues = new();
-        //     List<DirectiveNode> fieldDefinitionNodeDirectives = new();
-
-        //     if (entity.Parameters is not null)
-        //     {
-        //         foreach (string param in entity.Parameters.Keys)
-        //         {
-        //             inputValues.Add(
-        //                 new(
-        //                     location: null,
-        //                     new(param),
-        //                     new StringValueNode($"parameters for {name.Value} stored-procedure"),
-        //                     new NamedTypeNode("String"),
-        //                     defaultValue: new StringValueNode($"{entity.Parameters[param]}"),
-        //                     new List<DirectiveNode>())
-        //                 );
-        //         }
-        //     }
-
-        //     if (CreateAuthorizationDirectiveIfNecessary(
-        //             rolesAllowedForMutation,
-        //             out DirectiveNode? authorizeDirective))
-        //     {
-        //         fieldDefinitionNodeDirectives.Add(authorizeDirective!);
-        //     }
-
-        //     return new(
-        //         location: null,
-        //         new NameNode(name.Value),
-        //         new StringValueNode($"Execute Stored-Procedure {name.Value}."),
-        //         inputValues,
-        //         new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
-        //         fieldDefinitionNodeDirectives
-        //     );
-        // }
 
         public static Operation DetermineMutationOperationTypeBasedOnInputType(string inputTypeName)
         {

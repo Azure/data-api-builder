@@ -278,7 +278,7 @@ public class EndToEndTests
     /// <summary>
     /// Test to validate that the engine starts successfully when --verbose and --LogLevel
     /// options are used with the start command
-    /// This test does not validate whether the engine logs meesages at the specified log level
+    /// This test does not validate whether the engine logs messages at the specified log level
     /// </summary>
     /// <param name="logLevelOption">Log level options</param>
     [DataTestMethod]

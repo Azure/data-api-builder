@@ -79,6 +79,9 @@ namespace Cli.Tests
             }
         ";
 
+        /// <summary>
+        /// A minimal valid config json without any entities. This config string is used in unit tests.
+        /// </summary>
         public const string INITIAL_CONFIG =
           "{" +
             SAMPLE_SCHEMA_DATA_SOURCE + "," +
@@ -105,6 +108,10 @@ namespace Cli.Tests
             ""entities"": {}" +
           "}";
 
+        /// <summary>
+        /// A minimal config json without any entities. This config is invalid as it contains an empty connection
+        /// string. This config is used in tests to verify validation failures.
+        /// </summary>
         public const string INVALID_INTIAL_CONFIG = "{" +
             SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING + "," +
             @"

@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         }
 
         /// <summary>
-        /// Temporary Helper function to ensure that in testing we have an entity 
+        /// Temporary Helper function to ensure that in testing we have an entity
         /// that can have a custom schema. Ultimately this will be replaced with a JSON string
         /// in the tests that can be fully customized for testing purposes.
         /// </summary>
@@ -189,7 +189,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         ";
 
         /// <summary>
-        /// 
+        /// A minimal valid config json without any entities. This config string is used in unit tests.
         /// </summary>
         public const string INITIAL_CONFIG =
           "{" +

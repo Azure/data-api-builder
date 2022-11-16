@@ -68,30 +68,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>JSON object result and its related pagination metadata</returns>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
         {
-             _sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(context.Field.Name.Value, out DatabaseObject? databaseObject);
-            if (databaseObject is not null && databaseObject.SourceType is SourceType.StoredProcedure)
-            {
-                SqlExecuteStructure sqlExecuteStructure = new(context.FieldSelection.Name.Value, _sqlMetadataProvider, parameters);
-                string queryText = _queryBuilder.Build(sqlExecuteStructure);
-                _logger.LogInformation(queryText);
-
-                Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRowAndProperties =
-                await _queryExecutor.ExecuteQueryAsync(
-                    queryText,
-                    sqlExecuteStructure.Parameters,
-                    _queryExecutor.ExtractRowFromDbDataReader);
-
-                JsonDocument jsonResult = JsonDocument.Parse("{\"result\": {}}");
-                if (resultRowAndProperties.Item1 is not null)
-                {
-                    jsonResult = JsonSerializer.SerializeToDocument(resultRowAndProperties.Item1);
-                }
-
-
-                return new Tuple<JsonDocument, IMetadata>(
-                        jsonResult,
-                        PaginationMetadata.MakeEmptyPaginationMetadata());
-            }
 
             if (context.Selection.Type.IsListType())
             {

@@ -62,9 +62,18 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 IDictionary<string, object?> parameters = GetParametersFromContext(context);
 
-                Tuple<JsonDocument, IMetadata> result = await _mutationEngine.ExecuteAsync(context, parameters);
-                context.Result = result.Item1;
-                SetNewMetadata(context, result.Item2);
+                if (context.Selection.Type.IsListType())
+                {
+                    Tuple<IEnumerable<JsonDocument>, IMetadata> result = await _queryEngine.ExecuteListAsync(context, parameters);
+                    context.Result = result.Item1;
+                    SetNewMetadata(context, result.Item2);
+                }
+                else
+                {
+                    Tuple<JsonDocument, IMetadata> result = await _mutationEngine.ExecuteAsync(context, parameters);
+                    context.Result = result.Item1;
+                    SetNewMetadata(context, result.Item2);
+                }
             }
             else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {

@@ -184,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 new NameNode(name.Value),
                 new StringValueNode($"Execute Stored-Procedure {name.Value}."),
                 inputValues,
-                new NonNullTypeNode(new NamedTypeNode(name)),
+                new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
                 fieldDefinitionNodeDirectives
             );
         }

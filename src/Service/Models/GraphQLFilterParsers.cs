@@ -18,13 +18,6 @@ namespace Azure.DataApiBuilder.Service.Models
         public static readonly string NullStringValue = "NULL";
 
         /// <summary>
-        /// Constructor for the filter parser.
-        /// </summary>
-        public GQLFilterParser()
-        {
-        }
-
-        /// <summary>
         /// Parse a predicate for a *FilterInput input type
         /// </summary>
         /// <param name="ctx">The GraphQL context, used to get the query variables</param>

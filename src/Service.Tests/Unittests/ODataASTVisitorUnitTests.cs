@@ -1,11 +1,15 @@
 using System;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
+using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
+using Microsoft.Extensions.Logging;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
@@ -296,10 +300,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Name = tableName
             };
             FindRequestContext context = new(entityName, dbo, isList);
-
+            AuthorizationResolver authorizationResolver = new(
+                _runtimeConfigProvider,
+                _sqlMetadataProvider,
+                new Mock<ILogger<AuthorizationResolver>>().Object);
             Mock<SqlQueryStructure> structure = new(
                 context,
                 _sqlMetadataProvider,
+                authorizationResolver,
                 _runtimeConfigProvider,
                 new GQLFilterParser());
             return new ODataASTVisitor(structure.Object, _sqlMetadataProvider);

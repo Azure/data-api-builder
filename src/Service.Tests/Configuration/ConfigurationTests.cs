@@ -200,7 +200,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
-        [TestMethod("Validates that once the configuration is set, the config controller isn't reachable.")]
+        [TestMethod("Validates that once the configuration is set, the config controller isn't reachable."), TestCategory(TestCategory.COSMOS)]
         public async Task TestConflictAlreadySetConfiguration()
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
@@ -215,7 +215,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
         }
 
-        [TestMethod("Validates that the config controller returns a conflict when using local configuration.")]
+        [TestMethod("Validates that the config controller returns a conflict when using local configuration."), TestCategory(TestCategory.COSMOS)]
         public async Task TestConflictLocalConfiguration()
         {
             Environment.SetEnvironmentVariable
@@ -232,7 +232,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
         }
 
-        [TestMethod("Validates setting the configuration at runtime.")]
+        [TestMethod("Validates setting the configuration at runtime."), TestCategory(TestCategory.COSMOS)]
         public async Task TestSettingConfigurations()
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
@@ -300,7 +300,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
         }
 
-        [TestMethod("Validates that local cosmos settings can be loaded and the correct classes are in the service provider.")]
+        [TestMethod("Validates that local cosmos settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.COSMOS)]
         public void TestLoadingLocalCosmosSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
@@ -309,7 +309,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
-        [TestMethod("Validates access token is correctly loaded when Account Key is not present for Cosmos.")]
+        [TestMethod("Validates access token is correctly loaded when Account Key is not present for Cosmos."), TestCategory(TestCategory.COSMOS)]
         public async Task TestLoadingAccessTokenForCosmosClient()
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
@@ -391,7 +391,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MySqlMetadataProvider));
         }
 
-        [TestMethod("Validates that trying to override configs that are already set fail.")]
+        [TestMethod("Validates that trying to override configs that are already set fail."), TestCategory(TestCategory.COSMOS)]
         public async Task TestOverridingLocalSettingsFails()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
@@ -404,7 +404,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.Conflict, postResult.StatusCode);
         }
 
-        [TestMethod("Validates that setting the configuration at runtime will instantiate the proper classes.")]
+        [TestMethod("Validates that setting the configuration at runtime will instantiate the proper classes."), TestCategory(TestCategory.COSMOS)]
         public async Task TestSettingConfigurationCreatesCorrectClasses()
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
@@ -453,10 +453,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// file into the RuntimeConfig class. It verifies the deserialization succeeds.
         /// </summary>
         [TestMethod("Validates if deserialization of new runtime config format succeeds.")]
+        [Ignore]
         public void TestReadingRuntimeConfig()
         {
             Mock<ILogger> logger = new();
-            string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
+            string jsonString = File.ReadAllText("dab-config.MsSql.json");
             RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
             Assert.IsNotNull(runtimeConfig.Schema);
             Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
@@ -528,7 +529,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// This function verifies command line configuration provider takes higher
         /// precendence than default configuration file dab-config.json
         /// </summary>
-        [TestMethod("Validates command line configuration provider.")]
+        [TestMethod("Validates command line configuration provider."), TestCategory(TestCategory.COSMOS)]
         public void TestCommandLineConfigurationProvider()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
@@ -547,7 +548,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// This function verifies the environment variable DAB_ENVIRONMENT
         /// takes precendence than ASPNETCORE_ENVIRONMENT for the configuration file.
         /// </summary>
-        [TestMethod("Validates precedence is given to DAB_ENVIRONMENT environment variable name.")]
+        [TestMethod("Validates precedence is given to DAB_ENVIRONMENT environment variable name."), TestCategory(TestCategory.COSMOS)]
         public void TestRuntimeEnvironmentVariable()
         {
             Environment.SetEnvironmentVariable(
@@ -560,7 +561,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
-        [TestMethod("Validates the runtime configuration file.")]
+        [TestMethod("Validates the runtime configuration file."), TestCategory(TestCategory.MSSQL)]
         public void TestConfigIsValid()
         {
             RuntimeConfigPath configPath =
@@ -584,6 +585,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// Verifying the Exception thrown.
         /// </summary>
         [TestMethod("Validates that environment variable DAB_CONNSTRING has highest precedence.")]
+        [Ignore]
         public void TestConnectionStringEnvVarHasHighestPrecedence()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);

@@ -48,17 +48,64 @@ namespace Cli.Tests
             return process;
         }
 
-        public const string SAMPLE_SCHEMA_DATA_SOURCE = @"
-          ""$schema"": ""dab.draft.schema.json"",
+        /// <summary>
+        /// Schema property of the config json. This is used for constructing the required config json strings
+        /// for unit tests
+        /// </summary>
+        public const string SCHEMA_PROPERTY = @"
+          ""$schema"": """ + Azure.DataApiBuilder.Config.RuntimeConfig.SCHEMA + @"""";
+
+        /// <summary>
+        /// Data source property of the config json. This is used for constructing the required config json strings
+        /// for unit tests 
+        /// </summary>
+        public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
               ""database-type"": ""mssql"",
               ""connection-string"": ""testconnectionstring""
             }
         ";
 
+        /// <summary>
+        /// Data source property of the config json with an invalid connection string. This is used for constructing the required config json strings
+        /// for unit tests. Config json constructed using this data source element will fail validations because as connection string
+        /// is not allowed
+        /// </summary>
+        public const string SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING = SCHEMA_PROPERTY + "," + @"
+            ""data-source"": {
+              ""database-type"": ""mssql"",
+              ""connection-string"": """"
+            }
+        ";
+
         public const string INITIAL_CONFIG =
           "{" +
             SAMPLE_SCHEMA_DATA_SOURCE + "," +
+            @"
+            ""runtime"": {
+              ""rest"": {
+                ""path"": ""/api""
+              },
+              ""graphql"": {
+                ""path"": ""/graphql"",
+                ""allow-introspection"": true
+              },
+              ""host"": {
+                ""mode"": ""development"",
+                ""cors"": {
+                  ""origins"": [],
+                  ""allow-credentials"": false
+                },
+                ""authentication"": {
+                  ""provider"": ""StaticWebApps""
+                }
+              }
+            },
+            ""entities"": {}" +
+          "}";
+
+        public const string INVALID_INTIAL_CONFIG = "{" +
+            SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING + "," +
             @"
             ""runtime"": {
               ""rest"": {

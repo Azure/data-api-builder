@@ -165,7 +165,7 @@ Although scans are costlier than seeks, they are not always bad. The option 2 is
 
 
 ## Implementation Details for Option 1 Exists clause
- - When we parse the GraphQL filter arguments, we can identify if it is a nested filter object when the type of filter input is not a scalar i.e. NOT any of String, Boolean, Integer or Id filter input.
+- When we parse the GraphQL filter arguments, we can identify if it is a nested filter object when the type of filter input is not a scalar i.e. NOT any of String, Boolean, Integer or Id filter input.
 - Once the nested filtering scenario is identified, we need to identify if it is a relational database(SQL) scenario or non-relational. If the source definition of the entity that is being filtered has non-zero primary key count, it is a SQL scenario.
 - Create an SqlExistsQueryStructure as the predicate operand of Exists predicate. This query structure has no order by, no limit and selects 1.
 - Its predicates are obtained from recursively parsing the nested filter and an additional predicate to reflect the join between main query and this exists subquery.

@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// <summary>
         /// Build the model from the provided schema.
         /// </summary>
-        /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds the objects needed
+        /// <param name="sqlMetadataProvider">The MetadataProvider holds the objects needed
         /// to build the correct model.</param>
         /// <returns>An EdmModelBuilder that can be used to get a model.</returns>
         public EdmModelBuilder BuildModel(ISqlMetadataProvider sqlMetadataProvider)
@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// <summary>
         /// Add the entity types found in the schema to the model
         /// </summary>
-        /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds the objects needed
+        /// <param name="sqlMetadataProvider">The MetadataProvider holds the objects needed
         /// to build the correct model.</param>
         /// <returns>this model builder</returns>
         private EdmModelBuilder BuildEntityTypes(ISqlMetadataProvider sqlMetadataProvider)
@@ -146,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// <summary>
         /// Add the entity sets contained within the schema to container.
         /// </summary>
-        /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds the objects needed
+        /// <param name="sqlMetadataProvider">The MetadataProvider holds the objects needed
         /// to build the correct model.</param>
         /// <returns>this model builder</returns>
         private EdmModelBuilder BuildEntitySets(ISqlMetadataProvider sqlMetadataProvider)

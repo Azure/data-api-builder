@@ -449,27 +449,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// This function will attempt to read the dab-config.json
-        /// file into the RuntimeConfig class. It verifies the deserialization succeeds.
+        /// This test reads the dab-config.MsSql.json file and validates that the
+        /// deserialization succeeds.
         /// </summary>
-        [TestMethod("Validates if deserialization of new runtime config format succeeds.")]
-        [Ignore]
+        [TestMethod("Validates if deserialization of new runtime config format succeeds."), TestCategory(TestCategory.MSSQL)]
         public void TestReadingRuntimeConfig()
         {
             Mock<ILogger> logger = new();
-            string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
+            string jsonString = File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}");
             RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
             Assert.IsNotNull(runtimeConfig.Schema);
             Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
-            Assert.IsTrue(runtimeConfig.CosmosDb == null
-                || runtimeConfig.CosmosDb.GetType() == typeof(CosmosDbOptions));
-            Assert.IsTrue(runtimeConfig.MsSql == null
-                || runtimeConfig.MsSql.GetType() == typeof(MsSqlOptions));
-            Assert.IsTrue(runtimeConfig.PostgreSql == null
-                || runtimeConfig.PostgreSql.GetType() == typeof(PostgreSqlOptions));
-            Assert.IsTrue(runtimeConfig.MySql == null
-                || runtimeConfig.MySql.GetType() == typeof(MySqlOptions));
-
+            Assert.IsTrue(runtimeConfig.MsSql.GetType() == typeof(MsSqlOptions));
             Assert.IsInstanceOfType(runtimeConfig.Entities, typeof(Dictionary<string, Entity>));
             foreach (Entity entity in runtimeConfig.Entities.Values)
             {
@@ -510,7 +501,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         }
                         else
                         {
-                            Operation name = ((JsonElement)operation).Deserialize<Operation>(RuntimeConfig.SerializerOptions);
+                            Operation name = AuthorizationResolver.WILDCARD.Equals(operation.ToString()) ? Operation.All : ((JsonElement)operation).Deserialize<Operation>(RuntimeConfig.SerializerOptions);
                             Assert.IsTrue(allowedActions.Contains(name));
                         }
                     }

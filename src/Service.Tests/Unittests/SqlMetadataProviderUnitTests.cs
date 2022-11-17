@@ -4,9 +4,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {

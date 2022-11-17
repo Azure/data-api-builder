@@ -304,7 +304,7 @@ public class EndToEndTests
     [DataRow("--LogLevel waRNing", DisplayName = "Case sensitivity: LogLevel Warning from command line.")]
     [DataRow("--LogLevel eRROR", DisplayName = "Case sensitivity: LogLevel Error from command line.")]
     [DataRow("--LogLevel CrItIcal", DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
-    [DataRow("--LogLevel NONE",DisplayName = "Case sensitivity: LogLevel None from command line.")]
+    [DataRow("--LogLevel NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
     public void TestEngineStartUpWithVerboseAndLogLevelOptions(string logLevelOption)
     {
         WriteJsonContentToFile(_testRuntimeConfig, INITIAL_CONFIG);

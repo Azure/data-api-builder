@@ -66,72 +66,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
         [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests")]
         [DataRow("")]
-        public async Task CheckExceptionForBadConnectionStringForMsSql(string connectionString)
+        public async Task CheckExceptionForBadConnectionString(string connectionString)
         {
             DatabaseEngine = TestCategory.MSSQL;
-            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
-            SetUpSQLMetadataProvider();
-            try
-            {
-                await _sqlMetadataProvider.InitializeAsync();
-            }
-            catch (DataApiBuilderException ex)
-            {
-                // use contains to correctly cover db/user unique error messaging
-                Assert.IsTrue(ex.Message.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
-            }
-        }
-
-        /// <summary>
-        /// <code>Do: </code> Load runtimeConfig and set connection string and db type
-        /// according to data row.
-        /// <code>Check: </code>  Verify malformed connection string throws correct exception with MySQL as the database.
-        /// </summary>
-        [DataTestMethod, TestCategory(TestCategory.MYSQL)]
-        [DataRow(";;;;;fooBarBAZ")]
-        [DataRow("!&^%*&$$%#$%@$%#@()")]
-        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
-        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
-        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests")]
-        [DataRow("")]
-        [Ignore]
-        public async Task CheckExceptionForBadConnectionStringForMySql(string connectionString)
-        {
-            DatabaseEngine = TestCategory.MYSQL;
-            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
-            SetUpSQLMetadataProvider();
-            try
-            {
-                await _sqlMetadataProvider.InitializeAsync();
-            }
-            catch (DataApiBuilderException ex)
-            {
-                // use contains to correctly cover db/user unique error messaging
-                Assert.IsTrue(ex.Message.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
-            }
-        }
-
-        /// <summary>
-        /// <code>Do: </code> Load runtimeConfig and set connection string and db type
-        /// according to data row.
-        /// <code>Check: </code>  Verify malformed connection string throws correct exception with PostgreSql as the database.
-        /// </summary>
-        [DataTestMethod, TestCategory(TestCategory.POSTGRESQL)]
-        [DataRow(";;;;;fooBarBAZ")]
-        [DataRow("!&^%*&$$%#$%@$%#@()")]
-        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
-        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
-        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests")]
-        [DataRow("")]
-        public async Task CheckExceptionForBadConnectionStringForPostgreSql(string connectionString)
-        {
-            DatabaseEngine = TestCategory.POSTGRESQL;
             _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
             SetUpSQLMetadataProvider();

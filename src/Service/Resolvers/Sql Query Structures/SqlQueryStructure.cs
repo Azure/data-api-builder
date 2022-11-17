@@ -396,7 +396,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 object? filterObject = queryParams[QueryBuilder.FILTER_FIELD_NAME];
 
-                if (filterObject != null)
+                if (filterObject is not null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
                     Predicates.Add(GraphQLFilterParser.Parse(
@@ -412,7 +412,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 object? orderByObject = queryParams[QueryBuilder.ORDER_BY_FIELD_NAME];
 
-                if (orderByObject != null)
+                if (orderByObject is not null)
                 {
                     OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject, queryArgumentSchemas[QueryBuilder.ORDER_BY_FIELD_NAME]);
                 }

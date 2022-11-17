@@ -239,7 +239,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName();
                 RuntimeConfiguration!.ConnectionString = connectionString;
 
-                if (RuntimeConfiguration!.DatabaseType is DatabaseType.cosmos)
+                if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmos)
                 {
                     if (string.IsNullOrEmpty(schema))
                     {

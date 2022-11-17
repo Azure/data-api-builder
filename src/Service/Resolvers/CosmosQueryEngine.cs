@@ -42,6 +42,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             _metadataStoreProvider = metadataStoreProvider;
             _queryBuilder = new CosmosQueryBuilder();
             _gQLFilterParser = gQLFilterParser;
+            _authorizationResolver = authorizationResolver;
         }
 
         /// <summary>

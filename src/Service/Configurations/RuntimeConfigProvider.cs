@@ -239,14 +239,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName();
                 RuntimeConfiguration!.ConnectionString = connectionString;
 
-                if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmos)
+                if (RuntimeConfiguration!.DatabaseType is DatabaseType.cosmos)
                 {
                     if (string.IsNullOrEmpty(schema))
                     {
                         throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
                     }
 
-                    CosmosDbOptions? cosmosDb = RuntimeConfiguration.CosmosDb with { GraphQLSchema = schema };
+                    CosmosDbOptions? cosmosDb = RuntimeConfiguration.CosmosDb! with { GraphQLSchema = schema };
                     RuntimeConfiguration = RuntimeConfiguration with { CosmosDb = cosmosDb };
                 }
             }

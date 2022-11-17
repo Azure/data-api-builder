@@ -516,6 +516,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             EntityDeserializationValidationHelper(runtimeConfig);
         }
 
+        /// <summary>
+        /// Helper method to validate the deserialization of the "entities" section of the config file
+        /// This is used in unit tests that validate the deserialiation of the config files
+        /// </summary>
+        /// <param name="runtimeConfig"></param>
         private static void EntityDeserializationValidationHelper(RuntimeConfig runtimeConfig)
         {
             foreach (Entity entity in runtimeConfig.Entities.Values)

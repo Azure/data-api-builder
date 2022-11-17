@@ -6,6 +6,9 @@ DROP VIEW IF EXISTS books_publishers_view_composite;
 DROP VIEW IF EXISTS books_publishers_view_composite_insertable;
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
+DROP PROCEDURE IF EXISTS insert_book;
+DROP PROCEDURE IF EXISTS count_books;
+DROP PROCEDURE IF EXISTS insert_and_display_all_books;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -299,3 +302,12 @@ EXEC('CREATE PROCEDURE get_book_by_id @id int AS
       WHERE id = @id');
 EXEC('CREATE PROCEDURE get_books AS
       SELECT * FROM dbo.books');
+EXEC('CREATE PROCEDURE insert_book @title varchar(max), @publisher_id int AS
+      INSERT INTO dbo.books(title, publisher_id) VALUES (@title, @publisher_id)');
+EXEC('CREATE PROCEDURE count_books AS
+	  SELECT COUNT(*) AS total_books FROM dbo.books');
+EXEC('CREATE PROCEDURE insert_and_display_all_books @title varchar(max), @publisher_id int AS
+      BEGIN
+        INSERT INTO dbo.books(title, publisher_id) VALUES (@title, @publisher_id)
+        SELECT * FROM dbo.books
+      END');

@@ -254,6 +254,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingSingleRow()
+        {
+            string msSqlQuery = $"EXEC dbo.get_book_by_id @id=\"3\"";
+            await base.TestStoredProcedureQueryForGettingSingleRow(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingMultipleRows()
+        {
+            string msSqlQuery = $"EXEC dbo.get_books";
+            await base.TestStoredProcedureQueryForGettingMultipleRows(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows()
+        {
+            string msSqlQuery = $"EXEC dbo.count_books";
+            await base.TestStoredProcedureQueryForGettingTotalNumberOfRows(msSqlQuery);
+        }
+
+        [TestMethod]
         public async Task TestQueryOnCompositeView()
         {
             string msSqlQuery = $"SELECT TOP 5 id, name FROM books_publishers_view_composite ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";

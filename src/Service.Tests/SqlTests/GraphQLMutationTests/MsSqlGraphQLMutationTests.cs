@@ -103,6 +103,39 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await InsertMutationForConstantdefaultValue(msSqlQuery);
         }
 
+        [TestMethod]
+        public async Task TestStoredProcedureMutationForInsertionWithNoReturns()
+        {
+            string msSqlQuery = @"
+                SELECT COUNT(*) AS [count]
+                FROM [books] AS [table0]
+                WHERE [table0].[title] = 'Random Book'
+                    AND [table0].[publisher_id] = 1234
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await TestStoredProcedureMutationForInsertionWithNoReturns(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task TestStoredProcedureMutationForInsertionWithReturns()
+        {
+            string dbQueryForResult = $"SELECT id, title, publisher_id FROM books ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string dbQueryToVerifyInsertion = @"
+                SELECT COUNT(*) AS [count]
+                FROM [books] AS [table0]
+                WHERE [table0].[title] = 'Theory of DAB'
+                    AND [table0].[publisher_id] = 1234
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await TestStoredProcedureMutationForInsertionWithReturns(dbQueryForResult, dbQueryToVerifyInsertion);
+        }
+
         /// <inheritdoc/>
         [TestMethod]
         public async Task InsertMutationForVariableNotNullDefault()

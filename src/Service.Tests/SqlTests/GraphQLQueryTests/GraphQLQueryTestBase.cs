@@ -931,6 +931,67 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Query a simple view (contains columns from one table)
+        /// </summary>
+        [TestMethod]
+        public virtual async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
+        {
+            string graphQLQueryName = "GetBook";
+            string graphQLQuery = @"{
+                GetBook(id: ""3"") {
+                    id
+                    title
+                    publisher_id
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery, false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Query a simple view (contains columns from one table)
+        /// </summary>
+        [TestMethod]
+        public virtual async Task TestStoredProcedureQueryForGettingMultipleRows(string dbQuery)
+        {
+            string graphQLQueryName = "GetBooks";
+            string graphQLQuery = @"{
+                GetBooks {
+                    id
+                    title
+                    publisher_id
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery, false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Query a simple view (contains columns from one table)
+        /// </summary>
+        [TestMethod]
+        public virtual async Task TestStoredProcedureQueryForGettingTotalNumberOfRows(string dbQuery)
+        {
+            string graphQLQueryName = "CountBooks";
+            string graphQLQuery = @"{
+                CountBooks {
+                    total_books
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery, false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// Query a composite view (contains columns from multiple tables)
         /// </summary>
         [TestMethod]

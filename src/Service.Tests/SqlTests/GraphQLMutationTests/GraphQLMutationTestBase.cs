@@ -83,6 +83,69 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
+        /// <code>Check: </code> If book with the given id is present in the database then
+        /// the mutation query will return the review Id with the content of the review added
+        /// </summary>
+        public async Task TestStoredProcedureMutationForInsertionWithNoReturns(string dbQuery)
+        {
+            string graphQLMutationName = "InsertBook";
+            string graphQLMutation = @"
+                mutation {
+                    InsertBook(title: ""Random Book"", publisher_id: ""1234"" ) {
+                        result
+                    }
+                }
+            ";
+
+            string currentDbResponse = await GetDatabaseResultAsync(dbQuery);
+            JsonDocument currentResult = JsonDocument.Parse(currentDbResponse);
+            Assert.AreEqual(currentResult.RootElement.GetProperty("count").GetInt64(), 0);
+            JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+
+            // Stored Procedure didn't return anything
+            SqlTestHelper.PerformTestEqualJsonStrings("[]", graphQLResponse.ToString());
+
+            // check to verify new element is inserted
+            string updatedDbResponse = await GetDatabaseResultAsync(dbQuery);
+            JsonDocument updatedResult = JsonDocument.Parse(updatedDbResponse);
+            Assert.AreEqual(updatedResult.RootElement.GetProperty("count").GetInt64(), 1);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
+        /// <code>Check: </code> If book with the given id is present in the database then
+        /// the mutation query will return the review Id with the content of the review added
+        /// </summary>
+        public async Task TestStoredProcedureMutationForInsertionWithReturns(string dbQueryForResult, string dbQueryToVerifyInsertion)
+        {
+            string graphQLMutationName = "InsertAndDisplayAllBooks";
+            string graphQLMutation = @"
+                mutation {
+                    InsertAndDisplayAllBooks(title: ""Theory Of DAB"", publisher_id: ""1234"" ) {
+                        id,
+                        title,
+                        publisher_id
+                    }
+                }
+            ";
+
+            string currentDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyInsertion);
+            JsonDocument currentResult = JsonDocument.Parse(currentDbResponse);
+            Assert.AreEqual(currentResult.RootElement.GetProperty("count").GetInt64(), 0);
+            JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string dbResponse = await GetDatabaseResultAsync(dbQueryForResult);
+
+            // Stored Procedure didn't return anything
+            SqlTestHelper.PerformTestEqualJsonStrings(dbResponse, graphQLResponse.ToString());
+
+            // check to verify new element is inserted
+            string updatedDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyInsertion);
+            JsonDocument updatedResult = JsonDocument.Parse(updatedDbResponse);
+            Assert.AreEqual(updatedResult.RootElement.GetProperty("count").GetInt64(), 1);
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new stock price with default current timestamp as the value of 
         /// 'instant' column and returns the inserted row.
         /// <code>Check: </code> If stock price with the given (category, piece id) is successfully inserted

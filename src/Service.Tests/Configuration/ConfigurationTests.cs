@@ -455,14 +455,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of MsSql config file succeeds."), TestCategory(TestCategory.MSSQL)]
         public void TestReadingRuntimeConfigForMsSql()
         {
-            Mock<ILogger> logger = new();
             string jsonString = File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}");
-            RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
-            Assert.IsNotNull(runtimeConfig.Schema);
-            Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
-            Assert.IsTrue(runtimeConfig.MsSql == null || runtimeConfig.MsSql.GetType() == typeof(MsSqlOptions));
-            Assert.IsInstanceOfType(runtimeConfig.Entities, typeof(Dictionary<string, Entity>));
-            EntityDeserializationValidationHelper(runtimeConfig);
+            ConfigFileDeserializationValidationHelper(jsonString);
         }
 
         /// <summary>
@@ -472,14 +466,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of MySql config file succeeds."), TestCategory(TestCategory.MYSQL)]
         public void TestReadingRuntimeConfigForMySql()
         {
-            Mock<ILogger> logger = new();
             string jsonString = File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{MYSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}");
-            RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
-            Assert.IsNotNull(runtimeConfig.Schema);
-            Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
-            Assert.IsTrue(runtimeConfig.MySql == null || runtimeConfig.MySql.GetType() == typeof(MySqlOptions));
-            Assert.IsInstanceOfType(runtimeConfig.Entities, typeof(Dictionary<string, Entity>));
-            EntityDeserializationValidationHelper(runtimeConfig);
+            ConfigFileDeserializationValidationHelper(jsonString);
         }
 
         /// <summary>
@@ -489,14 +477,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of PostgreSql config file succeeds."), TestCategory(TestCategory.POSTGRESQL)]
         public void TestReadingRuntimeConfigForPostgreSql()
         {
-            Mock<ILogger> logger = new();
             string jsonString = File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}");
-            RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
-            Assert.IsNotNull(runtimeConfig.Schema);
-            Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
-            Assert.IsTrue(runtimeConfig.PostgreSql == null || runtimeConfig.PostgreSql.GetType() == typeof(PostgreSqlOptions));
-            Assert.IsInstanceOfType(runtimeConfig.Entities, typeof(Dictionary<string, Entity>));
-            EntityDeserializationValidationHelper(runtimeConfig);
+            ConfigFileDeserializationValidationHelper(jsonString);
         }
 
         /// <summary>
@@ -506,14 +488,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of the cosmos config file succeeds."), TestCategory(TestCategory.COSMOS)]
         public void TestReadingRuntimeConfigForCosmos()
         {
-            Mock<ILogger> logger = new();
             string jsonString = File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}");
-            RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
-            Assert.IsNotNull(runtimeConfig.Schema);
-            Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
-            Assert.IsTrue(runtimeConfig.CosmosDb == null || runtimeConfig.CosmosDb.GetType() == typeof(CosmosDbOptions));
-            Assert.IsInstanceOfType(runtimeConfig.Entities, typeof(Dictionary<string, Entity>));
-            EntityDeserializationValidationHelper(runtimeConfig);
+            ConfigFileDeserializationValidationHelper(jsonString);
         }
 
         /// <summary>
@@ -521,8 +497,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// This is used in unit tests that validate the deserialiation of the config files
         /// </summary>
         /// <param name="runtimeConfig"></param>
-        private static void EntityDeserializationValidationHelper(RuntimeConfig runtimeConfig)
+        private static void ConfigFileDeserializationValidationHelper(string jsonString)
         {
+            Mock<ILogger> logger = new();
+            RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
+            Assert.IsNotNull(runtimeConfig.Schema);
+            Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
+            Assert.IsTrue(runtimeConfig.CosmosDb == null
+                || runtimeConfig.CosmosDb.GetType() == typeof(CosmosDbOptions));
+            Assert.IsTrue(runtimeConfig.MsSql == null
+                || runtimeConfig.MsSql.GetType() == typeof(MsSqlOptions));
+            Assert.IsTrue(runtimeConfig.PostgreSql == null
+                || runtimeConfig.PostgreSql.GetType() == typeof(PostgreSqlOptions));
+            Assert.IsTrue(runtimeConfig.MySql == null
+                || runtimeConfig.MySql.GetType() == typeof(MySqlOptions));
+            Assert.IsInstanceOfType(runtimeConfig.Entities, typeof(Dictionary<string, Entity>));
+
             foreach (Entity entity in runtimeConfig.Entities.Values)
             {
                 Assert.IsTrue(((JsonElement)entity.Source).ValueKind == JsonValueKind.String

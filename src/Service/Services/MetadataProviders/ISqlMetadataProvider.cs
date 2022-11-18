@@ -23,20 +23,20 @@ namespace Azure.DataApiBuilder.Service.Services
         string GetSchemaName(string entityName);
 
         bool VerifyForeignKeyExistsInDB(
-            DatabaseObject databaseObjectA,
-            DatabaseObject databaseObjectB);
+            DatabaseTable databaseObjectA,
+            DatabaseTable databaseObjectB);
 
         /// <summary>
         /// Obtains the underlying source object's name (SQL table or Cosmos container).
         /// </summary>
         string GetDatabaseObjectName(string entityName);
 
-        (string, string) ParseSchemaAndDbObjectName(string source);
+        (string, string) ParseSchemaAndDbTableName(string source);
 
         /// <summary>
-        /// Obtains the underlying TableDefinition for the given entity name.
+        /// Obtains the underlying SourceDefinition for the given entity name.
         /// </summary>
-        TableDefinition GetTableDefinition(string entityName);
+        SourceDefinition GetSourceDefinition(string entityName);
 
         /// <summary>
         /// Obtains the underlying StoredProcedureDefinition for the given entity name.
@@ -110,5 +110,13 @@ namespace Azure.DataApiBuilder.Service.Services
         /// When a partition key path is being looked up for the first time, this method will add it to the dictionary
         /// </summary>
         void SetPartitionKeyPath(string database, string container, string partitionKeyPath);
+
+        /// <summary>
+        /// The GraphQL type is expected to either match the top level entity name from runtime config or the name specified in the singular property 
+        /// The entities dictionary should always be using the top level entity name
+        /// First try to check if the GraphQL type is matching any key in the entities dictionary
+        /// If no match found, then use the GraphQL singular type in the runtime config to look up the top-level entity name from a GraphQLSingularTypeToEntityNameMap
+        /// </summary>
+        public string GetEntityName(string graphQLType);
     }
 }

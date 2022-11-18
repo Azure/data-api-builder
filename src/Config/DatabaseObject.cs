@@ -3,17 +3,13 @@ namespace Azure.DataApiBuilder.Config
     /// <summary>
     /// Represents a database object - which could be a view, table, or stored procedure.
     /// </summary>
-    public class DatabaseObject
+    public abstract class DatabaseObject
     {
         public string SchemaName { get; set; } = null!;
 
         public string Name { get; set; } = null!;
 
-        public TableDefinition TableDefinition { get; set; } = null!;
-
-        public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
-
-        public SourceType? ObjectType { get; set; } = null!;
+        public SourceType SourceType { get; set; } = SourceType.Table;
 
         public DatabaseObject(string schemaName, string tableName)
         {
@@ -49,6 +45,38 @@ namespace Azure.DataApiBuilder.Config
         }
     }
 
+    /// <summary>
+    /// Sub-class of DatabaseObject class, represents a table in the database.
+    /// </summary>
+    public class DatabaseTable : DatabaseObject
+    {
+        public DatabaseTable(string schemaName, string tableName)
+            : base(schemaName, tableName) { }
+
+        public DatabaseTable() { }
+        public SourceDefinition TableDefinition { get; set; } = null!;
+    }
+
+    /// <summary>
+    /// Sub-class of DatabaseObject class, represents a view in the database.
+    /// </summary>
+    public class DatabaseView : DatabaseObject
+    {
+        public DatabaseView(string schemaName, string tableName)
+            : base(schemaName, tableName) { }
+        public ViewDefinition ViewDefinition { get; set; } = null!;
+    }
+
+    /// <summary>
+    /// Sub-class of DatabaseObject class, represents a stored procedure in the database.
+    /// </summary>
+    public class DatabaseStoredProcedure : DatabaseObject
+    {
+        public DatabaseStoredProcedure(string schemaName, string tableName)
+            : base(schemaName, tableName) { }
+        public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
+    }
+
     public class StoredProcedureDefinition
     {
         /// <summary>
@@ -65,30 +93,34 @@ namespace Azure.DataApiBuilder.Config
         public object? ConfigDefaultValue { get; set; }
     }
 
-    public class TableDefinition
+    /// <summary>
+    /// Class to store database table definition. It contains properties that are
+    /// common between a database table and a view.
+    /// </summary>
+    public class SourceDefinition
     {
         /// <summary>
-        /// The list of columns that together form the primary key of the table.
+        /// The list of columns that together form the primary key of the source.
         /// </summary>
         public List<string> PrimaryKey { get; set; } = new();
 
         /// <summary>
-        /// The list of columns in this table.
+        /// The list of columns in this source.
         /// </summary>
         public Dictionary<string, ColumnDefinition> Columns { get; private set; } =
             new(StringComparer.InvariantCultureIgnoreCase);
 
         /// <summary>
         /// A dictionary mapping all the source entities to their relationship metadata.
-        /// All these entities share this table definition
-        /// as their underlying database object 
+        /// All these entities share this source definition
+        /// as their underlying database object. 
         /// </summary>
         public Dictionary<string, RelationshipMetadata> SourceEntityRelationshipMap { get; private set; } =
             new(StringComparer.InvariantCultureIgnoreCase);
 
         /// <summary>
         /// Given the list of column names to check, evaluates
-        /// if any of them is a nullable column when matched with the columns in this table definition.
+        /// if any of them is a nullable column when matched with the columns in this source definition.
         /// </summary>
         /// <param name="columnsToCheck">List of column names.</param>
         /// <returns>True if any of the columns is null, false otherwise.</returns>
@@ -101,6 +133,11 @@ namespace Azure.DataApiBuilder.Config
                                  .Any();
         }
     }
+
+    /// <summary>
+    /// Class to store the database view definition.
+    /// </summary>
+    public class ViewDefinition : SourceDefinition { }
 
     /// <summary>
     /// Class encapsulating foreign keys corresponding to target entities.
@@ -172,16 +209,16 @@ namespace Azure.DataApiBuilder.Config
         public RelationShipPair() { }
 
         public RelationShipPair(
-            DatabaseObject referencingDbObject,
-            DatabaseObject referencedDbObject)
+            DatabaseTable referencingDbObject,
+            DatabaseTable referencedDbObject)
         {
-            ReferencingDbObject = referencingDbObject;
-            ReferencedDbObject = referencedDbObject;
+            ReferencingDbTable = referencingDbObject;
+            ReferencedDbTable = referencedDbObject;
         }
 
-        public DatabaseObject ReferencingDbObject { get; set; } = new();
+        public DatabaseTable ReferencingDbTable { get; set; } = new();
 
-        public DatabaseObject ReferencedDbObject { get; set; } = new();
+        public DatabaseTable ReferencedDbTable { get; set; } = new();
 
         public override bool Equals(object? other)
         {
@@ -191,14 +228,14 @@ namespace Azure.DataApiBuilder.Config
         public bool Equals(RelationShipPair? other)
         {
             return other != null &&
-                   ReferencedDbObject.Equals(other.ReferencedDbObject) &&
-                   ReferencingDbObject.Equals(other.ReferencingDbObject);
+                   ReferencedDbTable.Equals(other.ReferencedDbTable) &&
+                   ReferencingDbTable.Equals(other.ReferencingDbTable);
         }
 
         public override int GetHashCode()
         {
             return HashCode.Combine(
-                    ReferencedDbObject, ReferencingDbObject);
+                    ReferencedDbTable, ReferencingDbTable);
         }
     }
 

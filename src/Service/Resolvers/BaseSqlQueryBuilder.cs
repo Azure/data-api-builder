@@ -72,8 +72,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             StringBuilder result = new();
             for (int i = 0; i <= untilIndex; i++)
             {
-                string op = i == untilIndex ? GetComparisonFromDirection(columns[i].Direction) : "=";
-                result.Append($"{Build(columns[i], printDirection: false)} {op} {columns[i].ParamName}");
+                // Combine op and param to accomodate "is NULL" which is used for
+                // params that have value of NULL.
+                string opAndParam = i == untilIndex ?
+                    $"{GetComparisonFromDirection(columns[i].Direction)} {columns[i].ParamName}" :
+                    columns[i].Value is not null ?
+                    $"= {columns[i].ParamName}" : "is NULL";
+                result.Append($"{Build(columns[i], printDirection: false)} {opAndParam}");
 
                 if (i < untilIndex)
                 {
@@ -108,14 +113,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Build column as
         /// [{tableAlias}].[{ColumnName}]
-        /// or if TableAlias is empty, as
+        /// or if SourceAlias is empty, as
         /// [{schema}].[{table}].[{ColumnName}]
         /// or if schema is empty, as
         /// [{table}].[{ColumnName}]
         /// </summary>
         protected virtual string Build(Column column)
         {
-            // If the table alias is not empty, we return [{TableAlias}].[{Column}]
+            // If the table alias is not empty, we return [{SourceAlias}].[{Column}]
             if (!string.IsNullOrEmpty(column.TableAlias))
             {
                 return $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}";
@@ -134,8 +139,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// Build orderby column as
-        /// {TableAlias}.{ColumnName} {direction}
-        /// If TableAlias is null
+        /// {SourceAlias}.{ColumnName} {direction}
+        /// If SourceAlias is null
         /// {ColumnName} {direction}
         /// </summary>
         protected virtual string Build(OrderByColumn column, bool printDirection = true)
@@ -277,7 +282,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// Write the join in sql
-        /// INNER JOIN {TableName} AS {TableAlias} ON {JoinPredicates}
+        /// INNER JOIN {TableName} AS {SourceAlias} ON {JoinPredicates}
         /// </summary>
         protected string Build(SqlJoinStructure join)
         {
@@ -353,11 +358,11 @@ SELECT
     ReferentialConstraints.CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))},
     ReferencingColumnUsage.TABLE_SCHEMA
         {QuoteIdentifier($"Referencing{nameof(DatabaseObject.SchemaName)}")},
-    ReferencingColumnUsage.TABLE_NAME {QuoteIdentifier($"Referencing{nameof(TableDefinition)}")},
+    ReferencingColumnUsage.TABLE_NAME {QuoteIdentifier($"Referencing{nameof(SourceDefinition)}")},
     ReferencingColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))},
     ReferencedColumnUsage.TABLE_SCHEMA
         {QuoteIdentifier($"Referenced{nameof(DatabaseObject.SchemaName)}")},
-    ReferencedColumnUsage.TABLE_NAME {QuoteIdentifier($"Referenced{nameof(TableDefinition)}")},
+    ReferencedColumnUsage.TABLE_NAME {QuoteIdentifier($"Referenced{nameof(SourceDefinition)}")},
     ReferencedColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))}
 FROM 
     INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS ReferentialConstraints

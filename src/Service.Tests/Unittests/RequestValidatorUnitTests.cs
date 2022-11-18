@@ -51,20 +51,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void MatchingPrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id" };
-            TableDefinition tableDef = new()
+            SourceDefinition tableDef = new()
             {
                 PrimaryKey = new(primaryKeys)
             };
 
             string outParam;
-            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(tableDef);
             _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam))
                               .Callback(new metaDataCallback((string entity, string exposedField, out string backingColumn)
                               => _ = _defaultMapping[entity].TryGetValue(exposedField, out backingColumn)))
                               .Returns((string entity, string exposedField, string backingColumn)
                               => _defaultMapping[entity].TryGetValue(exposedField, out backingColumn));
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "id/1";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -80,20 +82,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void MatchingCompositePrimaryKeyOrdered()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            TableDefinition tableDef = new()
+            SourceDefinition tableDef = new()
             {
                 PrimaryKey = new(primaryKeys)
             };
 
             string outParam;
-            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(tableDef);
             _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam))
                               .Callback(new metaDataCallback((string entity, string exposedField, out string backingColumn)
                               => _ = _defaultMapping[entity].TryGetValue(exposedField, out backingColumn)))
                               .Returns((string entity, string exposedField, string backingColumn)
                               => _defaultMapping[entity].TryGetValue(exposedField, out backingColumn));
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "id/2/isbn/12345";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -110,20 +114,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void MatchingCompositePrimaryKeyNotOrdered()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            TableDefinition tableDef = new()
+            SourceDefinition tableDef = new()
             {
                 PrimaryKey = new(primaryKeys)
             };
 
             string outParam;
-            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(tableDef);
             _mockMetadataStore.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam))
                               .Callback(new metaDataCallback((string entity, string exposedField, out string backingColumn)
                               => _ = _defaultMapping[entity].TryGetValue(exposedField, out backingColumn)))
                               .Returns((string entity, string exposedField, string backingColumn)
                               => _defaultMapping[entity].TryGetValue(exposedField, out backingColumn));
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             ;
             string primaryKeyRoute = "isbn/12345/id/2";
@@ -173,14 +179,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void RequestWithInvalidPrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id" };
-            TableDefinition tableDef = new()
+            SourceDefinition tableDef = new()
             {
                 PrimaryKey = new(primaryKeys)
             };
 
-            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(tableDef);
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "name/Catch22";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -223,14 +231,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void RequestWithIncompleteCompositePrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id", "name" };
-            TableDefinition tableDef = new()
+            SourceDefinition tableDef = new()
             {
                 PrimaryKey = new(primaryKeys)
             };
 
-            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            _mockMetadataStore.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(tableDef);
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "name/1";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -246,14 +256,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void IncompleteRequestCompositePrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            TableDefinition tableDef = new()
+            SourceDefinition tableDef = new()
             {
                 PrimaryKey = new(primaryKeys)
             };
-
-            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
+            _mockMetadataStore.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "id/12345/name/2";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -272,14 +283,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void BloatedRequestCompositePrimaryKeyTest()
         {
             string[] primaryKeys = new string[] { "id", "isbn" };
-            TableDefinition tableDef = new()
+            SourceDefinition tableDef = new()
             {
                 PrimaryKey = new(primaryKeys)
             };
-
-            _mockMetadataStore.Setup(x => x.GetTableDefinition(It.IsAny<string>())).Returns(tableDef);
+            DatabaseTable dbo = (DatabaseTable)GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME);
+            dbo.TableDefinition = tableDef;
+            _mockMetadataStore.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(tableDef);
             FindRequestContext findRequestContext = new(entityName: DEFAULT_NAME,
-                                                        dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                                                        dbo: dbo,
                                                         isList: false);
             string primaryKeyRoute = "id/12345/isbn/2/name/TwoTowers";
             RequestParser.ParsePrimaryKey(primaryKeyRoute, findRequestContext);
@@ -426,7 +438,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Without use of delegate the out param will
         /// not be populated with the correct value.
         /// This delegate is for the callback used
-        /// with the mocked SqlMetadataProvider.
+        /// with the mocked MetadataProvider.
         /// </summary>
         /// <param name="entity">Name of entity.</param>
         /// <param name="exposedField">Exposed field name.</param>
@@ -441,12 +453,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <returns></returns>
         public static DatabaseObject GetDbo(string schema, string name)
         {
-            return new DatabaseObject()
+            DatabaseObject dbo = new DatabaseTable(schema, name)
             {
-                SchemaName = schema,
-                Name = name,
                 TableDefinition = new()
             };
+            return dbo;
         }
     }
 }

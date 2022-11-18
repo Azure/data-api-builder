@@ -1,7 +1,9 @@
 BEGIN TRANSACTION
 DROP VIEW IF EXISTS books_view_all;
+DROP VIEW IF EXISTS books_view_with_mapping;
 DROP VIEW IF EXISTS stocks_view_selected;
 DROP VIEW IF EXISTS books_publishers_view_composite;
+DROP VIEW IF EXISTS books_publishers_view_composite_insertable;
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP TABLE IF EXISTS book_author_link;
@@ -84,7 +86,7 @@ CREATE TABLE comics(
     title varchar(max) NOT NULL,
     volume int IDENTITY(5001,1),
     categoryName varchar(100) NOT NULL UNIQUE,
-    series_id int NULL,
+    series_id int NULL
 );
 
 CREATE TABLE stocks(
@@ -99,7 +101,7 @@ CREATE TABLE stocks(
 CREATE TABLE stocks_price(
     categoryid int NOT NULL,
     pieceid int NOT NULL,
-    instant varchar(10) NOT NULL,
+    instant datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     price float,
     is_wholesale_price bit,
     PRIMARY KEY(categoryid, pieceid, instant)
@@ -271,20 +273,25 @@ SET IDENTITY_INSERT series ON
 INSERT INTO series(id, [name]) VALUES (3001, 'Foundation'), (3002, 'Hyperion Cantos');
 SET IDENTITY_INSERT series OFF
 
-INSERT INTO comics(id, title, categoryName, series_id) 
+INSERT INTO comics(id, title, categoryName, series_id)
 VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'FairyTales', 3001),(3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');
-INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, 'instant1', 100.57, 1), (1, 1, 'instant2', 42.75, 0);
+INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES (2, 1, 100.57, 1), (1, 1, 42.75, 0);
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
 INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
+EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW stocks_view_selected AS SELECT
       categoryid,pieceid,categoryName,piecesAvailable
       FROM dbo.stocks');
 EXEC('CREATE VIEW books_publishers_view_composite as SELECT
-      publishers.name,books.id,books.publisher_id
+      publishers.name,books.id, books.title, publishers.id as pub_id
+      FROM dbo.books,dbo.publishers
+      where publishers.id = books.publisher_id');
+EXEC('CREATE VIEW books_publishers_view_composite_insertable as SELECT
+      books.id, books.title, publishers.name, books.publisher_id
       FROM dbo.books,dbo.publishers
       where publishers.id = books.publisher_id');
 EXEC('CREATE PROCEDURE get_book_by_id @id int AS

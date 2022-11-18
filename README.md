@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Latest version of Data API builder is  **0.1.5** also known as **M1.5**
+Latest version of Data API builder is  **0.3.7** (aka **Oct2022** release) [What's new?](./docs/whats-new.md#version-037)
 
 ## About
 
@@ -27,10 +27,9 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
   - relationship navigation
 - Easy development via dedicated CLI
 
-## Limitations 
+## Limitations
 
 - JWT only supports Azure AD
-- Tables must have a primary key
 - MySQL, MariaDB and PostgreSQL are not yet fully supported
 
 ## Known Issues
@@ -53,3 +52,13 @@ Contributions to this project are more than welcome. Make sure you check out the
 - [Security](./SECURITY.md)
 - [Contributing](./CONTRIBUTING.md)
 
+If you want to propose a completely new feature, please create an RFC item. Good examples of how to create RFC can be found here:
+
+- [Rust RFC Template](https://github.com/rust-lang/rfcs/blob/master/0000-template.md)
+- [Python PEP Guidance](https://www.python.org/dev/peps/pep-0001/#what-belongs-in-a-successful-pep)
+
+## References
+
+- [Microsoft REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md)
+- [Microsoft Azure REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/azure/Guidelines.md)
+- [GraphQL](https://graphql.org/)

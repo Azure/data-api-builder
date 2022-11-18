@@ -1,17 +1,17 @@
 {
-  "$schema": "../schemas/dab.draft-01.schema.json",
+  "$schema": "dab.draft-01.schema.json",
   "data-source": {
-    "database-type": "mysql",
-    "connection-string": "server=localhost;database=datagatewaytest;Allow User Variables=true;uid=root;pwd=REPLACEME"
+    "database-type": "mssql",
+    "connection-string": "Connection String"
+  },
+  "mssql": {
+    "set-session-context": false
   },
   "runtime": {
     "rest": {
-      "enabled": true,
       "path": "/api"
     },
     "graphql": {
-      "enabled": true,
-      "path": "/graphql",
       "allow-introspection": true
     },
     "host": {
@@ -371,36 +371,6 @@
               "action": "read",
               "fields": {
                 "include": [ "*" ]
-              }
-            },
-            {
-              "action": "delete",
-              "fields": {
-                "include": [ "*" ]
-              },
-              "policy": {
-                "database": "@item.id eq 9"
-              }
-            }
-          ]
-        },
-        {
-          "role": "policy_tester_update_noread",
-          "actions": [
-            "create",
-            {
-              "action": "update",
-              "fields": {
-                "include": [ "*" ]
-              },
-              "policy": {
-                "database": "@item.id eq 9"
-              }
-            },
-            {
-              "action": "read",
-              "fields": {
-                "exclude": [ "*" ]
               }
             },
             {
@@ -781,13 +751,16 @@
       ]
     },
     "books_view_all": {
-      "source": "books_view_all",
+      "source": {
+        "object": "books_view_all",
+        "type": "view"
+      },
       "rest": true,
       "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "*" ]
         },
         {
           "role": "authenticated",
@@ -797,14 +770,40 @@
       "relationships": {
       }
     },
+    "books_view_with_mapping": {
+      "source": {
+        "type": "view",
+        "object": "books_view_with_mapping",
+        "key-fields": ["id"]
+      },
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read", "create", "update", "delete" ]
+        }
+      ],
+      "relationships": {
+      },
+      "mappings": {
+        "id": "book_id"
+      }
+    },
     "stocks_view_selected": {
-      "source": "stocks_view_selected",
+      "source": {
+        "object": "stocks_view_selected",
+        "type": "view"
+      },
       "rest": true,
       "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "*" ]
         },
         {
           "role": "authenticated",
@@ -815,7 +814,27 @@
       }
     },
     "books_publishers_view_composite": {
-      "source": "books_publishers_view_composite",
+      "source": {
+        "object": "books_publishers_view_composite",
+        "type": "view"
+      },
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "books_publishers_view_composite_insertable": {
+      "source": "books_publishers_view_composite_insertable",
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -825,9 +844,32 @@
         },
         {
           "role": "authenticated",
+          "actions": [ "read", "create" ]
+        }
+      ],
+      "relationships": {
+      }
+    },
+    "stocks_price_view_composite": {
+      "source": {
+        "object": "stocks_price_view_composite",
+        "type": "view"
+      },
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
       ],
+      "mappings": {
+        "instant": "phase"
+      },
       "relationships": {
       }
     },
@@ -867,6 +909,42 @@
           "target.entity": "Comic"
         }
       }
+    },
+    "GetBooks": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "get_books"
+      },
+      "rest": true,
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
+        }
+      ]
+    },
+    "GetBook": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "get_book_by_id"
+      },
+      "rest": true,
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
+        }
+      ]
     }
   }
 }

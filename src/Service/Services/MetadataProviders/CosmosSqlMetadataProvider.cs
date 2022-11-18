@@ -19,6 +19,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         private CosmosDbOptions _cosmosDb;
         private readonly RuntimeConfig _runtimeConfig;
         private Dictionary<string, string> _partitionKeyPaths = new();
+        private Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
 
         /// <inheritdoc />
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
@@ -28,8 +29,9 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             _fileSystem = fileSystem;
             _runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
-            _databaseType = _runtimeConfig.DatabaseType;
             _entities = _runtimeConfig.Entities;
+            _databaseType = _runtimeConfig.DatabaseType;
+            _graphQLSingularTypeToEntityNameMap = _runtimeConfig.GraphQLSingularTypeToEntityNameMap;
 
             CosmosDbOptions? cosmosDb = _runtimeConfig.CosmosDb;
 
@@ -94,9 +96,15 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             };
         }
 
-        public TableDefinition GetTableDefinition(string entityName)
+        /// <summary>
+        /// Even though there is no source definition for underlying entity names for
+        /// cosmos db, we return back an empty source definition required for
+        /// graphql filter parser.
+        /// </summary>
+        /// <param name="entityName"></param>
+        public SourceDefinition GetSourceDefinition(string entityName)
         {
-            throw new NotSupportedException("Cosmos backends don't support direct table definitions. Definitions are provided via the GraphQL schema");
+            return new SourceDefinition();
         }
 
         public StoredProcedureDefinition GetStoredProcedureDefinition(string entityName)
@@ -139,13 +147,13 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         }
 
         public bool VerifyForeignKeyExistsInDB(
-            DatabaseObject databaseObjectA,
-            DatabaseObject databaseObjectB)
+            DatabaseTable databaseTableA,
+            DatabaseTable databaseTableB)
         {
             throw new NotImplementedException();
         }
 
-        public (string, string) ParseSchemaAndDbObjectName(string source)
+        public (string, string) ParseSchemaAndDbTableName(string source)
         {
             throw new NotImplementedException();
         }
@@ -184,6 +192,25 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         public bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
         {
             throw new NotImplementedException();
+        }
+
+        /// <inheritdoc />
+        public string GetEntityName(string graphQLType)
+        {
+            if (_entities.ContainsKey(graphQLType))
+            {
+                return graphQLType;
+            }
+
+            if (!_graphQLSingularTypeToEntityNameMap.TryGetValue(graphQLType, out string? entityName))
+            {
+                throw new DataApiBuilderException(
+                    "GraphQL type doesn't match any entity name or singular type in the runtime config.",
+                    System.Net.HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            return entityName!;
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -5,7 +6,7 @@ namespace Azure.DataApiBuilder.Config
 {
     /// <summary>
     /// Defines the Entities that are exposed.
-    /// </summary>   
+    /// </summary>
     /// <param name="Source">The underlying database object to which
     /// the exposed entity is connected to.</param>
     /// <param name="Rest">Can be a bool or RestEntitySettings type.
@@ -37,7 +38,7 @@ namespace Azure.DataApiBuilder.Config
         public const string JSON_PROPERTY_NAME = "entities";
 
         [JsonIgnore]
-        public SourceType ObjectType { get; private set; } = new();
+        public SourceType ObjectType { get; private set; } = SourceType.Table;
 
         [JsonIgnore]
         public string SourceName { get; private set; } = string.Empty;
@@ -46,7 +47,7 @@ namespace Azure.DataApiBuilder.Config
         public Dictionary<string, object>? Parameters { get; private set; }
 
         [JsonIgnore]
-        public Array? KeyFields { get; private set; }
+        public string[]? KeyFields { get; private set; }
 
         [property: JsonPropertyName("graphql")]
         public object? GraphQL { get; set; } = GraphQL;
@@ -78,12 +79,14 @@ namespace Azure.DataApiBuilder.Config
         /// Processes per entity GraphQL Naming Settings
         /// Top Level: true | false
         /// Alternatives: string, SingularPlural object
+        /// returns true on successfull processing
+        /// else false.
         /// </summary>
-        public void ProcessGraphQLNamingConfig()
+        public bool TryProcessGraphQLNamingConfig()
         {
             if (GraphQL is null)
             {
-                return;
+                return true;
             }
 
             if (GraphQL is JsonElement configElement)
@@ -107,7 +110,8 @@ namespace Azure.DataApiBuilder.Config
                     }
                     else
                     {
-                        throw new NotSupportedException("The runtime does not support this GraphQL settings type for an entity.");
+                        // Not Supported Type
+                        return false;
                     }
 
                     GraphQLEntitySettings graphQLEntitySettings = new(Type: nameConfiguration);
@@ -116,8 +120,11 @@ namespace Azure.DataApiBuilder.Config
             }
             else
             {
-                throw new NotSupportedException("The runtime does not support this GraphQL settings type for an entity.");
+                // Not Supported Type
+                return false;
             }
+
+            return true;
         }
 
         /// <summary>
@@ -141,6 +148,8 @@ namespace Azure.DataApiBuilder.Config
             {
                 ObjectType = SourceType.Table;
                 SourceName = JsonSerializer.Deserialize<string>((JsonElement)Source)!;
+                Parameters = null;
+                KeyFields = null;
             }
             else if (sourceJson.ValueKind is JsonValueKind.Object)
             {
@@ -154,7 +163,7 @@ namespace Azure.DataApiBuilder.Config
                 }
                 else
                 {
-                    ObjectType = ConvertSourceType(objectSource.Type);
+                    ObjectType = objectSource.Type;
                     SourceName = objectSource.Name;
                     Parameters = objectSource.Parameters;
                     KeyFields = objectSource.KeyFields;
@@ -164,23 +173,6 @@ namespace Azure.DataApiBuilder.Config
             {
                 throw new JsonException(message: $"Source not one of string or object");
             }
-        }
-
-        /// <summary>
-        /// Tries to convert the given string sourceType into one of the supported SourceType enums
-        /// Throws an exception if not a case-insensitive match
-        /// </summary>
-        private static SourceType ConvertSourceType(string? sourceType)
-        {
-            // If sourceType is not explicitly specified, we assume it is a Table
-            return sourceType is null ? SourceType.Table
-                : sourceType.ToLowerInvariant() switch
-                {
-                    "table" => SourceType.Table,
-                    "view" => SourceType.View,
-                    "stored-procedure" => SourceType.StoredProcedure,
-                    _ => throw new JsonException(message: "Source type must be one of: [table, view, stored-procedure]")
-                };
         }
     }
 
@@ -194,22 +186,93 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="Parameters"> If Type is SourceType.StoredProcedure,
     /// Parameters to be passed as defaults to the procedure call </param>
     /// <param name="KeyFields"> The field(s) to be used as primary keys.
-    /// Support tracked in #547 </param>
     public record DatabaseObjectSource(
-        string Type,
+        [property: JsonConverter(typeof(SourceTypeEnumConverter))]
+        SourceType Type,
         [property: JsonPropertyName("object")]
             string Name,
         Dictionary<string, object>? Parameters,
         [property: JsonPropertyName("key-fields")]
-            Array KeyFields);
+            string[]? KeyFields);
+
+    /// <summary>
+    /// Class to specify custom converter used while deserialising json config
+    /// to SourceType and serializing from SourceType to string.
+    /// Tries to convert the given string sourceType into one of the supported SourceType enums
+    /// Throws an exception if not a case-insensitive match
+    /// </summary>
+    public class SourceTypeEnumConverter : JsonConverter<SourceType>
+    {
+        public const string STORED_PROCEDURE = "stored-procedure";
+        public static readonly string[] VALID_SOURCE_TYPE_VALUES = {
+            STORED_PROCEDURE,
+            SourceType.Table.ToString().ToLower(),
+            SourceType.View.ToString().ToLower()
+        };
+
+        /// <inheritdoc/>
+        public override SourceType Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            string? type = reader.GetString();
+            if (!TryGetSourceType(type, out SourceType objectType))
+            {
+                throw new JsonException(GenerateMessageForInvalidSourceType(type!));
+            }
+
+            return objectType;
+        }
+
+        /// <inheritdoc/>
+        public override void Write(Utf8JsonWriter writer, SourceType value, JsonSerializerOptions options)
+        {
+            string valueToWrite = value is SourceType.StoredProcedure ? STORED_PROCEDURE : value.ToString().ToLower();
+            writer.WriteStringValue(valueToWrite);
+        }
+
+        /// <summary>
+        /// For the provided type as an string argument,
+        /// try to get the underlying Enum SourceType, if it exists,
+        /// and saves in out objectType, and return true, otherwise return false.
+        /// </summary>
+        public static bool TryGetSourceType(string? type, out SourceType objectType)
+        {
+            if (type is null)
+            {
+                objectType = SourceType.Table;  // Assume Default type as Table if type not provided.
+            }
+            else if (STORED_PROCEDURE.Equals(type, StringComparison.OrdinalIgnoreCase))
+            {
+                objectType = SourceType.StoredProcedure;
+            }
+            else if (!Enum.TryParse<SourceType>(type, ignoreCase: true, out objectType))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Generates an error message for invalid source type.
+        /// Message also includes the acceptable values of source type.
+        /// </summary>
+        public static string GenerateMessageForInvalidSourceType(string invalidType)
+        {
+            return $"Invalid Source Type: {invalidType}." +
+                    $" Valid values are: {string.Join(",", VALID_SOURCE_TYPE_VALUES)}";
+        }
+    }
 
     /// <summary>
     /// Supported source types as defined by json schema
     /// </summary>
     public enum SourceType
     {
+        [Description("table")]
         Table,
+        [Description("view")]
         View,
+        [Description("stored-procedure")]
         StoredProcedure
     }
 

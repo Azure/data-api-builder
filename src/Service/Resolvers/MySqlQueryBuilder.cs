@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlQueryStructure structure)
         {
-            string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.Name)} AS {QuoteIdentifier(structure.TableAlias)}{Build(structure.Joins)}";
+            string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.Name)} AS {QuoteIdentifier(structure.SourceAlias)}{Build(structure.Joins)}";
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
             string predicates = JoinPredicateStrings(
@@ -158,10 +158,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 SELECT
     CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))},
     TABLE_SCHEMA {QuoteIdentifier($"Referencing{nameof(DatabaseObject.SchemaName)}")},
-    TABLE_NAME {QuoteIdentifier($"Referencing{nameof(TableDefinition)}")},
+    TABLE_NAME {QuoteIdentifier($"Referencing{nameof(SourceDefinition)}")},
     COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencingColumns))},
     REFERENCED_TABLE_SCHEMA {QuoteIdentifier($"Referenced{nameof(DatabaseObject.SchemaName)}")},
-    REFERENCED_TABLE_NAME {QuoteIdentifier($"Referenced{nameof(TableDefinition)}")},
+    REFERENCED_TABLE_NAME {QuoteIdentifier($"Referenced{nameof(SourceDefinition)}")},
     REFERENCED_COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))}
 FROM
     INFORMATION_SCHEMA.KEY_COLUMN_USAGE

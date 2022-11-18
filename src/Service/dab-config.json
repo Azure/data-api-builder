@@ -6,16 +6,14 @@
   },
   "runtime": {
     "rest": {
-      "enabled": true,
       "path": "/api"
     },
     "graphql": {
-      "enabled": true,
-      "path": "/graphql",
       "allow-introspection": true
     },
     "host": {
       "mode": "development",
+      "authenticate-devmode-requests": false,
       "cors": {
         "origins": [ "http://localhost:5000" ],
         "allow-credentials": false
@@ -94,10 +92,6 @@
           "linking.source.fields": [ "book_id" ],
           "linking.target.fields": [ "author_id" ]
         }
-      },
-      "mappings": {
-        "id": "id",
-        "title": "title"
       }
     },
     "BookWebsitePlacement": {
@@ -259,11 +253,7 @@
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
-      ],
-      "mappings": {
-        "species": "Scientific Name",
-        "region": "United State's Region"
-      }
+      ]
     },
     "Shrub": {
       "source": "trees",
@@ -277,10 +267,7 @@
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
-      ],
-      "mappings": {
-        "species": "fancyName"
-      }
+      ]
     },
     "Fungus": {
       "source": "fungi",
@@ -294,10 +281,7 @@
           "role": "authenticated",
           "actions": [ "create", "read", "update", "delete" ]
         }
-      ],
-      "mappings": {
-        "spores": "hazards"
-      }
+      ]
     },
     "Empty": {
       "source": "empty_table",
@@ -314,7 +298,10 @@
       ]
     },
     "books_view_all": {
-      "source": "books_view_all",
+      "source": {
+        "object": "books_view_all",
+        "type": "view"
+      },
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -331,7 +318,10 @@
       }
     },
     "stocks_view_selected": {
-      "source": "stocks_view_selected",
+      "source": {
+        "object": "stocks_view_selected",
+        "type": "view"
+      },
       "rest": true,
       "graphql": true,
       "permissions": [
@@ -348,7 +338,10 @@
       }
     },
     "books_publishers_view_composite": {
-      "source": "books_publishers_view_composite",
+      "source": {
+        "object": "books_publishers_view_composite",
+        "type": "view"
+      },
       "rest": true,
       "graphql": true,
       "permissions": [

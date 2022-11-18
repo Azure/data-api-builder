@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
@@ -33,19 +34,25 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IMiddlewareContext context,
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
+            IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams
         ) : this(
             entityName,
             sqlMetadataProvider,
+            authorizationResolver,
+            gQLFilterParser,
             GQLMutArgumentToDictParams(context, CreateMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams))
         { }
 
         public SqlInsertStructure(
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
+            IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams
             )
-        : base(sqlMetadataProvider, entityName: entityName)
+        : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
         {
             InsertColumns = new();
             Values = new();
@@ -53,7 +60,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
-                SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+                MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 PopulateColumnsAndParams(backingColumn!, param.Value);
             }
         }
@@ -88,7 +95,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new DataApiBuilderException(
                     message: ex.Message,
                     statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    innerException: ex);
             }
         }
 
@@ -97,7 +105,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public ColumnDefinition GetColumnDefinition(string columnName)
         {
-            return GetUnderlyingTableDefinition().Columns[columnName];
+            return GetUnderlyingSourceDefinition().Columns[columnName];
         }
     }
 }

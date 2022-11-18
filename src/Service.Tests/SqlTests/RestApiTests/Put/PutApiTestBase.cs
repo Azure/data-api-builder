@@ -56,8 +56,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 sqlQuery: GetQuery("PutOne_Update_Default_Test"),
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.OK,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.OK
                 );
 
             requestBody = @"
@@ -75,8 +74,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 sqlQuery: GetQuery("PutOne_Update_CompositeNonAutoGenPK_Test"),
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.OK,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.OK
                 );
 
             // Perform a PUT UPDATE which nulls out a missing field from the request body
@@ -95,8 +93,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 sqlQuery: GetQuery("PutOne_Update_NullOutMissingField_Test"),
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.OK,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.OK
             );
 
             requestBody = @"
@@ -114,8 +111,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 sqlQuery: GetQuery("PutOne_Update_Empty_Test"),
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.OK,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.OK
                 );
         }
 
@@ -274,6 +270,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// Tests successful execution of PUT insert requests which try to
+        /// modify fields belonging to one base table in the view.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task PutOneInsertInViewTest()
+        {
+            // PUT insertion on a simple view based on one table where not
+            // all the fields from base table are selected in view.
+            // The missing field has to be nullable or has default value.
+            string requestBody = @"
+            {
+               ""categoryName"": ""SciFi""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/4/pieceid/1",
+                queryString: null,
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("PutOneInsertInStocksViewSelected"),
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created
+                );
+        }
+
+        /// <summary>
         /// Tests the PutOne functionality with a REST PUT request
         /// with a nullable column specified as NULL.
         /// The test should pass successfully for update as well as insert.
@@ -319,8 +342,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 sqlQuery: GetQuery("PutOne_Update_Nulled_Test"),
                 operationType: Operation.Upsert,
                 requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.OK,
-                expectedLocationHeader: expectedLocationHeader
+                expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
+        /// <summary>
+        /// Tests successful execution of PUT update requests which try to
+        /// modify fields belonging to one base table in the view.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task PutOneUpdateViewTest()
+        {
+            // Put update on simple view with subset of fields from base table.
+            string requestBody = @"
+            {
+                ""categoryName"": ""Historical""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/2/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _simple_subset_stocks,
+                    sqlQuery: GetQuery("PutOneUpdateStocksViewSelected"),
+                    operationType: Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
                 );
         }
 
@@ -644,6 +691,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// Tests that a cast failure of primary key value type results in HTTP 400 Bad Request.
+        /// e.g. Attempt to cast a string '{}' to the 'publisher_id' column type of int will fail.
+        /// </summary>
+        [TestMethod]
+        public async Task PutWithUncastablePKValue()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""BookTitle"",
+                ""publisher_id"": ""StringFailsToCastToInt""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: string.Empty,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: null,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: "Parameter \"StringFailsToCastToInt\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
         /// Tests the Put functionality with a REST PUT request
         /// with the request body having null value for non-nullable column
         /// We expect a failure and so no sql query is provided.
@@ -692,6 +765,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             );
         }
 
+        /// <summary>
+        /// Test to verify that we throw exception for invalid/bad
+        /// PUT requests on views.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task PutOneInViewBadRequest(string expectedErrorMessage)
+        {
+            // PUT update trying to modify fields from multiple base table
+            // will result in error.
+            string requestBody = @"
+            {
+                ""name"": ""new publisher"",
+                ""title"": ""new Book""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1/pub_id/1234",
+                queryString: string.Empty,
+                entityNameOrPath: _composite_subset_bookPub,
+                sqlQuery: string.Empty,
+                operationType: Operation.Upsert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: expectedErrorMessage,
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+            );
+        }
         #endregion
     }
 }

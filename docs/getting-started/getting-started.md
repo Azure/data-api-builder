@@ -36,6 +36,12 @@ then, to install this tool globally, use:
 dotnet tool install -g --add-source ./ dab --version <version_number>
 ```
 
+or, if you have already installed a previous version, you can update DAB CLI to the latest version via the following:
+
+```bash
+dotnet tool update -g --add-source ./ dab --version <version_number>
+```
+
 > **ATTENTION**: if you are running on Linux or MacOS, you may need to add .NET global tools to your PATH to call `dab` directly. Once installed run:
 > `export PATH=$PATH:~/.dotnet/tools`
 
@@ -74,7 +80,7 @@ You can use Docker to run the Data API Builder on your machine. Instructions are
 
 ### Using Data API Builder CLI to build the configuration file
 
-Data API Builder comes with a full CLI to help you run common tasks [Getting started with Data API Builder (`dab`) CLI](../getting-started/getting-started-dab-cli.md): 
+Data API Builder comes with a full CLI to help you run common tasks [Getting started with Data API Builder (`dab`) CLI](../getting-started/getting-started-dab-cli.md).
 
 ### Deploy on Azure
 

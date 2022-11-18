@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -29,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                       SELECT *
                       FROM " + _integrationTableName + @"
                       WHERE id = 1 and title = 'The Return of the King'
-                      ORDER BY id
+                      ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
             },
@@ -91,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
-                        WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='FairyTales' AND piecesAvailable is NULL 
+                        WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='FairyTales' AND piecesAvailable is NULL
                         AND piecesRequired = 4
                     ) AS subq
                 "
@@ -244,6 +245,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 "
             }
         };
+
+        #region Overriden tests
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInsertInViewTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneUpdateViewTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInViewBadRequest(string expectedErrorMessage)
+        {
+            throw new NotImplementedException();
+        }
+        #endregion
 
         #region Test Fixture Setup
 

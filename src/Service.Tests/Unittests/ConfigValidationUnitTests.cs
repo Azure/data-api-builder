@@ -78,6 +78,44 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test that permission configuration validation fails when a database policy
+        /// is defined for the Create operation.
+        /// </summary>
+        /// <param name="dbPolicy">Database policy.</param>
+        /// <param name="action">The action to be validated.</param>
+        /// <param name="errorExpected">Whether an error is expected.</param>
+        [DataTestMethod]
+        [DataRow("1 eq @item.col1", Operation.Create, true, DisplayName = "Database Policy defined for Create fails")]
+        [DataRow("", Operation.Create, true, DisplayName = "Database Policy left empty for Create fails")]
+        [DataRow(null, Operation.Create, false, DisplayName = "Database Policy NOT defined for Create passes")]
+        [DataRow("1 eq @item.col2", Operation.Read, false, DisplayName = "Database Policy defined for Read passes")]
+        [DataRow("2 eq @item.col3", Operation.Update, false, DisplayName = "Database Policy defined for Update passes")]
+        [DataRow("2 eq @item.col3", Operation.Delete, false, DisplayName = "Database Policy defined for Delete passes")]
+        public void AddDatabasePolicyToCreateOperationPermission(string dbPolicy, Operation action, bool errorExpected)
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE,
+                operation: action,
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
+                databasePolicy: dbPolicy
+                );
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+
+            try
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+                Assert.IsFalse(errorExpected, message: "Validation expected to have failed.");
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.IsTrue(errorExpected, message: "Validation expected to have passed.");
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+        }
+
+        /// <summary>
         /// Test method to check that Exception is thrown when Target Entity used in relationship is not defined in the config.
         /// </summary>
         [TestMethod]
@@ -235,12 +273,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
             mockDictionaryForEntityDatabaseObject.Add(
                 "SampleEntity1",
-                new DatabaseObject("dbo", "TEST_SOURCE1")
+                new DatabaseTable("dbo", "TEST_SOURCE1")
             );
 
             mockDictionaryForEntityDatabaseObject.Add(
                 "SampleEntity2",
-                new DatabaseObject("dbo", "TEST_SOURCE2")
+                new DatabaseTable("dbo", "TEST_SOURCE2")
             );
 
             _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
@@ -248,7 +286,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // To mock the schema name and dbObjectName for linkingObject
             _sqlMetadataProvider.Setup<(string, string)>(x =>
-                x.ParseSchemaAndDbObjectName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
+                x.ParseSchemaAndDbTableName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
 
             // Exception thrown as foreignKeyPair not found in the DB.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -260,12 +298,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Mocking ForeignKeyPair to be defined In DB
             _sqlMetadataProvider.Setup<bool>(x =>
                 x.VerifyForeignKeyExistsInDB(
-                    new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE1")
+                    new DatabaseTable("dbo", "TEST_SOURCE_LINK"), new DatabaseTable("dbo", "TEST_SOURCE1")
                 )).Returns(true);
 
             _sqlMetadataProvider.Setup<bool>(x =>
                 x.VerifyForeignKeyExistsInDB(
-                    new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE2")
+                    new DatabaseTable("dbo", "TEST_SOURCE_LINK"), new DatabaseTable("dbo", "TEST_SOURCE2")
                 )).Returns(true);
 
             // Since, we have defined the relationship in Database,
@@ -338,12 +376,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
             mockDictionaryForEntityDatabaseObject.Add(
                 "SampleEntity1",
-                new DatabaseObject("dbo", "TEST_SOURCE1")
+                new DatabaseTable("dbo", "TEST_SOURCE1")
             );
 
             mockDictionaryForEntityDatabaseObject.Add(
                 "SampleEntity2",
-                new DatabaseObject("dbo", "TEST_SOURCE2")
+                new DatabaseTable("dbo", "TEST_SOURCE2")
             );
 
             _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
@@ -351,17 +389,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // To mock the schema name and dbObjectName for linkingObject
             _sqlMetadataProvider.Setup<(string, string)>(x =>
-                x.ParseSchemaAndDbObjectName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
+                x.ParseSchemaAndDbTableName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
 
             // Mocking ForeignKeyPair to be defined In DB
             _sqlMetadataProvider.Setup<bool>(x =>
                 x.VerifyForeignKeyExistsInDB(
-                    new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE1")
+                    new DatabaseTable("dbo", "TEST_SOURCE_LINK"), new DatabaseTable("dbo", "TEST_SOURCE1")
                 )).Returns(isForeignKeyPairBetSourceAndLinkingObject);
 
             _sqlMetadataProvider.Setup<bool>(x =>
                 x.VerifyForeignKeyExistsInDB(
-                    new DatabaseObject("dbo", "TEST_SOURCE_LINK"), new DatabaseObject("dbo", "TEST_SOURCE2")
+                    new DatabaseTable("dbo", "TEST_SOURCE_LINK"), new DatabaseTable("dbo", "TEST_SOURCE2")
                 )).Returns(isForeignKeyPairBetTargetAndLinkingObject);
 
             if (isValidScenario)
@@ -424,12 +462,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
             mockDictionaryForEntityDatabaseObject.Add(
                 "SampleEntity1",
-                new DatabaseObject("dbo", "TEST_SOURCE1")
+                new DatabaseTable("dbo", "TEST_SOURCE1")
             );
 
             mockDictionaryForEntityDatabaseObject.Add(
                 "SampleEntity2",
-                new DatabaseObject("dbo", "TEST_SOURCE2")
+                new DatabaseTable("dbo", "TEST_SOURCE2")
             );
 
             _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
@@ -446,12 +484,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Mocking ForeignKeyPair to be defined In DB
             _sqlMetadataProvider.Setup<bool>(x =>
                 x.VerifyForeignKeyExistsInDB(
-                    new DatabaseObject("dbo", "TEST_SOURCE1"), new DatabaseObject("dbo", "TEST_SOURCE2")
+                    new DatabaseTable("dbo", "TEST_SOURCE1"), new DatabaseTable("dbo", "TEST_SOURCE2")
                 )).Returns(true);
 
             _sqlMetadataProvider.Setup<bool>(x =>
                 x.VerifyForeignKeyExistsInDB(
-                    new DatabaseObject("dbo", "TEST_SOURCE2"), new DatabaseObject("dbo", "TEST_SOURCE1")
+                    new DatabaseTable("dbo", "TEST_SOURCE2"), new DatabaseTable("dbo", "TEST_SOURCE1")
                 )).Returns(true);
 
             // No Exception is thrown as foreignKey Pair was found in the DB between
@@ -605,7 +643,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string actionJson = @"{
                                         ""action"": " + $"\"{operationName}\"" + @",
                                         ""policy"": {
-                                            ""database"": ""@claims.id eq @item.id""
+                                            ""database"": null
                                           },
                                         ""fields"": {
                                             ""include"": [""*""]
@@ -950,6 +988,51 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             entityCollection.Add("BOOK", bookWithAllUpperCase);
             entityCollection.Add("Book_alt", book_alt_upperCase);
             RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueries(entityCollection);
+        }
+
+        /// <summary>
+        /// Tests whether conflicting global REST/GraphQL fail config validation.
+        /// </summary>
+        /// <param name="graphQLConfiguredPath">GraphQL global path</param>
+        /// <param name="restConfiguredPath">REST global path</param>
+        /// <param name="expectError">Exception expected</param>
+        [DataTestMethod]
+        [DataRow("/graphql", "/graphql", true)]
+        [DataRow("/api", "/api", true)]
+        [DataRow("/graphql", "/api", false)]
+        public void TestGlobalRouteValidation(string graphQLConfiguredPath, string restConfiguredPath, bool expectError)
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Path = graphQLConfiguredPath, AllowIntrospection = true }) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Path = restConfiguredPath }) }
+
+            };
+
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(globalSettings: settings, dataSource: null);
+            string expectedErrorMessage = "Conflicting GraphQL and REST path configuration.";
+
+            try
+            {
+                RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(configuration);
+
+                if (expectError)
+                {
+                    Assert.Fail(message: "Global endpoint route config validation expected to fail.");
+                }
+            }
+            catch (DataApiBuilderException ex)
+            {
+                if (expectError)
+                {
+                    Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: ex.StatusCode);
+                    Assert.AreEqual(expected: expectedErrorMessage, actual: ex.Message);
+                }
+                else
+                {
+                    Assert.Fail(message: "Global endpoint route config validation not expected to fail.");
+                }
+            }
         }
 
         /// <summary>

@@ -30,6 +30,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly ILogger<SqlQueryEngine> _logger;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly GQLFilterParser _gQLFilterParser;
 
         // <summary>
         // Constructor.
@@ -40,6 +41,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
             ILogger<SqlQueryEngine> logger,
             RuntimeConfigProvider runtimeConfigProvider)
         {
@@ -48,6 +50,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             _sqlMetadataProvider = sqlMetadataProvider;
             _httpContextAccessor = httpContextAccessor;
             _authorizationResolver = authorizationResolver;
+            _gQLFilterParser = gQLFilterParser;
             _logger = logger;
             _runtimeConfigProvider = runtimeConfigProvider;
         }
@@ -61,7 +64,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="parameters">GraphQL Query Parameters from schema retrieved from ResolverMiddleware.GetParametersFromSchemaAndQueryFields()</param>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider, _authorizationResolver, _runtimeConfigProvider);
+            SqlQueryStructure structure = new(
+                context,
+                parameters,
+                _sqlMetadataProvider,
+                _authorizationResolver,
+                _runtimeConfigProvider,
+                _gQLFilterParser);
 
             if (structure.PaginationMetadata.IsPaginated)
             {
@@ -83,7 +92,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            SqlQueryStructure structure = new(context, parameters, _sqlMetadataProvider, _authorizationResolver, _runtimeConfigProvider);
+            SqlQueryStructure structure = new(
+                context,
+                parameters,
+                _sqlMetadataProvider,
+                _authorizationResolver,
+                _runtimeConfigProvider,
+                _gQLFilterParser);
             string queryString = _queryBuilder.Build(structure);
             _logger.LogInformation(queryString);
             List<JsonDocument> jsonListResult =
@@ -107,7 +122,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         // </summary>
         public async Task<IActionResult> ExecuteAsync(FindRequestContext context)
         {
-            SqlQueryStructure structure = new(context, _sqlMetadataProvider, _runtimeConfigProvider);
+            SqlQueryStructure structure = new(
+                context,
+                _sqlMetadataProvider,
+                _authorizationResolver,
+                _runtimeConfigProvider,
+                _gQLFilterParser);
             using JsonDocument queryJson = await ExecuteAsync(structure);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty table, return an empty json array
@@ -121,7 +141,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context)
         {
-            SqlExecuteStructure structure = new(context.EntityName, _sqlMetadataProvider, context.ResolvedParameters);
+            SqlExecuteStructure structure = new(
+                context.EntityName,
+                _sqlMetadataProvider,
+                _authorizationResolver,
+                _gQLFilterParser,
+                context.ResolvedParameters);
             using JsonDocument queryJson = await ExecuteAsync(structure);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty result set, return an empty json array
@@ -158,7 +183,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string after = SqlPaginationUtil.MakeCursorFromJsonElement(
                                element: rootEnumerated.Last(),
                                orderByColumns: context.OrderByClauseOfBackingColumns,
-                               primaryKey: _sqlMetadataProvider.GetTableDefinition(context.EntityName).PrimaryKey,
+                               primaryKey: _sqlMetadataProvider.GetSourceDefinition(context.EntityName).PrimaryKey,
                                entityName: context.EntityName,
                                schemaName: context.DatabaseObject.SchemaName,
                                tableName: context.DatabaseObject.Name,

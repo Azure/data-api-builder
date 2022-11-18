@@ -24,7 +24,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         private const Operation TEST_OPERATION = Operation.Create;
         private const string TEST_AUTHENTICATION_TYPE = "TestAuth";
         private const string TEST_CLAIMTYPE_NAME = "TestName";
-        private const string TEST_ROLE_TYPE = "TestRole";
 
         #region Role Context Tests
         /// <summary>
@@ -965,7 +964,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Mock<HttpContext> context = new();
 
             //Add identity object to the Mock context object.
-            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, TEST_ROLE_TYPE);
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
             identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
             identity.AddClaim(new Claim("name", "Aaron", ClaimValueTypes.String));
             identity.AddClaim(new Claim("contact_no", "1234", ClaimValueTypes.Integer64));
@@ -1003,7 +1002,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Mock<HttpContext> context = new();
 
             //Add identity object to the Mock context object.
-            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, TEST_ROLE_TYPE);
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
             identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
             identity.AddClaim(new Claim("isemployee", "true", ClaimValueTypes.Boolean));
             ClaimsPrincipal principal = new(identity);
@@ -1028,11 +1027,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <param name="exceptionExpected"> Whether we expect an exception (403 forbidden) to be thrown while parsing policy </param>
         /// <param name="claims"> Parameter list of claim types/keys to add to the claims dictionary that can be accessed with @claims </param>
         [DataTestMethod]
-        [DataRow(true, ClaimTypes.Role, "username", "guid", "username",
+        [DataRow(true, AuthenticationConfig.ROLE_CLAIM_TYPE, "username", "guid", "username",
             DisplayName = "duplicate claim expect exception")]
-        [DataRow(false, ClaimTypes.Role, "username", "guid", ClaimTypes.Role,
+        [DataRow(false, AuthenticationConfig.ROLE_CLAIM_TYPE, "username", "guid", AuthenticationConfig.ROLE_CLAIM_TYPE,
             DisplayName = "duplicate role claim does not expect exception")]
-        [DataRow(true, ClaimTypes.Role, ClaimTypes.Role, "username", "username",
+        [DataRow(true, AuthenticationConfig.ROLE_CLAIM_TYPE, AuthenticationConfig.ROLE_CLAIM_TYPE, "username", "username",
             DisplayName = "duplicate claim expect exception ignoring role")]
         public void ParsePolicyWithDuplicateUserClaims(bool exceptionExpected, params string[] claimTypes)
         {
@@ -1049,7 +1048,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Mock<HttpContext> context = new();
 
             //Add identity object to the Mock context object.
-            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, TEST_ROLE_TYPE);
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
             foreach (string claimType in claimTypes)
             {
                 identity.AddClaim(new Claim(type: claimType, value: defaultClaimValue, ClaimValueTypes.String));
@@ -1121,7 +1120,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Mock<HttpContext> context = new();
 
             // Add identity object to the Mock context object.
-            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, TEST_ROLE_TYPE);
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
             identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
             ClaimsPrincipal principal = new(identity);
             context.Setup(x => x.User).Returns(principal);

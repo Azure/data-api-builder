@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -26,8 +28,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public SqlExecuteStructure(
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
+            IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> requestParams)
-        : base(sqlMetadataProvider, entityName: entityName)
+        : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
         {
             StoredProcedureDefinition storedProcedureDefinition = GetUnderlyingStoredProcedureDefinition();
             ProcedureParameters = new();
@@ -43,14 +47,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             GetParamAsProcedureParameterType(requestParamValue.ToString()!, paramKey));
                         ProcedureParameters.Add(paramKey, $"@{parameterizedName}");
                     }
-                    catch (ArgumentException)
+                    catch (ArgumentException ex)
                     {
                         // In the case GetParamAsProcedureParameterType fails to parse as SystemType from database metadata
                         // Keep message being returned to the client more generalized to not expose schema info
                         throw new DataApiBuilderException(
                             message: $"Invalid value supplied for field: {paramKey}",
                             statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                            innerException: ex);
                     }
                 }
                 else

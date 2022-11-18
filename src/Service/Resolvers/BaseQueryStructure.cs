@@ -1,7 +1,10 @@
 using System.Collections.Generic;
+using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Models;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Types;
 
@@ -9,6 +12,27 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 {
     public class BaseQueryStructure
     {
+        /// <summary>
+        /// The Entity name associated with this query as appears in the config file.
+        /// </summary>
+        public string EntityName { get; protected set; }
+
+        /// <summary>
+        /// The alias of the entity as used in the generated query.
+        /// </summary>
+        public string SourceAlias { get; set; }
+
+        /// <summary>
+        /// The metadata provider of the respective database.
+        /// </summary>
+        protected ISqlMetadataProvider MetadataProvider { get; }
+
+        /// <summary>
+        /// The DatabaseObject associated with the entity, represents the
+        /// databse object to be queried.
+        /// </summary>
+        public DatabaseObject DatabaseObject { get; protected set; } = null!;
+
         /// <summary>
         /// The columns which the query selects
         /// </summary>
@@ -31,13 +55,50 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public List<Predicate> Predicates { get; }
 
+        /// <summary>
+        /// Used for parsing graphql filter arguments.
+        /// </summary>
+        public GQLFilterParser GraphQLFilterParser { get; protected set; }
+
+        /// <summary>
+        /// Authorization Resolver used to get and apply
+        /// authorization policies to requests.
+        /// </summary>
+        protected IAuthorizationResolver AuthorizationResolver { get; }
+
         public BaseQueryStructure(
+            ISqlMetadataProvider metadataProvider,
+            IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
+            List<Predicate>? predicates = null,
+            string entityName = "",
             IncrementingInteger? counter = null)
         {
             Columns = new();
-            Predicates = new();
+            Predicates = predicates ?? new();
             Parameters = new();
             Counter = counter ?? new IncrementingInteger();
+            MetadataProvider = metadataProvider;
+            GraphQLFilterParser = gQLFilterParser;
+            AuthorizationResolver = authorizationResolver;
+
+            // Default the alias to the empty string since this base construtor
+            // is called for requests other than Find operations. We only use
+            // SourceAlias for Find, so we leave empty here and then populate
+            // in the Find specific contructor.
+            SourceAlias = string.Empty;
+
+            if (!string.IsNullOrEmpty(entityName))
+            {
+                EntityName = entityName;
+                DatabaseObject = MetadataProvider.EntityToDatabaseObject[entityName];
+            }
+            else
+            {
+                EntityName = string.Empty;
+                DatabaseObject =
+                    new DatabaseTable(schemaName: string.Empty, tableName: string.Empty);
+            }
         }
 
         /// <summary>
@@ -49,6 +110,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string paramName = $"param{Counter.Next()}";
             Parameters.Add(paramName, value);
             return paramName;
+        }
+
+        /// <summary>
+        /// Creates a unique table alias.
+        /// </summary>
+        public string CreateTableAlias()
+        {
+            return $"table{Counter.Next()}";
+        }
+
+        /// <summary>
+        /// Returns the SourceDefinitionDefinition for the entity(table/view) of this query.
+        /// </summary>
+        public SourceDefinition GetUnderlyingSourceDefinition()
+        {
+            return MetadataProvider.GetSourceDefinition(EntityName);
         }
 
         /// <summary>

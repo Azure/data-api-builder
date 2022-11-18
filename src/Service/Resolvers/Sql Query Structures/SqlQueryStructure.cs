@@ -28,12 +28,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public class SqlQueryStructure : BaseSqlQueryStructure
     {
-        /// <summary>
-        /// Authorization Resolver used within SqlQueryStructure to get and apply
-        /// authorization policies to requests.
-        /// </summary>
-        protected IAuthorizationResolver AuthorizationResolver { get; }
-
         public const string DATA_IDENT = "data";
 
         /// <summary>
@@ -107,7 +101,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IDictionary<string, object?> queryParams,
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
-            RuntimeConfigProvider runtimeConfigProvider)
+            RuntimeConfigProvider runtimeConfigProvider,
+            GQLFilterParser gQLFilterParser)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
             // that make sense for the outermost query.
@@ -121,7 +116,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // create the IncrementingInteger that will be shared between
                 // all subqueries in this query.
                 new IncrementingInteger(),
-                runtimeConfigProvider)
+                runtimeConfigProvider,
+                gQLFilterParser)
         {
             // support identification of entities by primary key when query is non list type nor paginated
             // only perform this action for the outermost query as subqueries shouldn't provide primary key search
@@ -138,13 +134,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public SqlQueryStructure(
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider,
-            RuntimeConfigProvider runtimeConfigProvider) :
-            this(sqlMetadataProvider,
-                new IncrementingInteger(),
-                entityName: context.EntityName)
+            IAuthorizationResolver authorizationResolver,
+            RuntimeConfigProvider runtimeConfigProvider,
+            GQLFilterParser gQLFilterParser)
+            : this(sqlMetadataProvider,
+                authorizationResolver,
+                gQLFilterParser,
+                predicates: null,
+                entityName: context.EntityName,
+                counter: new IncrementingInteger())
         {
             IsListQuery = context.IsMany;
-            TableAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
+            SourceAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
             AddFields(context, sqlMetadataProvider);
             foreach (KeyValuePair<string, object> predicate in context.PrimaryKeyValuePairs)
             {
@@ -162,9 +163,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                             value: predicate.Value);
             }
 
-            // context.OrderByClauseOfBackingColumns will lack TableAlias because it is created in RequestParser
+            // context.OrderByClauseOfBackingColumns will lack SourceAlias because it is created in RequestParser
             // which may be called for any type of operation. To avoid coupling the OrderByClauseOfBackingColumns
-            // to only Find, we populate the TableAlias in this constructor where we know we have a Find operation.
+            // to only Find, we populate the SourceAlias in this constructor where we know we have a Find operation.
             OrderByColumns = context.OrderByClauseOfBackingColumns is not null ?
                 context.OrderByClauseOfBackingColumns : PrimaryKeyAsOrderByColumns();
 
@@ -172,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 if (string.IsNullOrEmpty(column.TableAlias))
                 {
-                    column.TableAlias = TableAlias;
+                    column.TableAlias = SourceAlias;
                 }
             }
 
@@ -260,7 +261,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _primaryKeyAsOrderByColumns.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
                                                                       tableName: DatabaseObject.Name,
                                                                       columnName: column,
-                                                                      tableAlias: TableAlias));
+                                                                      tableAlias: SourceAlias));
                 }
             }
 
@@ -281,10 +282,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 FieldNode? queryField,
                 IncrementingInteger counter,
                 RuntimeConfigProvider runtimeConfigProvider,
-                string entityName = ""
-        ) : this(sqlMetadataProvider, counter, entityName: entityName)
+                GQLFilterParser gQLFilterParser,
+                string entityName = "")
+            : this(sqlMetadataProvider,
+                  authorizationResolver,
+                  gQLFilterParser,
+                  predicates: null,
+                  entityName: entityName,
+                  counter)
         {
-            AuthorizationResolver = authorizationResolver;
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
             _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
@@ -333,7 +339,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             DatabaseObject.SchemaName = sqlMetadataProvider.GetSchemaName(EntityName);
             DatabaseObject.Name = sqlMetadataProvider.GetDatabaseObjectName(EntityName);
-            TableAlias = CreateTableAlias();
+            SourceAlias = CreateTableAlias();
 
             // SelectionSet will not be null when a field is not a leaf.
             // There may be another entity to resolve as a sub-query.
@@ -390,17 +396,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 object? filterObject = queryParams[QueryBuilder.FILTER_FIELD_NAME];
 
-                if (filterObject != null)
+                if (filterObject is not null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-                    Predicates.Add(GQLFilterParser.Parse(_ctx,
-                                                         filterArgumentSchema: queryArgumentSchemas[QueryBuilder.FILTER_FIELD_NAME],
-                                                         fields: filterFields,
-                                                         schemaName: DatabaseObject.SchemaName,
-                                                         sourceName: DatabaseObject.Name,
-                                                         sourceAlias: TableAlias,
-                                                         sourceDefinition: GetUnderlyingSourceDefinition(),
-                                                         processLiterals: MakeParamWithValue));
+                    Predicates.Add(GraphQLFilterParser.Parse(
+                                        _ctx,
+                                        filterArgumentSchema: queryArgumentSchemas[QueryBuilder.FILTER_FIELD_NAME],
+                                        fields: filterFields,
+                                        queryStructure: this));
                 }
             }
 
@@ -409,14 +412,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 object? orderByObject = queryParams[QueryBuilder.ORDER_BY_FIELD_NAME];
 
-                if (orderByObject != null)
+                if (orderByObject is not null)
                 {
                     OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject, queryArgumentSchemas[QueryBuilder.ORDER_BY_FIELD_NAME]);
                 }
             }
 
             // need to run after the rest of the query has been processed since it relies on
-            // TableName, TableAlias, Columns, and _limit
+            // TableName, SourceAlias, Columns, and _limit
             if (PaginationMetadata.IsPaginated)
             {
                 AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromQueryParams(queryParams, PaginationMetadata, sqlMetadataProvider, EntityName, runtimeConfigProvider));
@@ -453,10 +456,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// constructors.
         /// </summary>
         private SqlQueryStructure(
-            ISqlMetadataProvider sqlMetadataProvider,
-            IncrementingInteger counter,
-            string entityName = "")
-            : base(sqlMetadataProvider, entityName: entityName, counter: counter)
+            ISqlMetadataProvider metadataProvider,
+            IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
+            List<Predicate>? predicates = null,
+            string entityName = "",
+            IncrementingInteger? counter = null)
+            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
         {
             JoinQueries = new();
             Joins = new();
@@ -477,7 +483,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName,
                                                     tableName: DatabaseObject.Name,
                                                     columnName: parameter.Key,
-                                                    tableAlias: TableAlias)),
+                                                    tableAlias: SourceAlias)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
                 ));
@@ -499,7 +505,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 foreach (PaginationColumn column in afterJsonValues)
                 {
-                    column.TableAlias = TableAlias;
+                    column.TableAlias = SourceAlias;
                     column.ParamName = column.Value is not null ?
                         "@" + MakeParamWithValue(GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName)) :
                         "@" + MakeParamWithValue(null);
@@ -535,7 +541,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     parameterName = MakeParamWithValue(
                         GetParamAsColumnSystemType(value.ToString()!, backingColumn));
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, TableAlias)),
+                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
                         op,
                         new PredicateOperand($"@{parameterName}")));
                 }
@@ -582,14 +588,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         );
                     }
                 );
-        }
-
-        /// <summary>
-        /// Creates a unique table alias.
-        /// </summary>
-        public string CreateTableAlias()
-        {
-            return $"table{Counter.Next()}";
         }
 
         /// <summary>
@@ -654,7 +652,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
 
                     IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
-                    SqlQueryStructure subquery = new(_ctx, subqueryParams, SqlMetadataProvider, AuthorizationResolver, subschemaField, field, Counter, runtimeConfigProvider);
+                    SqlQueryStructure subquery = new(
+                        _ctx,
+                        subqueryParams,
+                        MetadataProvider,
+                        AuthorizationResolver,
+                        subschemaField,
+                        field,
+                        Counter,
+                        runtimeConfigProvider,
+                        GraphQLFilterParser);
 
                     if (PaginationMetadata.IsPaginated)
                     {
@@ -677,7 +684,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // use the _underlyingType from the subquery which will be overridden appropriately if the query is paginated
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
                     string targetEntityName = subunderlyingType.Name;
-                    string subtableAlias = subquery.TableAlias;
+                    string subtableAlias = subquery.SourceAlias;
 
                     AddJoinPredicatesForSubQuery(targetEntityName, subtableAlias, subquery);
 
@@ -713,7 +720,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// created for the given target entity Name and sub table alias.
         /// There are only a couple of options for the foreign key - we only use the
         /// valid foreign key definition. It is guaranteed at least one fk definition
-        /// will be valid since the SqlMetadataProvider.ValidateAllFkHaveBeenInferred.
+        /// will be valid since the MetadataProvider.ValidateAllFkHaveBeenInferred.
         /// </summary>
         /// <param name="targetEntityName"></param>
         /// <param name="subtableAlias"></param>
@@ -747,7 +754,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             && foreignKeyDefinition.ReferencedColumns.Count() > 0)
                         {
                             subQuery.Predicates.AddRange(CreateJoinPredicates(
-                                TableAlias,
+                                SourceAlias,
                                 foreignKeyDefinition.ReferencingColumns,
                                 subtableAlias,
                                 foreignKeyDefinition.ReferencedColumns));
@@ -762,7 +769,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             subQuery.Predicates.AddRange(CreateJoinPredicates(
                                 subtableAlias,
                                 foreignKeyDefinition.ReferencingColumns,
-                                TableAlias,
+                                SourceAlias,
                                 foreignKeyDefinition.ReferencedColumns));
                         }
                     }
@@ -786,7 +793,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             subQuery.Predicates.AddRange(CreateJoinPredicates(
                                 associativeTableAlias,
                                 foreignKeyDefinition.ReferencingColumns,
-                                TableAlias,
+                                SourceAlias,
                                 foreignKeyDefinition.ReferencedColumns));
                         }
                         else
@@ -852,7 +859,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
                                                              tableName: DatabaseObject.Name,
                                                              columnName: fieldName,
-                                                             tableAlias: TableAlias,
+                                                             tableAlias: SourceAlias,
                                                              direction: OrderBy.DESC));
                 }
                 else
@@ -860,7 +867,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
                                                              tableName: DatabaseObject.Name,
                                                              columnName: fieldName,
-                                                             tableAlias: TableAlias));
+                                                             tableAlias: SourceAlias));
                 }
             }
 
@@ -869,7 +876,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
                                                          tableName: DatabaseObject.Name,
                                                          columnName: colName,
-                                                         tableAlias: TableAlias));
+                                                         tableAlias: SourceAlias));
             }
 
             return orderByColumnsList;
@@ -892,7 +899,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         protected void AddColumn(string columnName, string labelName)
         {
-            Columns.Add(new LabelledColumn(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: labelName, TableAlias));
+            Columns.Add(new LabelledColumn(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: labelName, SourceAlias));
         }
 
         /// <summary>

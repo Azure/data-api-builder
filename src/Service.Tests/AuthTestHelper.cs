@@ -34,10 +34,12 @@ namespace Azure.DataApiBuilder.Service.Tests
                 Typ = ClaimTypes.Role
             };
 
-            List<AppServiceClaim> claims = new();
-            claims.Add(emailClaim);
-            claims.Add(roleClaimAnonymous);
-            claims.Add(roleClaimAuthenticated);
+            List<AppServiceClaim> claims = new()
+            {
+                emailClaim,
+                roleClaimAnonymous,
+                roleClaimAuthenticated
+            };
 
             AppServiceClientPrincipal token = new()
             {

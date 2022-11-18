@@ -22,16 +22,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
     [TestClass]
     public class EasyAuthAuthenticationUnitTests
     {
-        #region Positive Tests
+        #region Tests
         /// <summary>
-        /// Ensures a valid AppService EasyAuth header/value does NOT result in HTTP 401 Unauthenticated response.
-        /// 403 is okay, as it indicates authorization level failure, not authentication.
-        /// When an authorization header is sent, it contains an invalid value, if the runtime returns an error
-        /// then there is improper JWT validation occurring.
+        /// Ensures a valid AppService EasyAuth header/value results in HTTP 200 or HTTP 403.
+        /// HTTP 401 will not occur when EasyAuth is correctly configured (AppService environment and runtime configuration).
+        /// When EasyAuth is configured and an authorization header is sent, the authorization header should be ignored
+        /// and zero token validation errors should be observed.
         /// </summary>
         [DataTestMethod]
-        [DataRow(false, DisplayName = "Valid AppService EasyAuth header only")]
-        [DataRow(true, DisplayName = "Valid AppService EasyAuth header and authorization header")]
+        [DataRow(false, DisplayName = "Valid AppService EasyAuth payload - 200")]
+        [DataRow(true, DisplayName = "Valid AppService EasyAuth header and authorization header - 200")]
         [TestMethod]
         public async Task TestValidAppServiceEasyAuthToken(bool sendAuthorizationHeader)
         {
@@ -48,6 +48,41 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 expected: AuthorizationType.Authenticated.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
+        }
+
+        /// <summary>
+        /// Invalid AppService EasyAuth payloads elicit a 401 Unauthorized responsed, indicating
+        /// failed authentication.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("", DisplayName = "Empty JSON not serializable to AppServiceClientPrincipal")]
+        [DataRow("eyJtZXNzYWdlIjogImhlbGxvIHdvcmxkIn0=", DisplayName = "JSON not serializable to AppServiceClientPrincipal")]
+        [DataRow("aGVsbG8sIHdvcmxkIQ==", DisplayName = "Non-JSON Base64 encoded string not serializable to AppServiceClientPrincipal")]
+        public async Task TestInvalidAppServiceEasyAuthToken(string easyAuthPayload)
+        {
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token: easyAuthPayload, EasyAuthType.AppService);
+
+            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.AreEqual(expected: false, actual: postMiddlewareContext.User.Identity.IsAuthenticated);
+        }
+
+        /// <summary>
+        /// Ensures authentication fails when no EasyAuth header is present because
+        /// a correctly configured EasyAuth environment guarantees that ALL request types (anonymous and authenticated)
+        /// will contain an EasyAuth header.
+        /// </summary>
+        /// <param name="easyAuthType">AppService/StaticWebApps</param>
+        [DataTestMethod]
+        [DataRow(EasyAuthType.AppService)]
+        [DataRow(EasyAuthType.StaticWebApps)]
+        public async Task TestMissingEasyAuthHeader(EasyAuthType easyAuthType)
+        {
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token: null, easyAuthType);
+
+            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.AreEqual(expected: false, actual: postMiddlewareContext.User.Identity.IsAuthenticated);
         }
 
         /// <summary>
@@ -199,6 +234,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                     generatedToken,
                     EasyAuthType.StaticWebApps,
                     clientRoleHeader: clientRoleHeader);
+
+            // Validate state of HttpContext after being processed by authentication middleware.
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.AreEqual(expected: addAuthenticated, postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
@@ -208,58 +245,52 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         }
 
         /// <summary>
-        /// - Ensures an invalid/no EasyAuth header/value results in HTTP 200 OK response
-        /// but with the X-MS-API-ROLE assigned to be anonymous.
+        /// - Ensures an invalid/no EasyAuth header payload results in HTTP 401 Unauthorized response
+        /// A correctly configured EasyAuth environment guarantees an EasyAuth payload for authenticated and anonymous requests.
         /// - Also, validate that if other auth headers are present (Authorization Bearer token), that it is never considered
         /// when the runtime is configured for EasyAuth authentication.
         /// </summary>
-        /// <param name="token">EasyAuth header value</param>
+        /// <param name="easyAuthPayload">EasyAuth header value</param>
         /// <returns></returns>
         [DataTestMethod]
-        [DataRow("", DisplayName = "No EasyAuth header value provided")]
-        [DataRow("ey==", DisplayName = "Corrupt EasyAuth header value provided")]
-        [DataRow(null, DisplayName = "No EasyAuth header provided")]
-        [DataRow("", true, DisplayName = "No EasyAuth header value provided, include authorization header")]
+        [DataRow("", DisplayName = "No EasyAuth payload -> 401 Unauthorized")]
+        [DataRow("ey==", DisplayName = "Invalid EasyAuth payload -> 401 Unauthorized")]
+        [DataRow(null, DisplayName = "No EasyAuth header provided -> 401 Unauthorized")]
+        [DataRow("", true, DisplayName = "No EasyAuth payload, include authorization header")]
         [DataRow("ey==", true, DisplayName = "Corrupt EasyAuth header value provided, include authorization header")]
         [DataRow(null, true, DisplayName = "No EasyAuth header provided, include authorization header")]
         [TestMethod]
-        public async Task TestInvalidEasyAuthToken(string token, bool sendAuthorizationHeader = false)
+        public async Task TestInvalidStaticWebAppsEasyAuthToken(string easyAuthPayload, bool sendAuthorizationHeader = false)
         {
             HttpContext postMiddlewareContext =
                 await SendRequestAndGetHttpContextState(
-                    token,
+                    easyAuthPayload,
                     EasyAuthType.StaticWebApps,
                     sendAuthorizationHeader);
+
+            // Validate state of HttpContext after being processed by authentication middleware.
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
-            Assert.AreEqual(expected: AuthorizationType.Anonymous.ToString(),
-                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
-                ignoreCase: true);
+            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: string.Empty, actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString());
         }
 
         /// <summary>
         /// Test to validate that the request is appropriately treated as anonymous/authenticated
-        /// in development mode depending on the value feature switch we have in the config file.
+        /// in development mode depending on the value feature flag we have in the config file.
+        /// (Enabled/Disabled) in test DisplayName indicates state of feature flag.
         /// </summary>
-        /// <param name="treatRequestAsAuthenticated">Boolean value indicating whether to treat the
-        /// request as authenticated by default.</param>
+        /// <param name="authenticateDevModeRequests">Boolean value indicating whether to turn on feature flag
+        /// used to treat requests as authenticated by default.</param>
         /// <param name="expectedClientRoleHeader">Expected value of X-MS-API-ROLE header.</param>
         /// <param name="clientRoleHeader">Value of X-MS-API-ROLE header specified in request.</param>
-        /// <returns></returns>
         [DataTestMethod]
-        [DataRow(true, "Authenticated", null,
-            DisplayName = "EasyAuth- Treat request as authenticated in development mode")]
-        [DataRow(false, "Anonymous", null,
-            DisplayName = "EasyAuth- Treat request as anonymous in development mode")]
-        [DataRow(true, "author", "author",
-            DisplayName = "EasyAuth- Treat request as authenticated in development mode " +
-            "and honor the clientRoleHeader")]
-        [DataRow(true, "Anonymous", "Anonymous",
-            DisplayName = "EasyAuth- Treat request as authenticated in development mode " +
-            "and honor the clientRoleHeader even when specified as anonymous")]
-        public async Task TestAuthenticatedRequestInDevelopmentMode(
-            bool treatDevModeRequestAsAuthenticated,
+        [DataRow(false, null, null, DisplayName = "Disabled, no auth headers -> 401 Unauthorized")]
+        [DataRow(true, "Authenticated", null, DisplayName = "Enabled, no auth headers -> clientRoleHeader set to (authenticated)")]
+        [DataRow(true, "author", "author", DisplayName = "Enabled, honor the clientRoleHeader (author)")]
+        [DataRow(true, "Anonymous", "Anonymous", DisplayName = "Enabled, honor the clientRoleHeader (anonymous)")]
+        public async Task AuthenticateDevModeRequests_FeatureFlagTests(
+            bool authenticateDevModeRequests,
             string expectedClientRoleHeader,
             string clientRoleHeader)
         {
@@ -268,20 +299,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                     token: null,
                     easyAuthType: EasyAuthType.StaticWebApps,
                     clientRoleHeader: clientRoleHeader,
-                    treatRequestAsAuthenticated: treatDevModeRequestAsAuthenticated);
+                    treatRequestAsAuthenticated: authenticateDevModeRequests);
 
+            // Validate state of HttpContext after being processed by authentication middleware.
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
-            Assert.AreEqual(expected: expectedClientRoleHeader,
-                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString());
+            int expectedStatusCode = authenticateDevModeRequests ? (int)HttpStatusCode.OK : (int)HttpStatusCode.Unauthorized;
+            Assert.AreEqual(expected: expectedStatusCode, actual: postMiddlewareContext.Response.StatusCode);
 
-            // Validates that AuthenticationMiddleware adds the clientRoleHeader as a role claim
-            // ONLY when the DevModeAuthNFlag is set.
+            string resolvedRoleHeader = postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
+            if (!string.IsNullOrWhiteSpace(resolvedRoleHeader))
+            {
+                Assert.AreEqual(expected: expectedClientRoleHeader, actual: resolvedRoleHeader);
+            }
+
+            // Validates that AuthenticationMiddleware adds the clientRoleHeader as a role claim ONLY when the DevModeAuthNFlag is set.
             if (clientRoleHeader is not null)
             {
-                Assert.AreEqual(
-                    expected: treatDevModeRequestAsAuthenticated,
-                    actual: postMiddlewareContext.User.IsInRole(clientRoleHeader));
+                Assert.AreEqual(expected: authenticateDevModeRequests, actual: postMiddlewareContext.User.IsInRole(clientRoleHeader));
             }
         }
         #endregion

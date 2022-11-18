@@ -10,10 +10,10 @@ There are several ways to get an Azure MySQL Database connection string. See [ho
 
 
 For Data API Builder, the format used for a MySQL connection is shown below based on SSL configuration:
-1. If MySQL server has SSL enabled, use the ADO.NET connection string format with SSL mode as requried. If using Azure database for MySQL , remember to download the [public SSL certificate](https://dl.cacerts.digicert.com/DigiCertGlobalRootCA.crt.pem) and use the path to the certifcate for "SslCa" parameter.
+1. If MySQL server has SSL enabled, use the ADO.NET connection string format with SSL mode as requried. If using Azure database for MySQL , remember to download and install the [public SSL certificate](https://dl.cacerts.digicert.com/DigiCertGlobalRootCA.crt.pem). 
 
     ```
-    Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;SslMode=MySqlSslMode.Required;SslCa="{path_to_CA_cert}";
+    Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;SslMode=MySqlSslMode.Required;";
     ```
 2. If MySQL has SSL not enabled, you can use the ADO.NET connection string format without the SSL mode parameter
     ```
@@ -33,7 +33,7 @@ If Server is using SSL with Azure database for MySQL
 ```json
 "data-source": {
     "database-type": "mysql",
-    "connection-string": "Server=demoazuredbmysql.mysql.database.azure.com;User ID=root;Password=<Password>;database=<dbname>;SslMode=MySqlSslMode.Required;SslCa="{path_to_CA_cert}"
+    "connection-string": "Server=demoazuredbmysql.mysql.database.azure.com;User ID=root;Password=<Password>;database=<dbname>;SslMode=MySqlSslMode.Required;"
 }
 ```
 
@@ -45,15 +45,14 @@ Create the database tables needed to represent Authors, Books and the many-to-ma
 - `dbo.books`: Table containing books
 - `dbo.books_authors`: Table associating books with respective authors
 
-[Get script from Anirudh]
-Execute the script in the SQL Server or Azure MySQL Database you decided to use, so that the tables with samples data are created and populated.
+Execute this [sample script for books schema and data](https://github.com/Azure/data-api-builder/blob/main/src/Service/MySqlBooks.sql) in the Azure MySQL Database you decided to use.
 
 ## Creating a configuration file for DAB
 The Data API builder for Azure Databases engine needs a configuration file. There you'll define which database DAB connects to, and which entities are to be exposed by the API, together with their properties.
 
 For this getting started guide you will use DAB CLI to initialize your configuration file. Run the following command:
 
-dab init --database-type "mssql" --connection-string ""connection-string": "Server=demoazuredbmysql.mysql.database.azure.com;User ID=root;Password=<Password>;database=<dbname>;SslMode=MySqlSslMode.Required;SslCa="{path_to_CA_cert}" --host-mode "Development"
+dab init --database-type "mysql" --connection-string "connection-string": "Server=demoazuredbmysql.mysql.database.azure.com;User ID=root;Password=<Password>;database=<dbname>;SslMode=MySqlSslMode.Required;" --host-mode "Development"
 
 The command will generate a config file called dab-config.json looking like this:
 
@@ -62,7 +61,7 @@ The command will generate a config file called dab-config.json looking like this
   "$schema": "dab.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=ReplaceMe;TrustServerCertificate=true"
+    "connection-string": "Server=demoazuredbmysql.mysql.database.azure.com;User ID=root;Password=<Password>;database=<dbname>;SslMode=MySqlSslMode.Required;"
   },
   "mssql": {
     "set-session-context": true
@@ -352,14 +351,4 @@ that will return all the books written by Isaac Asimov.
 
 Congratulations, you have just created a fully working backend to support your modern applications!
 
-## Exercise
 
-If you want to practice what you have learned, here's a little exercise you can do on your own
-
-- Using the database setup script `/samples/getting-started/azure-sql-db/exercise/exercise.library.azure-sql.sql`:
-  - add the table `dbo.series` which will store series names (for example: [Foundation Series](https://en.wikipedia.org/wiki/Foundation_series))
-  - update the `dbo.books` table by adding a column named `series_id`
-  - update the `dbo.books` table by adding a foreign key constraint on the `dbo.series` table
-- Update the configuration file with a new entity named `series`, supported by the `dbo.series` source table you just created.
-- Update the `book` entity by creating a relationship with the `series` entity. Make sure you select `one` for the `cardinality` property
-- Update the `series` entity by creating a relationship with the `book` entity. Make sure you select `many` for the `cardinality` property

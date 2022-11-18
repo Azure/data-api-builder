@@ -78,8 +78,7 @@ namespace Cli
                 case DatabaseType.cosmosdb_postgresql:
                     break;
                 default:
-                    Console.WriteLine($"DatabaseType: ${dbType} not supported.Please provide a valid database-type.");
-                    return false;
+                    throw new Exception($"DatabaseType: ${dbType} not supported.Please provide a valid database-type.");
             }
 
             DataSource dataSource = new(dbType, DbOptions: cosmosDbNoSqlOptions);

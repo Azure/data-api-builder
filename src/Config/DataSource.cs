@@ -23,11 +23,15 @@ namespace Azure.DataApiBuilder.Config
         [property: JsonPropertyName(CONNSTRING_PROPERTY_NAME)]
         public string ConnectionString { get; set; } = string.Empty;
         public CosmosDbOptions? CosmosDbNoSql { get; set; }
+        public CosmosDbPostgreSqlOptions? CosmosDbPostgreSql { get; set; }
         public MsSqlOptions? MsSql { get; set; }
         public PostgreSqlOptions? PostgreSql { get; set; }
         public MySqlOptions? MySql { get; set; }
-        public CosmosDbPostgreSqlOptions? CosmosDbPostgreSql { get; set; }
 
+        /// <summary>
+        /// Method to populate the database specific options from the "options"
+        /// section in data-source.
+        /// </summary>
         public void PopulateDbSpecificOptions()
         {
             if (DbOptions is null)

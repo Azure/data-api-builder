@@ -44,6 +44,7 @@ namespace Cli.Tests
                     new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                     authenticateDevModeRequest: true)
             );
+
             RunTest(options, expectedRuntimeConfig);
         }
 
@@ -147,10 +148,10 @@ namespace Cli.Tests
                     ""database-type"": ""cosmosdb_nosql"",
                     ""connection-string"": ""testconnectionstring"",
                     ""options"": {
-                    ""database"": ""testdb"",
-                    ""container"": ""testcontainer"",
-                    ""schema"": ""schemafile""
-                }
+                        ""database"": ""testdb"",
+                        ""container"": ""testcontainer"",
+                        ""schema"": ""schemafile""
+                    }
                 },
                 ""cosmos"": {
                     ""database"": ""testdb"",

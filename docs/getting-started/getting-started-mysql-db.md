@@ -6,29 +6,34 @@ As mentioned before, this tutorial assumes that you already have a SQL Server or
 
 ## Get the database connection string
 
-There are several ways to get an Azure MySQL Database connection string. More details here:
-https://docs.microsoft.com/en-us/azure/azure-sql/database/connect-query-content-reference-guide?view=azuresql
+There are several ways to get an Azure MySQL Database connection string. See [how to connect and query with MySQL](https://learn.microsoft.com/en-us/azure/purview/register-scan-azure-mysql-database).
 
-If you are connecting to Azure SQL DB, Azure SQL MI, or SQL Server, the connection string look like:
 
-```
-Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;
-```
+For Data API Builder, the format used for a MySQL connection is shown below based on SSL configuration:
+1. If MySQL server has SSL enabled, use the ADO.NET connection string format with SSL mode as requried. If using Azure database for MySQL , remember to download the [public SSL certificate](https://dl.cacerts.digicert.com/DigiCertGlobalRootCA.crt.pem) and use the path to the certifcate for "SslCa" parameter.
 
-To connect to a local SQL Server, for example:
+    ```
+    Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;SslMode=MySqlSslMode.Required;SslCa="{path_to_CA_cert}";
+    ```
+2. If MySQL has SSL not enabled, you can use the ADO.NET connection string format without the SSL mode parameter
+    ```
+    Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;
+    ```
 
-```
-Server=localhost;Database=Library;User ID=dab_user;Password=<password>;TrustServerCertificate=true
-```
-
-More details on Azure SQL and SQL Server connection strings can be found here: https://docs.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax
-
-Once you have your connection string, add it to the configuration file you have created before. It will look like the following (if you are using a local SQL Server):
+Once you have your connection string, add it to the configuration file you have created before. It will look like the following (if you are using a local MySQL Server wihtout SSL)
 
 ```json
 "data-source": {
-    "database-type": "mssql",
-    "connection-string": "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=<Password>;TrustServerCertificate=true"
+    "database-type": "mysql",
+    "connection-string": "Server=127.0.0.1;User ID=root;Password=<Password>;database=<dbname>"
+}
+```
+
+If Server is using SSL with Azure database for MySQL  
+```json
+"data-source": {
+    "database-type": "mysql",
+    "connection-string": "Server=demoazuredbmysql.mysql.database.azure.com;User ID=root;Password=<Password>;database=<dbname>;SslMode=MySqlSslMode.Required;SslCa="{path_to_CA_cert}"
 }
 ```
 
@@ -40,8 +45,56 @@ Create the database tables needed to represent Authors, Books and the many-to-ma
 - `dbo.books`: Table containing books
 - `dbo.books_authors`: Table associating books with respective authors
 
+[Get script from Anirudh]
 Execute the script in the SQL Server or Azure MySQL Database you decided to use, so that the tables with samples data are created and populated.
 
+## Creating a configuration file for DAB
+The Data API builder for Azure Databases engine needs a configuration file. There you'll define which database DAB connects to, and which entities are to be exposed by the API, together with their properties.
+
+For this getting started guide you will use DAB CLI to initialize your configuration file. Run the following command:
+
+dab init --database-type "mssql" --connection-string ""connection-string": "Server=demoazuredbmysql.mysql.database.azure.com;User ID=root;Password=<Password>;database=<dbname>;SslMode=MySqlSslMode.Required;SslCa="{path_to_CA_cert}" --host-mode "Development"
+
+The command will generate a config file called dab-config.json looking like this:
+
+```json
+{
+  "$schema": "dab.draft-01.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=ReplaceMe;TrustServerCertificate=true"
+  },
+  "mssql": {
+    "set-session-context": true
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api"
+    },
+    "graphql": {
+      "allow-introspection": true,
+      "enabled": true,
+      "path": "/graphql"
+    },
+    "host": {
+      "mode": "development",
+      "cors": {
+        "origins": [],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "StaticWebApps"
+      }
+    }
+  },
+  "entities": {}
+}
+```
+As you can see there the `data-source` property specifies that our chosen `database-type` is `mssql`, with the `connection-string` we passed to DAB CLI.
+
+>Take a look at the [DAB Configuration File Guide](../configuration-file.md) document to learn more. With the configuration file in place, then it's time to start defining which entities you want to expose via the API.
+    
 ## Add Book and Author entities
 
 Now, you'll want to expose the `books` and the `authors` table as REST or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.

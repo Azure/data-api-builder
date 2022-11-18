@@ -309,7 +309,7 @@ public class EndToEndTests
     {
         WriteJsonContentToFile(_testRuntimeConfig, INITIAL_CONFIG);
 
-        Process process = StartDabProcess(
+        using Process process = StartDabProcess(
             command: $"start --config {_testRuntimeConfig}",
             logLevelOption
         );
@@ -330,7 +330,7 @@ public class EndToEndTests
     [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
     public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
     {
-        Process process = StartDabProcess(
+        using Process process = StartDabProcess(
             command,
             flags
         );
@@ -361,7 +361,7 @@ public class EndToEndTests
     {
         string runtimeConfigJson = AddPropertiesToJson(initialConfig, entityDetails);
         File.WriteAllText(_testRuntimeConfig, runtimeConfigJson);
-        Process process = StartDabProcess(
+        using Process process = StartDabProcess(
             command: "start",
             flags: $"--config {_testRuntimeConfig}"
         );

@@ -2,6 +2,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using HotChocolate.Language;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.Sql.SchemaConverter;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 {
@@ -24,13 +25,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             {
                 foreach (string param in entity.Parameters.Keys)
                 {
+                    Tuple<string, IValueNode> defaultGraphQLValue =  GetGraphQLTypeAndNodeTypeFromStringValue(entity.Parameters[param].ToString()!);
                     inputValues.Add(
                         new(
                             location: null,
                             new(param),
                             new StringValueNode($"parameters for {name.Value} stored-procedure"),
-                            new NamedTypeNode("String"),
-                            defaultValue: new StringValueNode($"{entity.Parameters[param]}"),
+                            new NamedTypeNode(defaultGraphQLValue.Item1),
+                            defaultValue: defaultGraphQLValue.Item2,
                             new List<DirectiveNode>())
                         );
                 }

@@ -256,7 +256,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task TestStoredProcedureQueryForGettingSingleRow()
         {
-            string msSqlQuery = $"EXEC dbo.get_book_by_id @id=\"3\"";
+            string msSqlQuery = $"EXEC dbo.get_book_by_id @id=3";
             await base.TestStoredProcedureQueryForGettingSingleRow(msSqlQuery);
         }
 

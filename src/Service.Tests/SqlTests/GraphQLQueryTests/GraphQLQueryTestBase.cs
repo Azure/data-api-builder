@@ -938,7 +938,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string graphQLQueryName = "GetBook";
             string graphQLQuery = @"{
-                GetBook(id: ""3"") {
+                GetBook(id: 3) {
                     id
                     title
                     publisher_id
@@ -1032,6 +1032,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataApiBuilderException.SubStatusCodes.BadRequest}");
+        }
+
+        [TestMethod]
+        public virtual async Task TestStoredProcedureQueryWithInvalidArgumentType()
+        {
+            string graphQLQueryName = "GetBook";
+            string graphQLQuery = @"{
+                GetBook(id: ""3"") {
+                    id
+                    title
+                    publisher_id
+                }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: "The specified argument value does not match the argument type.");
         }
 
         [TestMethod]

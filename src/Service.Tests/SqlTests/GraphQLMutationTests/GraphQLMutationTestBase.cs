@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string graphQLMutationName = "InsertBook";
             string graphQLMutation = @"
                 mutation {
-                    InsertBook(title: ""Random Book"", publisher_id: ""1234"" ) {
+                    InsertBook(title: ""Random Book"", publisher_id: 1234 ) {
                         result
                     }
                 }
@@ -122,7 +122,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string graphQLMutationName = "InsertAndDisplayAllBooks";
             string graphQLMutation = @"
                 mutation {
-                    InsertAndDisplayAllBooks(title: ""Theory Of DAB"", publisher_id: ""1234"" ) {
+                    InsertAndDisplayAllBooks(title: ""Theory Of DAB"", publisher_id: 1234 ) {
                         id,
                         title,
                         publisher_id

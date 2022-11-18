@@ -455,8 +455,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of MsSql config file succeeds."), TestCategory(TestCategory.MSSQL)]
         public void TestReadingRuntimeConfigForMsSql()
         {
-            string jsonString = File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}");
-            ConfigFileDeserializationValidationHelper(jsonString);
+            ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -466,8 +465,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of MySql config file succeeds."), TestCategory(TestCategory.MYSQL)]
         public void TestReadingRuntimeConfigForMySql()
         {
-            string jsonString = File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{MYSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}");
-            ConfigFileDeserializationValidationHelper(jsonString);
+            ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{MYSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -477,8 +475,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of PostgreSql config file succeeds."), TestCategory(TestCategory.POSTGRESQL)]
         public void TestReadingRuntimeConfigForPostgreSql()
         {
-            string jsonString = File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}");
-            ConfigFileDeserializationValidationHelper(jsonString);
+            ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -488,8 +485,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of the cosmos config file succeeds."), TestCategory(TestCategory.COSMOS)]
         public void TestReadingRuntimeConfigForCosmos()
         {
-            string jsonString = File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}");
-            ConfigFileDeserializationValidationHelper(jsonString);
+            ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"));
         }
 
         /// <summary>

@@ -1,10 +1,13 @@
+using System;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -66,12 +69,87 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
         [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests")]
         [DataRow("")]
-        public async Task CheckExceptionForBadConnectionString(string connectionString)
+        public async Task CheckExceptionForBadConnectionStringForMsSql(string connectionString)
         {
             DatabaseEngine = TestCategory.MSSQL;
-            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
+            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Load runtimeConfig and set connection string and db type
+        /// according to data row.
+        /// <code>Check: </code>  Verify malformed connection string throws correct exception with MySQL as the database.
+        /// </summary>
+        [DataTestMethod, TestCategory(TestCategory.MYSQL)]
+        [DataRow(";;;;;fooBarBAZ")]
+        [DataRow("!&^%*&$$%#$%@$%#@()")]
+        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
+        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests")]
+        [DataRow("")]
+        public async Task CheckExceptionForBadConnectionStringForMySql(string connectionString)
+        {
+            DatabaseEngine = TestCategory.MYSQL;
+            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Load runtimeConfig and set connection string and db type
+        /// according to data row.
+        /// <code>Check: </code>  Verify malformed connection string throws correct exception with PostgreSQL as the database.
+        /// </summary>
+        [DataTestMethod, TestCategory(TestCategory.POSTGRESQL)]
+        [DataRow(";;;;;fooBarBAZ")]
+        [DataRow("!&^%*&$$%#$%@$%#@()")]
+        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
+        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests")]
+        [DataRow("")]
+        public async Task CheckExceptionForBadConnectionStringForPgSql(string connectionString)
+        {
+            DatabaseEngine = TestCategory.POSTGRESQL;
+            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString);
+        }
+
+        /// <summary>
+        /// Helper method to validate the exception message when malformed connection strings are used
+        /// to retrieve metadata information from the database
+        /// </summary>
+        /// <param name="databaseType"></param>
+        /// <param name="connectionString"></param>
+        /// <returns></returns>
+        private static async Task CheckExceptionForBadConnectionStringHelperAsync(string databaseType, string connectionString)
+        {
+            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(databaseType);
+            _runtimeConfig.ConnectionString = connectionString;
+            _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
-            SetUpSQLMetadataProvider();
+
+            switch (databaseType)
+            {
+                case TestCategory.MSSQL:
+                    _sqlMetadataProvider =
+                       new MsSqlMetadataProvider(_runtimeConfigProvider,
+                           _queryExecutor,
+                           _queryBuilder,
+                           _sqlMetadataLogger);
+                    break;
+                case TestCategory.MYSQL:
+                    _sqlMetadataProvider =
+                       new MySqlMetadataProvider(_runtimeConfigProvider,
+                           _queryExecutor,
+                           _queryBuilder,
+                           _sqlMetadataLogger);
+                    break;
+                case TestCategory.POSTGRESQL:
+                    _sqlMetadataProvider =
+                       new PostgreSqlMetadataProvider(_runtimeConfigProvider,
+                           _queryExecutor,
+                           _queryBuilder,
+                           _sqlMetadataLogger);
+                    break;
+            }
+
             try
             {
                 await _sqlMetadataProvider.InitializeAsync();

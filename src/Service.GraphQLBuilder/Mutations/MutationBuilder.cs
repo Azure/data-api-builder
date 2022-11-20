@@ -3,6 +3,8 @@ using Azure.DataApiBuilder.Config;
 using HotChocolate.Language;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
+using Azure.DataApiBuilder.Service.Exceptions;
+using System.Net;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 {
@@ -76,13 +78,38 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             Dictionary<string, EntityMetadata>? entityPermissionsMap
         )
         {
-            if (entityPermissionsMap![dbEntityName].OperationToRolesMap.Count == 1)
+            List<Operation> operations = entityPermissionsMap![dbEntityName].OperationToRolesMap.Keys.ToList();
+            operations.Remove(Operation.Read);
+
+            // Only one of the mutation operation(CUD) is allowed at once
+            if (operations.Count == 0)
             {
-                return entityPermissionsMap[dbEntityName].OperationToRolesMap.First().Key;
+                // If it only contained Read Operation
+                return Operation.Read;
+            }
+            else if (operations.Count == 1)
+            {
+                if (entityPermissionsMap.TryGetValue(dbEntityName, out EntityMetadata entityMetadata))
+                {
+                    return entityMetadata!.OperationToRolesMap.First().Key;
+                }
+                else
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Failed to obtain permissions for entity:{dbEntityName}",
+                        statusCode: HttpStatusCode.PreconditionFailed,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
+                    );
+                }
+                
             }
             else
             {
-                throw new Exception("Stored Procedure cannot have more than one operation.");
+                throw new DataApiBuilderException(
+                        message: $"StoredProcedure can't have more than one CRUD operation.",
+                        statusCode: HttpStatusCode.PreconditionFailed,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
+                    );
             }
 
         }

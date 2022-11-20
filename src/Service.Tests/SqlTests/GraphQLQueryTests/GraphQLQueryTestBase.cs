@@ -931,7 +931,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Query a simple view (contains columns from one table)
+        /// Simple Stored Procedure to check SELECT query returning single row
         /// </summary>
         [TestMethod]
         public virtual async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
@@ -952,7 +952,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Query a simple view (contains columns from one table)
+        /// Simple Stored Procedure to check SELECT query returning multiple rows
         /// </summary>
         [TestMethod]
         public virtual async Task TestStoredProcedureQueryForGettingMultipleRows(string dbQuery)
@@ -973,7 +973,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Query a simple view (contains columns from one table)
+        /// Simple Stored Procedure to check COUNT operation
         /// </summary>
         [TestMethod]
         public virtual async Task TestStoredProcedureQueryForGettingTotalNumberOfRows(string dbQuery)

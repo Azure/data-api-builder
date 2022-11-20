@@ -146,21 +146,23 @@ namespace Azure.DataApiBuilder.Service.Services
                     IEnumerable<string> rolesAllowedForEntity = _authorizationResolver.GetRolesForEntity(entityName);
                     Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
                     SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
-                    if (databaseObject.SourceType is not SourceType.StoredProcedure)
+                    if (databaseObject.SourceType is SourceType.StoredProcedure)
                     {
-                        foreach (string column in sourceDefinition.Columns.Keys)
+                        Console.Write("asd");
+                    }
+                    foreach (string column in sourceDefinition.Columns.Keys)
+                    {
+                        IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Operation.Read);
+                        if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
                         {
-                            IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Operation.Read);
-                            if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
-                            {
-                                throw new DataApiBuilderException(
-                                    message: "Column already processed for building ObjectTypeDefinition authorization definition.",
-                                    statusCode: System.Net.HttpStatusCode.InternalServerError,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
-                                    );
-                            }
+                            throw new DataApiBuilderException(
+                                message: "Column already processed for building ObjectTypeDefinition authorization definition.",
+                                statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
+                                );
                         }
                     }
+                    // }
 
                     // The roles allowed for Fields are the roles allowed to READ the fields, so any role that has a read definition for the field.
                     // Only add objectTypeDefinition for GraphQL if it has a role definition defined for access.

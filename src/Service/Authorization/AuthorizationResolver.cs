@@ -292,6 +292,10 @@ namespace Azure.DataApiBuilder.Service.Authorization
                             }
                         }
 
+                        if (entity.ObjectType is SourceType.StoredProcedure){
+                            Console.Write("asdasd");
+                        }
+
                         // Populate allowed exposed columns for each entity/role/operation combination during startup,
                         // so that it doesn't need to be evaluated per request.
                         PopulateAllowedExposedColumns(operationToColumn.AllowedExposedColumns, entityName, allowedColumns);

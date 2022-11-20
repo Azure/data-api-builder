@@ -762,8 +762,9 @@ namespace Azure.DataApiBuilder.Service.Services
                 string resultFieldName = element.GetProperty("result_field_name").ToString();
                 Type resultFieldType = SqlToCLRType(element.GetProperty("system_type_name").ToString());
 
-                // Store the dictionary containing result set field with it's type
-                storedProcedureDefinition.ResultSet.TryAdd(resultFieldName, resultFieldType);
+                // Store the dictionary containing result set field with it's type as Columns
+                // storedProcedureDefinition.ResultSet.TryAdd(resultFieldName, resultFieldType);
+                storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType));
             }
         }
 
@@ -803,8 +804,8 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 // Ensure we don't attempt for stored procedures, which have no
                 // SourceDefinition, Columns, Keys, etc.
-                if (_entities[entityName].ObjectType is not SourceType.StoredProcedure)
-                {
+                // if (_entities[entityName].ObjectType is not SourceType.StoredProcedure)
+                // {
                     Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
                     EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
                     EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
@@ -817,7 +818,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             EntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
                         }
                     }
-                }
+                // }
             }
         }
 

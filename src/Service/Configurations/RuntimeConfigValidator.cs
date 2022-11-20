@@ -66,6 +66,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             ValidateAuthenticationConfig();
 
+            ValidateStoredProcedureInConfig(runtimeConfig);
+
             // Running these graphQL validations only in development mode to ensure
             // fast startup of engine in production mode.
             if (runtimeConfig.GraphQLGlobalSettings.Enabled
@@ -96,6 +98,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
 
             ValidateDatabaseType(runtimeConfig, fileSystem, logger);
+        }
+
+        public static void ValidateStoredProcedureInConfig(RuntimeConfig runtimeConfig)
+        {
+            // SetEntityPermissionMap(runtimeConfig);
         }
 
         /// <summary>

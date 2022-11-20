@@ -219,7 +219,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             foreach (string entityName in entityCollection.Keys)
             {
                 Entity entity = entityCollection[entityName];
-                entity.TryPopulateSourceFields();
+                // entity.TryPopulateSourceFields();
 
                 if (entity.GraphQL is null)
                 {

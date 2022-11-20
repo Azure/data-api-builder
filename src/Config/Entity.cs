@@ -140,14 +140,14 @@ namespace Azure.DataApiBuilder.Config
                 throw new JsonException(message: "Must specify entity source.");
             }
 
-            JsonElement sourceJson = (JsonElement)Source;
+            JsonElement sourceJson = JsonSerializer.SerializeToElement(Source);
 
             // In the case of a simple, string source, we assume the source type is a table; parameters and key fields left null
             // Note: engine supports views backing entities labeled as Tables, as long as their primary key can be inferred
             if (sourceJson.ValueKind is JsonValueKind.String)
             {
                 ObjectType = SourceType.Table;
-                SourceName = JsonSerializer.Deserialize<string>((JsonElement)Source)!;
+                SourceName = JsonSerializer.Deserialize<string>(sourceJson)!;
                 Parameters = null;
                 KeyFields = null;
             }

@@ -10,12 +10,12 @@ namespace Cli.Tests;
 public class EndToEndTests
 {
     /// <summary>
-    /// Initializing config for cosmos DB.
+    /// Initializing config for cosmosdb_nosql.
     /// </summary>
     [TestMethod]
-    public void TestInitForCosmosDB()
+    public void TestInitForCosmosDBNoSql()
     {
-        string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmos",
+        string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_nosql",
                           "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "True", "--cosmos-database",
                           "graphqldb", "--cosmos-container", "planet", "--graphql-schema", "schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
@@ -24,11 +24,41 @@ public class EndToEndTests
 
         Assert.IsNotNull(runtimeConfig);
         Assert.IsTrue(runtimeConfig.GraphQLGlobalSettings.AllowIntrospection);
-        Assert.AreEqual(DatabaseType.cosmos, runtimeConfig.DatabaseType);
-        Assert.IsNotNull(runtimeConfig.CosmosDb);
-        Assert.AreEqual("graphqldb", runtimeConfig.CosmosDb.Database);
-        Assert.AreEqual("planet", runtimeConfig.CosmosDb.Container);
-        Assert.AreEqual("schema.gql", runtimeConfig.CosmosDb.GraphQLSchemaPath);
+        Assert.AreEqual(DatabaseType.cosmosdb_nosql, runtimeConfig.DatabaseType);
+        Assert.IsNotNull(runtimeConfig.DataSource.CosmosDbNoSql);
+        Assert.AreEqual("graphqldb", runtimeConfig.DataSource.CosmosDbNoSql.Database);
+        Assert.AreEqual("planet", runtimeConfig.DataSource.CosmosDbNoSql.Container);
+        Assert.AreEqual("schema.gql", runtimeConfig.DataSource.CosmosDbNoSql.GraphQLSchemaPath);
+        Assert.IsNotNull(runtimeConfig.RuntimeSettings);
+        Assert.AreEqual(true, runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated);
+        JsonElement jsonRestSettings = (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Rest];
+
+        RestGlobalSettings? restGlobalSettings = JsonSerializer.Deserialize<RestGlobalSettings>(jsonRestSettings, RuntimeConfig.SerializerOptions);
+        Assert.IsNotNull(restGlobalSettings);
+        Assert.IsNotNull(runtimeConfig.HostGlobalSettings);
+
+        Assert.IsTrue(runtimeConfig.RuntimeSettings.ContainsKey(GlobalSettingsType.Host));
+        HostGlobalSettings? hostGlobalSettings = JsonSerializer.Deserialize<HostGlobalSettings>((JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Host], RuntimeConfig.SerializerOptions);
+        Assert.IsNotNull(hostGlobalSettings);
+        CollectionAssert.AreEqual(new string[] { "localhost:3000", "www.nolocalhost.com:80" }, hostGlobalSettings.Cors!.Origins);
+    }
+
+    /// <summary>
+    /// Initializing config for cosmosdb_postgresql.
+    /// </summary>
+    [TestMethod]
+    public void TestInitForCosmosDBPostgreSql()
+    {
+        string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_postgresql",
+                          "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "True",
+                          "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
+        Program.Main(args);
+
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(DatabaseType.cosmosdb_postgresql, runtimeConfig.DatabaseType);
+        Assert.IsNull(runtimeConfig.DataSource.CosmosDbPostgreSql);
         Assert.IsNotNull(runtimeConfig.RuntimeSettings);
         Assert.AreEqual(true, runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated);
         JsonElement jsonRestSettings = (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Rest];

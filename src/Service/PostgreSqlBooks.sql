@@ -216,7 +216,22 @@ ON DELETE CASCADE;
 
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02');
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
-INSERT INTO books(id, title, publisher_id) VALUES (1, 'Awesome book', 1234), (2, 'Also Awesome book', 1234), (3, 'Great wall of china explained', 2345), (4, 'US history in a nutshell', 2345), (5, 'Chernobyl Diaries', 2323), (6, 'The Palace Door', 2324), (7, 'The Groovy Bar', 2324), (8, 'Time to Eat', 2324), (9, 'Policy-Test-01', 1940), (10, 'Policy-Test-02', 1940), (11, 'Policy-Test-04', 1941), (12, 'Time to Eat 2', 1941);
+INSERT INTO books(id, title, publisher_id)
+    VALUES
+        (1, 'Awesome book', 1234),
+        (2, 'Also Awesome book', 1234),
+        (3, 'Great wall of china explained', 2345),
+        (4, 'US history in a nutshell', 2345),
+        (5, 'Chernobyl Diaries', 2323),
+        (6, 'The Palace Door', 2324),
+        (7, 'The Groovy Bar', 2324),
+        (8, 'Time to Eat', 2324),
+        (9, 'Policy-Test-01', 1940),
+        (10, 'Policy-Test-02', 1940),
+        (11, 'Policy-Test-04', 1941),
+        (12, 'Time to Eat 2', 1941),
+        (13, 'Before Sunrise', 1234),
+        (14, 'Before Sunset', 1234);
 INSERT INTO book_website_placements(book_id, price) VALUES (1, 100), (2, 50), (3, 23), (5, 33);
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124);

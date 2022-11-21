@@ -1,10 +1,10 @@
-using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
+using Azure.DataApiBuilder.Service.Exceptions;
+using System.Net;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 {
@@ -87,18 +87,29 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 // If it only contained Read Operation
                 return Operation.Read;
             }
-            else if (entityPermissionsMap.TryGetValue(dbEntityName, out EntityMetadata entityMetadata))
+            else if (operations.Count == 1)
             {
-                // If it contains any other operation apart from Read, then it's a Mutation
-                return entityMetadata!.OperationToRolesMap.First().Key;
+                if (entityPermissionsMap.TryGetValue(dbEntityName, out EntityMetadata entityMetadata))
+                {
+                    return entityMetadata!.OperationToRolesMap.First().Key;
+                }
+                else
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Failed to obtain permissions for entity:{dbEntityName}",
+                        statusCode: HttpStatusCode.PreconditionFailed,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
+                    );
+                }
+                
             }
             else
             {
                 throw new DataApiBuilderException(
-                    message: $"Failed to obtain permissions for entity:{dbEntityName}",
-                    statusCode: HttpStatusCode.PreconditionFailed,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
-                );
+                        message: $"StoredProcedure can't have more than one CRUD operation.",
+                        statusCode: HttpStatusCode.PreconditionFailed,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
+                    );
             }
 
         }

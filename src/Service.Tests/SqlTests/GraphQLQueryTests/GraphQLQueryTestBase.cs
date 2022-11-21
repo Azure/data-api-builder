@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                books(first: 100) {
+                books(first: 12) {
                     items {
                         id
                         title
@@ -562,6 +562,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                       },
           {
                         ""title"": ""Also Awesome book""
+          },
+          {
+                        ""title"": ""Before Sunrise""
           }
         ]
       }
@@ -604,6 +607,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     ""items"": [
                       {
                         ""id"": 1
+                      },
+                      {
+                        ""id"": 13
+                      },
+                      {
+                        ""id"": 14
                       }
         ]
       }
@@ -616,6 +625,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         ""items"": [
           {
             ""id"": 1
+          },
+          {
+            ""id"": 13
+          },
+          {
+            ""id"": 14
           }
         ]
       }
@@ -933,7 +948,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <summary>
         /// Simple Stored Procedure to check SELECT query returning single row
         /// </summary>
-        [TestMethod]
         public async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
         {
             string graphQLQueryName = "GetBook";
@@ -954,7 +968,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <summary>
         /// Simple Stored Procedure to check SELECT query returning multiple rows
         /// </summary>
-        [TestMethod]
         public async Task TestStoredProcedureQueryForGettingMultipleRows(string dbQuery)
         {
             string graphQLQueryName = "GetBooks";
@@ -975,7 +988,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <summary>
         /// Simple Stored Procedure to check COUNT operation
         /// </summary>
-        [TestMethod]
         public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows(string dbQuery)
         {
             string graphQLQueryName = "CountBooks";
@@ -1034,7 +1046,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataApiBuilderException.SubStatusCodes.BadRequest}");
         }
 
-        [TestMethod]
         public async Task TestStoredProcedureQueryWithInvalidArgumentType()
         {
             string graphQLQueryName = "GetBook";

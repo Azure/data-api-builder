@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -176,7 +177,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string graphQLMutationName = "UpdateBookTitle";
             string graphQLMutation = @"
                 mutation {
-                    UpdateBookTitle(id: 14, title: 'Before Midnight') {
+                    UpdateBookTitle(id: 14, title: ""Before Midnight"") {
                         id
                         title
                         publisher_id
@@ -188,8 +189,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             Console.Write(beforeUpdate);
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
             string afterUpdate = await GetDatabaseResultAsync(dbQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(afterUpdate, actual.ToString());
+            List<JsonDocument> jsonList = JsonSerializer.Deserialize<List<JsonDocument>>(actual.ToString());
+            Assert.AreEqual(1,jsonList.Count);
+            SqlTestHelper.PerformTestEqualJsonStrings(afterUpdate, JsonSerializer.Serialize(jsonList[0]));
         }
 
         /// <summary>

@@ -302,7 +302,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                         }
                       ],
                       ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":13,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]") + @""",
-                      ""hasNextPage"": false
+                      ""hasNextPage"": true
                     }
                   }
                 },
@@ -373,7 +373,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                     }
                   ],
                   ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":14,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]") + @""",
-                  ""hasNextPage"": false
+                  ""hasNextPage"": true
                 }
               }
             }";

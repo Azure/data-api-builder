@@ -499,15 +499,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
             Assert.IsNotNull(runtimeConfig.Schema);
             Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
-            Assert.IsTrue(runtimeConfig.CosmosDb == null
-                || runtimeConfig.CosmosDb.GetType() == typeof(CosmosDbOptions));
-            Assert.IsTrue(runtimeConfig.MsSql == null
-                || runtimeConfig.MsSql.GetType() == typeof(MsSqlOptions));
-            Assert.IsTrue(runtimeConfig.PostgreSql == null
-                || runtimeConfig.PostgreSql.GetType() == typeof(PostgreSqlOptions));
-            Assert.IsTrue(runtimeConfig.MySql == null
-                || runtimeConfig.MySql.GetType() == typeof(MySqlOptions));
-            Assert.IsInstanceOfType(runtimeConfig.Entities, typeof(Dictionary<string, Entity>));
+            Assert.IsTrue(runtimeConfig.DataSource.CosmosDbNoSql == null
+                || runtimeConfig.DataSource.CosmosDbNoSql.GetType() == typeof(CosmosDbOptions));
+            Assert.IsTrue(runtimeConfig.DataSource.MsSql == null
+                || runtimeConfig.DataSource.MsSql.GetType() == typeof(MsSqlOptions));
+            Assert.IsTrue(runtimeConfig.DataSource.PostgreSql == null
+                || runtimeConfig.DataSource.PostgreSql.GetType() == typeof(PostgreSqlOptions));
+            Assert.IsTrue(runtimeConfig.DataSource.MySql == null
+                || runtimeConfig.DataSource.MySql.GetType() == typeof(MySqlOptions));
 
             foreach (Entity entity in runtimeConfig.Entities.Values)
             {
@@ -1019,10 +1018,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "IntegrationTestMinimalSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
                 DataSource: dataSource,
                 RuntimeSettings: globalSettings,
                 Entities: entityMap

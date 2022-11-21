@@ -160,10 +160,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             RuntimeConfig config = new(
                 Schema: RuntimeConfig.SCHEMA,
                 DataSource: dataSource,
-                CosmosDb: null,
-                MsSql: null,
-                PostgreSql: null,
-                MySql: null,
                 RuntimeSettings: runtimeSettings,
                 Entities: entities
             );

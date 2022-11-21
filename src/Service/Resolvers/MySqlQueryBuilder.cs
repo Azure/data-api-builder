@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlQueryStructure structure)
         {
-            string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.Name)} AS {QuoteIdentifier(structure.TableAlias)}{Build(structure.Joins)}";
+            string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.Name)} AS {QuoteIdentifier(structure.SourceAlias)}{Build(structure.Joins)}";
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
             string predicates = JoinPredicateStrings(

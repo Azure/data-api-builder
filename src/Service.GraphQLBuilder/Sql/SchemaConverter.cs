@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             {
                 nameNode = new(value: GetDefinedSingularName(entityName, configEntity));
             }
-            
+
             // When the result set is not defined, it could be a mutation operation with no returning columns
             // Here we create a field called result which will be an empty array.
             if (databaseObject.SourceType is SourceType.StoredProcedure && ((StoredProcedureDefinition)sourceDefinition).Columns.Count == 0)

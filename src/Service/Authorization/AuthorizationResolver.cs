@@ -292,7 +292,8 @@ namespace Azure.DataApiBuilder.Service.Authorization
                             }
                         }
 
-                        if (entity.ObjectType is SourceType.StoredProcedure){
+                        if (entity.ObjectType is SourceType.StoredProcedure)
+                        {
                             Console.Write("asdasd");
                         }
 

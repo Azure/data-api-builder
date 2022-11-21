@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlQueryStructure structure)
         {
             string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                             $"AS {QuoteIdentifier(structure.TableAlias)}{Build(structure.Joins)}";
+                             $"AS {QuoteIdentifier(structure.SourceAlias)}{Build(structure.Joins)}";
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
             string predicates = JoinPredicateStrings(
@@ -141,12 +141,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Build column as
         /// "{tableAlias}"."{ColumnName}"
-        /// or if TableAlias is empty, as
+        /// or if SourceAlias is empty, as
         /// "{ColumnName}"
         /// </summary>
         protected override string Build(Column column)
         {
-            // If the table alias is not empty, we return [{TableAlias}].[{Column}]
+            // If the table alias is not empty, we return [{SourceAlias}].[{Column}]
             if (!string.IsNullOrEmpty(column.TableAlias))
             {
                 return $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}";

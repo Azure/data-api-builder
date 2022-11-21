@@ -212,18 +212,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         {
             if (int.TryParse(stringValue, out int integerValue))
             {
-                return new (LONG_TYPE, new IntValueNode(integerValue));
+                return new(LONG_TYPE, new IntValueNode(integerValue));
             }
             else if (double.TryParse(stringValue, out double floatingValue))
             {
-                return new (FLOAT_TYPE, new FloatValueNode(floatingValue));
+                return new(FLOAT_TYPE, new FloatValueNode(floatingValue));
             }
             else if (Boolean.TryParse(stringValue, out bool booleanValue))
             {
-                return new (BOOLEAN_TYPE, new BooleanValueNode(booleanValue));
+                return new(BOOLEAN_TYPE, new BooleanValueNode(booleanValue));
             }
 
-            return new (STRING_TYPE, new StringValueNode(stringValue));
+            return new(STRING_TYPE, new StringValueNode(stringValue));
         }
     }
 }

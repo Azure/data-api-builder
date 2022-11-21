@@ -183,7 +183,7 @@ namespace Azure.DataApiBuilder.Config
         public bool IsNullable { get; set; }
         public object? DefaultValue { get; set; }
 
-        public ColumnDefinition() {}
+        public ColumnDefinition() { }
 
         public ColumnDefinition(Type systemType)
         {

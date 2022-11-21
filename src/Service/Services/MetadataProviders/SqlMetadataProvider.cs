@@ -806,18 +806,18 @@ namespace Azure.DataApiBuilder.Service.Services
                 // SourceDefinition, Columns, Keys, etc.
                 // if (_entities[entityName].ObjectType is not SourceType.StoredProcedure)
                 // {
-                    Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
-                    EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
-                    EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
-                    SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
-                    foreach (string column in sourceDefinition.Columns.Keys)
+                Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
+                EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
+                EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
+                SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
+                foreach (string column in sourceDefinition.Columns.Keys)
+                {
+                    if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
                     {
-                        if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
-                        {
-                            EntityBackingColumnsToExposedNames[entityName].Add(column, column);
-                            EntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
-                        }
+                        EntityBackingColumnsToExposedNames[entityName].Add(column, column);
+                        EntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
                     }
+                }
                 // }
             }
         }

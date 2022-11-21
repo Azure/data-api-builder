@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             JsonDocument currentResult = JsonDocument.Parse(currentDbResponse);
             Assert.AreEqual(currentResult.RootElement.GetProperty("count").GetInt64(), 1);
             JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            
+
             // Stored Procedure didn't return anything
             SqlTestHelper.PerformTestEqualJsonStrings("[]", graphQLResponse.ToString());
 
@@ -191,7 +191,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             SqlTestHelper.PerformTestEqualJsonStrings(afterUpdate, actual.ToString());
         }
-
 
         /// <summary>
         /// <code>Do: </code> Inserts new stock price with default current timestamp as the value of 

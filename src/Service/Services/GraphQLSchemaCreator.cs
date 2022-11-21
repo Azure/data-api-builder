@@ -150,6 +150,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     {
                         Console.Write("asd");
                     }
+
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
                         IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Operation.Read);

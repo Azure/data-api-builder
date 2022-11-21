@@ -57,6 +57,8 @@ namespace Azure.DataApiBuilder.Config
                 case DatabaseType.cosmosdb_postgresql:
                     CosmosDbPostgreSql = ((JsonElement)DbOptions).Deserialize<CosmosDbPostgreSqlOptions>(RuntimeConfig.SerializerOptions)!;
                     break;
+                default:
+                    throw new Exception($"DatabaseType: ${DatabaseType} not supported.");
             }
         }
     }

@@ -129,6 +129,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 {
                   ""id"": 12,
                   ""title"": ""Time to Eat 2""
+                },
+                {
+                  ""id"": 13,
+                  ""title"": ""Before Sunrise""
+                },
+                {
+                  ""id"": 14,
+                  ""title"": ""Before Sunset""
                 }
               ],
               ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":12,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]") + @""",
@@ -287,6 +295,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                         {
                           ""id"": 2,
                           ""title"": ""Also Awesome book""
+                        },
+                        {
+                          ""id"": 13,
+                          ""title"": ""Before Sunrise""
                         }
                       ],
                       ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":2,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]") + @""",
@@ -356,8 +368,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                       ""title"": ""Also Awesome book""
                     },
                     {
-                      ""id"": 5001,
-                      ""title"": ""Books, Pages, and Pagination. The Book""
+                      ""id"": 13,
+                      ""title"": ""Before Sunrise""
                     }
                   ],
                   ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":5001,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]") + @""",

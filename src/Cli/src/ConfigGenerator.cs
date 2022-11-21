@@ -672,7 +672,7 @@ namespace Cli
                 updatedSourceParameters = null;
             }
 
-            // If given SourceParameter is null, no update is required.
+            // If given SourceParameter is null or is Empty, no update is required.
             // Else updatedSourceParameters will contain the parsed dictionary of parameters.
             if (options.SourceParameters is not null && options.SourceParameters.Any() &&
                 !TryParseSourceParameterDictionary(options.SourceParameters, out updatedSourceParameters))

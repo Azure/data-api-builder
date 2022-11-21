@@ -417,7 +417,6 @@ namespace Cli.Tests
         /// for json comparison in tests.
         /// </summary>
         public static string GetDefaultTestRuntimeSettingString(
-            DatabaseType databaseType,
             HostModeType hostModeType = HostModeType.Production,
             IEnumerable<string>? corsOrigins = null,
             bool? authenticateDevModeRequest = null)

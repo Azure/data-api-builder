@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Azure.DataApiBuilder.Config
@@ -10,14 +11,56 @@ namespace Azure.DataApiBuilder.Config
     /// will use to connect to the backend database.</param>
     public record DataSource(
         [property: JsonPropertyName(DataSource.DATABASE_PROPERTY_NAME)]
-        DatabaseType DatabaseType)
+        DatabaseType DatabaseType,
+        [property: JsonPropertyName(DataSource.OPTIONS_PROPERTY_NAME)]
+        object? DbOptions = null)
     {
         public const string JSON_PROPERTY_NAME = "data-source";
         public const string DATABASE_PROPERTY_NAME = "database-type";
         public const string CONNSTRING_PROPERTY_NAME = "connection-string";
+        public const string OPTIONS_PROPERTY_NAME = "options";
 
         [property: JsonPropertyName(CONNSTRING_PROPERTY_NAME)]
         public string ConnectionString { get; set; } = string.Empty;
+        public CosmosDbOptions? CosmosDbNoSql { get; set; }
+        public CosmosDbPostgreSqlOptions? CosmosDbPostgreSql { get; set; }
+        public MsSqlOptions? MsSql { get; set; }
+        public PostgreSqlOptions? PostgreSql { get; set; }
+        public MySqlOptions? MySql { get; set; }
+
+        /// <summary>
+        /// Method to populate the database specific options from the "options"
+        /// section in data-source.
+        /// </summary>
+        public void PopulateDbSpecificOptions()
+        {
+            if (DbOptions is null)
+            {
+                return;
+            }
+
+            switch (DatabaseType)
+            {
+                case DatabaseType.cosmos:
+                case DatabaseType.cosmosdb_nosql:
+                    CosmosDbNoSql = ((JsonElement)DbOptions).Deserialize<CosmosDbOptions>(RuntimeConfig.SerializerOptions)!;
+                    break;
+                case DatabaseType.mssql:
+                    MsSql = ((JsonElement)DbOptions).Deserialize<MsSqlOptions>(RuntimeConfig.SerializerOptions)!;
+                    break;
+                case DatabaseType.mysql:
+                    MySql = ((JsonElement)DbOptions).Deserialize<MySqlOptions>(RuntimeConfig.SerializerOptions)!;
+                    break;
+                case DatabaseType.postgresql:
+                    PostgreSql = ((JsonElement)DbOptions).Deserialize<PostgreSqlOptions>(RuntimeConfig.SerializerOptions)!;
+                    break;
+                case DatabaseType.cosmosdb_postgresql:
+                    CosmosDbPostgreSql = ((JsonElement)DbOptions).Deserialize<CosmosDbPostgreSqlOptions>(RuntimeConfig.SerializerOptions)!;
+                    break;
+                default:
+                    throw new Exception($"DatabaseType: ${DatabaseType} not supported.");
+            }
+        }
     }
 
     /// <summary>
@@ -32,6 +75,9 @@ namespace Azure.DataApiBuilder.Config
         string? GraphQLSchema)
     {
         public const string GRAPHQL_SCHEMA_PATH_PROPERTY_NAME = "schema";
+
+        // Keeping the name as cosmos only to provide backwards compatibility.
+        // This property won't be needed going forward.
         public const string JSON_PROPERTY_NAME = nameof(DatabaseType.cosmos);
     }
 
@@ -40,6 +86,7 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     public record MsSqlOptions(
         [property: JsonPropertyName("set-session-context")]
+        [property: JsonIgnore]
         bool SetSessionContext = true)
     {
         public const string JSON_PROPERTY_NAME = nameof(DatabaseType.mssql);
@@ -57,6 +104,11 @@ namespace Azure.DataApiBuilder.Config
     }
 
     /// <summary>
+    /// Options for CosmosDb_PostgresSql database.
+    /// </summary>
+    public record CosmosDbPostgreSqlOptions { }
+
+    /// <summary>
     /// Options for MySql database.
     /// </summary>
     public record MySqlOptions
@@ -70,6 +122,8 @@ namespace Azure.DataApiBuilder.Config
     public enum DatabaseType
     {
         cosmos,
+        cosmosdb_postgresql,
+        cosmosdb_nosql,
         mssql,
         mysql,
         postgresql

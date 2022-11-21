@@ -39,7 +39,46 @@ namespace Cli.Tests
             // Adding runtime settings to the above basic config
             string expectedRuntimeConfig = AddPropertiesToJson(
                 _basicRuntimeConfig,
-                GetDefaultTestRuntimeSettingString(DatabaseType.mssql,
+                GetDefaultTestRuntimeSettingString(
+                    HostModeType.Development,
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                    authenticateDevModeRequest: true)
+            );
+
+            RunTest(options, expectedRuntimeConfig);
+        }
+
+        /// <summary>
+        /// Test the simple init config for cosmosdb_postgresql database.
+        /// </summary>
+        [TestMethod]
+        public void CosmosDbPostgreSqlDatabase()
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.cosmosdb_postgresql,
+                connectionString: "testconnectionstring",
+                cosmosDatabase: null,
+                cosmosContainer: null,
+                graphQLSchemaPath: null,
+                hostMode: HostModeType.Development,
+                corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                config: _testRuntimeConfig,
+                devModeDefaultAuth: "true");
+
+            _basicRuntimeConfig =
+            @"{
+                ""$schema"": ""dab.draft.schema.json"",
+                ""data-source"": {
+                    ""database-type"": ""cosmosdb_postgresql"",
+                    ""connection-string"": ""testconnectionstring""
+                },
+                ""entities"": {}
+            }";
+
+            // Adding runtime settings to the above basic config
+            string expectedRuntimeConfig = AddPropertiesToJson(
+                _basicRuntimeConfig,
+                GetDefaultTestRuntimeSettingString(
                     HostModeType.Development,
                     new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                     authenticateDevModeRequest: true)
@@ -78,7 +117,7 @@ namespace Cli.Tests
             // Adding runtime settings to the above basic config
             string expectedRuntimeConfig = AddPropertiesToJson(
                 _basicRuntimeConfig,
-                GetDefaultTestRuntimeSettingString(DatabaseType.mssql,
+                GetDefaultTestRuntimeSettingString(
                     HostModeType.Development,
                     new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                     authenticateDevModeRequest: false)
@@ -87,13 +126,13 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test cosmos db specifc settings like cosmos-database, cosmos-container, cosmos-schema file.
+        /// Test cosmosdb_nosql specifc settings like cosmos-database, cosmos-container, cosmos-schema file.
         /// </summary>
         [TestMethod]
-        public void CosmosDatabase()
+        public void CosmosDbNoSqlDatabase()
         {
             InitOptions options = new(
-                databaseType: DatabaseType.cosmos,
+                databaseType: DatabaseType.cosmosdb_nosql,
                 connectionString: "testconnectionstring",
                 cosmosDatabase: "testdb",
                 cosmosContainer: "testcontainer",
@@ -106,8 +145,13 @@ namespace Cli.Tests
             _basicRuntimeConfig = @"{
                 ""$schema"": ""dab.draft.schema.json"",
                 ""data-source"": {
-                    ""database-type"": ""cosmos"",
-                    ""connection-string"": ""testconnectionstring""
+                    ""database-type"": ""cosmosdb_nosql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"": {
+                        ""database"": ""testdb"",
+                        ""container"": ""testcontainer"",
+                        ""schema"": ""schemafile""
+                    }
                 },
                 ""cosmos"": {
                     ""database"": ""testdb"",
@@ -120,7 +164,7 @@ namespace Cli.Tests
             // Adding runtime settings to the above basic config
             string expectedRuntimeConfig = AddPropertiesToJson(
                 _basicRuntimeConfig,
-                GetDefaultTestRuntimeSettingString(DatabaseType.cosmos));
+                GetDefaultTestRuntimeSettingString());
             RunTest(options, expectedRuntimeConfig);
         }
 
@@ -133,14 +177,14 @@ namespace Cli.Tests
         [DataRow("testDatabase", null, "", false, DisplayName = "database is provided, container and Schema is null/empty.")]
         [DataRow("testDatabase", null, "testSchema", true, DisplayName = "database and schema provided, container is null/empty.")]
         [DataTestMethod]
-        public void VerifyRequiredOptionsForCosmosDatabase(
+        public void VerifyRequiredOptionsForCosmosDbNoSqlDatabase(
             string? cosmosDatabase,
             string? cosmosContainer,
             string? graphQLSchema,
             bool expectedResult)
         {
             InitOptions options = new(
-                databaseType: DatabaseType.cosmos,
+                databaseType: DatabaseType.cosmosdb_nosql,
                 connectionString: "testconnectionstring",
                 cosmosDatabase: cosmosDatabase,
                 cosmosContainer: cosmosContainer,

@@ -197,9 +197,9 @@ public class EndToEndTests
 
         string actualSourceObject = JsonSerializer.Serialize(runtimeConfig.Entities["MyEntity"].Source);
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedSourceObject), JObject.Parse(actualSourceObject)));
-        
+
         // args for update command to update the source name from "s001.book" to "dbo.books"
-        string[] updateArgs = { "update", "MyEntity", "-c", _testRuntimeConfig, "--source", "dbo.books"};
+        string[] updateArgs = { "update", "MyEntity", "-c", _testRuntimeConfig, "--source", "dbo.books" };
         Program.Main(updateArgs);
         runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);

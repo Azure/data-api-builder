@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             return $"SELECT 1 " +
                    $"FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                   $"AS {QuoteIdentifier(structure.SourceAlias)}" +
+                   $"AS {QuoteIdentifier(structure.SourceAlias)} " +
                    $"WHERE {predicates}";
         }
 

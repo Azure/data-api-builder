@@ -176,7 +176,7 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test the exact config json generated to verify adding source as stored-procedure.
+    /// Test the exact config json is generated to verify updating source as stored-procedure.
     /// </summary>
     [TestMethod]
     public void TestConfigGeneratedAfterUpdatingEntityWithSourceAsStoredProcedure()

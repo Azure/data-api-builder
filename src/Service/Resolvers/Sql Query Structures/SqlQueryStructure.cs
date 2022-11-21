@@ -141,19 +141,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IsListQuery = context.IsMany;
             SourceAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
             AddFields(context, sqlMetadataProvider);
-            if (Columns.Count == 0)
-            {
-                SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
-                foreach (KeyValuePair<string, ColumnDefinition> column in sourceDefinition.Columns)
-                {
-                    // We only include columns that are exposed for use in requests
-                    if (sqlMetadataProvider.TryGetExposedColumnName(EntityName, column.Key, out string? name))
-                    {
-                        AddColumn(column.Key, name!);
-                    }
-                }
-            }
-
             foreach (KeyValuePair<string, object> predicate in context.PrimaryKeyValuePairs)
             {
                 sqlMetadataProvider.TryGetBackingColumn(EntityName, predicate.Key, out string? backingColumn);
@@ -403,7 +390,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 object? filterObject = queryParams[QueryBuilder.FILTER_FIELD_NAME];
 
-                if (filterObject != null)
+                if (filterObject is not null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
                     Predicates.Add(GraphQLFilterParser.Parse(
@@ -419,7 +406,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 object? orderByObject = queryParams[QueryBuilder.ORDER_BY_FIELD_NAME];
 
-                if (orderByObject != null)
+                if (orderByObject is not null)
                 {
                     OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject, queryArgumentSchemas[QueryBuilder.ORDER_BY_FIELD_NAME]);
                 }

@@ -80,7 +80,7 @@ steps:
     command: custom
     custom: pack
     projects: '**/*.sln'
-    arguments: '-p:generateConfigFiles=true --configuration $(buildConfiguration) -p:Version=$(dabVersion)' 
+    arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion)' 
 
 - task: DotNetCoreCLI@2
   displayName: "Run Unit Tests"

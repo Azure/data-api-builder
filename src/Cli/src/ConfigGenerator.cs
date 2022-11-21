@@ -53,7 +53,35 @@ namespace Cli
             runtimeConfigJson = string.Empty;
 
             DatabaseType dbType = options.DatabaseType;
-            DataSource dataSource = new(dbType);
+
+            CosmosDbOptions? cosmosDbNoSqlOptions = null;
+
+            switch (dbType)
+            {
+                case DatabaseType.cosmos:
+                case DatabaseType.cosmosdb_nosql:
+                    string? cosmosDatabase = options.CosmosDatabase;
+                    string? cosmosContainer = options.CosmosContainer;
+                    string? graphQLSchemaPath = options.GraphQLSchemaPath;
+                    if (string.IsNullOrEmpty(cosmosDatabase) || string.IsNullOrEmpty(graphQLSchemaPath))
+                    {
+                        Console.WriteLine($"Provide all the mandatory options for CosmosDB_NoSql: --cosmos-database, and --graphql-schema");
+                        return false;
+                    }
+
+                    cosmosDbNoSqlOptions = new CosmosDbOptions(cosmosDatabase, cosmosContainer, graphQLSchemaPath, GraphQLSchema: null);
+                    break;
+
+                case DatabaseType.mssql:
+                case DatabaseType.mysql:
+                case DatabaseType.postgresql:
+                case DatabaseType.cosmosdb_postgresql:
+                    break;
+                default:
+                    throw new Exception($"DatabaseType: ${dbType} not supported.Please provide a valid database-type.");
+            }
+
+            DataSource dataSource = new(dbType, DbOptions: cosmosDbNoSqlOptions);
 
             // default value of connection-string should be used, i.e Empty-string
             // if not explicitly provided by the user
@@ -62,50 +90,10 @@ namespace Cli
                 dataSource.ConnectionString = options.ConnectionString;
             }
 
-            CosmosDbOptions? cosmosDbOptions = null;
-            MsSqlOptions? msSqlOptions = null;
-            MySqlOptions? mySqlOptions = null;
-            PostgreSqlOptions? postgreSqlOptions = null;
-
-            switch (dbType)
-            {
-                case DatabaseType.cosmos:
-                    string? cosmosDatabase = options.CosmosDatabase;
-                    string? cosmosContainer = options.CosmosContainer;
-                    string? graphQLSchemaPath = options.GraphQLSchemaPath;
-                    if (string.IsNullOrEmpty(cosmosDatabase) || string.IsNullOrEmpty(graphQLSchemaPath))
-                    {
-                        Console.WriteLine($"Provide all the mandatory options for CosmosDB: --cosmos-database, and --graphql-schema");
-                        return false;
-                    }
-
-                    cosmosDbOptions = new CosmosDbOptions(cosmosDatabase, cosmosContainer, graphQLSchemaPath, GraphQLSchema: null);
-                    break;
-
-                case DatabaseType.mssql:
-                    msSqlOptions = new MsSqlOptions();
-                    break;
-
-                case DatabaseType.mysql:
-                    mySqlOptions = new MySqlOptions();
-                    break;
-
-                case DatabaseType.postgresql:
-                    postgreSqlOptions = new PostgreSqlOptions();
-                    break;
-
-                default:
-                    Console.WriteLine($"DatabaseType: ${dbType} not supported.Please provide a valid database-type.");
-                    return false;
-            }
-
             RuntimeConfig runtimeConfig = new(
                 Schema: RuntimeConfig.SCHEMA,
                 DataSource: dataSource,
-                CosmosDb: cosmosDbOptions,
-                MsSql: msSqlOptions,
-                PostgreSql: postgreSqlOptions,
-                MySql: mySqlOptions,
+                CosmosDb: cosmosDbNoSqlOptions,
                 RuntimeSettings: GetDefaultGlobalSettings(
                     options.HostMode,
                     options.CorsOrigin,
@@ -672,9 +660,9 @@ namespace Cli
                 updatedSourceParameters = null;
             }
 
-            // If given SourceParameter is null, no update is required.
+            // If given SourceParameter is null or is Empty, no update is required.
             // Else updatedSourceParameters will contain the parsed dictionary of parameters. 
-            if (options.SourceParameters is not null &&
+            if (options.SourceParameters is not null && options.SourceParameters.Any() &&
                 !TryParseSourceParameterDictionary(options.SourceParameters, out updatedSourceParameters))
             {
                 return false;

@@ -40,6 +40,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             _context = context;
             SourceAlias = _containerAlias;
+            DatabaseObject.Name = _containerAlias;
             Init(parameters);
         }
 
@@ -58,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 FieldNode? fieldNode = ExtractItemsQueryField(selection.SyntaxNode);
 
-                if (fieldNode != null)
+                if (fieldNode is not null)
                 {
                     Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: string.Empty,
                                                                                                        tableName: SourceAlias,
@@ -108,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 object? orderByObject = queryParams["orderBy"];
 
-                if (orderByObject != null)
+                if (orderByObject is not null)
                 {
                     OrderByColumns = ProcessGraphQLOrderByArg((List<ObjectFieldNode>)orderByObject);
                 }
@@ -120,7 +121,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 object? filterObject = queryParams[QueryBuilder.FILTER_FIELD_NAME];
 
-                if (filterObject != null)
+                if (filterObject is not null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
                     Predicates.Add(

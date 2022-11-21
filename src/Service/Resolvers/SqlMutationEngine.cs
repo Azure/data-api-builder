@@ -372,13 +372,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 case Operation.Insert:
                 case Operation.Create:
-                    SqlInsertStructure insertQueryStruct = context is null ?
-                        new(entityName,
-                        _sqlMetadataProvider,
-                        _authorizationResolver,
-                        _gQLFilterParser,
-                        parameters) :
-                        new(context,
+                    SqlInsertStructure insertQueryStruct = context is null
+                        ? new(
+                            entityName,
+                            _sqlMetadataProvider,
+                            _authorizationResolver,
+                            _gQLFilterParser,
+                            parameters)
+                        : new(
+                            context,
                             entityName,
                             _sqlMetadataProvider,
                             _authorizationResolver,
@@ -387,8 +389,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
-                    SqlUpdateStructure updateStructure =
-                        new(entityName,
+                    SqlUpdateStructure updateStructure = new(
+                        entityName,
                         _sqlMetadataProvider,
                         _authorizationResolver,
                         _gQLFilterParser,
@@ -398,8 +400,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     queryParameters = updateStructure.Parameters;
                     break;
                 case Operation.UpdateIncremental:
-                    SqlUpdateStructure updateIncrementalStructure =
-                        new(entityName,
+                    SqlUpdateStructure updateIncrementalStructure = new(
+                        entityName,
                         _sqlMetadataProvider,
                         _authorizationResolver,
                         _gQLFilterParser,
@@ -414,8 +416,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         throw new ArgumentNullException("Context should not be null for a GraphQL operation.");
                     }
 
-                    SqlUpdateStructure updateGraphQLStructure =
-                        new(
+                    SqlUpdateStructure updateGraphQLStructure = new(
                         context,
                         entityName,
                         _sqlMetadataProvider,
@@ -493,8 +494,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             string queryString;
             Dictionary<string, object?> queryParameters;
-            SqlDeleteStructure deleteStructure =
-                new(entityName,
+            SqlDeleteStructure deleteStructure = new(
+                entityName,
                 _sqlMetadataProvider,
                 _authorizationResolver,
                 _gQLFilterParser,
@@ -540,25 +541,25 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (operationType is Operation.Upsert)
             {
-                SqlUpsertQueryStructure upsertStructure =
-                        new(entityName,
-                        _sqlMetadataProvider,
-                        _authorizationResolver,
-                        _gQLFilterParser,
-                        parameters,
-                        incrementalUpdate: false);
+                SqlUpsertQueryStructure upsertStructure = new(
+                    entityName,
+                    _sqlMetadataProvider,
+                    _authorizationResolver,
+                    _gQLFilterParser,
+                    parameters,
+                    incrementalUpdate: false);
                 queryString = _queryBuilder.Build(upsertStructure);
                 queryParameters = upsertStructure.Parameters;
             }
             else
             {
-                SqlUpsertQueryStructure upsertIncrementalStructure =
-                        new(entityName,
-                        _sqlMetadataProvider,
-                        _authorizationResolver,
-                        _gQLFilterParser,
-                        parameters,
-                        incrementalUpdate: true);
+                SqlUpsertQueryStructure upsertIncrementalStructure = new(
+                    entityName,
+                    _sqlMetadataProvider,
+                    _authorizationResolver,
+                    _gQLFilterParser,
+                    parameters,
+                    incrementalUpdate: true);
                 queryString = _queryBuilder.Build(upsertIncrementalStructure);
                 queryParameters = upsertIncrementalStructure.Parameters;
             }

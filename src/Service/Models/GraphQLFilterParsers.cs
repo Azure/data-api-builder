@@ -162,6 +162,8 @@ namespace Azure.DataApiBuilder.Service.Models
                                 filterArgumentObject.Fields[name],
                                 subfields,
                                 queryStructure)));
+                            queryStructure.DatabaseObject.Name = sourceName;
+                            queryStructure.SourceAlias = sourceAlias;
                         }
                     }
                     else

@@ -13,12 +13,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     public class BaseQueryStructure
     {
         /// <summary>
-        /// The Entity associated with this query.
+        /// The Entity name associated with this query as appears in the config file.
         /// </summary>
         public string EntityName { get; protected set; }
 
         /// <summary>
-        /// The alias of the main entity to be queried.
+        /// The alias of the entity as used in the generated query.
         /// </summary>
         public virtual string SourceAlias { get; set; }
 
@@ -93,9 +93,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             else
             {
                 EntityName = string.Empty;
-                // This is the cosmos db metadata scenario
-                // where the table name is the Source Alias i.e. container alias
-                DatabaseObject = new DatabaseTable(string.Empty, SourceAlias);
+                DatabaseObject =
+                               new DatabaseTable(schemaName: string.Empty,
+                               tableName: string.Empty);
             }
         }
 

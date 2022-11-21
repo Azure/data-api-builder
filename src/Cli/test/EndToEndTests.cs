@@ -176,6 +176,49 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Validate update command for stored procedures by verifying the config json generated
+    /// </summary>
+    [TestMethod]
+    public void TestConfigGeneratedAfterUpdatingEntityWithSourceAsStoredProcedure()
+    {
+        string? runtimeConfigJson = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
+        WriteJsonContentToFile(_testRuntimeConfig, runtimeConfigJson);
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+        Assert.IsNotNull(runtimeConfig);
+        string expectedSourceObject = @"{
+            ""type"": ""stored-procedure"",
+            ""object"": ""s001.book"",
+            ""parameters"": {
+                ""param1"": 123,
+                ""param2"": ""hello"",
+                ""param3"": true
+            }
+        }";
+
+        string actualSourceObject = JsonSerializer.Serialize(runtimeConfig.Entities["MyEntity"].Source);
+        Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedSourceObject), JObject.Parse(actualSourceObject)));
+
+        // args for update command to update the source name from "s001.book" to "dbo.books"
+        string[] updateArgs = { "update", "MyEntity", "-c", _testRuntimeConfig, "--source", "dbo.books" };
+        Program.Main(updateArgs);
+        runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+        Assert.IsNotNull(runtimeConfig);
+        expectedSourceObject = @"{
+            ""type"": ""stored-procedure"",
+            ""object"": ""dbo.books"",
+            ""parameters"": {
+                ""param1"": 123,
+                ""param2"": ""hello"",
+                ""param3"": true
+            },
+            ""key-fields"": []
+        }";
+
+        actualSourceObject = JsonSerializer.Serialize(runtimeConfig.Entities["MyEntity"].Source);
+        Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedSourceObject), JObject.Parse(actualSourceObject)));
+    }
+
+    /// <summary>
     /// Test the exact config json generated to verify adding a new Entity with default source type and given key-fields.
     /// </summary>
     [TestMethod]

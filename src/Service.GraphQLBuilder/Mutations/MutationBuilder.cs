@@ -1,10 +1,10 @@
+using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
-using Azure.DataApiBuilder.Service.Exceptions;
-using System.Net;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 {
@@ -101,7 +101,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
                     );
                 }
-                
+
             }
             else
             {

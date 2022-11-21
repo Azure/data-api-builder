@@ -190,7 +190,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
             string afterUpdate = await GetDatabaseResultAsync(dbQuery);
             List<JsonDocument> jsonList = JsonSerializer.Deserialize<List<JsonDocument>>(actual.ToString());
-            Assert.AreEqual(1,jsonList.Count);
+            Assert.AreEqual(1, jsonList.Count);
             SqlTestHelper.PerformTestEqualJsonStrings(afterUpdate, JsonSerializer.Serialize(jsonList[0]));
         }
 

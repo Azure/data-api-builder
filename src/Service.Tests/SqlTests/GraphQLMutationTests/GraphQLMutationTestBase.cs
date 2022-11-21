@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -144,6 +145,53 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             JsonDocument updatedResult = JsonDocument.Parse(updatedDbResponse);
             Assert.AreEqual(updatedResult.RootElement.GetProperty("count").GetInt64(), 1);
         }
+
+        public async Task TestStoredProcedureMutationForDeletion(string dbQueryToVerifyDeletion)
+        {
+            string graphQLMutationName = "DeleteBook";
+            string graphQLMutation = @"
+                mutation {
+                    DeleteBook(id: 13) {
+                        result
+                    }
+                }
+            ";
+
+            string currentDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
+            JsonDocument currentResult = JsonDocument.Parse(currentDbResponse);
+            Assert.AreEqual(currentResult.RootElement.GetProperty("count").GetInt64(), 1);
+            JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            
+            // Stored Procedure didn't return anything
+            SqlTestHelper.PerformTestEqualJsonStrings("[]", graphQLResponse.ToString());
+
+            // check to verify new element is inserted
+            string updatedDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
+            JsonDocument updatedResult = JsonDocument.Parse(updatedDbResponse);
+            Assert.AreEqual(updatedResult.RootElement.GetProperty("count").GetInt64(), 0);
+        }
+
+        public async Task TestStoredProcedureMutationForUpdate(string dbQuery)
+        {
+            string graphQLMutationName = "UpdateBookTitle";
+            string graphQLMutation = @"
+                mutation {
+                    UpdateBookTitle(id: 14, title: 'Before Midnight') {
+                        id
+                        title
+                        publisher_id
+                    }
+                }
+            ";
+
+            string beforeUpdate = await GetDatabaseResultAsync(dbQuery);
+            Console.Write(beforeUpdate);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string afterUpdate = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(afterUpdate, actual.ToString());
+        }
+
 
         /// <summary>
         /// <code>Do: </code> Inserts new stock price with default current timestamp as the value of 

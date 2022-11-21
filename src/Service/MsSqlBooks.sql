@@ -9,6 +9,8 @@ DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP PROCEDURE IF EXISTS insert_book;
 DROP PROCEDURE IF EXISTS count_books;
 DROP PROCEDURE IF EXISTS insert_and_display_all_books;
+DROP PROCEDURE IF EXISTS delete_book;
+DROP PROCEDURE IF EXISTS update_book_title;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -243,7 +245,9 @@ VALUES (1, 'Awesome book', 1234),
 (9, 'Policy-Test-01', 1940),
 (10, 'Policy-Test-02', 1940),
 (11, 'Policy-Test-04', 1941),
-(12, 'Time to Eat 2', 1941);
+(12, 'Time to Eat 2', 1941),
+(13, 'Before Sunrise', 1234),
+(14, 'Before Sunset', 1234);
 SET IDENTITY_INSERT books OFF
 
 SET IDENTITY_INSERT book_website_placements ON
@@ -310,4 +314,11 @@ EXEC('CREATE PROCEDURE insert_and_display_all_books @title varchar(max), @publis
       BEGIN
         INSERT INTO dbo.books(title, publisher_id) VALUES (@title, @publisher_id)
         SELECT * FROM dbo.books
+      END');
+EXEC('CREATE PROCEDURE delete_book @id int AS
+      DELETE FROM dbo.books WHERE id=@id');
+EXEC('CREATE PROCEDURE update_book_title @id int, @title varchar(max) AS
+      BEGIN
+        UPDATE dbo.books SET title = @title WHERE id = @id
+        SELECT * from dbo.books WHERE id = @id
       END');

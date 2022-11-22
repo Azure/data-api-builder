@@ -164,7 +164,8 @@ namespace Azure.DataApiBuilder.Service.Services
             if (missingFields.Count > 0)
             {
                 throw new DataApiBuilderException(
-                    message: $"Invalid request. Missing required procedure parameters: {string.Join(", ", missingFields)}",
+                    message: $"Invalid request. Missing required procedure parameters: {string.Join(", ", missingFields)}" +
+                                $" for entity: {spRequestCtx.EntityName}",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }

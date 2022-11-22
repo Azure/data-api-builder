@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
@@ -43,15 +44,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             // Here we create a field called result which will be an empty array.
             if (databaseObject.SourceType is SourceType.StoredProcedure && ((StoredProcedureDefinition)sourceDefinition).Columns.Count == 0)
             {
-                FieldDefinitionNode field = new(
-                    location: null,
-                    new("result"),
-                    description: new StringValueNode("Contains output of stored-procedure execution"),
-                    new List<InputValueDefinitionNode>(),
-                    new StringType().ToTypeNode(),
-                    new List<DirectiveNode>());
+                FieldDefinitionNode field = GetDefaultResultFieldForStoredProcedure();
 
-                fields.Add("result", field);
+                fields.TryAdd("result", field);
             }
 
             foreach ((string columnName, ColumnDefinition column) in sourceDefinition.Columns)
@@ -117,6 +112,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                             directives);
 
                         fields.Add(columnName, field);
+                    }
+                    else
+                    {
+                        // When no roles have permission to access the columns
+                        // we create a default result set with no data. i.e, the stored-procedure 
+                        // executed but user can't see the results.
+                        if (databaseObject.SourceType is SourceType.StoredProcedure)
+                        {
+                            FieldDefinitionNode field = GetDefaultResultFieldForStoredProcedure();
+                            fields.TryAdd("result", field);
+                        }
                     }
                 }
             }

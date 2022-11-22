@@ -104,8 +104,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _gQLFilterParser,
                     parameters);
 
+                // checking if user has read permission on the result
+                _authorizationResolver.EntityPermissionsMap.TryGetValue(context.Field.Name.Value, out EntityMetadata entityMetadata);
+                bool IsReadAllowed = entityMetadata.OperationToRolesMap.ContainsKey(Operation.Read);
+
                 return new Tuple<IEnumerable<JsonDocument>, IMetadata>(
-                        FormatStoredProcedureResultAsJsonList(await ExecuteAsync(sqlExecuteStructure)),
+                        FormatStoredProcedureResultAsJsonList(IsReadAllowed, await ExecuteAsync(sqlExecuteStructure)),
                         PaginationMetadata.MakeEmptyPaginationMetadata());
             }
             else

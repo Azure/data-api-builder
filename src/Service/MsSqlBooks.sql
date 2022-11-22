@@ -6,6 +6,7 @@ DROP VIEW IF EXISTS books_publishers_view_composite;
 DROP VIEW IF EXISTS books_publishers_view_composite_insertable;
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
+DROP PROCEDURE IF EXISTS get_publisher_by_id;
 DROP PROCEDURE IF EXISTS insert_book;
 DROP PROCEDURE IF EXISTS count_books;
 DROP PROCEDURE IF EXISTS insert_and_display_all_books;
@@ -303,6 +304,9 @@ EXEC('CREATE VIEW books_publishers_view_composite_insertable as SELECT
       where publishers.id = books.publisher_id');
 EXEC('CREATE PROCEDURE get_book_by_id @id int AS
       SELECT * FROM dbo.books
+      WHERE id = @id');
+EXEC('CREATE PROCEDURE get_publisher_by_id @id int AS
+      SELECT * FROM dbo.publishers
       WHERE id = @id');
 EXEC('CREATE PROCEDURE get_books AS
       SELECT * FROM dbo.books');

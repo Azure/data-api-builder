@@ -111,7 +111,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
                     );
             }
-
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using HotChocolate.Language;
+using HotChocolate.Types;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder
@@ -58,10 +59,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// Takes the result from DB as JsonDocument and formats it in a way that can be filtered by column
         /// name. It parses the Json document into a list of Dictionary with key as result_column_name
         /// with it's corresponding value.
+        /// returns an empty list in case of no result or if READ is not allowed
         /// </summary>
-        public static List<JsonDocument> FormatStoredProcedureResultAsJsonList(JsonDocument jsonDocument)
+        public static List<JsonDocument> FormatStoredProcedureResultAsJsonList(bool IsReadAllowed, JsonDocument jsonDocument)
         {
-            if (jsonDocument is null)
+            if (jsonDocument is null || !IsReadAllowed)
             {
                 return new List<JsonDocument>();
             }
@@ -74,6 +76,21 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             }
 
             return resultJson;
+        }
+
+        /// <summary>
+        /// Helper method to create a default result field for stored-procedure which does not
+        /// return any row.
+        /// </summary>
+        public static FieldDefinitionNode GetDefaultResultFieldForStoredProcedure()
+        {
+            return new(
+                location: null,
+                new("result"),
+                description: new StringValueNode("Contains output of stored-procedure execution"),
+                new List<InputValueDefinitionNode>(),
+                new StringType().ToTypeNode(),
+                new List<DirectiveNode>());
         }
     }
 }

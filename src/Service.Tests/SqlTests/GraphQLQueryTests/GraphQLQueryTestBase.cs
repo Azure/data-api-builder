@@ -952,10 +952,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string graphQLQueryName = "GetBook";
             string graphQLQuery = @"{
-                GetBook(id: 3) {
+                GetPublisher(id: 1234) {
                     id
-                    title
-                    publisher_id
+                    name
                 }
             }";
 

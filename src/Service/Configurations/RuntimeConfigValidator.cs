@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
@@ -344,6 +345,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 {
                     string roleName = permissionSetting.Role;
                     Object[] actions = permissionSetting.Operations;
+                    List<Operation> operationsList = new();
                     foreach (Object action in actions)
                     {
                         if (action is null)
@@ -438,6 +440,24 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                     statusCode: HttpStatusCode.ServiceUnavailable,
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                             }
+                        }
+
+                        operationsList.Add(actionOp);
+                    }
+
+                    // READ operation is allowed with other CRUD operations.
+                    operationsList.Remove(Operation.Read);
+
+                    // Apart from READ one of the CUD operations is allowed for stored procedure.
+                    if (entity.ObjectType is SourceType.StoredProcedure)
+                    {
+                        if ((operationsList.Count > 1)
+                            || (operationsList.Count is 1 && operationsList[0] is Operation.All))
+                        {
+                            throw new DataApiBuilderException(
+                            message: $"StoredProcedure can process only one CUD (Create/Update/Delete) operation.",
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
                     }
                 }
@@ -559,6 +579,37 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
+                    }
+                }
+            }
+        }
+
+        public static void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+            {
+                // We are only doing this pre-check for GraphQL because for GraphQL we need the correct schema while making request
+                // so if the schema is not correct we will halt the engine
+                // but for rest we can do it when a request is made and only fail that particular request.
+                if (entity.ObjectType is SourceType.StoredProcedure &&
+                    entity.GraphQL is not null && !(entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
+                {
+                    DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
+                    StoredProcedureRequestContext sqRequestContext = new(
+                                                                            entityName,
+                                                                            dbObject,
+                                                                            JsonSerializer.SerializeToElement(entity.Parameters),
+                                                                            Operation.All);
+                    try
+                    {
+                        RequestValidator.ValidateStoredProcedureRequestContext(sqRequestContext, sqlMetadataProvider);
+                    }
+                    catch (DataApiBuilderException e)
+                    {
+                        throw new DataApiBuilderException(
+                            message: e.Message,
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                     }
                 }
             }

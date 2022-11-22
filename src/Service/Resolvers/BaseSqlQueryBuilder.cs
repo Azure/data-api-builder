@@ -29,14 +29,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc />
         public virtual string Build(BaseSqlQueryStructure structure)
         {
-            string predicates = JoinPredicateStrings(
+            string predicates = new(JoinPredicateStrings(
                        structure.DbPolicyPredicates,
-                       Build(structure.Predicates));
+                       Build(structure.Predicates)));
 
-            return $"SELECT 1 " +
-                   $"FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                   $"AS {QuoteIdentifier(structure.SourceAlias)} " +
-                   $"WHERE {predicates}";
+            string query = $@"SELECT 1
+                   FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}
+                   AS {QuoteIdentifier(structure.SourceAlias)}{Build(structure.Joins)}
+                   WHERE {predicates}";
+
+            return query;
         }
 
         /// <summary>

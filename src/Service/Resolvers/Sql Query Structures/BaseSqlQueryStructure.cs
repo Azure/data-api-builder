@@ -117,12 +117,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// valid foreign key definition. It is guaranteed at least one fk definition
         /// will be valid since the MetadataProvider.ValidateAllFkHaveBeenInferred.
         /// </summary>
-        /// <param name="targetEntityName"></param>
-        /// <param name="subtableAlias"></param>
-        /// <param name="subQuery"></param>
+        /// <param name="targetEntityName">Entity name as in config file for the related entity.</param>
+        /// <param name="relatedSourceAlias">The alias assigned for the underlying source of this related entity.</param>
+        /// <param name="subQuery">The subquery to which the join predicates are to be added.</param>
         public void AddJoinPredicatesForRelatedEntity(
             string targetEntityName,
-            string subtableAlias,
+            string relatedSourceAlias,
             BaseSqlQueryStructure subQuery)
         {
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
@@ -152,7 +152,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             subQuery.Predicates.AddRange(CreateJoinPredicates(
                                 SourceAlias,
                                 foreignKeyDefinition.ReferencingColumns,
-                                subtableAlias,
+                                relatedSourceAlias,
                                 foreignKeyDefinition.ReferencedColumns));
                         }
                     }
@@ -163,7 +163,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             && foreignKeyDefinition.ReferencedColumns.Count() > 0)
                         {
                             subQuery.Predicates.AddRange(CreateJoinPredicates(
-                                subtableAlias,
+                                relatedSourceAlias,
                                 foreignKeyDefinition.ReferencingColumns,
                                 SourceAlias,
                                 foreignKeyDefinition.ReferencedColumns));
@@ -201,7 +201,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                 CreateJoinPredicates(
                                     associativeTableAlias,
                                     foreignKeyDefinition.ReferencingColumns,
-                                    subtableAlias,
+                                    relatedSourceAlias,
                                     foreignKeyDefinition.ReferencedColumns
                                     ).ToList()
                             ));

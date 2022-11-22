@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Models
                 {
                     List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
 
-                    if (!IsScalarType(filterInputObjectType.Name))
+                    if (!StandardQueryInputs.IsStandardInputType(filterInputObjectType.Name))
                     {
                         // For SQL i.e. when there are primary keys on the source, we need to perform a join
                         // between the parent entity being filtered and the related entity representing the
@@ -184,16 +184,6 @@ namespace Azure.DataApiBuilder.Service.Models
             }
 
             return MakeChainPredicate(predicates, PredicateOperation.AND);
-        }
-
-        static bool IsScalarType(string name)
-        {
-            return new string[] {
-                "StringFilterInput",
-                "IntFilterInput",
-                "BoolFilterInput",
-                "IdFilterInput",
-                "FloatFilterInput" }.Contains(name);
         }
 
         /// <summary>

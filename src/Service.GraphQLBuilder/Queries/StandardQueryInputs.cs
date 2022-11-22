@@ -5,7 +5,7 @@ using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedT
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 {
-    internal static class StandardQueryInputs
+    public static class StandardQueryInputs
     {
         public static InputObjectTypeDefinitionNode IdInputType() =>
             new(
@@ -213,5 +213,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             { DATETIME_TYPE, DateTimeInputType() },
             { BYTEARRAY_TYPE, ByteArrayInputType() }
         };
+
+        /// <summary>
+        /// Returns true if the given inputObjectTypeName is one
+        /// of the standard input types.
+        /// </summary>
+        public static bool IsStandardInputType(string inputObjectTypeName)
+        {
+            HashSet<string> standardQueryInputNames =
+                InputTypes.Values.ToList().Select(x => x.Name.Value).ToHashSet();
+            return standardQueryInputNames.Contains(inputObjectTypeName);
+        }
     }
 }

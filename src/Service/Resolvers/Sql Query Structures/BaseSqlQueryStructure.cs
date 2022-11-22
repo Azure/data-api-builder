@@ -112,7 +112,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Based on the relationship metadata involving foreign key referenced and
         /// referencing columns, add the join predicates to the subquery Query structure
-        /// created for the given target entity Name and sub table alias.
+        /// created for the given target entity Name and related source alias.
         /// There are only a couple of options for the foreign key - we only use the
         /// valid foreign key definition. It is guaranteed at least one fk definition
         /// will be valid since the MetadataProvider.ValidateAllFkHaveBeenInferred.
@@ -127,10 +127,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
             DatabaseObject relatedEntityDbObject = MetadataProvider.EntityToDatabaseObject[targetEntityName];
-            if (sourceDefinition.SourceEntityRelationshipMap.TryGetValue(
-                EntityName, out RelationshipMetadata? relationshipMetadata)
-                && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
-                    out List<ForeignKeyDefinition>? foreignKeyDefinitions))
+            SourceDefinition relatedEntitySourceDefinition = MetadataProvider.GetSourceDefinition(targetEntityName);
+            if (// Search for the foreign key information either in the source or target entity.
+                sourceDefinition.SourceEntityRelationshipMap.TryGetValue(
+                    EntityName,
+                    out RelationshipMetadata? relationshipMetadata)
+                && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(
+                    targetEntityName,
+                    out List<ForeignKeyDefinition>? foreignKeyDefinitions)
+                || relatedEntitySourceDefinition.SourceEntityRelationshipMap.TryGetValue(
+                    targetEntityName, out relationshipMetadata)
+                && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(
+                    EntityName,
+                    out foreignKeyDefinitions))
             {
                 Dictionary<DatabaseObject, string> associativeTableAndAliases = new();
                 // For One-One and One-Many, not all fk definitions would be valid
@@ -208,6 +217,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         }
                     }
                 }
+            }
+            else
+            {
+                throw new DataApiBuilderException(
+                message: $"Could not find relationship between entities: {EntityName} and " +
+                $"{targetEntityName}.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
         }
 

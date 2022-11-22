@@ -126,23 +126,25 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             // Schema file should be present in the directory if not specified in the config
             // when using cosmos database.
-            if (runtimeConfig.DatabaseType is DatabaseType.cosmos)
+            if (runtimeConfig.DatabaseType is DatabaseType.cosmos ||
+                runtimeConfig.DatabaseType is DatabaseType.cosmosdb_nosql)
             {
-                if (runtimeConfig.CosmosDb is null)
+                CosmosDbOptions cosmosDbNoSql = runtimeConfig.DataSource.CosmosDbNoSql!;
+                if (cosmosDbNoSql is null)
                 {
-                    throw new NotSupportedException("CosmosDB is specified but no CosmosDB configuration information has been provided.");
+                    throw new NotSupportedException("CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.");
                 }
 
-                if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchema))
+                if (string.IsNullOrEmpty(cosmosDbNoSql.GraphQLSchema))
                 {
-                    if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    if (string.IsNullOrEmpty(cosmosDbNoSql.GraphQLSchemaPath))
                     {
-                        throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
+                        throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
                     }
 
-                    if (!fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    if (!fileSystem.File.Exists(cosmosDbNoSql.GraphQLSchemaPath))
                     {
-                        throw new FileNotFoundException($"The GraphQL schema file at '{runtimeConfig.CosmosDb.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
+                        throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
                     }
                 }
             }

@@ -1585,10 +1585,6 @@ namespace Cli.Tests
             RuntimeConfig runtimeConfig = new(
                 Schema: "schema",
                 DataSource: new DataSource(Enum.Parse<DatabaseType>(db)),
-                CosmosDb: null,
-                MsSql: null,
-                PostgreSql: null,
-                MySql: null,
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: new Dictionary<string, Entity>()
             );
@@ -1639,10 +1635,6 @@ namespace Cli.Tests
             RuntimeConfig runtimeConfig = new(
                 Schema: "schema",
                 DataSource: new DataSource(DatabaseType.mssql),
-                CosmosDb: null,
-                MsSql: null,
-                PostgreSql: null,
-                MySql: null,
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
             );

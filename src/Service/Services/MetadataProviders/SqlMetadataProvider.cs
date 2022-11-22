@@ -210,7 +210,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 return graphQLType;
             }
 
-            if (_graphQLSingularTypeToEntityNameMap.TryGetValue(graphQLType, out string? entityName))
+            if (!_graphQLSingularTypeToEntityNameMap.TryGetValue(graphQLType, out string? entityName))
             {
                 throw new DataApiBuilderException(
                     "GraphQL type doesn't match any entity name or singular type in the runtime config.",

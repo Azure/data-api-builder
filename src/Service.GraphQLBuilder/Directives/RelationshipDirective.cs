@@ -25,10 +25,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
         }
 
         /// <summary>
-        /// Gets the target object type name for a ifield with a relationship directive.
+        /// Gets the target object type name for a field with a relationship directive.
         /// </summary>
-        /// <param name="field">The ifield that has a relationship directive defined.</param>
-        /// <returns>The name of the GraphQL object type that the relationship targets. If no relationship is defined, the object type of the ifield is returned.</returns>
+        /// <param name="field">The field that has a relationship directive defined.</param>
+        /// <returns>The name of the GraphQL object type that the relationship targets. If no relationship is defined, the object type of the field is returned.</returns>
         public static string Target(FieldDefinitionNode field)
         {
             DirectiveNode? directive = field.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);

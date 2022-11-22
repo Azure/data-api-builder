@@ -188,7 +188,12 @@ namespace Azure.DataApiBuilder.Service.Models
 
         static bool IsScalarType(string name)
         {
-            return new string[] { "StringFilterInput", "IntFilterInput", "BoolFilterInput", "IdFilterInput" }.Contains(name);
+            return new string[] {
+                "StringFilterInput",
+                "IntFilterInput",
+                "BoolFilterInput",
+                "IdFilterInput",
+                "FloatFilterInput" }.Contains(name);
         }
 
         /// <summary>

@@ -60,16 +60,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
         /// <summary>
         /// Gets the cardinality of the relationship.
         /// </summary>
-        /// <param name="field">The ifield that has a relationship directive defined.</param>
+        /// <param name="field">The field that has a relationship directive defined.</param>
         /// <returns>Relationship cardinality</returns>
-        /// <exception cref="ArgumentException">Thrown if the ifield does not have a defined relationship.</exception>
+        /// <exception cref="ArgumentException">Thrown if the field does not have a defined relationship.</exception>
         public static Cardinality Cardinality(FieldDefinitionNode field)
         {
             DirectiveNode? directive = field.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
 
             if (directive == null)
             {
-                throw new ArgumentException("The specified ifield does not have a relationship directive defined.");
+                throw new ArgumentException("The specified field does not have a relationship directive defined.");
             }
 
             ArgumentNode arg = directive.Arguments.First(a => a.Name.Value == "cardinality");
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
         }
 
         /// <summary>
-        /// Retrieve the relationship directive defined on the given ifield definition node.
+        /// Retrieves the relationship directive defined on the given ifield definition node.
         /// </summary>
         public static DirectiveNode? GetDirective(FieldDefinitionNode field)
         {

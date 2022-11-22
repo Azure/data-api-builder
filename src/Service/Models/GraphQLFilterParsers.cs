@@ -92,67 +92,17 @@ namespace Azure.DataApiBuilder.Service.Models
 
                     if (!StandardQueryInputs.IsStandardInputType(filterInputObjectType.Name))
                     {
-                        // For SQL i.e. when there are primary keys on the source, we need to perform a join
-                        // between the parent entity being filtered and the related entity representing the
-                        // non-scalar filter input.
                         if (sourceDefinition.PrimaryKey.Count != 0)
                         {
-                            InputField filterField = filterArgumentObject.Fields[name];
-
-                            string? targetGraphQLTypeNameForFilter = RelationshipDirectiveType.Target(filterField);
-
-                            if (targetGraphQLTypeNameForFilter is null)
-                            {
-                                throw new DataApiBuilderException(
-                                    message: "The GraphQL schema is missing the relationship directive on input field.",
-                                    statusCode: HttpStatusCode.InternalServerError,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-                            }
-
-                            string nestedFilterEntityName = _metadataProvider.GetEntityName(targetGraphQLTypeNameForFilter);
-                            DatabaseObject databaseObjectForNestedFilter =
-                                _metadataProvider.GetDatabaseObjectForGraphQLType(targetGraphQLTypeNameForFilter);
-
-                            List<Predicate> predicatesForExistsQuery = new();
-
-                            // Create an SqlExistsQueryStructure as the predicate operand of Exists predicate
-                            // This query structure has no order by, no limit and selects 1
-                            // its predicates are obtained from recursively parsing the nested filter
-                            // and an additional predicate to reflect the join between main query and this exists subquery.
-                            SqlExistsQueryStructure existsQuery = new(
+                            // For SQL i.e. when there are primary keys on the source, we need to perform a join
+                            // between the parent entity being filtered and the related entity representing the
+                            // non-scalar filter input.
+                            HandleNestedFilterForSql(
                                 ctx,
-                                _metadataProvider,
-                                queryStructure.AuthorizationResolver,
-                                this,
-                                predicatesForExistsQuery,
-                                nestedFilterEntityName,
-                                queryStructure.Counter);
-
-                            // Recursively parse and obtain the predicates for the Exists clause subquery
-                            Predicate existsQueryFilterPredicate = Parse(ctx,
-                                    filterField,
-                                    subfields,
-                                    existsQuery);
-                            predicatesForExistsQuery.Push(existsQueryFilterPredicate);
-
-                            // Add JoinPredicates to the subquery query structure so a predicate connecting
-                            // the outer table is added to the where clause of subquery
-                            existsQuery.AddJoinPredicatesForRelatedEntity(
-                                queryStructure.EntityName,
-                                queryStructure.SourceAlias,
-                                existsQuery);
-
-                            // The right operand is the SqlExistsQueryStructure.
-                            PredicateOperand right = new(existsQuery);
-
-                            // Create a new unary Exists Predicate chain it with rest of the existing predicates.
-                            Predicate existsPredicate = new(left: null, PredicateOperation.EXISTS, right);
-
-                            predicates.Push(new PredicateOperand(existsPredicate));
-                            foreach ((string key, object? value) in existsQuery.Parameters)
-                            {
-                                queryStructure.Parameters.Add(key, value);
-                            }
+                                filterArgumentObject.Fields[name],
+                                subfields,
+                                predicates,
+                                queryStructure);
                         }
                         else
                         {
@@ -184,6 +134,85 @@ namespace Azure.DataApiBuilder.Service.Models
             }
 
             return MakeChainPredicate(predicates, PredicateOperation.AND);
+        }
+
+        /// <summary>
+        /// For SQL, a nested filter represents an EXISTS clause with a join between
+        /// the parent entity being filtered and the related entity representing the
+        /// non-scalar filter input. This function:
+        /// 1. Defines the Exists Query structure
+        /// 2. Recursively parses any more(possibly nested) filters on the Exists sub query.
+        /// 3. Adds join predicates between the related entities to the Exists sub query.
+        /// 4. Adds the Exists subquery to the existing list of predicates.
+        /// </summary>
+        /// <param name="ctx">The middleware context</param>
+        /// <param name="filterField">The nested filter field.</param>
+        /// <param name="subfields">The subfields of the nested filter.</param>
+        /// <param name="predicates">The predicates parsed so far.</param>
+        /// <param name="queryStructure">The query structure of the entity being filtered.</param>
+        /// <exception cref="DataApiBuilderException">
+        /// throws if a relationship directive is not found on the nested filter input</exception>
+        private void HandleNestedFilterForSql(
+            IMiddlewareContext ctx,
+            InputField filterField,
+            List<ObjectFieldNode> subfields,
+            List<PredicateOperand> predicates,
+            BaseQueryStructure queryStructure)
+        {
+            string? targetGraphQLTypeNameForFilter = RelationshipDirectiveType.Target(filterField);
+
+            if (targetGraphQLTypeNameForFilter is null)
+            {
+                throw new DataApiBuilderException(
+                    message: "The GraphQL schema is missing the relationship directive on input field.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
+            string nestedFilterEntityName = _metadataProvider.GetEntityName(targetGraphQLTypeNameForFilter);
+            List<Predicate> predicatesForExistsQuery = new();
+
+            // Create an SqlExistsQueryStructure as the predicate operand of Exists predicate
+            // This query structure has no order by, no limit and selects 1
+            // its predicates are obtained from recursively parsing the nested filter
+            // and an additional predicate to reflect the join between main query and this exists subquery.
+            SqlExistsQueryStructure existsQuery = new(
+                ctx,
+                _metadataProvider,
+                queryStructure.AuthorizationResolver,
+                this,
+                predicatesForExistsQuery,
+                nestedFilterEntityName,
+                queryStructure.Counter);
+
+            // Recursively parse and obtain the predicates for the Exists clause subquery
+            Predicate existsQueryFilterPredicate = Parse(ctx,
+                    filterField,
+                    subfields,
+                    existsQuery);
+            predicatesForExistsQuery.Push(existsQueryFilterPredicate);
+
+            // Add JoinPredicates to the subquery query structure so a predicate connecting
+            // the outer table is added to the where clause of subquery
+            existsQuery.AddJoinPredicatesForRelatedEntity(
+                queryStructure.EntityName,
+                queryStructure.SourceAlias,
+                existsQuery);
+
+            // The right operand is the SqlExistsQueryStructure.
+            PredicateOperand right = new(existsQuery);
+
+            // Create a new unary Exists Predicate
+            Predicate existsPredicate = new(left: null, PredicateOperation.EXISTS, right);
+
+            // Add it to the rest of the existing predicates.
+            predicates.Push(new PredicateOperand(existsPredicate));
+
+            // Add all parameters from the exists subquery to the main queryStructure.
+            foreach ((string key, object? value) in existsQuery.Parameters)
+            {
+                queryStructure.Parameters.Add(key, value);
+            }
         }
 
         /// <summary>

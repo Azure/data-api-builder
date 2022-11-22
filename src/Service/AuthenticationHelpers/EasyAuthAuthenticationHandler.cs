@@ -55,6 +55,8 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     _ => null
                 };
 
+                // If identity is null when the X-MS-CLIENT-PRINCIPAL header is present,
+                // the header payload failed to parse -> Authentication Failure.
                 if (identity is null)
                 {
                     return Task.FromResult(AuthenticateResult.Fail(failureMessage: EasyAuthAuthenticationDefaults.INVALID_PAYLOAD_ERROR));
@@ -81,10 +83,9 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 }
             }
 
-            // The EasyAuth (X-MS-CLIENT-PRINCIPAL) header will always be present in a properly configured environment
-            // for both anonymous and authenticated requests.
-            // Consequentially, authentication fails when EasyAuth header is not detected.
-            return Task.FromResult(AuthenticateResult.Fail(failureMessage: EasyAuthAuthenticationDefaults.INVALID_PAYLOAD_ERROR));
+            // The EasyAuth (X-MS-CLIENT-PRINCIPAL) header will only be present in a properly configured environment
+            // for authenticated requests and not anonymous requests.
+            return Task.FromResult(AuthenticateResult.NoResult());
         }
 
         /// <summary>

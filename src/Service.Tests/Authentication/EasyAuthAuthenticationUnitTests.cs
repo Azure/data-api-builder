@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
 
         /// <summary>
         /// Ensures authentication fails when no EasyAuth header is present because
-        /// a correctly configured EasyAuth environment guarantees that ALL request types (anonymous and authenticated)
+        /// a correctly configured EasyAuth environment guarantees that only authenticated requests
         /// will contain an EasyAuth header.
         /// </summary>
         /// <param name="easyAuthType">AppService/StaticWebApps</param>
@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         {
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token: null, easyAuthType);
 
-            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.AreEqual(expected: false, actual: postMiddlewareContext.User.Identity.IsAuthenticated);
         }
@@ -245,20 +245,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         }
 
         /// <summary>
-        /// - Ensures an invalid/no EasyAuth header payload results in HTTP 401 Unauthorized response
-        /// A correctly configured EasyAuth environment guarantees an EasyAuth payload for authenticated and anonymous requests.
+        /// - Ensures an invalid EasyAuth header payload results in HTTP 401 Unauthorized response
+        /// A correctly configured EasyAuth environment guarantees an EasyAuth payload for authenticated requests.
+        /// - Ensures a missing EasyAuth header results in HTTP OK and User.IsAuthenticated == false.
         /// - Also, validate that if other auth headers are present (Authorization Bearer token), that it is never considered
         /// when the runtime is configured for EasyAuth authentication.
         /// </summary>
         /// <param name="easyAuthPayload">EasyAuth header value</param>
-        /// <returns></returns>
         [DataTestMethod]
         [DataRow("", DisplayName = "No EasyAuth payload -> 401 Unauthorized")]
         [DataRow("ey==", DisplayName = "Invalid EasyAuth payload -> 401 Unauthorized")]
-        [DataRow(null, DisplayName = "No EasyAuth header provided -> 401 Unauthorized")]
+        [DataRow(null, DisplayName = "No EasyAuth header provided -> 200 OK, Anonymous request")]
         [DataRow("", true, DisplayName = "No EasyAuth payload, include authorization header")]
         [DataRow("ey==", true, DisplayName = "Corrupt EasyAuth header value provided, include authorization header")]
-        [DataRow(null, true, DisplayName = "No EasyAuth header provided, include authorization header")]
+        [DataRow(null, true, DisplayName = "No EasyAuth header provided, include authorization header -> 200 OK, Anonymous request")]
         [TestMethod]
         public async Task TestInvalidStaticWebAppsEasyAuthToken(string easyAuthPayload, bool sendAuthorizationHeader = false)
         {
@@ -271,8 +271,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             // Validate state of HttpContext after being processed by authentication middleware.
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
-            Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
-            Assert.AreEqual(expected: string.Empty, actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString());
+
+            // A missing EasyAuth header results in an anonymous request.
+            int expectedStatusCode = (easyAuthPayload is not null) ? (int)HttpStatusCode.Unauthorized : (int)HttpStatusCode.OK;
+            Assert.AreEqual(expected: expectedStatusCode, actual: postMiddlewareContext.Response.StatusCode);
+            string expectedResolvedRoleHeader = (easyAuthPayload is not null) ? string.Empty : AuthorizationResolver.ROLE_ANONYMOUS;
+            string actualResolvedRoleHeader = postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
+            Assert.AreEqual(expected: expectedResolvedRoleHeader, actual: actualResolvedRoleHeader, ignoreCase: true);
         }
 
         /// <summary>
@@ -285,7 +290,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// <param name="expectedClientRoleHeader">Expected value of X-MS-API-ROLE header.</param>
         /// <param name="clientRoleHeader">Value of X-MS-API-ROLE header specified in request.</param>
         [DataTestMethod]
-        [DataRow(false, null, null, DisplayName = "Disabled, no auth headers -> 401 Unauthorized")]
+        [DataRow(false, "Anonymous", null, DisplayName = "Disabled, no auth headers -> 401 Unauthorized")]
         [DataRow(true, "Authenticated", null, DisplayName = "Enabled, no auth headers -> clientRoleHeader set to (authenticated)")]
         [DataRow(true, "author", "author", DisplayName = "Enabled, honor the clientRoleHeader (author)")]
         [DataRow(true, "Anonymous", "Anonymous", DisplayName = "Enabled, honor the clientRoleHeader (anonymous)")]
@@ -303,8 +308,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
 
             // Validate state of HttpContext after being processed by authentication middleware.
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
-            int expectedStatusCode = authenticateDevModeRequests ? (int)HttpStatusCode.OK : (int)HttpStatusCode.Unauthorized;
-            Assert.AreEqual(expected: expectedStatusCode, actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
 
             string resolvedRoleHeader = postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
             if (!string.IsNullOrWhiteSpace(resolvedRoleHeader))

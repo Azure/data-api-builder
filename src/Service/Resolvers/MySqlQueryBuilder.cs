@@ -74,18 +74,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public override string Build(BaseSqlQueryStructure structure)
-        {
-            string predicates = JoinPredicateStrings(
-                       structure.DbPolicyPredicates,
-                       Build(structure.Predicates));
-
-            return $"SELECT 1 " +
-                   $"FROM {QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                   $"WHERE {predicates}";
-        }
-
-        /// <inheritdoc />
         public string Build(SqlUpdateStructure structure)
         {
             (string sets, string updates, string select) = MakeStoreUpdatePK(structure.AllColumns(),

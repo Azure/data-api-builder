@@ -33,10 +33,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                        structure.DbPolicyPredicates,
                        Build(structure.Predicates)));
 
-            string query = $@"SELECT 1
-                   FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}
-                   AS {QuoteIdentifier(structure.SourceAlias)}{Build(structure.Joins)}
-                   WHERE {predicates}";
+            string query = $"SELECT 1 " +
+                   $"FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                   $"AS {QuoteIdentifier(structure.SourceAlias)}{Build(structure.Joins)} " +
+                   $"WHERE {predicates}";
 
             return query;
         }
@@ -293,7 +293,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             else
             {
                 // For Unary predicates, there is always a paranthesis around the operand.
-                predicateString.Append($"{Build(predicate.Op)} ( {Build(predicate.Right)} )");
+                predicateString.Append($"{Build(predicate.Op)} ({Build(predicate.Right)})");
             }
 
             if (predicate.AddParenthesis)
@@ -327,15 +327,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (!string.IsNullOrWhiteSpace(join.DbObject.SchemaName))
             {
-                return $@" INNER JOIN {QuoteIdentifier(join.DbObject.SchemaName)}.{QuoteIdentifier(join.DbObject.Name)}
-                           AS {QuoteIdentifier(join.TableAlias)}
-                           ON {Build(join.Predicates)}";
+                return $" INNER JOIN {QuoteIdentifier(join.DbObject.SchemaName)}.{QuoteIdentifier(join.DbObject.Name)} " +
+                       $"AS {QuoteIdentifier(join.TableAlias)} " +
+                       $"ON {Build(join.Predicates)}";
             }
             else
             {
-                return $@" INNER JOIN {QuoteIdentifier(join.DbObject.Name)}
-                           AS {QuoteIdentifier(join.TableAlias)}
-                           ON {Build(join.Predicates)}";
+                return $" INNER JOIN {QuoteIdentifier(join.DbObject.Name)} " +
+                       $"AS {QuoteIdentifier(join.TableAlias)} " +
+                       $"ON {Build(join.Predicates)}";
             }
         }
 

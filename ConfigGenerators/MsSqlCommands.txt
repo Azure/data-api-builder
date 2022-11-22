@@ -24,7 +24,7 @@ add Journal --config "dab-config.MsSql.json" --source "journals" --rest true --g
 add ArtOfWar --config "dab-config.MsSql.json" --source "aow" --rest true --permissions "anonymous:*"
 add series --config "dab-config.MsSql.json" --source "series" --permissions "anonymous:*"
 add GetBooks --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:read" --rest true --graphql true
-add GetBook --config "dab-config.MsSql.json" --source "get_book_by_id" --source.type "stored-procedure" --permissions "anonymous:read" --rest true --graphql true
+add GetBook --config "dab-config.MsSql.json" --source "get_book_by_id" --source.type "stored-procedure" --permissions "anonymous:read" --rest true --graphql false
 add GetPublisher --config "dab-config.MsSql.json" --source "get_publisher_by_id" --source.type "stored-procedure" --source.params "id:1" --permissions "anonymous:read" --rest true --graphql true
 add InsertBook --config "dab-config.MsSql.json" --source "insert_book" --source.type "stored-procedure" --source.params "title:randomX,publisher_id:1234" --permissions "anonymous:create" --rest true --graphql true
 add CountBooks --config "dab-config.MsSql.json" --source "count_books" --source.type "stored-procedure" --permissions "anonymous:read" --rest true --graphql true

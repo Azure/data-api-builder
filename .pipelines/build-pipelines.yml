@@ -47,6 +47,12 @@ steps:
     folderPath: '$(System.DefaultWorkingDirectory)'
     fileType: 'json'
     targetFiles: 'schemas/dab.draft.schema.json'
+ 
+- task: CopyFiles@2
+  displayName: 'Copy dab.draft.schema.json'
+  inputs:
+    contents: 'schemas/dab.draft.schema.json'
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
 
 - task: UseDotNet@2
   displayName: Setup .NET SDK v6.0.x
@@ -191,6 +197,7 @@ steps:
       $(Build.ArtifactStagingDirectory)/**/*.nupkg
       $(Build.ArtifactStagingDirectory)/**/*.zip
       $(Build.ArtifactStagingDirectory)/**/dab-manifest.json
+      $(Build.ArtifactStagingDirectory)/**/dab.draft.schema.json
     isDraft: true
     isPreRelease: true
     addChangeLog: false

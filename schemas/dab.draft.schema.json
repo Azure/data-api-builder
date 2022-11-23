@@ -40,6 +40,7 @@
       "then": {
         "properties": {
           "options": {
+            "description": "Database specific properties for the backend database",
             "type": "object",
             "properties": {
               "database": {
@@ -65,13 +66,11 @@
       "else": {
         "properties": {
           "options": {
+            "description": "Database specific properties for the backend database",
             "type": "object",
             "properties": {
-              "sql-option1": {
-                "description": "Random option not added yet",
-                "type": "string"
-              }
-            }
+            },
+            "required": []
           }
         }
       },

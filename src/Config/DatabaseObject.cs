@@ -84,12 +84,6 @@ namespace Azure.DataApiBuilder.Config
         /// Key: parameter name, Value: ParameterDefinition object
         /// </summary>
         public Dictionary<string, ParameterDefinition> Parameters { get; set; } = new();
-
-        /// <summary>
-        /// The list of fields with their type in the Stored Procedure result
-        /// Key: ResultSet field name, Value: ResultSet field Type
-        /// </summary>
-        // public Dictionary<string, Type> ResultSet { get; set; } = new();
     }
 
     public class ParameterDefinition

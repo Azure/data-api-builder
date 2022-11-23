@@ -146,10 +146,6 @@ namespace Azure.DataApiBuilder.Service.Services
                     IEnumerable<string> rolesAllowedForEntity = _authorizationResolver.GetRolesForEntity(entityName);
                     Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
                     SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
-                    if (databaseObject.SourceType is SourceType.StoredProcedure)
-                    {
-                        Console.Write("asd");
-                    }
 
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {

@@ -154,7 +154,7 @@ namespace Azure.DataApiBuilder.Config
             else if (sourceJson.ValueKind is JsonValueKind.Object)
             {
                 DatabaseObjectSource? objectSource
-                    = JsonSerializer.Deserialize<DatabaseObjectSource>((JsonElement)Source,
+                    = JsonSerializer.Deserialize<DatabaseObjectSource>(sourceJson,
                     options: RuntimeConfig.SerializerOptions);
 
                 if (objectSource is null)

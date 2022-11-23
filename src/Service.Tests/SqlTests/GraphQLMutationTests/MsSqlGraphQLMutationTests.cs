@@ -1,3 +1,4 @@
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -119,21 +120,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await TestStoredProcedureMutationForInsertionWithNoReturns(msSqlQuery);
         }
 
-        [TestMethod]
-        public async Task TestStoredProcedureMutationForInsertionWithReturns()
+        [DataTestMethod]
+        [DataRow("Anonymous", false, "NO Permission", DisplayName = "Simulator - Anonymous role does not have proper permissions.")]
+        [DataRow("Authenticated", true, "HAS Permission", DisplayName = "Simulator - Authenticated but Authenticated role does not have proper permissions.")]
+        public async Task TestStoredProcedureMutationForInsertionReturnWithPermission(string clientRole, bool isAuthenticated, string bookName)
         {
-            string dbQueryForResult = $"SELECT id, title, publisher_id FROM books ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
             string dbQueryToVerifyInsertion = @"
                 SELECT COUNT(*) AS [count]
                 FROM [books] AS [table0]
-                WHERE [table0].[title] = 'Theory of DAB'
+                WHERE [table0].[title] = " + $"'{bookName}'" + @"
                     AND [table0].[publisher_id] = 1234
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await TestStoredProcedureMutationForInsertionWithReturns(dbQueryForResult, dbQueryToVerifyInsertion);
+            string dbQueryToVerifyGraphQLResponse = $"SELECT id, title, publisher_id FROM books ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            await TestStoredProcedureMutationForInsertionReturnWithPermission(clientRole, bookName, isAuthenticated, dbQueryToVerifyGraphQLResponse, dbQueryToVerifyInsertion);
         }
 
         [TestMethod]

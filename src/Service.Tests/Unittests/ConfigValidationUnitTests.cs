@@ -48,6 +48,56 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
+        [DataTestMethod]
+        [DataRow(new object[]{"create", "read"}, true, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[]{"update", "read"}, true, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[]{"delete", "read"}, true, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[]{"create"}, true, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[]{"read"}, true, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[]{"update"}, true, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[]{"delete"}, true, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[]{"update", "create"}, false, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[]{"delete", "read", "update"}, false, DisplayName = "Field id is not accessible")]
+        public void InvalidCRUDForStoredProcedure(object[] operations, bool isValid)
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE
+            );
+            
+            PermissionSetting permissionForEntity = new(
+                role: AuthorizationHelpers.TEST_ROLE,
+                operations: operations);
+            
+            object entitySource = new DatabaseObjectSource(
+                    Type: SourceType.StoredProcedure,
+                    Name: "sourceName",
+                    Parameters: null,
+                    KeyFields: null
+                );
+            
+            Entity testEntity = new(
+                Source: entitySource,
+                Rest: true,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+            );
+            runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY] = testEntity;
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+
+            if (!isValid)
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                    configValidator.ValidatePermissionsInConfig(runtimeConfig));
+                Assert.AreEqual("Invalid OPerations for Entity: SampleEntity. " +
+                    $"StoredProcedure can process only one CUD (Create/Update/Delete) operation.", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+        }
+
         /// <summary>
         /// Test method to validate that an appropriate exception is thrown when there is an invalid action
         /// supplied in the runtimeconfig.

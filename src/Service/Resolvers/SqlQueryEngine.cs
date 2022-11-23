@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
+using static Azure.DataApiBuilder.Service.Authorization.AuthorizationResolver;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -104,9 +105,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _gQLFilterParser,
                     parameters);
 
-                // checking if user has read permission on the result
+                // checking if role has read permission on the result
                 _authorizationResolver.EntityPermissionsMap.TryGetValue(context.Field.Name.Value, out EntityMetadata entityMetadata);
-                bool IsReadAllowed = entityMetadata.OperationToRolesMap.ContainsKey(Operation.Read);
+                string role = context.ContextData[CLIENT_ROLE_HEADER].ToString();
+                bool IsReadAllowed = entityMetadata.RoleToOperationMap[role].OperationToColumnMap.ContainsKey(Operation.Read);
 
                 return new Tuple<IEnumerable<JsonDocument>, IMetadata>(
                         FormatStoredProcedureResultAsJsonList(IsReadAllowed, await ExecuteAsync(sqlExecuteStructure)),

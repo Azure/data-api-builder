@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
@@ -119,32 +120,46 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Check: </code> If book with the given id is present in the database then
         /// the mutation query will return the review Id with the content of the review added
         /// </summary>
-        public async Task TestStoredProcedureMutationForInsertionWithReturns(string dbQueryForResult, string dbQueryToVerifyInsertion)
+        public async Task TestStoredProcedureMutationForInsertionReturnWithPermission(
+            string clientRole,
+            string bookName,
+            bool isAuthenticated,
+            string dbQueryToVerifyGraphQLResponse,
+            string dbQueryToVerifyInsertion)
         {
             string graphQLMutationName = "InsertAndDisplayAllBooks";
             string graphQLMutation = @"
                 mutation {
-                    InsertAndDisplayAllBooks(title: ""Theory Of DAB"", publisher_id: 1234 ) {
+                    InsertAndDisplayAllBooks(title: " + @$"""{bookName}""" + @", publisher_id: 1234 ) {
                         id,
                         title,
                         publisher_id
                     }
                 }
             ";
-
+ 
             string currentDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyInsertion);
             JsonDocument currentResult = JsonDocument.Parse(currentDbResponse);
             Assert.AreEqual(currentResult.RootElement.GetProperty("count").GetInt64(), 0);
-            JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            string dbResponse = await GetDatabaseResultAsync(dbQueryForResult);
 
-            // Stored Procedure didn't return anything
-            SqlTestHelper.PerformTestEqualJsonStrings(dbResponse, graphQLResponse.ToString());
+            JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: isAuthenticated, clientRoleHeader: clientRole);
 
             // check to verify new element is inserted
             string updatedDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyInsertion);
             JsonDocument updatedResult = JsonDocument.Parse(updatedDbResponse);
             Assert.AreEqual(updatedResult.RootElement.GetProperty("count").GetInt64(), 1);
+
+            if (clientRole.Equals("Anonymous", StringComparison.OrdinalIgnoreCase))
+            {
+                // Result not available without READ permissions
+                SqlTestHelper.PerformTestEqualJsonStrings("[]", graphQLResponse.ToString());
+            }
+            else
+            {
+                // Result available with READ permissions
+                string DbResponse = await GetDatabaseResultAsync(dbQueryToVerifyGraphQLResponse);
+                SqlTestHelper.PerformTestEqualJsonStrings(DbResponse, graphQLResponse.ToString());
+            }
         }
 
         public async Task TestStoredProcedureMutationForDeletion(string dbQueryToVerifyDeletion)

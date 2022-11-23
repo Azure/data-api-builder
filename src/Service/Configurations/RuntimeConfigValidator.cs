@@ -341,6 +341,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
+                entity.TryPopulateSourceFields();
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
                 {
                     string roleName = permissionSetting.Role;
@@ -355,7 +356,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                         // Evaluate actionOp as the current operation to be validated.
                         Operation actionOp;
-                        if (((JsonElement)action!).ValueKind is JsonValueKind.String)
+                        JsonElement actionJsonElement = JsonSerializer.SerializeToElement(action);
+                        if ((actionJsonElement!).ValueKind is JsonValueKind.String)
                         {
                             string actionName = action.ToString()!;
                             if (AuthorizationResolver.WILDCARD.Equals(actionName))
@@ -455,7 +457,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             || (operationsList.Count is 1 && operationsList[0] is Operation.All))
                         {
                             throw new DataApiBuilderException(
-                            message: $"StoredProcedure can process only one CUD (Create/Update/Delete) operation.",
+                            message: $"Invalid OPerations for Entity: {entityName}. " +
+                                $"StoredProcedure can process only one CUD (Create/Update/Delete) operation.",
                             statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
@@ -584,13 +587,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
         }
 
-        public static void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
+        public void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 // We are only doing this pre-check for GraphQL because for GraphQL we need the correct schema while making request
                 // so if the schema is not correct we will halt the engine
                 // but for rest we can do it when a request is made and only fail that particular request.
+                entity.TryPopulateSourceFields();
                 if (entity.ObjectType is SourceType.StoredProcedure &&
                     entity.GraphQL is not null && !(entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
                 {

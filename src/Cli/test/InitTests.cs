@@ -18,8 +18,8 @@ namespace Cli.Tests
             InitOptions options = new(
                 databaseType: DatabaseType.mssql,
                 connectionString: "testconnectionstring",
-                cosmosDatabase: null,
-                cosmosContainer: null,
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
@@ -57,8 +57,8 @@ namespace Cli.Tests
             InitOptions options = new(
                 databaseType: DatabaseType.cosmosdb_postgresql,
                 connectionString: "testconnectionstring",
-                cosmosDatabase: null,
-                cosmosContainer: null,
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
@@ -96,8 +96,8 @@ namespace Cli.Tests
             InitOptions options = new(
                 databaseType: DatabaseType.mssql,
                 connectionString: null,
-                cosmosDatabase: null,
-                cosmosContainer: null,
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
@@ -126,7 +126,7 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test cosmosdb_nosql specifc settings like cosmos-database, cosmos-container, cosmos-schema file.
+        /// Test cosmosdb_nosql specifc settings like cosmosdb_nosql-database, cosmosdb_nosql-container, cosmos-schema file.
         /// </summary>
         [TestMethod]
         public void CosmosDbNoSqlDatabase()
@@ -134,8 +134,8 @@ namespace Cli.Tests
             InitOptions options = new(
                 databaseType: DatabaseType.cosmosdb_nosql,
                 connectionString: "testconnectionstring",
-                cosmosDatabase: "testdb",
-                cosmosContainer: "testcontainer",
+                cosmosNoSqlDatabase: "testdb",
+                cosmosNoSqlContainer: "testcontainer",
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
@@ -186,8 +186,8 @@ namespace Cli.Tests
             InitOptions options = new(
                 databaseType: DatabaseType.cosmosdb_nosql,
                 connectionString: "testconnectionstring",
-                cosmosDatabase: cosmosDatabase,
-                cosmosContainer: cosmosContainer,
+                cosmosNoSqlDatabase: cosmosDatabase,
+                cosmosNoSqlContainer: cosmosContainer,
                 graphQLSchemaPath: graphQLSchema,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
@@ -208,8 +208,8 @@ namespace Cli.Tests
             InitOptions options = new(
                 databaseType: DatabaseType.mssql,
                 connectionString: "testconnectionstring",
-                cosmosDatabase: null,
-                cosmosContainer: null,
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { },
@@ -272,8 +272,8 @@ namespace Cli.Tests
             InitOptions options = new(
                 databaseType: DatabaseType.mssql,
                 connectionString: "testconnectionstring",
-                cosmosDatabase: null,
-                cosmosContainer: null,
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Production,
                 corsOrigin: new List<string>() { },

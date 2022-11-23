@@ -16,8 +16,8 @@ public class EndToEndTests
     public void TestInitForCosmosDBNoSql()
     {
         string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_nosql",
-                          "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "True", "--cosmos-database",
-                          "graphqldb", "--cosmos-container", "planet", "--graphql-schema", "schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
+                          "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "True", "--cosmosdb_nosql-database",
+                          "graphqldb", "--cosmosdb_nosql-container", "planet", "--graphql-schema", "schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);

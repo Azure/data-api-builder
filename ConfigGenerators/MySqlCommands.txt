@@ -39,7 +39,7 @@ update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_0
 update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_06:create,delete"
 update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_06:update" --fields.include "*"
 update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id eq 1940"
-update Stock --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true
+update Stock --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
 update Book --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete"
 update Book --config "dab-config.MySql.json" --relationship publishers --target.entity Publisher --cardinality one
 update Book --config "dab-config.MySql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one

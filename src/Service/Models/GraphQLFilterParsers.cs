@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -76,8 +77,25 @@ namespace Azure.DataApiBuilder.Service.Models
                 if (fieldIsAnd || fieldIsOr)
                 {
                     PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
+                    List<IValueNode> otherPredicates;
+                    if (fieldValue is IEnumerable<IValueNode>)
+                    {
+                        otherPredicates = (List<IValueNode>)fieldValue;
+                    }
+                    else if (fieldValue is IEnumerable<ObjectFieldNode>)
+                    {
+                        ObjectFieldNode fieldObject = ((List<ObjectFieldNode>)fieldValue).First();
+                        ObjectValueNode value = new(fieldObject);
+                        otherPredicates = new List<IValueNode> { value };
+                    }
+                    else
+                    {
+                        throw new DataApiBuilderException(
+                            message: "Invalid filter object input value type.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
 
-                    List<IValueNode> otherPredicates = (List<IValueNode>)fieldValue;
                     predicates.Push(new PredicateOperand(ParseAndOr(
                         ctx,
                         argumentSchema: filterArgumentObject.Fields[name],
@@ -286,7 +304,24 @@ namespace Azure.DataApiBuilder.Service.Models
                     continue;
                 }
 
-                List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
+                List<ObjectFieldNode> subfields;
+                if (fieldValue is List<ObjectFieldNode>)
+                {
+                    subfields = (List<ObjectFieldNode>)fieldValue;
+                }
+                else if (fieldValue is Array)
+                {
+                    ObjectFieldNode[] objectFieldNodes = (ObjectFieldNode[])fieldValue;
+                    subfields = objectFieldNodes.ToList();
+                }
+                else
+                {
+                    throw new DataApiBuilderException(
+                        message: "Invalid value extracted from IValueNode",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
                 operands.Add(new PredicateOperand(
                     Parse(ctx,
                         filterArgumentSchema,

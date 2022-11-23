@@ -155,7 +155,8 @@ namespace Azure.DataApiBuilder.Service.Services
             if (extraFields.Count > 0)
             {
                 throw new DataApiBuilderException(
-                    message: $"Invalid request. Contained unexpected fields: {string.Join(", ", extraFields)}",
+                    message: $"Invalid request. Contained unexpected fields: {string.Join(", ", extraFields)}" +
+                                $" for entity: {spRequestCtx.EntityName}",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }

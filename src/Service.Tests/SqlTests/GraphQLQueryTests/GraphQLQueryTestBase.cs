@@ -950,7 +950,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// </summary>
         public async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
         {
-            string graphQLQueryName = "GetBook";
+            string graphQLQueryName = "GetPublisher";
             string graphQLQuery = @"{
                 GetPublisher(id: 1234) {
                     id

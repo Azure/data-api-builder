@@ -61,7 +61,8 @@
               "schema"
             ]
           }
-        }
+        },
+        "required": [ "options" ]
       },
       "else": {
         "properties": {

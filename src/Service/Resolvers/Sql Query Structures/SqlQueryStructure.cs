@@ -650,7 +650,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                     // use the _underlyingType from the subquery which will be overridden appropriately if the query is paginated
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
-                    string targetEntityName = subunderlyingType.Name;
+                    string targetEntityName = MetadataProvider.GetEntityName(subunderlyingType.Name);
                     string subtableAlias = subquery.SourceAlias;
 
                     AddJoinPredicatesForRelatedEntity(targetEntityName, subtableAlias, subquery);

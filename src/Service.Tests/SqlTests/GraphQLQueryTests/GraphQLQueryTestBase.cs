@@ -203,7 +203,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         ""items"": []
     },
     ""authors"": {
-        ""items"": []
+        ""items"": [
+              {
+                ""id"": 126,
+                ""name"": ""Aaron""
+              }
+        ]
     }
 },
   {
@@ -514,7 +519,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string graphQLQuery = @"{
                 comic_by_pk(id: 1) {
                     title
-                    series {
+                    myseries {
                         name
                     }
                 }

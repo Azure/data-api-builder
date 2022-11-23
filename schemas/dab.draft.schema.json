@@ -21,7 +21,6 @@
             "mssql",
             "postgresql",
             "mysql",
-            "cosmos",
             "cosmosdb_nosql",
             "cosmosdb_postgresql"
           ]
@@ -29,6 +28,51 @@
         "connection-string": {
           "description": "Connection string for the selected database type",
           "type": "string"
+        }
+      },
+      "if": {
+        "properties": {
+          "database-type": {
+            "const": "cosmosdb_nosql"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "options": {
+            "type": "object",
+            "properties": {
+              "database": {
+                "type": "string",
+                "description": "Name of the database"
+              },
+              "container": {
+                "description": "Name of the container",
+                "type": "string"
+              },
+              "schema": {
+                "description": "Path to the GraphQL schema file",
+                "type": "string"
+              }
+            },
+            "required": [
+              "database",
+              "schema"
+            ]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "options": {
+            "type": "object",
+            "properties": {
+              "sql-option1": {
+                "description": "Random option not added yet",
+                "type": "string"
+              }
+            }
+          }
         }
       },
       "required": [

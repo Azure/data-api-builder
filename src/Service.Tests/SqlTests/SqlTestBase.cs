@@ -306,7 +306,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         parameters: null,
                         _queryExecutor.GetJsonResultAsync<JsonDocument>);
 
-                result = sqlResult is not null ? sqlResult.RootElement.ToString() : null;
+                result = sqlResult is not null ?
+                    sqlResult.RootElement.ToString() :
+                    new JsonArray().ToString();
             }
             else
             {

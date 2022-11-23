@@ -21,6 +21,55 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             await InitializeTestFixture(context);
         }
 
+        [Ignore]
+        [TestMethod]
+        public void TestNestedFilterManyOne()
+        {
+            throw new System.NotImplementedException("Nested Filtering for MySQL is not yet implemented.");
+        }
+
+        [Ignore]
+        [TestMethod]
+        public void TestNestedFilterOneMany()
+        {
+            throw new System.NotImplementedException("Nested Filtering for MySQL is not yet implemented.");
+        }
+
+        [Ignore]
+        [TestMethod]
+        public void TestNestedFilterManyMany()
+        {
+            throw new System.NotImplementedException("Nested Filtering for MySQL is not yet implemented.");
+        }
+
+        [Ignore]
+        [TestMethod]
+        public void TestNestedFilterFieldIsNull()
+        {
+            throw new System.NotImplementedException("Nested Filtering for MySQL is not yet implemented.");
+        }
+
+        [Ignore]
+        [TestMethod]
+        public void TestNestedFilterWithinNestedFilter()
+        {
+            throw new System.NotImplementedException("Nested Filtering for PostgreSQL is not yet implemented.");
+        }
+
+        [Ignore]
+        [TestMethod]
+        public void TestNestedFilterWithAnd()
+        {
+            throw new System.NotImplementedException("Nested Filtering for PostgreSQL is not yet implemented.");
+        }
+
+        [Ignore]
+        [TestMethod]
+        public void TestNestedFilterWithOr()
+        {
+            throw new System.NotImplementedException("Nested Filtering for PostgreSQL is not yet implemented.");
+        }
+
         /// <summary>
         /// Gets the default schema for
         /// PostgreSql.

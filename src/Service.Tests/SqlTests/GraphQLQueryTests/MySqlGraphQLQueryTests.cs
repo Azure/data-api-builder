@@ -127,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string mySqlQuery = @"
                 SELECT
                   JSON_OBJECT(
-                    'title', `subq7`.`title`, 'series',
+                    'title', `subq7`.`title`, 'myseries',
                     `subq7`.`series`
                   ) AS `data`
                 FROM

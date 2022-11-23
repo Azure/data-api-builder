@@ -28,7 +28,7 @@ add GetBook --config "dab-config.MsSql.json" --source "get_book_by_id" --source.
 add GetPublisher --config "dab-config.MsSql.json" --source "get_publisher_by_id" --source.type "stored-procedure" --source.params "id:1" --permissions "anonymous:read" --rest true --graphql true
 add InsertBook --config "dab-config.MsSql.json" --source "insert_book" --source.type "stored-procedure" --source.params "title:randomX,publisher_id:1234" --permissions "anonymous:create" --rest true --graphql true
 add CountBooks --config "dab-config.MsSql.json" --source "count_books" --source.type "stored-procedure" --permissions "anonymous:read" --rest true --graphql true
-add InsertAndDisplayAllBooks --config "dab-config.MsSql.json" --source "insert_and_display_all_books" --source.type "stored-procedure" --source.params "title:randomX,publisher_id:1234" --permissions "anonymous:create,read" --rest true --graphql true
+add InsertAndDisplayAllBooks --config "dab-config.MsSql.json" --source "insert_and_display_all_books" --source.type "stored-procedure" --source.params "title:randomX,publisher_id:1234" --permissions "anonymous:create" --rest true --graphql true
 add DeleteBook --config "dab-config.MsSql.json" --source "delete_book" --source.type "stored-procedure" --source.params "id:1" --permissions "anonymous:delete" --rest true --graphql true
 add UpdateBookTitle --config "dab-config.MsSql.json" --source "update_book_title" --source.type "stored-procedure" --source.params "id:1,title:Testing Tonight" --permissions "anonymous:update,read" --rest true --graphql true
 update Publisher --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many

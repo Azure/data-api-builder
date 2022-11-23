@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
-using HotChocolate.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
@@ -137,7 +136,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     }
                 }
             ";
- 
+
             string currentDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyInsertion);
             JsonDocument currentResult = JsonDocument.Parse(currentDbResponse);
             Assert.AreEqual(currentResult.RootElement.GetProperty("count").GetInt64(), 0);

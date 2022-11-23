@@ -49,33 +49,33 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(new object[]{"create", "read"}, true, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[]{"update", "read"}, true, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[]{"delete", "read"}, true, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[]{"create"}, true, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[]{"read"}, true, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[]{"update"}, true, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[]{"delete"}, true, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[]{"update", "create"}, false, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[]{"delete", "read", "update"}, false, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[] { "create", "read" }, true, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[] { "update", "read" }, true, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[] { "delete", "read" }, true, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[] { "create" }, true, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[] { "read" }, true, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[] { "update" }, true, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[] { "delete" }, true, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[] { "update", "create" }, false, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[] { "delete", "read", "update" }, false, DisplayName = "Field id is not accessible")]
         public void InvalidCRUDForStoredProcedure(object[] operations, bool isValid)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE
             );
-            
+
             PermissionSetting permissionForEntity = new(
                 role: AuthorizationHelpers.TEST_ROLE,
                 operations: operations);
-            
+
             object entitySource = new DatabaseObjectSource(
                     Type: SourceType.StoredProcedure,
                     Name: "sourceName",
                     Parameters: null,
                     KeyFields: null
                 );
-            
+
             Entity testEntity = new(
                 Source: entitySource,
                 Rest: true,

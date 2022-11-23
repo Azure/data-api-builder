@@ -60,12 +60,12 @@ namespace Cli
             {
                 case DatabaseType.cosmos:
                 case DatabaseType.cosmosdb_nosql:
-                    string? cosmosDatabase = options.CosmosDatabase;
-                    string? cosmosContainer = options.CosmosContainer;
+                    string? cosmosDatabase = options.CosmosNoSqlDatabase;
+                    string? cosmosContainer = options.CosmosNoSqlContainer;
                     string? graphQLSchemaPath = options.GraphQLSchemaPath;
                     if (string.IsNullOrEmpty(cosmosDatabase) || string.IsNullOrEmpty(graphQLSchemaPath))
                     {
-                        Console.WriteLine($"Provide all the mandatory options for CosmosDB_NoSql: --cosmos-database, and --graphql-schema");
+                        Console.WriteLine($"Provide all the mandatory options for CosmosDB_NoSql: --cosmosdb_nosql-database, and --graphql-schema");
                         return false;
                     }
 

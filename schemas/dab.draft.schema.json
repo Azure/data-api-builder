@@ -21,7 +21,9 @@
             "mssql",
             "postgresql",
             "mysql",
-            "cosmos"
+            "cosmos",
+            "cosmosdb_nosql",
+            "cosmosdb_postgresql"
           ]
         },
         "connection-string": {
@@ -32,28 +34,6 @@
       "required": [
         "database-type",
         "connection-string"
-      ]
-    },
-    "cosmos": {
-      "type": "object",
-      "description": "Azure Cosmos DB related settings",
-      "properties": {
-        "database": {
-          "type": "string",
-          "description": "Name of the database"
-        },
-        "container": {
-          "description": "Name of the container",
-          "type": "string"
-        },
-        "schema": {
-          "description": "Path to the GraphQL schema file",
-          "type": "string"
-        }
-      },
-      "required": [
-        "database",
-        "schema"
       ]
     },
     "runtime": {

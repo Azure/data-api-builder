@@ -802,10 +802,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             foreach (string entityName in _entities.Keys)
             {
-                // Ensure we don't attempt for stored procedures, which have no
-                // SourceDefinition, Columns, Keys, etc.
-                // if (_entities[entityName].ObjectType is not SourceType.StoredProcedure)
-                // {
+                // InCase of StoredProcedures, result set definitions becomes the column definition.
                 Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
                 EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
                 EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
@@ -818,7 +815,6 @@ namespace Azure.DataApiBuilder.Service.Services
                         EntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
                     }
                 }
-                // }
             }
         }
 

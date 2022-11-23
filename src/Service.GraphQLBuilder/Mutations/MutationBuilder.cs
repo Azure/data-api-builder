@@ -41,8 +41,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     NameNode name = objectTypeDefinitionNode.Name;
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
 
+                    // We will only create a single mutation query for stored procedure
+                    // unlike table/views where we create one for each CUD operation.
                     if (entities[dbEntityName].ObjectType is SourceType.StoredProcedure)
                     {
+                        // If the role has actions other than READ, a schema for mutation will be generated.
                         Operation storedProcedureOperation = GetOperationTypeForStoredProcedure(dbEntityName, entityPermissionsMap);
                         if (storedProcedureOperation is not Operation.Read)
                         {
@@ -71,12 +74,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
         /// <summary>
         /// Tries to fetch the Operation Type for Stored Procedure.
-        /// Stored Procedure currently support only 1 CRUD operation at a time.
+        /// Stored Procedure currently support at most 1 CUD operation at a time
+        /// apart from READ operation, an Exception is thrown otherwise.
         /// </summary>
         private static Operation GetOperationTypeForStoredProcedure(
             string dbEntityName,
-            Dictionary<string, EntityMetadata>? entityPermissionsMap
-        )
+            Dictionary<string, EntityMetadata>? entityPermissionsMap)
         {
             List<Operation> operations = entityPermissionsMap![dbEntityName].OperationToRolesMap.Keys.ToList();
             operations.Remove(Operation.Read);
@@ -89,9 +92,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
             else if (operations.Count == 1)
             {
-                if (entityPermissionsMap.TryGetValue(dbEntityName, out EntityMetadata entityMetadata))
+                if (entityPermissionsMap.TryGetValue(dbEntityName, out _))
                 {
-                    return entityMetadata!.OperationToRolesMap.First().Key;
+                    return operations.First();
                 }
                 else
                 {

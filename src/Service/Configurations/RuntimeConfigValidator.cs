@@ -67,8 +67,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             ValidateAuthenticationConfig();
 
-            // ValidateStoredProcedureInConfig(runtimeConfig);
-
             // Running these graphQL validations only in development mode to ensure
             // fast startup of engine in production mode.
             if (runtimeConfig.GraphQLGlobalSettings.Enabled
@@ -100,12 +98,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             ValidateDatabaseType(runtimeConfig, fileSystem, logger);
         }
-
-        // public static void ValidateStoredProcedureInConfig(ISqlMetadataProvider sqlMetadataProvider)
-        // {
-        //     AuthorizationResolver x = new AuthorizationResolver(_runtimeConfigProvider, sqlMetadataProvider, _logger);
-        //     x.SetEntityPermissionMap(_runtimeConfigProvider.GetRuntimeConfiguration());
-        // }
 
         /// <summary>
         /// Throws exception if database type is incorrectly configured
@@ -587,6 +579,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
         }
 
+        /// <summary>
+        /// Validates the parameters given in the config are consistent with the DB i.e., config has all
+        /// the parameters that are specified for the stored procedure in DB.
+        /// </summary>
         public void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)

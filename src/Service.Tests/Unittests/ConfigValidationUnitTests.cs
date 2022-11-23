@@ -48,16 +48,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
+        /// <summary>
+        /// Test method to validate that only 1 CUD operation along with READ is provided for a particular role.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(new object[] { "create", "read" }, true, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[] { "update", "read" }, true, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[] { "delete", "read" }, true, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[] { "create" }, true, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[] { "read" }, true, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[] { "update" }, true, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[] { "delete" }, true, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[] { "update", "create" }, false, DisplayName = "Field id is not accessible")]
-        [DataRow(new object[] { "delete", "read", "update" }, false, DisplayName = "Field id is not accessible")]
+        [DataRow(new object[] { "create", "read" }, true, DisplayName = "Stored-procedure with create-read permission")]
+        [DataRow(new object[] { "update", "read" }, true, DisplayName = "Stored-procedure with update-read permission")]
+        [DataRow(new object[] { "delete", "read" }, true, DisplayName = "Stored-procedure with delete-read permission")]
+        [DataRow(new object[] { "create" }, true, DisplayName = "Stored-procedure with only create permission")]
+        [DataRow(new object[] { "read" }, true, DisplayName = "Stored-procedure with only read permission")]
+        [DataRow(new object[] { "update" }, true, DisplayName = "Stored-procedure with only update permission")]
+        [DataRow(new object[] { "delete" }, true, DisplayName = "Stored-procedure with only delete permission")]
+        [DataRow(new object[] { "update", "create" }, false, DisplayName = "Stored-procedure with update-create permission")]
+        [DataRow(new object[] { "delete", "read", "update" }, false, DisplayName = "Stored-procedure with delete-read-update permission")]
         public void InvalidCRUDForStoredProcedure(object[] operations, bool isValid)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(

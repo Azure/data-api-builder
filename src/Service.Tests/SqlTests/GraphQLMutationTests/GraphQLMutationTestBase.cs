@@ -85,9 +85,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
-        /// <code>Check: </code> If book with the given id is present in the database then
-        /// the mutation query will return the review Id with the content of the review added
+        /// <code>Do: </code> Inserts new book in the books table with given publisher_id
+        /// <code>Check: </code> If the new book is inserted into the DB and
+        /// verifies the response.
         /// </summary>
         public async Task TestStoredProcedureMutationForInsertionWithNoReturns(string dbQuery)
         {
@@ -115,9 +115,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
-        /// <code>Check: </code> If book with the given id is present in the database then
-        /// the mutation query will return the review Id with the content of the review added
+        /// <code>Do: </code> Inserts new book in the books table with given publisher_id
+        /// <code>Check: </code> If the user has read permission it will display the result
+        /// else user won't see the result of the stored procedure.
         /// </summary>
         public async Task TestStoredProcedureMutationForInsertionReturnWithPermission(
             string clientRole,
@@ -161,6 +161,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             }
         }
 
+        /// <summary>
+        /// <code>Do: </code> Deletes book from the books table with given id
+        /// <code>Check: </code> If the intended book is deleted from the DB and
+        /// verifies the response.
+        /// </summary>
         public async Task TestStoredProcedureMutationForDeletion(string dbQueryToVerifyDeletion)
         {
             string graphQLMutationName = "DeleteBook";
@@ -186,6 +191,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             Assert.AreEqual(updatedResult.RootElement.GetProperty("count").GetInt64(), 0);
         }
 
+        /// <summary>
+        /// <code>Do: </code> updates a book title from the books table with given id
+        /// and new title.
+        /// <code>Check: </code> The book title should be updated with the given id
+        /// and the response is verified which contains the updated row.
+        /// </summary>
         public async Task TestStoredProcedureMutationForUpdate(string dbQuery)
         {
             string graphQLMutationName = "UpdateBookTitle";

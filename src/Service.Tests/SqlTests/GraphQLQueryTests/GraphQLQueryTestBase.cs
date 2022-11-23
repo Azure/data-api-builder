@@ -1045,6 +1045,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataApiBuilderException.SubStatusCodes.BadRequest}");
         }
 
+        /// <summary>
+        /// Checks failure on providing invalid arguments in graphQL Query
+        /// </summary>
         public async Task TestStoredProcedureQueryWithInvalidArgumentType()
         {
             string graphQLQueryName = "GetBook";

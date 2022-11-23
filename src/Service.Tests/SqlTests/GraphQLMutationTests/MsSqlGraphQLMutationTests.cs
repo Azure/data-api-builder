@@ -103,6 +103,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await InsertMutationForConstantdefaultValue(msSqlQuery);
         }
 
+        /// <summary>
+        /// <code>Do: </code>insert new Book and return nothing
+        /// <code>Check: </code>if the intended book is inserted in books table
+        /// </summary>
         [TestMethod]
         public async Task TestStoredProcedureMutationForInsertionWithNoReturns()
         {
@@ -119,6 +123,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await TestStoredProcedureMutationForInsertionWithNoReturns(msSqlQuery);
         }
 
+        /// <summary>
+        /// <code>Do: </code>insert new Book and return all the rows from book table
+        /// <code>Check: </code>if the book is inserted and shows result to roles having read permission
+        /// </summary>
         [DataTestMethod]
         [DataRow("Anonymous", false, "NO Permission", DisplayName = "Simulator - Anonymous role does not have proper permissions.")]
         [DataRow("Authenticated", true, "HAS Permission", DisplayName = "Simulator - Authenticated but Authenticated role does not have proper permissions.")]
@@ -139,6 +147,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await TestStoredProcedureMutationForInsertionReturnWithPermission(clientRole, bookName, isAuthenticated, dbQueryToVerifyGraphQLResponse, dbQueryToVerifyInsertion);
         }
 
+        /// <summary>
+        /// <code>Do: </code>deletes a Book and return nothing
+        /// <code>Check: </code>the intended book is deleted
+        /// </summary>
         [TestMethod]
         public async Task TestStoredProcedureMutationForDeletion()
         {
@@ -157,6 +169,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await TestStoredProcedureMutationForDeletion(dbQueryToVerifyDeletion);
         }
 
+        /// <summary>
+        /// <code>Do: </code>Book title updation and return the updated row
+        /// <code>Check: </code>if the result returned from the mutation is correct
+        /// </summary>
         [TestMethod]
         public async Task TestStoredProcedureMutationForUpdate()
         {

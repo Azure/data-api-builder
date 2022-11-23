@@ -737,6 +737,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             string clientRoleHeader = null)
         {
             JsonElement dataResult = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: isAuthenticated, variables);
+
             return dataResult.GetProperty("items");
         }
     }

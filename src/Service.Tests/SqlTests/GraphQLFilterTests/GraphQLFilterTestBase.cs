@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -738,7 +739,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             string clientRoleHeader = null)
         {
             JsonElement dataResult = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: isAuthenticated, variables);
-            _sqlMetadataLogger.LogInformation($"GraphQL Result is:{dataResult}");
+            Console.WriteLine($"GraphQL Result is:{dataResult}");
             return dataResult.GetProperty("items");
         }
     }

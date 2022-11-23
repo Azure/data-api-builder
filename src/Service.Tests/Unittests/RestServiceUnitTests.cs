@@ -20,7 +20,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     public class RestServiceUnitTests
     {
         private static RestService _restService;
-        private static string _testCategory = "mssql";
 
         #region Positive Cases
 
@@ -117,7 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// runtimeconfigprovider.</param>
         public static void InitializeTest(string path, string entityName)
         {
-            RuntimeConfigPath runtimeConfigPath = TestHelper.GetRuntimeConfigPath(_testCategory);
+            RuntimeConfigPath runtimeConfigPath = TestHelper.GetRuntimeConfigPath(TestCategory.MSSQL);
             RuntimeConfigProvider runtimeConfigProvider =
                 TestHelper.GetMockRuntimeConfigProvider(runtimeConfigPath, path);
             MsSqlQueryBuilder queryBuilder = new();

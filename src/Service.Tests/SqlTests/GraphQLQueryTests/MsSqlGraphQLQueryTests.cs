@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <summary>
         /// Gets array of results for querying a table containing computed columns.
         /// </summary>
-        /// <returns>rows from sales table</returns>
+        /// <check>rows from sales table</check>
         [TestMethod]
         public async Task MultipleResultQueryContainingComputedColumns()
         {

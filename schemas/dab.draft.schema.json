@@ -6,7 +6,7 @@
   "title": "Data API Builder",
   "description": "Schema for Data API Builder engine",
   "additionalProperties": {
-    "version": "urn:dab:config:schema:draft-major.minor.patch"
+    "version": "https://dataapibuilder.blob.core.windows.net/schemas/vmajor.minor.patch-alpha/dab.draft.schema.json"
   },
   "type": "object",
   "properties": {

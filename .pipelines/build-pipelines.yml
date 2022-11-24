@@ -51,7 +51,8 @@ steps:
 - task: CopyFiles@2
   displayName: 'Copy dab.draft.schema.json'
   inputs:
-    contents: 'schemas/dab.draft.schema.json'
+    sourceFolder: '$(Build.SourcesDirectory)/schemas'
+    contents: 'dab.draft.schema.json'
     targetFolder: '$(Build.ArtifactStagingDirectory)'
 
 - task: UseDotNet@2

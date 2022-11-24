@@ -25,8 +25,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQuery(postgresQuery);
         }
 
+        /// <summary>
+        /// Gets array of results for querying a table containing computed columns.
+        /// </summary>
+        /// <check>rows from sales table</check>
         [TestMethod]
-        public async Task MultipleResultQueryContainingCalculatedColumns()
+        public async Task MultipleResultQueryContainingComputedColumns()
         {
             string postgresQuery = @"SELECT json_agg(to_jsonb(table0)) FROM
                 (SELECT
@@ -36,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     tax,
                     total
                 FROM sales ORDER BY id asc LIMIT 100) as table0";
-            await MultipleResultQueryContainingCalculatedColumns(postgresQuery);
+            await MultipleResultQueryContainingComputedColumns(postgresQuery);
         }
 
         [TestMethod]

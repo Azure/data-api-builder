@@ -60,11 +60,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts new book using variables to set its title and publisher_id
-        /// <code>Check: </code> If book with the expected values of the new book is present in the database and
-        /// if the mutation query has returned the correct information
+        /// <code>Do: </code> Inserts new sale item into sales table that automatically calculates the total price
+        /// based on subtotal and tax.
+        /// <code>Check: Calculated column is persisted successfully with correct calculated result. </code>
         /// </summary>
-        public async Task InsertMutationForCalculatedColumns(string dbQuery)
+        public async Task InsertMutationForComputedColumns(string dbQuery)
         {
             string graphQLMutationName = "createSales";
             string graphQLMutation = @"
@@ -156,11 +156,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code>Update book in database and return its updated fields
-        /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
-        /// and if the mutation query has returned the values correctly
+        /// <code>Do: </code>Update Sales in database and return its updated fields
+        /// <code>Check: The calculated column has successfully been updated after updating the other fields </code>
         /// </summary>
-        public async Task UpdateMutationForCalculatedColumns(string dbQuery)
+        public async Task UpdateMutationForComputedColumns(string dbQuery)
         {
             string graphQLMutationName = "updateSales";
             string graphQLMutation = @"

@@ -61,12 +61,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts new book and return its id and title
-        /// <code>Check: </code> If book with the expected values of the new book is present in the database and
-        /// if the mutation query has returned the correct information
+        /// <code>Do: </code> Inserts new sale item into sales table that automatically calculates the total price
+        /// based on subtotal and tax.
+        /// <code>Check: Calculated column is persisted successfully with correct calculated result. </code>
         /// </summary>
         [TestMethod]
-        public async Task InsertMutationForCalculatedColumns()
+        public async Task InsertMutationForComputedColumns()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT(
@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     ) AS `subq`
             ";
 
-            await InsertMutationForCalculatedColumns(mySqlQuery);
+            await InsertMutationForComputedColumns(mySqlQuery);
         }
 
         /// <summary>
@@ -183,12 +183,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts new book and return its id and title
-        /// <code>Check: </code> If book with the expected values of the new book is present in the database and
-        /// if the mutation query has returned the correct information
+        /// <code>Do: </code>Update Sales in database and return its updated fields
+        /// <code>Check: The calculated column has successfully been updated after updating the other fields </code>
         /// </summary>
         [TestMethod]
-        public async Task UpdateMutationForCalculatedColumns()
+        public async Task UpdateMutationForComputedColumns()
         {
             string mySqlQuery = @"
                 SELECT JSON_OBJECT(
@@ -208,7 +207,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     ) AS `subq2`
             ";
 
-            await UpdateMutationForCalculatedColumns(mySqlQuery);
+            await UpdateMutationForComputedColumns(mySqlQuery);
         }
 
         /// <summary>

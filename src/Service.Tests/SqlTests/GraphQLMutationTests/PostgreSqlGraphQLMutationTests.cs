@@ -60,12 +60,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts new book and return its id and title
-        /// <code>Check: </code> If book with the expected values of the new book is present in the database and
-        /// if the mutation query has returned the correct information
+        /// <code>Do: </code> Inserts new sale item into sales table that automatically calculates the total price
+        /// based on subtotal and tax.
+        /// <code>Check: Calculated column is persisted successfully with correct calculated result. </code>
         /// </summary>
         [TestMethod]
-        public async Task InsertMutationForCalculatedColumns()
+        public async Task InsertMutationForComputedColumns()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    LIMIT 1) AS subq
             ";
 
-            await InsertMutationForCalculatedColumns(postgresQuery);
+            await InsertMutationForComputedColumns(postgresQuery);
         }
 
         /// <summary>
@@ -182,12 +182,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code>Update book in database and return its updated fields
-        /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
-        /// and if the mutation query has returned the values correctly
+        /// <code>Do: </code>Update Sales in database and return its updated fields
+        /// <code>Check: The calculated column has successfully been updated after updating the other fields </code>
         /// </summary>
         [TestMethod]
-        public async Task UpdateMutationForCalculatedColumns()
+        public async Task UpdateMutationForComputedColumns()
         {
             string postgresQuery = @"
                 SELECT to_jsonb(subq) AS DATA
@@ -207,7 +206,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                    LIMIT 1) AS subq
             ";
 
-            await UpdateMutationForCalculatedColumns(postgresQuery);
+            await UpdateMutationForComputedColumns(postgresQuery);
         }
 
         /// <summary>

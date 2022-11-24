@@ -34,8 +34,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQuery(mySqlQuery);
         }
 
+        /// <summary>
+        /// Gets array of results for querying a table containing computed columns.
+        /// </summary>
+        /// <check>rows from sales table</check>
         [TestMethod]
-        public async Task MultipleResultQueryContainingCalculatedColumns()
+        public async Task MultipleResultQueryContainingComputedColumns()
         {
             string mySqlQuery = @"
                 SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(
@@ -56,7 +60,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                    ORDER BY `table0`.`id` asc
                    LIMIT 100) AS `subq1`";
 
-            await MultipleResultQueryContainingCalculatedColumns(mySqlQuery);
+            await MultipleResultQueryContainingComputedColumns(mySqlQuery);
         }
 
         [TestMethod]

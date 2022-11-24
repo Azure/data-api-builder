@@ -32,11 +32,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Gets array of results for querying more than one item.
+        /// Gets array of results for querying a table containing computed columns.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>rows from sales table</returns>
         [TestMethod]
-        public async Task MultipleResultQueryContainingCalculatedColumns()
+        public async Task MultipleResultQueryContainingComputedColumns()
         {
             string msSqlQuery = @"
                 SELECT
@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 FROM
                     sales
                 ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
-            await MultipleResultQueryContainingCalculatedColumns(msSqlQuery);
+            await MultipleResultQueryContainingComputedColumns(msSqlQuery);
         }
 
         [TestMethod]

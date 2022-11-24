@@ -55,10 +55,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Gets array of results for querying more than one item.
+        /// Gets array of results for querying a table containing computed columns.
         /// </summary>
-        /// <returns></returns>
-        public async Task MultipleResultQueryContainingCalculatedColumns(string dbQuery)
+        /// <returns>rows from sales table</returns>
+        public async Task MultipleResultQueryContainingComputedColumns(string dbQuery)
         {
             string graphQLQueryName = "sales";
             string graphQLQuery = @"{

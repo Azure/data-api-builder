@@ -26,6 +26,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         [TestMethod]
+        public async Task MultipleResultQueryContainingCalculatedColumns()
+        {
+            string postgresQuery = @"SELECT json_agg(to_jsonb(table0)) FROM
+                (SELECT
+                    id,
+                    item_name,
+                    subtotal,
+                    tax,
+                    total
+                FROM sales ORDER BY id asc LIMIT 100) as table0";
+            await MultipleResultQueryContainingCalculatedColumns(postgresQuery);
+        }
+
+        [TestMethod]
         public async Task MultipleResultQueryWithVariables()
         {
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id asc LIMIT 100) as table0";

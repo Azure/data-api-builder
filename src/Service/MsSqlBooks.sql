@@ -26,6 +26,7 @@ DROP TABLE IF EXISTS notebooks;
 DROP TABLE IF EXISTS journals;
 DROP TABLE IF EXISTS aow;
 DROP TABLE IF EXISTS series;
+DROP TABLE IF EXISTS sales;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -171,6 +172,13 @@ CREATE TABLE series (
     [name] nvarchar(1000) NOT NULL
 );
 
+CREATE TABLE sales (
+    id int NOT NULL IDENTITY(5001, 1) PRIMARY KEY,
+    item_name varchar(max) NOT NULL,
+    subtotal decimal(18,2) NOT NULL,
+    tax decimal(18,2) NOT NULL
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -219,6 +227,9 @@ FOREIGN KEY (series_id)
 REFERENCES series(id)
 ON DELETE CASCADE;
 
+ALTER TABLE sales
+ADD total AS (subtotal + tax)
+
 SET IDENTITY_INSERT publishers ON
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02');
 SET IDENTITY_INSERT publishers OFF
@@ -261,6 +272,10 @@ INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, strin
     (4, 255, 32767, 2147483647, 9223372036854775807, 'null', -3.4E38, 1.7E308, 2.929292E-100, 1, '1999-01-08 10:23:00', 0xFFFFFFFF),
     (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT type_table OFF
+
+SET IDENTITY_INSERT sales ON
+INSERT INTO sales(id, item_name, subtotal, tax) VALUES (1, 'Watch', 249.00, 20.59), (2, 'Montior', 120.50, 11.12);
+SET IDENTITY_INSERT sales OFF
 
 INSERT INTO notebooks(id, notebookname, color, ownername) VALUES (1, 'Notebook1', 'red', 'Sean'), (2, 'Notebook2', 'green', 'Ani'), (3, 'Notebook3', 'blue', 'Jarupat'), (4, 'Notebook4', 'yellow', 'Aaron');
 INSERT INTO journals(id, journalname, color, ownername) VALUES (1, 'Journal1', 'red', 'Sean'), (2, 'Journal2', 'green', 'Ani'), (3, 'Journal3', 'blue', 'Jarupat'), (4, 'Journal4', 'yellow', 'Aaron');

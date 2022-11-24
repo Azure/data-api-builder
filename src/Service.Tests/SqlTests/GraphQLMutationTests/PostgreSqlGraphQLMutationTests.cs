@@ -60,6 +60,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new book and return its id and title
+        /// <code>Check: </code> If book with the expected values of the new book is present in the database and
+        /// if the mutation query has returned the correct information
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationForCalculatedColumns()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.item_name AS item_name,
+                          table0.subtotal AS subtotal,
+                          table0.tax AS tax,
+                          table0.total AS total
+                   FROM sales AS table0
+                   WHERE id = 5001
+                     AND item_name = 'headphones'
+                     AND subtotal = 195.00
+                     AND tax = 10.33
+                     AND total = 205.33
+                   ORDER BY id asc
+                   LIMIT 1) AS subq
+            ";
+
+            await InsertMutationForCalculatedColumns(postgresQuery);
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new book using variables to set its title and publisher_id
         /// <code>Check: </code> If book with the expected values of the new book is present in the database and
         /// if the mutation query has returned the correct information
@@ -150,6 +179,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             await UpdateMutation(postgresQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Update book in database and return its updated fields
+        /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
+        /// and if the mutation query has returned the values correctly
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateMutationForCalculatedColumns()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.id AS id,
+                          table0.item_name AS item_name,
+                          table0.subtotal AS subtotal,
+                          table0.tax AS tax,
+                          table0.total AS total
+                   FROM sales AS table0
+                   WHERE id = 2
+                     AND item_name = 'phone'
+                     AND subtotal = 495.00
+                     AND tax = 30.33
+                     AND total = 525.33
+                   ORDER BY id asc
+                   LIMIT 1) AS subq
+            ";
+
+            await UpdateMutationForCalculatedColumns(postgresQuery);
         }
 
         /// <summary>

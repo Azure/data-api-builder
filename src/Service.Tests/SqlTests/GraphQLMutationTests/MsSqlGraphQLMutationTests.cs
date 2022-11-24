@@ -80,6 +80,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new book using variables to set its title and publisher_id
+        /// <code>Check: </code> If book with the expected values of the new book is present in the database and
+        /// if the mutation query has returned the correct information
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationForCalculatedColumns()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 1 [table0].[id] AS [id],
+                    [table0].[item_name] AS [item_name],
+                    [table0].[subtotal] AS [subtotal],
+                    [table0].[tax] AS [tax],
+                    [table0].[total] AS [total]
+                FROM [sales] AS [table0]
+                WHERE [table0].[id] = 5001
+                    AND [table0].[item_name] = 'headphones'
+                    AND [table0].[subtotal] = 195.00
+                    AND [table0].[tax] = 10.33
+                    AND [table0].[total] = 205.33
+                ORDER BY [id] asc
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await InsertMutationForCalculatedColumns(msSqlQuery);
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
         /// <code>Check: </code> If book with the given id is present in the database then
         /// the mutation query will return the review Id with the content of the review added
@@ -144,6 +173,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             await UpdateMutation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Inserts new book using variables to set its title and publisher_id
+        /// <code>Check: </code> If book with the expected values of the new book is present in the database and
+        /// if the mutation query has returned the correct information
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateMutationForCalculatedColumns()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 1 [table0].[id] AS [id],
+                    [table0].[item_name] AS [item_name],
+                    [table0].[subtotal] AS [subtotal],
+                    [table0].[tax] AS [tax],
+                    [table0].[total] AS [total]
+                FROM [sales] AS [table0]
+                WHERE [table0].[id] = 2
+                    AND [table0].[item_name] = 'phone'
+                    AND [table0].[subtotal] = 495.00
+                    AND [table0].[tax] = 30.33
+                    AND [table0].[total] = 525.33
+                ORDER BY [id] asc
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await UpdateMutationForCalculatedColumns(msSqlQuery);
         }
 
         /// <summary>

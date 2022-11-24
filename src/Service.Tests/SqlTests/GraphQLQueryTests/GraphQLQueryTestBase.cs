@@ -58,6 +58,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// Gets array of results for querying more than one item.
         /// </summary>
         /// <returns></returns>
+        public async Task MultipleResultQueryContainingCalculatedColumns(string dbQuery)
+        {
+            string graphQLQueryName = "sales";
+            string graphQLQuery = @"{
+                sales(first: 10) {
+                    items {
+                        id
+                        item_name
+                        subtotal
+                        tax
+                        total
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// Gets array of results for querying more than one item.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public virtual async Task MultipleResultJoinQuery()
         {

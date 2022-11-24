@@ -35,6 +35,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         [TestMethod]
+        public async Task MultipleResultQueryContainingCalculatedColumns()
+        {
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(
+                    'id', `subq1`.`id`,
+                    'item_name', `subq1`.`item_name`,
+                    'subtotal', `subq1`.`subtotal`,
+                    'tax', `subq1`.`tax`,
+                    'total', `subq1`.`total`
+                    )), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`id` AS `id`,
+                          `table0`.`item_name` AS `item_name`,
+                          `table0`.`subtotal` AS `subtotal`,
+                          `table0`.`tax` AS `tax`,
+                          `table0`.`total` AS `total`
+                   FROM `sales` AS `table0`
+                   WHERE 1 = 1
+                   ORDER BY `table0`.`id` asc
+                   LIMIT 100) AS `subq1`";
+
+            await MultipleResultQueryContainingCalculatedColumns(mySqlQuery);
+        }
+
+        [TestMethod]
         public async Task MultipleResultQueryWithVariables()
         {
             string mySqlQuery = @"

@@ -187,6 +187,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Check: The calculated column has successfully been updated after updating the other fields </code>
         /// </summary>
         [TestMethod]
+        // IGNORE FOR NOW, SEE: Issue #1001
+        [Ignore]
         public async Task UpdateMutationForComputedColumns()
         {
             string mySqlQuery = @"

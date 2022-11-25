@@ -1,7 +1,5 @@
-using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
@@ -84,14 +82,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         {
             List<Operation> operations = entityPermissionsMap![dbEntityName].OperationToRolesMap.Keys.ToList();
             operations.Remove(Operation.Read);
-            
+
             // It can have maximum of two operation where one will be read and other can be one of CUD operations
             if (operations.Count == 0)
             {
                 // If it only contained Read Operation
                 return Operation.Read;
             }
-            else 
+            else
             {
                 // It will have only one element
                 return operations.First();

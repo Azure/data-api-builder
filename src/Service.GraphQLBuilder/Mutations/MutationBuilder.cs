@@ -75,7 +75,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <summary>
         /// Tries to fetch the Operation Type for Stored Procedure.
         /// Stored Procedure currently support at most 1 CUD operation at a time
-        /// apart from READ operation, an Exception is thrown otherwise.
+        /// apart from READ operation, This check is done during intialization
+        /// as part of config validation.
         /// </summary>
         private static Operation GetOperationTypeForStoredProcedure(
             string dbEntityName,
@@ -83,36 +84,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         {
             List<Operation> operations = entityPermissionsMap![dbEntityName].OperationToRolesMap.Keys.ToList();
             operations.Remove(Operation.Read);
-
-            // Only one of the mutation operation(CUD) is allowed at once
+            
+            // It can have maximum of two operation where one will be read and other can be one of CUD operations
             if (operations.Count == 0)
             {
                 // If it only contained Read Operation
                 return Operation.Read;
             }
-            else if (operations.Count == 1)
+            else 
             {
-                if (entityPermissionsMap.TryGetValue(dbEntityName, out _))
-                {
-                    return operations.First();
-                }
-                else
-                {
-                    throw new DataApiBuilderException(
-                        message: $"Failed to obtain permissions for entity:{dbEntityName}",
-                        statusCode: HttpStatusCode.PreconditionFailed,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
-                    );
-                }
-
-            }
-            else
-            {
-                throw new DataApiBuilderException(
-                        message: $"StoredProcedure can't have more than one CRUD operation.",
-                        statusCode: HttpStatusCode.PreconditionFailed,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
-                    );
+                // It will have only one element
+                return operations.First();
             }
         }
 

@@ -763,7 +763,6 @@ namespace Azure.DataApiBuilder.Service.Services
                 Type resultFieldType = SqlToCLRType(element.GetProperty("system_type_name").ToString());
 
                 // Store the dictionary containing result set field with it's type as Columns
-                // storedProcedureDefinition.ResultSet.TryAdd(resultFieldName, resultFieldType);
                 storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType));
             }
         }

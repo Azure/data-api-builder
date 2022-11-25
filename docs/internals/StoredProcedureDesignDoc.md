@@ -35,7 +35,7 @@ Thus a stored procedure entity might look like:
 parameters can either be fixed as above or passed at runtime through
 - [REST] query parameters for GET request
 - [REST] request body for POST, PUT, PATCH, DELETE
-- [GRAPHQL] the calling stored-procedure will look something like this passed in the body
+- [GRAPHQL] query field arguments in the request body of a GraphQL request
 ```
 {
     GetBooks(param1:value, param2:value) {
@@ -91,7 +91,7 @@ Justification **for** allowing permission configuration for all CRUD operations:
 - Davide: the "simplification" would complicate authorization with no real benefit. True in that the authorization logic would need to change conditioned on whether the entity source was a stored procedure.
 - Aniruddh: we should leave the responsibility for the developer to properly configure hawaii; it's not our fault if they configure against the API guidelines
 
-Users can provide only one CRUD operation for stored-procedure. However, in cases where the stored-procedure is also returning some values, a READ permission would also be required
+Users can provide only one CRUD operation for stored-procedure. However, Cases where the stored-procedure is also returning some values, a READ permission would also be required
 or else the stored procedure will execute but no result would be displayed.
 One of create/update/delete(CUD) operation is required to qualify as mutation. Along with one of the CUD operation, READ permission could also be given.
 But providing more than one (CUD) operation would throw an error. As we don’t know what exactly the stored-procedure will be doing, From DABs perspective, we need just one of the CUD operation to label it as Mutation.
@@ -164,7 +164,7 @@ Implementation was segmented into 5 main sections:
 >       - there were missing parameters in the request and no default was found in config
 > - Condition to avoid the `ColumnsPermissionsRequirement` AuthZ check, since specification hasn't defined what this would look like yet 
 
-### 4. GRAPHQL Schema Generation
+### 4. GraphQL Schema Generation
 
 > ### `GraphQLSchemaCreator.cs`
 > - Updated `GenerateSqlGraphQLObjects` method to allow it to process stored-procedure.
@@ -172,8 +172,7 @@ Implementation was segmented into 5 main sections:
 > - the return type of GraphQL Query/ Mutation will be of List Type with the same name as StoredProcedure name.
 
 > ### `SchemaConvertor.cs`
-- Here we create the objectTypeDefinitionNode, if the stored procedure does not return anything, we add "results" as field
-for return type object
+- Here we create the objectTypeDefinitionNode, if the stored procedure does not return anything, we add "results" as field for return type object
 
 ```
 {StoredProcedureName(param1:value1, param2:value2): [StoredProcedureName!]}
@@ -238,7 +237,6 @@ for return type object
 > - `ExecuteAsync(StoredProcedureRequestContext)` initializes the `SqlExecuteStructure` with the context's resolved parameters, and calls a new `ExecuteAsync(SqlExecuteStructure)` method. Result returned simply as an `OkResponse` instead of using the `FormatFindResult` method. The pagination methods of `FormatFindResult` don't play well with stored procedures at the moment, since it relies on fields from a `TableDefinition`, but pagination can and should be added to a future version.
 >     - The response from this method will always be a `200 OK` if there were no database errors. If there was no result set returned, we will return an empty json array. **NOTE: Only the first result set returned by the procedure is considered.**
 > - `ExecuteAsync(SqlExecuteStructure)` is needed because **we have no guarantee the result set is JSON**. As such, we can't use the same strategy that `ExecuteAsync(SqlQueryStructure)` does in using `GetJsonStringFromDbReader`. Instead, we do basically identical fetching as the mutation engine does in using `ExtractRowFromDbDataReader`. As such, one could argue that stored procedures could entirely be the responsibility of the mutation engine.
-> - `ExecuteListAsync` is called for stored procedure. here we create an object of `SqlExecuteStructure` and calls `ExecuteAsync(SqlExecuteStructure)`. We format the result as list of JsonDocument. If the user has no read permission, it will return an empty list.
 
 <br/>
 
@@ -251,12 +249,16 @@ for return type object
 >    - Insert request returns `201 Created` with **first result set** as json response. If none/empty result set, an empty array is returned. Discussion: prefer to instead return no json at all?
 >    - Update/upsert behaves same as insert but with `200 OK` response.
 
-### 7. GRAPHQL Query Execution
+### 7. GRAPHQL Query Execution + Result Formatting
 
 > ### `ResolverMiddleware.cs`, `SqlQueryEngine.cs`, and `SqlMutationEngine.cs`
 > - Call `ExecuteAsync` with `IMiddlewareContext` and `parameters`.
 > - We would have to convert `IMiddlewareContext` to `StoredProcedureRequestContext`, similar to how the `dispatchQuery` method in `RestService.cs` is doing. It converts `RestRequestContext` to `StoredProcedureRequestContext`.
 > - Then we can simply call `ExecuteAsync(StoredProcedureRequestContext context)` and return the parsed json request as String.
+
+> ### `SqlQueryEngine.cs` and `SqlMutationEngine.cs`
+> - `ExecuteListAsync` is called where we create an object of `SqlExecuteStructure` and calls `ExecuteAsync(SqlExecuteStructure)`.
+> - We format the result as list of JsonDocument. If the user has no read permission, it will return an empty list.
 
 > ### Example 
 > 1. With param as id

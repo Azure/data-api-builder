@@ -49,10 +49,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             }
 
             string existsPredicate = $@"
-EXISTS( SELECT 1
-         FROM {defaultSchema}[series] AS [table1]
-WHERE [table1].[name] = 'Foundation'
-AND [table0].[series_id] = [table1].[id] )";
+                EXISTS( SELECT 1
+                        FROM {defaultSchema}[series] AS [table1]
+                        WHERE [table1].[name] = 'Foundation'
+                        AND [table0].[series_id] = [table1].[id] )";
             string dbQuery = MakeQueryOn(
                 table: "comics",
                 queriedColumns: new List<string> { "id", "title" },
@@ -93,10 +93,10 @@ AND [table0].[series_id] = [table1].[id] )";
             }
 
             string existsPredicate = $@"
-EXISTS( SELECT 1
-         FROM {defaultSchema}[comics] AS [table1]
-WHERE [table1].[title] = 'Cinderella'
-AND [table1].[series_id] = [table0].[id] )";
+                EXISTS( SELECT 1
+                        FROM {defaultSchema}[comics] AS [table1]
+                        WHERE [table1].[title] = 'Cinderella'
+                        AND [table1].[series_id] = [table0].[id] )";
             string dbQuery = MakeQueryOn(
                 table: "series",
                 queriedColumns: new List<string> { "id", "name" },
@@ -136,12 +136,12 @@ AND [table1].[series_id] = [table0].[id] )";
             }
 
             string existsPredicate = $@"
-EXISTS( SELECT 1
-         FROM {defaultSchema}[authors] AS [table1]
-INNER JOIN [dbo].[book_author_link] AS [table3]
-ON [table3].[book_id] = [table0].[id]
-WHERE [table1].[name] = 'Aaron'
-AND [table3].[author_id] = [table1].[id])";
+                EXISTS( SELECT 1
+                        FROM {defaultSchema}[authors] AS [table1]
+                        INNER JOIN [dbo].[book_author_link] AS [table3]
+                        ON [table3].[book_id] = [table0].[id]
+                        WHERE [table1].[name] = 'Aaron'
+                        AND [table3].[author_id] = [table1].[id])";
             string dbQuery = MakeQueryOn(
                 table: "books",
                 queriedColumns: new List<string> { "title" },
@@ -181,11 +181,11 @@ AND [table3].[author_id] = [table1].[id])";
             }
 
             string existsPredicate = $@"
-EXISTS( SELECT 1
-         FROM {defaultSchema}[stocks_price] AS [table1]
-WHERE [table1].[price] IS NULL
-AND [table1].[categoryid] = [table0].[categoryid]
-AND [table1].[pieceid] = [table0].[pieceid])";
+                EXISTS( SELECT 1
+                        FROM {defaultSchema}[stocks_price] AS [table1]
+                        WHERE [table1].[price] IS NULL
+                        AND [table1].[categoryid] = [table0].[categoryid]
+                        AND [table1].[pieceid] = [table0].[pieceid])";
             string dbQuery = MakeQueryOn(
                 table: "stocks",
                 queriedColumns: new List<string> { "categoryName" },
@@ -231,16 +231,15 @@ AND [table1].[pieceid] = [table0].[pieceid])";
             }
 
             string existsPredicate = $@"
-EXISTS (SELECT 1 FROM {defaultSchema}[authors] AS [table1]
-INNER JOIN {defaultSchema}[book_author_link] AS [table6]
-ON [table6].[book_id] = [table0].[id]
-WHERE (EXISTS
-    (SELECT 1 FROM {defaultSchema}[books] AS [table2]
-    INNER JOIN {defaultSchema}[book_author_link] AS [table4]
-    ON [table4].[author_id] = [table1].[id]
-    WHERE [table2].[title] LIKE 'Awesome'
-    AND [table4].[book_id] = [table2].[id])
-AND [table1].[name] = 'Aaron') AND [table6].[author_id] = [table1].[id])";
+                EXISTS (SELECT 1 FROM {defaultSchema}[authors] AS [table1]
+                        INNER JOIN {defaultSchema}[book_author_link] AS [table6]
+                        ON [table6].[book_id] = [table0].[id]
+                        WHERE (EXISTS (SELECT 1 FROM {defaultSchema}[books] AS [table2]
+                                       INNER JOIN {defaultSchema}[book_author_link] AS [table4]
+                                       ON [table4].[author_id] = [table1].[id]
+                                       WHERE [table2].[title] LIKE 'Awesome'
+                                       AND [table4].[book_id] = [table2].[id])
+                                       AND [table1].[name] = 'Aaron') AND [table6].[author_id] = [table1].[id])";
             string dbQuery = MakeQueryOn(
                 table: "books",
                 queriedColumns: new List<string> { "title" },
@@ -287,13 +286,14 @@ AND [table1].[name] = 'Aaron') AND [table6].[author_id] = [table1].[id])";
             }
 
             string existsPredicate = $@"
-EXISTS (SELECT 1 FROM {defaultSchema}[authors] AS [table1]
-    INNER JOIN {defaultSchema}[book_author_link] AS [table3]
-    ON [table3].[book_id] = [table0].[id]
-    WHERE [table1].[name] = 'Aniruddh' AND [table3].[author_id] = [table1].[id])
-AND EXISTS (SELECT 1 FROM {defaultSchema}[publishers] AS [table4] 
-WHERE [table4].[name] = 'Small Town Publisher'
-AND [table0].[publisher_id] = [table4].[id])";
+                EXISTS (SELECT 1 FROM {defaultSchema}[authors] AS [table1]
+                        INNER JOIN {defaultSchema}[book_author_link] AS [table3]
+                        ON [table3].[book_id] = [table0].[id]
+                        WHERE [table1].[name] = 'Aniruddh'
+                        AND [table3].[author_id] = [table1].[id])
+                        AND EXISTS (SELECT 1 FROM {defaultSchema}[publishers] AS [table4]
+                                    WHERE [table4].[name] = 'Small Town Publisher'
+                                    AND [table0].[publisher_id] = [table4].[id])";
             string dbQuery = MakeQueryOn(
                 table: "books",
                 queriedColumns: new List<string> { "title" },
@@ -309,7 +309,7 @@ AND [table0].[publisher_id] = [table4].[id])";
         }
 
         /// <summary>
-        /// 
+        /// Tests nested filter alongwith an OR clause.
         /// </summary>
         [TestMethod]
         public async Task TestNestedFilterWithOr()
@@ -339,13 +339,14 @@ AND [table0].[publisher_id] = [table4].[id])";
             }
 
             string existsPredicate = $@"
-EXISTS (SELECT 1 FROM {defaultSchema}[publishers] AS [table1]
-WHERE [table1].[name] = 'TBD Publishing One'
-AND [table0].[publisher_id] = [table1].[id])
-OR EXISTS (SELECT 1 FROM {defaultSchema}[authors] AS [table3]
-INNER JOIN {defaultSchema}[book_author_link] AS [table5]
-ON [table5].[book_id] = [table0].[id]
-WHERE [table3].[name] = 'Aniruddh' AND [table5].[author_id] = [table3].[id])";
+                EXISTS( SELECT 1 FROM {defaultSchema}[publishers] AS [table1]
+                    WHERE [table1].[name] = 'TBD Publishing One'
+                    AND [table0].[publisher_id] = [table1].[id])
+                OR EXISTS( SELECT 1 FROM {defaultSchema}[authors] AS [table3]
+                           INNER JOIN {defaultSchema}[book_author_link] AS [table5]
+                           ON [table5].[book_id] = [table0].[id]
+                           WHERE [table3].[name] = 'Aniruddh'
+                           AND [table5].[author_id] = [table3].[id])";
             string dbQuery = MakeQueryOn(
                 table: "books",
                 queriedColumns: new List<string> { "title" },

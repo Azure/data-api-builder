@@ -261,18 +261,18 @@ Implementation was segmented into 5 main sections:
 > - We format the result as list of JsonDocument. If the user has no read permission, it will return an empty list.
 
 > ### Example 
-> 1. With param as id
+> 1. Query With param as id
 > ![image](https://user-images.githubusercontent.com/102276754/201590249-57c03f98-2a88-4acd-a951-3e8779df4f4d.png)
-> 2. No param
+> 2. Query No param
 > ![image](https://user-images.githubusercontent.com/102276754/201590101-59931ff4-fba8-4901-8a18-9f8a4ffd2cfa.png)
-> 3. Mutation operation
-> ![image](https://user-images.githubusercontent.com/102276754/198975915-f8fefd85-6f8e-4b1b-8fc3-be156084e6ae.png)
-> 4. InsertMutation Stored Procedure
-> ![image](https://user-images.githubusercontent.com/102276754/201590249-57c03f98-2a88-4acd-a951-3e8779df4f4d.png)
+> 3. Insert Mutation operation
+> ![image](https://user-images.githubusercontent.com/102276754/202139861-4e65ba4a-a5db-4c39-9de5-aa10d971e489.png)
+> 4. Count rows Stored Procedure
+> ![image](https://user-images.githubusercontent.com/102276754/203942475-ac5e1e40-df5d-4708-99b4-9a8c34a4c042.png)
 > 2. Insert And Select with Read permission
-> ![image](https://user-images.githubusercontent.com/102276754/201590101-59931ff4-fba8-4901-8a18-9f8a4ffd2cfa.png)
+> ![image](https://user-images.githubusercontent.com/102276754/202140414-6aa1312d-8a83-47b3-a123-ac6da0dcf129.png)
 > 3. Insert And Select without Read permission
-> ![image](https://user-images.githubusercontent.com/102276754/198975915-f8fefd85-6f8e-4b1b-8fc3-be156084e6ae.png)
+> ![image](https://user-images.githubusercontent.com/102276754/203942396-8c54cd8e-b217-4eb2-9359-6ce923a428e5.png)
 
 
 ## TODO

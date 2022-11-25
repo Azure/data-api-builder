@@ -19,7 +19,7 @@ variables:
   # The counter is reset when the minor version is updated.
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
   isReleaseBuild: $(isNugetRelease)
-  additionalProperties.version: 'urn:dab:config:schema:draft-$(major).$(minor).$(patch)'
+  additionalProperties.version: 'https://dataapibuilder.azureedge.net/schemas/v$(major).$(minor).$(patch)-alpha/dab.draft.schema.json'
 
 steps:
 - task: NuGetAuthenticate@1
@@ -47,6 +47,13 @@ steps:
     folderPath: '$(System.DefaultWorkingDirectory)'
     fileType: 'json'
     targetFiles: 'schemas/dab.draft.schema.json'
+ 
+- task: CopyFiles@2
+  displayName: 'Copy dab.draft.schema.json'
+  inputs:
+    sourceFolder: '$(Build.SourcesDirectory)/schemas'
+    contents: 'dab.draft.schema.json'
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
 
 - task: UseDotNet@2
   displayName: Setup .NET SDK v6.0.x
@@ -191,6 +198,7 @@ steps:
       $(Build.ArtifactStagingDirectory)/**/*.nupkg
       $(Build.ArtifactStagingDirectory)/**/*.zip
       $(Build.ArtifactStagingDirectory)/**/dab-manifest.json
+      $(Build.ArtifactStagingDirectory)/**/dab.draft.schema.json
     isDraft: true
     isPreRelease: true
     addChangeLog: false

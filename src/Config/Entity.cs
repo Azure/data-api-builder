@@ -186,7 +186,6 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="Parameters"> If Type is SourceType.StoredProcedure,
     /// Parameters to be passed as defaults to the procedure call </param>
     /// <param name="KeyFields"> The field(s) to be used as primary keys.
-    /// Support tracked in #547 </param>
     public record DatabaseObjectSource(
         [property: JsonConverter(typeof(SourceTypeEnumConverter))]
         SourceType Type,

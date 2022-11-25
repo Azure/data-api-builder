@@ -36,6 +36,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<SqlMutationEngine> _logger;
+        private readonly GQLFilterParser _gQLFilterParser;
         public const string IS_FIRST_RESULT_SET = "IsFirstResultSet";
 
         /// <summary>
@@ -47,6 +48,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IQueryBuilder queryBuilder,
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
             IHttpContextAccessor httpContextAccessor,
             ILogger<SqlMutationEngine> logger)
         {
@@ -57,6 +59,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             _authorizationResolver = authorizationResolver;
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
+            _gQLFilterParser = gQLFilterParser;
         }
 
         /// <summary>
@@ -150,7 +153,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context)
         {
-            SqlExecuteStructure executeQueryStructure = new(context.EntityName, _sqlMetadataProvider, context.ResolvedParameters!);
+            SqlExecuteStructure executeQueryStructure = new(
+                context.EntityName,
+                _sqlMetadataProvider,
+                _authorizationResolver,
+                _gQLFilterParser,
+                context.ResolvedParameters);
             string queryText = _queryBuilder.Build(executeQueryStructure);
             _logger.LogInformation(queryText);
 
@@ -267,7 +275,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&
                         PostgresQueryBuilder.IsInsert(resultRow)))
                     {
-                        string primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRow);
+                        string primaryKeyRoute = ConstructPrimaryKeyRoute(context, resultRow);
                         // location will be updated in rest controller where httpcontext is available
                         return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value);
                     }
@@ -294,7 +302,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
 
                     Dictionary<string, object?> resultRow = resultRowAndProperties.Item1;
-                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context.EntityName, resultRow);
+                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context, resultRow);
                     // location will be updated in rest controller where httpcontext is available
                     return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value);
                 }
@@ -364,25 +372,39 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 case Operation.Insert:
                 case Operation.Create:
-                    SqlInsertStructure insertQueryStruct = context is null ?
-                        new(entityName, _sqlMetadataProvider, parameters) :
-                        new(context, entityName, _sqlMetadataProvider, parameters);
+                    SqlInsertStructure insertQueryStruct = context is null
+                        ? new(
+                            entityName,
+                            _sqlMetadataProvider,
+                            _authorizationResolver,
+                            _gQLFilterParser,
+                            parameters)
+                        : new(
+                            context,
+                            entityName,
+                            _sqlMetadataProvider,
+                            _authorizationResolver,
+                            _gQLFilterParser, parameters);
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case Operation.Update:
-                    SqlUpdateStructure updateStructure =
-                        new(entityName,
+                    SqlUpdateStructure updateStructure = new(
+                        entityName,
                         _sqlMetadataProvider,
+                        _authorizationResolver,
+                        _gQLFilterParser,
                         parameters,
                         isIncrementalUpdate: false);
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
                     break;
                 case Operation.UpdateIncremental:
-                    SqlUpdateStructure updateIncrementalStructure =
-                        new(entityName,
+                    SqlUpdateStructure updateIncrementalStructure = new(
+                        entityName,
                         _sqlMetadataProvider,
+                        _authorizationResolver,
+                        _gQLFilterParser,
                         parameters,
                         isIncrementalUpdate: true);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
@@ -394,11 +416,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         throw new ArgumentNullException("Context should not be null for a GraphQL operation.");
                     }
 
-                    SqlUpdateStructure updateGraphQLStructure =
-                        new(
+                    SqlUpdateStructure updateGraphQLStructure = new(
                         context,
                         entityName,
                         _sqlMetadataProvider,
+                        _authorizationResolver,
+                        _gQLFilterParser,
                         parameters);
                     AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
                         Operation.Update,
@@ -471,9 +494,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             string queryString;
             Dictionary<string, object?> queryParameters;
-            SqlDeleteStructure deleteStructure =
-                new(entityName,
+            SqlDeleteStructure deleteStructure = new(
+                entityName,
                 _sqlMetadataProvider,
+                _authorizationResolver,
+                _gQLFilterParser,
                 parameters);
             AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
                 Operation.Delete,
@@ -516,21 +541,25 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (operationType is Operation.Upsert)
             {
-                SqlUpsertQueryStructure upsertStructure =
-                        new(entityName,
-                        _sqlMetadataProvider,
-                        parameters,
-                        incrementalUpdate: false);
+                SqlUpsertQueryStructure upsertStructure = new(
+                    entityName,
+                    _sqlMetadataProvider,
+                    _authorizationResolver,
+                    _gQLFilterParser,
+                    parameters,
+                    incrementalUpdate: false);
                 queryString = _queryBuilder.Build(upsertStructure);
                 queryParameters = upsertStructure.Parameters;
             }
             else
             {
-                SqlUpsertQueryStructure upsertIncrementalStructure =
-                        new(entityName,
-                        _sqlMetadataProvider,
-                        parameters,
-                        incrementalUpdate: true);
+                SqlUpsertQueryStructure upsertIncrementalStructure = new(
+                    entityName,
+                    _sqlMetadataProvider,
+                    _authorizationResolver,
+                    _gQLFilterParser,
+                    parameters,
+                    incrementalUpdate: true);
                 queryString = _queryBuilder.Build(upsertIncrementalStructure);
                 queryParameters = upsertIncrementalStructure.Parameters;
             }
@@ -556,8 +585,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <remarks> This function expects the Json element entity to contain all the properties
         /// that make up the primary keys.</remarks>
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
-        public string ConstructPrimaryKeyRoute(string entityName, Dictionary<string, object?> entity)
+        public string ConstructPrimaryKeyRoute(RestRequestContext context, Dictionary<string, object?> entity)
         {
+            if (context.DatabaseObject.SourceType is SourceType.View)
+            {
+                return string.Empty;
+            }
+
+            string entityName = context.EntityName;
             SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
             StringBuilder newPrimaryKeyRoute = new();
 

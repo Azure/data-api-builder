@@ -120,6 +120,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             );
 
             await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=book_id",
+                entityNameOrPath: _book_view_with_key_and_mapping,
+                sqlQuery: GetQuery("FindViewWithKeyAndMapping")
+            );
+
+            await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/2/pieceid/1",
                 queryString: string.Empty,
                 entityNameOrPath: _simple_subset_stocks,
@@ -127,10 +134,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             );
 
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/2/publisher_id/1234",
+                primaryKeyRoute: "id/2/pub_id/1234",
                 queryString: string.Empty,
                 entityNameOrPath: _composite_subset_bookPub,
-                sqlQuery: GetQuery("FindViewComposite")
+                sqlQuery: GetQuery("FindBooksPubViewComposite")
             );
         }
 
@@ -522,6 +529,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery(nameof(FindTestWithPaginationVerifMultiplePrimaryKeysInAfter)),
                 expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
                 paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using sorting
+        /// with integer type and null values.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithIntTypeNullValuesOrderByAsc()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=id,int_types&$orderby=int_types",
+                entityNameOrPath: _integrationTypeEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithIntTypeNullValuesOrderByAsc))
             );
         }
 
@@ -1108,14 +1130,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
 
-            //"?$filter=not (categoryid gt 1)",
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$filter=not (title gt 1)",
+                queryString: "?$filter=not (titl gt 1)",
                 entityNameOrPath: _composite_subset_bookPub,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
-                expectedErrorMessage: $"Could not find a property named 'title' on type 'default_namespace.{_composite_subset_bookPub}.{GetDefaultSchemaForEdmModel()}books_publishers_view_composite'.",
+                expectedErrorMessage: $"Could not find a property named 'titl' on type 'default_namespace.{_composite_subset_bookPub}.{GetDefaultSchemaForEdmModel()}books_publishers_view_composite'.",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
         }

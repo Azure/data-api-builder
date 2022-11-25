@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Net;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
@@ -15,8 +16,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public SqlDeleteStructure(
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
+            IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams)
-        : base(sqlMetadataProvider, entityName: entityName)
+        : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
         {
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
 
@@ -33,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
 
                 // primary keys used as predicates
-                SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+                MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 if (primaryKeys.Contains(backingColumn!))
                 {
                     Predicates.Add(new Predicate(

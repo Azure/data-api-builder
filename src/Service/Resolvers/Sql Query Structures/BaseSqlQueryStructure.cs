@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
@@ -22,24 +23,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public abstract class BaseSqlQueryStructure : BaseQueryStructure
     {
-        protected ISqlMetadataProvider SqlMetadataProvider { get; }
-
-        /// <summary>
-        /// The Entity associated with this query.
-        /// </summary>
-        public string EntityName { get; protected set; }
-
-        /// <summary>
-        /// The DatabaseObject associated with the entity, represents the
-        /// databse object to be queried.
-        /// </summary>
-        public DatabaseObject DatabaseObject { get; }
-
-        /// <summary>
-        /// The alias of the main table to be queried.
-        /// </summary>
-        public string TableAlias { get; protected set; }
-
         /// <summary>
         /// FilterPredicates is a string that represents the filter portion of our query
         /// in the WHERE Clause. This is generated specifically from the $filter portion
@@ -54,28 +37,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string? DbPolicyPredicates { get; set; }
 
         public BaseSqlQueryStructure(
-            ISqlMetadataProvider sqlMetadataProvider,
-            string entityName,
+            ISqlMetadataProvider metadataProvider,
+            IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
+            List<Predicate>? predicates = null,
+            string entityName = "",
             IncrementingInteger? counter = null)
-            : base(counter)
+            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
         {
-            SqlMetadataProvider = sqlMetadataProvider;
-            if (!string.IsNullOrEmpty(entityName))
-            {
-                EntityName = entityName;
-                DatabaseObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
-            }
-            else
-            {
-                EntityName = string.Empty;
-                DatabaseObject = new DatabaseTable();
-            }
 
-            // Default the alias to the empty string since this base construtor
-            // is called for requests other than Find operations. We only use
-            // TableAlias for Find, so we leave empty here and then populate
-            // in the Find specific contructor.
-            TableAlias = string.Empty;
         }
 
         /// <summary>
@@ -85,7 +55,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="leftoverSchemaColumns"></param>
         /// <param name="updateOperations">List of Predicates representing UpdateOperations.</param>
-        /// <param name="sourceDefinition">The definition for the table.</param>
+        /// <param name="sourceDefinition">The definition for the entity (table/view).</param>
         public void AddNullifiedUnspecifiedFields(
             List<string> leftoverSchemaColumns,
             List<Predicate> updateOperations,
@@ -134,19 +104,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Returns the SourceDefinitionDefinition for the entity(table/view) of this query.
-        /// </summary>
-        protected SourceDefinition GetUnderlyingSourceDefinition()
-        {
-            return SqlMetadataProvider.GetSourceDefinition(EntityName);
-        }
-
-        /// <summary>
         /// Return the StoredProcedureDefinition associated with this database object
         /// </summary>
         protected StoredProcedureDefinition GetUnderlyingStoredProcedureDefinition()
         {
-            return SqlMetadataProvider.GetStoredProcedureDefinition(EntityName);
+            return MetadataProvider.GetStoredProcedureDefinition(EntityName);
         }
 
         /// <summary>
@@ -176,8 +138,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             List<LabelledColumn> outputColumns = new();
             foreach (string columnName in GetUnderlyingSourceDefinition().Columns.Keys)
             {
-                // if column is not exposed we skip
-                if (!SqlMetadataProvider.TryGetExposedColumnName(
+                if (!MetadataProvider.TryGetExposedColumnName(
                     entityName: EntityName,
                     backingFieldName: columnName,
                     out string? exposedName))
@@ -190,7 +151,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     tableName: DatabaseObject.Name,
                     columnName: columnName,
                     label: exposedName!,
-                    tableAlias: TableAlias));
+                    tableAlias: SourceAlias));
             }
 
             return outputColumns;
@@ -353,7 +314,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
         public void ProcessOdataClause(FilterClause odataClause)
         {
-            ODataASTVisitor visitor = new(this, this.SqlMetadataProvider);
+            ODataASTVisitor visitor = new(this, this.MetadataProvider);
             try
             {
                 DbPolicyPredicates = GetFilterPredicatesFromOdataClause(odataClause, visitor);

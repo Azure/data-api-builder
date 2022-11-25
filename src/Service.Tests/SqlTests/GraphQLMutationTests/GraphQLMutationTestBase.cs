@@ -83,6 +83,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new stock price with default current timestamp as the value of 
+        /// 'instant' column and returns the inserted row.
+        /// <code>Check: </code> If stock price with the given (category, piece id) is successfully inserted
+        /// in the database by the mutation with a default value for 'instant'.
+        /// </summary>
+        public async Task InsertMutationForVariableNotNullDefault(string dbQuery)
+        {
+            string graphQLMutationName = "createstocks_price";
+            string graphQLMutation = @"
+                mutation {
+                  createstocks_price(item: { categoryid: 100 pieceid: 99 price: 50.0 is_wholesale_price: true } ) {
+                    pieceid
+                    categoryid
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// <code>Do: </code>Update book in database and return its updated fields
         /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
         /// and if the mutation query has returned the values correctly
@@ -290,9 +314,130 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
+        /// <summary>
+        /// Insert into a simple view (contains columns from one table)
+        /// </summary>
+        public async Task InsertIntoSimpleView(string dbQuery)
+        {
+            string graphQLMutationName = "createbooks_view_all";
+            string graphQLMutation = @"
+                mutation {
+                    createbooks_view_all(item: { title: ""Book View"", publisher_id: 1234 }) {
+                        id
+                        title
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Update a simple view (contains columns from one table)
+        /// </summary>
+        public async Task UpdateSimpleView(string dbQuery)
+        {
+            string graphQLMutationName = "updatebooks_view_all";
+            string graphQLMutation = @"
+                mutation {
+                    updatebooks_view_all(id: 1 item: { title: ""New title from View""}) {
+                        id
+                        title
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Delete from simple view (contains columns from one table)
+        /// </summary>
+        public async Task DeleteFromSimpleView(string dbQueryForResult, string dbQueryToVerifyDeletion)
+        {
+            string graphQLMutationName = "deletebooks_view_all";
+            string graphQLMutation = @"
+                mutation {
+                    deletebooks_view_all(id: 1) {
+                        id
+                        title
+                    }
+                }
+            ";
+
+            // query the table before deletion is performed to see if what the mutation
+            // returns is correct
+            string expected = await GetDatabaseResultAsync(dbQueryForResult);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+
+            // check if entry is actually deleted
+            string dbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
+
+            using JsonDocument result = JsonDocument.Parse(dbResponse);
+            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
+        }
+
+        /// <summary>
+        /// Insert into an "insertable" complex view (contains columns from one table)
+        /// books_publishers_view_composite_insertable has a trigger to handle inserts
+        /// </summary>
+        public async Task InsertIntoInsertableComplexView(string dbQuery)
+        {
+            string graphQLMutationName = "createbooks_publishers_view_composite_insertable";
+            string graphQLMutation = @"
+                mutation {
+                    createbooks_publishers_view_composite_insertable(item: { title: ""Book Complex View"", publisher_id: 1234 }) {
+                        id
+                        title
+                        publisher_id
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
         #endregion
 
         #region Negative Tests
+
+        /// <summary>
+        /// <code>Do: </code> Attempts to insert a new row with a null value for a variable default column.
+        /// <code>Check: </code> Even though the operation is expected to fail,
+        /// the failure happens in the database, not with a GraphQL schema error.
+        /// This verifies that since the column has a default value on the database,
+        /// the GraphQL schema input field type is nullable even though the underlying column type is not.
+        /// </summary>
+        [TestMethod]
+        public async Task TestTryInsertMutationForVariableNotNullDefault()
+        {
+            string graphQLMutationName = "createSupportedType";
+            string graphQLMutation = @"
+                mutation {
+                    createstocks_price(item: { categoryid: 100 pieceid: 99 instant: null } ) {
+                    categoryid
+                    pieceid
+                    instant
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                actual.ToString(),
+                statusCode: $"{DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed}");
+        }
 
         /// <summary>
         /// <code>Do: </code>insert a new Book with an invalid foreign key
@@ -414,6 +559,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 statusCode: $"{DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed}"
             );
         }
+
+        /// <summary>
+        /// Insert into a complex view (contains columns from one table)
+        /// This will fail unless there are some triggers set up to instruct the db
+        /// how to handle the insertion in complex views.
+        /// books_publishers_view_composite doesn't have such triggers so the mutation
+        /// will fail
+        /// </summary>
+        public async Task InsertIntoCompositeView(string dbQuery)
+        {
+            string graphQLMutationName = "createbooks_publishers_view_composite";
+            string graphQLMutation = @"
+                mutation {
+                    createbooks_publishers_view_composite(item: { name: ""Big Company"", publisher_id: 1234 }) {
+                        id
+                        name
+                    }
+                }
+            ";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed}");
+        }
+
         #endregion
     }
 }

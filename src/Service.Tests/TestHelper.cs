@@ -169,5 +169,52 @@ namespace Azure.DataApiBuilder.Service.Tests
             Entity entity = JsonSerializer.Deserialize<Entity>(entityJsonString, options);
             config.Entities.Add(entityKey, entity);
         }
+
+        /// <summary>
+        /// Schema property of the config json. This is used for constructing the required config json strings
+        /// for unit tests
+        /// </summary>
+        public const string SCHEMA_PROPERTY = @"
+          ""$schema"": """ + Azure.DataApiBuilder.Config.RuntimeConfig.SCHEMA + @"""";
+
+        /// <summary>
+        /// Data source property of the config json. This is used for constructing the required config json strings
+        /// for unit tests 
+        /// </summary>
+        public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
+            ""data-source"": {
+              ""database-type"": ""mssql"",
+              ""connection-string"": ""testconnectionstring""
+            }
+        ";
+
+        /// <summary>
+        /// A minimal valid config json without any entities. This config string is used in unit tests.
+        /// </summary>
+        public const string INITIAL_CONFIG =
+          "{" +
+            SAMPLE_SCHEMA_DATA_SOURCE + "," +
+            @"
+            ""runtime"": {
+              ""rest"": {
+                ""path"": ""/api""
+              },
+              ""graphql"": {
+                ""path"": ""/graphql"",
+                ""allow-introspection"": true
+              },
+              ""host"": {
+                ""mode"": ""development"",
+                ""cors"": {
+                  ""origins"": [],
+                  ""allow-credentials"": false
+                },
+                ""authentication"": {
+                  ""provider"": ""StaticWebApps""
+                }
+              }
+            },
+            ""entities"": {}" +
+          "}";
     }
 }

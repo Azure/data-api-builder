@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WHERE `id` = 5001
                         AND `title` = 'My New Book'
                         AND `publisher_id` = 1234
-                    ORDER BY `id` LIMIT 1
+                    ORDER BY `id` asc LIMIT 1
                     ) AS `subq`
             ";
 
@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WHERE `id` = 5001
                         AND `title` = 'My New Book'
                         AND `publisher_id` = 1234
-                    ORDER BY `id` LIMIT 1
+                    ORDER BY `id` asc LIMIT 1
                     ) AS `subq`
             ";
 
@@ -101,11 +101,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WHERE `id` = 5001
                         AND `content` = 'Its a classic'
                         AND `book_id` = 1
-                    ORDER BY `id` LIMIT 1
+                    ORDER BY `id` asc LIMIT 1
                     ) AS `subq`
             ";
 
             await InsertMutationForConstantdefaultValue(mySqlQuery);
+        }
+
+        /// <inheritdoc/>
+        [TestMethod]
+        public async Task InsertMutationForVariableNotNullDefault()
+        {
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('categoryid', `subq`.`categoryid`, 'pieceid', `subq`.`pieceid`) AS `data`
+                FROM (
+                    SELECT `table0`.`categoryid` AS `categoryid`,
+                           `table0`.`pieceid` AS `pieceid`
+                    FROM `stocks_price` AS `table0`
+                    WHERE `categoryid` = 100
+                        AND `pieceid` = 99
+                    ORDER BY `categoryid` LIMIT 1
+                    ) AS `subq`
+            ";
+
+            await InsertMutationForVariableNotNullDefault(mySqlQuery);
         }
 
         /// <summary>
@@ -123,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                         `table0`.`publisher_id` AS `publisher_id`
                     FROM `books` AS `table0`
                     WHERE `table0`.`id` = 1
-                    ORDER BY `table0`.`id` LIMIT 1
+                    ORDER BY `table0`.`id` asc LIMIT 1
                     ) AS `subq2`
             ";
 
@@ -144,7 +163,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                         `table0`.`publisher_id` AS `publisher_id`
                     FROM `books` AS `table0`
                     WHERE `table0`.`id` = 1
-                    ORDER BY `table0`.`id` LIMIT 1
+                    ORDER BY `table0`.`id` asc LIMIT 1
                     ) AS `subq2`
             ";
 
@@ -200,10 +219,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                             SELECT `table1`.`name` AS `name`
                             FROM `publishers` AS `table1`
                             WHERE `table0`.`publisher_id` = `table1`.`id`
-                            ORDER BY `table1`.`id` LIMIT 1
+                            ORDER BY `table1`.`id` asc LIMIT 1
                             ) AS `subq3`) AS `table1_subq` ON TRUE
                     WHERE `table0`.`id` = 5001
-                    ORDER BY `table0`.`id` LIMIT 1
+                    ORDER BY `table0`.`id` asc LIMIT 1
                     ) AS `subq4`
             ";
 
@@ -226,7 +245,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WHERE `table0`.`id` = 800
                         AND `table0`.`title` = 'New Magazine'
                         AND `table0`.`issue_number` IS NULL
-                    ORDER BY `table0`.`id` LIMIT 1
+                    ORDER BY `table0`.`id` asc LIMIT 1
                     ) AS `subq2`
             ";
 
@@ -249,7 +268,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WHERE `table0`.`id` = 801
                         AND `table0`.`title` = 'New Magazine 2'
                         AND `table0`.`issue_number` IS NULL
-                    ORDER BY `table0`.`id` LIMIT 1
+                    ORDER BY `table0`.`id` asc LIMIT 1
                     ) AS `subq2`
             ";
 
@@ -270,7 +289,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     FROM `magazines` AS `table0`
                     WHERE `table0`.`id` = 1
                         AND `table0`.`issue_number` IS NULL
-                    ORDER BY `table0`.`id` LIMIT 1
+                    ORDER BY `table0`.`id` asc LIMIT 1
                     ) AS `subq2`
             ";
 
@@ -293,7 +312,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WHERE `table0`.`id` = 1
                         AND `table0`.`title` = 'Newest Magazine'
                         AND `table0`.`issue_number` = 1234
-                    ORDER BY `table0`.`id` LIMIT 1
+                    ORDER BY `table0`.`id` asc LIMIT 1
                     ) AS `subq2`
             ";
 
@@ -317,11 +336,117 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WHERE `id` = 5001
                         AND `title` = 'My New Book'
                         AND `publisher_id` = 1234
-                    ORDER BY `id` LIMIT 1
+                    ORDER BY `id` asc LIMIT 1
                     ) AS `subq`
             ";
 
             await TestAliasSupportForGraphQLMutationQueryFields(mySqlQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>insert into a simple view
+        /// <code>Check: </code> that the new entry is in the view
+        /// </summary>
+        [TestMethod]
+        public async Task InsertIntoSimpleView()
+        {
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('id', `subq`.`id`, 'title', `subq`.`title`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`title` AS `title`
+                    FROM `books_view_all` AS `table0`
+                    WHERE `id` = 5001
+                        AND `title` = 'Book View'
+                        AND `publisher_id` = 1234
+                    ORDER BY `id` LIMIT 1
+                    ) AS `subq`
+            ";
+
+            await InsertIntoSimpleView(mySqlQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Update a simple view
+        /// <code>Check: </code> the updated entry is present in the view
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public async Task UpdateSimpleView()
+        {
+            // update on a simple view should succeed in MySql: https://dev.mysql.com/doc/refman/8.0/en/view-updatability.html
+            // but it fails with: The target table books_view_all of the UPDATE is not updatable
+            // I suspect it may have to do with the update query generated for mysql
+            // ignore for now
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('id', `subq2`.`id`, 'title', `subq2`.`title`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`title` AS `title`
+                    FROM `books_view_all` AS `table0`
+                    WHERE `table0`.`id` = 1
+                    ORDER BY `table0`.`id` LIMIT 1
+                    ) AS `subq2`
+            ";
+
+            await UpdateSimpleView(mySqlQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Delete an entry from a simple view
+        /// <code>Check: </code>if the mutation returned result is as expected and if the entry that id has been deleted
+        /// </summary>
+        [TestMethod]
+        public async Task DeleteFromSimpleView()
+        {
+            string mySqlQueryForResult = @"
+                SELECT JSON_OBJECT('id', `subq2`.`id`, 'title', `subq2`.`title`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`title` AS `title`
+                    FROM `books_view_all` AS `table0`
+                    WHERE `table0`.`id` = 1
+                    ORDER BY `table0`.`id` LIMIT 1
+                    ) AS `subq2`
+            ";
+
+            string mySqlQueryToVerifyDeletion = @"
+                SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
+                FROM (
+                    SELECT COUNT(*) AS `count`
+                    FROM `books_view_all` AS `table0`
+                    WHERE `id` = 1
+                    ) AS `subq`
+            ";
+
+            await DeleteFromSimpleView(mySqlQueryForResult, mySqlQueryToVerifyDeletion);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>insert into an "insertable" complex view
+        /// <code>Check: </code> that the new entry is in the view
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public async Task InsertIntoInsertableComplexView()
+        {
+            // this view does not have the necessary trigger
+            // implemented yet
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('id', `subq`.`id`, 'title', `subq`.`title`, 'publisher_id', `subq`.`publisher_id`) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`title` AS `title`,
+                        `table0`.`publisher_id` AS `publisher_id`
+                    FROM `books_publishers_view_composite_insertable` AS `table0`
+                    WHERE `id` = 5001
+                        AND `title` = 'Book Complex View'
+                        AND `publisher_id` = 1234
+                    ORDER BY `id` LIMIT 1
+                    ) AS `subq`
+            ";
+
+            await InsertIntoInsertableComplexView(mySqlQuery);
         }
 
         #endregion

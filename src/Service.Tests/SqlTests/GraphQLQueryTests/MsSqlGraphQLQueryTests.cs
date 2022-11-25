@@ -27,14 +27,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task MultipleResultQuery()
         {
-            string msSqlQuery = $"SELECT id, title FROM books ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string msSqlQuery = $"SELECT id, title FROM books ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
             await MultipleResultQuery(msSqlQuery);
         }
 
         [TestMethod]
         public async Task MultipleResultQueryWithVariables()
         {
-            string msSqlQuery = $"SELECT id, title FROM books ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string msSqlQuery = $"SELECT id, title FROM books ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
             await MultipleResultQueryWithVariables(msSqlQuery);
         }
 
@@ -113,27 +113,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task QueryWithNullableForeignKey()
         {
             string msSqlQuery = @"
-                SELECT 
-                  TOP 1 [table0].[title] AS [title], 
-                  JSON_QUERY ([table1_subq].[data]) AS [series] 
-                FROM 
+                SELECT
+                  TOP 1 [table0].[title] AS [title],
+                  JSON_QUERY ([table1_subq].[data]) AS [series]
+                FROM
                   [dbo].[comics] AS [table0] OUTER APPLY (
-                    SELECT 
-                      TOP 1 [table1].[name] AS [name] 
-                    FROM 
-                      [dbo].[series] AS [table1] 
-                    WHERE 
-                      [table0].[series_id] = [table1].[id] 
-                    ORDER BY 
-                      [table1].[id] ASC FOR JSON PATH, 
-                      INCLUDE_NULL_VALUES, 
+                    SELECT
+                      TOP 1 [table1].[name] AS [name]
+                    FROM
+                      [dbo].[series] AS [table1]
+                    WHERE
+                      [table0].[series_id] = [table1].[id]
+                    ORDER BY
+                      [table1].[id] ASC FOR JSON PATH,
+                      INCLUDE_NULL_VALUES,
                       WITHOUT_ARRAY_WRAPPER
-                  ) AS [table1_subq]([data]) 
-                WHERE 
+                  ) AS [table1_subq]([data])
+                WHERE
                   [table0].[id] = 1
-                ORDER BY 
-                  [table0].[id] ASC FOR JSON PATH, 
-                  INCLUDE_NULL_VALUES, 
+                ORDER BY
+                  [table0].[id] ASC FOR JSON PATH,
+                  INCLUDE_NULL_VALUES,
                   WITHOUT_ARRAY_WRAPPER";
 
             await QueryWithNullableForeignKey(msSqlQuery);
@@ -145,7 +145,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task TestQueryingTypeWithNullableIntFields()
         {
-            string msSqlQuery = $"SELECT TOP 100 id, title, issue_number FROM [foo].[magazines] ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string msSqlQuery = $"SELECT TOP 100 id, title, issue_number FROM [foo].[magazines] ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
             await TestQueryingTypeWithNullableIntFields(msSqlQuery);
         }
 
@@ -155,7 +155,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task TestQueryingTypeWithNullableStringFields()
         {
-            string msSqlQuery = $"SELECT TOP 100 id, username FROM website_users ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string msSqlQuery = $"SELECT TOP 100 id, username FROM website_users ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
             await TestQueryingTypeWithNullableStringFields(msSqlQuery);
         }
 
@@ -167,7 +167,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task TestAliasSupportForGraphQLQueryFields()
         {
-            string msSqlQuery = $"SELECT TOP 2 id AS book_id, title AS book_title FROM books ORDER by id FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string msSqlQuery = $"SELECT TOP 2 id AS book_id, title AS book_title FROM books ORDER by id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
             await TestAliasSupportForGraphQLQueryFields(msSqlQuery);
         }
 
@@ -179,7 +179,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task TestSupportForMixOfRawDbFieldFieldAndAlias()
         {
-            string msSqlQuery = $"SELECT TOP 2 id AS book_id, title AS title FROM books ORDER by id FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string msSqlQuery = $"SELECT TOP 2 id AS book_id, title AS title FROM books ORDER by id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
             await TestSupportForMixOfRawDbFieldFieldAndAlias(msSqlQuery);
         }
 
@@ -242,8 +242,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task TestQueryWithExplicitlyNullArguments()
         {
-            string msSqlQuery = $"SELECT id, title FROM books ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string msSqlQuery = $"SELECT id, title FROM books ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
             await TestQueryWithExplicitlyNullArguments(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task TestQueryOnBasicView()
+        {
+            string msSqlQuery = $"SELECT TOP 5 id, title FROM books_view_all ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await base.TestQueryOnBasicView(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task TestQueryOnCompositeView()
+        {
+            string msSqlQuery = $"SELECT TOP 5 id, name FROM books_publishers_view_composite ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await base.TestQueryOnCompositeView(msSqlQuery);
         }
 
         #endregion

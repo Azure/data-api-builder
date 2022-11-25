@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
@@ -61,50 +59,88 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// <code>Do: </code> Load runtimeConfig and set connection string and db type
         /// according to data row.
-        /// <code>Check: </code>  Verify malformed connection string throws correct exception.
+        /// <code>Check: </code>  Verify malformed connection string throws correct exception with MSSQL as the database.
         /// </summary>
-        [DataTestMethod]
-        [DataRow(";;;;;fooBarBAZ", DatabaseType.mssql)]
-        [DataRow(";;;;;fooBarBAZ", DatabaseType.mysql)]
-        [DataRow(";;;;;fooBarBAZ", DatabaseType.postgresql)]
-        [DataRow("!&^%*&$$%#$%@$%#@()", DatabaseType.mssql)]
-        [DataRow("!&^%*&$$%#$%@$%#@()", DatabaseType.mysql)]
-        [DataRow("!&^%*&$$%#$%@$%#@()", DatabaseType.postgresql)]
-        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", DatabaseType.mssql)]
-        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", DatabaseType.mysql)]
-        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", DatabaseType.postgresql)]
-        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", DatabaseType.mssql)]
-        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", DatabaseType.mysql)]
-        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", DatabaseType.postgresql)]
-        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.mssql)]
-        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.postgresql)]
-        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", DatabaseType.mysql)]
-        [DataRow("", DatabaseType.mssql)]
-        [DataRow("", DatabaseType.postgresql)]
-        [DataRow("", DatabaseType.mysql)]
-        public async Task CheckExceptionForBadConnectionString(string connectionString, DatabaseType db)
+        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [DataRow(";;;;;fooBarBAZ")]
+        [DataRow("!&^%*&$$%#$%@$%#@()")]
+        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
+        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests")]
+        [DataRow("")]
+        public async Task CheckExceptionForBadConnectionStringForMsSql(string connectionString)
         {
-            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(db.ToString());
+            DatabaseEngine = TestCategory.MSSQL;
+            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Load runtimeConfig and set connection string and db type
+        /// according to data row.
+        /// <code>Check: </code>  Verify malformed connection string throws correct exception with MySQL as the database.
+        /// </summary>
+        [DataTestMethod, TestCategory(TestCategory.MYSQL)]
+        [DataRow(";;;;;fooBarBAZ")]
+        [DataRow("!&^%*&$$%#$%@$%#@()")]
+        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
+        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests")]
+        [DataRow("")]
+        public async Task CheckExceptionForBadConnectionStringForMySql(string connectionString)
+        {
+            DatabaseEngine = TestCategory.MYSQL;
+            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Load runtimeConfig and set connection string and db type
+        /// according to data row.
+        /// <code>Check: </code>  Verify malformed connection string throws correct exception with PostgreSQL as the database.
+        /// </summary>
+        [DataTestMethod, TestCategory(TestCategory.POSTGRESQL)]
+        [DataRow(";;;;;fooBarBAZ")]
+        [DataRow("!&^%*&$$%#$%@$%#@()")]
+        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
+        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests")]
+        [DataRow("")]
+        public async Task CheckExceptionForBadConnectionStringForPgSql(string connectionString)
+        {
+            DatabaseEngine = TestCategory.POSTGRESQL;
+            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString);
+        }
+
+        /// <summary>
+        /// Helper method to validate the exception message when malformed connection strings are used
+        /// to retrieve metadata information from the database
+        /// </summary>
+        /// <param name="databaseType"></param>
+        /// <param name="connectionString"></param>
+        /// <returns></returns>
+        private static async Task CheckExceptionForBadConnectionStringHelperAsync(string databaseType, string connectionString)
+        {
+            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(databaseType);
             _runtimeConfig.ConnectionString = connectionString;
             _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
             _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
-            switch (db)
+
+            switch (databaseType)
             {
-                case DatabaseType.mssql:
+                case TestCategory.MSSQL:
                     _sqlMetadataProvider =
                        new MsSqlMetadataProvider(_runtimeConfigProvider,
                            _queryExecutor,
                            _queryBuilder,
                            _sqlMetadataLogger);
                     break;
-                case DatabaseType.mysql:
+                case TestCategory.MYSQL:
                     _sqlMetadataProvider =
                        new MySqlMetadataProvider(_runtimeConfigProvider,
                            _queryExecutor,
                            _queryBuilder,
                            _sqlMetadataLogger);
                     break;
-                case DatabaseType.postgresql:
+                case TestCategory.POSTGRESQL:
                     _sqlMetadataProvider =
                        new PostgreSqlMetadataProvider(_runtimeConfigProvider,
                            _queryExecutor,
@@ -145,69 +181,39 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(SourceType.StoredProcedure, entity.ObjectType);
         }
 
-        /// <summary>
-        /// Test to verify that all the base tables which have a column in select clause
-        /// for the view are present in the base table definitions for the view's
-        /// definition.
-        /// </summary>
-        /// <param name="entityName">Name of the view.</param>
-        /// <param name="expectedBaseTableCount">Expected number of base tables.</param>
-        /// <param name="baseTableNames">Names of the base tables.</param>
-        /// <returns></returns>
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
-        [DataRow("books_view_all", 1, new string[] { "dbo.books" },
-            DisplayName = "Validate view definition on books_view_all")]
-        [DataRow("stocks_view_selected", 1, new string[] { "dbo.stocks" },
-            DisplayName = "Validate view definition on stocks_view_selected")]
-        [DataRow("books_publishers_view_composite", 2, new string[] { "dbo.books", "dbo.publishers" },
-            DisplayName = "Validate view definition on books_publishers_view_composite")]
-        public async Task CheckPopulatedBaseTableDefinitionsForViewAsync(
-            string entityName,
-            int expectedBaseTableCount,
-            string[] baseTableNames)
+        [DataRow("/mygql", "/graphql", true, DisplayName = "Entity Rest path conflicts with default path /graphql")]
+        [DataRow("/mygql", "/mygql", true, DisplayName = "Entity Rest path conflicts with configured GraphQL path")]
+        [DataRow("/mygql", "mygql", true, DisplayName = "Entity Name mygql conflicts with configured GraphQL path")]
+        [DataRow("/mygql", "graphql", true, DisplayName = "Entity Name graphql conflicts with default path /graphql")]
+        [DataRow("/mygql", "", false, DisplayName = "Entity name does not conflict with GraphQL paths")]
+        [DataRow("/mygql", "/entityRestPath", false, DisplayName = "Entity Rest path does not conflict with GraphQL paths")]
+        [DataRow("/mygql", "entityName", false, DisplayName = "Entity name does not conflict with GraphQL paths")]
+        public void TestEntityRESTPathDoesNotCollideWithGraphQLPaths(
+            string graphQLConfigPath,
+            string entityPath,
+            bool expectsError)
         {
-            DatabaseEngine = TestCategory.MSSQL;
-            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
-            SetUpSQLMetadataProvider();
-
-            await _sqlMetadataProvider.InitializeAsync();
-            ViewDefinition viewDefinition = (ViewDefinition)_sqlMetadataProvider.GetSourceDefinition(entityName);
-
-            // Assert that there are expected number of base tables in view's definition.
-            Assert.AreEqual(expectedBaseTableCount, viewDefinition.BaseTableDefinitions.Count);
-            foreach (string baseTableName in baseTableNames)
+            try
             {
-                // Assert that the base tables in the BaseTableDefinitions are the ones
-                // that are expected.
-                Assert.IsTrue(viewDefinition.BaseTableDefinitions.ContainsKey(baseTableName));
+                MsSqlMetadataProvider.ValidateEntityandGraphQLPathUniqueness(path: entityPath, graphQLGlobalPath: graphQLConfigPath);
+                if (expectsError)
+                {
+                    Assert.Fail(message: "REST and GraphQL path validation expected to fail.");
+                }
             }
-        }
-
-        /// <summary>
-        /// Test to verify that the mappings generated for columns in view to corresponding
-        /// source column and table are correct.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod, TestCategory(TestCategory.MSSQL)]
-        public async Task CheckPopulatedColToBaseTableDetailsForViewAsync()
-        {
-            DatabaseEngine = TestCategory.MSSQL;
-            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
-            SetUpSQLMetadataProvider();
-
-            await _sqlMetadataProvider.InitializeAsync();
-            ViewDefinition viewDefinition = (ViewDefinition)_sqlMetadataProvider.GetSourceDefinition("books_publishers_view_composite");
-
-            // Create the expected column mapping for view columns to source column and table.
-            Dictionary<string, Tuple<string, string>> expectedColToBaseTableDetails = new();
-            expectedColToBaseTableDetails.Add("publisher_id", new Tuple<string, string>("id", "dbo.publishers"));
-            expectedColToBaseTableDetails.Add("name", new Tuple<string, string>("name", "dbo.publishers"));
-            expectedColToBaseTableDetails.Add("id", new Tuple<string, string>("id", "dbo.books"));
-
-            // Assert that the expected column mapping and the actual column mapping are same.
-            CollectionAssert.AreEquivalent(expectedColToBaseTableDetails, viewDefinition.ColToBaseTableDetails);
+            catch (DataApiBuilderException ex)
+            {
+                if (expectsError)
+                {
+                    Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: ex.StatusCode);
+                    Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: ex.SubStatusCode);
+                }
+                else
+                {
+                    Assert.Fail(message: "REST and GraphQL path validation expected to pass.");
+                }
+            }
         }
     }
 }

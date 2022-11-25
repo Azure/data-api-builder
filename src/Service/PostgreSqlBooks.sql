@@ -1,3 +1,8 @@
+DROP VIEW IF EXISTS books_view_all;
+DROP VIEW IF EXISTS books_view_with_mapping;
+DROP VIEW IF EXISTS stocks_view_selected;
+DROP VIEW IF EXISTS books_publishers_view_composite;
+DROP VIEW IF EXISTS books_publishers_view_composite_insertable;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -18,6 +23,7 @@ DROP TABLE IF EXISTS aow;
 DROP TABLE IF EXISTS notebooks;
 DROP TABLE IF EXISTS journals;
 DROP TABLE IF EXISTS series;
+DROP FUNCTION IF EXISTS insertCompositeView;
 
 DROP SCHEMA IF EXISTS foo;
 
@@ -90,7 +96,7 @@ CREATE TABLE stocks(
 CREATE TABLE stocks_price(
     categoryid int NOT NULL,
     pieceid int NOT NULL,
-    instant varchar(10) NOT NULL,
+    instant timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     price float,
     is_wholesale_price boolean,
     PRIMARY KEY(categoryid, pieceid, instant)
@@ -220,7 +226,7 @@ INSERT INTO series(id, name) VALUES (3001, 'Foundation'), (3002, 'Hyperion Canto
 INSERT INTO comics(id, title, "categoryName", series_id)
 VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'FairyTales', 3001),(3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);INSERT INTO stocks(categoryid, pieceid, "categoryName") VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');
 INSERT INTO brokers("ID Number", "First Name", "Last Name") VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
-INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, 'instant1', 100.57, True), (1, 1, 'instant2', 42.75, False);
+INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES (2, 1, 100.57, True), (1, 1, 42.75, False);
 INSERT INTO type_table(id, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types, datetime_types, bytearray_types) VALUES
     (1, 1, 1, 1, '', 0.33, 0.33, 0.333333, true, '1999-01-08 10:23:54', '\xABCDEF0123'),
     (2, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, false, '19990108 10:23:00', '\x98AB7511AABB1234'),
@@ -242,3 +248,28 @@ SELECT setval('publishers_id_seq', 5000);
 SELECT setval('authors_id_seq', 5000);
 SELECT setval('reviews_id_seq', 5000);
 SELECT setval('type_table_id_seq', 5000);
+
+CREATE VIEW books_view_all AS SELECT * FROM books;
+CREATE VIEW books_view_with_mapping AS SELECT * FROM books;
+CREATE VIEW stocks_view_selected AS
+    SELECT categoryid, pieceid, "categoryName", "piecesAvailable"
+    FROM stocks;
+CREATE VIEW books_publishers_view_composite as SELECT
+    publishers.name, books.id, books.title, publishers.id as pub_id
+    FROM books, publishers
+    where publishers.id = books.publisher_id;
+CREATE VIEW books_publishers_view_composite_insertable as SELECT
+    books.id, books.title, publishers.name, books.publisher_id
+    FROM books, publishers
+    WHERE publishers.id = books.publisher_id;
+
+CREATE FUNCTION insertCompositeView() RETURNS trigger AS $$
+BEGIN
+    INSERT INTO books(title, publisher_id) VALUES (new.title, new.publisher_id) RETURNING id INTO new.id;
+    SELECT name INTO new.name FROM publishers WHERE id = new.publisher_id;
+    RETURN new;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER insertCompositeViewTrigger INSTEAD OF INSERT ON books_publishers_view_composite_insertable
+  FOR EACH ROW EXECUTE PROCEDURE insertCompositeView();

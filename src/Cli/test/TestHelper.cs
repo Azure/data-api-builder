@@ -48,14 +48,40 @@ namespace Cli.Tests
             return process;
         }
 
-        public const string SAMPLE_SCHEMA_DATA_SOURCE = @"
-          ""$schema"": ""dab.draft-01.schema.json"",
+        /// <summary>
+        /// Schema property of the config json. This is used for constructing the required config json strings
+        /// for unit tests
+        /// </summary>
+        public const string SCHEMA_PROPERTY = @"
+          ""$schema"": """ + Azure.DataApiBuilder.Config.RuntimeConfig.SCHEMA + @"""";
+
+        /// <summary>
+        /// Data source property of the config json. This is used for constructing the required config json strings
+        /// for unit tests 
+        /// </summary>
+        public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
               ""database-type"": ""mssql"",
               ""connection-string"": ""testconnectionstring""
             }
         ";
 
+        /// <summary>
+        /// Data source property of the config json with an invalid connection string. This is used for
+        /// constructing the required config json strings for unit tests. Config json constructed using
+        /// this data source element will fail validations as empty connection string
+        /// is not allowed
+        /// </summary>
+        public const string SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING = SCHEMA_PROPERTY + "," + @"
+            ""data-source"": {
+              ""database-type"": ""mssql"",
+              ""connection-string"": """"
+            }
+        ";
+
+        /// <summary>
+        /// A minimal valid config json without any entities. This config string is used in unit tests.
+        /// </summary>
         public const string INITIAL_CONFIG =
           "{" +
             SAMPLE_SCHEMA_DATA_SOURCE + "," +
@@ -65,7 +91,37 @@ namespace Cli.Tests
                 ""path"": ""/api""
               },
               ""graphql"": {
-                ""path"": ""/graphql""
+                ""path"": ""/graphql"",
+                ""allow-introspection"": true
+              },
+              ""host"": {
+                ""mode"": ""development"",
+                ""cors"": {
+                  ""origins"": [],
+                  ""allow-credentials"": false
+                },
+                ""authentication"": {
+                  ""provider"": ""StaticWebApps""
+                }
+              }
+            },
+            ""entities"": {}" +
+          "}";
+
+        /// <summary>
+        /// A minimal config json without any entities. This config is invalid as it contains an empty connection
+        /// string. This config is used in tests to verify validation failures.
+        /// </summary>
+        public const string INVALID_INTIAL_CONFIG = "{" +
+            SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING + "," +
+            @"
+            ""runtime"": {
+              ""rest"": {
+                ""path"": ""/api""
+              },
+              ""graphql"": {
+                ""path"": ""/graphql"",
+                ""allow-introspection"": true
               },
               ""host"": {
                 ""mode"": ""development"",
@@ -94,7 +150,8 @@ namespace Cli.Tests
                 ""path"": ""/api""
               },
               ""graphql"": {
-                ""path"": ""/graphql""
+                ""path"": ""/graphql"",
+                ""allow-introspection"": true
               },
               ""host"": {
                 ""mode"": ""development"",
@@ -316,7 +373,7 @@ namespace Cli.Tests
 
         public const string CONFIG_WITH_SINGLE_ENTITY = @"
           {
-        ""$schema"": ""dab.draft-01.schema.json"",
+        ""$schema"": ""dab.draft.schema.json"",
         ""data-source"": {
           ""database-type"": ""mssql"",
           ""connection-string"": ""localhost:5000""
@@ -326,7 +383,8 @@ namespace Cli.Tests
             ""path"": ""/api""
           },
           ""graphql"": {
-            ""path"": ""/graphql""
+            ""path"": ""/graphql"",
+            ""allow-introspection"": true
           },
           ""host"": {
             ""mode"": ""production"",
@@ -359,7 +417,6 @@ namespace Cli.Tests
         /// for json comparison in tests.
         /// </summary>
         public static string GetDefaultTestRuntimeSettingString(
-            DatabaseType databaseType,
             HostModeType hostModeType = HostModeType.Production,
             IEnumerable<string>? corsOrigins = null,
             bool? authenticateDevModeRequest = null)

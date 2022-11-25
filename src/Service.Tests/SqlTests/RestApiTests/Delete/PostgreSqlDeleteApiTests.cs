@@ -22,6 +22,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
             }
         };
 
+        [TestMethod]
+        public async Task DeleteOneInViewBadRequestTest()
+        {
+            string expectedErrorMessage = $"55000: cannot delete from view \"{_composite_subset_bookPub}\"";
+            await base.DeleteOneInViewBadRequestTest(expectedErrorMessage);
+        }
+
+        #region Overriden tests
+
+        #endregion
+
         #region Test Fixture Setup
 
         /// <summary>

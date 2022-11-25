@@ -54,24 +54,15 @@ namespace Azure.DataApiBuilder.Config
     public record RuntimeConfig(
         [property: JsonPropertyName(RuntimeConfig.SCHEMA_PROPERTY_NAME)] string Schema,
         [property: JsonPropertyName(DataSource.JSON_PROPERTY_NAME)] DataSource DataSource,
-        [property: JsonPropertyName(CosmosDbOptions.JSON_PROPERTY_NAME)]
-        CosmosDbOptions? CosmosDb,
-        [property: JsonPropertyName(MsSqlOptions.JSON_PROPERTY_NAME)]
-        [property: JsonIgnore]
-        MsSqlOptions? MsSql,
-        [property: JsonPropertyName(PostgreSqlOptions.JSON_PROPERTY_NAME)]
-        [property: JsonIgnore]
-        PostgreSqlOptions? PostgreSql,
-        [property: JsonPropertyName(MySqlOptions.JSON_PROPERTY_NAME)]
-        [property: JsonIgnore]
-        MySqlOptions? MySql,
         [property: JsonPropertyName(GlobalSettings.JSON_PROPERTY_NAME)]
         Dictionary<GlobalSettingsType, object>? RuntimeSettings,
         [property: JsonPropertyName(Entity.JSON_PROPERTY_NAME)]
-        Dictionary<string, Entity> Entities)
+        Dictionary<string, Entity> Entities,
+        [property: JsonPropertyName(CosmosDbOptions.JSON_PROPERTY_NAME)]
+        CosmosDbOptions? CosmosDb = null)
     {
         public const string SCHEMA_PROPERTY_NAME = "$schema";
-        public const string SCHEMA = "dab.draft-01.schema.json";
+        public const string SCHEMA = "dab.draft.schema.json";
 
         // use camel case
         // convert Enum to strings
@@ -133,6 +124,39 @@ namespace Azure.DataApiBuilder.Config
         }
 
         /// <summary>
+        /// Mapping GraphQL singular type To each entity name.
+        /// This is used for looking up top-level entity name with GraphQL type, GraphQL type is not matching any of the top level entity name.
+        /// Use singular field to find the top level entity name, then do the look up from the entities dictionary
+        /// </summary>
+        public void MapGraphQLSingularTypeToEntityName()
+        {
+            foreach (KeyValuePair<string, Entity> item in Entities)
+            {
+                Entity entity = item.Value;
+                string entityName = item.Key;
+
+                if (entity.GraphQL != null
+                    && entity.GraphQL is GraphQLEntitySettings)
+                {
+                    GraphQLEntitySettings? graphQL = entity.GraphQL as GraphQLEntitySettings;
+
+                    if (graphQL is null || graphQL.Type is null
+                        || (graphQL.Type is not SingularPlural && graphQL.Type is not string))
+                    {
+                        continue;
+                    }
+
+                    string? graphQLType = (graphQL.Type is SingularPlural) ? ((SingularPlural)graphQL.Type).Singular : graphQL.Type.ToString();
+
+                    if (graphQLType is not null)
+                    {
+                        GraphQLSingularTypeToEntityNameMap.TryAdd(graphQLType, entityName);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Try to deserialize the given json string into its object form.
         /// </summary>
         /// <typeparam name="T">The object type.</typeparam>
@@ -178,6 +202,7 @@ namespace Azure.DataApiBuilder.Config
                 deserializedRuntimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(configJson, SerializerOptions);
                 deserializedRuntimeConfig!.DetermineGlobalSettings();
                 deserializedRuntimeConfig!.DetermineGraphQLEntityNames();
+                deserializedRuntimeConfig.DataSource.PopulateDbSpecificOptions();
                 return true;
             }
             catch (Exception ex)
@@ -210,12 +235,28 @@ namespace Azure.DataApiBuilder.Config
         [JsonIgnore]
         public HostGlobalSettings HostGlobalSettings { get; private set; } = new();
 
+        [JsonIgnore]
+        public Dictionary<string, string> GraphQLSingularTypeToEntityNameMap { get; private set; } = new();
+
         public bool IsEasyAuthAuthenticationProvider()
         {
             // by default, if there is no AuthenticationSection,
             // EasyAuth StaticWebApps is the authentication scheme.
-            return AuthNConfig is null ||
-                   AuthNConfig!.IsEasyAuthAuthenticationProvider();
+            return AuthNConfig != null &&
+                   AuthNConfig.IsEasyAuthAuthenticationProvider();
+        }
+
+        public bool IsAuthenticationSimulatorEnabled()
+        {
+            return AuthNConfig != null &&
+                AuthNConfig!.IsAuthenticationSimulatorEnabled();
+        }
+
+        public bool IsJwtConfiguredIdentityProvider()
+        {
+            return AuthNConfig != null &&
+                !AuthNConfig.IsEasyAuthAuthenticationProvider() &&
+                !AuthNConfig.IsAuthenticationSimulatorEnabled();
         }
 
         [JsonIgnore]

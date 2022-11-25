@@ -71,6 +71,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (runtimeConfig.GraphQLGlobalSettings.Enabled
                  && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
             {
+                ValidateGlobalEndpointRouteConfig(runtimeConfig);
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
                 ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
             }
@@ -117,23 +118,25 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             // Schema file should be present in the directory if not specified in the config
             // when using cosmos database.
-            if (runtimeConfig.DatabaseType is DatabaseType.cosmos)
+            if (runtimeConfig.DatabaseType is DatabaseType.cosmos ||
+                runtimeConfig.DatabaseType is DatabaseType.cosmosdb_nosql)
             {
-                if (runtimeConfig.CosmosDb is null)
+                CosmosDbOptions cosmosDbNoSql = runtimeConfig.DataSource.CosmosDbNoSql!;
+                if (cosmosDbNoSql is null)
                 {
-                    throw new NotSupportedException("CosmosDB is specified but no CosmosDB configuration information has been provided.");
+                    throw new NotSupportedException("CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.");
                 }
 
-                if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchema))
+                if (string.IsNullOrEmpty(cosmosDbNoSql.GraphQLSchema))
                 {
-                    if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    if (string.IsNullOrEmpty(cosmosDbNoSql.GraphQLSchemaPath))
                     {
-                        throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
+                        throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
                     }
 
-                    if (!fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    if (!fileSystem.File.Exists(cosmosDbNoSql.GraphQLSchemaPath))
                     {
-                        throw new FileNotFoundException($"The GraphQL schema file at '{runtimeConfig.CosmosDb.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
+                        throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
                     }
                 }
             }
@@ -251,6 +254,31 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
         }
 
+        /// <summary>
+        /// Ensure the global REST and GraphQL endpoints do not conflict if both
+        /// are enabled.
+        /// </summary>
+        /// <param name="runtimeConfig"></param>
+        public static void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
+        {
+            // Do not check for conflicts if GraphQL or REST endpoints are disabled.
+            if (!runtimeConfig.GraphQLGlobalSettings.Enabled || !runtimeConfig.RestGlobalSettings.Enabled)
+            {
+                return;
+            }
+
+            if (string.Equals(
+                a: runtimeConfig.GraphQLGlobalSettings.Path,
+                b: runtimeConfig.RestGlobalSettings.Path,
+                comparisonType: StringComparison.OrdinalIgnoreCase))
+            {
+                throw new DataApiBuilderException(
+                    message: $"Conflicting GraphQL and REST path configuration.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
+        }
+
         private void ValidateAuthenticationConfig()
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
@@ -276,14 +304,16 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 runtimeConfig.AuthNConfig is not null &&
                 runtimeConfig.AuthNConfig.Jwt is not null &&
                 !string.IsNullOrEmpty(runtimeConfig.AuthNConfig.Jwt.Issuer);
-            if (!runtimeConfig.IsEasyAuthAuthenticationProvider() && (!isAudienceSet || !isIssuerSet))
+            if ((runtimeConfig.IsJwtConfiguredIdentityProvider()) &&
+                (!isAudienceSet || !isIssuerSet))
             {
-                throw new NotSupportedException("Audience and Issuer must be set when not using EasyAuth.");
+                throw new NotSupportedException("Audience and Issuer must be set when using a JWT identity Provider.");
             }
 
-            if (runtimeConfig!.IsEasyAuthAuthenticationProvider() && (isAudienceSet || isIssuerSet))
+            if ((!runtimeConfig.IsJwtConfiguredIdentityProvider()) &&
+                (isAudienceSet || isIssuerSet))
             {
-                throw new NotSupportedException("Audience and Issuer should not be set and are not used with EasyAuth.");
+                throw new NotSupportedException("Audience and Issuer can not be set when a JWT identity provider is not configured.");
             }
         }
 
@@ -385,10 +415,32 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                     ValidateClaimsInPolicy(configOperation.Policy.Database);
                                 }
                             }
+
+                            if (!IsValidDatabasePolicyForAction(configOperation))
+                            {
+                                throw new DataApiBuilderException(
+                                    message: $"The Create action does not support defining a database policy." +
+                                    $" entity:{entityName}, role:{permissionSetting.Role}, action:{configOperation.Name}",
+                                    statusCode: HttpStatusCode.ServiceUnavailable,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            }
                         }
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// A database policy can only be defined for a PermissionOperation when
+        /// the operation type is read, update, delete.
+        /// A create operation (database record insert) does not support query predicates
+        /// such as "WHERE name = 'xyz'"
+        /// </summary>
+        /// <param name="permission"></param>
+        /// <returns></returns>
+        public bool IsValidDatabasePolicyForAction(PermissionOperation permission)
+        {
+            return !(permission.Policy?.Database != null && permission.Name == Operation.Create);
         }
 
         /// <summary>

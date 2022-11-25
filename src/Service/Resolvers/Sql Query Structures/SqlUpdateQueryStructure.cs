@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
@@ -28,9 +29,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public SqlUpdateStructure(
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
+            IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
             bool isIncrementalUpdate)
-        : base(sqlMetadataProvider, entityName)
+        : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
         {
             UpdateOperations = new();
             OutputColumns = GenerateOutputColumns();
@@ -42,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 Predicate predicate = CreatePredicateForParam(param);
                 // since we have already validated mutationParams we know backing column exists
-                SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+                MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 // primary keys used as predicates
                 if (primaryKeys.Contains(backingColumn!))
                 {
@@ -79,8 +82,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IMiddlewareContext context,
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
+            IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams)
-            : base(sqlMetadataProvider, entityName: entityName)
+            : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
         {
             UpdateOperations = new();
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
@@ -123,7 +128,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
             Predicate predicate;
             // since we have already validated param we know backing column exists
-            SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+            MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
             if (param.Value is null && !sourceDefinition.Columns[backingColumn!].IsNullable)
             {
                 throw new DataApiBuilderException(

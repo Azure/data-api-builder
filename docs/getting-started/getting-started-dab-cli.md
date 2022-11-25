@@ -37,6 +37,13 @@ To add the entities to the config file with the GraphQL type and permissions def
 dab add <entity> --source <source_db> --graphql <graphql_type> --permissions <roles:actions>
 ```
 
+If `source.type` is not provided, it is inferred to be Table. Accepted values are: `table`,`view`, and `stored-procedure`.
+```dotnetcli
+# dab add book --source dbo.books_composite_view --source.type view --source.key-fields "id,regNo"  --graphql book --permissions "anonymous:*"
+
+dab add <entity> --source <source_db> --source.type <source_type> --source.key-fields <key_columns> --graphql <graphql_type> --permissions <roles:actions>
+```
+
 ### Update entities in config
 
 To update entities which are already added to the config, run the following update command:
@@ -44,7 +51,7 @@ To update entities which are already added to the config, run the following upda
 ```dotnetcli
 # dab update book --permissions "authenticate:create,update" --fields.include "id,title"
 
-dab update <entity> --source <new_source_db> --graphql <new_graphql_type> --permissions <rules:actions> --fields.include <fields_to_include> --fields.exclude <fields_to_exclude>
+dab update <entity> --source <new_source_db> --source.type <new_source_type> --source.key-fields <new_key_columns> --graphql <new_graphql_type> --permissions <rules:actions> --fields.include <fields_to_include> --fields.exclude <fields_to_exclude>
 ```
 
 ### Add entity relationship mappings

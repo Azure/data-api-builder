@@ -1,7 +1,9 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
@@ -40,6 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 generatedToken,
                 EasyAuthType.AppService,
                 sendAuthorizationHeader);
+
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
             Assert.AreEqual(expected: (int)HttpStatusCode.OK,
@@ -48,6 +51,68 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 expected: AuthorizationType.Authenticated.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
+        }
+
+        /// <summary>
+        /// Tests that the value returned by Identity.Name comes from the claim of type nameClaimType,
+        /// which reflects correct AppService EasyAuth parsing into a ClaimsIdentity object used to
+        /// create a ClaimsPrincipal object.
+        /// </summary>
+        /// <param name="name">Expected name to be returned by Identity.Name</param>
+        /// <param name="nameClaimType">Defines the ClaimType of the claim used for the return value of Identity.Name </param>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.name?view=net-6.0"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.nameclaimtype?view=net-6.0"/>
+        [DataTestMethod]
+        [DataRow("NameShortClaimType", "unique_name", DisplayName = "Identity.Name from custom claim name type")]
+        [DataRow("NameUriClaimType", ClaimTypes.Name, DisplayName = "Identity.Name from URI claim name type")]
+        [DataRow("NameUriClaimType", null, DisplayName = "Identity.Name from default URI claim name type")]
+        public async Task TestNameClaimTypeAppServiceEasyAuthToken(string? name, string? nameClaimType)
+        {
+            // Generated token has the following relevant claims:
+            // Type | Value
+            // NameShortClaimType | unique_name
+            // NameUriClaimType | ClaimTypes.Name
+            string generatedToken = AuthTestHelper.CreateAppServiceEasyAuthToken(nameClaimType: nameClaimType);
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
+                generatedToken,
+                EasyAuthType.AppService
+                );
+
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(expected: name, actual: postMiddlewareContext.User.Identity.Name);
+        }
+
+        /// <summary>
+        /// Tests that the value returned by ClaimsPrincipal.IsInRole comes from the claim of type roleClaimType,
+        /// which reflects correct AppService EasyAuth parsing into a ClaimsIdentity object used to
+        /// create a ClaimsPrincipal object.
+        /// </summary>
+        /// <param name="isInRole">User expected to be in role.</param>
+        /// <param name="roleName">Name of role to check in role membership query. </param>
+        /// <param name="roleClaimType">Defines the ClaimType of the claim used for the return value of ClaimsPrincpal.IsInRole(roleName)</param>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.roleclaimtype?view=net-6.0"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole?view=net-6.0"/>
+        [DataTestMethod]
+        [DataRow(true, "RoleShortClaimType", "roles")]
+        [DataRow(false, "RoleUriClaimType", "roles")]
+        [DataRow(false, "RoleShortClaimType", ClaimTypes.Role)]
+        [DataRow(true, "RoleUriClaimType", ClaimTypes.Role)]
+        public async Task TestRoleClaimTypeAppServiceEasyAuthToken(bool isInRole, string roleName, string roleClaimType)
+        {
+            // Generated token has the following relevant claims:
+            // Type | Value
+            // RoleShortClaimType | roles
+            // RoleUriClaimType | ClaimTypes.Role
+            string generatedToken = AuthTestHelper.CreateAppServiceEasyAuthToken(roleClaimType: roleClaimType);
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
+                generatedToken,
+                EasyAuthType.AppService
+                );
+
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(expected: isInRole, actual: postMiddlewareContext.User.IsInRole(roleName));
         }
 
         /// <summary>

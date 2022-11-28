@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -13,42 +14,74 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <summary>
         /// Creates a mocked EasyAuth token, namely, the value of the header injected by EasyAuth.
         /// </summary>
+        /// <param name="nameClaimType">Defines the ClaimType of the claim used for the return value of Identity.Name </param>
+        /// <param name="roleClaimType">Defines the ClaimType of the claim used for the return value of ClaimsPrincpal.IsInRole(roleName)</param>
         /// <returns>A Base64 encoded string of a serialized EasyAuthClientPrincipal object</returns>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.nameclaimtype?view=net-6.0"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.roleclaimtype?view=net-6.0"/>
         public static string CreateAppServiceEasyAuthToken(
-            string nameType = ClaimTypes.Name,
-            string roleType = ClaimTypes.Role)
+            string? nameClaimType = ClaimTypes.Name,
+            string? roleClaimType = ClaimTypes.Role)
         {
             AppServiceClaim emailClaim = new()
             {
                 Val = "apple@contoso.com",
-                Typ = nameType
+                Typ = ClaimTypes.Upn
             };
 
             AppServiceClaim roleClaimAnonymous = new()
             {
                 Val = "Anonymous",
-                Typ = roleType
+                Typ = roleClaimType
             };
 
             AppServiceClaim roleClaimAuthenticated = new()
             {
                 Val = "Authenticated",
-                Typ = roleType
+                Typ = roleClaimType
+            };
+
+            AppServiceClaim roleClaimShortNameClaimType = new()
+            {
+                Val = "RoleShortClaimType",
+                Typ = "roles"
+            };
+
+            AppServiceClaim roleClaimUriClaimType = new()
+            {
+                Val = "RoleUriClaimType",
+                Typ = ClaimTypes.Role
+            };
+
+            AppServiceClaim nameShortClaimType = new()
+            {
+                Val = "NameShortClaimType",
+                Typ = "unique_name"
+            };
+
+            AppServiceClaim nameUriClaimType = new()
+            {
+                Val = "NameUriClaimType",
+                Typ = ClaimTypes.Name
             };
 
             List<AppServiceClaim> claims = new()
             {
                 emailClaim,
                 roleClaimAnonymous,
-                roleClaimAuthenticated
+                roleClaimAuthenticated,
+                roleClaimShortNameClaimType,
+                roleClaimUriClaimType,
+                nameShortClaimType,
+                nameUriClaimType
             };
 
             AppServiceClientPrincipal token = new()
             {
                 Auth_typ = "aad",
-                Name_typ = nameType,
+                Name_typ = nameClaimType,
                 Claims = claims,
-                Role_typ = roleType
+                Role_typ = roleClaimType
             };
 
             string serializedToken = JsonSerializer.Serialize(value: token);

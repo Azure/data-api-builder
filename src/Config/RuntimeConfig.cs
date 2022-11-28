@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Config
         Dictionary<GlobalSettingsType, object>? RuntimeSettings,
         [property: JsonPropertyName(Entity.JSON_PROPERTY_NAME)]
         Dictionary<string, Entity> Entities,
-        [property: JsonPropertyName(CosmosDbOptions.JSON_PROPERTY_NAME)]
+        [property: JsonPropertyName(DataSource.OPTIONS_PROPERTY_NAME)]
         CosmosDbOptions? CosmosDb = null)
     {
         public const string SCHEMA_PROPERTY_NAME = "$schema";

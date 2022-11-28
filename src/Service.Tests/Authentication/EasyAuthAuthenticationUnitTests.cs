@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         }
 
         /// <summary>
-        /// Invalid AppService EasyAuth payloads elicit a 401 Unauthorized responsed, indicating
+        /// Invalid AppService EasyAuth payloads elicit a 401 Unauthorized response, indicating
         /// failed authentication.
         /// </summary>
         [DataTestMethod]

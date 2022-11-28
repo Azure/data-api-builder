@@ -34,12 +34,12 @@ The account should have access to all entities that are defined in the runtime c
 
 #### 2.2 Supply a `connection-string` for the respective `database-type`
 
-Project startup requires a config that can be generated using dab.
+Project startup requires a config that can be generated using the DAB CLI tool.
 
 ##### Use Cli-tool to Generate the config
 Below command will let you generate the config file with the required database-type and connection-string (**Note:** --name denotes name of the generated config, do not add extension).
 ```
-dab init --name dab-config.XXX --database-type <<DBTYPE>> --connection-string <<CONNSTRING>>
+dab init --name dab-config.xyz.json --database-type <<DBTYPE>> --connection-string <<CONNSTRING>>
 ```
 
 In your editor of choice, you can locate template configuration files in the `DataGateway.Service` directory of the form `dab-config.XXX.json`.
@@ -114,7 +114,7 @@ Schema and data population files are included that are necessary for running sam
 
 **Cli-tool**:
 
-When we do `dab init`, it will automatically generate the default Host settings with default authentication(**Note:** --host-mode is an optional flag that takes in the environment: Production/Development. Updating other keys are not supported currently). Below is the default Host setting that is generated with host-mode as Development. by Default authentication-provider will be "EasyAuth".
+The command, `dab init` will automatically generate the default host settings with default authentication(**Note:** --host-mode is an optional flag that takes in the environment: Production/Development. Updating other keys are not supported currently). Below are the default host settings generated when host-mode is set as Development. By default, the authentication-provider will be **StaticWebApps**.
 
 ```json
     "host": {
@@ -136,7 +136,7 @@ When we do `dab init`, it will automatically generate the default Host settings 
 
 #### Setting up Role and Actions
 
-dab allows us to specify role and actions for every entity using the --permission option. permissions can only be specified with add/update command.
+dab allows us to specify roles and actions for every entity using the `--permission` option. Permissions can only be specified with the add/update commands.
 ```
 dab add <<enity_name>> --source <<xxx>> --permissions "<<role>>:<<actions>>" --fields.include <<a,b,c>> --fields.exclude <<x,y,z>>
 ```
@@ -226,36 +226,18 @@ HTTP requests must have the `Authorization` HTTP header set with the value `Bear
 4. Select **Build Solution** (Do not select rebuild, as any changes to configuration files may not be reflected in the build folder.)
 5. Start runtime
 
-#### An alternative way to Build and Generate Config Files
+#### An alternative way to generate config files
 
-The following steps outline an alternative way of building the project. This is particularly useful for development in local.
+The following steps outline an alternative way of generating config files to assist with local development.
 
 1. The **ConfigGenerators** directory contains text files with DAB commands for each database type.
 2. Based on your choice of database, in the respective text file, update the **connection-string** property of the **init** command.
-3. Execute the command `dotnet build -p:generateConfigFiles=true`. This builds the project and generates the config files. The generated config files can be used to start DAB.
-4. After performing the code changes, the build can be performed using one of the two commands. If there are changes to the dab commands, execute `dotnet build -p:generateConfigFiles=true`. If not, executing `dotnet build` will suffice.
-5. DAB can be started using one of the various methods outlined in this document.
-
+3. Execute the command `dotnet build -p:generateConfigFiles=true` in the directory `data-api-builder\src` to build the project and generate the config file that can be used when starting DAB. The config files will be generated in the directory `data-api-builder\src\Service`.
+4. DAB can be started using one of the various methods outlined in this document.
 
 #### Which configuration file is used?
 
-1. DAB runtime determines the name of the configuration file based on environment values, following the same behavior offered by ASP.NET Core for the `appsettings.json` file. It expects the configuration file in the same directory as the runtime.
-
-2. The precedence followed is in the following order from high to low:
-
-    a. Command Line Argument e.g. `--ConfigFileName=custom-config.json`
-
-    b. Value of `DAB_ENVIRONMENT` suffixed to dab-config.
-    e.g. setting `DAB_ENVIRONMENT=Development` will prompt the runtime to look for `dab-config.Development.json`
-
-    c. Value of `ASPNETCORE_ENVIRONMENT` suffixed to dab-config.
-    e.g. setting `ASPNETCORE_ENVIRONMENT=MsSql` will prompt the runtime to look for `dab-config.MsSql.json`
-
-    d. By default, runtime will look for `dab-config.json`
-
-3. For any of the configuration file names determined for the environment, if there is another file with the `.overrides` suffix in the current directory, that overridden file name will instead be picked up.
-e.g. if both `dab-config.json` and `dab-config.overrides.json` are present, precedence will be given to `dab-config.overrides.json` - however, the runtime will still follow the above rules of precedence.
-e.g. When DAB_ENVIRONMENT is set as `Development` and if all three config files exist- `dab-config.Development.json`, `dab-config.json`, `dab-config.overrides.json`- the runtime will pick `dab-config.Development.json`.
+[This document](https://github.com/Azure/data-api-builder/blob/main/docs/configuration-file.md#environments-support) describes this in detail.
 
 #### Command Line
 

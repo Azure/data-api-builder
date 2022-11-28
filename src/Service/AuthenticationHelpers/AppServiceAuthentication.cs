@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -23,9 +24,23 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         /// </summary>
         public class AppServiceClientPrincipal
         {
-            public string? Auth_typ { get; set; }
+            /// <summary>
+            /// The type of authentication used, unauthenticated request when null.
+            /// </summary>
+            public string Auth_typ { get; set; } = null!;
+            /// <summary>
+            /// The Claim.Type used when obtaining the value of <see cref="ClaimsIdentity.Name"/>.
+            /// </summary>
+            /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.nameclaimtype?view=net-6.0"/>
             public string? Name_typ { get; set; }
+            /// <summary>
+            /// The Claim.Type used when performing logic for <see cref="ClaimsPrincipal.IsInRole"/>.
+            /// </summary>
+            /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.roleclaimtype?view=net-6.0"/>
             public string? Role_typ { get; set; }
+            /// <summary>
+            /// Collection of claims optionally present.
+            /// </summary>
             public IEnumerable<AppServiceClaim>? Claims { get; set; }
         }
 
@@ -40,10 +55,9 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         }
 
         /// <summary>
-        /// Create ClaimsIdentity object from EasyAuth
-        /// injected x-ms-client-principal injected header,
-        /// the value is a base64 encoded custom JWT injected by EasyAuth
-        /// as a result of validating a bearer token.
+        /// Create ClaimsIdentity object from EasyAuth injected x-ms-client-principal injected header,
+        /// the value is a base64 encoded custom JWT injected by EasyAuth as a result of validating a bearer token.
+        /// If present, copies all AppService token claims to .NET ClaimsIdentity object.
         /// </summary>
         /// <param name="context">Request's Http Context</param>
         /// <returns>
@@ -64,11 +78,13 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     string json = Encoding.UTF8.GetString(decodedPrincpalData);
                     AppServiceClientPrincipal? principal = JsonSerializer.Deserialize<AppServiceClientPrincipal>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                    if (principal is not null && principal.Claims is not null && principal.Claims.Any())
+                    if (!string.IsNullOrEmpty(principal?.Auth_typ))
                     {
+                    // When Name_typ and Role_type are null, ClaimsIdentity contructor uses default values.
+                    // Auth_typ must not be null or empty for ClaimsIdentity.IsAuthenticated() to be true.
+                    // Whitespace is not a requirement per: https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.isauthenticated?view=net-6.0#remarks
                         identity = new(principal.Auth_typ, principal.Name_typ, principal.Role_typ);
 
-                        // Copy all AppService token claims to .NET ClaimsIdentity object.
                         if (principal.Claims is not null && principal.Claims.Any())
                         {
                             identity.AddClaims(principal.Claims

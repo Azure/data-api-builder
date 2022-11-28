@@ -51,13 +51,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         }
 
         /// <summary>
-        /// Invalid AppService EasyAuth payloads elicit a 401 Unauthorized response, indicating
-        /// failed authentication.
+        /// Invalid AppService EasyAuth payloads elicit a 401 Unauthorized response, indicating failed authentication.
         /// </summary>
         [DataTestMethod]
         [DataRow("", DisplayName = "Empty JSON not serializable to AppServiceClientPrincipal")]
         [DataRow("eyJtZXNzYWdlIjogImhlbGxvIHdvcmxkIn0=", DisplayName = "JSON not serializable to AppServiceClientPrincipal")]
         [DataRow("aGVsbG8sIHdvcmxkIQ==", DisplayName = "Non-JSON Base64 encoded string not serializable to AppServiceClientPrincipal")]
+        [DataRow("eyJhdXRoX3R5cCI6IiIsIm5hbWVfdHlwIjoidW5pcXVlX25hbWUiLCJyb2xlX3R5cCI6InJvbGVzIn0=", DisplayName = "Missing value for property Auth_typ")]
+        [DataRow("eyJhdXRoX3R5cCI6IG51bGwsIm5hbWVfdHlwIjoidW5pcXVlX25hbWUiLCJyb2xlX3R5cCI6InJvbGVzIn0=", DisplayName = "Null value for property Auth_typ")]
+        [DataRow("eyJhdXRoX3R5cCI6ICIiLCJuYW1lX3R5cCI6InVuaXF1ZV9uYW1lIiwicm9sZV90eXAiOiJyb2xlcyJ9", DisplayName = "Empty value for property Auth_typ")]
         public async Task TestInvalidAppServiceEasyAuthToken(string easyAuthPayload)
         {
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token: easyAuthPayload, EasyAuthType.AppService);

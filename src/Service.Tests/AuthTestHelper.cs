@@ -14,24 +14,26 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// Creates a mocked EasyAuth token, namely, the value of the header injected by EasyAuth.
         /// </summary>
         /// <returns>A Base64 encoded string of a serialized EasyAuthClientPrincipal object</returns>
-        public static string CreateAppServiceEasyAuthToken()
+        public static string CreateAppServiceEasyAuthToken(
+            string nameType = ClaimTypes.Name,
+            string roleType = ClaimTypes.Role)
         {
             AppServiceClaim emailClaim = new()
             {
                 Val = "apple@contoso.com",
-                Typ = ClaimTypes.Upn
+                Typ = nameType
             };
 
             AppServiceClaim roleClaimAnonymous = new()
             {
                 Val = "Anonymous",
-                Typ = ClaimTypes.Role
+                Typ = roleType
             };
 
             AppServiceClaim roleClaimAuthenticated = new()
             {
                 Val = "Authenticated",
-                Typ = ClaimTypes.Role
+                Typ = roleType
             };
 
             List<AppServiceClaim> claims = new()
@@ -44,9 +46,9 @@ namespace Azure.DataApiBuilder.Service.Tests
             AppServiceClientPrincipal token = new()
             {
                 Auth_typ = "aad",
-                Name_typ = "Apple Banana",
+                Name_typ = nameType,
                 Claims = claims,
-                Role_typ = ClaimTypes.Role
+                Role_typ = roleType
             };
 
             string serializedToken = JsonSerializer.Serialize(value: token);

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -80,9 +79,9 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 
                     if (!string.IsNullOrEmpty(principal?.Auth_typ))
                     {
-                    // When Name_typ and Role_type are null, ClaimsIdentity contructor uses default values.
-                    // Auth_typ must not be null or empty for ClaimsIdentity.IsAuthenticated() to be true.
-                    // Whitespace is not a requirement per: https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.isauthenticated?view=net-6.0#remarks
+                        // When Name_typ and Role_type are null, ClaimsIdentity contructor uses default values.
+                        // Auth_typ must not be null or empty for ClaimsIdentity.IsAuthenticated() to be true.
+                        // Whitespace is not a requirement per: https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.isauthenticated?view=net-6.0#remarks
                         identity = new(principal.Auth_typ, principal.Name_typ, principal.Role_typ);
 
                         if (principal.Claims is not null && principal.Claims.Any())

@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             string dataIdent = QuoteIdentifier(SqlQueryStructure.DATA_IDENT);
             string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                             $"AS {QuoteIdentifier($"{structure.TableAlias}")}{Build(structure.Joins)}";
+                             $"AS {QuoteIdentifier($"{structure.SourceAlias}")}{Build(structure.Joins)}";
 
             fromSql += string.Join(
                     "",

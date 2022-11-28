@@ -6,7 +6,7 @@
   "title": "Data API Builder",
   "description": "Schema for Data API Builder engine",
   "additionalProperties": {
-    "version": "urn:dab:config:schema:draft-major.minor.patch"
+    "version": "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-alpha/dab.draft.schema.json"
   },
   "type": "object",
   "properties": {
@@ -21,7 +21,8 @@
             "mssql",
             "postgresql",
             "mysql",
-            "cosmos"
+            "cosmosdb_nosql",
+            "cosmosdb_postgresql"
           ]
         },
         "connection-string": {
@@ -29,31 +30,54 @@
           "type": "string"
         }
       },
-      "required": [
-        "database-type",
-        "connection-string"
-      ]
-    },
-    "cosmos": {
-      "type": "object",
-      "description": "Azure Cosmos DB related settings",
-      "properties": {
-        "database": {
-          "type": "string",
-          "description": "Name of the database"
+      "if": {
+        "properties": {
+          "database-type": {
+            "const": "cosmosdb_nosql"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "options": {
+            "description": "Database specific properties for the backend database",
+            "type": "object",
+            "properties": {
+              "database": {
+                "type": "string",
+                "description": "Name of the database"
+              },
+              "container": {
+                "description": "Name of the container",
+                "type": "string"
+              },
+              "schema": {
+                "description": "Path to the GraphQL schema file",
+                "type": "string"
+              }
+            },
+            "required": [
+              "database",
+              "schema"
+            ]
+          }
         },
-        "container": {
-          "description": "Name of the container",
-          "type": "string"
-        },
-        "schema": {
-          "description": "Path to the GraphQL schema file",
-          "type": "string"
+        "required": [ "options" ]
+      },
+      "else": {
+        "properties": {
+          "options": {
+            "description": "Database specific properties for the backend database",
+            "type": "object",
+            "properties": {
+            },
+            "required": []
+          }
         }
       },
       "required": [
-        "database",
-        "schema"
+        "database-type",
+        "connection-string"
       ]
     },
     "runtime": {

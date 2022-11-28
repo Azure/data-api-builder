@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
@@ -11,7 +13,7 @@ namespace Azure.DataApiBuilder.Service.Models
     /// <summary>
     /// Contains methods to parse a GQL filter parameter
     /// </summary>
-    public static class GQLFilterParser
+    public class GQLFilterParser
     {
         public static readonly string NullStringValue = "NULL";
 
@@ -21,19 +23,21 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <param name="ctx">The GraphQL context, used to get the query variables</param>
         /// <param name="filterArgumentSchema">An IInputField object which describes the schema of the filter argument</param>
         /// <param name="fields">The fields in the *FilterInput being processed</param>
-        /// <param name="sourceAlias">The source alias underlyin the *FilterInput being processed</param>
-        /// <param name="sourceDefinition">Definition of the table/view underlying the *FilterInput being processed</param>
-        /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
-        public static Predicate Parse(
+        /// <param name="queryStructure">The query structure for the entity being filtered providing
+        /// the source alias of the underlying *FilterInput being processed,
+        /// source definition of the table/view of the underlying *FilterInput being processed,
+        /// and the function that parametrizes literals before they are written in string predicate operands.</param>
+        public Predicate Parse(
             IMiddlewareContext ctx,
             IInputField filterArgumentSchema,
             List<ObjectFieldNode> fields,
-            string schemaName,
-            string sourceName,
-            string sourceAlias,
-            SourceDefinition sourceDefinition,
-            Func<object, string> processLiterals)
+            BaseQueryStructure queryStructure)
         {
+            string schemaName = queryStructure.DatabaseObject.SchemaName;
+            string sourceName = queryStructure.DatabaseObject.Name;
+            string sourceAlias = queryStructure.SourceAlias;
+            SourceDefinition sourceDefinition = queryStructure.GetUnderlyingSourceDefinition();
+
             InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
 
             List<PredicateOperand> predicates = new();
@@ -54,6 +58,7 @@ namespace Azure.DataApiBuilder.Service.Models
                 bool fieldIsAnd = string.Equals(name, $"{PredicateOperation.AND}", StringComparison.OrdinalIgnoreCase);
                 bool fieldIsOr = string.Equals(name, $"{PredicateOperation.OR}", StringComparison.OrdinalIgnoreCase);
 
+                InputObjectType filterInputObjectType = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentObject.Fields[name]);
                 if (fieldIsAnd || fieldIsOr)
                 {
                     PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
@@ -64,29 +69,47 @@ namespace Azure.DataApiBuilder.Service.Models
                         argumentSchema: filterArgumentObject.Fields[name],
                         filterArgumentSchema: filterArgumentSchema,
                         otherPredicates,
-                        schemaName,
-                        sourceName,
-                        sourceAlias,
-                        sourceDefinition,
-                        op,
-                        processLiterals)));
+                        queryStructure,
+                        op)));
                 }
                 else
                 {
                     List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
-                    predicates.Push(new PredicateOperand(ParseScalarType(
-                        ctx,
-                        argumentSchema: filterArgumentObject.Fields[name],
-                        name,
-                        subfields,
-                        schemaName,
-                        sourceName,
-                        sourceAlias,
-                        processLiterals)));
+
+                    if (!IsScalarType(filterInputObjectType.Name))
+                    {
+                        queryStructure.DatabaseObject.Name = sourceName + "." + name;
+                        queryStructure.SourceAlias = sourceAlias + "." + name;
+                        predicates.Push(new PredicateOperand(Parse(ctx,
+                            filterArgumentObject.Fields[name],
+                            subfields,
+                            queryStructure)));
+                        queryStructure.DatabaseObject.Name = sourceName;
+                        queryStructure.SourceAlias = sourceAlias;
+                    }
+                    else
+                    {
+                        predicates.Push(
+                            new PredicateOperand(
+                                ParseScalarType(
+                                    ctx,
+                                    argumentSchema: filterArgumentObject.Fields[name],
+                                    name,
+                                    subfields,
+                                    schemaName,
+                                    sourceName,
+                                    sourceAlias,
+                                    queryStructure.MakeParamWithValue)));
+                    }
                 }
             }
 
             return MakeChainPredicate(predicates, PredicateOperation.AND);
+        }
+
+        static bool IsScalarType(string name)
+        {
+            return new string[] { "StringFilterInput", "IntFilterInput", "BoolFilterInput", "IdFilterInput" }.Contains(name);
         }
 
         /// <summary>
@@ -134,17 +157,13 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <param name="sourceDefinition">Definition of the table/view underlying the *FilterInput being processed</param>
         /// <param name="op">The operation (and or or)</param>
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
-        private static Predicate ParseAndOr(
+        private Predicate ParseAndOr(
             IMiddlewareContext ctx,
             IInputField argumentSchema,
             IInputField filterArgumentSchema,
             List<IValueNode> fields,
-            string schemaName,
-            string tableName,
-            string tableAlias,
-            SourceDefinition sourceDefinition,
-            PredicateOperation op,
-            Func<object, string> processLiterals)
+            BaseQueryStructure baseQuery,
+            PredicateOperation op)
         {
             if (fields.Count == 0)
             {
@@ -165,7 +184,11 @@ namespace Azure.DataApiBuilder.Service.Models
                 }
 
                 List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
-                operands.Add(new PredicateOperand(Parse(ctx, filterArgumentSchema, subfields, schemaName, tableName, tableAlias, sourceDefinition, processLiterals)));
+                operands.Add(new PredicateOperand(
+                    Parse(ctx,
+                        filterArgumentSchema,
+                        subfields,
+                        baseQuery)));
             }
 
             return MakeChainPredicate(operands, op);

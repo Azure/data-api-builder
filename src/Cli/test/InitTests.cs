@@ -18,8 +18,8 @@ namespace Cli.Tests
             InitOptions options = new(
                 databaseType: DatabaseType.mssql,
                 connectionString: "testconnectionstring",
-                cosmosDatabase: null,
-                cosmosContainer: null,
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
@@ -28,7 +28,7 @@ namespace Cli.Tests
 
             _basicRuntimeConfig =
             @"{
-                ""$schema"": ""dab.draft-01.schema.json"",
+                ""$schema"": ""dab.draft.schema.json"",
                 ""data-source"": {
                     ""database-type"": ""mssql"",
                     ""connection-string"": ""testconnectionstring""
@@ -39,7 +39,46 @@ namespace Cli.Tests
             // Adding runtime settings to the above basic config
             string expectedRuntimeConfig = AddPropertiesToJson(
                 _basicRuntimeConfig,
-                GetDefaultTestRuntimeSettingString(DatabaseType.mssql,
+                GetDefaultTestRuntimeSettingString(
+                    HostModeType.Development,
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                    authenticateDevModeRequest: true)
+            );
+
+            RunTest(options, expectedRuntimeConfig);
+        }
+
+        /// <summary>
+        /// Test the simple init config for cosmosdb_postgresql database.
+        /// </summary>
+        [TestMethod]
+        public void CosmosDbPostgreSqlDatabase()
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.cosmosdb_postgresql,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                hostMode: HostModeType.Development,
+                corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                config: _testRuntimeConfig,
+                devModeDefaultAuth: "true");
+
+            _basicRuntimeConfig =
+            @"{
+                ""$schema"": ""dab.draft.schema.json"",
+                ""data-source"": {
+                    ""database-type"": ""cosmosdb_postgresql"",
+                    ""connection-string"": ""testconnectionstring""
+                },
+                ""entities"": {}
+            }";
+
+            // Adding runtime settings to the above basic config
+            string expectedRuntimeConfig = AddPropertiesToJson(
+                _basicRuntimeConfig,
+                GetDefaultTestRuntimeSettingString(
                     HostModeType.Development,
                     new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                     authenticateDevModeRequest: true)
@@ -57,8 +96,8 @@ namespace Cli.Tests
             InitOptions options = new(
                 databaseType: DatabaseType.mssql,
                 connectionString: null,
-                cosmosDatabase: null,
-                cosmosContainer: null,
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
@@ -67,7 +106,7 @@ namespace Cli.Tests
 
             _basicRuntimeConfig =
             @"{
-                ""$schema"": ""dab.draft-01.schema.json"",
+                ""$schema"": ""dab.draft.schema.json"",
                 ""data-source"": {
                     ""database-type"": ""mssql"",
                     ""connection-string"": """"
@@ -78,7 +117,7 @@ namespace Cli.Tests
             // Adding runtime settings to the above basic config
             string expectedRuntimeConfig = AddPropertiesToJson(
                 _basicRuntimeConfig,
-                GetDefaultTestRuntimeSettingString(DatabaseType.mssql,
+                GetDefaultTestRuntimeSettingString(
                     HostModeType.Development,
                     new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                     authenticateDevModeRequest: false)
@@ -87,16 +126,16 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test cosmos db specifc settings like cosmos-database, cosmos-container, cosmos-schema file.
+        /// Test cosmosdb_nosql specifc settings like cosmosdb_nosql-database, cosmosdb_nosql-container, cosmos-schema file.
         /// </summary>
         [TestMethod]
-        public void CosmosDatabase()
+        public void CosmosDbNoSqlDatabase()
         {
             InitOptions options = new(
-                databaseType: DatabaseType.cosmos,
+                databaseType: DatabaseType.cosmosdb_nosql,
                 connectionString: "testconnectionstring",
-                cosmosDatabase: "testdb",
-                cosmosContainer: "testcontainer",
+                cosmosNoSqlDatabase: "testdb",
+                cosmosNoSqlContainer: "testcontainer",
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
@@ -104,10 +143,15 @@ namespace Cli.Tests
                 devModeDefaultAuth: null);
 
             _basicRuntimeConfig = @"{
-                ""$schema"": ""dab.draft-01.schema.json"",
+                ""$schema"": ""dab.draft.schema.json"",
                 ""data-source"": {
-                    ""database-type"": ""cosmos"",
-                    ""connection-string"": ""testconnectionstring""
+                    ""database-type"": ""cosmosdb_nosql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"": {
+                        ""database"": ""testdb"",
+                        ""container"": ""testcontainer"",
+                        ""schema"": ""schemafile""
+                    }
                 },
                 ""cosmos"": {
                     ""database"": ""testdb"",
@@ -120,7 +164,7 @@ namespace Cli.Tests
             // Adding runtime settings to the above basic config
             string expectedRuntimeConfig = AddPropertiesToJson(
                 _basicRuntimeConfig,
-                GetDefaultTestRuntimeSettingString(DatabaseType.cosmos));
+                GetDefaultTestRuntimeSettingString());
             RunTest(options, expectedRuntimeConfig);
         }
 
@@ -133,17 +177,17 @@ namespace Cli.Tests
         [DataRow("testDatabase", null, "", false, DisplayName = "database is provided, container and Schema is null/empty.")]
         [DataRow("testDatabase", null, "testSchema", true, DisplayName = "database and schema provided, container is null/empty.")]
         [DataTestMethod]
-        public void VerifyRequiredOptionsForCosmosDatabase(
+        public void VerifyRequiredOptionsForCosmosDbNoSqlDatabase(
             string? cosmosDatabase,
             string? cosmosContainer,
             string? graphQLSchema,
             bool expectedResult)
         {
             InitOptions options = new(
-                databaseType: DatabaseType.cosmos,
+                databaseType: DatabaseType.cosmosdb_nosql,
                 connectionString: "testconnectionstring",
-                cosmosDatabase: cosmosDatabase,
-                cosmosContainer: cosmosContainer,
+                cosmosNoSqlDatabase: cosmosDatabase,
+                cosmosNoSqlContainer: cosmosContainer,
                 graphQLSchemaPath: graphQLSchema,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
@@ -164,8 +208,8 @@ namespace Cli.Tests
             InitOptions options = new(
                 databaseType: DatabaseType.mssql,
                 connectionString: "testconnectionstring",
-                cosmosDatabase: null,
-                cosmosContainer: null,
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { },
@@ -228,8 +272,8 @@ namespace Cli.Tests
             InitOptions options = new(
                 databaseType: DatabaseType.mssql,
                 connectionString: "testconnectionstring",
-                cosmosDatabase: null,
-                cosmosContainer: null,
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Production,
                 corsOrigin: new List<string>() { },

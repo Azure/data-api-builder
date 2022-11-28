@@ -198,6 +198,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
 
         #endregion
 
+        [TestMethod]
+        public async Task PutOneInViewBadRequest()
+        {
+            string expectedErrorMessage = $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
+                                           "because the modification affects multiple base tables.";
+            await base.PutOneInViewBadRequest(expectedErrorMessage);
+        }
+
         #region RestApiTestBase Overrides
 
         public override string GetQuery(string key)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
@@ -57,9 +58,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public SqlUpsertQueryStructure(
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
+            IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
             bool incrementalUpdate)
-        : base(sqlMetadataProvider, entityName: entityName)
+        : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
         {
             UpdateOperations = new();
             InsertColumns = new();
@@ -104,7 +107,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 foreach (KeyValuePair<string, object?> param in mutationParams)
                 {
                     // since we have already validated mutationParams we know backing column exists
-                    SqlMetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+                    MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                     // Create Parameter and map it to column for downstream logic to utilize.
                     string paramIdentifier;
                     if (param.Value != null)

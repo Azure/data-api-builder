@@ -97,8 +97,8 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <returns>A Base64 encoded string of a serialized StaticWebAppsClientPrincipal object</returns>
         public static string CreateStaticWebAppsEasyAuthToken(
             bool addAuthenticated = true,
-            string specificRole = null,
-            IEnumerable<SWAPrincipalClaim> claims = null)
+            string? specificRole = null,
+            IEnumerable<SWAPrincipalClaim>? claims = null)
         {
             // The anonymous role is present in all requests sent to Static Web Apps or AppService endpoints.
             List<string> roles = new()

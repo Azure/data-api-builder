@@ -109,6 +109,91 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new book in the books table with given publisher_id
+        /// <code>Check: </code> If the new book is inserted into the DB and
+        /// verifies the response.
+        /// </summary>
+        public async Task TestStoredProcedureMutationForInsertion(string dbQuery)
+        {
+            string graphQLMutationName = "InsertBook";
+            string graphQLMutation = @"
+                mutation {
+                    InsertBook(title: ""Random Book"", publisher_id: 1234 ) {
+                        result
+                    }
+                }
+            ";
+
+            string currentDbResponse = await GetDatabaseResultAsync(dbQuery);
+            JsonDocument currentResult = JsonDocument.Parse(currentDbResponse);
+            Assert.AreEqual(currentResult.RootElement.GetProperty("count").GetInt64(), 0);
+            JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+
+            // Stored Procedure didn't return anything
+            SqlTestHelper.PerformTestEqualJsonStrings("[]", graphQLResponse.ToString());
+
+            // check to verify new element is inserted
+            string updatedDbResponse = await GetDatabaseResultAsync(dbQuery);
+            JsonDocument updatedResult = JsonDocument.Parse(updatedDbResponse);
+            Assert.AreEqual(updatedResult.RootElement.GetProperty("count").GetInt64(), 1);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Deletes book from the books table with given id
+        /// <code>Check: </code> If the intended book is deleted from the DB and
+        /// verifies the response.
+        /// </summary>
+        public async Task TestStoredProcedureMutationForDeletion(string dbQueryToVerifyDeletion)
+        {
+            string graphQLMutationName = "DeleteLastInsertedBook";
+            string graphQLMutation = @"
+                mutation {
+                    DeleteLastInsertedBook {
+                        result
+                    }
+                }
+            ";
+
+            string currentDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
+            JsonDocument currentResult = JsonDocument.Parse(currentDbResponse);
+            Assert.AreEqual(currentResult.RootElement.GetProperty("maxId").GetInt64(), 14);
+            JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+
+            // Stored Procedure didn't return anything
+            SqlTestHelper.PerformTestEqualJsonStrings("[]", graphQLResponse.ToString());
+
+            // check to verify new element is inserted
+            string updatedDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
+            JsonDocument updatedResult = JsonDocument.Parse(updatedDbResponse);
+            Assert.AreEqual(updatedResult.RootElement.GetProperty("maxId").GetInt64(), 13);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> updates a book title from the books table with given id
+        /// and new title.
+        /// <code>Check: </code> The book title should be updated with the given id
+        /// DB is queried to verify the result.
+        /// </summary>
+        public async Task TestStoredProcedureMutationForUpdate(string dbQuery)
+        {
+            string graphQLMutationName = "UpdateBookTitle";
+            string graphQLMutation = @"
+                mutation {
+                    UpdateBookTitle(id: 14, title: ""Before Midnight"") {
+                        result
+                    }
+                }
+            ";
+
+            string beforeUpdate = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings("{\"id\":14,\"title\":\"Before Sunset\",\"publisher_id\":1234}", beforeUpdate);
+            JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings("[]", graphQLResponse.ToString());
+            string afterUpdate = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings("{\"id\":14,\"title\":\"Before Midnight\",\"publisher_id\":1234}", afterUpdate);
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new stock price with default current timestamp as the value of 
         /// 'instant' column and returns the inserted row.
         /// <code>Check: </code> If stock price with the given (category, piece id) is successfully inserted

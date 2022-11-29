@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                books(first: 100) {
+                books(first: 12) {
                     items {
                         id
                         title
@@ -587,6 +587,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                       },
           {
                         ""title"": ""Also Awesome book""
+          },
+          {
+                        ""title"": ""Before Sunrise""
           }
         ]
       }
@@ -629,6 +632,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     ""items"": [
                       {
                         ""id"": 1
+                      },
+                      {
+                        ""id"": 13
+                      },
+                      {
+                        ""id"": 14
                       }
         ]
       }
@@ -641,6 +650,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         ""items"": [
           {
             ""id"": 1
+          },
+          {
+            ""id"": 13
+          },
+          {
+            ""id"": 14
           }
         ]
       }
@@ -956,6 +971,63 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Simple Stored Procedure to check SELECT query returning single row
+        /// </summary>
+        public async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
+        {
+            string graphQLQueryName = "GetPublisher";
+            string graphQLQuery = @"{
+                GetPublisher(id: 1234) {
+                    id
+                    name
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery, false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Simple Stored Procedure to check SELECT query returning multiple rows
+        /// </summary>
+        public async Task TestStoredProcedureQueryForGettingMultipleRows(string dbQuery)
+        {
+            string graphQLQueryName = "GetBooks";
+            string graphQLQuery = @"{
+                GetBooks {
+                    id
+                    title
+                    publisher_id
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery, false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Simple Stored Procedure to check COUNT operation
+        /// </summary>
+        public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows(string dbQuery)
+        {
+            string graphQLQueryName = "CountBooks";
+            string graphQLQuery = @"{
+                CountBooks {
+                    total_books
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery, false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// Query a composite view (contains columns from multiple tables)
         /// </summary>
         [TestMethod]
@@ -996,6 +1068,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataApiBuilderException.SubStatusCodes.BadRequest}");
+        }
+
+        /// <summary>
+        /// Checks failure on providing invalid arguments in graphQL Query
+        /// </summary>
+        public async Task TestStoredProcedureQueryWithInvalidArgumentType()
+        {
+            string graphQLQueryName = "GetBook";
+            string graphQLQuery = @"{
+                GetBook(id: ""3"") {
+                    id
+                    title
+                    publisher_id
+                }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: "The specified argument value does not match the argument type.");
         }
 
         [TestMethod]

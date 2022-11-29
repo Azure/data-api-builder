@@ -39,6 +39,20 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     NameNode name = objectTypeDefinitionNode.Name;
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
 
+                    // For stored procedures, only one mutation is created in the schema
+                    // unlike table/views where we create one for each CUD operation.
+                    if (entities[dbEntityName].ObjectType is SourceType.StoredProcedure)
+                    {
+                        // If the role has actions other than READ, a schema for mutation will be generated.
+                        Operation storedProcedureOperation = GetOperationTypeForStoredProcedure(dbEntityName, entityPermissionsMap);
+                        if (storedProcedureOperation is not Operation.Read)
+                        {
+                            AddMutationsForStoredProcedure(dbEntityName, storedProcedureOperation, entityPermissionsMap, name, entities, mutationFields);
+                        }
+
+                        continue;
+                    }
+
                     AddMutations(dbEntityName, operation: Operation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
                     AddMutations(dbEntityName, operation: Operation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
                     AddMutations(dbEntityName, operation: Operation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
@@ -54,6 +68,21 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             return new(definitionNodes);
+        }
+
+        /// <summary>
+        /// Tries to fetch the Operation Type for Stored Procedure.
+        /// Stored Procedure currently supports exactly 1 CRUD operation at a time.
+        /// This check is done during initialization as part of config validation.
+        /// </summary>
+        private static Operation GetOperationTypeForStoredProcedure(
+            string dbEntityName,
+            Dictionary<string, EntityMetadata>? entityPermissionsMap)
+        {
+            List<Operation> operations = entityPermissionsMap![dbEntityName].OperationToRolesMap.Keys.ToList();
+
+            // Stored Procedure will have only CRUD action.
+            return operations.First();
         }
 
         /// <summary>
@@ -100,6 +129,26 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     default:
                         throw new ArgumentOutOfRangeException(paramName: "action", message: "Invalid argument value provided.");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to add the new StoredProcedure in the mutation fields
+        /// of GraphQL Schema
+        /// </summary>
+        private static void AddMutationsForStoredProcedure(
+            string dbEntityName,
+            Operation operation,
+            Dictionary<string, EntityMetadata>? entityPermissionsMap,
+            NameNode name,
+            IDictionary<string, Entity> entities,
+            List<FieldDefinitionNode> mutationFields
+            )
+        {
+            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: operation, entityPermissionsMap);
+            if (rolesAllowedForMutation.Count() > 0)
+            {
+                mutationFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entities[dbEntityName], rolesAllowedForMutation));
             }
         }
 

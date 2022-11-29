@@ -273,6 +273,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await base.TestQueryOnBasicView(msSqlQuery);
         }
 
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that returns a single row
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingSingleRow()
+        {
+            string msSqlQuery = $"EXEC dbo.get_publisher_by_id @id=1234";
+            await TestStoredProcedureQueryForGettingSingleRow(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that returns a list(multiple rows)
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingMultipleRows()
+        {
+            string msSqlQuery = $"EXEC dbo.get_books";
+            await TestStoredProcedureQueryForGettingMultipleRows(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that counts the total number of rows
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows()
+        {
+            string msSqlQuery = $"EXEC dbo.count_books";
+            await TestStoredProcedureQueryForGettingTotalNumberOfRows(msSqlQuery);
+        }
+
         [TestMethod]
         public async Task TestQueryOnCompositeView()
         {

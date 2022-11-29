@@ -57,9 +57,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             ItemResponse<JObject>? response = resolver.OperationType switch
             {
-                Operation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
-                Operation.Create => await HandleCreateAsync(queryArgs, container),
-                Operation.Delete => await HandleDeleteAsync(queryArgs, container),
+                Operation.UpdateGraphQL => await HandleUpdateAsync(queryArgs!, container),
+                Operation.Create => await HandleCreateAsync(queryArgs!, container),
+                Operation.Delete => await HandleDeleteAsync(queryArgs!, container),
                 _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
             };
 

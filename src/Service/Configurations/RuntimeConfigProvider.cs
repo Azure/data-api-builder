@@ -254,7 +254,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             ManagedIdentityAccessToken = accessToken;
 
             EventHandler<RuntimeConfig>? handlers = RuntimeConfigLoaded;
-            if (handlers != null)
+            if (handlers is not null && RuntimeConfiguration is not null)
             {
                 handlers(this, RuntimeConfiguration);
             }

@@ -820,7 +820,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataTestMethod]
         [DataRow(false, true, "Introspection is not allowed for the current request.", DisplayName = "Disabled introspection returns GraphQL error.")]
         [DataRow(true, false, null, DisplayName = "Enabled introspection does not return introspection forbidden error.")]
-        public async Task TestSchemaIntrospectionQuery(bool enableIntrospection, bool expectError, string? errorMessage)
+        public async Task TestSchemaIntrospectionQuery(bool enableIntrospection, bool expectError, string errorMessage)
         {
             Dictionary<GlobalSettingsType, object> settings = new()
             {

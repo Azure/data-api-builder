@@ -286,10 +286,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(new string[] { "id" }, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", DisplayName = "TargetField is null")]
         [DataTestMethod]
         public void TestRelationshipWithLinkingObjectNotHavingRequiredFields(
-            string[]? sourceFields,
-            string[]? linkingSourceFields,
-            string[]? targetFields,
-            string[]? linkingTargetFields,
+            string[] sourceFields,
+            string[] linkingSourceFields,
+            string[] targetFields,
+            string[] linkingTargetFields,
             string relationshipEntity
         )
         {
@@ -382,10 +382,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "TargetField is null, , only ForeignKeyPair between LinkingObject and source is present. Valid Case.")]
         [DataTestMethod]
         public void TestRelationshipForCorrectPairingOfLinkingObjectWithSourceAndTarget(
-            string[]? sourceFields,
-            string[]? linkingSourceFields,
-            string[]? targetFields,
-            string[]? linkingTargetFields,
+            string[] sourceFields,
+            string[] linkingSourceFields,
+            string[] targetFields,
+            string[] linkingTargetFields,
             string relationshipEntity,
             bool isForeignKeyPairBetSourceAndLinkingObject,
             bool isForeignKeyPairBetTargetAndLinkingObject,
@@ -470,9 +470,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(null, null, null, DisplayName = "both source and targetFields are null")]
         [DataTestMethod]
         public void TestRelationshipWithNoLinkingObjectAndEitherSourceOrTargetFieldIsNull(
-            string[]? sourceFields,
-            string[]? targetFields,
-            string? linkingObject
+            string[] sourceFields,
+            string[] targetFields,
+            string linkingObject
         )
         {
             // Creating an EntityMap with two sample entity
@@ -1092,8 +1092,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="relationshipMap">Dictionary containing {relationshipName, Relationship}</param>
         private static Entity GetSampleEntityUsingSourceAndRelationshipMap(
             string source,
-            Dictionary<string, Relationship>? relationshipMap,
-            object? graphQLdetails
+            Dictionary<string, Relationship> relationshipMap,
+            object graphQLdetails
             )
         {
             PermissionOperation actionForRole = new(
@@ -1126,11 +1126,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private static Dictionary<string, Entity> GetSampleEntityMap(
             string sourceEntity,
             string targetEntity,
-            string[]? sourceFields,
-            string[]? targetFields,
+            string[] sourceFields,
+            string[] targetFields,
             string linkingObject,
-            string[]? linkingSourceFields,
-            string[]? linkingTargetFields
+            string[] linkingSourceFields,
+            string[] linkingTargetFields
         )
         {
             Dictionary<string, Relationship> relationshipMap = new();

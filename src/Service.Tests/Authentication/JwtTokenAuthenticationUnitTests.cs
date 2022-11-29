@@ -411,7 +411,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         private static async Task<HttpContext> SendRequestAndGetHttpContextState(
             SecurityKey key,
             string token,
-            string? clientRoleHeader = null,
+            string clientRoleHeader = null,
             bool treatDevModeRequestAsAuthenticated = false)
         {
             using IHost host = await CreateWebHostCustomIssuer(key, treatDevModeRequestAsAuthenticated);

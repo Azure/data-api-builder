@@ -150,7 +150,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
-            return DatabaseObject.GetSourceDefinitionForDatabaseObject(databaseObject);
+            return databaseObject.SourceDefinition;
         }
 
         /// <inheritdoc />

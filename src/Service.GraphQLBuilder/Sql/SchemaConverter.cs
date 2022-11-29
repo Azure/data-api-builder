@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
             List<DirectiveNode> objectTypeDirectives = new();
-            SourceDefinition sourceDefinition = DatabaseObject.GetSourceDefinitionForDatabaseObject(databaseObject);
+            SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
             NameNode nameNode = new(value: GetDefinedSingularName(entityName, configEntity));
 
             // When the result set is not defined, it could be a mutation operation with no returning columns

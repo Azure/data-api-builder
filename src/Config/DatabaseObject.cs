@@ -47,16 +47,19 @@ namespace Azure.DataApiBuilder.Config
         /// <summary>
         /// Get the underlying SourceDefinition based on database object source type
         /// </summary>
-        public static SourceDefinition GetSourceDefinitionForDatabaseObject(DatabaseObject databaseObject)
+        public SourceDefinition SourceDefinition
         {
-            return databaseObject.SourceType switch
+            get
             {
-                SourceType.Table => ((DatabaseTable)databaseObject).TableDefinition,
-                SourceType.View => ((DatabaseView)databaseObject).ViewDefinition,
-                SourceType.StoredProcedure => ((DatabaseStoredProcedure)databaseObject).StoredProcedureDefinition,
-                _ => throw new Exception(
-                        message: $"Unsupported SourceType. It can either be Table,View, or Stored Procedure.")
-            };
+                return SourceType switch
+                {
+                    SourceType.Table => ((DatabaseTable)this).TableDefinition,
+                    SourceType.View => ((DatabaseView)this).ViewDefinition,
+                    SourceType.StoredProcedure => ((DatabaseStoredProcedure)this).StoredProcedureDefinition,
+                    _ => throw new Exception(
+                            message: $"Unsupported SourceType. It can either be Table,View, or Stored Procedure.")
+                };
+            }
         }
     }
 

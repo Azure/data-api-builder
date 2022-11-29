@@ -91,9 +91,8 @@ Justification **for** allowing permission configuration for all CRUD operations:
 - Davide: the "simplification" would complicate authorization with no real benefit. True in that the authorization logic would need to change conditioned on whether the entity source was a stored procedure.
 - Aniruddh: we should leave the responsibility for the developer to properly configure hawaii; it's not our fault if they configure against the API guidelines
 
-Users can provide only one CRUD operation for stored-procedure. However, Cases where the stored-procedure is also returning some values, a READ permission would also be required
-or else the stored procedure will execute but no result would be displayed.
-One of create/update/delete(CUD) operation is required to qualify as mutation. Along with one of the CUD operation, READ permission could also be given.
+Users can provide only one CRUD operation for stored-procedure. 
+CREATE/UPDATE/DELETE(CUD) action will create mutation operation, while READ will create a Query operation for GraphQL.
 But providing more than one (CUD) operation would throw an error. As we don’t know what exactly the stored-procedure will be doing, From DABs perspective, we need just one of the CUD operation to label it as Mutation.
 
 **Conclusion**: we treat stored procedures as any other entity when it comes to CRUD support and role/action AuthZ except that they can provide only one CRUD operation for stored-procedure alone with READ.
@@ -196,7 +195,7 @@ Implementation was segmented into 5 main sections:
 > - If any roles in the permission has CREATE/UPDATE/DELETE access, then we generate a GraphQL Mutation.
 > - It will have a method called `GenerateStoredProcedureSchema` to create the graphql schema for our Stored Procedure.
 > - The above method will be called by `AddMutationsForStoredProcedure`, which checks if the roles are allowed for mutation and add it to mutation fields.
-> - We simply execute the stored-procedure and if it doesn't return anything or if the user doesn't have read permission empty result array will be returned.
+> - We simply execute the stored-procedure and response is an empty array.
 ```
 {
     "Execute Stored-Procedure GetBook and get results from the database"
@@ -265,14 +264,15 @@ Implementation was segmented into 5 main sections:
 > ![image](https://user-images.githubusercontent.com/102276754/201590249-57c03f98-2a88-4acd-a951-3e8779df4f4d.png)
 > 2. Query No param
 > ![image](https://user-images.githubusercontent.com/102276754/201590101-59931ff4-fba8-4901-8a18-9f8a4ffd2cfa.png)
-> 3. Insert Mutation operation
+> 3. Insert (Mutation)
 > ![image](https://user-images.githubusercontent.com/102276754/202139861-4e65ba4a-a5db-4c39-9de5-aa10d971e489.png)
-> 4. Count rows Stored Procedure
-> ![image](https://user-images.githubusercontent.com/102276754/203942475-ac5e1e40-df5d-4708-99b4-9a8c34a4c042.png)
-> 2. Insert And Select with Read permission
-> ![image](https://user-images.githubusercontent.com/102276754/202140414-6aa1312d-8a83-47b3-a123-ac6da0dcf129.png)
-> 3. Insert And Select without Read permission
-> ![image](https://user-images.githubusercontent.com/102276754/203942396-8c54cd8e-b217-4eb2-9359-6ce923a428e5.png)
+> 4. Count (Query)
+> ![image](https://user-images.githubusercontent.com/102276754/202140115-bc380631-c403-4871-8b40-bfc28438d602.png)
+> 5. Update(Mutation)
+> ![image](https://user-images.githubusercontent.com/102276754/204460055-a14e6a85-bf89-4547-b62d-8ff6a4c96caf.png)
+> 6. Delete(Mutation)
+> ![image](https://user-images.githubusercontent.com/102276754/204484061-c32412dd-673a-4b2c-a3b0-ae34f3662b22.png)
+
 
 
 ## TODO

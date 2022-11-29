@@ -996,13 +996,10 @@
       ],
       "graphql": true
     },
-    "DeleteBook": {
+    "DeleteLastInsertedBook": {
       "source": {
         "type": "stored-procedure",
-        "object": "delete_book",
-        "parameters": {
-          "id": 1
-        },
+        "object": "delete_last_inserted_book",
         "key-fields": []
       },
       "rest": true,

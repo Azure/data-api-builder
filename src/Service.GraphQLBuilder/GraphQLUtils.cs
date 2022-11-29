@@ -218,7 +218,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             {
                 return new(FLOAT_TYPE, new FloatValueNode(floatingValue));
             }
-            else if (Boolean.TryParse(stringValue, out bool booleanValue))
+            else if (bool.TryParse(stringValue, out bool booleanValue))
             {
                 return new(BOOLEAN_TYPE, new BooleanValueNode(booleanValue));
             }

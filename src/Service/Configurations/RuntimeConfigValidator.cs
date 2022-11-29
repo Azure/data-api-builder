@@ -445,10 +445,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             || (operationsList.Count is 1 && operationsList[0] is Operation.All))
                         {
                             throw new DataApiBuilderException(
-                            message: $"Invalid Operations for Entity: {entityName}. " +
-                                $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.",
-                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                                message: $"Invalid Operations for Entity: {entityName}. " +
+                                    $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
                     }
                 }

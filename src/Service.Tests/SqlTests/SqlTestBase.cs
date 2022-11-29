@@ -84,7 +84,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
             _runtimeConfigProvider = TestHelper.GetMockRuntimeConfigProvider(configPath, string.Empty);
 
-            // Add magazines entity to the 
+            // Add magazines entity to the
             if (TestCategory.MYSQL.Equals(DatabaseEngine))
             {
                 TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "magazine", "magazines");
@@ -230,11 +230,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             switch (DatabaseEngine)
             {
                 case TestCategory.POSTGRESQL:
-                    Mock<ILogger<QueryExecutor<NpgsqlConnection>>> pgQueryExecutorLogger = new();
+                    Mock<ILogger<PostgreSqlQueryExecutor>> pgQueryExecutorLogger = new();
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgreSqlDbExceptionParser(_runtimeConfigProvider);
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(
+                    _queryExecutor = new PostgreSqlQueryExecutor(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
                         pgQueryExecutorLogger.Object);

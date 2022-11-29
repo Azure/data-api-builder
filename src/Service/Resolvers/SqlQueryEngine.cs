@@ -117,12 +117,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             else
             {
                 SqlQueryStructure structure = new(
-                context,
-                parameters,
-                _sqlMetadataProvider,
-                _authorizationResolver,
-                _runtimeConfigProvider,
-                _gQLFilterParser);
+                    context,
+                    parameters,
+                    _sqlMetadataProvider,
+                    _authorizationResolver,
+                    _runtimeConfigProvider,
+                    _gQLFilterParser);
+
                 string queryString = _queryBuilder.Build(structure);
                 _logger.LogInformation(queryString);
                 List<JsonDocument> jsonListResult =

@@ -108,7 +108,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Check: </code>if the intended book is inserted in books table
         /// </summary>
         [TestMethod]
-        public async Task TestStoredProcedureMutationForInsertionWithNoReturns()
+        public async Task TestStoredProcedureMutationForInsertion()
         {
             string msSqlQuery = @"
                 SELECT COUNT(*) AS [count]
@@ -120,31 +120,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await TestStoredProcedureMutationForInsertionWithNoReturns(msSqlQuery);
-        }
-
-        /// <summary>
-        /// <code>Do: </code>insert new Book and return all the rows from book table
-        /// <code>Check: </code>if the book is inserted and shows result to roles having read permission
-        /// </summary>
-        [DataTestMethod]
-        [DataRow("Anonymous", false, "NO Permission", DisplayName = "Simulator - Anonymous role does not have proper permissions.")]
-        [DataRow("Authenticated", true, "HAS Permission", DisplayName = "Simulator - Authenticated but Authenticated role does not have proper permissions.")]
-        public async Task TestStoredProcedureMutationForInsertionReturnWithPermission(string clientRole, bool isAuthenticated, string bookName)
-        {
-            string dbQueryToVerifyInsertion = @"
-                SELECT COUNT(*) AS [count]
-                FROM [books] AS [table0]
-                WHERE [table0].[title] = " + $"'{bookName}'" + @"
-                    AND [table0].[publisher_id] = 1234
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES,
-                    WITHOUT_ARRAY_WRAPPER
-            ";
-
-            string dbQueryToVerifyGraphQLResponse = $"SELECT id, title, publisher_id FROM books ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
-
-            await TestStoredProcedureMutationForInsertionReturnWithPermission(clientRole, bookName, isAuthenticated, dbQueryToVerifyGraphQLResponse, dbQueryToVerifyInsertion);
+            await TestStoredProcedureMutationForInsertion(msSqlQuery);
         }
 
         /// <summary>

@@ -9,7 +9,6 @@ DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP PROCEDURE IF EXISTS get_publisher_by_id;
 DROP PROCEDURE IF EXISTS insert_book;
 DROP PROCEDURE IF EXISTS count_books;
-DROP PROCEDURE IF EXISTS insert_and_display_all_books;
 DROP PROCEDURE IF EXISTS delete_book;
 DROP PROCEDURE IF EXISTS update_book_title;
 DROP TABLE IF EXISTS book_author_link;
@@ -314,11 +313,6 @@ EXEC('CREATE PROCEDURE insert_book @title varchar(max), @publisher_id int AS
       INSERT INTO dbo.books(title, publisher_id) VALUES (@title, @publisher_id)');
 EXEC('CREATE PROCEDURE count_books AS
 	  SELECT COUNT(*) AS total_books FROM dbo.books');
-EXEC('CREATE PROCEDURE insert_and_display_all_books @title varchar(max), @publisher_id int AS
-      BEGIN
-        INSERT INTO dbo.books(title, publisher_id) VALUES (@title, @publisher_id)
-        SELECT * FROM dbo.books
-      END');
 EXEC('CREATE PROCEDURE delete_book @id int AS
       DELETE FROM dbo.books WHERE id=@id');
 EXEC('CREATE PROCEDURE update_book_title @id int, @title varchar(max) AS

@@ -438,18 +438,15 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         operationsList.Add(actionOp);
                     }
 
-                    // READ operation is allowed with other CRUD operations.
-                    operationsList.Remove(Operation.Read);
-
-                    // Apart from READ one of the CUD operations is allowed for stored procedure.
+                    // Only one of the CRUD actions is allowed for stored procedure.
                     if (entity.ObjectType is SourceType.StoredProcedure)
                     {
                         if ((operationsList.Count > 1)
                             || (operationsList.Count is 1 && operationsList[0] is Operation.All))
                         {
                             throw new DataApiBuilderException(
-                            message: $"Invalid OPerations for Entity: {entityName}. " +
-                                $"StoredProcedure can process only one CUD (Create/Update/Delete) operation.",
+                            message: $"Invalid Operations for Entity: {entityName}. " +
+                                $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.",
                             statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }

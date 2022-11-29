@@ -924,7 +924,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "*" ]
+          "actions": [ "read" ]
         }
       ]
     },
@@ -942,7 +942,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "*" ]
+          "actions": [ "read" ]
         }
       ]
     },
@@ -996,33 +996,6 @@
       ],
       "graphql": true
     },
-    "InsertAndDisplayAllBooks": {
-      "source": {
-        "type": "stored-procedure",
-        "object": "insert_and_display_all_books",
-        "parameters": {
-          "title": "randomX",
-          "publisher_id": 1234
-        },
-        "key-fields": []
-      },
-      "rest": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            "create"
-          ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [
-            "create"
-          ]
-        }
-      ],
-      "graphql": true
-    },
     "DeleteBook": {
       "source": {
         "type": "stored-procedure",
@@ -1064,15 +1037,13 @@
         {
           "role": "anonymous",
           "actions": [
-            "update",
-            "read"
+            "update"
           ]
         },
         {
           "role": "authenticated",
           "actions": [
-            "update",
-            "read"
+            "update"
           ]
         }
       ],

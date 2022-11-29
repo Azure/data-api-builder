@@ -59,7 +59,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// Takes the result from DB as JsonDocument and formats it in a way that can be filtered by column
         /// name. It parses the Json document into a list of Dictionary with key as result_column_name
         /// with it's corresponding value.
-        /// returns an empty list in case of no result or if READ is not allowed
+        /// returns an empty list in case of no result 
+        /// or stored-procedure is trying to read from DB without READ permission.
         /// </summary>
         public static List<JsonDocument> FormatStoredProcedureResultAsJsonList(bool IsReadAllowed, JsonDocument jsonDocument)
         {

@@ -49,12 +49,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test method to validate that only 1 CUD operation along with READ is provided for a particular role.
+        /// Test method to validate that only 1 CRUD operation is supported for stored procedure.
         /// </summary>
         [DataTestMethod]
-        [DataRow(new object[] { "create", "read" }, true, DisplayName = "Stored-procedure with create-read permission")]
-        [DataRow(new object[] { "update", "read" }, true, DisplayName = "Stored-procedure with update-read permission")]
-        [DataRow(new object[] { "delete", "read" }, true, DisplayName = "Stored-procedure with delete-read permission")]
+        [DataRow(new object[] { "create", "read" }, false, DisplayName = "Stored-procedure with create-read permission")]
+        [DataRow(new object[] { "update", "read" }, false, DisplayName = "Stored-procedure with update-read permission")]
+        [DataRow(new object[] { "delete", "read" }, false, DisplayName = "Stored-procedure with delete-read permission")]
         [DataRow(new object[] { "create" }, true, DisplayName = "Stored-procedure with only create permission")]
         [DataRow(new object[] { "read" }, true, DisplayName = "Stored-procedure with only read permission")]
         [DataRow(new object[] { "update" }, true, DisplayName = "Stored-procedure with only update permission")]
@@ -90,12 +90,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY] = testEntity;
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
 
-            if (!isValid)
+            try
             {
-                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                    configValidator.ValidatePermissionsInConfig(runtimeConfig));
-                Assert.AreEqual("Invalid OPerations for Entity: SampleEntity. " +
-                    $"StoredProcedure can process only one CUD (Create/Update/Delete) operation.", ex.Message);
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+                Assert.AreEqual(true, isValid);
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.AreEqual(false, isValid);
+                Assert.AreEqual("Invalid Operations for Entity: SampleEntity. " +
+                    $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.", ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }

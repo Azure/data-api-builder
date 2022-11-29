@@ -113,11 +113,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
                         fields.Add(columnName, field);
                     }
-                    else
+                    else if (databaseObject.SourceType is SourceType.StoredProcedure)
                     {
                         // When no roles have permission to access the columns
-                        // we create a default result set with no data. i.e, the stored-procedure 
-                        // executed but user can't see the results.
+                        // we create a default result set with no data. i.e, the stored-procedure is
+                        // executed but user see empty results because it is trying to query the DB without read permission.
                         if (databaseObject.SourceType is SourceType.StoredProcedure)
                         {
                             FieldDefinitionNode field = GetDefaultResultFieldForStoredProcedure();

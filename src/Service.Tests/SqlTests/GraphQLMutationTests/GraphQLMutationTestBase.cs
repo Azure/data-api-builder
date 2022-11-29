@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -89,7 +87,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Check: </code> If the new book is inserted into the DB and
         /// verifies the response.
         /// </summary>
-        public async Task TestStoredProcedureMutationForInsertionWithNoReturns(string dbQuery)
+        public async Task TestStoredProcedureMutationForInsertion(string dbQuery)
         {
             string graphQLMutationName = "InsertBook";
             string graphQLMutation = @"
@@ -112,53 +110,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string updatedDbResponse = await GetDatabaseResultAsync(dbQuery);
             JsonDocument updatedResult = JsonDocument.Parse(updatedDbResponse);
             Assert.AreEqual(updatedResult.RootElement.GetProperty("count").GetInt64(), 1);
-        }
-
-        /// <summary>
-        /// <code>Do: </code> Inserts new book in the books table with given publisher_id
-        /// <code>Check: </code> If the user has read permission it will display the result
-        /// else user won't see the result of the stored procedure.
-        /// </summary>
-        public async Task TestStoredProcedureMutationForInsertionReturnWithPermission(
-            string clientRole,
-            string bookName,
-            bool isAuthenticated,
-            string dbQueryToVerifyGraphQLResponse,
-            string dbQueryToVerifyInsertion)
-        {
-            string graphQLMutationName = "InsertAndDisplayAllBooks";
-            string graphQLMutation = @"
-                mutation {
-                    InsertAndDisplayAllBooks(title: " + @$"""{bookName}""" + @", publisher_id: 1234 ) {
-                        id,
-                        title,
-                        publisher_id
-                    }
-                }
-            ";
-
-            string currentDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyInsertion);
-            JsonDocument currentResult = JsonDocument.Parse(currentDbResponse);
-            Assert.AreEqual(currentResult.RootElement.GetProperty("count").GetInt64(), 0);
-
-            JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: isAuthenticated, clientRoleHeader: clientRole);
-
-            // check to verify new element is inserted
-            string updatedDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyInsertion);
-            JsonDocument updatedResult = JsonDocument.Parse(updatedDbResponse);
-            Assert.AreEqual(updatedResult.RootElement.GetProperty("count").GetInt64(), 1);
-
-            if (clientRole.Equals("Anonymous", StringComparison.OrdinalIgnoreCase))
-            {
-                // Result not available without READ permissions
-                SqlTestHelper.PerformTestEqualJsonStrings("[]", graphQLResponse.ToString());
-            }
-            else
-            {
-                // Result available with READ permissions
-                string DbResponse = await GetDatabaseResultAsync(dbQueryToVerifyGraphQLResponse);
-                SqlTestHelper.PerformTestEqualJsonStrings(DbResponse, graphQLResponse.ToString());
-            }
         }
 
         /// <summary>
@@ -195,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Do: </code> updates a book title from the books table with given id
         /// and new title.
         /// <code>Check: </code> The book title should be updated with the given id
-        /// and the response is verified which contains the updated row.
+        /// DB is queried to verify the result.
         /// </summary>
         public async Task TestStoredProcedureMutationForUpdate(string dbQuery)
         {
@@ -203,20 +154,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string graphQLMutation = @"
                 mutation {
                     UpdateBookTitle(id: 14, title: ""Before Midnight"") {
-                        id
-                        title
-                        publisher_id
+                        result
                     }
                 }
             ";
 
             string beforeUpdate = await GetDatabaseResultAsync(dbQuery);
-            Console.Write(beforeUpdate);
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings("{\"id\":14,\"title\":\"Before Sunset\",\"publisher_id\":1234}", beforeUpdate);
+            JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings("[]", graphQLResponse.ToString());
             string afterUpdate = await GetDatabaseResultAsync(dbQuery);
-            List<JsonDocument> jsonList = JsonSerializer.Deserialize<List<JsonDocument>>(actual.ToString());
-            Assert.AreEqual(1, jsonList.Count);
-            SqlTestHelper.PerformTestEqualJsonStrings(afterUpdate, JsonSerializer.Serialize(jsonList[0]));
+            SqlTestHelper.PerformTestEqualJsonStrings("{\"id\":14,\"title\":\"Before Midnight\",\"publisher_id\":1234}", afterUpdate);
         }
 
         /// <summary>

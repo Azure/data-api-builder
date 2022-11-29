@@ -93,9 +93,9 @@ Justification **for** allowing permission configuration for all CRUD operations:
 
 Users can provide only one CRUD operation for stored-procedure. 
 CREATE/UPDATE/DELETE(CUD) action will create mutation operation, while READ will create a Query operation for GraphQL.
-But providing more than one (CUD) operation would throw an error. As we don’t know what exactly the stored-procedure will be doing, From DABs perspective, we need just one of the CUD operation to label it as Mutation.
+Providing more than one (CRUD) operation would throw an error and the engine will fail to start during initialization.
 
-**Conclusion**: we treat stored procedures as any other entity when it comes to CRUD support and role/action AuthZ except that they can provide only one CRUD operation for stored-procedure alone with READ.
+**Conclusion**: we treat stored procedures as any other entity when it comes to CRUD support and role/action AuthZ.
 ## Implementation Overview
 
 Implementation was segmented into 5 main sections:

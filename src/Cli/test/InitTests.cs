@@ -153,16 +153,11 @@ namespace Cli.Tests
                         ""schema"": ""schemafile""
                     }
                 },
-                ""cosmos"": {
-                    ""database"": ""testdb"",
-                    ""container"": ""testcontainer"",
-                    ""schema"": ""schemafile""
-                },
                 ""entities"": {}
             }";
 
             // Adding runtime settings to the above basic config
-            string expectedRuntimeConfig = AddPropertiesToJson(
+            string expectedRuntimeConfig = AddPropertiesToJson (
                 _basicRuntimeConfig,
                 GetDefaultTestRuntimeSettingString());
             RunTest(options, expectedRuntimeConfig);

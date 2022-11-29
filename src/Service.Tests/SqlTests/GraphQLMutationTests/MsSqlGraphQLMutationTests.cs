@@ -131,12 +131,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         public async Task TestStoredProcedureMutationForDeletion()
         {
             string dbQueryToVerifyDeletion = @"
-                SELECT COUNT(*) AS [count]
+                SELECT MAX(table0.id) AS [maxId]
                 FROM [books] AS [table0]
-                WHERE 
-                    [table0].[id] = 13
-                    AND [table0].[title] = 'Before Sunrise'
-                    AND [table0].[publisher_id] = 1234
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES,
                     WITHOUT_ARRAY_WRAPPER

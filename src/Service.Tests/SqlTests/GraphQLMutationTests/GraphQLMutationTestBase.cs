@@ -119,10 +119,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationForDeletion(string dbQueryToVerifyDeletion)
         {
-            string graphQLMutationName = "DeleteBook";
+            string graphQLMutationName = "DeleteLastInsertedBook";
             string graphQLMutation = @"
                 mutation {
-                    DeleteBook(id: 13) {
+                    DeleteLastInsertedBook {
                         result
                     }
                 }
@@ -130,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             string currentDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
             JsonDocument currentResult = JsonDocument.Parse(currentDbResponse);
-            Assert.AreEqual(currentResult.RootElement.GetProperty("count").GetInt64(), 1);
+            Assert.AreEqual(currentResult.RootElement.GetProperty("maxId").GetInt64(), 14);
             JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
 
             // Stored Procedure didn't return anything
@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             // check to verify new element is inserted
             string updatedDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
             JsonDocument updatedResult = JsonDocument.Parse(updatedDbResponse);
-            Assert.AreEqual(updatedResult.RootElement.GetProperty("count").GetInt64(), 0);
+            Assert.AreEqual(updatedResult.RootElement.GetProperty("maxId").GetInt64(), 13);
         }
 
         /// <summary>

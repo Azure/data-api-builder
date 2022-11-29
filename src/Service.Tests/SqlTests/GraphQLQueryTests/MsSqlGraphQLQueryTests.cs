@@ -31,6 +31,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQuery(msSqlQuery);
         }
 
+        /// <summary>
+        /// Gets array of results for querying a table containing computed columns.
+        /// </summary>
+        /// <check>rows from sales table</check>
+        [TestMethod]
+        public async Task MultipleResultQueryContainingComputedColumns()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    id,
+                    item_name,
+                    ROUND(subtotal,2) AS subtotal,
+                    ROUND(tax,2) AS tax,
+                    ROUND(total,2) AS total
+                FROM
+                    sales
+                ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await MultipleResultQueryContainingComputedColumns(msSqlQuery);
+        }
+
         [TestMethod]
         public async Task MultipleResultQueryWithVariables()
         {

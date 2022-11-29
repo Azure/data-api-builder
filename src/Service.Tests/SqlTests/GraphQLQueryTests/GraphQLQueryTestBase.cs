@@ -55,6 +55,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Gets array of results for querying a table containing computed columns.
+        /// </summary>
+        /// <returns>rows from sales table</returns>
+        public async Task MultipleResultQueryContainingComputedColumns(string dbQuery)
+        {
+            string graphQLQueryName = "sales";
+            string graphQLQuery = @"{
+                sales(first: 10) {
+                    items {
+                        id
+                        item_name
+                        subtotal
+                        tax
+                        total
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
         /// Gets array of results for querying more than one item.
         /// </summary>
         /// <returns></returns>

@@ -43,6 +43,21 @@ namespace Azure.DataApiBuilder.Config
         {
             return HashCode.Combine(SchemaName, Name);
         }
+
+        /// <summary>
+        /// Get the underlying SourceDefinition based on database object source type
+        /// </summary>
+        public static SourceDefinition GetSourceDefinitionForDatabaseObject(DatabaseObject databaseObject)
+        {
+            return databaseObject.SourceType switch
+            {
+                SourceType.Table => ((DatabaseTable)databaseObject).TableDefinition,
+                SourceType.View => ((DatabaseView)databaseObject).ViewDefinition,
+                SourceType.StoredProcedure => ((DatabaseStoredProcedure)databaseObject).StoredProcedureDefinition,
+                _ => throw new Exception(
+                        message: $"Unsupported SourceType. It can either be Table,View, or Stored Procedure.")
+            };
+        }
     }
 
     /// <summary>
@@ -131,21 +146,6 @@ namespace Azure.DataApiBuilder.Config
                                          Columns.TryGetValue(column, out ColumnDefinition? definition) && definition.IsNullable)
                                  .Where(isNullable => isNullable == true)
                                  .Any();
-        }
-
-        /// <summary>
-        /// Get the underlying SourceDefinition based on database object source type
-        /// </summary>
-        public static SourceDefinition GetSourceDefinitionForDatabaseObject(DatabaseObject databaseObject)
-        {
-            return databaseObject.SourceType switch
-            {
-                SourceType.Table => ((DatabaseTable)databaseObject).TableDefinition,
-                SourceType.View => ((DatabaseView)databaseObject).ViewDefinition,
-                SourceType.StoredProcedure => ((DatabaseStoredProcedure)databaseObject).StoredProcedureDefinition,
-                _ => throw new Exception(
-                        message: $"Unsupported SourceType. It can either be Table,View, or Stored Procedure.")
-            };
         }
     }
 

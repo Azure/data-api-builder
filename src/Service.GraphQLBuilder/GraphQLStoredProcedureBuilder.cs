@@ -71,9 +71,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
             List<JsonDocument> resultJson = new();
             List<Dictionary<string, object>> resultList = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonDocument.RootElement.ToString())!;
-            foreach (Dictionary<string, object> dict in resultList)
+            foreach (Dictionary<string, object> result in resultList)
             {
-                resultJson.Add(JsonDocument.Parse(JsonSerializer.Serialize(dict)));
+                resultJson.Add(JsonDocument.Parse(JsonSerializer.Serialize(result)));
             }
 
             return resultJson;

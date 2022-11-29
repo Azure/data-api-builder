@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     NameNode name = objectTypeDefinitionNode.Name;
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
 
-                    // We will only create a single mutation query for stored procedure
+                    // For stored procedures, only one mutation is created in the schema
                     // unlike table/views where we create one for each CUD operation.
                     if (entities[dbEntityName].ObjectType is SourceType.StoredProcedure)
                     {
@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
         /// <summary>
         /// Tries to fetch the Operation Type for Stored Procedure.
-        /// Stored Procedure currently support at most 1 CRUD operation at a time.
+        /// Stored Procedure currently supports exactly 1 CRUD operation at a time.
         /// This check is done during initialization as part of config validation.
         /// </summary>
         private static Operation GetOperationTypeForStoredProcedure(

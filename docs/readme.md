@@ -6,7 +6,7 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 
 ## Table of content
 
-- [What's new](./whats-new.md]
+- [What's new](./whats-new.md)
 - [Getting started](./getting-started/getting-started.md)
 - [Command Line Interface](./dab-cli.md)
 - [Local development](./local-development.md)

@@ -132,6 +132,65 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await InsertMutationForConstantdefaultValue(msSqlQuery);
         }
 
+        /// <summary>
+        /// <code>Do: </code>insert new Book and return nothing
+        /// <code>Check: </code>if the intended book is inserted in books table
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureMutationForInsertion()
+        {
+            string msSqlQuery = @"
+                SELECT COUNT(*) AS [count]
+                FROM [books] AS [table0]
+                WHERE [table0].[title] = 'Random Book'
+                    AND [table0].[publisher_id] = 1234
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await TestStoredProcedureMutationForInsertion(msSqlQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>deletes a Book and return nothing
+        /// <code>Check: </code>the intended book is deleted
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureMutationForDeletion()
+        {
+            string dbQueryToVerifyDeletion = @"
+                SELECT MAX(table0.id) AS [maxId]
+                FROM [books] AS [table0]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await TestStoredProcedureMutationForDeletion(dbQueryToVerifyDeletion);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Book title updation and return the updated row
+        /// <code>Check: </code>if the result returned from the mutation is correct
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureMutationForUpdate()
+        {
+            string dbQuery = @"
+                SELECT id, title, publisher_id
+                FROM [books] AS [table0]
+                WHERE 
+                    [table0].[id] = 14
+                    AND [table0].[publisher_id] = 1234
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await TestStoredProcedureMutationForUpdate(dbQuery);
+        }
+
         /// <inheritdoc/>
         [TestMethod]
         public async Task InsertMutationForVariableNotNullDefault()

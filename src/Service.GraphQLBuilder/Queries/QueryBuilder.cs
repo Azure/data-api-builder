@@ -50,15 +50,23 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     Entity entity = entities[entityName];
 
                     ObjectTypeDefinitionNode returnType = GenerateReturnType(name);
-                    returnTypes.Add(returnType);
 
                     IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForOperation(entityName, operation: Operation.Read, entityPermissionsMap);
 
                     if (rolesAllowedForRead.Count() > 0)
                     {
-                        queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity, rolesAllowedForRead));
-                        queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, entity, rolesAllowedForRead));
+                        if (entity.ObjectType is SourceType.StoredProcedure)
+                        {
+                            queryFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entity, rolesAllowedForRead));
+                        }
+                        else
+                        {
+                            queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity, rolesAllowedForRead));
+                            queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, entity, rolesAllowedForRead));
+                        }
                     }
+
+                    returnTypes.Add(returnType);
                 }
             }
 

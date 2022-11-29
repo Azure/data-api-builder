@@ -24,8 +24,13 @@ add Journal --config "dab-config.MsSql.json" --source "journals" --rest true --g
 add ArtOfWar --config "dab-config.MsSql.json" --source "aow" --rest true --permissions "anonymous:*"
 add series --config "dab-config.MsSql.json" --source "series" --permissions "anonymous:*"
 add Sales --config "dab-config.MsSql.json" --source "sales" --permissions "anonymous:*" --rest true --graphql true
-add GetBooks --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:read" --rest true --graphql false
+add GetBooks --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:read" --rest true --graphql true
 add GetBook --config "dab-config.MsSql.json" --source "get_book_by_id" --source.type "stored-procedure" --permissions "anonymous:read" --rest true --graphql false
+add GetPublisher --config "dab-config.MsSql.json" --source "get_publisher_by_id" --source.type "stored-procedure" --source.params "id:1" --permissions "anonymous:read" --rest true --graphql true
+add InsertBook --config "dab-config.MsSql.json" --source "insert_book" --source.type "stored-procedure" --source.params "title:randomX,publisher_id:1234" --permissions "anonymous:create" --rest true --graphql true
+add CountBooks --config "dab-config.MsSql.json" --source "count_books" --source.type "stored-procedure" --permissions "anonymous:read" --rest true --graphql true
+add DeleteLastInsertedBook --config "dab-config.MsSql.json" --source "delete_last_inserted_book" --source.type "stored-procedure" --permissions "anonymous:delete" --rest true --graphql true
+add UpdateBookTitle --config "dab-config.MsSql.json" --source "update_book_title" --source.type "stored-procedure" --source.params "id:1,title:Testing Tonight" --permissions "anonymous:update" --rest true --graphql true
 update Publisher --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_01:create,delete"
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_01:update" --fields.include "*"
@@ -106,6 +111,11 @@ update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_upd
 update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:delete" --fields.include "*" --policy-database "@item.id eq 1"
 update Journal --config "dab-config.MsSql.json" --permissions "authorizationHandlerTester:read"
 update ArtOfWar --config "dab-config.MsSql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
-update GetBook --config "dab-config.MsSql.json" --permissions "authenticated:*"
-update GetBooks --config "dab-config.MsSql.json" --permissions "authenticated:*"
+update GetBook --config "dab-config.MsSql.json" --permissions "authenticated:read"
+update GetPublisher --config "dab-config.MsSql.json" --permissions "authenticated:read"
+update GetBooks --config "dab-config.MsSql.json" --permissions "authenticated:read"
+update InsertBook --config "dab-config.MsSql.json" --permissions "authenticated:create"
+update CountBooks --config "dab-config.MsSql.json" --permissions "authenticated:read"
+update DeleteLastInsertedBook --config "dab-config.MsSql.json" --permissions "authenticated:delete"
+update UpdateBookTitle --config "dab-config.MsSql.json" --permissions "authenticated:update"
 update Sales --config "dab-config.MsSql.json" --permissions "authenticated:*"

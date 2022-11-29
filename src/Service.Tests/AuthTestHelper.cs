@@ -14,7 +14,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// Creates a mocked EasyAuth token, namely, the value of the header injected by EasyAuth.
         /// </summary>
         /// <returns>A Base64 encoded string of a serialized EasyAuthClientPrincipal object</returns>
-        public static string CreateAppServiceEasyAuthToken()
+        public static string CreateAppServiceEasyAuthToken(IEnumerable<AppServiceClaim> additionalClaims = null)
         {
             AppServiceClaim emailClaim = new()
             {
@@ -34,15 +34,22 @@ namespace Azure.DataApiBuilder.Service.Tests
                 Typ = ClaimTypes.Role
             };
 
-            List<AppServiceClaim> claims = new();
-            claims.Add(emailClaim);
-            claims.Add(roleClaimAnonymous);
-            claims.Add(roleClaimAuthenticated);
+            HashSet<AppServiceClaim> claims = new()
+            {
+                emailClaim,
+                roleClaimAnonymous,
+                roleClaimAuthenticated
+            };
+
+            if (additionalClaims != null)
+            {
+                claims.UnionWith(additionalClaims);
+            }
 
             AppServiceClientPrincipal token = new()
             {
                 Auth_typ = "aad",
-                Name_typ = "Apple Banana",
+                Name_typ = "name",
                 Claims = claims,
                 Role_typ = ClaimTypes.Role
             };
@@ -61,7 +68,8 @@ namespace Azure.DataApiBuilder.Service.Tests
         public static string CreateStaticWebAppsEasyAuthToken(
             bool addAuthenticated = true,
             string specificRole = null,
-            IEnumerable<SWAPrincipalClaim> claims = null)
+            string userId = null,
+            string userDetails = null)
         {
             // The anonymous role is present in all requests sent to Static Web Apps or AppService endpoints.
             List<string> roles = new()
@@ -93,9 +101,10 @@ namespace Azure.DataApiBuilder.Service.Tests
 
             StaticWebAppsClientPrincipal token = new()
             {
-                IdentityProvider = "github",
-                UserRoles = roles,
-                Claims = claims
+                UserId = userId,
+                UserDetails = userDetails,
+                IdentityProvider = "aad",
+                UserRoles = roles
             };
 
             string serializedToken = JsonSerializer.Serialize(value: token);

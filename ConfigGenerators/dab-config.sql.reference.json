@@ -946,6 +946,29 @@
         }
       ]
     },
+    "Sales": {
+      "source": {
+        "type": "table",
+        "object": "sales",
+        "key-fields": []
+      },
+      "rest": true,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "*"
+          ]
+        }
+      ]
+    },
     "InsertBook": {
       "source": {
         "type": "stored-procedure",

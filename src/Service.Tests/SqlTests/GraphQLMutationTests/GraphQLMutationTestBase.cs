@@ -60,6 +60,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new sale item into sales table that automatically calculates the total price
+        /// based on subtotal and tax.
+        /// <code>Check: Calculated column is persisted successfully with correct calculated result. </code>
+        /// </summary>
+        public async Task InsertMutationForComputedColumns(string dbQuery)
+        {
+            string graphQLMutationName = "createSales";
+            string graphQLMutation = @"
+                mutation{
+                    createSales(item: {item_name: ""headphones"", subtotal: 195.00, tax: 10.33}) {
+                        id
+                        item_name
+                        subtotal
+                        tax
+                        total
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
         /// <code>Check: </code> If book with the given id is present in the database then
         /// the mutation query will return the review Id with the content of the review added
@@ -204,6 +230,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     updatebook(id: 1, item: { title: ""Even Better Title"", publisher_id: 2345} ) {
                         title
                         publisher_id
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Update Sales in database and return its updated fields
+        /// <code>Check: The calculated column has successfully been updated after updating the other fields </code>
+        /// </summary>
+        public async Task UpdateMutationForComputedColumns(string dbQuery)
+        {
+            string graphQLMutationName = "updateSales";
+            string graphQLMutation = @"
+                mutation{
+                    updateSales(id: 2, item: {item_name: ""phone"", subtotal: 495.00, tax: 30.33}) {
+                        id
+                        item_name
+                        subtotal
+                        tax
+                        total
                     }
                 }
             ";

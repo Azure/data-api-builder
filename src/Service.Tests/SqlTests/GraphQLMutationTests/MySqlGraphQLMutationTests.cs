@@ -61,9 +61,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts new sale item into sales table that automatically calculates the total price
+        /// <code>Do: </code> Inserts a new sale item into the sales table that automatically calculates the total price
         /// based on subtotal and tax.
-        /// <code>Check: Calculated column is persisted successfully with correct calculated result. </code>
+        /// <code>Check: </code> Calculated column is persisted successfully with correct calculated result.
         /// </summary>
         [TestMethod]
         public async Task InsertMutationForComputedColumns()

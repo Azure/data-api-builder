@@ -228,7 +228,7 @@ REFERENCES series(id)
 ON DELETE CASCADE;
 
 ALTER TABLE sales
-ADD total AS (subtotal + tax)
+ADD total AS (subtotal + tax) PERSISTED;
 
 SET IDENTITY_INSERT publishers ON
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02');

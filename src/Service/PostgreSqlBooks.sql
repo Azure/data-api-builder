@@ -172,7 +172,7 @@ CREATE TABLE sales (
     item_name text NOT NULL,
     subtotal float NOT NULL,
     tax float NOT NULL,
-	total float generated always as (subtotal + tax) stored
+    total float generated always as (subtotal + tax) stored
 );
 
 ALTER TABLE books

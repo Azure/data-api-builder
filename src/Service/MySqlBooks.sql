@@ -168,7 +168,7 @@ CREATE TABLE sales (
     item_name text NOT NULL,
     subtotal decimal(18,2) NOT NULL,
     tax decimal(18,2) NOT NULL,
-	total decimal(18,2) generated always as (subtotal + tax) stored
+    total decimal(18,2) generated always as (subtotal + tax) stored
 );
 
 ALTER TABLE books

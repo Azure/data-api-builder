@@ -328,5 +328,11 @@ WHERE
 
             return defaultValue;
         }
+
+        /// <inheritdoc/>
+        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

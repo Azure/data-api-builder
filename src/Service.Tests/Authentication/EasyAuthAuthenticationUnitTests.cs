@@ -148,7 +148,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
 
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
-            Assert.AreEqual(expected: false, actual: postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
         }
 
         /// <summary>

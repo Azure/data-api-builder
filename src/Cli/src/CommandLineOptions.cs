@@ -29,8 +29,8 @@ namespace Cli
         public InitOptions(
             DatabaseType databaseType,
             string? connectionString,
-            string? cosmosDatabase,
-            string? cosmosContainer,
+            string? cosmosNoSqlDatabase,
+            string? cosmosNoSqlContainer,
             string? graphQLSchemaPath,
             HostModeType hostMode,
             IEnumerable<string>? corsOrigin,
@@ -40,8 +40,8 @@ namespace Cli
         {
             DatabaseType = databaseType;
             ConnectionString = connectionString;
-            CosmosDatabase = cosmosDatabase;
-            CosmosContainer = cosmosContainer;
+            CosmosNoSqlDatabase = cosmosNoSqlDatabase;
+            CosmosNoSqlContainer = cosmosNoSqlContainer;
             GraphQLSchemaPath = graphQLSchemaPath;
             HostMode = hostMode;
             CorsOrigin = corsOrigin;
@@ -54,11 +54,11 @@ namespace Cli
         [Option("connection-string", Required = false, HelpText = "(Default: '') Connection details to connect to the database.")]
         public string? ConnectionString { get; }
 
-        [Option("cosmos-database", Required = false, HelpText = "Database name for Cosmos DB.")]
-        public string? CosmosDatabase { get; }
+        [Option("cosmosdb_nosql-database", Required = false, HelpText = "Database name for Cosmos DB.")]
+        public string? CosmosNoSqlDatabase { get; }
 
-        [Option("cosmos-container", Required = false, HelpText = "Container name for Cosmos DB.")]
-        public string? CosmosContainer { get; }
+        [Option("cosmosdb_nosql-container", Required = false, HelpText = "Container name for Cosmos DB.")]
+        public string? CosmosNoSqlContainer { get; }
 
         [Option("graphql-schema", Required = false, HelpText = "GraphQL schema Path.")]
         public string? GraphQLSchemaPath { get; }

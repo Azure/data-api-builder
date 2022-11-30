@@ -49,6 +49,63 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test method to validate that only 1 CRUD operation is supported for stored procedure.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(new object[] { "create", "read" }, false, DisplayName = "Stored-procedure with create-read permission")]
+        [DataRow(new object[] { "update", "read" }, false, DisplayName = "Stored-procedure with update-read permission")]
+        [DataRow(new object[] { "delete", "read" }, false, DisplayName = "Stored-procedure with delete-read permission")]
+        [DataRow(new object[] { "create" }, true, DisplayName = "Stored-procedure with only create permission")]
+        [DataRow(new object[] { "read" }, true, DisplayName = "Stored-procedure with only read permission")]
+        [DataRow(new object[] { "update" }, true, DisplayName = "Stored-procedure with only update permission")]
+        [DataRow(new object[] { "delete" }, true, DisplayName = "Stored-procedure with only delete permission")]
+        [DataRow(new object[] { "update", "create" }, false, DisplayName = "Stored-procedure with update-create permission")]
+        [DataRow(new object[] { "delete", "read", "update" }, false, DisplayName = "Stored-procedure with delete-read-update permission")]
+        public void InvalidCRUDForStoredProcedure(object[] operations, bool isValid)
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE
+            );
+
+            PermissionSetting permissionForEntity = new(
+                role: AuthorizationHelpers.TEST_ROLE,
+                operations: operations);
+
+            object entitySource = new DatabaseObjectSource(
+                    Type: SourceType.StoredProcedure,
+                    Name: "sourceName",
+                    Parameters: null,
+                    KeyFields: null
+                );
+
+            Entity testEntity = new(
+                Source: entitySource,
+                Rest: true,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+            );
+            runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY] = testEntity;
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+
+            try
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+                Assert.AreEqual(true, isValid);
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.AreEqual(false, isValid);
+                Assert.AreEqual("Invalid Operations for Entity: SampleEntity. " +
+                    $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+        }
+
+        /// <summary>
         /// Test method to validate that an appropriate exception is thrown when there is an invalid action
         /// supplied in the runtimeconfig.
         /// </summary>
@@ -147,10 +204,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
                 DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
@@ -206,10 +259,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
                 DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
@@ -257,10 +306,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
                 DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
@@ -360,10 +405,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
                 DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
@@ -447,10 +488,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
                 DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
@@ -669,10 +706,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
                 DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap

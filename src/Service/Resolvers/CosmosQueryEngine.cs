@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(
             IMiddlewareContext context,
-            IDictionary<string, object> parameters)
+            IDictionary<string, object?> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -318,8 +318,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="parameter"></param>
         /// <returns></returns>
-
-#nullable disable
         private static string GetIdValue(object parameter)
         {
             if (parameter != null)

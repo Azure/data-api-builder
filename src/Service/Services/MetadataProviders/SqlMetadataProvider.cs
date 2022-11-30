@@ -1323,11 +1323,15 @@ namespace Azure.DataApiBuilder.Service.Services
             DatabaseTable databaseTableA,
             DatabaseTable databaseTableB)
         {
+            if (_pairToFkDefinition is null)
+            {
+                return false;
+            }
+
             RelationShipPair pairAB = new(databaseTableA, databaseTableB);
             RelationShipPair pairBA = new(databaseTableB, databaseTableA);
 
-            return _pairToFkDefinition is not null &&
-                (_pairToFkDefinition.ContainsKey(pairAB) || _pairToFkDefinition.ContainsKey(pairBA));
+            return (_pairToFkDefinition.ContainsKey(pairAB) || _pairToFkDefinition.ContainsKey(pairBA));
         }
 
         /// <summary>

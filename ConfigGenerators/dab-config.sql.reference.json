@@ -916,7 +916,7 @@
         "object": "get_books"
       },
       "rest": true,
-      "graphql": false,
+      "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
@@ -924,7 +924,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "*" ]
+          "actions": [ "read" ]
         }
       ]
     },
@@ -942,7 +942,7 @@
         },
         {
           "role": "authenticated",
-          "actions": [ "*" ]
+          "actions": [ "read" ]
         }
       ]
     },
@@ -968,6 +968,131 @@
           ]
         }
       ]
+    },
+    "InsertBook": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "insert_book",
+        "parameters": {
+          "title": "randomX",
+          "publisher_id": 1234
+        },
+        "key-fields": []
+      },
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create"
+          ]
+        }
+      ],
+      "graphql": true
+    },
+    "CountBooks": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "count_books",
+        "key-fields": []
+      },
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "read"
+          ]
+        }
+      ],
+      "graphql": true
+    },
+    "DeleteLastInsertedBook": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "delete_last_inserted_book",
+        "key-fields": []
+      },
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "delete"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "delete"
+          ]
+        }
+      ],
+      "graphql": true
+    },
+    "UpdateBookTitle": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "update_book_title",
+        "parameters": {
+          "id": 1,
+          "title": "Testing Tonight"
+        },
+        "key-fields": []
+      },
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "update"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "update"
+          ]
+        }
+      ],
+      "graphql": true
+    },
+    "GetPublisher": {
+      "source": {
+        "type": "stored-procedure",
+        "object": "get_publisher_by_id",
+        "parameters": {
+          "id": 1
+        }
+      },
+      "rest": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "read"
+          ]
+        }
+      ],
+      "graphql": true
     }
   }
 }

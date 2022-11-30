@@ -971,6 +971,44 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
+        /// Tests authorization resolver handling of claim value types present in HttpContext.User.Claims
+        /// </summary>
+        /// <param name="policy"></param>
+        [DataTestMethod]
+        [DataRow("@claims.user_email ne @item.col1", ClaimValueTypes.String, DisplayName = "string")]
+        [DataRow("", ClaimValueTypes.Boolean, DisplayName = "bool")]
+        [DataRow("", ClaimValueTypes.Integer, DisplayName = "int")]
+        //[DataRow("", ClaimValueTypes., DisplayName = "json object")]
+        //[DataRow("", ClaimValueTypes.null, DisplayName = "null")]
+        public void DbPolicy_ClaimValueTypeParsing(string policy, string claimValueType)
+        {
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(
+                entityName: TEST_ENTITY,
+                roleName: TEST_ROLE,
+                operation: TEST_OPERATION,
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
+                databasePolicy: policy
+    );
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            Mock<HttpContext> context = new();
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
+            identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
+            identity.AddClaim(new Claim("name", "Aaron", ClaimValueTypes.String));
+            identity.AddClaim(new Claim("contact_no", "1234", ClaimValueTypes.Integer64));
+            identity.AddClaim(new Claim("isemployee", "true", ClaimValueTypes.Boolean));
+            identity.AddClaim(new Claim("emprating", "4.2", ClaimValueTypes.Double));
+            ClaimsPrincipal principal = new(identity);
+            context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
+
+            string parsedPolicy = authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+            Assert.IsFalse(string.IsNullOrEmpty(parsedPolicy));
+        }
+
+        /// <summary>
         /// Test to validate that we are correctly throwing an appropriate exception when the user request
         /// lacks a claim required by the policy.
         /// </summary>
@@ -1017,7 +1055,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// duplicate role claims are ignored, so just checks policy is parsed as expected in this case 
         /// </summary>
         /// <param name="exceptionExpected"> Whether we expect an exception (403 forbidden) to be thrown while parsing policy </param>
-        /// <param name="claims"> Parameter list of claim types/keys to add to the claims dictionary that can be accessed with @claims </param>
+        /// <param name="claimTypes"> Parameter list of claim types/keys to add to the claims dictionary that can be accessed with @claims </param>
         [DataTestMethod]
         [DataRow(true, AuthenticationConfig.ROLE_CLAIM_TYPE, "username", "guid", "username",
             DisplayName = "duplicate claim expect exception")]

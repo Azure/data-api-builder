@@ -66,12 +66,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return response.Resource;
         }
 
-        private static async Task<ItemResponse<JObject>> HandleDeleteAsync(IDictionary<string, object> queryArgs, Container container)
+        private static async Task<ItemResponse<JObject>> HandleDeleteAsync(IDictionary<string, object?> queryArgs, Container container)
         {
             string? partitionKey = null;
             string? id = null;
 
-            if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj))
+            if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj)
+                && idObj is not null)
             {
                 id = idObj.ToString();
             }
@@ -81,7 +82,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new InvalidDataException("id field is mandatory");
             }
 
-            if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj))
+            if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj)
+                && partitionKeyObj is not null)
             {
                 partitionKey = partitionKeyObj.ToString();
             }
@@ -94,9 +96,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return await container.DeleteItemAsync<JObject>(id, new PartitionKey(partitionKey));
         }
 
-        private static async Task<ItemResponse<JObject>> HandleCreateAsync(IDictionary<string, object> queryArgs, Container container)
+        private static async Task<ItemResponse<JObject>> HandleCreateAsync(IDictionary<string, object?> queryArgs, Container container)
         {
-            object item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+            object? item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
 
             JObject? input;
             // Variables were provided to the mutation
@@ -113,12 +115,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return await container.CreateItemAsync(input);
         }
 
-        private static async Task<ItemResponse<JObject>> HandleUpdateAsync(IDictionary<string, object> queryArgs, Container container)
+        private static async Task<ItemResponse<JObject>> HandleUpdateAsync(IDictionary<string, object?> queryArgs, Container container)
         {
             string? partitionKey = null;
             string? id = null;
 
-            if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj))
+            if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj)
+                && idObj is not null)
             {
                 id = idObj.ToString();
             }
@@ -128,7 +131,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new InvalidDataException("id field is mandatory");
             }
 
-            if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj))
+            if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj)
+                && partitionKeyObj is not null)
             {
                 partitionKey = partitionKeyObj.ToString();
             }
@@ -138,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new InvalidDataException("Partition Key field is mandatory");
             }
 
-            object item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+            object? item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
 
             JObject? input;
             // Variables were provided to the mutation

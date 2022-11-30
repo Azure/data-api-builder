@@ -326,7 +326,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     if (string.Equals(item.Name.Value, "id", StringComparison.OrdinalIgnoreCase))
                     {
-                        IList<ObjectFieldNode> idValueObj = (IList<ObjectFieldNode>)item.Value.Value;
+                        IList<ObjectFieldNode>? idValueObj = (IList<ObjectFieldNode>?)item.Value.Value;
                         return idValueObj.FirstOrDefault(x => x.Name.Value == "eq")?.Value.Value.ToString();
                     }
                 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
@@ -32,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
         public const string ROLE_ANONYMOUS = "anonymous";
         public const string ROLE_AUTHENTICATED = "authenticated";
-        private const string SHORT_CLAIM_TYPE_NAME = "http://schemas.xmlsoap.org/ws/2005/05/identity/claimproperties/ShortTypeName";
+        public const string INVALID_POLICY_CLAIM_MESSAGE = "One or more claims referenced in an authorization policy have value types which are not supported.";
 
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
@@ -158,7 +159,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <inheritdoc />
-        public string TryProcessDBPolicy(string entityName, string roleName, Operation operation, HttpContext httpContext)
+        public string ProcessDBPolicy(string entityName, string roleName, Operation operation, HttpContext httpContext)
         {
             string dBpolicyWithClaimTypes = GetDBPolicyForRequest(entityName, roleName, operation);
 
@@ -453,7 +454,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 {
                     // If there are duplicate claims present in the request, return an exception.
                     throw new DataApiBuilderException(
-                        message: $"Duplicate claims are not allowed within a request.",
+                        message: "Duplicate claims are not allowed within a request.",
                         statusCode: HttpStatusCode.Forbidden,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
                         );
@@ -521,14 +522,16 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
         /// <summary>
         /// Using the input parameter claim, returns the primitive literal from claim.Value enclosed within parentheses:
-        /// e.g. @claims.idp resolves as ('azuread')
-        /// e.g. @claims.iat resolves as (1537231048)
-        /// e.g. @claims.email_verified resolves as (true)
+        /// e.g. @claims.idp (string) resolves as ('azuread')
+        /// e.g. @claims.iat (int) resolves as (1537231048)
+        /// e.g. @claims.email_verified (boolean) resolves as (true)
         /// To adhere with OData 4 ABNF construction rules (Section 7: Literal Data Values)
         /// - Primitive string literals in URLS must be enclosed within single quotes.
         /// - Other primitive types are represented as plain values and do not require single quotes.
         /// Note: With many access token issuers, token claims are strings or string representations
         /// of other data types such as dates and GUIDs.
+        /// Note: System.Security.Claim.ValueType defaults to CLaimValueTypes.String if mechanism that
+        /// created the claim does not explicitly provide a value type. 
         /// </summary>
         /// <param name="claim">The claim whose value is to be returned.</param>
         /// <returns>Processed claim value based on its data type.</returns>
@@ -536,6 +539,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <seealso cref="http://docs.oasis-open.org/odata/odata/v4.01/cs01/abnf/odata-abnf-construction-rules.txt"/>
         /// <seealso cref="https://www.iana.org/assignments/jwt/jwt.xhtml#claims"/>
         /// <seealso cref="https://www.rfc-editor.org/rfc/rfc7519.html#section-4"/>
+        /// <seealso cref="https://github.com/microsoft/referencesource/blob/dae14279dd0672adead5de00ac8f117dcf74c184/mscorlib/system/security/claims/Claim.cs#L107"/>
         private static string GetClaimValueByDataType(Claim claim)
         {
             /* An example Claim object:
@@ -549,14 +553,19 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 case ClaimValueTypes.String:
                     return $"('{claim.Value}')";
                 case ClaimValueTypes.Boolean:
+                case ClaimValueTypes.Integer:
                 case ClaimValueTypes.Integer32:
                 case ClaimValueTypes.Integer64:
+                case ClaimValueTypes.UInteger32:
+                case ClaimValueTypes.UInteger64:
                 case ClaimValueTypes.Double:
                     return $"({claim.Value})";
+                case JsonClaimValueTypes.JsonNull:
+                    return $"(null)";
                 default:
                     // One of the claims in the request had unsupported data type.
                     throw new DataApiBuilderException(
-                        message: "One or more claims have data types which are not supported yet.",
+                        message: INVALID_POLICY_CLAIM_MESSAGE,
                         statusCode: HttpStatusCode.Forbidden,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
                     );

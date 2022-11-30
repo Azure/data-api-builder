@@ -1,5 +1,7 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
@@ -10,6 +12,7 @@ using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
@@ -966,46 +969,75 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
-            string parsedPolicy = authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+            string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
             Assert.AreEqual(parsedPolicy, expectedParsedPolicy);
         }
 
         /// <summary>
-        /// Tests authorization resolver handling of claim value types present in HttpContext.User.Claims
+        /// Tests authorization policy processing mechanism by validating value type compatibility
+        /// of claims present in HttpContext.User.Claims.
         /// </summary>
-        /// <param name="policy"></param>
+        /// <param name="claimValueType">Claim.ValueType which is a string, by definition.</param>
+        /// <param name="claimValue">Claim.Value which is a string, by definition.</param>
+        /// <param name="supportedValueType">Whether Claim.ValueType is supported by DAB engine</param>
+        /// <seealso cref="https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet/blob/9ddad8fc51ed2732622323612acad83f6629d5ba/src/Microsoft.IdentityModel.JsonWebTokens/Json/JsonClaimSet.cs#L76-L124"/>
+        /// <seealso cref="https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet/blob/59d1307a260829c0f8609a183a962aceaeffba89/src/Microsoft.IdentityModel.Tokens/TokenUtilities.cs#L82-L112"/>
+        #pragma warning disable format
         [DataTestMethod]
-        [DataRow("@claims.user_email ne @item.col1", ClaimValueTypes.String, DisplayName = "string")]
-        [DataRow("", ClaimValueTypes.Boolean, DisplayName = "bool")]
-        [DataRow("", ClaimValueTypes.Integer, DisplayName = "int")]
-        //[DataRow("", ClaimValueTypes., DisplayName = "json object")]
-        //[DataRow("", ClaimValueTypes.null, DisplayName = "null")]
-        public void DbPolicy_ClaimValueTypeParsing(string policy, string claimValueType)
+        [DataRow(ClaimValueTypes.String,        "StringLiteral",                      true, DisplayName = "string")]
+        [DataRow(ClaimValueTypes.Boolean,       "true",                               true, DisplayName = "bool")]
+        [DataRow(ClaimValueTypes.Integer,       "65535",                              true, DisplayName = "short")]
+        [DataRow(ClaimValueTypes.Integer,       "-2147483648",                        true, DisplayName = "int - Scenario 1")]
+        [DataRow(ClaimValueTypes.Integer32,     "2147483647",                         true, DisplayName = "int - Scenario 2")]
+        [DataRow(ClaimValueTypes.Integer64,     "9223372036854775807",                true, DisplayName = "long")]
+        [DataRow(ClaimValueTypes.UInteger32,    "4294967295",                         true, DisplayName = "uint")]
+        [DataRow(ClaimValueTypes.UInteger64,    "18446744073709551615",               true, DisplayName = "ulong")]
+        [DataRow(ClaimValueTypes.Double,        "12.34",                              true, DisplayName = "decimal")]
+        [DataRow(ClaimValueTypes.Double,        "12.345",                             true, DisplayName = "double")]
+        [DataRow(JsonClaimValueTypes.JsonNull,  "null",                               true, DisplayName = "Json null literal")]
+        [DataRow(ClaimValueTypes.DateTime,      "2022-11-30T22:57:57.5847834Z",       false, DisplayName = "DateTime")]
+        [DataRow(JsonClaimValueTypes.Json,      "{\"\"ext1\"\":\"\"ext1Value\"\"}",   false, DisplayName = "Json object")]
+        [DataRow(JsonClaimValueTypes.JsonArray, "[{\"\"ext1\"\":\"\"ext1Value\"\"}]", false, DisplayName = "Json array")]
+        #pragma warning restore format
+        public void DbPolicy_ClaimValueTypeParsing(string claimValueType, string claimValue, bool supportedValueType)
         {
+            // To adhere with OData 4 ABNF construction rules (Section 7: Literal Data Values)
+            // - Primitive string literals in URLS must be enclosed within single quotes.
+            // - http://docs.oasis-open.org/odata/odata/v4.01/cs01/abnf/odata-abnf-construction-rules.txt
+            string odataClaimValue = (claimValueType == ClaimValueTypes.String) ? "'" + claimValue + "'" : claimValue; 
+            string expectedPolicy = "(" + odataClaimValue + ") eq col1";
+            string policyDefinition = "@claims.testClaim eq @item.col1";
+
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: TEST_ENTITY,
                 roleName: TEST_ROLE,
                 operation: TEST_OPERATION,
-                includedCols: new HashSet<string> { "col1", "col2", "col3" },
-                databasePolicy: policy
-    );
+                includedCols: new HashSet<string> { "col1" },
+                databasePolicy: policyDefinition);
+
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
             Mock<HttpContext> context = new();
 
             //Add identity object to the Mock context object.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
-            identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
-            identity.AddClaim(new Claim("name", "Aaron", ClaimValueTypes.String));
-            identity.AddClaim(new Claim("contact_no", "1234", ClaimValueTypes.Integer64));
-            identity.AddClaim(new Claim("isemployee", "true", ClaimValueTypes.Boolean));
-            identity.AddClaim(new Claim("emprating", "4.2", ClaimValueTypes.Double));
+            identity.AddClaim(new Claim("testClaim", claimValue, claimValueType));
+
             ClaimsPrincipal principal = new(identity);
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
-            string parsedPolicy = authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
-            Assert.IsFalse(string.IsNullOrEmpty(parsedPolicy));
+            try
+            {
+                string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+                Assert.IsTrue(supportedValueType);
+                Assert.AreEqual(expectedPolicy, parsedPolicy);
+            }
+            catch(DataApiBuilderException ex)
+            {
+                Assert.IsFalse(supportedValueType);
+                Assert.AreEqual(expected: AuthorizationResolver.INVALID_POLICY_CLAIM_MESSAGE, actual: ex.Message);
+            }
         }
 
         /// <summary>
@@ -1041,7 +1073,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             try
             {
-                authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+                authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
             }
             catch (DataApiBuilderException ex)
             {
@@ -1093,7 +1125,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             {
                 try
                 {
-                    authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+                    authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
                     Assert.Fail();
                 }
                 catch (DataApiBuilderException ex)
@@ -1106,7 +1138,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             {
                 // If the role claim was the only duplicate, simply verify policy parsed as expected
                 string expectedPolicy = $"('{defaultClaimValue}') eq 1";
-                string parsedPolicy = authZResolver.TryProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+                string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
                 Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy);
             }
         }
@@ -1156,7 +1188,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(clientRole);
 
-            string parsedPolicy = authZResolver.TryProcessDBPolicy(TEST_ENTITY, clientRole, requestOperation, context.Object);
+            string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, clientRole, requestOperation, context.Object);
             string errorMessage = "TryProcessDBPolicy returned unexpected value.";
             if (expectPolicy)
             {

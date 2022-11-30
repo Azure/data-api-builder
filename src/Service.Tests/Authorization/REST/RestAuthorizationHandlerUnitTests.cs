@@ -96,7 +96,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             AuthorizationResolver authorizationResolver = SetupAuthResolverWithWildcardOperation();
             HttpContext httpContext = CreateHttpContext(httpMethod: httpMethod, clientRole: "admin");
 
-            Assert.AreEqual(expected: string.Empty, actual: authorizationResolver.TryProcessDBPolicy(
+            Assert.AreEqual(expected: string.Empty, actual: authorizationResolver.ProcessDBPolicy(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: "admin",
                 operation: RestService.HttpVerbToOperations(httpVerbName: httpMethod),

@@ -34,15 +34,15 @@ The account should have access to all entities that are defined in the runtime c
 
 #### 2.2 Supply a `connection-string` for the respective `database-type`
 
-Project startup requires a config that can be generated using the DAB CLI tool.
+Project startup requires a config file, which can be generated using the DAB CLI tool.
 
 ##### Use Cli-tool to Generate the config
-Below command will let you generate the config file with the required database-type and connection-string (**Note:** --name denotes name of the generated config, do not add extension).
+Below command will let you generate the config file with the required database-type and connection-string (**Note:** --name denotes name of the generated config file. There are no patterns or restrictions on the name of the config file).
 ```
 dab init --name dab-config.xyz.json --database-type <<DBTYPE>> --connection-string <<CONNSTRING>>
 ```
 
-In your editor of choice, you can locate template configuration files in the `DataGateway.Service` directory of the form `dab-config.XXX.json`.
+In your editor of choice, you can locate template configuration files in the `DataGateway.Service` directory of the form `dab-config.xyz.json`.
 
 Supply a value `connection-string` for the project to be able to connect the service to your database. These connection strings will be specific to the instance of the database that you are running. Example connection strings are provided for assistance.
 
@@ -136,7 +136,7 @@ The command, `dab init` will automatically generate the default host settings wi
 
 #### Setting up Role and Actions
 
-dab allows us to specify roles and actions for every entity using the `--permission` option. Permissions can only be specified with the add/update commands.
+DAB allows us to specify roles and actions for every entity using the `--permission` option. Permissions can only be specified with the add/update commands.
 ```
 dab add <<enity_name>> --source <<xxx>> --permissions "<<role>>:<<actions>>" --fields.include <<a,b,c>> --fields.exclude <<x,y,z>>
 ```

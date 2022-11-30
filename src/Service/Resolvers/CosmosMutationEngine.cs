@@ -71,10 +71,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string? partitionKey = null;
             string? id = null;
 
-            if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj)
-                && idObj is not null)
+            if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj))
             {
-                id = idObj.ToString();
+                id = idObj?.ToString();
             }
 
             if (string.IsNullOrEmpty(id))
@@ -82,10 +81,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new InvalidDataException("id field is mandatory");
             }
 
-            if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj)
-                && partitionKeyObj is not null)
+            if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj))
             {
-                partitionKey = partitionKeyObj.ToString();
+                partitionKey = partitionKeyObj?.ToString();
             }
 
             if (string.IsNullOrEmpty(partitionKey))
@@ -120,10 +118,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string? partitionKey = null;
             string? id = null;
 
-            if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj)
-                && idObj is not null)
+            if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj))
             {
-                id = idObj.ToString();
+                id = idObj?.ToString();
             }
 
             if (string.IsNullOrEmpty(id))
@@ -131,10 +128,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new InvalidDataException("id field is mandatory");
             }
 
-            if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj)
-                && partitionKeyObj is not null)
+            if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj))
             {
-                partitionKey = partitionKeyObj.ToString();
+                partitionKey = partitionKeyObj?.ToString();
             }
 
             if (string.IsNullOrEmpty(partitionKey))

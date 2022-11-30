@@ -38,12 +38,12 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         }
 
         /// <summary>
-        /// Gets any authentication data for a request. When an EasyAuth header is present,
-        /// parses the header and authenticates the user within a ClaimsPrincipal object.
+        /// Attempts processing of a request's authentication metadata.
+        /// When an EasyAuth header is present, parses the header and authenticates the user within a ClaimsPrincipal object.
         /// The ClaimsPrincipal is a security principal usable by middleware to identify the
         /// authenticated user.
         /// </summary>
-        /// <returns>An authentication result to ASP.NET Core library authentication mechanisms</returns>
+        /// <returns>AuthenticatedResult (Fail, NoResult, Success).</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
             if (Context.Request.Headers[AuthenticationConfig.CLIENT_PRINCIPAL_HEADER].Count > 0)
@@ -55,13 +55,19 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     _ => null
                 };
 
-                if (identity is null || HasOnlyAnonymousRole(identity.Claims))
+                // If identity is null when the X-MS-CLIENT-PRINCIPAL header is present,
+                // the header payload failed to parse -> Authentication Failure.
+                if (identity is null)
                 {
-                    // Either the token is invalid, Or the role is only anonymous,
-                    // we don't terminate the pipeline since the request is
-                    // always at least in the anonymous role.
-                    // It means that anything that is exposed anonymously will still be visible.
-                    // The role assigned to X-MS-API-ROLE will be anonymous.
+                    return Task.FromResult(AuthenticateResult.Fail(failureMessage: EasyAuthAuthenticationDefaults.INVALID_PAYLOAD_ERROR));
+                }
+
+                if (HasOnlyAnonymousRole(identity.Claims))
+                {
+                    // When EasyAuth is properly configured, do not terminate the request pipeline
+                    // since a request is always at least in the anonymous role.
+                    // This result signals that authentication did not fail, though the request
+                    // should be evaluated as unauthenticated.
                     return Task.FromResult(AuthenticateResult.NoResult());
                 }
 
@@ -77,11 +83,8 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 }
             }
 
-            // Return no result when no EasyAuth header is present,
-            // because a request is always in anonymous role in EasyAuth
-            // This scenario is not possible when front loaded with EasyAuth
-            // since the X-MS-CLIENT-PRINCIPAL header will always be present in that case.
-            // This is applicable when engine is being tested without front loading with EasyAuth.
+            // The EasyAuth (X-MS-CLIENT-PRINCIPAL) header will only be present in a properly configured environment
+            // for authenticated requests and not anonymous requests.
             return Task.FromResult(AuthenticateResult.NoResult());
         }
 
@@ -90,7 +93,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         /// </summary>
         /// <param name="claims"></param>
         /// <returns></returns>
-        private static bool HasOnlyAnonymousRole(IEnumerable<Claim> claims)
+        public static bool HasOnlyAnonymousRole(IEnumerable<Claim> claims)
         {
             bool isUserAnonymousOnly = false;
             foreach (Claim claim in claims)

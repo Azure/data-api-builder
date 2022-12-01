@@ -110,9 +110,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Based on the relationship metadata involving foreign key referenced and
-        /// referencing columns, add the join predicates to the subquery Query structure
-        /// created for the given target entity Name and related source alias.
+        /// Based on the relationship metadata involving referenced and
+        /// referencing columns of a foreign key, add the join predicates
+        /// to the subquery Query structure created for the given target entity Name
+        /// and related source alias.
         /// There are only a couple of options for the foreign key - we only use the
         /// valid foreign key definition. It is guaranteed at least one fk definition
         /// will be valid since the MetadataProvider.ValidateAllFkHaveBeenInferred.

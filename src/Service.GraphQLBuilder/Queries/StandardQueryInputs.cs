@@ -216,7 +216,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 
         /// <summary>
         /// Returns true if the given inputObjectTypeName is one
-        /// of the standard input types.
+        /// of the values in the InputTypes dictionary i.e.
+        /// any of the scalar inputs like String, Boolean, Integer, Id etc.
         /// </summary>
         public static bool IsStandardInputType(string inputObjectTypeName)
         {

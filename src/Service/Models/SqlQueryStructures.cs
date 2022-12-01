@@ -134,6 +134,7 @@ namespace Azure.DataApiBuilder.Service.Models
             _columnOperand = column;
             _stringOperand = null;
             _predicateOperand = null;
+            _queryStructure = null;
         }
 
         /// <summary>
@@ -235,7 +236,8 @@ namespace Azure.DataApiBuilder.Service.Models
     public class Predicate
     {
         /// <summary>
-        /// Left operand of the expression
+        /// Left operand of the expression.
+        /// This could be null for unary predicates.
         /// </summary>
         public PredicateOperand? Left { get; }
 
@@ -257,14 +259,6 @@ namespace Azure.DataApiBuilder.Service.Models
             Right = right;
             Op = op;
             AddParenthesis = addParenthesis;
-        }
-
-        /// <summary>
-        /// Used to check if this predicate constains nested predicates
-        /// </summary>
-        public bool IsNested()
-        {
-            return Left is not null ? Left.IsPredicate() || Right.IsPredicate() : Right.IsPredicate();
         }
 
         /// <summary>

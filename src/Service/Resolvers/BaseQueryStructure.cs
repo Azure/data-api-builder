@@ -22,6 +22,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public virtual string SourceAlias { get; set; }
 
+        /// <summary>
+        /// The metadata provider of the respective database.
+        /// </summary>
         protected ISqlMetadataProvider MetadataProvider { get; }
 
         /// <summary>
@@ -93,9 +96,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             else
             {
                 EntityName = string.Empty;
-                DatabaseObject =
-                               new DatabaseTable(schemaName: string.Empty,
-                               tableName: string.Empty);
+                DatabaseObject = new DatabaseTable(schemaName: string.Empty, tableName: string.Empty);
             }
         }
 

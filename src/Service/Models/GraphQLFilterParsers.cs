@@ -177,7 +177,7 @@ namespace Azure.DataApiBuilder.Service.Models
             List<PredicateOperand> predicates,
             BaseQueryStructure queryStructure)
         {
-            string? targetGraphQLTypeNameForFilter = RelationshipDirectiveType.Target(filterField);
+            string? targetGraphQLTypeNameForFilter = RelationshipDirectiveType.GetTarget(filterField);
 
             if (targetGraphQLTypeNameForFilter is null)
             {

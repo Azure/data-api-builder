@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
@@ -164,6 +165,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// All these entities will create queries with the following field names
         /// pk query name: book_by_pk
         /// List query name: books
+        /// NOTE: we don't do this check for storedProcedure, because the name of the query is same
+        /// as that provided in the config, and two different entity can't have same name in the config.
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
         /// <exception cref="DataApiBuilderException"></exception>
@@ -173,7 +176,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             foreach ((string entityName, Entity entity) in entityCollection)
             {
-                if (entity.GraphQL is null
+                entity.TryPopulateSourceFields();
+                if (
+                    entity.ObjectType is SourceType.StoredProcedure ||
+                    entity.GraphQL is null
                     || (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
                 {
                     continue;
@@ -326,10 +332,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
+                entity.TryPopulateSourceFields();
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
                 {
                     string roleName = permissionSetting.Role;
                     Object[] actions = permissionSetting.Operations;
+                    List<Operation> operationsList = new();
                     foreach (Object action in actions)
                     {
                         if (action is null)
@@ -339,7 +347,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                         // Evaluate actionOp as the current operation to be validated.
                         Operation actionOp;
-                        if (((JsonElement)action!).ValueKind is JsonValueKind.String)
+                        JsonElement actionJsonElement = JsonSerializer.SerializeToElement(action);
+                        if ((actionJsonElement!).ValueKind is JsonValueKind.String)
                         {
                             string actionName = action.ToString()!;
                             if (AuthorizationResolver.WILDCARD.Equals(actionName))
@@ -425,6 +434,22 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                             }
                         }
+
+                        operationsList.Add(actionOp);
+                    }
+
+                    // Only one of the CRUD actions is allowed for stored procedure.
+                    if (entity.ObjectType is SourceType.StoredProcedure)
+                    {
+                        if ((operationsList.Count > 1)
+                            || (operationsList.Count is 1 && operationsList[0] is Operation.All))
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"Invalid Operations for Entity: {entityName}. " +
+                                    $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        }
                     }
                 }
             }
@@ -479,7 +504,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
 
-                foreach ((string relationshipName, Relationship relationship) in entity.Relationships)
+                foreach ((string relationshipName, Relationship relationship) in entity.Relationships!)
                 {
                     // Validate if entity referenced in relationship is defined in the config.
                     if (!runtimeConfig.Entities.ContainsKey(relationship.TargetEntity))
@@ -545,6 +570,42 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Validates the parameters given in the config are consistent with the DB i.e., config has all
+        /// the parameters that are specified for the stored procedure in DB.
+        /// </summary>
+        public void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+            {
+                // We are only doing this pre-check for GraphQL because for GraphQL we need the correct schema while making request
+                // so if the schema is not correct we will halt the engine
+                // but for rest we can do it when a request is made and only fail that particular request.
+                entity.TryPopulateSourceFields();
+                if (entity.ObjectType is SourceType.StoredProcedure &&
+                    entity.GraphQL is not null && !(entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
+                {
+                    DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
+                    StoredProcedureRequestContext sqRequestContext = new(
+                                                                            entityName,
+                                                                            dbObject,
+                                                                            JsonSerializer.SerializeToElement(entity.Parameters),
+                                                                            Operation.All);
+                    try
+                    {
+                        RequestValidator.ValidateStoredProcedureRequestContext(sqRequestContext, sqlMetadataProvider);
+                    }
+                    catch (DataApiBuilderException e)
+                    {
+                        throw new DataApiBuilderException(
+                            message: e.Message,
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                     }
                 }
             }

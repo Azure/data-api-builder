@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             _databaseType = _runtimeConfig.DatabaseType;
             _graphQLSingularTypeToEntityNameMap = _runtimeConfig.GraphQLSingularTypeToEntityNameMap;
 
-            CosmosDbOptions? cosmosDb = _runtimeConfig.CosmosDb;
+            CosmosDbOptions? cosmosDb = _runtimeConfig.DataSource.CosmosDbNoSql;
 
             if (cosmosDb is null)
             {

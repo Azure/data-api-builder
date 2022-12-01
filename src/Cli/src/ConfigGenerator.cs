@@ -93,7 +93,6 @@ namespace Cli
             RuntimeConfig runtimeConfig = new(
                 Schema: RuntimeConfig.SCHEMA,
                 DataSource: dataSource,
-                CosmosDb: cosmosDbNoSqlOptions,
                 RuntimeSettings: GetDefaultGlobalSettings(
                     options.HostMode,
                     options.CorsOrigin,
@@ -661,7 +660,7 @@ namespace Cli
             }
 
             // If given SourceParameter is null or is Empty, no update is required.
-            // Else updatedSourceParameters will contain the parsed dictionary of parameters. 
+            // Else updatedSourceParameters will contain the parsed dictionary of parameters.
             if (options.SourceParameters is not null && options.SourceParameters.Any() &&
                 !TryParseSourceParameterDictionary(options.SourceParameters, out updatedSourceParameters))
             {

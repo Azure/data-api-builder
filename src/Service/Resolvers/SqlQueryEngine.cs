@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            _sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(context.Field.Name.Value, out DatabaseObject? databaseObject);
+            _sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(context.Field.Name.Value, out DatabaseObject databaseObject);
             if (databaseObject is not null && databaseObject.SourceType is SourceType.StoredProcedure)
             {
                 SqlExecuteStructure sqlExecuteStructure = new(

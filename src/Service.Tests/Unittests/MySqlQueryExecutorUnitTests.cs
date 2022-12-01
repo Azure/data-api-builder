@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("Server =<>;Database=<>;User=xyz;Password=xxx;", false, false,
             DisplayName = "No managed identity access token when connection string specifies User, Password.")]
         [DataRow("Server =<>;Database=<>;User=xyz;", true, false,
-            DisplayName = "Managed identity access token from config used when connection string specifies none of User, Password.")]
+            DisplayName = "Managed identity access token from config used when connection string specifies User but not the Password.")]
         [DataRow("Server =<>;Database=<>;User=xyz;", true, true,
             DisplayName = "Default managed identity access token used when connection string specifies none of User, Password.")]
         public async Task TestHandleManagedIdentityAccess(

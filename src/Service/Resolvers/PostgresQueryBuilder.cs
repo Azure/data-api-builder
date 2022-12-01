@@ -217,5 +217,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             return string.Join(", ", builtColumns);
         }
+
+        /// <inheritdoc/>
+        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

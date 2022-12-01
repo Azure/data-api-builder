@@ -108,7 +108,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Tries to get an access token using DefaultAzureCredentials.
         /// Catches any CredentialUnavailableException and logs only a warning
-        /// since since this is best effort.
+        /// since this is best effort.
         /// </summary>
         /// <returns>The string representation of the access token if found,
         /// null otherwise.</returns>

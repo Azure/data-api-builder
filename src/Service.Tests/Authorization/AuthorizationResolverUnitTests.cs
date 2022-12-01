@@ -1035,8 +1035,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             }
             catch(DataApiBuilderException ex)
             {
-                Assert.IsFalse(supportedValueType);
-                Assert.AreEqual(expected: AuthorizationResolver.INVALID_POLICY_CLAIM_MESSAGE, actual: ex.Message);
+                Assert.IsFalse(supportedValueType, message: ex.Message);
+                Assert.AreEqual(expected: AuthorizationResolver.INVALID_POLICY_CLAIM_MESSAGE, actual: ex.Message, message: ex.Message);
             }
         }
 

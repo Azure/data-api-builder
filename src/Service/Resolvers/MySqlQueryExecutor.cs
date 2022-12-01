@@ -58,7 +58,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // Only attempt to get the access token if the connection string is in the appropriate format
             if (_attemptToSetAccessToken)
             {
-                //MySqlConnection sqlConn = (MySqlConnection)conn;
 
                 // If the configuration controller provided a managed identity access token use that,
                 // else use the default saved access token if still valid.

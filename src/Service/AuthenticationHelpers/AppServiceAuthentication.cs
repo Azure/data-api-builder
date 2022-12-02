@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -20,29 +21,42 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         /// Representation of authenticated user principal Http header
         /// injected by EasyAuth
         /// </summary>
-        public struct AppServiceClientPrincipal
+        public class AppServiceClientPrincipal
         {
-            public string Auth_typ { get; set; }
-            public string Name_typ { get; set; }
-            public string Role_typ { get; set; }
-            public IEnumerable<AppServiceClaim> Claims { get; set; }
+            /// <summary>
+            /// The type of authentication used, unauthenticated request when null.
+            /// </summary>
+            public string Auth_typ { get; set; } = null!;
+            /// <summary>
+            /// The Claim.Type used when obtaining the value of <see cref="ClaimsIdentity.Name"/>.
+            /// </summary>
+            /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.nameclaimtype?view=net-6.0"/>
+            public string? Name_typ { get; set; }
+            /// <summary>
+            /// The Claim.Type used when performing logic for <see cref="ClaimsPrincipal.IsInRole"/>.
+            /// </summary>
+            /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.roleclaimtype?view=net-6.0"/>
+            public string? Role_typ { get; set; }
+            /// <summary>
+            /// Collection of claims optionally present.
+            /// </summary>
+            public IEnumerable<AppServiceClaim>? Claims { get; set; }
         }
 
         /// <summary>
         /// Representation of authenticated user principal claims
         /// injected by EasyAuth
         /// </summary>
-        public struct AppServiceClaim
+        public class AppServiceClaim
         {
-            public string Typ { get; set; }
-            public string Val { get; set; }
+            public string? Typ { get; set; }
+            public string? Val { get; set; }
         }
 
         /// <summary>
-        /// Create ClaimsIdentity object from EasyAuth
-        /// injected x-ms-client-principal injected header,
-        /// the value is a base64 encoded custom JWT injected by EasyAuth
-        /// as a result of validating a bearer token.
+        /// Create ClaimsIdentity object from EasyAuth injected x-ms-client-principal injected header,
+        /// the value is a base64 encoded custom JWT injected by EasyAuth as a result of validating a bearer token.
+        /// If present, copies all AppService token claims to .NET ClaimsIdentity object.
         /// </summary>
         /// <param name="context">Request's Http Context</param>
         /// <returns>
@@ -61,19 +75,29 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     string encodedPrincipalData = header[0];
                     byte[] decodedPrincpalData = Convert.FromBase64String(encodedPrincipalData);
                     string json = Encoding.UTF8.GetString(decodedPrincpalData);
-                    AppServiceClientPrincipal principal = JsonSerializer.Deserialize<AppServiceClientPrincipal>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    AppServiceClientPrincipal? principal = JsonSerializer.Deserialize<AppServiceClientPrincipal>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                    identity = new(principal.Auth_typ, principal.Name_typ, principal.Role_typ);
-
-                    if (principal.Claims != null)
+                    if (!string.IsNullOrEmpty(principal?.Auth_typ))
                     {
-                        foreach (AppServiceClaim claim in principal.Claims)
+                        // When Name_typ and Role_type are null, ClaimsIdentity contructor uses default values.
+                        // Auth_typ must not be null or empty for ClaimsIdentity.IsAuthenticated() to be true.
+                        // Whitespace is not a requirement per: https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.isauthenticated?view=net-6.0#remarks
+                        identity = new(principal.Auth_typ, principal.Name_typ, principal.Role_typ);
+
+                        if (principal.Claims is not null && principal.Claims.Any())
                         {
-                            identity.AddClaim(new Claim(type: claim.Typ, value: claim.Val));
+                            identity.AddClaims(principal.Claims
+                                .Where(claim => claim.Typ is not null && claim.Val is not null)
+                                .Select(claim => new Claim(type: claim.Typ!, value: claim.Val!))
+                                );
                         }
                     }
                 }
-                catch (Exception error)
+                catch (Exception error) when (
+                    error is JsonException ||
+                    error is ArgumentNullException ||
+                    error is NotSupportedException ||
+                    error is InvalidOperationException)
                 {
                     // Logging the parsing failure exception to the console, but not rethrowing
                     // nor creating a DataApiBuilder exception because the authentication handler

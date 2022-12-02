@@ -71,7 +71,10 @@ the `dab-config.json` file will look like the following:
 
 The `parameters` object is optional, and is used to provide default values to be passed to the stored procedure parameters, if those are not provided in the HTTP request.
 
-**ATTENTION**: Only the first result set returned by the stored procedure will be used by Data API Builder.
+**ATTENTION**: 
+1. Only the first result set returned by the stored procedure will be used by Data API Builder.
+2. Currently we only support simple StoredProcedures,i.e. stored procedure that requires only 1 CRUD action to execute.
+3. If more than one CRUD action is specified in the config, runtime initialization will fail due to config validation error.
 
 Please note that **you should configure the permission accordingly with the stored procedure behavior**. For example, if a Stored Procedure create a new item in the database, it is recommended to allow only the action `create` for such stored procedure. If, like in the sample, a stored procedure returns some data, it is recommended to allow only the action `read`. In general the recommendation is to align the allowed actions to what the stored procedure does, so to provide a consistent experience to the developer.
 

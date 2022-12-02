@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -31,6 +32,9 @@ namespace Azure.DataApiBuilder.Service.Services
         private readonly DatabaseType _databaseType;
 
         private readonly Dictionary<string, Entity> _entities;
+
+        // Dictionary mapping singular graphql types to entity name keys in the configuration
+        private readonly Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
 
         // Contains all the referencing and referenced columns for each pair
         // of referencing and referenced tables.
@@ -72,6 +76,7 @@ namespace Azure.DataApiBuilder.Service.Services
             _runtimeConfigProvider = runtimeConfigProvider;
             _databaseType = runtimeConfig.DatabaseType;
             _entities = runtimeConfig.Entities;
+            _graphQLSingularTypeToEntityNameMap = runtimeConfig.GraphQLSingularTypeToEntityNameMap;
             _logger = logger;
             foreach (KeyValuePair<string, Entity> entity in _entities)
             {
@@ -149,16 +154,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
-            switch (databaseObject!.SourceType)
-            {
-                case SourceType.Table:
-                    return ((DatabaseTable)databaseObject).TableDefinition;
-                case SourceType.View:
-                    return ((DatabaseView)databaseObject).ViewDefinition;
-                default:
-                    // For stored procedures
-                    return null!;
-            }
+            return databaseObject.SourceDefinition;
         }
 
         /// <inheritdoc />
@@ -196,6 +192,25 @@ namespace Azure.DataApiBuilder.Service.Services
         public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
             return EntityToDatabaseObject;
+        }
+
+        /// <inheritdoc />
+        public string GetEntityName(string graphQLType)
+        {
+            if (_entities.ContainsKey(graphQLType))
+            {
+                return graphQLType;
+            }
+
+            if (!_graphQLSingularTypeToEntityNameMap.TryGetValue(graphQLType, out string? entityName))
+            {
+                throw new DataApiBuilderException(
+                    "GraphQL type doesn't match any entity name or singular type in the runtime config.",
+                    System.Net.HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            return entityName!;
         }
 
         /// <inheritdoc />
@@ -707,6 +722,14 @@ namespace Azure.DataApiBuilder.Service.Services
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         GetStoredProcedureDefinition(entityName));
+
+                    if (GetDatabaseType() == DatabaseType.mssql)
+                    {
+                        await PopulateResultSetDefinitionsForStoredProcedureAsync(
+                            GetSchemaName(entityName),
+                            GetDatabaseObjectName(entityName),
+                            GetStoredProcedureDefinition(entityName));
+                    }
                 }
                 else if (entitySourceType is SourceType.Table)
                 {
@@ -730,6 +753,41 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             await PopulateForeignKeyDefinitionAsync();
+        }
+
+        /// <summary>
+        /// Queries DB to get the result fields name and type to
+        /// populate the result set definition for entities specified as stored procedures
+        /// </summary>
+        private async Task PopulateResultSetDefinitionsForStoredProcedureAsync(
+            string schemaName,
+            string storedProcedureName,
+            SourceDefinition sourceDefinition)
+        {
+            StoredProcedureDefinition storedProcedureDefinition = (StoredProcedureDefinition)sourceDefinition;
+            string dbStoredProcedureName = $"{schemaName}.{storedProcedureName}";
+            // Generate query to get result set details
+            // of the stored procedure.
+            string queryForResultSetDetails = SqlQueryBuilder.BuildStoredProcedureResultDetailsQuery(
+                dbStoredProcedureName);
+
+            // Execute the query to get columns' details.
+            JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
+                sqltext: queryForResultSetDetails,
+                parameters: null!,
+                dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
+            using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
+
+            // Iterate through each row returned by the query which corresponds to
+            // one row in the result set.
+            foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
+            {
+                string resultFieldName = element.GetProperty("result_field_name").ToString();
+                Type resultFieldType = SqlToCLRType(element.GetProperty("system_type_name").ToString());
+
+                // Store the dictionary containing result set field with it's type as Columns
+                storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType));
+            }
         }
 
         /// <summary>
@@ -766,21 +824,17 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             foreach (string entityName in _entities.Keys)
             {
-                // Ensure we don't attempt for stored procedures, which have no
-                // SourceDefinition, Columns, Keys, etc.
-                if (_entities[entityName].ObjectType is not SourceType.StoredProcedure)
+                // InCase of StoredProcedures, result set definitions becomes the column definition.
+                Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
+                EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
+                EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
+                SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
+                foreach (string column in sourceDefinition.Columns.Keys)
                 {
-                    Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
-                    EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
-                    EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
-                    SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
-                    foreach (string column in sourceDefinition.Columns.Keys)
+                    if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
                     {
-                        if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
-                        {
-                            EntityBackingColumnsToExposedNames[entityName].Add(column, column);
-                            EntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
-                        }
+                        EntityBackingColumnsToExposedNames[entityName].Add(column, column);
+                        EntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
                     }
                 }
             }
@@ -1292,6 +1346,11 @@ namespace Azure.DataApiBuilder.Service.Services
             DatabaseTable databaseTableA,
             DatabaseTable databaseTableB)
         {
+            if (_pairToFkDefinition is null)
+            {
+                return false;
+            }
+
             RelationShipPair pairAB = new(databaseTableA, databaseTableB);
             RelationShipPair pairBA = new(databaseTableB, databaseTableA);
 
@@ -1308,10 +1367,6 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Setting the partition key path, for Cosmos only
         /// </summary>
         public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
-            => throw new NotImplementedException();
-
-        /// <inheritdoc />
-        public string GetEntityName(string graphQLType)
             => throw new NotImplementedException();
     }
 }

@@ -61,6 +61,39 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts a new sale item into the sales table that automatically calculates the total price
+        /// based on subtotal and tax.
+        /// <code>Check: </code> Calculated column is persisted successfully with correct calculated result.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationForComputedColumns()
+        {
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT(
+                    'id', `subq`.`id`, 'item_name', `subq`.`item_name`,
+                    'subtotal', `subq`.`subtotal`, 'tax', `subq`.`tax`,
+                    'total', `subq`.`total`
+                    ) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`item_name` AS `item_name`,
+                        `table0`.`subtotal` AS `subtotal`,
+                        `table0`.`tax` AS `tax`,
+                        `table0`.`total` AS `total`
+                    FROM `sales` AS `table0`
+                    WHERE `id` = 5001
+                        AND `item_name` = 'headphones'
+                        AND `subtotal` = 195.00
+                        AND `tax` = 10.33
+                        AND `total` = 205.33
+                    ORDER BY `id` asc LIMIT 1
+                    ) AS `subq`
+            ";
+
+            await InsertMutationForComputedColumns(mySqlQuery);
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new book using variables to set its title and publisher_id
         /// <code>Check: </code> If book with the expected values of the new book is present in the database and
         /// if the mutation query has returned the correct information
@@ -147,6 +180,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             await UpdateMutation(mySqlQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Update Sales in database and return its updated fields
+        /// <code>Check: The calculated column has successfully been updated after updating the other fields </code>
+        /// </summary>
+        [TestMethod]
+        // IGNORE FOR NOW, SEE: Issue #1001
+        [Ignore]
+        public async Task UpdateMutationForComputedColumns()
+        {
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT(
+                    'id', `subq2`.`id`, 'item_name', `subq2`.`item_name`,
+                    'subtotal', `subq2`.`subtotal`, 'tax', `subq2`.`tax`,
+                    'total', `subq2`.`total`
+                    ) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`item_name` AS `item_name`,
+                        `table0`.`subtotal` AS `subtotal`,
+                        `table0`.`tax` AS `tax`,
+                        `table0`.`total` AS `total`
+                    FROM `sales` AS `table0`
+                    WHERE `id` = 2
+                    ORDER BY `id` asc LIMIT 1
+                    ) AS `subq2`
+            ";
+
+            await UpdateMutationForComputedColumns(mySqlQuery);
         }
 
         /// <summary>

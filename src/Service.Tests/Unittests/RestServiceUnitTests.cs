@@ -147,7 +147,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DefaultHttpContext context = new();
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
             AuthorizationResolver authorizationResolver = new(runtimeConfigProvider, sqlMetadataProvider.Object, authLogger.Object);
-            GQLFilterParser gQLFilterParser = new();
+            GQLFilterParser gQLFilterParser = new(sqlMetadataProvider.Object);
             SqlQueryEngine queryEngine = new(
                 queryExecutor,
                 queryBuilder,

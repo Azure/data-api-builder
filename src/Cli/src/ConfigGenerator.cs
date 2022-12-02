@@ -93,7 +93,6 @@ namespace Cli
             RuntimeConfig runtimeConfig = new(
                 Schema: RuntimeConfig.SCHEMA,
                 DataSource: dataSource,
-                CosmosDb: cosmosDbNoSqlOptions,
                 RuntimeSettings: GetDefaultGlobalSettings(
                     options.HostMode,
                     options.CorsOrigin,

@@ -246,15 +246,16 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
                     }
 
-                    CosmosDbOptions? cosmosDb = RuntimeConfiguration.CosmosDb! with { GraphQLSchema = schema };
-                    RuntimeConfiguration = RuntimeConfiguration with { CosmosDb = cosmosDb };
+                    CosmosDbOptions? cosmosDb = RuntimeConfiguration.DataSource.CosmosDbNoSql! with { GraphQLSchema = schema };
+                    DataSource dataSource = RuntimeConfiguration.DataSource with { CosmosDbNoSql = cosmosDb };
+                    RuntimeConfiguration = RuntimeConfiguration with { DataSource = dataSource };
                 }
             }
 
             ManagedIdentityAccessToken = accessToken;
 
             EventHandler<RuntimeConfig>? handlers = RuntimeConfigLoaded;
-            if (handlers != null)
+            if (handlers is not null && RuntimeConfiguration is not null)
             {
                 handlers(this, RuntimeConfiguration);
             }

@@ -504,7 +504,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
 
-                foreach ((string relationshipName, Relationship relationship) in entity.Relationships)
+                foreach ((string relationshipName, Relationship relationship) in entity.Relationships!)
                 {
                     // Validate if entity referenced in relationship is defined in the config.
                     if (!runtimeConfig.Entities.ContainsKey(relationship.TargetEntity))

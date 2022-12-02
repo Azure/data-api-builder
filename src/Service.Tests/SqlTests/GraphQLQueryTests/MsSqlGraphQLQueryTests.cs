@@ -135,7 +135,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string msSqlQuery = @"
                 SELECT
                   TOP 1 [table0].[title] AS [title],
-                  JSON_QUERY ([table1_subq].[data]) AS [series]
+                  JSON_QUERY ([table1_subq].[data]) AS [myseries]
                 FROM
                   [dbo].[comics] AS [table0] OUTER APPLY (
                     SELECT

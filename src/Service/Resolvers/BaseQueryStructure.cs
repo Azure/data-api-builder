@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// The alias of the entity as used in the generated query.
         /// </summary>
-        public string SourceAlias { get; set; }
+        public virtual string SourceAlias { get; set; }
 
         /// <summary>
         /// The metadata provider of the respective database.
@@ -61,10 +61,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public GQLFilterParser GraphQLFilterParser { get; protected set; }
 
         /// <summary>
-        /// Authorization Resolver used to get and apply
+        /// Authorization Resolver used within SqlQueryStructure to get and apply
         /// authorization policies to requests.
         /// </summary>
-        protected IAuthorizationResolver AuthorizationResolver { get; }
+        public IAuthorizationResolver AuthorizationResolver { get; }
 
         public BaseQueryStructure(
             ISqlMetadataProvider metadataProvider,
@@ -75,8 +75,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IncrementingInteger? counter = null)
         {
             Columns = new();
-            Predicates = predicates ?? new();
             Parameters = new();
+            Predicates = predicates ?? new();
             Counter = counter ?? new IncrementingInteger();
             MetadataProvider = metadataProvider;
             GraphQLFilterParser = gQLFilterParser;
@@ -96,8 +96,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             else
             {
                 EntityName = string.Empty;
-                DatabaseObject =
-                    new DatabaseTable(schemaName: string.Empty, tableName: string.Empty);
+                DatabaseObject = new DatabaseTable(schemaName: string.Empty, tableName: string.Empty);
             }
         }
 

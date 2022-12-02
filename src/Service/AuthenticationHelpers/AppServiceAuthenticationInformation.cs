@@ -18,8 +18,13 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         /// Environment variable key whose value represents Identity Provider such as "AzureActiveDirectory"
         /// </summary>
         public const string APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR = "WEBSITE_AUTH_DEFAULT_PROVIDER";
-
+        /// <summary>
+        /// Error message used when AppService Authentication is configured in production mode in a non AppService Environment.
+        /// </summary>
         public const string APPSERVICE_PROD_MISSING_ENV_CONFIG = "AppService environment not detected while runtime is in production mode.";
+        /// <summary>
+        /// Warning message logged when AppService environment not detected (applicable to development mode).
+        /// </summary>
         public const string APPSERVICE_DEV_MISSING_ENV_CONFIG = "AppService environment not detected, EasyAuth authentication may not behave as expected.";
 
         /// <summary>

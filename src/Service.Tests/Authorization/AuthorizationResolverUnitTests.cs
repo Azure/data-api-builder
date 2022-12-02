@@ -1,7 +1,5 @@
 #nullable enable
-using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
@@ -1004,7 +1002,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             // To adhere with OData 4 ABNF construction rules (Section 7: Literal Data Values)
             // - Primitive string literals in URLS must be enclosed within single quotes.
             // - http://docs.oasis-open.org/odata/odata/v4.01/cs01/abnf/odata-abnf-construction-rules.txt
-            string odataClaimValue = (claimValueType == ClaimValueTypes.String) ? "'" + claimValue + "'" : claimValue; 
+            string odataClaimValue = (claimValueType == ClaimValueTypes.String) ? "'" + claimValue + "'" : claimValue;
             string expectedPolicy = "(" + odataClaimValue + ") eq col1";
             string policyDefinition = "@claims.testClaim eq @item.col1";
 
@@ -1033,7 +1031,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 Assert.IsTrue(supportedValueType);
                 Assert.AreEqual(expectedPolicy, parsedPolicy);
             }
-            catch(DataApiBuilderException ex)
+            catch (DataApiBuilderException ex)
             {
                 Assert.IsFalse(supportedValueType, message: ex.Message);
                 Assert.AreEqual(expected: AuthorizationResolver.INVALID_POLICY_CLAIM_MESSAGE, actual: ex.Message, message: ex.Message);

@@ -383,7 +383,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         /// <param name="services">The service collection where authentication services are added.</param>
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
-        private static void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
+        private void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
         {
             if (runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig) && runtimeConfig.AuthNConfig != null)
             {
@@ -404,19 +404,27 @@ namespace Azure.DataApiBuilder.Service
                 }
                 else if (runtimeConfig.IsEasyAuthAuthenticationProvider())
                 {
-                    if (!runtimeConfigurationProvider.IsDeveloperMode() && !AppServicesAuthenticationInformation.IsAppServicesAadAuthenticationEnabled)
+                    EasyAuthType easyAuthType = (EasyAuthType)Enum.Parse(typeof(EasyAuthType), runtimeConfig.AuthNConfig.Provider, ignoreCase: true);
+                    bool isProductionMode = !runtimeConfigurationProvider.IsDeveloperMode();
+                    bool appServiceEnvironmentDetected = AppServicesAuthenticationInformation.AreExpectedAppServiceEnvVarsPresent();
+
+                    if (easyAuthType == EasyAuthType.AppService && !appServiceEnvironmentDetected)
                     {
-                        throw new DataApiBuilderException(
-                            message: "EasyAuth is configured in Production mode while AppService environment is not detected.",
-                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                        if (isProductionMode)
+                        {
+                            throw new DataApiBuilderException(
+                                message: "AppService environment not detected while runtime is in production mode.",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"AppService environment not detected, EasyAuth authentication may not behave as expected.");
+                        }
                     }
 
                     services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                        .AddEasyAuthAuthentication(
-                            (EasyAuthType)Enum.Parse(typeof(EasyAuthType),
-                                runtimeConfig.AuthNConfig.Provider,
-                                ignoreCase: true));
+                        .AddEasyAuthAuthentication(easyAuthAuthenticationProvider: easyAuthType);
                 }
                 else if (runtimeConfigurationProvider.IsDeveloperMode() && runtimeConfig.IsAuthenticationSimulatorEnabled())
                 {

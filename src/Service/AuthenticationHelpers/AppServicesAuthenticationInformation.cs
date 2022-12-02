@@ -3,46 +3,42 @@ using System;
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 {
     /// <summary>
-    /// Information about the App Services configuration on the host.
-    /// This class is an abridged mirror of Microsoft.Identity.Web's
-    /// AppServicesAuthenticationInformation.cs helper class used to
+    /// Information about the App Services configuration on the host. This class is an abridged mirror of
+    /// Microsoft.Identity.Web's AppServicesAuthenticationInformation.cs helper class used to
     /// detect whether the app is running in an Azure App Service environment.
     /// </summary>
     /// <seealso cref="https://github.com/AzureAD/microsoft-identity-web/blob/master/src/Microsoft.Identity.Web/AppServicesAuth/AppServicesAuthenticationInformation.cs"/>
     public static class AppServicesAuthenticationInformation
     {
-        // Environment variables.
-        internal const string APPSERVICESAUTH_ENABLED_ENVIRONMENTVARIABLE = "WEBSITE_AUTH_ENABLED";            // True
-        internal const string APPSERVICESAUTH_OPENIDISSUER_ENVIRONMENTVARIABLE = "WEBSITE_AUTH_OPENID_ISSUER"; // for instance https://sts.windows.net/<tenantId>/
-        internal const string APPSERVICESAUTH_CLIENTID_ENVIRONMENTVARIABLE = "WEBSITE_AUTH_CLIENT_ID";         // A GUID
-        internal const string APPSERVICESAUTH_CLIENTSECRET_ENVIRONMENTVARIABLE = "WEBSITE_AUTH_CLIENT_SECRET"; // A string
-        internal const string APPSERVICESAUTH_CLIENTSECRET_SETTINGNAME = "WEBSITE_AUTH_CLIENT_SECRET_SETTING_NAME"; // A string
-        internal const string APPSERVICESAUTH_LOGOUTPATH_ENVIRONMENTVARIABLE = "WEBSITE_AUTH_LOGOUT_PATH";    // /.auth/logout
-        internal const string APPSERVICESAUTH_IDENTITYPROVIDER_ENVIRONMENTVARIABLE = "WEBSITE_AUTH_DEFAULT_PROVIDER"; // AzureActiveDirectory
-        internal const string APPSERVICESAUTH_AZUREACTIVEDIRECTORY = "AzureActiveDirectory";
-        internal const string APPSERVICESAUTH_AAD = "AAD";
+        /// <summary>
+        /// Environment variable key whose value represents whether AppService EasyAuth is enabled ("true" or "false").
+        /// </summary>
+        private const string APPSERVICESAUTH_ENABLED_ENVIRONMENTVARIABLE = "WEBSITE_AUTH_ENABLED";
+        /// <summary>
+        /// Environment variable key whose value represents Identity Provider such as "AzureActiveDirectory"
+        /// </summary>
+        private const string APPSERVICESAUTH_IDENTITYPROVIDER_ENVIRONMENTVARIABLE = "WEBSITE_AUTH_DEFAULT_PROVIDER";
 
         /// <summary>
-        /// Returns whether App Services authentication is enabled?
+        /// Returns a best guess whether AppService is enabled in the environment by checking for
+        /// existence and value population of known AppService environment variables.
+        /// This check is determined to be "best guess" because environment variables could be
+        /// manually added or overridden.
+        /// This check's purpose is to help warn developers that an AppService environment is not detected
+        /// where the DataApiBuilder service is executing and DataApiBuilder is configured to use AppService
+        /// as the identity provider.
         /// </summary>
-        public static bool IsAppServicesAadAuthenticationEnabled
+        public static bool AreExpectedAppServiceEnvVarsPresent()
         {
-            get
+            string? appServiceEnabled = Environment.GetEnvironmentVariable(APPSERVICESAUTH_ENABLED_ENVIRONMENTVARIABLE);
+            string? appServiceIdentityProvider = Environment.GetEnvironmentVariable(APPSERVICESAUTH_IDENTITYPROVIDER_ENVIRONMENTVARIABLE);
+
+            if (string.IsNullOrEmpty(appServiceEnabled) || string.IsNullOrEmpty(appServiceIdentityProvider))
             {
-                return
-                    string.Equals(
-                        Environment.GetEnvironmentVariable(APPSERVICESAUTH_ENABLED_ENVIRONMENTVARIABLE),
-                        "true",
-                        StringComparison.OrdinalIgnoreCase) &&
-                     (string.Equals(
-                         Environment.GetEnvironmentVariable(APPSERVICESAUTH_IDENTITYPROVIDER_ENVIRONMENTVARIABLE),
-                         APPSERVICESAUTH_AZUREACTIVEDIRECTORY,
-                         StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(
-                         Environment.GetEnvironmentVariable(APPSERVICESAUTH_IDENTITYPROVIDER_ENVIRONMENTVARIABLE),
-                         APPSERVICESAUTH_AAD,
-                         StringComparison.OrdinalIgnoreCase));
+                return false;
             }
+
+            return appServiceEnabled.Equals(value: "true", comparisonType: StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -22,7 +22,7 @@ $RIDs = "win-x64", "linux-x64", "osx-x64"
 foreach ($RID in $RIDs) {
     $fileName = "dab_$RID-$DabVersion.zip"
     $filePath = "$BuildOutputDir/publish/$BuildConfiguration/$RID/$fileName"
-    $download_url = "https://dataapibuilder.azureedge.net/releases/download/$versionTag/$fileName"
+    $download_url = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/$fileName"
     $fileHashInfo = Get-FileHash $filePath
     $hash = $fileHashInfo.Hash
     switch ($RID) {
@@ -80,5 +80,5 @@ if($versionArray.Length -gt $maxVersionCount){
 
 # Updating the manifest file 
 # Keeping Depth as 4, as by default ConvertTo-Json only support conversion till depth 2.
-$versionArray | ConvertTo-Json -Depth 4 | Out-File $BuildOutputDir/dab-manifest.json
+ConvertTo-Json -Depth 4 $versionArray | Out-File $BuildOutputDir/dab-manifest.json
 

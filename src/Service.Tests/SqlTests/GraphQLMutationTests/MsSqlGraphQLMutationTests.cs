@@ -80,6 +80,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new sale item into sales table that automatically calculates the total price
+        /// based on subtotal and tax.
+        /// <code>Check: Calculated column is persisted successfully with correct calculated result. </code>
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationForComputedColumns()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 1 [table0].[id] AS [id],
+                    [table0].[item_name] AS [item_name],
+                    [table0].[subtotal] AS [subtotal],
+                    [table0].[tax] AS [tax],
+                    [table0].[total] AS [total]
+                FROM [sales] AS [table0]
+                WHERE [table0].[id] = 5001
+                    AND [table0].[item_name] = 'headphones'
+                    AND [table0].[subtotal] = 195.00
+                    AND [table0].[tax] = 10.33
+                    AND [table0].[total] = 205.33
+                ORDER BY [id] asc
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await InsertMutationForComputedColumns(msSqlQuery);
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
         /// <code>Check: </code> If book with the given id is present in the database then
         /// the mutation query will return the review Id with the content of the review added
@@ -101,6 +130,65 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             await InsertMutationForConstantdefaultValue(msSqlQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>insert new Book and return nothing
+        /// <code>Check: </code>if the intended book is inserted in books table
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureMutationForInsertion()
+        {
+            string msSqlQuery = @"
+                SELECT COUNT(*) AS [count]
+                FROM [books] AS [table0]
+                WHERE [table0].[title] = 'Random Book'
+                    AND [table0].[publisher_id] = 1234
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await TestStoredProcedureMutationForInsertion(msSqlQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>deletes a Book and return nothing
+        /// <code>Check: </code>the intended book is deleted
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureMutationForDeletion()
+        {
+            string dbQueryToVerifyDeletion = @"
+                SELECT MAX(table0.id) AS [maxId]
+                FROM [books] AS [table0]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await TestStoredProcedureMutationForDeletion(dbQueryToVerifyDeletion);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Book title updation and return the updated row
+        /// <code>Check: </code>if the result returned from the mutation is correct
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureMutationForUpdate()
+        {
+            string dbQuery = @"
+                SELECT id, title, publisher_id
+                FROM [books] AS [table0]
+                WHERE 
+                    [table0].[id] = 14
+                    AND [table0].[publisher_id] = 1234
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await TestStoredProcedureMutationForUpdate(dbQuery);
         }
 
         /// <inheritdoc/>
@@ -144,6 +232,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             await UpdateMutation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Update Sales in database and return its updated fields
+        /// <code>Check: The calculated column has successfully been updated after updating the other fields </code>
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateMutationForComputedColumns()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 1 [table0].[id] AS [id],
+                    [table0].[item_name] AS [item_name],
+                    [table0].[subtotal] AS [subtotal],
+                    [table0].[tax] AS [tax],
+                    [table0].[total] AS [total]
+                FROM [sales] AS [table0]
+                WHERE [table0].[id] = 2
+                    AND [table0].[item_name] = 'phone'
+                    AND [table0].[subtotal] = 495.00
+                    AND [table0].[tax] = 30.33
+                    AND [table0].[total] = 525.33
+                ORDER BY [id] asc
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await UpdateMutationForComputedColumns(msSqlQuery);
         }
 
         /// <summary>

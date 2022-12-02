@@ -3,21 +3,24 @@ using System;
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 {
     /// <summary>
-    /// Information about the App Services configuration on the host. This class is an abridged mirror of
+    /// Info about the App Services configuration on the host. This class is an abridged mirror of
     /// Microsoft.Identity.Web's AppServicesAuthenticationInformation.cs helper class used to
     /// detect whether the app is running in an Azure App Service environment.
     /// </summary>
     /// <seealso cref="https://github.com/AzureAD/microsoft-identity-web/blob/master/src/Microsoft.Identity.Web/AppServicesAuth/AppServicesAuthenticationInformation.cs"/>
-    public static class AppServicesAuthenticationInformation
+    public static class AppServiceAuthenticationInfo
     {
         /// <summary>
         /// Environment variable key whose value represents whether AppService EasyAuth is enabled ("true" or "false").
         /// </summary>
-        private const string APPSERVICESAUTH_ENABLED_ENVIRONMENTVARIABLE = "WEBSITE_AUTH_ENABLED";
+        public const string APPSERVICESAUTH_ENABLED_ENVVAR = "WEBSITE_AUTH_ENABLED";
         /// <summary>
         /// Environment variable key whose value represents Identity Provider such as "AzureActiveDirectory"
         /// </summary>
-        private const string APPSERVICESAUTH_IDENTITYPROVIDER_ENVIRONMENTVARIABLE = "WEBSITE_AUTH_DEFAULT_PROVIDER";
+        public const string APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR = "WEBSITE_AUTH_DEFAULT_PROVIDER";
+
+        public const string APPSERVICE_PROD_MISSING_ENV_CONFIG = "AppService environment not detected while runtime is in production mode.";
+        public const string APPSERVICE_DEV_MISSING_ENV_CONFIG = "AppService environment not detected, EasyAuth authentication may not behave as expected.";
 
         /// <summary>
         /// Returns a best guess whether AppService is enabled in the environment by checking for
@@ -30,8 +33,8 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         /// </summary>
         public static bool AreExpectedAppServiceEnvVarsPresent()
         {
-            string? appServiceEnabled = Environment.GetEnvironmentVariable(APPSERVICESAUTH_ENABLED_ENVIRONMENTVARIABLE);
-            string? appServiceIdentityProvider = Environment.GetEnvironmentVariable(APPSERVICESAUTH_IDENTITYPROVIDER_ENVIRONMENTVARIABLE);
+            string? appServiceEnabled = Environment.GetEnvironmentVariable(APPSERVICESAUTH_ENABLED_ENVVAR);
+            string? appServiceIdentityProvider = Environment.GetEnvironmentVariable(APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR);
 
             if (string.IsNullOrEmpty(appServiceEnabled) || string.IsNullOrEmpty(appServiceIdentityProvider))
             {

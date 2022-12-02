@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Controllers;
@@ -807,6 +808,63 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 string body = await response.Content.ReadAsStringAsync();
 
                 Assert.AreEqual(expectedStatusCode, response.StatusCode);
+            }
+        }
+
+        /// <summary>
+        /// Tests that Startup.cs properly handles EasyAuth authentication configuration.
+        /// AppService as Identity Provider while in Production mode will result in startup error.
+        /// An Azure AppService environment has environment variables on the host which indicate
+        /// the environment is, in fact, an AppService environment.
+        /// </summary>
+        /// <param name="hostMode">HostMode in Runtime config - Development or Production.</param>
+        /// <param name="authType">EasyAuth auth type - AppService or StaticWebApps.</param>
+        /// <param name="setEnvVars">Whether to set the AppService host environment variables.</param>
+        /// <param name="expectError">Whether an error is expected.</param>
+        [DataTestMethod]
+        [DataRow(HostModeType.Development, EasyAuthType.AppService, false, false, DisplayName = "AppService Dev - No EnvVars - No Error")]
+        [DataRow(HostModeType.Development, EasyAuthType.AppService, true, false, DisplayName = "AppService Dev - EnvVars - No Error")]
+        [DataRow(HostModeType.Production, EasyAuthType.AppService, false, true, DisplayName = "AppService Prod - No EnvVars - Error")]
+        [DataRow(HostModeType.Production, EasyAuthType.AppService, true, false, DisplayName = "AppService Prod - EnvVars - Error")]
+        [DataRow(HostModeType.Development, EasyAuthType.StaticWebApps, false, false, DisplayName = "SWA Dev - No EnvVars - No Error")]
+        [DataRow(HostModeType.Development, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Dev - EnvVars - No Error")]
+        [DataRow(HostModeType.Production, EasyAuthType.StaticWebApps, false, false, DisplayName = "SWA Prod - No EnvVars - No Error")]
+        [DataRow(HostModeType.Production, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Prod - EnvVars - No Error")]
+        public void TestProductionModeAppServiceEnvironmentCheck(HostModeType hostMode, EasyAuthType authType, bool setEnvVars, bool expectError)
+        {
+            // Clears or sets App Service Environment Variables based on test input.
+            Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR, setEnvVars ? "true" : null);
+            Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR, setEnvVars ? "AzureActiveDirectory" : null);
+
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(MSSQL_ENVIRONMENT);
+            RuntimeConfig config = configProvider.GetRuntimeConfiguration();
+
+            // Setup configuration
+            AuthenticationConfig authenticationConfig = new(Provider: authType.ToString());
+            HostGlobalSettings customHostGlobalSettings = config.HostGlobalSettings with { Mode = hostMode, Authentication = authenticationConfig };
+            JsonElement serializedCustomHostGlobalSettings = JsonSerializer.SerializeToElement(customHostGlobalSettings, RuntimeConfig.SerializerOptions);
+            Dictionary<GlobalSettingsType, object> customRuntimeSettings = new(config.RuntimeSettings);
+            customRuntimeSettings.Remove(GlobalSettingsType.Host);
+            customRuntimeSettings.Add(GlobalSettingsType.Host, serializedCustomHostGlobalSettings);
+            RuntimeConfig configWithCustomHostMode = config with { RuntimeSettings = customRuntimeSettings };
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(path: CUSTOM_CONFIG, contents: JsonSerializer.Serialize(configWithCustomHostMode, RuntimeConfig.SerializerOptions));
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            // This test only checks for startup errors, so no requests are sent to the test server.
+            try
+            {
+                using TestServer server = new(Program.CreateWebHostBuilder(args));
+                Assert.IsFalse(expectError, message: "Expected error faulting AppService config in production mode." );
+            }
+            catch(DataApiBuilderException ex)
+            {
+                Assert.IsTrue(expectError, message: ex.Message);
+                Assert.AreEqual(AppServiceAuthenticationInfo.APPSERVICE_PROD_MISSING_ENV_CONFIG, ex.Message);
             }
         }
 

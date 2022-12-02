@@ -406,20 +406,20 @@ namespace Azure.DataApiBuilder.Service
                 {
                     EasyAuthType easyAuthType = (EasyAuthType)Enum.Parse(typeof(EasyAuthType), runtimeConfig.AuthNConfig.Provider, ignoreCase: true);
                     bool isProductionMode = !runtimeConfigurationProvider.IsDeveloperMode();
-                    bool appServiceEnvironmentDetected = AppServicesAuthenticationInformation.AreExpectedAppServiceEnvVarsPresent();
+                    bool appServiceEnvironmentDetected = AppServiceAuthenticationInfo.AreExpectedAppServiceEnvVarsPresent();
 
                     if (easyAuthType == EasyAuthType.AppService && !appServiceEnvironmentDetected)
                     {
                         if (isProductionMode)
                         {
                             throw new DataApiBuilderException(
-                                message: "AppService environment not detected while runtime is in production mode.",
+                                message: AppServiceAuthenticationInfo.APPSERVICE_PROD_MISSING_ENV_CONFIG,
                                 statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                         }
                         else
                         {
-                            _logger.LogWarning($"AppService environment not detected, EasyAuth authentication may not behave as expected.");
+                            _logger.LogWarning(AppServiceAuthenticationInfo.APPSERVICE_DEV_MISSING_ENV_CONFIG);
                         }
                     }
 

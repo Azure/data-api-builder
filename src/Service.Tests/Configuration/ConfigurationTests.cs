@@ -43,6 +43,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const string POST_STARTUP_CONFIG_ENTITY = "Book";
         private const string POST_STARTUP_CONFIG_ENTITY_SOURCE = "books";
         private const string POST_STARTUP_CONFIG_ROLE = "PostStartupConfigRole";
+        private const string COSMOS_DATABASE_NAME = "config_db";
         private const int RETRY_COUNT = 5;
         private const int RETRY_WAIT_SECONDS = 1;
 
@@ -428,6 +429,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(DatabaseType.cosmos, configuration.DatabaseType, "Expected cosmos database type after configuring the runtime with cosmos settings.");
             Assert.AreEqual(config.Schema, configuration.DataSource.CosmosDbNoSql.GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
             Assert.AreEqual(config.ConnectionString, configuration.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
+            string db = configProvider.GetRuntimeConfiguration().DataSource.CosmosDbNoSql.Database;
+            Assert.AreEqual(COSMOS_DATABASE_NAME, db, "Expect the database in the runtime config to match the one sent to the configuration endpoint.");
         }
 
         [TestMethod("Validates that an exception is thrown if there's a null model in filter parser.")]
@@ -916,7 +919,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 File.ReadAllText(cosmosFile),
                 File.ReadAllText("schema.gql"),
                 "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",
-                AccessToken: null);
+                AccessToken: null,
+                Database: COSMOS_DATABASE_NAME);
         }
 
         /// <summary>

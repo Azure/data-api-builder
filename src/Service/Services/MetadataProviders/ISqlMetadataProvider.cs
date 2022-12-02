@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 
@@ -118,5 +120,27 @@ namespace Azure.DataApiBuilder.Service.Services
         /// If no match found, then use the GraphQL singular type in the runtime config to look up the top-level entity name from a GraphQLSingularTypeToEntityNameMap
         /// </summary>
         public string GetEntityName(string graphQLType);
+
+        /// <summary>
+        /// For the given graphql type, returns the inferred database object.
+        /// Does this by first looking up the entity name from the graphql type to entity name mapping.
+        /// Subsequently, looks up the database object inferred for the corresponding entity.
+        /// </summary>
+        /// <param name="graphqlType">Name of the graphql type</param>
+        /// <returns>Underlying inferred DatabaseObject.</returns>
+        /// <exception cref="DataApiBuilderException">Thrown if entity is not found.</exception>
+        public DatabaseObject GetDatabaseObjectForGraphQLType(string graphqlType)
+        {
+            string entityName = GetEntityName(graphqlType);
+
+            if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
+            {
+                throw new DataApiBuilderException(message: $"Source Definition for {entityName} has not been inferred.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+            }
+
+            return databaseObject;
+        }
     }
 }

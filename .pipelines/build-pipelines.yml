@@ -148,7 +148,6 @@ steps:
   displayName: "Generate Manifest File"
   inputs:
     targetType: 'filePath'
-    pwsh: true
     filePath: $(System.DefaultWorkingDirectory)/create_manifest_file.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) $(isReleaseBuild)
 

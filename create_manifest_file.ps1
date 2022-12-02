@@ -72,6 +72,8 @@ $latestBlock = $ExecutionContext.InvokeCommand.ExpandString($latestBlock) | Conv
 $versionArray = '[]' | ConvertFrom-Json 
 $versionArray += $latestBlock
 
+$versionArray
+
 # Removing the oldest version if total count exceeds the max permissible count 
 if($versionArray.Length -gt $maxVersionCount){ 
     $versionArray = [System.Collections.ArrayList]$versionArray 

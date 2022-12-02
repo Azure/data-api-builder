@@ -69,7 +69,7 @@ $latestBlock = $ExecutionContext.InvokeCommand.ExpandString($latestBlock) | Conv
 
 # Adding new block to the top of the list of released versions.
 # TODO: To use the data from the current manifest file and update it.
-$versionArray = @() | ConvertFrom-Json 
+$versionArray = @()
 $versionArray += $latestBlock
 
 Write-Host("versionArray: = $versionArray")

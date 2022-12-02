@@ -72,8 +72,6 @@ $latestBlock = $ExecutionContext.InvokeCommand.ExpandString($latestBlock) | Conv
 $versionArray = @()
 $versionArray += $latestBlock
 
-Write-Host("versionArray: = $versionArray")
-
 # Removing the oldest version if total count exceeds the max permissible count 
 if($versionArray.Length -gt $maxVersionCount){ 
     $versionArray = [System.Collections.ArrayList]$versionArray 
@@ -82,7 +80,5 @@ if($versionArray.Length -gt $maxVersionCount){
 
 # Updating the manifest file 
 # Keeping Depth as 4, as by default ConvertTo-Json only support conversion till depth 2.
-$jsonX = @(ConvertTo-Json -Depth 4 $versionArray)
-Write-Host("JsonArray: = $jsonX")
-$jsonX | Out-File $BuildOutputDir/dab-manifest.json
+$versionArray | ConvertTo-Json -Depth 4 | Out-File $BuildOutputDir/dab-manifest.json
 

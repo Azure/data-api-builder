@@ -106,6 +106,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Tests processed authorization policies (@claims.claimName eq @item.columnName) -> ('UserName' eq ScreenName)
         /// against the custom OData Filter parser resolver ClaimsTypeDataUriResolver.
         /// The columns xyz_types are sourced from type_table.
+        /// Constant values/literals in expressions are parsed by Microsoft.OData.UriParser.ExpressionLexer which
+        /// attempts to resolve value to its OData(EdmPrimitiveTypeKind) via
+        /// https://github.com/OData/odata.net/blob/f3bf65a74a7ed4028ff8074ccae31e4c2019772d/src/Microsoft.OData.Core/UriParser/ExpressionLexer.cs#L1206-L1221
         /// </summary>
         /// <param name="resolvedAuthZPolicyText">Filter parser input, the processed authorization policy</param>
         /// <param name="errorExpected">Whether an OData Filter parser error is expected</param>
@@ -113,7 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataTestMethod]
         // Constant on left side and OData EDM object on right side of binary operator. (L->R)
         [DataRow("'1' eq int_types", false, DisplayName = "L->R: Cast token claim of type string to integer")]
-        [DataRow("12.24 eq float_types", false, DisplayName = "L->R: Cast token claim of type double to (SQL) float")]
+        [DataRow("12.24 eq float_types", false, DisplayName = "L->R: Cast token claim of type single to type double (CLR) which maps to (SQL) float")]
         [DataRow("'13B4F4EC-C45B-46EC-99F2-77BC22A256A7' eq guid_types", false, DisplayName = "L->R: Cast token claim of type string to GUID")]
         [DataRow("'true' eq boolean_types", false, DisplayName = "L->R: Cast token claim of type string to bool (true)")]
         [DataRow("'false' eq boolean_types", false, DisplayName = "L->R: Cast token claim of type string to bool (false)")]
@@ -121,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("true eq string_types", false, DisplayName = "L->R: Cast token claim of type bool to string")]
         // Constant on right side and OData EDM object on left side of binary operator. (R->L)
         [DataRow("int_types eq '1'", false, DisplayName = "R->L: Cast token claim of type string to integer")]
-        [DataRow("float_types eq 12.24", false, DisplayName = "R->L: Cast token claim of type double to (SQL) float")]
+        [DataRow("float_types eq 12.24", false, DisplayName = "R->L: Cast token claim of type single to type double (CLR) which maps to (SQL) float")]
         [DataRow("guid_types eq '13B4F4EC-C45B-46EC-99F2-77BC22A256A7'", false, DisplayName = "R->L: Cast token claim of type string to GUID")]
         [DataRow("boolean_types eq 'true'", false, DisplayName = "R->L: Cast token claim of type string to bool (true)")]
         [DataRow("boolean_types eq 'false'", false, DisplayName = "R->L: Cast token claim of type string to bool (false)")]

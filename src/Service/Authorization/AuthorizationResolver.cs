@@ -507,7 +507,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
             string claimType = claimTypeMatch.Value.ToString().Substring(CLAIM_PREFIX.Length);
             if (claimsInRequestContext.TryGetValue(claimType, out Claim? claim))
             {
-                return GetClaimValueByDataType(claim);
+                return GetODataCompliantClaimValue(claim);
             }
             else
             {
@@ -525,13 +525,13 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// e.g. @claims.idp (string) resolves as ('azuread')
         /// e.g. @claims.iat (int) resolves as (1537231048)
         /// e.g. @claims.email_verified (boolean) resolves as (true)
-        /// To adhere with OData 4 ABNF construction rules (Section 7: Literal Data Values)
+        /// To adhere with OData 4.01 ABNF construction rules (Section 7: Literal Data Values)
         /// - Primitive string literals in URLS must be enclosed within single quotes.
         /// - Other primitive types are represented as plain values and do not require single quotes.
         /// Note: With many access token issuers, token claims are strings or string representations
         /// of other data types such as dates and GUIDs.
-        /// Note: System.Security.Claim.ValueType defaults to CLaimValueTypes.String if mechanism that
-        /// created the claim does not explicitly provide a value type. 
+        /// Note: System.Security.Claim.ValueType defaults to ClaimValueTypes.String if the code calling
+        /// the constructor for Claim does not explicitly provide a value type. 
         /// </summary>
         /// <param name="claim">The claim whose value is to be returned.</param>
         /// <returns>Processed claim value based on its data type.</returns>
@@ -540,7 +540,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <seealso cref="https://www.iana.org/assignments/jwt/jwt.xhtml#claims"/>
         /// <seealso cref="https://www.rfc-editor.org/rfc/rfc7519.html#section-4"/>
         /// <seealso cref="https://github.com/microsoft/referencesource/blob/dae14279dd0672adead5de00ac8f117dcf74c184/mscorlib/system/security/claims/Claim.cs#L107"/>
-        private static string GetClaimValueByDataType(Claim claim)
+        private static string GetODataCompliantClaimValue(Claim claim)
         {
             /* An example Claim object:
              * claim.Type: "user_email"

@@ -859,9 +859,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             try
             {
                 using TestServer server = new(Program.CreateWebHostBuilder(args));
-                Assert.IsFalse(expectError, message: "Expected error faulting AppService config in production mode." );
+                Assert.IsFalse(expectError, message: "Expected error faulting AppService config in production mode.");
             }
-            catch(DataApiBuilderException ex)
+            catch (DataApiBuilderException ex)
             {
                 Assert.IsTrue(expectError, message: ex.Message);
                 Assert.AreEqual(AppServiceAuthenticationInfo.APPSERVICE_PROD_MISSING_ENV_CONFIG, ex.Message);

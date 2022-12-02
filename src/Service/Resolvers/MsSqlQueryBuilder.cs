@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             string dataIdent = QuoteIdentifier(SqlQueryStructure.DATA_IDENT);
             string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                             $"AS {QuoteIdentifier($"{structure.TableAlias}")}{Build(structure.Joins)}";
+                             $"AS {QuoteIdentifier($"{structure.SourceAlias}")}{Build(structure.Joins)}";
 
             fromSql += string.Join(
                     "",
@@ -195,6 +195,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string parameterList = sb.ToString();
             // If at least one parameter added, remove trailing comma and space, else return empty string
             return parameterList.Length > 0 ? parameterList[..^2] : parameterList;
+        }
+
+        /// <inheritdoc/>
+        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
+        {
+            string query = "SELECT " +
+                            "name as result_field_name, system_type_name, column_ordinal " +
+                            "FROM " +
+                            "sys.dm_exec_describe_first_result_set_for_object (" +
+                            $"OBJECT_ID('{databaseObjectName}'), 0) " +
+                            "WHERE is_hidden is not NULL AND is_hidden = 0";
+            return query;
         }
     }
 }

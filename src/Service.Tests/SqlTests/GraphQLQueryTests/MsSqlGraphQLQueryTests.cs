@@ -31,6 +31,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQuery(msSqlQuery);
         }
 
+        /// <summary>
+        /// Gets array of results for querying a table containing computed columns.
+        /// </summary>
+        /// <check>rows from sales table</check>
+        [TestMethod]
+        public async Task MultipleResultQueryContainingComputedColumns()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    id,
+                    item_name,
+                    ROUND(subtotal,2) AS subtotal,
+                    ROUND(tax,2) AS tax,
+                    ROUND(total,2) AS total
+                FROM
+                    sales
+                ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await MultipleResultQueryContainingComputedColumns(msSqlQuery);
+        }
+
         [TestMethod]
         public async Task MultipleResultQueryWithVariables()
         {
@@ -115,7 +135,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string msSqlQuery = @"
                 SELECT
                   TOP 1 [table0].[title] AS [title],
-                  JSON_QUERY ([table1_subq].[data]) AS [series]
+                  JSON_QUERY ([table1_subq].[data]) AS [myseries]
                 FROM
                   [dbo].[comics] AS [table0] OUTER APPLY (
                     SELECT
@@ -251,6 +271,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string msSqlQuery = $"SELECT TOP 5 id, title FROM books_view_all ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
             await base.TestQueryOnBasicView(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that returns a single row
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingSingleRow()
+        {
+            string msSqlQuery = $"EXEC dbo.get_publisher_by_id @id=1234";
+            await TestStoredProcedureQueryForGettingSingleRow(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that returns a list(multiple rows)
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingMultipleRows()
+        {
+            string msSqlQuery = $"EXEC dbo.get_books";
+            await TestStoredProcedureQueryForGettingMultipleRows(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that counts the total number of rows
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows()
+        {
+            string msSqlQuery = $"EXEC dbo.count_books";
+            await TestStoredProcedureQueryForGettingTotalNumberOfRows(msSqlQuery);
         }
 
         [TestMethod]

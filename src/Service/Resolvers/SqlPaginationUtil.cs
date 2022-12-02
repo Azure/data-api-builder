@@ -140,7 +140,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 foreach (OrderByColumn column in orderByColumns)
                 {
                     string? exposedColumnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
-                    object value = ResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName));
+                    object? value = ResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName));
                     cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
                                                         tableName: tableName,
                                                         exposedColumnName,

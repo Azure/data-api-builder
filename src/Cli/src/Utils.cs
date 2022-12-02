@@ -645,7 +645,7 @@ namespace Cli
             {
                 return floatingValue;
             }
-            else if (Boolean.TryParse(stringValue, out bool booleanValue))
+            else if (bool.TryParse(stringValue, out bool booleanValue))
             {
                 return booleanValue;
             }

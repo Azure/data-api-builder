@@ -34,11 +34,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             metadataProvider.Setup(x => x.GetSourceDefinition(TEST_ENTITY)).Returns(sampleTable);
             metadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.mssql);
 
-            string outParam;
+            string? outParam;
             Dictionary<string, Dictionary<string, string>> _exposedNameToBackingColumnMapping = CreateColumnMappingTable();
             metadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outParam))
-                              .Callback(new metaDataCallback((string entity, string exposedField, out string backingColumn) => _ = _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn)))
-                              .Returns((string entity, string exposedField, string backingColumn) => _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn));
+                              .Callback(new metaDataCallback((string entity, string exposedField, out string? backingColumn) => _ = _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn)))
+                              .Returns((string entity, string exposedField, string? backingColumn) => _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn));
 
             return new AuthorizationResolver(runtimeConfigProvider, metadataProvider.Object, logger.Object);
         }
@@ -107,10 +107,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
                 DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
@@ -170,11 +166,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// Without use of delegate the out param will
         /// not be populated with the correct value.
         /// This delegate is for the callback used
-        /// with the mocked SqlMetadataProvider.
+        /// with the mocked MetadataProvider.
         /// </summary>
         /// <param name="entity">Name of entity.</param>
         /// <param name="exposedField">Exposed field name.</param>
         /// <param name="backingColumn">Out param for backing column name.</param>
-        delegate void metaDataCallback(string entity, string exposedField, out string backingColumn);
+        delegate void metaDataCallback(string entity, string exposedField, out string? backingColumn);
     }
 }

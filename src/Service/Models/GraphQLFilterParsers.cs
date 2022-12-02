@@ -1,7 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
@@ -12,9 +17,20 @@ namespace Azure.DataApiBuilder.Service.Models
     /// <summary>
     /// Contains methods to parse a GQL filter parameter
     /// </summary>
-    public static class GQLFilterParser
+    public class GQLFilterParser
     {
         public static readonly string NullStringValue = "NULL";
+
+        private readonly ISqlMetadataProvider _metadataProvider;
+
+        /// <summary>
+        /// Constructor for the filter parser.
+        /// </summary>
+        /// <param name="metadataProvider">The metadata provider of the respective database.</param>
+        public GQLFilterParser(ISqlMetadataProvider metadataProvider)
+        {
+            _metadataProvider = metadataProvider;
+        }
 
         /// <summary>
         /// Parse a predicate for a *FilterInput input type
@@ -22,19 +38,21 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <param name="ctx">The GraphQL context, used to get the query variables</param>
         /// <param name="filterArgumentSchema">An IInputField object which describes the schema of the filter argument</param>
         /// <param name="fields">The fields in the *FilterInput being processed</param>
-        /// <param name="sourceAlias">The source alias underlyin the *FilterInput being processed</param>
-        /// <param name="sourceDefinition">Definition of the table/view underlying the *FilterInput being processed</param>
-        /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
-        public static Predicate Parse(
+        /// <param name="queryStructure">The query structure for the entity being filtered providing
+        /// the source alias of the underlying *FilterInput being processed,
+        /// source definition of the table/view of the underlying *FilterInput being processed,
+        /// and the function that parametrizes literals before they are written in string predicate operands.</param>
+        public Predicate Parse(
             IMiddlewareContext ctx,
             IInputField filterArgumentSchema,
             List<ObjectFieldNode> fields,
-            string schemaName,
-            string sourceName,
-            string sourceAlias,
-            SourceDefinition sourceDefinition,
-            Func<object, string> processLiterals)
+            BaseQueryStructure queryStructure)
         {
+            string schemaName = queryStructure.DatabaseObject.SchemaName;
+            string sourceName = queryStructure.DatabaseObject.Name;
+            string sourceAlias = queryStructure.SourceAlias;
+            SourceDefinition sourceDefinition = queryStructure.GetUnderlyingSourceDefinition();
+
             InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
 
             List<PredicateOperand> predicates = new();
@@ -56,50 +74,79 @@ namespace Azure.DataApiBuilder.Service.Models
                 bool fieldIsOr = string.Equals(name, $"{PredicateOperation.OR}", StringComparison.OrdinalIgnoreCase);
 
                 InputObjectType filterInputObjectType = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentObject.Fields[name]);
-
                 if (fieldIsAnd || fieldIsOr)
                 {
                     PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
+                    List<IValueNode> otherPredicates;
+                    if (fieldValue is IEnumerable<IValueNode>)
+                    {
+                        otherPredicates = (List<IValueNode>)fieldValue;
+                    }
+                    else if (fieldValue is IEnumerable<ObjectFieldNode>)
+                    {
+                        ObjectFieldNode fieldObject = ((List<ObjectFieldNode>)fieldValue).First();
+                        ObjectValueNode value = new(fieldObject);
+                        otherPredicates = new List<IValueNode> { value };
+                    }
+                    else
+                    {
+                        throw new DataApiBuilderException(
+                            message: "Invalid filter object input value type.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
 
-                    List<IValueNode> otherPredicates = (List<IValueNode>)fieldValue;
                     predicates.Push(new PredicateOperand(ParseAndOr(
                         ctx,
                         argumentSchema: filterArgumentObject.Fields[name],
                         filterArgumentSchema: filterArgumentSchema,
                         otherPredicates,
-                        schemaName,
-                        sourceName,
-                        sourceAlias,
-                        sourceDefinition,
-                        op,
-                        processLiterals)));
+                        queryStructure,
+                        op)));
                 }
                 else
                 {
                     List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
 
-                    if (!IsScalarType(filterInputObjectType.Name))
+                    if (!StandardQueryInputs.IsStandardInputType(filterInputObjectType.Name))
                     {
-                        predicates.Push(new PredicateOperand(Parse(ctx,
-                            filterArgumentObject.Fields[name],
-                            subfields,
-                            schemaName,
-                            sourceName + "." + name,
-                            sourceAlias + "." + name,
-                            sourceDefinition,
-                            processLiterals)));
+                        if (sourceDefinition.PrimaryKey.Count != 0)
+                        {
+                            // For SQL i.e. when there are primary keys on the source, we need to perform a join
+                            // between the parent entity being filtered and the related entity representing the
+                            // non-scalar filter input.
+                            HandleNestedFilterForSql(
+                                ctx,
+                                filterArgumentObject.Fields[name],
+                                subfields,
+                                predicates,
+                                queryStructure);
+                        }
+                        else
+                        {
+                            queryStructure.DatabaseObject.Name = sourceName + "." + name;
+                            queryStructure.SourceAlias = sourceName + "." + name;
+                            predicates.Push(new PredicateOperand(Parse(ctx,
+                                filterArgumentObject.Fields[name],
+                                subfields,
+                                queryStructure)));
+                            queryStructure.DatabaseObject.Name = sourceName;
+                            queryStructure.SourceAlias = sourceAlias;
+                        }
                     }
                     else
                     {
-                        predicates.Push(new PredicateOperand(ParseScalarType(
-                        ctx,
-                        argumentSchema: filterArgumentObject.Fields[name],
-                        name,
-                        subfields,
-                        schemaName,
-                        sourceName,
-                        sourceAlias,
-                        processLiterals)));
+                        predicates.Push(
+                            new PredicateOperand(
+                                ParseScalarType(
+                                    ctx,
+                                    argumentSchema: filterArgumentObject.Fields[name],
+                                    name,
+                                    subfields,
+                                    schemaName,
+                                    sourceName,
+                                    sourceAlias,
+                                    queryStructure.MakeParamWithValue)));
                     }
                 }
             }
@@ -107,9 +154,83 @@ namespace Azure.DataApiBuilder.Service.Models
             return MakeChainPredicate(predicates, PredicateOperation.AND);
         }
 
-        static bool IsScalarType(string name)
+        /// <summary>
+        /// For SQL, a nested filter represents an EXISTS clause with a join between
+        /// the parent entity being filtered and the related entity representing the
+        /// non-scalar filter input. This function:
+        /// 1. Defines the Exists Query structure
+        /// 2. Recursively parses any more(possibly nested) filters on the Exists sub query.
+        /// 3. Adds join predicates between the related entities to the Exists sub query.
+        /// 4. Adds the Exists subquery to the existing list of predicates.
+        /// </summary>
+        /// <param name="ctx">The middleware context</param>
+        /// <param name="filterField">The nested filter field.</param>
+        /// <param name="subfields">The subfields of the nested filter.</param>
+        /// <param name="predicates">The predicates parsed so far.</param>
+        /// <param name="queryStructure">The query structure of the entity being filtered.</param>
+        /// <exception cref="DataApiBuilderException">
+        /// throws if a relationship directive is not found on the nested filter input</exception>
+        private void HandleNestedFilterForSql(
+            IMiddlewareContext ctx,
+            InputField filterField,
+            List<ObjectFieldNode> subfields,
+            List<PredicateOperand> predicates,
+            BaseQueryStructure queryStructure)
         {
-            return new string[] { "StringFilterInput", "IntFilterInput", "BoolFilterInput", "IdFilterInput" }.Contains(name);
+            string? targetGraphQLTypeNameForFilter = RelationshipDirectiveType.GetTarget(filterField);
+
+            if (targetGraphQLTypeNameForFilter is null)
+            {
+                throw new DataApiBuilderException(
+                    message: "The GraphQL schema is missing the relationship directive on input field.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
+            string nestedFilterEntityName = _metadataProvider.GetEntityName(targetGraphQLTypeNameForFilter);
+            List<Predicate> predicatesForExistsQuery = new();
+
+            // Create an SqlExistsQueryStructure as the predicate operand of Exists predicate
+            // This query structure has no order by, no limit and selects 1
+            // its predicates are obtained from recursively parsing the nested filter
+            // and an additional predicate to reflect the join between main query and this exists subquery.
+            SqlExistsQueryStructure existsQuery = new(
+                ctx,
+                _metadataProvider,
+                queryStructure.AuthorizationResolver,
+                this,
+                predicatesForExistsQuery,
+                nestedFilterEntityName,
+                queryStructure.Counter);
+
+            // Recursively parse and obtain the predicates for the Exists clause subquery
+            Predicate existsQueryFilterPredicate = Parse(ctx,
+                    filterField,
+                    subfields,
+                    existsQuery);
+            predicatesForExistsQuery.Push(existsQueryFilterPredicate);
+
+            // Add JoinPredicates to the subquery query structure so a predicate connecting
+            // the outer table is added to the where clause of subquery
+            existsQuery.AddJoinPredicatesForRelatedEntity(
+                queryStructure.EntityName,
+                queryStructure.SourceAlias,
+                existsQuery);
+
+            // The right operand is the SqlExistsQueryStructure.
+            PredicateOperand right = new(existsQuery);
+
+            // Create a new unary Exists Predicate
+            Predicate existsPredicate = new(left: null, PredicateOperation.EXISTS, right);
+
+            // Add it to the rest of the existing predicates.
+            predicates.Push(new PredicateOperand(existsPredicate));
+
+            // Add all parameters from the exists subquery to the main queryStructure.
+            foreach ((string key, object? value) in existsQuery.Parameters)
+            {
+                queryStructure.Parameters.Add(key, value);
+            }
         }
 
         /// <summary>
@@ -157,17 +278,13 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <param name="sourceDefinition">Definition of the table/view underlying the *FilterInput being processed</param>
         /// <param name="op">The operation (and or or)</param>
         /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
-        private static Predicate ParseAndOr(
+        private Predicate ParseAndOr(
             IMiddlewareContext ctx,
             IInputField argumentSchema,
             IInputField filterArgumentSchema,
             List<IValueNode> fields,
-            string schemaName,
-            string tableName,
-            string tableAlias,
-            SourceDefinition sourceDefinition,
-            PredicateOperation op,
-            Func<object, string> processLiterals)
+            BaseQueryStructure baseQuery,
+            PredicateOperation op)
         {
             if (fields.Count == 0)
             {
@@ -187,8 +304,29 @@ namespace Azure.DataApiBuilder.Service.Models
                     continue;
                 }
 
-                List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
-                operands.Add(new PredicateOperand(Parse(ctx, filterArgumentSchema, subfields, schemaName, tableName, tableAlias, sourceDefinition, processLiterals)));
+                List<ObjectFieldNode> subfields;
+                if (fieldValue is List<ObjectFieldNode>)
+                {
+                    subfields = (List<ObjectFieldNode>)fieldValue;
+                }
+                else if (fieldValue is Array)
+                {
+                    ObjectFieldNode[] objectFieldNodes = (ObjectFieldNode[])fieldValue;
+                    subfields = objectFieldNodes.ToList();
+                }
+                else
+                {
+                    throw new DataApiBuilderException(
+                        message: "Invalid value extracted from IValueNode",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
+                operands.Add(new PredicateOperand(
+                    Parse(ctx,
+                        filterArgumentSchema,
+                        subfields,
+                        baseQuery)));
             }
 
             return MakeChainPredicate(operands, op);

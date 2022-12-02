@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -16,8 +16,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommandLineParser" Version="$(CommandLineParserVersion)" />
-    <PackageReference Include="Humanizer.Core" Version="$(HumanizerVersion)" />
+    <PackageReference Include="CommandLineParser" />
+    <PackageReference Include="Humanizer.Core" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,10 +28,20 @@
       <ConfigFiles Include="..\..\Service\dab-config*.json" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="dab.draft.schema.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\..\schemas\dab.draft.schema.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <Target Name="GenerateConfigFiles" AfterTargets="PostBuildEvent">
-      <Exec Command="powershell.exe -command ..\..\..\ConfigGenerators\configGenerator.ps1 " Condition=" '$(OS)' == 'Windows_NT' And '$(generateConfigFiles)' == 'true' "/>
+      <Exec Command="powershell.exe -command ..\..\..\ConfigGenerators\configGenerator.ps1 " Condition=" '$(OS)' == 'Windows_NT' And '$(generateConfigFiles)' == 'true' " />
       <Exec Command="bash ../../../ConfigGenerators/configGenerator.sh" Condition=" '$(OS)' != 'Windows_NT' And '$(generateConfigFiles)' == 'true' " />
-      <Copy SourceFiles="@(ConfigFiles)"  DestinationFolder="..\..\out\tests\$(TargetFramework)" />
+      <Copy SourceFiles="@(ConfigFiles)" DestinationFolder="..\..\out\tests\$(TargetFramework)" />
   </Target>
 
 </Project>

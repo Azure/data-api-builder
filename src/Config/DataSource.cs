@@ -75,10 +75,6 @@ namespace Azure.DataApiBuilder.Config
         string? GraphQLSchema)
     {
         public const string GRAPHQL_SCHEMA_PATH_PROPERTY_NAME = "schema";
-
-        // Keeping the name as cosmos only to provide backwards compatibility.
-        // This property won't be needed going forward.
-        public const string JSON_PROPERTY_NAME = nameof(DatabaseType.cosmos);
     }
 
     /// <summary>

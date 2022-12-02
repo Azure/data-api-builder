@@ -153,11 +153,6 @@ namespace Cli.Tests
                         ""schema"": ""schemafile""
                     }
                 },
-                ""cosmos"": {
-                    ""database"": ""testdb"",
-                    ""container"": ""testcontainer"",
-                    ""schema"": ""schemafile""
-                },
                 ""entities"": {}
             }";
 

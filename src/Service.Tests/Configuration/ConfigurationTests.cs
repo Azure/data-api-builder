@@ -822,6 +822,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="setEnvVars">Whether to set the AppService host environment variables.</param>
         /// <param name="expectError">Whether an error is expected.</param>
         [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
         [DataRow(HostModeType.Development, EasyAuthType.AppService, false, false, DisplayName = "AppService Dev - No EnvVars - No Error")]
         [DataRow(HostModeType.Development, EasyAuthType.AppService, true, false, DisplayName = "AppService Dev - EnvVars - No Error")]
         [DataRow(HostModeType.Production, EasyAuthType.AppService, false, true, DisplayName = "AppService Prod - No EnvVars - Error")]

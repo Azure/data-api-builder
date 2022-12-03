@@ -430,7 +430,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(config.Schema, configuration.DataSource.CosmosDbNoSql.GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
             Assert.AreEqual(config.ConnectionString, configuration.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
             string db = configProvider.GetRuntimeConfiguration().DataSource.CosmosDbNoSql.Database;
-            Assert.AreEqual(COSMOS_DATABASE_NAME, db, "Expect the database in the runtime config to match the one sent to the configuration endpoint.");
+            Assert.AreEqual(COSMOS_DATABASE_NAME, db, "Expected the database name in the runtime config to match the one sent to the configuration endpoint.");
         }
 
         [TestMethod("Validates that an exception is thrown if there's a null model in filter parser.")]

@@ -17,6 +17,9 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     /// </summary>
     public class StaticWebAppsAuthentication
     {
+        public const string USER_ID_CLAIM = "userId";
+        public const string USER_DETAILS_CLAIM = "userDetails";
+
         /// <summary>
         /// Link for reference of how StaticWebAppsClientPrincipal is defined
         /// https://docs.microsoft.com/azure/static-web-apps/user-information?tabs=csharp#client-principal-data
@@ -27,16 +30,6 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             public string? UserId { get; set; }
             public string? UserDetails { get; set; }
             public IEnumerable<string>? UserRoles { get; set; }
-            public IEnumerable<SWAPrincipalClaim>? Claims { get; set; }
-        }
-
-        /// <summary>
-        /// Representation of a user claim in a SWA token payload. 
-        /// </summary>
-        public class SWAPrincipalClaim
-        {
-            public string? Typ { get; set; }
-            public string? Val { get; set; }
         }
 
         /// <summary>
@@ -67,22 +60,21 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     return identity;
                 }
 
-                identity = new(principal.IdentityProvider, nameType: ClaimTypes.Name, roleType: AuthenticationConfig.ROLE_CLAIM_TYPE);
-                identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, principal.UserId ?? string.Empty));
-                identity.AddClaim(new Claim(ClaimTypes.Name, principal.UserDetails ?? string.Empty));
+                identity = new(authenticationType: principal.IdentityProvider, nameType: USER_ID_CLAIM, roleType: AuthenticationConfig.ROLE_CLAIM_TYPE);
+
+                if (!string.IsNullOrWhiteSpace(principal.UserId))
+                {
+                    identity.AddClaim(new Claim(USER_ID_CLAIM, principal.UserId));
+                }
+
+                if (!string.IsNullOrWhiteSpace(principal.UserDetails))
+                {
+                    identity.AddClaim(new Claim(USER_DETAILS_CLAIM, principal.UserDetails));
+                }
 
                 // output identity.Claims
-                // [0] { Type = "role", Value = "roleName" }
+                // [0] { Type = "roles", Value = "roleName" }
                 identity.AddClaims(principal.UserRoles.Select(roleName => new Claim(AuthenticationConfig.ROLE_CLAIM_TYPE, roleName)));
-
-                // Copy all SWA token claims to .NET ClaimsIdentity object.
-                if (principal.Claims is not null && principal.Claims.Any())
-                {
-                    identity.AddClaims(principal.Claims
-                        .Where(claim => claim.Typ is not null && claim.Val is not null)
-                        .Select(claim => new Claim(type: claim.Typ!, value: claim.Val!))
-                        );
-                }
 
                 return identity;
             }

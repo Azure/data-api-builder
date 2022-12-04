@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
-            _gQLFilterParser = new();
+            _gQLFilterParser = new(_sqlMetadataProvider);
             await ResetDbStateAsync();
 
             // Execute additional queries, if any.
@@ -306,7 +306,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         parameters: null,
                         _queryExecutor.GetJsonResultAsync<JsonDocument>);
 
-                result = sqlResult is not null ? sqlResult.RootElement.ToString() : null;
+                result = sqlResult is not null ?
+                    sqlResult.RootElement.ToString() :
+                    new JsonArray().ToString();
             }
             else
             {

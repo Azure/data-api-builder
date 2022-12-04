@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
         {
             descriptor.Name(DirectiveName)
                                .Description("A directive to indicate the relationship between two tables")
-                               .Location(DirectiveLocation.FieldDefinition);
+                               .Location(DirectiveLocation.FieldDefinition | DirectiveLocation.InputFieldDefinition);
 
             descriptor.Argument("target")
                   .Type<StringType>()
@@ -44,6 +44,20 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
         }
 
         /// <summary>
+        /// Gets the target object type name for an input infield with a relationship directive.
+        /// </summary>
+        /// <param name="infield">The input field that is expected to have a relationship directive defined on it.</param>
+        /// <returns>The name of the target object if the relationship is found, null otherwise.</returns>
+        public static string? GetTarget(InputField infield)
+        {
+            Directive? directive = (Directive?)infield.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
+            DirectiveNode? directiveNode = directive?.ToNode();
+            ArgumentNode? arg = directiveNode?.Arguments.First(a => a.Name.Value == "target");
+
+            return (string?)arg?.Value.Value;
+        }
+
+        /// <summary>
         /// Gets the cardinality of the relationship.
         /// </summary>
         /// <param name="field">The field that has a relationship directive defined.</param>
@@ -61,6 +75,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
             ArgumentNode arg = directive.Arguments.First(a => a.Name.Value == "cardinality");
 
             return Enum.Parse<Cardinality>((string)arg.Value.Value!);
+        }
+
+        /// <summary>
+        /// Retrieves the relationship directive defined on the given field definition node.
+        /// </summary>
+        public static DirectiveNode? GetDirective(FieldDefinitionNode field)
+        {
+            DirectiveNode? directive = field.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
+            return directive;
         }
     }
 }

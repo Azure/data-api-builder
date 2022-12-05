@@ -108,7 +108,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             Mock<ILogger<SqlMutationEngine>> _mutationEngineLogger = new();
             DefaultHttpContext context = new();
-            Mock<GQLFilterParser> _gQLFilterParser = new();
+            Mock<GQLFilterParser> _gQLFilterParser = new(_sqlMetadataProvider.Object);
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
 
             // Creates Mock AuthorizationResolver to return a preset result based on [TestMethod] input.

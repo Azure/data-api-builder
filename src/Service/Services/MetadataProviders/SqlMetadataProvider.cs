@@ -33,6 +33,9 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private readonly Dictionary<string, Entity> _entities;
 
+        // Dictionary mapping singular graphql types to entity name keys in the configuration
+        private readonly Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
+
         // Contains all the referencing and referenced columns for each pair
         // of referencing and referenced tables.
         private Dictionary<RelationShipPair, ForeignKeyDefinition>? _pairToFkDefinition;
@@ -73,6 +76,7 @@ namespace Azure.DataApiBuilder.Service.Services
             _runtimeConfigProvider = runtimeConfigProvider;
             _databaseType = runtimeConfig.DatabaseType;
             _entities = runtimeConfig.Entities;
+            _graphQLSingularTypeToEntityNameMap = runtimeConfig.GraphQLSingularTypeToEntityNameMap;
             _logger = logger;
             foreach (KeyValuePair<string, Entity> entity in _entities)
             {
@@ -188,6 +192,25 @@ namespace Azure.DataApiBuilder.Service.Services
         public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
             return EntityToDatabaseObject;
+        }
+
+        /// <inheritdoc />
+        public string GetEntityName(string graphQLType)
+        {
+            if (_entities.ContainsKey(graphQLType))
+            {
+                return graphQLType;
+            }
+
+            if (!_graphQLSingularTypeToEntityNameMap.TryGetValue(graphQLType, out string? entityName))
+            {
+                throw new DataApiBuilderException(
+                    "GraphQL type doesn't match any entity name or singular type in the runtime config.",
+                    System.Net.HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            return entityName!;
         }
 
         /// <inheritdoc />
@@ -1344,10 +1367,6 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Setting the partition key path, for Cosmos only
         /// </summary>
         public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
-            => throw new NotImplementedException();
-
-        /// <inheritdoc />
-        public string GetEntityName(string graphQLType)
             => throw new NotImplementedException();
     }
 }

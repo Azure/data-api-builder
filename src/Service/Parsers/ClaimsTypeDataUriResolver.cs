@@ -47,7 +47,10 @@ namespace Azure.DataApiBuilder.Service.Parsers
         }
 
         /// <summary>
-        /// Uses type specific parsers to attempt converting the supplied node to a new ConstantNode of type targetType.
+        /// Uses type specific parsers to attempt converting the supplied node to a new ConstantNode of type targetType
+        /// when the supplied node's type differs from the target's type.
+        /// When no explicit conversion is provided, no conversion occurs here and the conversion attempt is deferred
+        /// to base.PromoteBinaryOperandTypes().
         /// </summary>
         /// <param name="targetType">Primitive type (string, bool, int, etc.) of the primary node's value.</param>
         /// <param name="operandToConvert">Node representing a constant value which should be converted to a ConstantNode of type targetType.</param>

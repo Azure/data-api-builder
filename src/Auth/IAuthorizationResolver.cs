@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Auth
         /// <param name="operation">Operation type: Create, Read, Update, Delete.</param>
         /// <param name="httpContext">Contains token claims of the authenticated user used in policy evaluation.</param>
         /// <returns>Returns the parsed policy, if successfully processed, or an exception otherwise.</returns>
-        public string TryProcessDBPolicy(string entityName, string roleName, Operation operation, HttpContext httpContext);
+        public string ProcessDBPolicy(string entityName, string roleName, Operation operation, HttpContext httpContext);
 
         /// <summary>
         /// Get list of roles defined for entity within runtime configuration.. This is applicable for GraphQL when creating authorization

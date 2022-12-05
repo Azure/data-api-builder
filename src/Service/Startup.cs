@@ -26,7 +26,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using MySqlConnector;
 using Npgsql;
 
 namespace Azure.DataApiBuilder.Service
@@ -110,7 +109,7 @@ namespace Azure.DataApiBuilder.Service
                     case DatabaseType.postgresql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<NpgsqlConnection>>(serviceProvider);
                     case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<MySqlConnection>>(serviceProvider);
+                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryExecutor>(serviceProvider);
                     default:
                         throw new NotSupportedException(
                             runtimeConfig.DatabaseTypeNotSupportedMessage);
@@ -383,7 +382,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         /// <param name="services">The service collection where authentication services are added.</param>
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
-        private static void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
+        private void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
         {
             if (runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig) && runtimeConfig.AuthNConfig != null)
             {
@@ -404,11 +403,27 @@ namespace Azure.DataApiBuilder.Service
                 }
                 else if (runtimeConfig.IsEasyAuthAuthenticationProvider())
                 {
+                    EasyAuthType easyAuthType = (EasyAuthType)Enum.Parse(typeof(EasyAuthType), runtimeConfig.AuthNConfig.Provider, ignoreCase: true);
+                    bool isProductionMode = !runtimeConfigurationProvider.IsDeveloperMode();
+                    bool appServiceEnvironmentDetected = AppServiceAuthenticationInfo.AreExpectedAppServiceEnvVarsPresent();
+
+                    if (easyAuthType == EasyAuthType.AppService && !appServiceEnvironmentDetected)
+                    {
+                        if (isProductionMode)
+                        {
+                            throw new DataApiBuilderException(
+                                message: AppServiceAuthenticationInfo.APPSERVICE_PROD_MISSING_ENV_CONFIG,
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                        }
+                        else
+                        {
+                            _logger.LogWarning(AppServiceAuthenticationInfo.APPSERVICE_DEV_MISSING_ENV_CONFIG);
+                        }
+                    }
+
                     services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                        .AddEasyAuthAuthentication(
-                            (EasyAuthType)Enum.Parse(typeof(EasyAuthType),
-                                runtimeConfig.AuthNConfig.Provider,
-                                ignoreCase: true));
+                        .AddEasyAuthAuthentication(easyAuthAuthenticationProvider: easyAuthType);
                 }
                 else if (runtimeConfigurationProvider.IsDeveloperMode() && runtimeConfig.IsAuthenticationSimulatorEnabled())
                 {

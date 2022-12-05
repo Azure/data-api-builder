@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// <returns>An AST FilterClause that represents the filter portion of the WHERE clause.</returns>
         public FilterClause GetFilterClause(string filterQueryString, string resourcePath, ODataUriResolver? customResolver = null)
         {
-            if (_model == null)
+            if (_model is null)
             {
 
                 throw new DataApiBuilderException(
@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
             try
             {
                 Uri relativeUri = new(resourcePath + '/' + filterQueryString, UriKind.Relative);
-                ODataUriParser parser = new(_model!, relativeUri);
+                ODataUriParser parser = new(_model, relativeUri);
 
                 if (customResolver is not null)
                 {

@@ -21,7 +21,8 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.roleclaimtype?view=net-6.0"/>
         public static string CreateAppServiceEasyAuthToken(
             string? nameClaimType = ClaimTypes.Name,
-            string? roleClaimType = ClaimTypes.Role)
+            string? roleClaimType = ClaimTypes.Role,
+            IEnumerable<AppServiceClaim>? additionalClaims = null)
         {
             AppServiceClaim emailClaim = new()
             {
@@ -65,7 +66,7 @@ namespace Azure.DataApiBuilder.Service.Tests
                 Typ = ClaimTypes.Name
             };
 
-            List<AppServiceClaim> claims = new()
+            HashSet<AppServiceClaim> claims = new()
             {
                 emailClaim,
                 roleClaimAnonymous,
@@ -75,6 +76,11 @@ namespace Azure.DataApiBuilder.Service.Tests
                 nameShortClaimType,
                 nameUriClaimType
             };
+
+            if (additionalClaims != null)
+            {
+                claims.UnionWith(additionalClaims);
+            }
 
             AppServiceClientPrincipal token = new()
             {
@@ -98,7 +104,8 @@ namespace Azure.DataApiBuilder.Service.Tests
         public static string CreateStaticWebAppsEasyAuthToken(
             bool addAuthenticated = true,
             string? specificRole = null,
-            IEnumerable<SWAPrincipalClaim>? claims = null)
+            string? userId = null,
+            string? userDetails = null)
         {
             // The anonymous role is present in all requests sent to Static Web Apps or AppService endpoints.
             List<string> roles = new()
@@ -130,9 +137,10 @@ namespace Azure.DataApiBuilder.Service.Tests
 
             StaticWebAppsClientPrincipal token = new()
             {
-                IdentityProvider = "github",
-                UserRoles = roles,
-                Claims = claims
+                UserId = userId,
+                UserDetails = userDetails,
+                IdentityProvider = "aad",
+                UserRoles = roles
             };
 
             string serializedToken = JsonSerializer.Serialize(value: token);

@@ -5,6 +5,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Authentication.Helpers;
 using Microsoft.AspNetCore.Http;
@@ -12,7 +13,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using static Azure.DataApiBuilder.Service.AuthenticationHelpers.StaticWebAppsAuthentication;
+using static Azure.DataApiBuilder.Service.AuthenticationHelpers.AppServiceAuthentication;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication
 {
@@ -180,16 +181,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         }
 
         /// <summary>
-        /// Ensures SWA token payload claims are processed by
-        /// validating that those claims are present
+        /// Ensures AppService EasyAuth payload claims are processed by validating that those claims are present
         /// on the authenticated .NET ClaimsPrincipal object.
-        /// Demonstrates using the immutable claim values tid and oid
-        /// as a combined key for uniquely identifying the API's data
-        /// and determining whether a user should be granted access to that data.
+        /// Demonstrates using the immutable claim values tid and oid as a combined key for uniquely identifying
+        /// the API's data and determining whether a user should be granted access to that data.
         /// </summary>
         /// <seealso cref="https://docs.microsoft.com/azure/active-directory/develop/access-tokens#validate-user-permission"/>
         [TestMethod]
-        public async Task TestStaticWebAppsEasyAuthTokenClaims()
+        public async Task TestAppServiceEasyAuthTokenClaims()
         {
             string objectIdClaimType = "oid";
             string objectId = "f35eaa76-b8e6-4c7c-99a2-5aeeeee9ba58";
@@ -197,18 +196,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             string tenantIdClaimType = "tid";
             string tenantId = "8f902aef-2c06-42c9-a3d0-bc31f04a3dca";
 
-            List<SWAPrincipalClaim> payloadClaims = new();
-            payloadClaims.Add(new SWAPrincipalClaim() { Typ = objectIdClaimType, Val = objectId });
-            payloadClaims.Add(new SWAPrincipalClaim() { Typ = tenantIdClaimType, Val = tenantId });
+            List<AppServiceClaim> payloadClaims = new()
+            {
+                new AppServiceClaim() { Typ = objectIdClaimType, Val = objectId },
+                new AppServiceClaim() { Typ = tenantIdClaimType, Val = tenantId }
+            };
 
-            string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(
-                addAuthenticated: true,
-                claims: payloadClaims
-                );
+            string generatedToken = AuthTestHelper.CreateAppServiceEasyAuthToken(additionalClaims: payloadClaims);
 
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
                 generatedToken,
-                EasyAuthType.StaticWebApps);
+                EasyAuthType.AppService);
 
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
@@ -218,11 +216,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         }
 
         /// <summary>
-        /// Validates that null claim type and/or null claim value
-        /// are not processed claims on the .NET ClaimsPrincipal object,
-        /// due lack of null claim type/ claim value support on the ClaimsPrincipal.
-        /// Validates that empty string for claim type and/or value
-        /// is processed successfully.
+        /// Validates that null claim type and/or null claim value are not processed claims on the
+        /// .NET ClaimsPrincipal object, due lack of null claim type/ claim value support on the ClaimsPrincipal.
+        /// Validates that empty string for claim type and/or value is processed successfully.
         /// </summary>
         /// <param name="claimType">string representation of claim type</param>
         /// <param name="claimValue">string representation of claim value</param>
@@ -236,19 +232,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         [DataRow("tid", "", true, DisplayName = "Claim value empty string - will process")]
         [DataRow("", "", true, DisplayName = "Claim type/value empty string -  will process")]
 
-        public async Task TestStaticWebAppsEasyAuth_IncompleteTokenClaims(string? claimType, string? claimValue, bool expectProcessedClaim)
+        public async Task TestAppServiceEasyAuth_IncompleteTokenClaims(string? claimType, string? claimValue, bool expectProcessedClaim)
         {
-            List<SWAPrincipalClaim> payloadClaims = new();
-            payloadClaims.Add(new SWAPrincipalClaim() { Typ = claimType, Val = claimValue });
+            List<AppServiceClaim> payloadClaims = new()
+            {
+                new AppServiceClaim() { Typ = claimType, Val = claimValue }
+            };
 
-            string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(
-                addAuthenticated: true,
-                claims: payloadClaims
+            string generatedToken = AuthTestHelper.CreateAppServiceEasyAuthToken(
+                additionalClaims: payloadClaims
                 );
 
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
                 generatedToken,
-                EasyAuthType.StaticWebApps);
+                EasyAuthType.AppService);
 
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
@@ -260,6 +257,40 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                     .Any());
 
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+        }
+
+        /// <summary>
+        /// Tests that a populated userId and/or userDetails property on the SWA Authenticated user payload
+        /// results in the created ClaimsIdentity object having a matching claim for the populated property.
+        /// </summary>
+        /// <param name="userId">SWA userId property value.</param>
+        /// <param name="userDetails">SWA userDetails property value.</param>
+        /// <param name="expectClaim">Whether claim matching property should be present on ClaimsIdentity object.</param>
+        [DataTestMethod]
+        [DataRow("1337", "UserDetailsString", true, DisplayName = "UserId and UserDetails Claims Match SWA User Payload")]
+        [DataRow("", "", false, DisplayName = "Empty properties in SWA User Payload -> No Matching Claims")]
+        [DataRow(null, null, false, DisplayName = "Null properties in SWA User Payload -> No Matching Claims")]
+        public async Task TestStaticWebAppsEasyAuthToken_PropertiesToClaims(string userId, string userDetails, bool expectClaim)
+        {
+            string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: true, userId: userId, userDetails: userDetails);
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(generatedToken, EasyAuthType.StaticWebApps);
+
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+
+            // If userId and/or userDetails are null in the EasyAuth payload, a claim will NOT be added to the ClaimsIdentity object
+            // for the null/empty/whitespace property.
+            if (expectClaim)
+            {
+                Assert.IsTrue(postMiddlewareContext.User.HasClaim(type: StaticWebAppsAuthentication.USER_ID_CLAIM, value: userId));
+                Assert.IsTrue(postMiddlewareContext.User.HasClaim(type: StaticWebAppsAuthentication.USER_DETAILS_CLAIM, value: userDetails));
+            }
+            else
+            {
+                Assert.IsFalse(postMiddlewareContext.User.HasClaim(type: StaticWebAppsAuthentication.USER_ID_CLAIM, value: string.Empty));
+                Assert.IsFalse(postMiddlewareContext.User.HasClaim(type: StaticWebAppsAuthentication.USER_DETAILS_CLAIM, value: string.Empty));
+            }
         }
 
         /// <summary>

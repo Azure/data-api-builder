@@ -6,12 +6,15 @@ using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Service.Exceptions.DataApiBuilderException;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -676,10 +679,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="policy">The policy to be validated and processed.</param>
         /// <returns>Processed policy</returns>
         /// <exception cref="DataApiBuilderException">Throws exception when one or the other validations fail.</exception>
-        private static void ValidateClaimsInPolicy(string policy)
+        private void ValidateClaimsInPolicy(string policy)
         {
             // Find all the claimTypes from the policy
             MatchCollection claimTypes = GetClaimTypesInPolicy(policy);
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
+            bool isStaticWebAppsAuthConfigured = Enum.TryParse<EasyAuthType>(runtimeConfig.AuthNConfig!.Provider, ignoreCase: true, out EasyAuthType easyAuthMode) ?
+                easyAuthMode is EasyAuthType.StaticWebApps : false;
 
             foreach (Match claimType in claimTypes)
             {
@@ -701,6 +707,18 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     // Not a valid claimType containing allowed characters
                     throw new DataApiBuilderException(
                         message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                        );
+                }
+
+                if (isStaticWebAppsAuthConfigured &&
+                    !(typeOfClaim.Equals(StaticWebAppsAuthentication.USER_ID_CLAIM, StringComparison.OrdinalIgnoreCase) ||
+                    typeOfClaim.Equals(StaticWebAppsAuthentication.USER_DETAILS_CLAIM, StringComparison.OrdinalIgnoreCase)))
+                {
+                    // Not a valid claimType containing allowed characters
+                    throw new DataApiBuilderException(
+                        message: $"One or more claim types supplied in the database policy are not supported.",
                         statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                         );

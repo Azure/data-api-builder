@@ -256,7 +256,7 @@ Implementation was segmented into 5 main sections:
 
 ### `SqlQueryEngine.cs` and `SqlMutationEngine.cs`
 > - `ExecuteListAsync` is called where we create an object of `SqlExecuteStructure` and calls `ExecuteAsync(SqlExecuteStructure)`.
-> - We format the result as list of JsonDocument. If the user has no read permission, it will return an empty list.
+> - We format the result as list of JsonElement. If the user has no read permission, it will return an empty list.
 
 > ### Example 
 > 1. Query With param as id

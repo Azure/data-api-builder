@@ -51,7 +51,7 @@ parameters can either be fixed as above or passed at runtime through
 
 ### Stored Procedure Permissions 
 
-Stored procedures have identical role/action permissions to any other entity. I.e. same familiar format:
+Stored procedures have identical role/action permissions to any other entity. i.e. same familiar format:
 ```json
 "permissions": [
         {

@@ -627,7 +627,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.IsTrue(errorExpected);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-                Assert.AreEqual("One or more claim types supplied in the database policy are not supported.", ex.Message);
+                Assert.AreEqual(RuntimeConfigValidator.INVALID_CLAIMS_IN_POLICY_ERR_MSG, ex.Message);
             }
         }
 

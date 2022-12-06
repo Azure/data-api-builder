@@ -42,6 +42,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
         // specify the action name.
         private static readonly string _actionKey = "action";
 
+        // Error messages.
+        public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
+
         public RuntimeConfigValidator(
             RuntimeConfigProvider runtimeConfigProvider,
             IFileSystem fileSystem,
@@ -716,7 +719,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 {
                     // Not a valid claimType containing allowed characters
                     throw new DataApiBuilderException(
-                        message: $"One or more claim types supplied in the database policy are not supported.",
+                        message: INVALID_CLAIMS_IN_POLICY_ERR_MSG,
                         statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                         );

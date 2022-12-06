@@ -12,9 +12,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Service.Exceptions.DataApiBuilderException;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -713,8 +711,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 }
 
                 if (isStaticWebAppsAuthConfigured &&
-                    !(typeOfClaim.Equals(StaticWebAppsAuthentication.USER_ID_CLAIM, StringComparison.OrdinalIgnoreCase) ||
-                    typeOfClaim.Equals(StaticWebAppsAuthentication.USER_DETAILS_CLAIM, StringComparison.OrdinalIgnoreCase)))
+                    !(typeOfClaim.Equals(StaticWebAppsAuthentication.USER_ID_CLAIM) ||
+                    typeOfClaim.Equals(StaticWebAppsAuthentication.USER_DETAILS_CLAIM)))
                 {
                     // Not a valid claimType containing allowed characters
                     throw new DataApiBuilderException(

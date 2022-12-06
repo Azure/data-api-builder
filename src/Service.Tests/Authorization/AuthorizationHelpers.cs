@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             {
                 { entityName, sampleEntity }
             };
-            
+
             // Create runtime settings for the config.
             Dictionary<GlobalSettingsType, object> runtimeSettings = new();
             AuthenticationConfig authenticationConfig = new(Provider: authProvider);

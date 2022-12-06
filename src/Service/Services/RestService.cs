@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             string role = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
             Operation operation = HttpVerbToOperations(GetHttpContext().Request.Method);
-            string dbPolicy = _authorizationResolver.TryProcessDBPolicy(entityName, role, operation, GetHttpContext());
+            string dbPolicy = _authorizationResolver.ProcessDBPolicy(entityName, role, operation, GetHttpContext());
             if (!string.IsNullOrEmpty(dbPolicy))
             {
                 // Since dbPolicy is nothing but filters to be added by virtue of database policy, we prefix it with

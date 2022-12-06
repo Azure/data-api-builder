@@ -101,7 +101,7 @@ Providing more than one (CRUD) operation would throw an error and the engine wil
 Implementation was segmented into 5 main sections:
 ### 1.  Support in Config
 
-#### `Entity.cs`
+### `Entity.cs`
 > - Exposing the `DatabaseObjectSource` object rather than `source` being a simple string.
 > - Stored procedures must be specified as "stored-procedure" source type
 >     - See [sample source config](#sample-source)
@@ -109,7 +109,7 @@ Implementation was segmented into 5 main sections:
 
 ### 2.  Metadata Validation
 
-#### `DatabaseObject.cs`
+### `DatabaseObject.cs`
 > - Tables and views have metadata that does not apply to stored procedures, most notably Columns, Primary Keys, and Relationships.
 > - As such, we create a `StoredProcedureDefinition` class with base class as `SourceDefinition` to hold procedure-relevant info - i.e. procedure parameter metadata.
 >     - We also add an `ObjectType` attribute on a `DatabaseObject` for more robust checking of whether it represents a table, view, or stored procedure vs. just null-checking the `TableDefinition` and `StoredProcedureDefinition` attributes. 
@@ -118,7 +118,7 @@ Implementation was segmented into 5 main sections:
 
 <br/>
 
-#### `SqlMetadataProvider.cs`
+### `SqlMetadataProvider.cs`
 > - Problem: when we draw metadata from the database schema, we implicitly check if each entity specified in config exists in the database. Path: in `Startup.cs`, the `PerformOnConfigChangeAsync()` method invokes `InitializeAsync()` of the metadata provider bound at runtime, which then invokes `PopulateTableDefinitionForEntities()`. Several steps down the stack `FillSchemaForTableAsync()` is called, which performs a `SELECT * FROM {table_name}` for the given entity and adds the resulting `DataTable` object to the `EntitiesDataSet` class variable. Unfortunately, stored procedure metadata cannot be queried using the same syntax. As such, running the select statement on a stored procedure source name will cause a Sql exception to surface and result in runtime initialization failure.
 > - Instead, we introduce the `PopulateStoredProcedureDefinitionForEntities()` method, which iterates over only entities labeled as stored procedures to fill their metadata, and we simply skip over entities labeled as Stored Procedures in the `PopulateTableDefinitionForEntities()` method.
 > - We use the ADO.NET `GetSchemaAsync` method to retrieve procedure metadata and parameter metadata from the Procedures and Procedure Parameters collections respectively: https://learn.microsoft.com/dotnet/framework/data/adonet/sql-server-schema-collections. These collections are listed as SQL Server-specific, so this implementation might not be extensible to MySQL and Postgres.
@@ -131,19 +131,19 @@ Implementation was segmented into 5 main sections:
 
 <br/>
 
-#### `MsSqlMetadataProvider.cs`, `MySqlMetadataProvider.cs`, & `PostgreSqlMetadataProvider.cs`
+### `MsSqlMetadataProvider.cs`, `MySqlMetadataProvider.cs`, & `PostgreSqlMetadataProvider.cs`
 > - Added overriden method to map Sql data type returned from metadata into the CLR/.NET type equivalent. Used/necessary for metadata parsing in `FillSchemaForStoredProcedureAsync()` in `SqlMetadataProvider`.
 > - Left as TODOs in MySql and Postgres.
 
 ### 3. REST Request Context + Validation
 
-#### `RestRequestContext.cs`
+### `RestRequestContext.cs`
 > - Since multiple derived classes are implementing/duplicating logic for populating their `FieldValuePairsInBody` dictionary with the Json request body, moved that logic into a method in this class, `PopulateFieldValuePairsInBody`.
 > - Added `DispatchExecute(IQueryEngine)` and `DispatchExecute(IMutationEngine)` as virtual methods, as an implementation of the visitor pattern/double dispatch strategy. Helps prevent the sometimes-bad practice of downcasting in calling the overloaded `ExecuteAsync` methods in the query and mutation engines (between `FindRequestContext` and `StoredProcedureRequestContext` in the query engine, for example).
 
 <br/>
 
-#### `StoredProcedureRequestContext.cs`
+### `StoredProcedureRequestContext.cs`
 > - Since it was agreed not to change the Operation enum, as we are keeping the same general authorization logic, we need a way to conditionally split constructing and building the appropriate query structure in the query and mutation engine. The best way I found to do so was introduce a request context representing a stored procedure request for both Query and Mutation scenarios. 
 > - Populates the request body on construction.
 > - Contains `PopulateResolvedParameters` method to populate its `ResolvedParameters` dictionary, which houses the final, resolved parameters that will be passed in constructing the sql query. Populates this dictionary with the query string or request body depending on the `OperationType` field. Should only be called after `ParsedQueryString` and/or `FieldValuePairsInBody` are appropriately populated.
@@ -151,7 +151,7 @@ Implementation was segmented into 5 main sections:
 
 <br/>
 
-#### `RestService.cs`
+### `RestService.cs`
 > - Condition in `ExecuteAsync` based on the database object type whether the entity type requested is a stored procedure.
 > - If so, initialize a `StoredProcedureRequestContext`. 
 >     - If we have a read operation, parse the query string into `ParsedQueryString`. Note: for stored procedures, ODataFilters do not apply for this iteration. As such, keys like `$filter` and `$select` will be treated as any other parameters. Request body is ignored, as we pass in `null` to constructor.
@@ -165,19 +165,19 @@ Implementation was segmented into 5 main sections:
 
 ### 4. GraphQL Schema Generation
 
-#### `GraphQLSchemaCreator.cs`
+### `GraphQLSchemaCreator.cs`
 > - Updated `GenerateSqlGraphQLObjects` method to allow it to process stored-procedure metadata retrieved from SQL Server.
 > - Create StoredProcedure GraphQL Object Types for use in the generated GraphQL schema.
 > - The return type of the generated GraphQL Query/Mutation is `List<T> listName` where `listName` is the stored procedure name.
 
-#### `SchemaConvertor.cs`
+### `SchemaConvertor.cs`
 > - Create the `objectTypeDefinitionNode` to represent the columns of the stored-procedure result. If the stored procedure does not return anything, the return type object (`objectTypeDefinitionNode`) will only have one field added named `results`.
 
 ```graphql
 {StoredProcedureName(param1:value1, param2:value2): [StoredProcedureName!]}
 ```
 
-> ### `QueryBuilder.cs` and `MutationBuilder.cs`
+### `QueryBuilder.cs` and `MutationBuilder.cs`
 > - If the stored-procedure entity in the runtime config defines a role permission allowing READ access, a GraphQL Query field is created to be included in the generated GraphQL schema.
 > #### Query
 > - `GraphQLStoredProcedureBuilder` contains the method called `GenerateStoredProcedureSchema` which gets called inside QueryBuilder class to create the GraphQL schema for our Stored Procedure.
@@ -210,7 +210,7 @@ Implementation was segmented into 5 main sections:
 
 ### 5.  Structure + Query Building
 
-#### `SqlExecuteStructure.cs`
+### `SqlExecuteStructure.cs`
 > - Contains all needed info to build an `EXECUTE {stored_proc_name} {parameters}` query
 > - Contains a dictionary, `ProcedureParameters`, mapping stored procedure parameter names to engine-generated parameterized values. I.e. keys are the user-defined procedure parameters (@<!-- -->id), and values are @<!-- -->param0, @<!-- -->param1...
 > - Constructor populates `ProcedureParameters` dictionary and the base class's `Parameters` dictionary mapping parameterized values to the procedure parameter values. Confusing, I know.
@@ -218,19 +218,19 @@ Implementation was segmented into 5 main sections:
 
 <br/>
 
-#### `MsSqlQueryBuilder.cs`
+### `MsSqlQueryBuilder.cs`
 > - Added the `Build(SqlExecuteStructure)` that builds the query string for execute requests as `EXECUTE {schema_name}.{stored_proc_name} {parameters}`
 > - Added `BuildProcedureParameterList` to build the list of parameters from the `ProcedureParameters` dictionary. The result of this method might look like `@id = @param0, @title = @param1`.
 >     - Found the naive string concatenation implementation faster than StringBuilder or Linq + string.Join
 
 <br/>
 
-#### `MySqlQueryBuilder.cs` & `PostgresQueryBuilder.cs`
+### `MySqlQueryBuilder.cs` & `PostgresQueryBuilder.cs`
 > - Added method stubs as TODOs for `Build(SqlExecuteStructure)`
 
 ### 6. REST Query Execution + Result Formatting
 
-#### `SqlQueryEngine.cs`
+### `SqlQueryEngine.cs`
 > - Separated `ExecuteAsync(RestRequestContext)` into `ExecuteAsync(FindRequestContext)` and `ExecuteAsync(StoredProcedureRequestContext)`. Seems to be better practice than doing type checking and conditional downcasting.
 > - `ExecuteAsync(StoredProcedureRequestContext)` initializes the `SqlExecuteStructure` with the context's resolved parameters, and calls a new `ExecuteAsync(SqlExecuteStructure)` method. Result returned simply as an `OkResponse` instead of using the `FormatFindResult` method. The pagination methods of `FormatFindResult` don't play well with stored procedures at the moment, since it relies on fields from a `TableDefinition`, but pagination can and should be added to a future version.
 >     - The response from this method will always be a `200 OK` if there were no database errors. If there was no result set returned, we will return an empty json array. **NOTE: Only the first result set returned by the procedure is considered.**
@@ -238,7 +238,7 @@ Implementation was segmented into 5 main sections:
 
 <br/>
 
-#### `SqlMutationEngine.cs`
+### `SqlMutationEngine.cs`
 
 > - Instead of trying to refactor `ExecuteAsync(RestRequestContext)` and `PerformMutationOperation`, which conditionally initializes query structures and builds them based on context `OperationType` - which is not a distinguishing factor of a stored procedure request - I found it easier and clearer to add an overloaded `ExecuteAsync(StoredProcedureRequestContext)`, which will be responsible for all stored procedure mutation requests (POST, PUT, PATCH, DELETE). 
 > - In `ExecuteAsync(StoredProcedureRequestContext)`, we initialize the structure and build it the same way as in the query engine. The difference comes in formatting the response. We're leaving it up to the developers to configure their procedures appropriately and to call them with the appropriate HTTP verb. As such, we will return the expected response for each successful request based on its Operation.
@@ -249,12 +249,12 @@ Implementation was segmented into 5 main sections:
 
 ### 7. GRAPHQL Query Execution + Result Formatting
 
-#### `ResolverMiddleware.cs`, `SqlQueryEngine.cs`, and `SqlMutationEngine.cs`
+### `ResolverMiddleware.cs`, `SqlQueryEngine.cs`, and `SqlMutationEngine.cs`
 > - Call `ExecuteAsync` with `IMiddlewareContext` and `parameters`.
 > - We would have to convert `IMiddlewareContext` to `StoredProcedureRequestContext`, similar to how the `dispatchQuery` method in `RestService.cs` is doing. It converts `RestRequestContext` to `StoredProcedureRequestContext`.
 > - Then we can simply call `ExecuteAsync(StoredProcedureRequestContext context)` and return the parsed json request as String.
 
-#### `SqlQueryEngine.cs` and `SqlMutationEngine.cs`
+### `SqlQueryEngine.cs` and `SqlMutationEngine.cs`
 > - `ExecuteListAsync` is called where we create an object of `SqlExecuteStructure` and calls `ExecuteAsync(SqlExecuteStructure)`.
 > - We format the result as list of JsonDocument. If the user has no read permission, it will return an empty list.
 

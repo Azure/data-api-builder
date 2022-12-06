@@ -114,13 +114,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             string predicateString;
-            if (Build(predicate.Right).Equals(GQLFilterParser.NullStringValue))
+            if (ResolveOperand(predicate.Right).Equals(GQLFilterParser.NullStringValue))
             {
-                predicateString = $" {Build(predicate.Op)} IS_NULL({Build(predicate.Left)})";
+                predicateString = $" {Build(predicate.Op)} IS_NULL({ResolveOperand(predicate.Left)})";
             }
             else
             {
-                predicateString = $"{Build(predicate.Left)} {Build(predicate.Op)} {Build(predicate.Right)}";
+                predicateString = $"{ResolveOperand(predicate.Left)} {Build(predicate.Op)} {ResolveOperand(predicate.Right)}";
             }
 
             if (predicate.AddParenthesis)

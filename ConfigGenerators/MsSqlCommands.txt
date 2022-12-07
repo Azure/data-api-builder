@@ -47,7 +47,7 @@ update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_0
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_06:create,delete"
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_06:update" --fields.include "*"
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id eq 1940"
-update Stock --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true
+update Stock --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
 update Book --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
 update Book --config "dab-config.MsSql.json" --relationship publishers --target.entity Publisher --cardinality one
 update Book --config "dab-config.MsSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
@@ -83,11 +83,11 @@ update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:rea
 update Review --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
 update Review --config "dab-config.MsSql.json" --relationship books --target.entity Book --cardinality one
 update BookWebsitePlacement --config "dab-config.MsSql.json" --permissions "authenticated:create,update" --rest true --graphql true
-update BookWebsitePlacement --config "dab-config.MsSql.json" --permissions "authenticated:delete" --fields.include "*" --policy-database "@claims.id eq @item.id"
+update BookWebsitePlacement --config "dab-config.MsSql.json" --permissions "authenticated:delete" --fields.include "*" --policy-database "@claims.userId eq @item.id"
 update Author --config "dab-config.MsSql.json"  --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update WebsiteUser --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update" --rest false --graphql "websiteUser:websiteUsers"
 update stocks_price --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update" --rest false
-update Comic --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship series --target.entity series --cardinality one
+update Comic --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship myseries --target.entity series --cardinality one
 update series --config "dab-config.MsSql.json" --relationship comics --target.entity Comic --cardinality many
 update Broker --config "dab-config.MsSql.json" --permissions "authenticated:create,update,read,delete" --graphql false
 update Tree --config "dab-config.MsSql.json" --rest true --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"

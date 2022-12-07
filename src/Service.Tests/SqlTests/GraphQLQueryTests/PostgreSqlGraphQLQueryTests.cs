@@ -156,7 +156,7 @@ FROM
             SELECT to_jsonb(subq7) AS data
             FROM
               (SELECT table0.title AS title,
-                      table1_subq.data AS series
+                      table1_subq.data AS myseries
                FROM public.comics AS table0
                LEFT OUTER JOIN LATERAL
                  (SELECT to_jsonb(subq6) AS data

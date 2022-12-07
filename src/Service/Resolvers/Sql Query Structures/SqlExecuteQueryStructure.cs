@@ -75,7 +75,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
                 }
-
             }
         }
 

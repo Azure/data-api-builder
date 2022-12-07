@@ -32,7 +32,8 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 configuration.Configuration,
                 configuration.Schema,
                 configuration.ConnectionString,
-                configuration.AccessToken);
+                configuration.AccessToken,
+                configuration.Database);
 
             return new OkResult();
         }
@@ -45,10 +46,12 @@ namespace Azure.DataApiBuilder.Service.Controllers
     /// <param name="Schema">The GraphQL schema. Can be left empty for SQL databases.</param>
     /// <param name="ConnectionString">The database connection string.</param>
     /// <param name="AccessToken">The managed identity access token (if any) used to connect to the database.</param>
+    /// <param name="Database"> The name of the database to be used for Cosmos</param>
     public record class ConfigurationPostParameters(
         string Configuration,
         string? Schema,
         string ConnectionString,
-        string? AccessToken)
+        string? AccessToken,
+        string? Database = null)
     { }
 }

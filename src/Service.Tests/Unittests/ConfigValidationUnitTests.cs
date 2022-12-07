@@ -594,6 +594,44 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test to validate that only and only for SWA, if claims other than "userId" and
+        /// "userDetails" are referenced in the database policy, we fail the validation.
+        /// </summary>
+        /// <param name="authProvider">Authentication provider like AppService, StaticWebApps.</param>
+        /// <param name="dbPolicy">Database policy defined for action.</param>
+        /// <param name="action">The action for which database policy is defined.</param>
+        /// <param name="errorExpected">Boolean value indicating whether an exception is expected or not.</param>
+        [DataTestMethod]
+        [DataRow("StaticWebApps", "@claims.userId eq @item.col2", Operation.Read, false, DisplayName = "SWA- Database Policy defined for Read passes")]
+        [DataRow("staticwebapps", "@claims.userDetails eq @item.col3", Operation.Update, false, DisplayName = "SWA- Database Policy defined for Update passes")]
+        [DataRow("StaticWebAPPs", "@claims.email eq @item.col3", Operation.Delete, true, DisplayName = "SWA- Database Policy defined for Delete fails")]
+        [DataRow("appService", "@claims.email eq @item.col3", Operation.Delete, false, DisplayName = "AppService- Database Policy defined for Delete passes")]
+        public void TestInvalidClaimsForStaticWebApps(string authProvider, string dbPolicy, Operation action, bool errorExpected)
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE,
+                operation: action,
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
+                databasePolicy: dbPolicy,
+                authProvider: authProvider.ToString()
+                );
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            try
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+                Assert.IsFalse(errorExpected);
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.IsTrue(errorExpected);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+                Assert.AreEqual(RuntimeConfigValidator.INVALID_CLAIMS_IN_POLICY_ERR_MSG, ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Test to validate that wildcard action passes all stages of config validation.
         /// </summary>
         [TestMethod]

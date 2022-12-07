@@ -199,7 +199,7 @@ The following HTTP verbs are supported:
 - `PUT` `PATCH`: update or create an item
 - `DELETE`: delete an item
 
-Whenver you need to access a single item, you can get the item you want by specifying its primary key:
+Whenever you need to access a single item, you can get the item you want by specifying its primary key:
 
 ```
 GET /api/book/id/1000

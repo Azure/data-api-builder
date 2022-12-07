@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="action">The action to be validated.</param>
         /// <param name="errorExpected">Whether an error is expected.</param>
         [DataTestMethod]
-        [DataRow("1 eq @item.col1", Operation.Create, true, DisplayName = "Database Policy defined for Create fails")]
+        [DataRow("1 eq @item.col1", Config.Operation.Create, true, DisplayName = "Database Policy defined for Create fails")]
         [DataRow("", Config.Operation.Create, true, DisplayName = "Database Policy left empty for Create fails")]
         [DataRow(null, Config.Operation.Create, false, DisplayName = "Database Policy NOT defined for Create passes")]
         [DataRow("1 eq @item.col2", Config.Operation.Read, false, DisplayName = "Database Policy defined for Read passes")]

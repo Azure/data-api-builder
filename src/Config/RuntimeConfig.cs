@@ -137,7 +137,7 @@ namespace Azure.DataApiBuilder.Config
         /// This is used for looking up top-level entity name with GraphQL type, GraphQL type is not matching any of the top level entity name.
         /// Use singular field to find the top level entity name, then do the look up from the entities dictionary
         /// </summary>
-        public void MapGraphQLSingularTypeToEntityName()
+        public void MapGraphQLSingularTypeToEntityName(ILogger? logger)
         {
             foreach (KeyValuePair<string, Entity> item in Entities)
             {
@@ -160,6 +160,10 @@ namespace Azure.DataApiBuilder.Config
                     if (graphQLType is not null)
                     {
                         GraphQLSingularTypeToEntityNameMap.TryAdd(graphQLType, entityName);
+                        if (logger is not null)
+                        {
+                            logger.LogInformation($"GraphQL Entity: {GraphQLGlobalSettings.Path}/{entityName}");
+                        }
                     }
                 }
             }

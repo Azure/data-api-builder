@@ -1,85 +1,71 @@
 # Getting started with Data API builder for Azure MySQL Database
 
-Make sure you have read the [Getting Started](getting-started.md) document.
-
-As mentioned before, this tutorial assumes that you already have a SQL Server or an Azure MySQL Database that can be used as playground.
+Make sure you have read the [Getting Started](getting-started.md) document.As mentioned before, this tutorial assumes that you already have an Azure MySQL Database that can be used as playground.
 
 ## Get the database connection string
 
 There are several ways to get an Azure MySQL Database connection string. See [how to connect and query with MySQL](https://learn.microsoft.com/en-us/azure/purview/register-scan-azure-mysql-database).
 
-
 For Data API Builder, the format used for a MySQL connection is shown below based on SSL configuration:
-1. If MySQL server has SSL enabled, use the ADO.NET connection string format with SSL mode as requried. If using Azure database for MySQL , remember to download and install the [public SSL certificate](https://dl.cacerts.digicert.com/DigiCertGlobalRootCA.crt.pem). 
+
+1. If MySQL server has SSL enabled, use the ADO.NET connection string format with SSL mode as requried. If using Azure database for MySQL , remember to download and install the [public SSL certificate](https://dl.cacerts.digicert.com/DigiCertGlobalRootCA.crt.pem) in the **Trusted Root certification authorities store** on the client machine using **certmgr.msc** Management Console on your local Windows system. If Using an Azure cloud service like Azure App Service, I recommend to copy it in a folder on the App Service file system and add **SslCa** argument with the full path as shown below.
 
     ```
-    Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;SslMode=MySqlSslMode.Required;";
+    Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;SslMode=MySqlSslMode.Required;SslCa=<path-to-certificate>";
     ```
+    
 2. If MySQL has SSL not enabled, you can use the ADO.NET connection string format without the SSL mode parameter
     ```
     Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;
     ```
 
-Once you have your connection string, add it to the configuration file you have created before. It will look like the following (if you are using a local MySQL Server wihtout SSL)
-
-```json
-"data-source": {
-    "database-type": "mysql",
-    "connection-string": "Server=127.0.0.1;User ID=root;Password=<Password>;database=<dbname>"
-}
-```
-
-If Server is using SSL with Azure database for MySQL  
-```json
-"data-source": {
-    "database-type": "mysql",
-    "connection-string": "Server=demoazuredbmysql.mysql.database.azure.com;User ID=root;Password=<Password>;database=<dbname>;SslMode=MySqlSslMode.Required;"
-}
-```
-
 ## Create the database objects
 
-Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `libray.azure-sql.sql` script in the `azure-sql-db` folder that you can use to create three tables, along with sample data:
+Create the database `booksdb` with tables to represent Authors, Books and the many-to-many relationship between Authors and Books. Execute this [sample script for books schema and data](../../samples/getting-started/azure-sql-db/exercise/exercise-library.azure-mysql.sql) in the Azure MySQL Database you decided to use.
 
 - `dbo.authors`: Table containing authors
 - `dbo.books`: Table containing books
 - `dbo.books_authors`: Table associating books with respective authors
 
-Execute this [sample script for books schema and data](https://github.com/Azure/data-api-builder/blob/main/src/Service/MySqlBooks.sql) in the Azure MySQL Database you decided to use.
-
 ## Creating a configuration file for DAB
 The Data API builder for Azure Databases engine needs a configuration file. There you'll define which database DAB connects to, and which entities are to be exposed by the API, together with their properties.
 
-For this getting started guide you will use DAB CLI to initialize your configuration file. Run the following command:
+For this getting started guide you will use DAB CLI to initialize your configuration file. Run the following command and use the connection stirng based on whether SSL is enabled or note. Please review the **Get the database connection string** section above. 
 
-dab init --database-type "mysql" --connection-string "connection-string": "Server=demoazuredbmysql.mysql.database.azure.com;User ID=root;Password=<Password>;database=<dbname>;SslMode=MySqlSslMode.Required;" --host-mode "Development"
+dab init  --config "dab-config.MySql.json" --database-type mysql --connection-string "<mysql-connection-string-ssl-or-non-ssl>" --host-mode "Development" --authenticate-devmode-requests false --cors-origin "http://localhost:5000"
 
-The command will generate a config file called dab-config.json looking like this:
+The output would look like 
+```
+    Using config file: dab-config.MySql.json
+    Config file generated.
+    SUGGESTION: Use 'dab add <options>' to add new entities in your config.
+```
+
+The command will generate a config file called dab-config.MySql.json looking like this:
 
 ```json
 {
   "$schema": "dab.draft-01.schema.json",
   "data-source": {
-    "database-type": "mssql",
-    "connection-string": "Server=demoazuredbmysql.mysql.database.azure.com;User ID=root;Password=<Password>;database=<dbname>;SslMode=MySqlSslMode.Required;"
+    "database-type": "mysql",
+    "connection-string": "Server=demoazuredbmysql.mysql.database.azure.com;User ID=root;Password=<Password>;database=<dbname>;SslMode=MySqlSslMode.Required;SslCa=<path-to-SSLcert>"
   },
-  "mssql": {
-    "set-session-context": true
-  },
+  ,
   "runtime": {
     "rest": {
-      "enabled": true,
       "path": "/api"
     },
     "graphql": {
       "allow-introspection": true,
-      "enabled": true,
       "path": "/graphql"
     },
     "host": {
       "mode": "development",
+      "authenticate-devmode-requests": false,
       "cors": {
-        "origins": [],
+        "origins": [
+          "http://localhost:5000"
+        ],
         "allow-credentials": false
       },
       "authentication": {
@@ -92,22 +78,35 @@ The command will generate a config file called dab-config.json looking like this
 ```
 As you can see there the `data-source` property specifies that our chosen `database-type` is `mssql`, with the `connection-string` we passed to DAB CLI.
 
->Take a look at the [DAB Configuration File Guide](../configuration-file.md) document to learn more. With the configuration file in place, then it's time to start defining which entities you want to expose via the API.
+> Take a look at the [DAB Configuration File Guide](../configuration-file.md) document to learn more. With the configuration file in place, then it's time to start defining which entities you want to expose via the API.
     
 ## Add Book and Author entities
 
 Now, you'll want to expose the `books` and the `authors` table as REST or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.
 
-Start by adding the `author` entity:
+Run the DAB CLI command as shown below to create the entity called Books
+```
+    dab add Book --config "dab-config.MySql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
+    Using config file: dab-config.MySql.json
+    Added new entity: Book with source: books to config: dab-config.MySql.json with permissions: anonymous:create,read,update,delete.
+    SUGGESTION: Use 'dab update <options>' to update any entities in your config.
+```
+
+Start by adding the `books` entity:
 
 ```json
 "entities": {
-    "author": {
-      "source": "dbo.authors",
+    "Book": {
+      "source": "books",
       "permissions": [
         {
-          "actions": ["*"],
-          "role": "anonymous"
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
         }
       ]
     }
@@ -125,7 +124,7 @@ You can also add the `book` entity now, applying the same concepts you just lear
 ```json
 "entities": {
     "author": {
-      "source": "dbo.authors",
+      "source": "authors",
       "permissions": [
         {
           "actions": ["*"],
@@ -134,7 +133,7 @@ You can also add the `book` entity now, applying the same concepts you just lear
       ]
     },
     "book": {
-      "source": "dbo.books",
+      "source": "books",
       "permissions": [
         {
           "actions": ["*"],
@@ -151,22 +150,28 @@ that's all is needed at the moment. Data API builder is ready to be run.
 
 ## Start Data API builder for Azure MySQL Database
 
-From the `samples/getting-started` folder, start Data API Builder engine :
-
+To start the DAB API builder with the configuration file, run the following command:
+```   
+    dab start -c dab-config.MySql.json
 ```
-./run-dab.cmd library-dab-config.json
-```
 
-Use `run-dab.sh` if you are on Linux. After a few seconds, you'll see something like
-
+The output would look like 
 ```
-      Successfully completed runtime initialization.
-info: Microsoft.Hosting.Lifetime[14]
-      Now listening on: https://localhost:5001
+Using config file: dab-config.MySql.json
+Starting the runtime engine...
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[63]
+      User profile is available. Using 'xxxxxxxxxxxxxxxxxxxxxxx' as key repository and Windows DPAPI to encrypt keys at rest.
+info: Azure.DataApiBuilder.Service.Services.ISqlMetadataProvider[0]
+      Book path: /api/Book
+info: Azure.DataApiBuilder.Service.Services.ISqlMetadataProvider[0]
+      Author path: /api/Author
+info: Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator[0]
+      Validating Relationship Section in Config...
 info: Microsoft.Hosting.Lifetime[14]
       Now listening on: http://localhost:5000
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: https://localhost:5001
 ```
-
 The Data API builder engine is running and is ready to accept requests.
 
 ## Query the endpoints
@@ -245,7 +250,7 @@ Stop the engine (`Ctrl+C`) and go back to the `library-dab-config.json` and add 
     "books": {
         "cardinality": "many",
         "target.entity": "book",
-        "linking.object": "dbo.books_authors"
+        "linking.object": "books_authors"
     }
 }
 ```
@@ -254,7 +259,7 @@ The element under `relationship` is used to add a field - `books` in the sample 
 
 - `cardinality`: set to `many` as an author can be associated with more than one book
 - `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample is `book` as we are creating the relationship on the `author` entity.
-- `linking.object`: the database table used to support the many-to-many relationship. That table is the `dbo.books_authors`.
+- `linking.object`: the database table used to support the many-to-many relationship. That table is the `books_authors`.
 
 Data API Builder will automatically figure out what are the columns that are used to support the relationship between all the involved parts by analyzing the forieng keys constratins that exist between the involved tables. For this reason the configuration is done! (If you don't have foreign keys you can always manually specify the columns you want to use to navigate from one table to another. More on this in the [relationships documentation](../relationships.md))
 
@@ -262,7 +267,7 @@ The `author` entity should now look like the following:
 
 ```json
 "author": {
-    "source": "dbo.authors",
+    "source": "authors",
     "permissions": [
         {
             "actions": [ "*" ],
@@ -273,7 +278,7 @@ The `author` entity should now look like the following:
         "books": {
             "cardinality": "many",
             "target.entity": "book",
-            "linking.object": "dbo.books_authors"
+            "linking.object": "books_authors"
         }
     }
 },
@@ -283,7 +288,7 @@ as we also want to enable querying a book and getting its authors, we also need 
 
 ```json
 "book": {
-    "source": "dbo.books",
+    "source": "books",
     "permissions": [
         {
             "actions": [
@@ -296,7 +301,7 @@ as we also want to enable querying a book and getting its authors, we also need 
         "authors": {
             "cardinality": "many",
             "target.entity": "author",
-            "linking.object": "dbo.books_authors"
+            "linking.object": "books_authors"
         }
     }
 }

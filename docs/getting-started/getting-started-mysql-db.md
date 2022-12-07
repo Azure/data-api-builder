@@ -224,7 +224,7 @@ GraphQL endpoint is available at
 /graphql
 ```
 
-Use a GraphQL-capable REST client like Postman or Insomnia to query the database using full GraphQL introspection capabilities, to get intellisense and validation. For example:
+Use a GraphQL-capable API client like Postman or Insomnia to query the database using full GraphQL introspection capabilities, to get IntelliSense and validation. For example:
 
 ```graphql
 {

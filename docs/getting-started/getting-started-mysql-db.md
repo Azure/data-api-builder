@@ -180,7 +180,7 @@ Now that Data API builder engine is running, you can use your favourite REST cli
 
 ### REST Endpoint
 
-REST endpoint is made available at the path (make sure to keep in mind that the url path is treated as Case Sensitive):
+The REST endpoint is made available at the path (make sure to keep in mind that the url path is treated as Case Sensitive):
 
 ```
 /api/<entity>

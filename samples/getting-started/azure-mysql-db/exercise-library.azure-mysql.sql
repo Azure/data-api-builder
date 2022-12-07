@@ -1,5 +1,5 @@
-CREATE DATABASE  IF NOT EXISTS `books` 
-USE `books`;
+CREATE DATABASE  IF NOT EXISTS `booksdb` 
+USE `booksdb`;
 
 --
 -- Table structure for table `authors`

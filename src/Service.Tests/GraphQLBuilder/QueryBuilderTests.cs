@@ -132,7 +132,7 @@ type foo @model(name:""foo"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "foo" },
-                    new Operation[] { Config.Operation.Read },
+                    new Config.Operation[] { Config.Operation.Read },
                     roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
@@ -334,7 +334,7 @@ type Table @model(name: ""table"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { entityName },
-                    new Operation[] { Config.Operation.Read },
+                    new Config.Operation[] { Config.Operation.Read },
                     new string[] { "anonymous", "authenticated" });
 
             Entity entity = (singularName is not null)

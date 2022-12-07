@@ -272,7 +272,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 entityName: POST_STARTUP_CONFIG_ENTITY,
                 entitySource: POST_STARTUP_CONFIG_ENTITY_SOURCE,
                 roleName: POST_STARTUP_CONFIG_ROLE,
-                operation: Config.OperationRead,
+                operation: Config.Operation.Read,
                 includedCols: new HashSet<string>() { "*" });
 
             ConfigurationPostParameters config = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration);
@@ -534,7 +534,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 {
                     foreach (object operation in permission.Operations)
                     {
-                        HashSet<Operation> allowedActions =
+                        HashSet<Config.Operation> allowedActions =
                             new() { Config.Operation.All, Config.Operation.Create, Config.Operation.Read,
                                 Config.Operation.Update, Config.Operation.Delete };
                         Assert.IsTrue(((JsonElement)operation).ValueKind == JsonValueKind.String ||
@@ -551,7 +551,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         }
                         else
                         {
-                            Operation name = AuthorizationResolver.WILDCARD.Equals(operation.ToString()) ? Config.OperationAll : ((JsonElement)operation).Deserialize<Operation>(RuntimeConfig.SerializerOptions);
+                            Config.Operation name = AuthorizationResolver.WILDCARD.Equals(operation.ToString()) ? Config.Operation.All : ((JsonElement)operation).Deserialize<Config.Operation>(RuntimeConfig.SerializerOptions);
                             Assert.IsTrue(allowedActions.Contains(name));
                         }
                     }
@@ -1098,7 +1098,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public static PermissionSetting GetMinimalPermissionConfig(string roleName)
         {
             PermissionOperation actionForRole = new(
-                Name: Config.OperationAll,
+                Name: Config.Operation.All,
                 Fields: null,
                 Policy: new(request: null, database: null)
                 );

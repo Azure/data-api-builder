@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new Operation[] { Operation.Read },
+                    new Config.Operation[] { Config.Operation.Read },
                     new string[] { "anonymous", "authenticated" }
                     );
         }
@@ -57,7 +57,7 @@ type Foo @model(name:""Foo"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new Operation[] { Operation.Read },
+                    new Config.Operation[] { Config.Operation.Read },
                     roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
@@ -132,7 +132,7 @@ type foo @model(name:""foo"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "foo" },
-                    new Operation[] { Operation.Read },
+                    new Operation[] { Config.Operation.Read },
                     roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
@@ -334,7 +334,7 @@ type Table @model(name: ""table"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { entityName },
-                    new Operation[] { Operation.Read },
+                    new Operation[] { Config.Operation.Read },
                     new string[] { "anonymous", "authenticated" });
 
             Entity entity = (singularName is not null)

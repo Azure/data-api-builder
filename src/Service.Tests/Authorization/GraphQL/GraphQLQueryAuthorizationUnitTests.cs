@@ -40,7 +40,7 @@ type Foo @model(name: ""Foo""){
                 inputTypes: new(),
                 GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     entityNames: new string[] { "Foo" },
-                    operations: new Operation[] { Operation.Read },
+                    operations: new Config.Operation[] { Config.Operation.Read },
                     roles: rolesDefinedInPermissions)
                 );
 

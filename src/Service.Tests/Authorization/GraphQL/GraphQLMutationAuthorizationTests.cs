@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             _authorizationResolver.Setup(x => x.AreColumnsAllowedForOperation(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<Operation>(),
+                It.IsAny<Config.Operation>(),
                 It.IsAny<IEnumerable<string>>()
                 )).Returns(isAuthorized);
 

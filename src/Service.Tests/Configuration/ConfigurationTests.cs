@@ -166,7 +166,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 entityName: "MyEntity",
                 entitySource: entitySource,
                 roleName: "Anonymous",
-                operation: Operation.All,
+                operation: Config.Operation.All,
                 includedCols: null,
                 excludedCols: null,
                 databasePolicy: null
@@ -272,7 +272,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 entityName: POST_STARTUP_CONFIG_ENTITY,
                 entitySource: POST_STARTUP_CONFIG_ENTITY_SOURCE,
                 roleName: POST_STARTUP_CONFIG_ROLE,
-                operation: Operation.Read,
+                operation: Config.OperationRead,
                 includedCols: new HashSet<string>() { "*" });
 
             ConfigurationPostParameters config = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration);
@@ -535,8 +535,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     foreach (object operation in permission.Operations)
                     {
                         HashSet<Operation> allowedActions =
-                            new() { Operation.All, Operation.Create, Operation.Read,
-                                Operation.Update, Operation.Delete };
+                            new() { Config.Operation.All, Config.Operation.Create, Config.Operation.Read,
+                                Config.Operation.Update, Config.Operation.Delete };
                         Assert.IsTrue(((JsonElement)operation).ValueKind == JsonValueKind.String ||
                             ((JsonElement)operation).ValueKind == JsonValueKind.Object);
                         if (((JsonElement)operation).ValueKind == JsonValueKind.Object)
@@ -551,7 +551,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         }
                         else
                         {
-                            Operation name = AuthorizationResolver.WILDCARD.Equals(operation.ToString()) ? Operation.All : ((JsonElement)operation).Deserialize<Operation>(RuntimeConfig.SerializerOptions);
+                            Operation name = AuthorizationResolver.WILDCARD.Equals(operation.ToString()) ? Config.OperationAll : ((JsonElement)operation).Deserialize<Operation>(RuntimeConfig.SerializerOptions);
                             Assert.IsTrue(allowedActions.Contains(name));
                         }
                     }
@@ -1098,7 +1098,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public static PermissionSetting GetMinimalPermissionConfig(string roleName)
         {
             PermissionOperation actionForRole = new(
-                Name: Operation.All,
+                Name: Config.OperationAll,
                 Fields: null,
                 Policy: new(request: null, database: null)
                 );

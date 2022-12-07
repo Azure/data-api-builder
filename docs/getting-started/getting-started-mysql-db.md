@@ -307,7 +307,7 @@ as we also want to enable querying a book and getting its authors, we also need 
 }
 ```
 
-Once this is done, you can now restart the Data API builder engine, and using GraphQL you can now execute queries like:
+Once this is done, you can restart the Data API builder engine. Then, you can execute GraphQL queries like:
 
 ```graphql
 {

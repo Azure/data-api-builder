@@ -14,7 +14,7 @@ For Data API Builder, the format used for a MySQL connection is shown below base
     Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;SslMode=MySqlSslMode.Required;SslCa=<path-to-certificate>";
     ```
     
-2. If MySQL has SSL not enabled, you can use the ADO.NET connection string format without the SSL mode parameter
+2. If MySQL does not have SSL enabled, you can use the ADO.NET connection string format without the SSL mode parameter
     ```
     Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;
     ```

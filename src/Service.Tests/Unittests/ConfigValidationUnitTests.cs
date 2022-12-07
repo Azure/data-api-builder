@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("@claims.id eq @item.col1", Config.Operation.Insert, DisplayName = "Invalid action Insert specified in config")]
         [DataRow("@claims.id eq @item.col2", Config.Operation.Upsert, DisplayName = "Invalid action Upsert specified in config")]
         [DataRow("@claims.id eq @item.col3", Config.Operation.UpsertIncremental, DisplayName = "Invalid action UpsertIncremental specified in config")]
-        public void InvalidActionSpecifiedForARole(string dbPolicy, Config.Operation  action)
+        public void InvalidActionSpecifiedForARole(string dbPolicy, Config.Operation action)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -148,7 +148,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("1 eq @item.col2", Config.Operation.Read, false, DisplayName = "Database Policy defined for Read passes")]
         [DataRow("2 eq @item.col3", Config.Operation.Update, false, DisplayName = "Database Policy defined for Update passes")]
         [DataRow("2 eq @item.col3", Config.Operation.Delete, false, DisplayName = "Database Policy defined for Delete passes")]
-        public void AddDatabasePolicyToCreateOperationPermission(string dbPolicy, Config.Operation  action, bool errorExpected)
+        public void AddDatabasePolicyToCreateOperationPermission(string dbPolicy, Config.Operation action, bool errorExpected)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -606,7 +606,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("staticwebapps", "@claims.userDetails eq @item.col3", Config.Operation.Update, false, DisplayName = "SWA- Database Policy defined for Update passes")]
         [DataRow("StaticWebAPPs", "@claims.email eq @item.col3", Config.Operation.Delete, true, DisplayName = "SWA- Database Policy defined for Delete fails")]
         [DataRow("appService", "@claims.email eq @item.col3", Config.Operation.Delete, false, DisplayName = "AppService- Database Policy defined for Delete passes")]
-        public void TestInvalidClaimsForStaticWebApps(string authProvider, string dbPolicy, Config.Operation  action, bool errorExpected)
+        public void TestInvalidClaimsForStaticWebApps(string authProvider, string dbPolicy, Config.Operation action, bool errorExpected)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,

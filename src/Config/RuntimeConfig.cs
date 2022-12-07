@@ -138,8 +138,20 @@ namespace Azure.DataApiBuilder.Config
                 {
                     GraphQLEntitySettings? graphQL = entity.GraphQL as GraphQLEntitySettings;
 
-                    if (graphQL is null || graphQL.Type is null
-                        || (graphQL.Type is not SingularPlural && graphQL.Type is not string))
+                    if (graphQL is null)
+                    {
+                        continue;
+                    }
+                    else if (graphQL.Type is null)
+                    {
+                        if (logger is not null)
+                        {
+                            logger.LogInformation($"GraphQL type for {entityName} is {entityName}");
+                        }
+
+                        continue;
+                    }
+                    else if (graphQL.Type is not SingularPlural && graphQL.Type is not string)
                     {
                         continue;
                     }
@@ -151,7 +163,7 @@ namespace Azure.DataApiBuilder.Config
                         GraphQLSingularTypeToEntityNameMap.TryAdd(graphQLType, entityName);
                         if (logger is not null)
                         {
-                            logger.LogInformation($"GraphQL Entity: {GraphQLGlobalSettings.Path}/{entityName}");
+                            logger.LogInformation($"GraphQL type for {entityName} is {graphQLType}");
                         }
                     }
                 }

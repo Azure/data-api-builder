@@ -4,7 +4,7 @@ Make sure you have read the [Getting Started](getting-started.md) document.As me
 
 ## Get the database connection string
 
-There are several ways to get an Azure MySQL Database connection string. See [how to connect and query with MySQL](https://learn.microsoft.com/en-us/azure/purview/register-scan-azure-mysql-database).
+There are several ways to get an Azure MySQL Database connection string. See [how to connect and query with MySQL](https://learn.microsoft.com/azure/purview/register-scan-azure-mysql-database).
 
 For Data API Builder, the format used for a MySQL connection is shown below based on SSL configuration:
 

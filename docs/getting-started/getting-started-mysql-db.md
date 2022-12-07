@@ -258,7 +258,7 @@ Stop the engine (`Ctrl+C`) and go back to the `library-dab-config.json` and add 
 The element under `relationship` is used to add a field - `books` in the sample - to the generated GraphQL object, so that one will be able to navigate the relationship between an Author and their Books. Within the `books` object there are three fields:
 
 - `cardinality`: set to `many` as an author can be associated with more than one book
-- `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample is `book` as we are creating the relationship on the `author` entity.
+- `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample, it is `book` as we are creating the relationship on the `author` entity.
 - `linking.object`: the database table used to support the many-to-many relationship. That table is the `books_authors`.
 
 Data API Builder will automatically figure out what are the columns that are used to support the relationship between all the involved parts by analyzing the forieng keys constratins that exist between the involved tables. For this reason the configuration is done! (If you don't have foreign keys you can always manually specify the columns you want to use to navigate from one table to another. More on this in the [relationships documentation](../relationships.md))

@@ -232,14 +232,14 @@ namespace Azure.DataApiBuilder.Config
             // is instantiated.
             if (File.Exists(Path.Combine(currentDir, fileName)))
             {
-                Console.WriteLine($"Using config file: {fileName}.");
+                Console.WriteLine($"Found config file: {fileName}.");
                 return true;
             }
             else
             {
                 // Unable to use ILogger because this code is invoked before LoggerFactory
                 // is instantiated.
-                Console.WriteLine($"Config file: {fileName} does not exist.");
+                Console.WriteLine($"Unable to find config file: {fileName} does not exist.");
                 return false;
             }
         }

@@ -1150,15 +1150,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         // no predicates need to be added to the database query generated for the request.
         // When a value is returned as a result, the execution behaved as expected.
         [DataTestMethod]
-        [DataRow("anonymous", "anonymous", Operation.Read, Operation.Read, "id eq 1", true,
+        [DataRow("anonymous", "anonymous", Config.Operation.Read, Config.Operation.Read, "id eq 1", true,
             DisplayName = "Fetch Policy for existing system role - anonymous")]
-        [DataRow("authenticated", "authenticated", Operation.Update, Operation.Update, "id eq 1", true,
+        [DataRow("authenticated", "authenticated", Config.Operation.Update, Config.Operation.Update, "id eq 1", true,
             DisplayName = "Fetch Policy for existing system role - authenticated")]
-        [DataRow("anonymous", "anonymous", Operation.Read, Operation.Read, null, false,
+        [DataRow("anonymous", "anonymous", Config.Operation.Read, Config.Operation.Read, null, false,
             DisplayName = "Fetch Policy for existing role, no policy object defined in config.")]
-        [DataRow("anonymous", "authenticated", Operation.Read, Operation.Read, "id eq 1", false,
+        [DataRow("anonymous", "authenticated", Config.Operation.Read, Config.Operation.Read, "id eq 1", false,
             DisplayName = "Fetch Policy for non-configured role")]
-        [DataRow("anonymous", "anonymous", Operation.Read, Operation.Create, "id eq 1", false,
+        [DataRow("anonymous", "anonymous", Config.Operation.Read, Config.Operation.Create, "id eq 1", false,
             DisplayName = "Fetch Policy for non-configured operation")]
         public void GetDBPolicyTest(
             string clientRole,

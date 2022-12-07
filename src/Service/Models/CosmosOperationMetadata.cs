@@ -1,5 +1,3 @@
-using Azure.DataApiBuilder.Config;
-
 namespace Azure.DataApiBuilder.Service.Models
 {
     /// <summary>

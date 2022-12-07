@@ -284,7 +284,7 @@ The `author` entity should now look like the following:
 },
 ```
 
-as we also want to enable querying a book and getting its authors, we also need to make a similar change to the book entity:
+as we also want to enable querying a book and getting its authors, we also need to make a similar change to the `book` entity:
 
 ```json
 "book": {

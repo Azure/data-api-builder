@@ -82,7 +82,7 @@ As you can see there the `data-source` property specifies that our chosen `datab
     
 ## Add Book and Author entities
 
-Now, you'll want to expose the `books` and the `authors` table as REST or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.
+Now, you'll want to expose the `books` and the `authors` table as REST and/or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.
 
 Run the DAB CLI command as shown below to create the entity called Books
 ```

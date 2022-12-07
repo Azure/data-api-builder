@@ -28,7 +28,7 @@ Create the database `booksdb` with tables to represent Authors, Books and the ma
 - `dbo.books_authors`: Table associating books with respective authors
 
 ## Creating a configuration file for DAB
-The Data API builder for Azure Databases engine needs a configuration file. There you'll define which database DAB connects to, and which entities are to be exposed by the API, together with their properties.
+The Data API Builder engine needs a configuration file. There you'll define which database DAB targets, and which entities and associated properties are to be exposed by the API.
 
 For this getting started guide you will use DAB CLI to initialize your configuration file. Run the following command and use the connection stirng based on whether SSL is enabled or note. Please review the **Get the database connection string** section above. 
 

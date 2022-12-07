@@ -47,10 +47,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlExecuteStructure structure);
 
         /// <summary>
+        /// Builds a query that selects 1 and only has predicates.
+        /// </summary>
+        public string Build(BaseSqlQueryStructure structure);
+
+        /// <summary>
         /// Builds the query to obtain foreign key information with the given
         /// number of parameters.
         /// </summary>
         public string BuildForeignKeyInfoQuery(int numberOfParameters, bool developerMode, ILogger logger);
+
+        /// <summary>
+        /// Builds the query to obtain details about the result set for stored-procedure
+        /// </summary>
+        /// <param name="databaseObjectName">Name of stored-procedure</param>
+        /// <returns></returns>
+        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName);
 
         /// <summary>
         /// Adds database specific quotes to string identifier

@@ -134,8 +134,7 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 // Skip creating the GraphQL object for the current entity due to configuration
                 // explicitly excluding the entity from the GraphQL endpoint.
-                if (entity.ObjectType is SourceType.StoredProcedure
-                    || entity.GraphQL is not null && entity.GraphQL is bool graphql && graphql == false)
+                if (entity.GraphQL is not null && entity.GraphQL is bool graphql && graphql == false)
                 {
                     continue;
                 }
@@ -147,6 +146,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     IEnumerable<string> rolesAllowedForEntity = _authorizationResolver.GetRolesForEntity(entityName);
                     Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
                     SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
+
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
                         IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Operation.Read);
@@ -173,7 +173,11 @@ namespace Azure.DataApiBuilder.Service.Services
                             rolesAllowedForFields
                         );
 
-                        InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
+                        if (databaseObject.SourceType is not SourceType.StoredProcedure)
+                        {
+                            InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
+                        }
+
                         objectTypes.Add(entityName, node);
                     }
                 }

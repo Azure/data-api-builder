@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -102,7 +103,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             }
             else
             {
-                Assert.AreEqual(expected: null, actual: dbResponse);
+                Assert.AreEqual(expected: new JsonArray().ToString(), actual: dbResponse);
             }
         }
 

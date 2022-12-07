@@ -49,6 +49,63 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test method to validate that only 1 CRUD operation is supported for stored procedure.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(new object[] { "create", "read" }, false, DisplayName = "Stored-procedure with create-read permission")]
+        [DataRow(new object[] { "update", "read" }, false, DisplayName = "Stored-procedure with update-read permission")]
+        [DataRow(new object[] { "delete", "read" }, false, DisplayName = "Stored-procedure with delete-read permission")]
+        [DataRow(new object[] { "create" }, true, DisplayName = "Stored-procedure with only create permission")]
+        [DataRow(new object[] { "read" }, true, DisplayName = "Stored-procedure with only read permission")]
+        [DataRow(new object[] { "update" }, true, DisplayName = "Stored-procedure with only update permission")]
+        [DataRow(new object[] { "delete" }, true, DisplayName = "Stored-procedure with only delete permission")]
+        [DataRow(new object[] { "update", "create" }, false, DisplayName = "Stored-procedure with update-create permission")]
+        [DataRow(new object[] { "delete", "read", "update" }, false, DisplayName = "Stored-procedure with delete-read-update permission")]
+        public void InvalidCRUDForStoredProcedure(object[] operations, bool isValid)
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE
+            );
+
+            PermissionSetting permissionForEntity = new(
+                role: AuthorizationHelpers.TEST_ROLE,
+                operations: operations);
+
+            object entitySource = new DatabaseObjectSource(
+                    Type: SourceType.StoredProcedure,
+                    Name: "sourceName",
+                    Parameters: null,
+                    KeyFields: null
+                );
+
+            Entity testEntity = new(
+                Source: entitySource,
+                Rest: true,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+            );
+            runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY] = testEntity;
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+
+            try
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+                Assert.AreEqual(true, isValid);
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.AreEqual(false, isValid);
+                Assert.AreEqual("Invalid Operations for Entity: SampleEntity. " +
+                    $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+        }
+
+        /// <summary>
         /// Test method to validate that an appropriate exception is thrown when there is an invalid action
         /// supplied in the runtimeconfig.
         /// </summary>
@@ -147,10 +204,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
                 DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
@@ -206,10 +259,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
                 DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
@@ -237,10 +286,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(new string[] { "id" }, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", DisplayName = "TargetField is null")]
         [DataTestMethod]
         public void TestRelationshipWithLinkingObjectNotHavingRequiredFields(
-            string[]? sourceFields,
-            string[]? linkingSourceFields,
-            string[]? targetFields,
-            string[]? linkingTargetFields,
+            string[] sourceFields,
+            string[] linkingSourceFields,
+            string[] targetFields,
+            string[] linkingTargetFields,
             string relationshipEntity
         )
         {
@@ -257,10 +306,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
                 DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
@@ -337,10 +382,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "TargetField is null, , only ForeignKeyPair between LinkingObject and source is present. Valid Case.")]
         [DataTestMethod]
         public void TestRelationshipForCorrectPairingOfLinkingObjectWithSourceAndTarget(
-            string[]? sourceFields,
-            string[]? linkingSourceFields,
-            string[]? targetFields,
-            string[]? linkingTargetFields,
+            string[] sourceFields,
+            string[] linkingSourceFields,
+            string[] targetFields,
+            string[] linkingTargetFields,
             string relationshipEntity,
             bool isForeignKeyPairBetSourceAndLinkingObject,
             bool isForeignKeyPairBetTargetAndLinkingObject,
@@ -360,10 +405,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
                 DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
@@ -429,9 +470,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(null, null, null, DisplayName = "both source and targetFields are null")]
         [DataTestMethod]
         public void TestRelationshipWithNoLinkingObjectAndEitherSourceOrTargetFieldIsNull(
-            string[]? sourceFields,
-            string[]? targetFields,
-            string? linkingObject
+            string[] sourceFields,
+            string[] targetFields,
+            string linkingObject
         )
         {
             // Creating an EntityMap with two sample entity
@@ -447,10 +488,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
                 DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
@@ -554,6 +591,44 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(ex.Message.StartsWith("Invalid format for claim type"));
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+        }
+
+        /// <summary>
+        /// Test to validate that only and only for SWA, if claims other than "userId" and
+        /// "userDetails" are referenced in the database policy, we fail the validation.
+        /// </summary>
+        /// <param name="authProvider">Authentication provider like AppService, StaticWebApps.</param>
+        /// <param name="dbPolicy">Database policy defined for action.</param>
+        /// <param name="action">The action for which database policy is defined.</param>
+        /// <param name="errorExpected">Boolean value indicating whether an exception is expected or not.</param>
+        [DataTestMethod]
+        [DataRow("StaticWebApps", "@claims.userId eq @item.col2", Operation.Read, false, DisplayName = "SWA- Database Policy defined for Read passes")]
+        [DataRow("staticwebapps", "@claims.userDetails eq @item.col3", Operation.Update, false, DisplayName = "SWA- Database Policy defined for Update passes")]
+        [DataRow("StaticWebAPPs", "@claims.email eq @item.col3", Operation.Delete, true, DisplayName = "SWA- Database Policy defined for Delete fails")]
+        [DataRow("appService", "@claims.email eq @item.col3", Operation.Delete, false, DisplayName = "AppService- Database Policy defined for Delete passes")]
+        public void TestInvalidClaimsForStaticWebApps(string authProvider, string dbPolicy, Operation action, bool errorExpected)
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE,
+                operation: action,
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
+                databasePolicy: dbPolicy,
+                authProvider: authProvider.ToString()
+                );
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            try
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+                Assert.IsFalse(errorExpected);
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.IsTrue(errorExpected);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+                Assert.AreEqual(RuntimeConfigValidator.INVALID_CLAIMS_IN_POLICY_ERR_MSG, ex.Message);
+            }
         }
 
         /// <summary>
@@ -669,10 +744,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                MsSql: null,
-                CosmosDb: null,
-                PostgreSql: null,
-                MySql: null,
                 DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
@@ -1059,8 +1130,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="relationshipMap">Dictionary containing {relationshipName, Relationship}</param>
         private static Entity GetSampleEntityUsingSourceAndRelationshipMap(
             string source,
-            Dictionary<string, Relationship>? relationshipMap,
-            object? graphQLdetails
+            Dictionary<string, Relationship> relationshipMap,
+            object graphQLdetails
             )
         {
             PermissionOperation actionForRole = new(
@@ -1093,11 +1164,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private static Dictionary<string, Entity> GetSampleEntityMap(
             string sourceEntity,
             string targetEntity,
-            string[]? sourceFields,
-            string[]? targetFields,
+            string[] sourceFields,
+            string[] targetFields,
             string linkingObject,
-            string[]? linkingSourceFields,
-            string[]? linkingTargetFields
+            string[] linkingSourceFields,
+            string[] linkingTargetFields
         )
         {
             Dictionary<string, Relationship> relationshipMap = new();

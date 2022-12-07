@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
@@ -16,11 +17,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     public class CosmosQueryStructure : BaseQueryStructure
     {
         private readonly IMiddlewareContext _context;
-        private readonly ISqlMetadataProvider _metadataProvider;
+        private readonly string _containerAlias = "c";
+
+        public override string SourceAlias { get => base.SourceAlias; set => base.SourceAlias = value; }
 
         public bool IsPaginated { get; internal set; }
 
-        private readonly string _containerAlias = "c";
         public string Container { get; internal set; }
         public string Database { get; internal set; }
         public string? Continuation { get; internal set; }
@@ -31,11 +33,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public CosmosQueryStructure(
             IMiddlewareContext context,
             IDictionary<string, object> parameters,
-            ISqlMetadataProvider metadataProvider)
-            : base()
+            ISqlMetadataProvider metadataProvider,
+            IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser)
+            : base(metadataProvider, authorizationResolver, gQLFilterParser, entityName: string.Empty)
         {
-            _metadataProvider = metadataProvider;
             _context = context;
+            SourceAlias = _containerAlias;
+            DatabaseObject.Name = _containerAlias;
             Init(parameters);
         }
 
@@ -54,30 +59,30 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 FieldNode? fieldNode = ExtractItemsQueryField(selection.SyntaxNode);
 
-                if (fieldNode != null)
+                if (fieldNode is not null)
                 {
                     Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: string.Empty,
-                                                                                                       tableName: _containerAlias,
+                                                                                                       tableName: SourceAlias,
                                                                                                        columnName: string.Empty,
                                                                                                        label: x.GetNodes().First().ToString())));
                 }
 
                 ObjectType realType = GraphQLUtils.UnderlyingGraphQLEntityType(underlyingType.Fields[QueryBuilder.PAGINATION_FIELD_NAME].Type);
-                string entityName = _metadataProvider.GetEntityName(realType.Name);
+                string entityName = MetadataProvider.GetEntityName(realType.Name);
 
-                Database = _metadataProvider.GetSchemaName(entityName);
-                Container = _metadataProvider.GetDatabaseObjectName(entityName);
+                Database = MetadataProvider.GetSchemaName(entityName);
+                Container = MetadataProvider.GetDatabaseObjectName(entityName);
             }
             else
             {
                 Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: string.Empty,
-                                                                                                              tableName: _containerAlias,
+                                                                                                              tableName: SourceAlias,
                                                                                                               columnName: string.Empty,
                                                                                                               label: x.GetNodes().First().ToString())));
-                string entityName = _metadataProvider.GetEntityName(underlyingType.Name);
+                string entityName = MetadataProvider.GetEntityName(underlyingType.Name);
 
-                Database = _metadataProvider.GetSchemaName(entityName);
-                Container = _metadataProvider.GetDatabaseObjectName(entityName);
+                Database = MetadataProvider.GetSchemaName(entityName);
+                Container = MetadataProvider.GetDatabaseObjectName(entityName);
             }
 
             // first and after will not be part of query parameters. They will be going into headers instead.
@@ -104,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 object? orderByObject = queryParams["orderBy"];
 
-                if (orderByObject != null)
+                if (orderByObject is not null)
                 {
                     OrderByColumns = ProcessGraphQLOrderByArg((List<ObjectFieldNode>)orderByObject);
                 }
@@ -116,18 +121,21 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 object? filterObject = queryParams[QueryBuilder.FILTER_FIELD_NAME];
 
-                if (filterObject != null)
+                if (filterObject is not null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-                    Predicates.Add(GQLFilterParser.Parse(
-                        _context,
-                        filterArgumentSchema: selection.Field.Arguments[QueryBuilder.FILTER_FIELD_NAME],
-                        fields: filterFields,
-                        schemaName: string.Empty,
-                        sourceName: _containerAlias,
-                        sourceAlias: _containerAlias,
-                        sourceDefinition: new SourceDefinition(),
-                        processLiterals: MakeParamWithValue));
+                    Predicates.Add(
+                        GraphQLFilterParser.Parse(
+                            _context,
+                            filterArgumentSchema: selection.Field.Arguments[QueryBuilder.FILTER_FIELD_NAME],
+                            fields: filterFields,
+                            queryStructure: this));
+
+                    // after parsing all the graphql filters,
+                    // reset the source alias and object name to the generic container alias
+                    // since these may potentially be updated due to the presence of nested filters.
+                    SourceAlias = _containerAlias;
+                    DatabaseObject.Name = _containerAlias;
                 }
             }
             else

@@ -6,6 +6,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
@@ -107,6 +108,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             Mock<ILogger<SqlMutationEngine>> _mutationEngineLogger = new();
             DefaultHttpContext context = new();
+            Mock<GQLFilterParser> _gQLFilterParser = new(_sqlMetadataProvider.Object);
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
 
             // Creates Mock AuthorizationResolver to return a preset result based on [TestMethod] input.
@@ -124,6 +126,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 _queryBuilder.Object,
                 _sqlMetadataProvider.Object,
                 _authorizationResolver.Object,
+                _gQLFilterParser.Object,
                 httpContextAccessor.Object,
                 _mutationEngineLogger.Object
                 );

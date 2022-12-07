@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
@@ -34,14 +33,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// Verify correct deserialization of Cors record
-        /// This function will attempt to read dab-config.json (must be present)
         /// </summary>
         [TestMethod]
         public void TestCorsConfigReadCorrectly()
         {
             Mock<ILogger> logger = new();
-            string jsonString = File.ReadAllText(RuntimeConfigPath.DefaultName);
-            RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
+            RuntimeConfig.TryGetDeserializedRuntimeConfig(TestHelper.INITIAL_CONFIG, out RuntimeConfig runtimeConfig, logger.Object);
             HostGlobalSettings hostGlobalSettings =
                 JsonSerializer.Deserialize<HostGlobalSettings>(
                     (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Host],

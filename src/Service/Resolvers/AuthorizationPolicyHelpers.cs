@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             string clientRoleHeader = roleHeaderValue.ToString();
 
-            string dbQueryPolicy = authorizationResolver.TryProcessDBPolicy(
+            string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
                 queryStructure.EntityName,
                 clientRoleHeader,
                 operationType,

@@ -6,6 +6,11 @@ DROP VIEW IF EXISTS books_publishers_view_composite;
 DROP VIEW IF EXISTS books_publishers_view_composite_insertable;
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
+DROP PROCEDURE IF EXISTS get_publisher_by_id;
+DROP PROCEDURE IF EXISTS insert_book;
+DROP PROCEDURE IF EXISTS count_books;
+DROP PROCEDURE IF EXISTS delete_last_inserted_book;
+DROP PROCEDURE IF EXISTS update_book_title;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -26,6 +31,7 @@ DROP TABLE IF EXISTS notebooks;
 DROP TABLE IF EXISTS journals;
 DROP TABLE IF EXISTS aow;
 DROP TABLE IF EXISTS series;
+DROP TABLE IF EXISTS sales;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -171,6 +177,13 @@ CREATE TABLE series (
     [name] nvarchar(1000) NOT NULL
 );
 
+CREATE TABLE sales (
+    id int NOT NULL IDENTITY(5001, 1) PRIMARY KEY,
+    item_name varchar(max) NOT NULL,
+    subtotal decimal(18,2) NOT NULL,
+    tax decimal(18,2) NOT NULL
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -219,6 +232,9 @@ FOREIGN KEY (series_id)
 REFERENCES series(id)
 ON DELETE CASCADE;
 
+ALTER TABLE sales
+ADD total AS (subtotal + tax) PERSISTED;
+
 SET IDENTITY_INSERT publishers ON
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02');
 SET IDENTITY_INSERT publishers OFF
@@ -240,14 +256,16 @@ VALUES (1, 'Awesome book', 1234),
 (9, 'Policy-Test-01', 1940),
 (10, 'Policy-Test-02', 1940),
 (11, 'Policy-Test-04', 1941),
-(12, 'Time to Eat 2', 1941);
+(12, 'Time to Eat 2', 1941),
+(13, 'Before Sunrise', 1234),
+(14, 'Before Sunset', 1234);
 SET IDENTITY_INSERT books OFF
 
 SET IDENTITY_INSERT book_website_placements ON
 INSERT INTO book_website_placements(id, book_id, price) VALUES (1, 1, 100), (2, 2, 50), (3, 3, 23), (4, 5, 33);
 SET IDENTITY_INSERT book_website_placements OFF
 
-INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124);
+INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);
 
 SET IDENTITY_INSERT reviews ON
 INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
@@ -262,6 +280,10 @@ INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, strin
     (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT type_table OFF
 
+SET IDENTITY_INSERT sales ON
+INSERT INTO sales(id, item_name, subtotal, tax) VALUES (1, 'Watch', 249.00, 20.59), (2, 'Montior', 120.50, 11.12);
+SET IDENTITY_INSERT sales OFF
+
 INSERT INTO notebooks(id, notebookname, color, ownername) VALUES (1, 'Notebook1', 'red', 'Sean'), (2, 'Notebook2', 'green', 'Ani'), (3, 'Notebook3', 'blue', 'Jarupat'), (4, 'Notebook4', 'yellow', 'Aaron');
 INSERT INTO journals(id, journalname, color, ownername) VALUES (1, 'Journal1', 'red', 'Sean'), (2, 'Journal2', 'green', 'Ani'), (3, 'Journal3', 'blue', 'Jarupat'), (4, 'Journal4', 'yellow', 'Aaron');
 
@@ -274,9 +296,10 @@ INSERT INTO series(id, [name]) VALUES (3001, 'Foundation'), (3002, 'Hyperion Can
 SET IDENTITY_INSERT series OFF
 
 INSERT INTO comics(id, title, categoryName, series_id)
-VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'FairyTales', 3001),(3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);
+VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'FairyTales', 3001),(3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL),
+(5, 'Snow White', 'Fairy Tales', 3001);
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');
-INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES (2, 1, 100.57, 1), (1, 1, 42.75, 0);
+INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES (2, 1, 100.57, 1), (1, 1, 42.75, 0), (100, 99, NULL, NULL);
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
 INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');
@@ -297,5 +320,23 @@ EXEC('CREATE VIEW books_publishers_view_composite_insertable as SELECT
 EXEC('CREATE PROCEDURE get_book_by_id @id int AS
       SELECT * FROM dbo.books
       WHERE id = @id');
+EXEC('CREATE PROCEDURE get_publisher_by_id @id int AS
+      SELECT * FROM dbo.publishers
+      WHERE id = @id');
 EXEC('CREATE PROCEDURE get_books AS
       SELECT * FROM dbo.books');
+EXEC('CREATE PROCEDURE insert_book @title varchar(max), @publisher_id int AS
+      INSERT INTO dbo.books(title, publisher_id) VALUES (@title, @publisher_id)');
+EXEC('CREATE PROCEDURE count_books AS
+	  SELECT COUNT(*) AS total_books FROM dbo.books');
+EXEC('CREATE PROCEDURE delete_last_inserted_book AS
+      BEGIN
+        DELETE FROM dbo.books
+        WHERE
+        id = (select max(id) from dbo.books)
+      END');
+EXEC('CREATE PROCEDURE update_book_title @id int, @title varchar(max) AS
+      BEGIN
+        UPDATE dbo.books SET title = @title WHERE id = @id
+        SELECT * from dbo.books WHERE id = @id
+      END');

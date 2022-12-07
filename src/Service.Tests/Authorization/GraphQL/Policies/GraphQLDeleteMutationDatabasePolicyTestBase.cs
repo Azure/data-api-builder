@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -52,7 +53,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 clientRoleHeader: "policy_tester_08");
 
             string dbResponse = await GetDatabaseResultAsync(dbQuery);
-            Assert.IsNull(dbResponse, message: "Expected result was not null, delete operation failed.");
+            JsonArray empty = new();
+            Assert.IsTrue(empty.ToString().Equals(dbResponse),
+                message:
+                "Expected result was not empty, delete operation failed.");
         }
     }
 }

@@ -57,9 +57,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             ItemResponse<JObject>? response = resolver.OperationType switch
             {
-                Operation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
-                Operation.Create => await HandleCreateAsync(queryArgs, container),
-                Operation.Delete => await HandleDeleteAsync(queryArgs, container),
+                Config.Operation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
+                Config.Operation.Create => await HandleCreateAsync(queryArgs, container),
+                Config.Operation.Delete => await HandleDeleteAsync(queryArgs, container),
                 _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
             };
 
@@ -236,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string containerName = _metadataProvider.GetDatabaseObjectName(entityName);
 
             string graphqlMutationName = context.Selection.Field.Name.Value;
-            Operation mutationOperation =
+            Config.Operation mutationOperation =
                 MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
 
             CosmosOperationMetadata mutation = new(databaseName, containerName, mutationOperation);

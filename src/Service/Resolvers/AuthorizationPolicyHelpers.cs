@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="authorizationResolver">Used to lookup authorization policies.</param>
         /// <param name="sqlMetadataProvider">Provides helper method to process ODataFilterClause.</param>
         public static void ProcessAuthorizationPolicies(
-            Operation operationType,
+            Config.Operation operationType,
             BaseSqlQueryStructure queryStructure,
             HttpContext context,
             IAuthorizationResolver authorizationResolver,

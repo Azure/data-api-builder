@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo", "Baz", "Bar" },
-                    new Operation[] { Operation.Create, Operation.Update, Operation.Delete },
+                    new Config.Operation[] { Config.Operation.Create, Config.Operation.Update, Config.Operation.Delete },
                     new string[] { "anonymous", "authenticated" }
                     );
         }
@@ -64,7 +64,7 @@ type Foo @model(name:""Foo"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new Operation[] { Operation.Create },
+                    new Config.Operation[] { Config.Operation.Create },
                     roles);
             DocumentNode mutationRoot = MutationBuilder.Build(root,
                 DatabaseType.cosmos,
@@ -605,7 +605,7 @@ type Foo @model(name:""Foo"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new Operation[] { Operation.Delete },
+                    new Config.Operation[] { Config.Operation.Delete },
                     roles);
             DocumentNode mutationRoot = MutationBuilder.Build(root,
                 DatabaseType.cosmos,
@@ -711,7 +711,7 @@ type Foo @model(name:""Foo"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new Operation[] { Operation.Update },
+                    new Config.Operation[] { Config.Operation.Update },
                     roles);
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
@@ -959,7 +959,7 @@ type Foo @model(name:""Foo"") {{
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             Dictionary<string, EntityMetadata> entityPermissionsMap = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { entityName },
-                    new Operation[] { Operation.Create, Operation.Update, Operation.Delete },
+                    new Config.Operation[] { Config.Operation.Create, Config.Operation.Update, Config.Operation.Delete },
                     new string[] { "anonymous", "authenticated" });
 
             Entity entity = (singularName is not null)

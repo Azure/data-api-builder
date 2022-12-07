@@ -108,7 +108,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // checking if role has read permission on the result
                 _authorizationResolver.EntityPermissionsMap.TryGetValue(context.Field.Name.Value, out EntityMetadata entityMetadata);
                 string role = context.ContextData[CLIENT_ROLE_HEADER].ToString();
-                bool IsReadAllowed = entityMetadata.RoleToOperationMap[role].OperationToColumnMap.ContainsKey(Operation.Read);
+                bool IsReadAllowed = entityMetadata.RoleToOperationMap[role].OperationToColumnMap.ContainsKey(Config.Operation.Read);
 
                 return new Tuple<IEnumerable<JsonDocument>, IMetadata>(
                         FormatStoredProcedureResultAsJsonList(IsReadAllowed, await ExecuteAsync(sqlExecuteStructure)),

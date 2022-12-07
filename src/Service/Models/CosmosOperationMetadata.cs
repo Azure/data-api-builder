@@ -8,5 +8,5 @@ namespace Azure.DataApiBuilder.Service.Models
     /// <param name="DatabaseName">Name of the database</param>
     /// <param name="ContainerName">Name of the container</param>
     /// <param name="OperationType">Type of operation to perform</param>
-    record CosmosOperationMetadata(string DatabaseName, string ContainerName, Operation OperationType);
+    record CosmosOperationMetadata(string DatabaseName, string ContainerName, Config.Operation OperationType);
 }

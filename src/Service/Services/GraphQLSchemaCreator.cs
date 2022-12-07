@@ -149,7 +149,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
-                        IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Operation.Read);
+                        IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Config.Operation.Read);
                         if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
                         {
                             throw new DataApiBuilderException(

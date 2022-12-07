@@ -153,19 +153,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="operationType">The operation to be executed on the entity.</param>
         /// <returns></returns>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static HttpMethod GetHttpMethodFromOperation(Operation operationType)
+        public static HttpMethod GetHttpMethodFromOperation(Config.Operation operationType)
         {
             switch (operationType)
             {
-                case Operation.Read:
+                case Config.Operation.Read:
                     return HttpMethod.Get;
-                case Operation.Insert:
+                case Config.Operation.Insert:
                     return HttpMethod.Post;
-                case Operation.Delete:
+                case Config.Operation.Delete:
                     return HttpMethod.Delete;
-                case Operation.Upsert:
+                case Config.Operation.Upsert:
                     return HttpMethod.Put;
-                case Operation.UpsertIncremental:
+                case Config.Operation.UpsertIncremental:
                     return HttpMethod.Patch;
                 default:
                     throw new DataApiBuilderException(

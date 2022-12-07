@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             // This adds any required DBPolicyPredicates to this Exists query structure.
             AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                Operation.Read,
+                Config.Operation.Read,
                 queryStructure: this,
                 httpContext,
                 authorizationResolver,

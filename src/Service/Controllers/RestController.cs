@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                Operation.Read);
+                Config.Operation.Read);
         }
 
         /// <summary>
@@ -103,7 +103,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                Operation.Insert);
+                Config.Operation.Insert);
         }
 
         /// <summary>
@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                Operation.Delete);
+                Config.Operation.Delete);
         }
 
         /// <summary>
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                DeterminePatchPutSemantics(Operation.Upsert));
+                DeterminePatchPutSemantics(Config.Operation.Upsert));
         }
 
         /// <summary>
@@ -163,7 +163,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                DeterminePatchPutSemantics(Operation.UpsertIncremental));
+                DeterminePatchPutSemantics(Config.Operation.UpsertIncremental));
         }
 
         /// <summary>
@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// <param name="operationType">The kind of operation to handle.</param>
         private async Task<IActionResult> HandleOperation(
             string route,
-            Operation operationType)
+            Config.Operation operationType)
         {
             try
             {
@@ -253,7 +253,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// </summary>
         /// <param name="operation">opertion to be used.</param>
         /// <returns>correct opertion based on headers.</returns>
-        private Operation DeterminePatchPutSemantics(Operation operation)
+        private Config.Operation DeterminePatchPutSemantics(Config.Operation operation)
         {
 
             if (HttpContext.Request.Headers.ContainsKey("If-Match"))
@@ -267,11 +267,11 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
                 switch (operation)
                 {
-                    case Operation.Upsert:
-                        operation = Operation.Update;
+                    case Config.Operation.Upsert:
+                        operation = Config.Operation.Update;
                         break;
-                    case Operation.UpsertIncremental:
-                        operation = Operation.UpdateIncremental;
+                    case Config.Operation.UpsertIncremental:
+                        operation = Config.Operation.UpdateIncremental;
                         break;
                 }
             }

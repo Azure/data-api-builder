@@ -141,12 +141,8 @@ namespace Azure.DataApiBuilder.Config
                     if (graphQL is null || graphQL.Type is null
                         || (graphQL.Type is not SingularPlural && graphQL.Type is not string))
                     {
-                        if (logger is not null)
-                        {
-                            // Use entity name since GraphQL type unavailable
-                            logger.LogInformation($"GraphQL type for {entityName} is {entityName}");
-                        }
-
+                        // Use entity name since GraphQL type unavailable
+                        logger?.LogInformation($"GraphQL type for {entityName} is {entityName}");
                         continue;
                     }
 
@@ -155,11 +151,8 @@ namespace Azure.DataApiBuilder.Config
                     if (graphQLType is not null)
                     {
                         GraphQLSingularTypeToEntityNameMap.TryAdd(graphQLType, entityName);
-                        if (logger is not null)
-                        {
-                            // We have the GraphQL type so we log that
-                            logger.LogInformation($"GraphQL type for {entityName} is {graphQLType}");
-                        }
+                        // We have the GraphQL type so we log that
+                        logger?.LogInformation($"GraphQL type for {entityName} is {graphQLType}");
                     }
                 }
 
@@ -170,11 +163,9 @@ namespace Azure.DataApiBuilder.Config
                 }
                 else
                 {
-                    if (logger is not null)
-                    {
-                        // Use entity name since GraphQL type uavailable
-                        logger.LogInformation($"GraphQL type for {entityName} is {entityName}");
-                    }
+                    // Use entity name since GraphQL type uavailable
+                    logger?.LogInformation($"GraphQL type for {entityName} is {entityName}");
+                    
                 }
             }
         }

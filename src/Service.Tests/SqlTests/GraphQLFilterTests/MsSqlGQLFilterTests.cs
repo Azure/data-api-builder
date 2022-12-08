@@ -230,6 +230,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 defaultSchema += ".";
             }
 
+            // Table aliases and param names are created using the same
+            // Counter hence the following intermixed naming:
+            // [table0]:books
+            // [table1]: authors
+            // [table2]: books
+            // [param3]: 'Awesome'
+            // [table4]: book_author_link
+            // [param5]: 'Aaron'
+            // [table6]: book_author_link
             string existsPredicate = $@"
                 EXISTS (SELECT 1 FROM {defaultSchema}[authors] AS [table1]
                         INNER JOIN {defaultSchema}[book_author_link] AS [table6]

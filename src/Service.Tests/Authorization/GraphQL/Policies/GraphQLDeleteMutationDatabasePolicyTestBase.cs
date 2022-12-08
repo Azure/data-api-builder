@@ -53,8 +53,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 clientRoleHeader: "policy_tester_08");
 
             string dbResponse = await GetDatabaseResultAsync(dbQuery);
-            JsonArray empty = new();
-            Assert.IsTrue(empty.ToString().Equals(dbResponse),
+            Assert.IsTrue(new JsonArray().ToString().Equals(dbResponse),
                 message:
                 "Expected result was not empty, delete operation failed.");
         }

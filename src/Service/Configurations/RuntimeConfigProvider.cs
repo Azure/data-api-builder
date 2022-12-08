@@ -131,7 +131,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     out runtimeConfig,
                     ConfigProviderLogger))
             {
-                runtimeConfig!.MapGraphQLSingularTypeToEntityName();
+                runtimeConfig!.MapGraphQLSingularTypeToEntityName(ConfigProviderLogger);
                 if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
                 {
                     runtimeConfig!.ConnectionString = configPath.CONNSTRING;
@@ -238,7 +238,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     ConfigProviderLogger!))
             {
                 RuntimeConfiguration = runtimeConfig;
-                RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName();
+                RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName(ConfigProviderLogger);
                 RuntimeConfiguration!.ConnectionString = connectionString;
 
                 if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmos)

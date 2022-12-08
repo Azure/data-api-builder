@@ -82,7 +82,7 @@ As you can see there the `data-source` property specifies that our chosen `datab
     
 ## Add Book entities
 
-Now, you'll want to expose the `books` and the `authors` table as REST and/or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.
+Now, you'll want to expose the `books` table as REST and/or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.
 
 Run the DAB CLI command as shown below to create the entity called Books
 ```
@@ -113,11 +113,11 @@ Start by adding the `books` entity:
 }
 ```
 
-within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL). The name `books`, in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case is `books`.
+within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL). The name `books`, in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case is `books`. You can add other entities for `authors` table and `books_authors` table using `dab add`` CLI command. 
 
 > **NOTE**: Entities names are case sensitive, and they will be exposed via REST and GraphQL as you have typed them.
 
-After that, the permissions for the exposed entity are defined via the `permissions` element; it allows you to be sure that only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial, we're allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `author` entity.
+After that, the permissions for the exposed entity are defined via the `permissions` element; it allows you to be sure that only those users making a request with the right claims will be able to access the entity and its data. 
 
 > **BEST PRACTICE**: It is recommeneded to use the *singular* form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a *list* of entity items will be returned. More on this behaviour in the [GraphQL documentation](./../graphql.md).
 
@@ -136,8 +136,6 @@ info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[63]
       User profile is available. Using 'xxxxxxxxxxxxxxxxxxxxxxx' as key repository and Windows DPAPI to encrypt keys at rest.
 info: Azure.DataApiBuilder.Service.Services.ISqlMetadataProvider[0]
       Book path: /api/book
-info: Azure.DataApiBuilder.Service.Services.ISqlMetadataProvider[0]
-      Author path: /api/author
 info: Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator[0]
       Validating Relationship Section in Config...
 info: Microsoft.Hosting.Lifetime[14]

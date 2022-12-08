@@ -157,15 +157,10 @@ namespace Azure.DataApiBuilder.Config
                 }
 
                 // Log every entity that is not disabled for GQL
-                if (entity.GraphQL is not null && entity.GraphQL is false)
-                {
-                    continue;
-                }
-                else
+                if (entity.GraphQL is null || entity.GraphQL is true)
                 {
                     // Use entity name since GraphQL type uavailable
                     logger?.LogInformation($"GraphQL type for {entityName} is {entityName}");
-                    
                 }
             }
         }

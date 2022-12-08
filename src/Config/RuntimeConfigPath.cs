@@ -232,6 +232,7 @@ namespace Azure.DataApiBuilder.Config
             // is instantiated.
             if (File.Exists(Path.Combine(currentDir, fileName)))
             {
+                // This config file is logged as being found, but may not actually be used!
                 Console.WriteLine($"Found config file: {fileName}.");
                 return true;
             }

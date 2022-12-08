@@ -30,7 +30,7 @@ Create the database `booksdb` with tables to represent Authors, Books and the ma
 ## Creating a configuration file for DAB
 The Data API Builder engine needs a configuration file. There you'll define which database DAB targets, and which entities and associated properties are to be exposed by the API.
 
-For this getting started guide you will use DAB CLI to initialize your configuration file. Run the following command and use the connection stirng based on whether SSL is enabled or not. Please review the **Get the database connection string** section above. 
+For this getting started guide, you will use DAB CLI to initialize your configuration file. Run the following command and use the connection string based on whether SSL is enabled or not. Please review the **Get the database connection string** section above. 
 
 dab init  --config "dab-config.MySql.json" --database-type mysql --connection-string "<mysql-connection-string-ssl-or-non-ssl>" --host-mode "Development" --authenticate-devmode-requests false --cors-origin "http://localhost:5000"
 

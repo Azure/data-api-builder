@@ -76,7 +76,7 @@ The command will generate a config file called dab-config.MySql.json looking lik
   "entities": {}
 }
 ```
-As you can see there the `data-source` property specifies that our chosen `database-type` is `mssql`, with the `connection-string` we passed to DAB CLI.
+As you can see there the `data-source` property specifies that our chosen `database-type` is `mysql`, with the `connection-string` we passed to DAB CLI.
 
 > Take a look at the [DAB Configuration File Guide](../configuration-file.md) document to learn more. With the configuration file in place, then it's time to start defining which entities you want to expose via the API.
     
@@ -261,7 +261,7 @@ The element under `relationship` is used to add a field - `books` in the sample 
 - `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample, it is `book` as we are creating the relationship on the `author` entity.
 - `linking.object`: the database table used to support the many-to-many relationship. That table is the `books_authors`.
 
-Data API Builder will automatically figure out which columns are used to support the relationship between all the involved parts by analyzing the forieng keys constratins that exist between the involved tables. For this reason, the configuration is done! (If you don't have foreign keys, you can always manually specify the columns you want to use to navigate between table relationships. More on this in the [relationships documentation](../relationships.md))
+Data API Builder will automatically figure out which columns are used to support the relationship between all the involved parts by analyzing the foriegn key constratints that exist between the involved tables. For this reason, the configuration is done! (If you don't have foreign keys, you can always manually specify the columns you want to use to navigate between table relationships. More on this in the [relationships documentation](../relationships.md))
 
 The `author` entity should now look like the following:
 

@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
-            _gQLFilterParser = new();
+            _gQLFilterParser = new(_sqlMetadataProvider);
             await ResetDbStateAsync();
 
             // Execute additional queries, if any.
@@ -261,11 +261,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                             _sqlMetadataLogger);
                     break;
                 case TestCategory.MYSQL:
-                    Mock<ILogger<QueryExecutor<MySqlConnection>>> mySqlQueryExecutorLogger = new();
+                    Mock<ILogger<MySqlQueryExecutor>> mySqlQueryExecutorLogger = new();
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new MySqlDbExceptionParser(_runtimeConfigProvider);
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(
+                    _queryExecutor = new MySqlQueryExecutor(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
                         mySqlQueryExecutorLogger.Object);
@@ -306,7 +306,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         parameters: null,
                         _queryExecutor.GetJsonResultAsync<JsonDocument>);
 
-                result = sqlResult is not null ? sqlResult.RootElement.ToString() : null;
+                result = sqlResult is not null ?
+                    sqlResult.RootElement.ToString() :
+                    new JsonArray().ToString();
             }
             else
             {

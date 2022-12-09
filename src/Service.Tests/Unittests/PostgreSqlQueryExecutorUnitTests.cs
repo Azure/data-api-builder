@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         [DataTestMethod]
         [DataRow("Server =<>;Database=<>;Username=xyz;", false, false,
-            DisplayName = "No managed identity access token when connection string specifies Username only.")]
+            DisplayName = "No managed identity access token even when connection string specifies Username only.")]
         [DataRow("Server =<>;Database=<>;Username=xyz;", true, false,
             DisplayName = "Managed identity access token from config used when connection string specifies Username only.")]
         [DataRow("Server =<>;Database=<>;Username=xyz;", true, true,

@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// Specialized QueryExecutor for PostgreSql mainly providing methods to
     /// handle connecting to the database with a managed identity.
     /// for more info: https://learn.microsoft.com/EN-us/azure/postgresql/single-server/how-to-connect-with-managed-identity
-    /// /// </summary>
+    /// </summary>
     public class PostgreSqlQueryExecutor : QueryExecutor<NpgsqlConnection>
     {
         // This is the same scope for any Azure Database for PostgreSQL that is
@@ -103,7 +103,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Tries to get an access token using DefaultAzureCredentials.
         /// Catches any CredentialUnavailableException and logs only a warning
-        /// since since this is best effort.
+        /// since this is best effort.
         /// </summary>
         /// <returns>The string representation of the access token if found,
         /// null otherwise.</returns>
@@ -123,6 +123,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 QueryExecutorLogger.LogWarning($"No password detected in the connection string. Attempt to retrieve " +
                     $"a managed identity access token using DefaultAzureCredential failed due to: \n{ex}\n" +
                     $"If authentication with DefaultAzureCrendential is not intended, this warning can be safely ignored.");
+
+                // the config doesn't contain an identity token
+                // and a default identity token cannot be obtained
+                // so the application should not attempt to set the token
+                // for future conntions
+                // this would happen in scenarios where the user has a
+                // valid connection string without a password in it
+                _attemptToSetAccessToken = false;
             }
 
             return _defaultAccessToken?.Token;

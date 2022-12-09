@@ -1,3 +1,4 @@
+using System;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -42,13 +43,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ILogger<QueryExecutor<NpgsqlConnection>> logger)
             : base(runtimeConfigProvider, dbExceptionParser, logger)
         {
-            // Postgres connection string does not have a good way to determine
-            // if the authentication should be done through Azure AD
-            // so as a workaround the user can specify "ManagedIdentityAccessToken": "USE DEFAULT"
-            // to instruct DAB to use the default access token
-            string? configAccessToken = runtimeConfigProvider.ManagedIdentityAccessToken;
-            _attemptToSetAccessToken = configAccessToken is not null;
-            _accessTokenFromController = configAccessToken is "USE DEFAULT" ? null : configAccessToken;
+            _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
+            _attemptToSetAccessToken =
+                ShouldManagedIdentityAccessBeAttempted(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString);
         }
 
         /// <summary>
@@ -84,6 +81,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
+        /// Determines if managed identity access should be attempted or not.
+        /// It should only be attempted if the password is not provided
+        /// </summary>
+        private static bool ShouldManagedIdentityAccessBeAttempted(string connString)
+        {
+            NpgsqlConnectionStringBuilder connStringBuilder = new(connString);
+            return string.IsNullOrEmpty(connStringBuilder.Password);
+        }
+
+        /// <summary>
         /// Determines if the saved default azure credential's access token is valid and not expired.
         /// </summary>
         /// <returns>True if valid, false otherwise.</returns>
@@ -108,7 +115,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     await AzureCredential.GetTokenAsync(
                         new TokenRequestContext(new[] { DATABASE_SCOPE }));
             }
-            catch (CredentialUnavailableException ex)
+            // because there can be scenarios where password is not specified but
+            // default managed identity is not the intended method of authentication
+            // so a bunch of different exceptions could occur in that scenario
+            catch (Exception ex)
             {
                 QueryExecutorLogger.LogWarning($"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
                     $" failed due to: \n{ex}");

@@ -17,35 +17,32 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     public class PostgreSqlQueryExecutorUnitTests
     {
         /// <summary>
-        /// Validates managed identity token issued ONLY when ManagedIdentityAccessToken is "USE DEFAULT"
+        /// Validates managed identity token issued ONLY when connection string does not specify password
         /// </summary>
         [DataTestMethod]
-        [DataRow("Server =<>;Database=<>;username=<>;password=<>", null, false, false,
-            DisplayName = "Managed identity is not used")]
-        [DataRow("Server =<>;Database=<>;", "xxx", true, false,
-            DisplayName = "Managed identity access token from config used " +
-                "when ManagedIdentityAccessToken is not null and not \"USE DEFAULT\".")]
-        [DataRow("Server =<>;Database=<>;", "USE DEFAULT", true, true,
-            DisplayName = "Default managed identity access token used " +
-                "when ManagedIdentityAccessToken is \"USE DEFAULT\".")]
+        [DataRow("Server =<>;Database=<>;Username=xyz;", false, false,
+            DisplayName = "No managed identity access token when connection string specifies Username only.")]
+        [DataRow("Server =<>;Database=<>;Username=xyz;", true, false,
+            DisplayName = "Managed identity access token from config used when connection string specifies Username only.")]
+        [DataRow("Server =<>;Database=<>;Username=xyz;", true, true,
+            DisplayName = "Default managed identity access token used when connection string specifies Username only.")]
+        [DataRow("Server =<>;Database=<>;Password=xyz;", false, false,
+            DisplayName = "No managed identity access token when connection string specifies Password only.")]
+        [DataRow("Server =<>;Database=<>;Username=xyz;Password=xxx", false, false,
+            DisplayName = "No managed identity access token when connection string specifies both Username and Password.")]
         public async Task TestHandleManagedIdentityAccess(
             string connectionString,
-            string managedIdentityAccessToken,
             bool expectManagedIdentityAccessToken,
             bool isDefaultAzureCredential)
         {
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.POSTGRESQL);
-            runtimeConfigProvider.Initialize(
-                        JsonSerializer.Serialize(runtimeConfigProvider.GetRuntimeConfiguration()),
-                        schema: null,
-                        connectionString: connectionString,
-                        accessToken: managedIdentityAccessToken);
-
+            runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString = connectionString;
             Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider, new HashSet<string>());
             Mock<ILogger<PostgreSqlQueryExecutor>> queryExecutorLogger = new();
             PostgreSqlQueryExecutor postgreSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object);
 
             const string DEFAULT_TOKEN = "Default access token";
+            const string CONFIG_TOKEN = "Configuration controller access token";
             AccessToken testValidToken = new(accessToken: DEFAULT_TOKEN, expiresOn: DateTimeOffset.MaxValue);
             if (expectManagedIdentityAccessToken)
             {
@@ -60,27 +57,32 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }
                 else
                 {
+                    runtimeConfigProvider.Initialize(
+                        JsonSerializer.Serialize(runtimeConfigProvider.GetRuntimeConfiguration()),
+                        schema: null,
+                        connectionString: connectionString,
+                        accessToken: CONFIG_TOKEN);
                     postgreSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object);
                 }
             }
 
             using NpgsqlConnection conn = new(connectionString);
             await postgreSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            NpgsqlConnectionStringBuilder connStringBuilder = new(conn.ConnectionString);
 
             if (expectManagedIdentityAccessToken)
             {
                 if (isDefaultAzureCredential)
                 {
-                    Assert.IsTrue(conn.ConnectionString.Contains(DEFAULT_TOKEN), "Password not set to default access token");
+                    Assert.AreEqual(expected: DEFAULT_TOKEN, actual: connStringBuilder.Password);
                 }
                 else
                 {
-                    Assert.IsTrue(conn.ConnectionString.Contains(managedIdentityAccessToken), $"Password not set to the config access token");
+                    Assert.AreEqual(expected: CONFIG_TOKEN, actual: connStringBuilder.Password);
                 }
             }
             else
             {
-                // password is not changed to the access token
                 Assert.AreEqual(connectionString, conn.ConnectionString);
             }
         }

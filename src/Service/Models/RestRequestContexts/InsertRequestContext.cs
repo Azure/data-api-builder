@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Service.Models
             string entityName,
             DatabaseObject dbo,
             JsonElement insertPayloadRoot,
-            Operation operationType)
+            Config.Operation operationType)
             : base(entityName, dbo)
         {
             FieldsToBeReturned = new();

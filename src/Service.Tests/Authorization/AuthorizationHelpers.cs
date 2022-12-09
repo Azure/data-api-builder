@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             string entityName = TEST_ENTITY,
             object? entitySource = null,
             string roleName = "Reader",
-            Operation operation = Operation.Create,
+            Config.Operation operation = Config.Operation.Create,
             HashSet<string>? includedCols = null,
             HashSet<string>? excludedCols = null,
             string? databasePolicy = null,

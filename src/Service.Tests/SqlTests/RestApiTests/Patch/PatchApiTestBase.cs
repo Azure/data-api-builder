@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Http;
@@ -41,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOne_Insert_Nulled_Test"),
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
@@ -59,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOne_Update_Nulled_Test"),
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -89,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _integrationUniqueCharactersEntity,
                     sqlQuery: GetQuery(nameof(PatchOne_Insert_UniqueCharacters_Test)),
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
@@ -118,7 +117,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _integration_NonAutoGenPK_EntityName,
                     sqlQuery: GetQuery(nameof(PatchOne_Insert_NonAutoGenPK_Test)),
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
@@ -137,7 +136,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOne_Insert_CompositeNonAutoGenPK_Test"),
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
@@ -156,7 +155,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOne_Insert_Empty_Test"),
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
@@ -173,7 +172,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOne_Insert_Default_Test"),
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
@@ -192,7 +191,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _integrationMappingEntity,
                     sqlQuery: GetQuery("PatchOne_Insert_Mapping_Test"),
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
@@ -219,7 +218,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 queryString: null,
                 entityNameOrPath: _simple_subset_stocks,
                 sqlQuery: GetQuery("PatchOneInsertInStocksViewSelected"),
-                operationType: Operation.UpsertIncremental,
+                operationType: Config.Operation.UpsertIncremental,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: string.Empty
@@ -244,7 +243,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: GetQuery(nameof(PatchOne_Update_Test)),
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -259,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _entityWithCompositePrimaryKey,
                     sqlQuery: GetQuery("PatchOne_Update_Default_Test"),
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -274,7 +273,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOne_Update_CompositeNonAutoGenPK_Test"),
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -290,7 +289,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOne_Update_Empty_Test"),
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -316,7 +315,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _simple_subset_stocks,
                     sqlQuery: GetQuery("PatchOneUpdateStocksViewSelected"),
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -342,7 +341,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: GetQuery(nameof(PatchOne_Update_IfMatchHeaders_Test)),
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
@@ -373,7 +372,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: null,
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: $"Cannot perform INSERT and could not find {_integrationEntityName} with primary key <id: 1000> to perform UPDATE on.",
@@ -402,7 +401,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _integration_NonAutoGenPK_EntityName,
                     sqlQuery: null,
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: $"Cannot perform INSERT and could not find {_integration_NonAutoGenPK_EntityName} with primary key <id: 1000> to perform UPDATE on.",
@@ -433,7 +432,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: string.Empty,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
                     exceptionExpected: true,
@@ -465,7 +464,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 queryString: string.Empty,
                 entityNameOrPath: _integrationBrokenMappingEntity,
                 sqlQuery: string.Empty,
-                operationType: Operation.UpsertIncremental,
+                operationType: Config.Operation.UpsertIncremental,
                 exceptionExpected: true,
                 requestBody: requestBody,
                 expectedErrorMessage: "Invalid request body. Either insufficient or extra fields supplied.",
@@ -496,7 +495,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 queryString: string.Empty,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                operationType: Operation.UpsertIncremental,
+                operationType: Config.Operation.UpsertIncremental,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
@@ -516,7 +515,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 queryString: string.Empty,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                operationType: Operation.UpsertIncremental,
+                operationType: Config.Operation.UpsertIncremental,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
@@ -541,7 +540,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: null,
-                operationType: Operation.UpsertIncremental,
+                operationType: Config.Operation.UpsertIncremental,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Parameter \"StringFailsToCastToInt\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
@@ -568,7 +567,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _integration_NonAutoGenPK_EntityName,
                     sqlQuery: string.Empty,
-                    operationType: Operation.UpsertIncremental,
+                    operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
@@ -597,7 +596,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 queryString: string.Empty,
                 entityNameOrPath: _composite_subset_bookPub,
                 sqlQuery: string.Empty,
-                operationType: Operation.UpsertIncremental,
+                operationType: Config.Operation.UpsertIncremental,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,

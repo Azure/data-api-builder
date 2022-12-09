@@ -59,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="primaryKeyRoute">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
         public async Task<IActionResult?> ExecuteAsync(
             string entityName,
-            Operation operationType,
+            Config.Operation operationType,
             string? primaryKeyRoute)
         {
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
@@ -93,13 +93,13 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 switch (operationType)
                 {
-                    case Operation.Read:
+                    case Config.Operation.Read:
                         context = new FindRequestContext(
                             entityName,
                             dbo: dbObject,
                             isList: string.IsNullOrEmpty(primaryKeyRoute));
                         break;
-                    case Operation.Insert:
+                    case Config.Operation.Insert:
                         JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
                         context = new InsertRequestContext(
                             entityName,
@@ -114,16 +114,16 @@ namespace Azure.DataApiBuilder.Service.Services
                         }
 
                         break;
-                    case Operation.Delete:
+                    case Config.Operation.Delete:
                         RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
                         context = new DeleteRequestContext(entityName,
                                                            dbo: dbObject,
                                                            isList: false);
                         break;
-                    case Operation.Update:
-                    case Operation.UpdateIncremental:
-                    case Operation.Upsert:
-                    case Operation.UpsertIncremental:
+                    case Config.Operation.Update:
+                    case Config.Operation.UpdateIncremental:
+                    case Config.Operation.Upsert:
+                    case Config.Operation.UpsertIncremental:
                         JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
                         context = new UpsertRequestContext(
                             entityName,
@@ -160,7 +160,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             string role = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-            Operation operation = HttpVerbToOperations(GetHttpContext().Request.Method);
+            Config.Operation operation = HttpVerbToOperations(GetHttpContext().Request.Method);
             string dbPolicy = _authorizationResolver.ProcessDBPolicy(entityName, role, operation, GetHttpContext());
             if (!string.IsNullOrEmpty(dbPolicy))
             {
@@ -189,14 +189,14 @@ namespace Azure.DataApiBuilder.Service.Services
 
             switch (operationType)
             {
-                case Operation.Read:
+                case Config.Operation.Read:
                     return await DispatchQuery(context);
-                case Operation.Insert:
-                case Operation.Delete:
-                case Operation.Update:
-                case Operation.UpdateIncremental:
-                case Operation.Upsert:
-                case Operation.UpsertIncremental:
+                case Config.Operation.Insert:
+                case Config.Operation.Delete:
+                case Config.Operation.Update:
+                case Config.Operation.UpdateIncremental:
+                case Config.Operation.Upsert:
+                case Config.Operation.UpsertIncremental:
                     return await DispatchMutation(context);
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
@@ -233,7 +233,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Helper method to populate the context in case the database object for this request is a stored procedure
         /// </summary>
-        private void PopulateStoredProcedureContext(Operation operationType,
+        private void PopulateStoredProcedureContext(Config.Operation operationType,
             DatabaseObject dbObject,
             string entityName,
             string queryString,
@@ -244,7 +244,7 @@ namespace Azure.DataApiBuilder.Service.Services
             switch (operationType)
             {
 
-                case Operation.Read:
+                case Config.Operation.Read:
                     // Parameters passed in query string, request body is ignored for find requests
                     context = new StoredProcedureRequestContext(
                         entityName,
@@ -262,12 +262,12 @@ namespace Azure.DataApiBuilder.Service.Services
                     }
 
                     break;
-                case Operation.Insert:
-                case Operation.Delete:
-                case Operation.Update:
-                case Operation.UpdateIncremental:
-                case Operation.Upsert:
-                case Operation.UpsertIncremental:
+                case Config.Operation.Insert:
+                case Config.Operation.Delete:
+                case Config.Operation.Update:
+                case Config.Operation.UpdateIncremental:
+                case Config.Operation.Upsert:
+                case Config.Operation.UpsertIncremental:
                     // Stored procedure call is semantically identical for all methods except Find, so we can
                     // effectively reuse the ValidateInsertRequest - throws error if query string is nonempty
                     // and parses the body into json
@@ -393,21 +393,21 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="httpVerb"></param>
         /// <returns>The CRUD operation for the given httpverb.</returns>
-        public static Operation HttpVerbToOperations(string httpVerbName)
+        public static Config.Operation HttpVerbToOperations(string httpVerbName)
         {
             switch (httpVerbName)
             {
                 case "POST":
-                    return Operation.Create;
+                    return Config.Operation.Create;
                 case "PUT":
                 case "PATCH":
                     // Please refer to the use of this method, which is to look out for policy based on crud operation type.
                     // Since create doesn't have filter predicates, PUT/PATCH would resolve to update operation.
-                    return Operation.Update;
+                    return Config.Operation.Update;
                 case "DELETE":
-                    return Operation.Delete;
+                    return Config.Operation.Delete;
                 case "GET":
-                    return Operation.Read;
+                    return Config.Operation.Read;
                 default:
                     throw new DataApiBuilderException(
                         message: "Unsupported operation type.",

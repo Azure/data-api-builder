@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
@@ -116,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             _authorizationResolver.Setup(x => x.AreColumnsAllowedForOperation(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<Operation>(),
+                It.IsAny<Config.Operation>(),
                 It.IsAny<IEnumerable<string>>()
                 )).Returns(isAuthorized);
 

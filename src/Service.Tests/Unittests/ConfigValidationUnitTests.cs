@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE,
-                operation: Operation.Create,
+                operation: Config.Operation.Create,
                 includedCols: new HashSet<string> { "*" },
                 excludedCols: new HashSet<string> { "id", "email" },
                 databasePolicy: dbPolicy
@@ -112,10 +112,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="dbPolicy">Database policy.</param>
         /// <param name="action">The action to be validated.</param>
         [DataTestMethod]
-        [DataRow("@claims.id eq @item.col1", Operation.Insert, DisplayName = "Invalid action Insert specified in config")]
-        [DataRow("@claims.id eq @item.col2", Operation.Upsert, DisplayName = "Invalid action Upsert specified in config")]
-        [DataRow("@claims.id eq @item.col3", Operation.UpsertIncremental, DisplayName = "Invalid action UpsertIncremental specified in config")]
-        public void InvalidActionSpecifiedForARole(string dbPolicy, Operation action)
+        [DataRow("@claims.id eq @item.col1", Config.Operation.Insert, DisplayName = "Invalid action Insert specified in config")]
+        [DataRow("@claims.id eq @item.col2", Config.Operation.Upsert, DisplayName = "Invalid action Upsert specified in config")]
+        [DataRow("@claims.id eq @item.col3", Config.Operation.UpsertIncremental, DisplayName = "Invalid action UpsertIncremental specified in config")]
+        public void InvalidActionSpecifiedForARole(string dbPolicy, Config.Operation action)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -142,13 +142,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="action">The action to be validated.</param>
         /// <param name="errorExpected">Whether an error is expected.</param>
         [DataTestMethod]
-        [DataRow("1 eq @item.col1", Operation.Create, true, DisplayName = "Database Policy defined for Create fails")]
-        [DataRow("", Operation.Create, true, DisplayName = "Database Policy left empty for Create fails")]
-        [DataRow(null, Operation.Create, false, DisplayName = "Database Policy NOT defined for Create passes")]
-        [DataRow("1 eq @item.col2", Operation.Read, false, DisplayName = "Database Policy defined for Read passes")]
-        [DataRow("2 eq @item.col3", Operation.Update, false, DisplayName = "Database Policy defined for Update passes")]
-        [DataRow("2 eq @item.col3", Operation.Delete, false, DisplayName = "Database Policy defined for Delete passes")]
-        public void AddDatabasePolicyToCreateOperationPermission(string dbPolicy, Operation action, bool errorExpected)
+        [DataRow("1 eq @item.col1", Config.Operation.Create, true, DisplayName = "Database Policy defined for Create fails")]
+        [DataRow("", Config.Operation.Create, true, DisplayName = "Database Policy left empty for Create fails")]
+        [DataRow(null, Config.Operation.Create, false, DisplayName = "Database Policy NOT defined for Create passes")]
+        [DataRow("1 eq @item.col2", Config.Operation.Read, false, DisplayName = "Database Policy defined for Read passes")]
+        [DataRow("2 eq @item.col3", Config.Operation.Update, false, DisplayName = "Database Policy defined for Update passes")]
+        [DataRow("2 eq @item.col3", Config.Operation.Delete, false, DisplayName = "Database Policy defined for Delete passes")]
+        public void AddDatabasePolicyToCreateOperationPermission(string dbPolicy, Config.Operation action, bool errorExpected)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -547,7 +547,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE,
-                operation: Operation.Create,
+                operation: Config.Operation.Create,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy
                 );
@@ -579,7 +579,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE,
-                operation: Operation.Create,
+                operation: Config.Operation.Create,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );
@@ -602,11 +602,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="action">The action for which database policy is defined.</param>
         /// <param name="errorExpected">Boolean value indicating whether an exception is expected or not.</param>
         [DataTestMethod]
-        [DataRow("StaticWebApps", "@claims.userId eq @item.col2", Operation.Read, false, DisplayName = "SWA- Database Policy defined for Read passes")]
-        [DataRow("staticwebapps", "@claims.userDetails eq @item.col3", Operation.Update, false, DisplayName = "SWA- Database Policy defined for Update passes")]
-        [DataRow("StaticWebAPPs", "@claims.email eq @item.col3", Operation.Delete, true, DisplayName = "SWA- Database Policy defined for Delete fails")]
-        [DataRow("appService", "@claims.email eq @item.col3", Operation.Delete, false, DisplayName = "AppService- Database Policy defined for Delete passes")]
-        public void TestInvalidClaimsForStaticWebApps(string authProvider, string dbPolicy, Operation action, bool errorExpected)
+        [DataRow("StaticWebApps", "@claims.userId eq @item.col2", Config.Operation.Read, false, DisplayName = "SWA- Database Policy defined for Read passes")]
+        [DataRow("staticwebapps", "@claims.userDetails eq @item.col3", Config.Operation.Update, false, DisplayName = "SWA- Database Policy defined for Update passes")]
+        [DataRow("StaticWebAPPs", "@claims.email eq @item.col3", Config.Operation.Delete, true, DisplayName = "SWA- Database Policy defined for Delete fails")]
+        [DataRow("appService", "@claims.email eq @item.col3", Config.Operation.Delete, false, DisplayName = "AppService- Database Policy defined for Delete passes")]
+        public void TestInvalidClaimsForStaticWebApps(string authProvider, string dbPolicy, Config.Operation action, bool errorExpected)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -640,7 +640,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE,
-                operation: Operation.All,
+                operation: Config.Operation.All,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
@@ -654,9 +654,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// in it.
         /// </summary>
         [DataTestMethod]
-        [DataRow(Operation.Create, DisplayName = "Wildcard Field with another field in included set and create action")]
-        [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in included set and update action")]
-        public void WildCardAndOtherFieldsPresentInIncludeSet(Operation actionOp)
+        [DataRow(Config.Operation.Create, DisplayName = "Wildcard Field with another field in included set and create action")]
+        [DataRow(Config.Operation.Update, DisplayName = "Wildcard Field with another field in included set and update action")]
+        public void WildCardAndOtherFieldsPresentInIncludeSet(Config.Operation actionOp)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -677,9 +677,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(Operation.Create, DisplayName = "Wildcard Field with another field in excluded set and create action")]
-        [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in excluded set and update action")]
-        public void WildCardAndOtherFieldsPresentInExcludeSet(Operation actionOp)
+        [DataRow(Config.Operation.Create, DisplayName = "Wildcard Field with another field in excluded set and create action")]
+        [DataRow(Config.Operation.Update, DisplayName = "Wildcard Field with another field in excluded set and update action")]
+        public void WildCardAndOtherFieldsPresentInExcludeSet(Config.Operation actionOp)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -1135,7 +1135,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             )
         {
             PermissionOperation actionForRole = new(
-                Name: Operation.Create,
+                Name: Config.Operation.Create,
                 Fields: null,
                 Policy: null);
 

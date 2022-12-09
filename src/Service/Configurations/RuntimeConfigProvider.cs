@@ -131,7 +131,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     out runtimeConfig,
                     ConfigProviderLogger))
             {
-                runtimeConfig!.MapGraphQLSingularTypeToEntityName();
+                runtimeConfig!.MapGraphQLSingularTypeToEntityName(ConfigProviderLogger);
                 if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
                 {
                     runtimeConfig!.ConnectionString = configPath.CONNSTRING;
@@ -213,12 +213,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
         /// <param name="connectionString">The connection string to the database.</param>
         /// <param name="accessToken">The string representation of a managed identity access token
+        /// <param name="Database"> The name of the database to be used for Cosmos</param>
         /// useful to connect to the database.</param>
         public void Initialize(
             string configuration,
             string? schema,
             string connectionString,
-            string? accessToken)
+            string? accessToken,
+            string? database = null)
         {
             if (string.IsNullOrEmpty(connectionString))
             {
@@ -236,7 +238,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     ConfigProviderLogger!))
             {
                 RuntimeConfiguration = runtimeConfig;
-                RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName();
+                RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName(ConfigProviderLogger);
                 RuntimeConfiguration!.ConnectionString = connectionString;
 
                 if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmos)
@@ -247,6 +249,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     }
 
                     CosmosDbOptions? cosmosDb = RuntimeConfiguration.DataSource.CosmosDbNoSql! with { GraphQLSchema = schema };
+
+                    if (!string.IsNullOrEmpty(database))
+                    {
+                        cosmosDb = cosmosDb with { Database = database };
+                    }
+
                     DataSource dataSource = RuntimeConfiguration.DataSource with { CosmosDbNoSql = cosmosDb };
                     RuntimeConfiguration = RuntimeConfiguration with { DataSource = dataSource };
                 }

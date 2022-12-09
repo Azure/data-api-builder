@@ -141,18 +141,18 @@ namespace Azure.DataApiBuilder.Service.Tests
                       {
                         ""role"": ""anonymous"",
                         ""actions"": [" +
-                        $" \"{Operation.Create.ToString().ToLower()}\"," +
-                        $" \"{Operation.Read.ToString().ToLower()}\"," +
-                        $" \"{Operation.Delete.ToString().ToLower()}\"," +
-                        $" \"{Operation.Update.ToString().ToLower()}\" ]" +
+                        $" \"{Config.Operation.Create.ToString().ToLower()}\"," +
+                        $" \"{Config.Operation.Read.ToString().ToLower()}\"," +
+                        $" \"{Config.Operation.Delete.ToString().ToLower()}\"," +
+                        $" \"{Config.Operation.Update.ToString().ToLower()}\" ]" +
                       @"},
                       {
                         ""role"": ""authenticated"",
                         ""actions"": [" +
-                        $" \"{Operation.Create.ToString().ToLower()}\"," +
-                        $" \"{Operation.Read.ToString().ToLower()}\"," +
-                        $" \"{Operation.Delete.ToString().ToLower()}\"," +
-                        $" \"{Operation.Update.ToString().ToLower()}\" ]" +
+                        $" \"{Config.Operation.Create.ToString().ToLower()}\"," +
+                        $" \"{Config.Operation.Read.ToString().ToLower()}\"," +
+                        $" \"{Config.Operation.Delete.ToString().ToLower()}\"," +
+                        $" \"{Config.Operation.Update.ToString().ToLower()}\" ]" +
                       @"}
                     ]
                 }";

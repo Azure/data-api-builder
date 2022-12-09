@@ -6,6 +6,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -40,6 +41,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
         // actionKey is the key used in json runtime config to
         // specify the action name.
         private static readonly string _actionKey = "action";
+
+        // Error messages.
+        public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
 
         public RuntimeConfigValidator(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -337,7 +341,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 {
                     string roleName = permissionSetting.Role;
                     Object[] actions = permissionSetting.Operations;
-                    List<Operation> operationsList = new();
+                    List<Config.Operation> operationsList = new();
                     foreach (Object action in actions)
                     {
                         if (action is null)
@@ -346,16 +350,16 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         }
 
                         // Evaluate actionOp as the current operation to be validated.
-                        Operation actionOp;
+                        Config.Operation actionOp;
                         JsonElement actionJsonElement = JsonSerializer.SerializeToElement(action);
                         if ((actionJsonElement!).ValueKind is JsonValueKind.String)
                         {
                             string actionName = action.ToString()!;
                             if (AuthorizationResolver.WILDCARD.Equals(actionName))
                             {
-                                actionOp = Operation.All;
+                                actionOp = Config.Operation.All;
                             }
-                            else if (!Enum.TryParse<Operation>(actionName, ignoreCase: true, out actionOp) ||
+                            else if (!Enum.TryParse<Config.Operation>(actionName, ignoreCase: true, out actionOp) ||
                                 !IsValidPermissionAction(actionOp))
                             {
                                 throw GetInvalidActionException(entityName, roleName, actionName);
@@ -406,7 +410,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                     // If thats the case with both of them, we specify 'included' in error.
                                     string misconfiguredColumnSet = configOperation.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
                                         && configOperation.Fields.Include.Count > 1 ? "included" : "excluded";
-                                    string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
+                                    string actionName = actionOp is Config.Operation.All ? "*" : actionOp.ToString();
                                     throw new DataApiBuilderException(
                                             message: $"No other field can be present with wildcard in the {misconfiguredColumnSet} set for:" +
                                             $" entity:{entityName}, role:{permissionSetting.Role}, action:{actionName}",
@@ -442,7 +446,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     if (entity.ObjectType is SourceType.StoredProcedure)
                     {
                         if ((operationsList.Count > 1)
-                            || (operationsList.Count is 1 && operationsList[0] is Operation.All))
+                            || (operationsList.Count is 1 && operationsList[0] is Config.Operation.All))
                         {
                             throw new DataApiBuilderException(
                                 message: $"Invalid Operations for Entity: {entityName}. " +
@@ -465,7 +469,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <returns></returns>
         public bool IsValidDatabasePolicyForAction(PermissionOperation permission)
         {
-            return !(permission.Policy?.Database != null && permission.Name == Operation.Create);
+            return !(permission.Policy?.Database != null && permission.Name == Config.Operation.Create);
         }
 
         /// <summary>
@@ -595,7 +599,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                                                             entityName,
                                                                             dbObject,
                                                                             JsonSerializer.SerializeToElement(entity.Parameters),
-                                                                            Operation.All);
+                                                                            Config.Operation.All);
                     try
                     {
                         RequestValidator.ValidateStoredProcedureRequestContext(sqRequestContext, sqlMetadataProvider);
@@ -676,10 +680,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="policy">The policy to be validated and processed.</param>
         /// <returns>Processed policy</returns>
         /// <exception cref="DataApiBuilderException">Throws exception when one or the other validations fail.</exception>
-        private static void ValidateClaimsInPolicy(string policy)
+        private void ValidateClaimsInPolicy(string policy)
         {
             // Find all the claimTypes from the policy
             MatchCollection claimTypes = GetClaimTypesInPolicy(policy);
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
+            bool isStaticWebAppsAuthConfigured = Enum.TryParse<EasyAuthType>(runtimeConfig.AuthNConfig!.Provider, ignoreCase: true, out EasyAuthType easyAuthMode) ?
+                easyAuthMode is EasyAuthType.StaticWebApps : false;
 
             foreach (Match claimType in claimTypes)
             {
@@ -701,6 +708,18 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     // Not a valid claimType containing allowed characters
                     throw new DataApiBuilderException(
                         message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                        );
+                }
+
+                if (isStaticWebAppsAuthConfigured &&
+                    !(typeOfClaim.Equals(StaticWebAppsAuthentication.USER_ID_CLAIM) ||
+                    typeOfClaim.Equals(StaticWebAppsAuthentication.USER_DETAILS_CLAIM)))
+                {
+                    // Not a valid claimType containing allowed characters
+                    throw new DataApiBuilderException(
+                        message: INVALID_CLAIMS_IN_POLICY_ERR_MSG,
                         statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                         );
@@ -790,9 +809,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// </summary>
         /// <param name="action"></param>
         /// <returns>Boolean value indicating whether the action is valid or not.</returns>
-        public static bool IsValidPermissionAction(Operation action)
+        public static bool IsValidPermissionAction(Config.Operation action)
         {
-            return action is Operation.All || PermissionOperation.ValidPermissionOperations.Contains(action);
+            return action is Config.Operation.All || PermissionOperation.ValidPermissionOperations.Contains(action);
         }
     }
 }

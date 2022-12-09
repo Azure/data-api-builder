@@ -77,7 +77,7 @@ update Review --config "dab-config.MySql.json" --permissions "authenticated:crea
 update Review --config "dab-config.MySql.json" --relationship books --target.entity Book --cardinality one
 update Empty --config "dab-config.MySql.json" --permissions "anonymous:read"
 update BookWebsitePlacement --config "dab-config.MySql.json" --permissions "authenticated:create,update" --rest true --graphql true
-update BookWebsitePlacement --config "dab-config.MySql.json" --permissions "authenticated:delete" --fields.include "*" --policy-database "@claims.id eq @item.id"
+update BookWebsitePlacement --config "dab-config.MySql.json" --permissions "authenticated:delete" --fields.include "*" --policy-database "@claims.userId eq @item.id"
 update Author --config "dab-config.MySql.json"  --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update WebsiteUser --config "dab-config.MySql.json" --permissions "authenticated:create,read,delete,update" --rest false --graphql "websiteUser:websiteUsers"
 update stocks_price --config "dab-config.MySql.json" --permissions "authenticated:create,read,delete,update" --rest false

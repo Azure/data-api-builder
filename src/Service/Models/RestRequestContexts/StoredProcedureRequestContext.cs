@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Service.Models
             string entityName,
             DatabaseObject dbo,
             JsonElement? requestPayloadRoot,
-            Operation operationType)
+            Config.Operation operationType)
             : base(entityName, dbo)
         {
             FieldsToBeReturned = new();
@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// </summary>
         public void PopulateResolvedParameters()
         {
-            if (OperationType is Operation.Read)
+            if (OperationType is Config.Operation.Read)
             {
                 // Query string may have malformed/null keys, if so just ignore them
                 ResolvedParameters = ParsedQueryString.Cast<string>()

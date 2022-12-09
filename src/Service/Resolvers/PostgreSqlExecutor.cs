@@ -109,6 +109,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// null otherwise.</returns>
         private async Task<string?> GetAccessTokenAsync()
         {
+            bool firstAttemptAtDefaultAccessToken = _defaultAccessToken is null;
+
             try
             {
                 _defaultAccessToken =
@@ -122,15 +124,25 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 QueryExecutorLogger.LogWarning($"No password detected in the connection string. Attempt to retrieve " +
                     $"a managed identity access token using DefaultAzureCredential failed due to: \n{ex}\n" +
-                    $"If authentication with DefaultAzureCrendential is not intended, this warning can be safely ignored.");
+                    (firstAttemptAtDefaultAccessToken ?
+                    $"If authentication with DefaultAzureCrendential is not intended, this warning can be safely ignored." :
+                    string.Empty));
 
                 // the config doesn't contain an identity token
                 // and a default identity token cannot be obtained
                 // so the application should not attempt to set the token
                 // for future conntions
-                // this would happen in scenarios where the user has a
-                // valid connection string without a password in it
-                _attemptToSetAccessToken = false;
+                // note though that if a default access token has been previously
+                // obtained successfully (firstAttemptAtDefaultAccessToken == false)
+                // this might be a transitory failure don't disable attempts to set
+                // the token
+                //
+                // disabling the attempts is useful in scenarios where the user
+                // has a valid connection string without a password in it
+                if (firstAttemptAtDefaultAccessToken)
+                {
+                    _attemptToSetAccessToken = false;
+                }
             }
 
             return _defaultAccessToken?.Token;

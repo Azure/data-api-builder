@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// /// </summary>
     public class PostgreSqlQueryExecutor : QueryExecutor<NpgsqlConnection>
     {
-        // This is the same scope for any Azure SQL database that is
+        // This is the same scope for any Azure Database for PostgreSQL that is
         // required to request a default azure credential access token
         // for a managed identity.
         public const string DATABASE_SCOPE = @"https://ossrdbms-aad.database.windows.net/.default";
@@ -120,8 +120,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // so a bunch of different exceptions could occur in that scenario
             catch (Exception ex)
             {
-                QueryExecutorLogger.LogWarning($"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
-                    $" failed due to: \n{ex}");
+                QueryExecutorLogger.LogWarning($"No password detected in the connection string. Attempt to retrieve " +
+                    $"a managed identity access token using DefaultAzureCredential failed due to: \n{ex}\n" +
+                    $"If authentication with DefaultAzureCrendential is not intended, this warning can be safely ignored.");
             }
 
             return _defaultAccessToken?.Token;

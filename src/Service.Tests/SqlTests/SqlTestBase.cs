@@ -84,7 +84,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
             _runtimeConfigProvider = TestHelper.GetMockRuntimeConfigProvider(configPath, string.Empty);
 
-            // Add magazines entity to the
+            // Add magazines entity to the config
             if (TestCategory.MYSQL.Equals(DatabaseEngine))
             {
                 TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "magazine", "magazines");

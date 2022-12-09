@@ -155,7 +155,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     }
                 }
 
-                Console.WriteLine($"CONNECTION STRING = {runtimeConfig.ConnectionString}");
                 return true;
             }
 

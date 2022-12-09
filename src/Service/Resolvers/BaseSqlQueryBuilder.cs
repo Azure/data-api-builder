@@ -199,9 +199,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Builds the operand either as a column or returns it directly as string
+        /// Resolves the operand either as a column, another predicate,
+        /// a SqlQueryStructure or returns it directly as string
         /// </summary>
-        protected string Build(PredicateOperand operand)
+        protected string ResolveOperand(PredicateOperand operand)
         {
             if (operand == null)
             {
@@ -288,12 +289,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             if (predicate.Left is not null)
             {
                 // For Binary predicates:
-                predicateString.Append($"{Build(predicate.Left)} {Build(predicate.Op)} {Build(predicate.Right)}");
+                predicateString.Append($"{ResolveOperand(predicate.Left)} {Build(predicate.Op)} {ResolveOperand(predicate.Right)}");
             }
             else
             {
                 // For Unary predicates, there is always a paranthesis around the operand.
-                predicateString.Append($"{Build(predicate.Op)} ({Build(predicate.Right)})");
+                predicateString.Append($"{Build(predicate.Op)} ({ResolveOperand(predicate.Right)})");
             }
 
             if (predicate.AddParenthesis)

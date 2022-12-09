@@ -390,7 +390,7 @@ public class EndToEndTests
         string? output = process.StandardOutput.ReadLine();
         process.Kill();
         Assert.IsNotNull(output);
-        Assert.IsTrue(output.Contains($"Using config file: {_testRuntimeConfig}"));
+        Assert.IsTrue(output.Contains($"User provided config file: {_testRuntimeConfig}"));
     }
 
     /// <summary>
@@ -441,7 +441,7 @@ public class EndToEndTests
 
         string? output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
-        Assert.IsTrue(output.Contains($"Using config file: {_testRuntimeConfig}"));
+        Assert.IsTrue(output.Contains($"User provided config file: {_testRuntimeConfig}"));
         output = process.StandardOutput.ReadLine();
         if (expectSuccess)
         {

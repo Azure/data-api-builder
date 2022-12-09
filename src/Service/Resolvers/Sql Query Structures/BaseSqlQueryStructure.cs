@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
@@ -22,23 +23,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public abstract class BaseSqlQueryStructure : BaseQueryStructure
     {
-        protected ISqlMetadataProvider SqlMetadataProvider { get; }
-
         /// <summary>
-        /// The Entity associated with this query.
+        /// All tables/views that should be in the FROM clause of the query.
+        /// All these objects are linked via an INNER JOIN.
         /// </summary>
-        public string EntityName { get; protected set; }
-
-        /// <summary>
-        /// The DatabaseObject associated with the entity, represents the
-        /// databse object to be queried.
-        /// </summary>
-        public DatabaseObject DatabaseObject { get; }
-
-        /// <summary>
-        /// The alias of the main table to be queried.
-        /// </summary>
-        public string TableAlias { get; protected set; }
+        public List<SqlJoinStructure> Joins { get; }
 
         /// <summary>
         /// FilterPredicates is a string that represents the filter portion of our query
@@ -54,28 +43,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string? DbPolicyPredicates { get; set; }
 
         public BaseSqlQueryStructure(
-            ISqlMetadataProvider sqlMetadataProvider,
-            string entityName,
+            ISqlMetadataProvider metadataProvider,
+            IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
+            List<Predicate>? predicates = null,
+            string entityName = "",
             IncrementingInteger? counter = null)
-            : base(counter)
+            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
         {
-            SqlMetadataProvider = sqlMetadataProvider;
-            if (!string.IsNullOrEmpty(entityName))
-            {
-                EntityName = entityName;
-                DatabaseObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
-            }
-            else
-            {
-                EntityName = string.Empty;
-                DatabaseObject = new DatabaseTable();
-            }
-
-            // Default the alias to the empty string since this base construtor
-            // is called for requests other than Find operations. We only use
-            // TableAlias for Find, so we leave empty here and then populate
-            // in the Find specific contructor.
-            TableAlias = string.Empty;
+            Joins = new();
         }
 
         /// <summary>
@@ -134,11 +110,149 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Returns the SourceDefinitionDefinition for the entity(table/view) of this query.
+        /// Based on the relationship metadata involving referenced and
+        /// referencing columns of a foreign key, add the join predicates
+        /// to the subquery Query structure created for the given target entity Name
+        /// and related source alias.
+        /// There are only a couple of options for the foreign key - we only use the
+        /// valid foreign key definition. It is guaranteed at least one fk definition
+        /// will be valid since the MetadataProvider.ValidateAllFkHaveBeenInferred.
         /// </summary>
-        protected SourceDefinition GetUnderlyingSourceDefinition()
+        /// <param name="targetEntityName">Entity name as in config file for the related entity.</param>
+        /// <param name="relatedSourceAlias">The alias assigned for the underlying source of this related entity.</param>
+        /// <param name="subQuery">The subquery to which the join predicates are to be added.</param>
+        public void AddJoinPredicatesForRelatedEntity(
+            string targetEntityName,
+            string relatedSourceAlias,
+            BaseSqlQueryStructure subQuery)
         {
-            return SqlMetadataProvider.GetSourceDefinition(EntityName);
+            SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
+            DatabaseObject relatedEntityDbObject = MetadataProvider.EntityToDatabaseObject[targetEntityName];
+            SourceDefinition relatedEntitySourceDefinition = MetadataProvider.GetSourceDefinition(targetEntityName);
+            if (// Search for the foreign key information either in the source or target entity.
+                sourceDefinition.SourceEntityRelationshipMap.TryGetValue(
+                    EntityName,
+                    out RelationshipMetadata? relationshipMetadata)
+                && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(
+                    targetEntityName,
+                    out List<ForeignKeyDefinition>? foreignKeyDefinitions)
+                || relatedEntitySourceDefinition.SourceEntityRelationshipMap.TryGetValue(
+                    targetEntityName, out relationshipMetadata)
+                && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(
+                    EntityName,
+                    out foreignKeyDefinitions))
+            {
+                Dictionary<DatabaseObject, string> associativeTableAndAliases = new();
+                // For One-One and One-Many, not all fk definitions would be valid
+                // but at least 1 will be.
+                // Identify the side of the relationship first, then check if its valid
+                // by ensuring the referencing and referenced column count > 0
+                // before adding the predicates.
+                foreach (ForeignKeyDefinition foreignKeyDefinition in foreignKeyDefinitions)
+                {
+                    // First identify which side of the relationship, this fk definition
+                    // is looking at.
+                    if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(DatabaseObject))
+                    {
+                        // Case where fk in parent entity references the nested entity.
+                        // Verify this is a valid fk definition before adding the join predicate.
+                        if (foreignKeyDefinition.ReferencingColumns.Count() > 0
+                            && foreignKeyDefinition.ReferencedColumns.Count() > 0)
+                        {
+                            subQuery.Predicates.AddRange(CreateJoinPredicates(
+                                SourceAlias,
+                                foreignKeyDefinition.ReferencingColumns,
+                                relatedSourceAlias,
+                                foreignKeyDefinition.ReferencedColumns));
+                        }
+                    }
+                    else if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(relatedEntityDbObject))
+                    {
+                        // Case where fk in nested entity references the parent entity.
+                        if (foreignKeyDefinition.ReferencingColumns.Count() > 0
+                            && foreignKeyDefinition.ReferencedColumns.Count() > 0)
+                        {
+                            subQuery.Predicates.AddRange(CreateJoinPredicates(
+                                relatedSourceAlias,
+                                foreignKeyDefinition.ReferencingColumns,
+                                SourceAlias,
+                                foreignKeyDefinition.ReferencedColumns));
+                        }
+                    }
+                    else
+                    {
+                        DatabaseObject associativeTableDbObject =
+                            foreignKeyDefinition.Pair.ReferencingDbTable;
+                        // Case when the linking object is the referencing table
+                        if (!associativeTableAndAliases.TryGetValue(
+                                associativeTableDbObject,
+                                out string? associativeTableAlias))
+                        {
+                            // this is the first fk definition found for this associative table.
+                            // create an alias for it and store for later lookup.
+                            associativeTableAlias = CreateTableAlias();
+                            associativeTableAndAliases.Add(associativeTableDbObject, associativeTableAlias);
+                        }
+
+                        if (foreignKeyDefinition.Pair.ReferencedDbTable.Equals(DatabaseObject))
+                        {
+                            subQuery.Predicates.AddRange(CreateJoinPredicates(
+                                associativeTableAlias,
+                                foreignKeyDefinition.ReferencingColumns,
+                                SourceAlias,
+                                foreignKeyDefinition.ReferencedColumns));
+                        }
+                        else
+                        {
+                            subQuery.Joins.Add(new SqlJoinStructure
+                            (
+                                associativeTableDbObject,
+                                associativeTableAlias,
+                                CreateJoinPredicates(
+                                    associativeTableAlias,
+                                    foreignKeyDefinition.ReferencingColumns,
+                                    relatedSourceAlias,
+                                    foreignKeyDefinition.ReferencedColumns
+                                    ).ToList()
+                            ));
+                        }
+                    }
+                }
+            }
+            else
+            {
+                throw new DataApiBuilderException(
+                message: $"Could not find relationship between entities: {EntityName} and " +
+                $"{targetEntityName}.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Creates equality predicates between the columns of the left table and
+        /// the columns of the right table. The columns are compared in order,
+        /// thus the lists should be the same length.
+        /// </summary>
+        protected IEnumerable<Predicate> CreateJoinPredicates(
+            string leftTableAlias,
+            List<string> leftColumnNames,
+            string rightTableAlias,
+            List<string> rightColumnNames)
+        {
+            return leftColumnNames.Zip(rightColumnNames,
+                    (leftColumnName, rightColumnName) =>
+                    {
+                        // no table name or schema here is needed because this is a subquery that joins on table alias
+                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, leftColumnName, leftTableAlias);
+                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, rightColumnName, rightTableAlias);
+                        return new Predicate(
+                            new PredicateOperand(leftColumn),
+                            PredicateOperation.Equal,
+                            new PredicateOperand(rightColumn)
+                        );
+                    }
+                );
         }
 
         /// <summary>
@@ -146,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         protected StoredProcedureDefinition GetUnderlyingStoredProcedureDefinition()
         {
-            return SqlMetadataProvider.GetStoredProcedureDefinition(EntityName);
+            return MetadataProvider.GetStoredProcedureDefinition(EntityName);
         }
 
         /// <summary>
@@ -176,7 +290,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             List<LabelledColumn> outputColumns = new();
             foreach (string columnName in GetUnderlyingSourceDefinition().Columns.Keys)
             {
-                if (!SqlMetadataProvider.TryGetExposedColumnName(
+                if (!MetadataProvider.TryGetExposedColumnName(
                     entityName: EntityName,
                     backingFieldName: columnName,
                     out string? exposedName))
@@ -189,7 +303,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     tableName: DatabaseObject.Name,
                     columnName: columnName,
                     label: exposedName!,
-                    tableAlias: TableAlias));
+                    tableAlias: SourceAlias));
             }
 
             return outputColumns;
@@ -352,7 +466,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
         public void ProcessOdataClause(FilterClause odataClause)
         {
-            ODataASTVisitor visitor = new(this, this.SqlMetadataProvider);
+            ODataASTVisitor visitor = new(this, this.MetadataProvider);
             try
             {
                 DbPolicyPredicates = GetFilterPredicatesFromOdataClause(odataClause, visitor);

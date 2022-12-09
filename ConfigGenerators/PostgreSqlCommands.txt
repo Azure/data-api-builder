@@ -23,6 +23,7 @@ add Notebook --config "dab-config.PostgreSql.json" --source "notebooks" --permis
 add Journal --config "dab-config.PostgreSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
 add ArtOfWar --config "dab-config.PostgreSql.json" --source "aow" --rest true --permissions "anonymous:*"
 add series --config "dab-config.PostgreSql.json" --source "series" --permissions "anonymous:*"
+add Sales --config "dab-config.PostgreSql.json" --source "sales" --permissions "anonymous:*" --rest true --graphql true
 update Publisher --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_01:create,delete"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_01:update" --fields.include "*"
@@ -39,7 +40,7 @@ update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tes
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:create,delete"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:update" --fields.include "*"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id eq 1940"
-update Stock --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true
+update Stock --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
 update Book --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete"
 update Book --config "dab-config.PostgreSql.json" --relationship publishers --target.entity Publisher --cardinality one
 update Book --config "dab-config.PostgreSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
@@ -76,11 +77,11 @@ update Review --config "dab-config.PostgreSql.json" --permissions "authenticated
 update Review --config "dab-config.PostgreSql.json" --relationship books --target.entity Book --cardinality one
 update Empty --config "dab-config.PostgreSql.json" --permissions "anonymous:read"
 update BookWebsitePlacement --config "dab-config.PostgreSql.json" --permissions "authenticated:create,update" --rest true --graphql true
-update BookWebsitePlacement --config "dab-config.PostgreSql.json" --permissions "authenticated:delete" --fields.include "*" --policy-database "@claims.id eq @item.id"
+update BookWebsitePlacement --config "dab-config.PostgreSql.json" --permissions "authenticated:delete" --fields.include "*" --policy-database "@claims.userId eq @item.id"
 update Author --config "dab-config.PostgreSql.json"  --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update WebsiteUser --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,delete,update" --rest false --graphql "websiteUser:websiteUsers"
 update stocks_price --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,delete,update" --rest false
-update Comic --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship series --target.entity series --cardinality one
+update Comic --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship myseries --target.entity series --cardinality one
 update series --config "dab-config.PostgreSql.json" --relationship comics --target.entity Comic --cardinality many
 update Broker --config "dab-config.PostgreSql.json" --permissions "authenticated:create,update,read,delete" --graphql false
 update Tree --config "dab-config.PostgreSql.json" --rest true --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
@@ -100,3 +101,4 @@ update Journal --config "dab-config.PostgreSql.json" --permissions "policy_teste
 update Journal --config "dab-config.PostgreSql.json" --permissions "policy_tester_update_noread:delete" --fields.include "*" --policy-database "@item.id eq 1"
 update Journal --config "dab-config.PostgreSql.json" --permissions "authorizationHandlerTester:read"
 update ArtOfWar --config "dab-config.PostgreSql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
+update Sales --config "dab-config.PostgreSql.json" --permissions "authenticated:*"

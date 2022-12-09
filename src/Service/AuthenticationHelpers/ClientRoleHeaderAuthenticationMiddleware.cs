@@ -59,10 +59,9 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             // Write challenge response metadata (HTTP 401 Unauthorized response code
             // and www-authenticate headers) to the HTTP Context via JwtBearerHandler code
             // https://github.com/dotnet/aspnetcore/blob/3fe12b935c03138f76364dc877a7e069e254b5b2/src/Security/Authentication/JwtBearer/src/JwtBearerHandler.cs#L217
-            if (authNResult.Failure is not null)
+            if (authNResult.Failure is not null && !_runtimeConfigurationProvider.IsAuthenticatedDevModeRequest())
             {
                 await httpContext.ChallengeAsync();
-
                 return;
             }
 

@@ -1,7 +1,9 @@
 # Known Issues and Limitations
 
-## Cannot filter field of nested objects in a many-to-many relationship
-TDB
+## Table with triggers error out on UPDATE
 
-## Cannot add details on many-to-many relationshop when creating or updating an item via GraphQL
-TDB
+See issue [#452](https://github.com/Azure/data-api-builder/issues/452)
+
+## Mutations are not correctly created for many-to-many relationship
+
+See issue [#479](https://github.com/Azure/data-api-builder/issues/479)

@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             _databaseType = _runtimeConfig.DatabaseType;
             _graphQLSingularTypeToEntityNameMap = _runtimeConfig.GraphQLSingularTypeToEntityNameMap;
 
-            CosmosDbOptions? cosmosDb = _runtimeConfig.CosmosDb;
+            CosmosDbOptions? cosmosDb = _runtimeConfig.DataSource.CosmosDbNoSql;
 
             if (cosmosDb is null)
             {
@@ -96,9 +96,15 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             };
         }
 
+        /// <summary>
+        /// Even though there is no source definition for underlying entity names for
+        /// cosmos db, we return back an empty source definition required for
+        /// graphql filter parser.
+        /// </summary>
+        /// <param name="entityName"></param>
         public SourceDefinition GetSourceDefinition(string entityName)
         {
-            throw new NotSupportedException("Cosmos backends don't support direct table definitions. Definitions are provided via the GraphQL schema");
+            return new SourceDefinition();
         }
 
         public StoredProcedureDefinition GetStoredProcedureDefinition(string entityName)

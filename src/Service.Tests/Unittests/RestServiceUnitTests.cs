@@ -4,6 +4,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -19,7 +20,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     public class RestServiceUnitTests
     {
         private static RestService _restService;
-        private static string _testCategory = "mssql";
 
         #region Positive Cases
 
@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// runtimeconfigprovider.</param>
         public static void InitializeTest(string path, string entityName)
         {
-            RuntimeConfigPath runtimeConfigPath = TestHelper.GetRuntimeConfigPath(_testCategory);
+            RuntimeConfigPath runtimeConfigPath = TestHelper.GetRuntimeConfigPath(TestCategory.MSSQL);
             RuntimeConfigProvider runtimeConfigProvider =
                 TestHelper.GetMockRuntimeConfigProvider(runtimeConfigPath, path);
             MsSqlQueryBuilder queryBuilder = new();
@@ -147,13 +147,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DefaultHttpContext context = new();
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
             AuthorizationResolver authorizationResolver = new(runtimeConfigProvider, sqlMetadataProvider.Object, authLogger.Object);
-
+            GQLFilterParser gQLFilterParser = new(sqlMetadataProvider.Object);
             SqlQueryEngine queryEngine = new(
                 queryExecutor,
                 queryBuilder,
                 sqlMetadataProvider.Object,
                 httpContextAccessor.Object,
                 authorizationResolver,
+                gQLFilterParser,
                 queryEngineLogger.Object,
                 runtimeConfigProvider);
 
@@ -164,6 +165,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 queryBuilder,
                 sqlMetadataProvider.Object,
                 authorizationResolver,
+                gQLFilterParser,
                 httpContextAccessor.Object,
                 mutationEngingLogger.Object);
 
@@ -184,7 +186,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Without use of delegate the out param will
         /// not be populated with the correct value.
         /// This delegate is for the callback used
-        /// with the mocked SqlMetadataProvider.
+        /// with the mocked MetadataProvider.
         /// </summary>
         /// <param name="entityPath">The entity path.</param>
         /// <param name="entity">Name of entity.</param>

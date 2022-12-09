@@ -6,9 +6,11 @@ using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
@@ -39,6 +41,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
         // actionKey is the key used in json runtime config to
         // specify the action name.
         private static readonly string _actionKey = "action";
+
+        // Error messages.
+        public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
 
         public RuntimeConfigValidator(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -118,23 +123,25 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             // Schema file should be present in the directory if not specified in the config
             // when using cosmos database.
-            if (runtimeConfig.DatabaseType is DatabaseType.cosmos)
+            if (runtimeConfig.DatabaseType is DatabaseType.cosmos ||
+                runtimeConfig.DatabaseType is DatabaseType.cosmosdb_nosql)
             {
-                if (runtimeConfig.CosmosDb is null)
+                CosmosDbOptions cosmosDbNoSql = runtimeConfig.DataSource.CosmosDbNoSql!;
+                if (cosmosDbNoSql is null)
                 {
-                    throw new NotSupportedException("CosmosDB is specified but no CosmosDB configuration information has been provided.");
+                    throw new NotSupportedException("CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.");
                 }
 
-                if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchema))
+                if (string.IsNullOrEmpty(cosmosDbNoSql.GraphQLSchema))
                 {
-                    if (string.IsNullOrEmpty(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    if (string.IsNullOrEmpty(cosmosDbNoSql.GraphQLSchemaPath))
                     {
-                        throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
+                        throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
                     }
 
-                    if (!fileSystem.File.Exists(runtimeConfig.CosmosDb.GraphQLSchemaPath))
+                    if (!fileSystem.File.Exists(cosmosDbNoSql.GraphQLSchemaPath))
                     {
-                        throw new FileNotFoundException($"The GraphQL schema file at '{runtimeConfig.CosmosDb.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
+                        throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
                     }
                 }
             }
@@ -162,6 +169,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// All these entities will create queries with the following field names
         /// pk query name: book_by_pk
         /// List query name: books
+        /// NOTE: we don't do this check for storedProcedure, because the name of the query is same
+        /// as that provided in the config, and two different entity can't have same name in the config.
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
         /// <exception cref="DataApiBuilderException"></exception>
@@ -171,7 +180,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             foreach ((string entityName, Entity entity) in entityCollection)
             {
-                if (entity.GraphQL is null
+                entity.TryPopulateSourceFields();
+                if (
+                    entity.ObjectType is SourceType.StoredProcedure ||
+                    entity.GraphQL is null
                     || (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
                 {
                     continue;
@@ -324,10 +336,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
+                entity.TryPopulateSourceFields();
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
                 {
                     string roleName = permissionSetting.Role;
                     Object[] actions = permissionSetting.Operations;
+                    List<Operation> operationsList = new();
                     foreach (Object action in actions)
                     {
                         if (action is null)
@@ -337,7 +351,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                         // Evaluate actionOp as the current operation to be validated.
                         Operation actionOp;
-                        if (((JsonElement)action!).ValueKind is JsonValueKind.String)
+                        JsonElement actionJsonElement = JsonSerializer.SerializeToElement(action);
+                        if ((actionJsonElement!).ValueKind is JsonValueKind.String)
                         {
                             string actionName = action.ToString()!;
                             if (AuthorizationResolver.WILDCARD.Equals(actionName))
@@ -423,6 +438,22 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                             }
                         }
+
+                        operationsList.Add(actionOp);
+                    }
+
+                    // Only one of the CRUD actions is allowed for stored procedure.
+                    if (entity.ObjectType is SourceType.StoredProcedure)
+                    {
+                        if ((operationsList.Count > 1)
+                            || (operationsList.Count is 1 && operationsList[0] is Operation.All))
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"Invalid Operations for Entity: {entityName}. " +
+                                    $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        }
                     }
                 }
             }
@@ -477,7 +508,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
 
-                foreach ((string relationshipName, Relationship relationship) in entity.Relationships)
+                foreach ((string relationshipName, Relationship relationship) in entity.Relationships!)
                 {
                     // Validate if entity referenced in relationship is defined in the config.
                     if (!runtimeConfig.Entities.ContainsKey(relationship.TargetEntity))
@@ -549,6 +580,42 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
+        /// Validates the parameters given in the config are consistent with the DB i.e., config has all
+        /// the parameters that are specified for the stored procedure in DB.
+        /// </summary>
+        public void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+            {
+                // We are only doing this pre-check for GraphQL because for GraphQL we need the correct schema while making request
+                // so if the schema is not correct we will halt the engine
+                // but for rest we can do it when a request is made and only fail that particular request.
+                entity.TryPopulateSourceFields();
+                if (entity.ObjectType is SourceType.StoredProcedure &&
+                    entity.GraphQL is not null && !(entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
+                {
+                    DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
+                    StoredProcedureRequestContext sqRequestContext = new(
+                                                                            entityName,
+                                                                            dbObject,
+                                                                            JsonSerializer.SerializeToElement(entity.Parameters),
+                                                                            Operation.All);
+                    try
+                    {
+                        RequestValidator.ValidateStoredProcedureRequestContext(sqRequestContext, sqlMetadataProvider);
+                    }
+                    catch (DataApiBuilderException e)
+                    {
+                        throw new DataApiBuilderException(
+                            message: e.Message,
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Pre-processes the permissions section of the runtime config object.
         /// For eg. removing the @item. directives, checking for invalid characters in claimTypes etc.
         /// </summary>
@@ -613,10 +680,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="policy">The policy to be validated and processed.</param>
         /// <returns>Processed policy</returns>
         /// <exception cref="DataApiBuilderException">Throws exception when one or the other validations fail.</exception>
-        private static void ValidateClaimsInPolicy(string policy)
+        private void ValidateClaimsInPolicy(string policy)
         {
             // Find all the claimTypes from the policy
             MatchCollection claimTypes = GetClaimTypesInPolicy(policy);
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
+            bool isStaticWebAppsAuthConfigured = Enum.TryParse<EasyAuthType>(runtimeConfig.AuthNConfig!.Provider, ignoreCase: true, out EasyAuthType easyAuthMode) ?
+                easyAuthMode is EasyAuthType.StaticWebApps : false;
 
             foreach (Match claimType in claimTypes)
             {
@@ -638,6 +708,18 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     // Not a valid claimType containing allowed characters
                     throw new DataApiBuilderException(
                         message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                        );
+                }
+
+                if (isStaticWebAppsAuthConfigured &&
+                    !(typeOfClaim.Equals(StaticWebAppsAuthentication.USER_ID_CLAIM) ||
+                    typeOfClaim.Equals(StaticWebAppsAuthentication.USER_DETAILS_CLAIM)))
+                {
+                    // Not a valid claimType containing allowed characters
+                    throw new DataApiBuilderException(
+                        message: INVALID_CLAIMS_IN_POLICY_ERR_MSG,
                         statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                         );

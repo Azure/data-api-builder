@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -13,8 +14,15 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <summary>
         /// Creates a mocked EasyAuth token, namely, the value of the header injected by EasyAuth.
         /// </summary>
+        /// <param name="nameClaimType">Defines the ClaimType of the claim used for the return value of Identity.Name </param>
+        /// <param name="roleClaimType">Defines the ClaimType of the claim used for the return value of ClaimsPrincpal.IsInRole(roleName)</param>
         /// <returns>A Base64 encoded string of a serialized EasyAuthClientPrincipal object</returns>
-        public static string CreateAppServiceEasyAuthToken()
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.nameclaimtype?view=net-6.0"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.roleclaimtype?view=net-6.0"/>
+        public static string CreateAppServiceEasyAuthToken(
+            string? nameClaimType = ClaimTypes.Name,
+            string? roleClaimType = ClaimTypes.Role,
+            IEnumerable<AppServiceClaim>? additionalClaims = null)
         {
             AppServiceClaim emailClaim = new()
             {
@@ -25,26 +33,61 @@ namespace Azure.DataApiBuilder.Service.Tests
             AppServiceClaim roleClaimAnonymous = new()
             {
                 Val = "Anonymous",
-                Typ = ClaimTypes.Role
+                Typ = roleClaimType
             };
 
             AppServiceClaim roleClaimAuthenticated = new()
             {
                 Val = "Authenticated",
+                Typ = roleClaimType
+            };
+
+            AppServiceClaim roleClaimShortNameClaimType = new()
+            {
+                Val = "RoleShortClaimType",
+                Typ = "roles"
+            };
+
+            AppServiceClaim roleClaimUriClaimType = new()
+            {
+                Val = "RoleUriClaimType",
                 Typ = ClaimTypes.Role
             };
 
-            List<AppServiceClaim> claims = new();
-            claims.Add(emailClaim);
-            claims.Add(roleClaimAnonymous);
-            claims.Add(roleClaimAuthenticated);
+            AppServiceClaim nameShortClaimType = new()
+            {
+                Val = "NameShortClaimType",
+                Typ = "unique_name"
+            };
+
+            AppServiceClaim nameUriClaimType = new()
+            {
+                Val = "NameUriClaimType",
+                Typ = ClaimTypes.Name
+            };
+
+            HashSet<AppServiceClaim> claims = new()
+            {
+                emailClaim,
+                roleClaimAnonymous,
+                roleClaimAuthenticated,
+                roleClaimShortNameClaimType,
+                roleClaimUriClaimType,
+                nameShortClaimType,
+                nameUriClaimType
+            };
+
+            if (additionalClaims != null)
+            {
+                claims.UnionWith(additionalClaims);
+            }
 
             AppServiceClientPrincipal token = new()
             {
                 Auth_typ = "aad",
-                Name_typ = "Apple Banana",
+                Name_typ = nameClaimType,
                 Claims = claims,
-                Role_typ = ClaimTypes.Role
+                Role_typ = roleClaimType
             };
 
             string serializedToken = JsonSerializer.Serialize(value: token);
@@ -60,8 +103,9 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <returns>A Base64 encoded string of a serialized StaticWebAppsClientPrincipal object</returns>
         public static string CreateStaticWebAppsEasyAuthToken(
             bool addAuthenticated = true,
-            string specificRole = null,
-            IEnumerable<SWAPrincipalClaim> claims = null)
+            string? specificRole = null,
+            string? userId = null,
+            string? userDetails = null)
         {
             // The anonymous role is present in all requests sent to Static Web Apps or AppService endpoints.
             List<string> roles = new()
@@ -93,9 +137,10 @@ namespace Azure.DataApiBuilder.Service.Tests
 
             StaticWebAppsClientPrincipal token = new()
             {
-                IdentityProvider = "github",
-                UserRoles = roles,
-                Claims = claims
+                UserId = userId,
+                UserDetails = userDetails,
+                IdentityProvider = "aad",
+                UserRoles = roles
             };
 
             string serializedToken = JsonSerializer.Serialize(value: token);

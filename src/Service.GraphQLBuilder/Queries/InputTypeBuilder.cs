@@ -137,6 +137,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 {
                     string targetEntityName = RelationshipDirectiveType.Target(field);
 
+                    DirectiveNode? relationshipDirective =
+                        RelationshipDirectiveType.GetDirective(field);
+                    List<DirectiveNode> directives = new();
+                    if (relationshipDirective is not null)
+                    {
+                        directives.Add(relationshipDirective);
+                    }
+
                     inputFields.Add(
                         new(
                             location: null,
@@ -144,10 +152,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                             new StringValueNode($"Filter options for {field.Name}"),
                             new NamedTypeNode(GenerateObjectInputFilterName(targetEntityName)),
                             defaultValue: null,
-                            new List<DirectiveNode>())
-                        );
+                            directives: directives));
                 }
-
             }
 
             return inputFields;

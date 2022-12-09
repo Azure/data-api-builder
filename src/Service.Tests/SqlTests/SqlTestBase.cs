@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Controllers;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -53,6 +54,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static ILogger<SqlMutationEngine> _mutationEngineLogger;
         protected static ILogger<SqlQueryEngine> _queryEngineLogger;
         protected static ILogger<RestController> _restControllerLogger;
+        protected static GQLFilterParser _gQLFilterParser;
         protected const string MSSQL_DEFAULT_DB_NAME = "master";
 
         protected static string DatabaseName { get; set; }
@@ -102,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
-
+            _gQLFilterParser = new(_sqlMetadataProvider);
             await ResetDbStateAsync();
 
             // Execute additional queries, if any.
@@ -126,6 +128,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     {
                         services.AddHttpContextAccessor();
                         services.AddSingleton(_runtimeConfigProvider);
+                        services.AddSingleton(_gQLFilterParser);
                         services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
                         {
                             return new SqlQueryEngine(
@@ -134,6 +137,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                 _sqlMetadataProvider,
                                 ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
                                 _authorizationResolver,
+                                _gQLFilterParser,
                                 _queryEngineLogger,
                                 _runtimeConfigProvider
                                 );
@@ -146,6 +150,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                     _queryBuilder,
                                     _sqlMetadataProvider,
                                     _authorizationResolver,
+                                    _gQLFilterParser,
                                     ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
                                     _mutationEngineLogger);
                         });
@@ -256,11 +261,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                             _sqlMetadataLogger);
                     break;
                 case TestCategory.MYSQL:
-                    Mock<ILogger<QueryExecutor<MySqlConnection>>> mySqlQueryExecutorLogger = new();
+                    Mock<ILogger<MySqlQueryExecutor>> mySqlQueryExecutorLogger = new();
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
                     _dbExceptionParser = new MySqlDbExceptionParser(_runtimeConfigProvider);
-                    _queryExecutor = new QueryExecutor<MySqlConnection>(
+                    _queryExecutor = new MySqlQueryExecutor(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
                         mySqlQueryExecutorLogger.Object);
@@ -301,7 +306,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         parameters: null,
                         _queryExecutor.GetJsonResultAsync<JsonDocument>);
 
-                result = sqlResult is not null ? sqlResult.RootElement.ToString() : null;
+                result = sqlResult is not null ?
+                    sqlResult.RootElement.ToString() :
+                    new JsonArray().ToString();
             }
             else
             {

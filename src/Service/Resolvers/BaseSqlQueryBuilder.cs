@@ -26,6 +26,21 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public abstract string QuoteIdentifier(string ident);
 
+        /// <inheritdoc />
+        public virtual string Build(BaseSqlQueryStructure structure)
+        {
+            string predicates = new(JoinPredicateStrings(
+                       structure.DbPolicyPredicates,
+                       Build(structure.Predicates)));
+
+            string query = $"SELECT 1 " +
+                   $"FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                   $"AS {QuoteIdentifier(structure.SourceAlias)}{Build(structure.Joins)} " +
+                   $"WHERE {predicates}";
+
+            return query;
+        }
+
         /// <summary>
         /// Builds a database specific keyset pagination predicate
         /// </summary>
@@ -113,14 +128,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Build column as
         /// [{tableAlias}].[{ColumnName}]
-        /// or if TableAlias is empty, as
+        /// or if SourceAlias is empty, as
         /// [{schema}].[{table}].[{ColumnName}]
         /// or if schema is empty, as
         /// [{table}].[{ColumnName}]
         /// </summary>
         protected virtual string Build(Column column)
         {
-            // If the table alias is not empty, we return [{TableAlias}].[{Column}]
+            // If the table alias is not empty, we return [{SourceAlias}].[{Column}]
             if (!string.IsNullOrEmpty(column.TableAlias))
             {
                 return $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}";
@@ -139,8 +154,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// Build orderby column as
-        /// {TableAlias}.{ColumnName} {direction}
-        /// If TableAlias is null
+        /// {SourceAlias}.{ColumnName} {direction}
+        /// If SourceAlias is null
         /// {ColumnName} {direction}
         /// </summary>
         protected virtual string Build(OrderByColumn column, bool printDirection = true)
@@ -184,9 +199,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Builds the operand either as a column or returns it directly as string
+        /// Resolves the operand either as a column, another predicate,
+        /// a SqlQueryStructure or returns it directly as string
         /// </summary>
-        protected string Build(PredicateOperand operand)
+        protected string ResolveOperand(PredicateOperand operand)
         {
             if (operand == null)
             {
@@ -196,6 +212,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Column? c;
             string? s;
             Predicate? p;
+            BaseSqlQueryStructure? sqlQueryStructure;
             if ((c = operand.AsColumn()) != null)
             {
                 return Build(c);
@@ -207,6 +224,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             else if ((p = operand.AsPredicate()) != null)
             {
                 return Build(p);
+            }
+            else if ((sqlQueryStructure = operand.AsSqlQueryStructure()) is not null)
+            {
+                return Build(sqlQueryStructure);
             }
             else
             {
@@ -245,6 +266,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     return "IS";
                 case PredicateOperation.IS_NOT:
                     return "IS NOT";
+                case PredicateOperation.EXISTS:
+                    return "EXISTS";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }
@@ -261,14 +284,26 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new ArgumentNullException(nameof(predicate));
             }
 
-            string predicateString = $"{Build(predicate.Left)} {Build(predicate.Op)} {Build(predicate.Right)}";
+            StringBuilder predicateString = new();
+
+            if (predicate.Left is not null)
+            {
+                // For Binary predicates:
+                predicateString.Append($"{ResolveOperand(predicate.Left)} {Build(predicate.Op)} {ResolveOperand(predicate.Right)}");
+            }
+            else
+            {
+                // For Unary predicates, there is always a paranthesis around the operand.
+                predicateString.Append($"{Build(predicate.Op)} ({ResolveOperand(predicate.Right)})");
+            }
+
             if (predicate.AddParenthesis)
             {
                 return "(" + predicateString + ")";
             }
             else
             {
-                return predicateString;
+                return predicateString.ToString();
             }
         }
 
@@ -282,7 +317,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// Write the join in sql
-        /// INNER JOIN {TableName} AS {TableAlias} ON {JoinPredicates}
+        /// INNER JOIN {TableName} AS {SourceAlias} ON {JoinPredicates}
         /// </summary>
         protected string Build(SqlJoinStructure join)
         {
@@ -293,15 +328,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (!string.IsNullOrWhiteSpace(join.DbObject.SchemaName))
             {
-                return $@" INNER JOIN {QuoteIdentifier(join.DbObject.SchemaName)}.{QuoteIdentifier(join.DbObject.Name)}
-                           AS {QuoteIdentifier(join.TableAlias)}
-                           ON {Build(join.Predicates)}";
+                return $" INNER JOIN {QuoteIdentifier(join.DbObject.SchemaName)}.{QuoteIdentifier(join.DbObject.Name)} " +
+                       $"AS {QuoteIdentifier(join.TableAlias)} " +
+                       $"ON {Build(join.Predicates)}";
             }
             else
             {
-                return $@" INNER JOIN {QuoteIdentifier(join.DbObject.Name)}
-                           AS {QuoteIdentifier(join.TableAlias)}
-                           ON {Build(join.Predicates)}";
+                return $" INNER JOIN {QuoteIdentifier(join.DbObject.Name)} " +
+                       $"AS {QuoteIdentifier(join.TableAlias)} " +
+                       $"ON {Build(join.Predicates)}";
             }
         }
 

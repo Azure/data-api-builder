@@ -53,7 +53,7 @@ jobs:
     inputs:
       command: build
       projects: '**/*.csproj'
-      arguments: '-p:generateConfigFiles=true --configuration $(buildConfiguration)' # Update this to match your need
+      arguments: '-p:generateConfigFiles=MySql --configuration $(buildConfiguration)' # Update this to match your need
 
   - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.MySql.json'

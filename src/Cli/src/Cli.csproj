@@ -39,8 +39,8 @@
   </ItemGroup>
 
   <Target Name="GenerateConfigFiles" AfterTargets="PostBuildEvent">
-      <Exec Command="powershell.exe -command ..\..\..\ConfigGenerators\configGenerator.ps1 " Condition=" '$(OS)' == 'Windows_NT' And '$(generateConfigFiles)' == 'true' " />
-      <Exec Command="bash ../../../ConfigGenerators/configGenerator.sh" Condition=" '$(OS)' != 'Windows_NT' And '$(generateConfigFiles)' == 'true' " />
+      <Exec Command="powershell.exe -command ..\..\..\ConfigGenerators\configGenerator.ps1 $(generateConfigFiles) " Condition=" '$(OS)' == 'Windows_NT' And '$(generateConfigFiles)' != '' " />
+      <Exec Command="bash ../../../ConfigGenerators/configGenerator.sh $(generateConfigFiles) " Condition=" '$(OS)' != 'Windows_NT' And '$(generateConfigFiles)' != '' " />
       <Copy SourceFiles="@(ConfigFiles)" DestinationFolder="..\..\out\tests\$(TargetFramework)" />
   </Target>
 

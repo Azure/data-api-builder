@@ -4,11 +4,11 @@
 
 The full list of release notes for this version is available here: [version 0.4.10 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.4.10-alpha)
 
-- [Nested filtering GraphQL support for MsSql]
-- [AAD User authentication Support for MySQL]
-- [Stored Procedures GraphQL Support]
-- [Managed Identity Support for PostgreSql]
-- [Runtime Configuration Updates in Cosmos DB]
+- [Nested filtering GraphQL support for MsSql](#nested-filtering-graphql-support-for-mssql)
+- [AAD User authentication Support for MySQL](#aad-user-authentication-support-for-mysql)
+- [Stored Procedures GraphQL Support](#stored-procedures-graphql-support)
+- [Managed Identity Support for PostgreSql](#managed-identity-support-for-postgresql)
+- [Runtime Configuration Updates in Cosmos DB](#runtime-configuration-updates-in-cosmos-db)
 
 ### Nested filtering GraphQL support for MsSql
 

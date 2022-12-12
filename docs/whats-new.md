@@ -1,72 +1,79 @@
 # What's New in Data API Builder
 
-## Version 0.3.7
+## Version 0.4.10
 
-The full list of release notes for this version is available here: [version 0.3.7 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.3.7-alpha)
+The full list of release notes for this version is available here: [version 0.4.10 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.4.10-alpha)
 
-- [Public JSON Schema](#public-json-schema)
-- [View Support](#view-support)
-- [Stored Procedures Support](#stored-procedures-support)
-- [Azure Active Directory Authentication](#azure-active-directory-authentication)
-- [New "Simulator" Authentication Provider for local authentication](#new-simulator-authentication-provider-for-local-authentication)
-- [Support for filter on nested objects within a document in Cosmos DB](#support-for-filter-on-nested-objects-within-a-document-in-cosmos-db)
+- [Nested filtering GraphQL support for MsSql]
+- [AAD User authentication Support for MySQL]
+- [Stored Procedures GraphQL Support]
+- [Managed Identity Support for PostgreSql]
+- [Runtime Configuration Updates in Cosmos DB]
 
-### Public JSON Schema
+### Nested filtering GraphQL support for MsSql
 
-JSON Schema has been published here:
+Added nested filtering support for relational databases:
 
-```text
-https://dataapibuilder.blob.core.windows.net/schemas/v0.3.7-alpha/dab.draft.schema.json
-```
-
-This will give you intellisense if you are using an IDE, like VS Code, that supports JSON Schemas. Take a look at `basic-empty-dab-config.json` in the `samples` folder, to have a starting point when manually creating the `dab-config.json` file.
-
-Please note that if you are using DAB CLI to create and manage the `dab-config.json` file, DAB CLI is not yet creating the configuration file using the aforementioned reference to the JSON schema file.
-
-### View Support
-
-Views are now supported both in REST and GraphQL. If you have a view, for example [`dbo.vw_books_details`](../samples/getting-started/azure-sql-db/library.azure-sql.sql#L112) it can be exposed using the following `dab` command:
-
-```sh
-dab add BookDetail --source dbo.vw_books_details --source.type View --source.key-fields "id" --permissions "anonymous:read"
-```
-
-the `source.key-fields` option is used to specify which fields from the view are used to uniquely identify an item, so that navigation by primary key can be implemented also for views. Its the responsibility of the developer configuring DAB to enable or disable actions (for example, the `create` action) depending on if the view is updatable or not.
-
-### Stored Procedures Support
-
-Stored procedures are now supported for REST requests. If you have a stored procedure, for example [`dbo.stp_get_all_cowritten_books_by_author`](../samples/getting-started/azure-sql-db/library.azure-sql.sql#L138) it can be exposed using the following `dab` command:
-
-```sh
-
-dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" --permissions "anonymous:read"
-```
-
-The parameter can be passed in the URL query string when calling the REST endpoint:
-
-```text
-http://<dab-server>/api/GetCowrittenBooksByAuthor?author=isaac%20asimov
-```
-
-Its the responsibility of the developer configuring DAB to enable or disable actions (for example, the `create` action) to allow or deny specific HTTP verbs to be used when calling the stored procedure. For example, for the stored procedure used in the example, given that its purpose is to return some data, it would make sense to only allow the `read` action.
-
-### Azure Active Directory Authentication
-
-Azure AD authentication is now fully working. Read how to use it here: [Authentication with Azure AD](./authentication-azure-ad.md)
-
-### New "Simulator" Authentication Provider for local authentication
-
-To simplify testing of authenticated requests when developing locally, a new `simulator` authentication provider has been created; `simulator` is a configurable authentication provider which instructs the Data API Builder engine to treat all requests as authenticated. More details here: [Local Authentication](./local-authentication.md)
-
-### Support for filter on nested objects within a document in Cosmos DB
-
-With Azure Cosmos DB, You can use the object or array relationship defined in your schema which enables to do filter operations on the nested objects.
-
-```graphql
-query {
-  books(first: 1, filter : { author : { profile : { twitter : {eq : ""@founder""}}}})
-    id
-    name
+```sample request
+{
+    books (filter: {
+      authors : {
+          books: {
+            title: { contains: "Awesome"}
+          }
+          name: { eq: "Aaron"}
+      }
+    }) {
+      items {
+      title
+    }
   }
 }
 ```
+
+### AAD User authentication Support for MySQL
+
+AAD User authentication are now supported for MySQL, added user token as password field to authenticate with MySQL with AAD plugin.
+
+### Stored Procedures GraphQL Support
+
+Stored procedures are now supported for GraphQL requests.
+For stored procedures Data API Builder will support all CRUD operations:
+
+- GraphQL: queries and mutations
+- REST: POST, GET, PUT, PATCH, DELETE methods
+
+It will be up to the developer to limit what of the above operations are applicable to the stored procedure, by correctly configuring the permission associated with the entity connected to the stored procedure. For example, a stored procedure named `get_users` should only support the `read` permission, but that will be up to the developer to correctly configure the configuration file to do so. For example:
+
+```json
+"entities": {
+    "user": {
+        "source": {
+        "object": "web.get_users",
+        "type": "stored-procedure",
+        "parameters": {
+            "param1": 123,
+            "param2": "hello",
+            "param3": true
+        }
+        },
+        "permissions": [
+        {
+            "actions": [ "read" ],
+            "role": "anonymous"
+        }
+        ]
+    }
+}
+```
+
+### Managed Identity Support for PostgreSql
+
+The user now can specify the access token in the config to authenticate with managed identity. Alternatively, the user now can just not specify the password in the connection string and the runtime will attempt to fetch the default managed identity token. If this fails, connection will be attempted without a password in the connection string.
+
+### Runtime Configuration Updates in Cosmos DB
+
+- Reading comsos options from data-source/options instead of "cosmos" object.
+- Honor the database name being set by SWA during runtime configuration.
+
+

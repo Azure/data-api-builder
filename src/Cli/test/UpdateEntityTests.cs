@@ -6,6 +6,17 @@ namespace Cli.Tests
     [TestClass]
     public class UpdateEntityTests
     {
+        /// <summary>
+        /// Setup the logger for CLI
+        /// </summary>
+        [TestInitialize]
+        public void SetupLoggerForCLI()
+        {
+            Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
+            Mock<ILogger<Utils>> utilsLogger = new();
+            ConfigGenerator.SetLoggerFactoryForCLi(configGeneratorLogger.Object, utilsLogger.Object);
+        }
+
         #region  Positive Tests
         /// <summary>
         /// Simple test to update an entity permission by adding a new action.

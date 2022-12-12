@@ -9,6 +9,18 @@ namespace Cli.Tests
         private string _basicRuntimeConfig = string.Empty;
 
         /// <summary>
+        /// Setup the logger for CLI
+        /// </summary>
+        [TestInitialize]
+        public void SetupLoggerForCLI()
+        {
+            Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
+            Mock<ILogger<Utils>> utilsLogger = new();
+            ConfigGenerator.SetLoggerFactoryForCLi(configGeneratorLogger.Object, utilsLogger.Object);
+        }
+
+
+        /// <summary>
         /// Test the simple init config for mssql database. PG and MySQL should be similar.
         /// There is no need for a separate test.
         /// </summary>

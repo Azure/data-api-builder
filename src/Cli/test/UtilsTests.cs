@@ -7,6 +7,17 @@ namespace Cli.Tests
     public class UtilsTests
     {
         /// <summary>
+        /// Setup the logger for CLI
+        /// </summary>
+        [TestInitialize]
+        public void SetupLoggerForCLI()
+        {
+            Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
+            Mock<ILogger<Utils>> utilsLogger = new();
+            ConfigGenerator.SetLoggerFactoryForCLi(configGeneratorLogger.Object, utilsLogger.Object);
+        }
+
+        /// <summary>
         /// Test to check if it successfully creates the rest object
         /// which can be either a boolean value
         /// or a RestEntitySettings object

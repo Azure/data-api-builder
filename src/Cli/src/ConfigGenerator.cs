@@ -13,6 +13,16 @@ namespace Cli
     /// </summary>
     public class ConfigGenerator
     {
+        private static ILogger<ConfigGenerator> _logger;
+
+        public static void SetLoggerFactoryForCLi(
+            ILogger<ConfigGenerator> configGeneratorLoggerFactory,
+            ILogger<Utils> utilsLoggerFactory)
+        {
+            _logger = configGeneratorLoggerFactory;
+            Utils._logger = utilsLoggerFactory;
+        }
+
         /// <summary>
         /// This method will generate the initial config with databaseType and connection-string.
         /// </summary>
@@ -21,13 +31,13 @@ namespace Cli
             if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
             {
                 runtimeConfigFile = RuntimeConfigPath.DefaultName;
-                Console.WriteLine($"Creating a new config file: {runtimeConfigFile}");
+                _logger.LogInformation($"Creating a new config file: {runtimeConfigFile}");
             }
 
             // File existence checked to avoid overwriting the existing configuration.
             if (File.Exists(runtimeConfigFile))
             {
-                Console.Error.Write($"Config file: {runtimeConfigFile} already exists. " +
+                _logger.LogError($"Config file: {runtimeConfigFile} already exists. " +
                     "Please provide a different name or remove the existing config file.");
                 return false;
             }
@@ -35,7 +45,7 @@ namespace Cli
             // Creating a new json file with runtime configuration
             if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
             {
-                Console.Error.Write($"Failed to create the runtime config file.");
+                _logger.LogError($"Failed to create the runtime config file.");
                 return false;
             }
 
@@ -65,7 +75,7 @@ namespace Cli
                     string? graphQLSchemaPath = options.GraphQLSchemaPath;
                     if (string.IsNullOrEmpty(cosmosDatabase) || string.IsNullOrEmpty(graphQLSchemaPath))
                     {
-                        Console.WriteLine($"Provide all the mandatory options for CosmosDB_NoSql: --cosmosdb_nosql-database, and --graphql-schema");
+                        _logger.LogError($"Not all the mandatory options provided for CosmosDB_NoSql: --cosmosdb_nosql-database, and --graphql-schema");
                         return false;
                     }
 
@@ -138,13 +148,13 @@ namespace Cli
 
             if (!TryReadRuntimeConfig(runtimeConfigFile, out string runtimeConfigJson))
             {
-                Console.Error.Write($"Failed to read the config file: {runtimeConfigFile}.");
+                _logger.LogError($"Failed to read the config file: {runtimeConfigFile}.");
                 return false;
             }
 
             if (!TryAddNewEntity(options, ref runtimeConfigJson))
             {
-                Console.Error.Write("Failed to add a new entity.");
+                _logger.LogError("Failed to add a new entity.");
                 return false;
             }
 
@@ -173,15 +183,15 @@ namespace Cli
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Failed with exception: {e}.");
+                _logger.LogError($"Failed with exception: {e}.");
                 return false;
             }
 
-            // If entity exist, we cannot add. Just exit.
+            // If entity exist, we cannot add. Display warning
             //
             if (runtimeConfig!.Entities.ContainsKey(options.Entity))
             {
-                Console.WriteLine($"WARNING: Entity-{options.Entity} is already present. No new changes are added to Config.");
+                _logger.LogWarning($"Entity-{options.Entity} is already present. No new changes are added to Config.");
                 return false;
             }
 
@@ -191,7 +201,7 @@ namespace Cli
             PermissionSetting[]? permissionSettings = ParsePermission(options.Permissions, policy, field);
             if (permissionSettings is null)
             {
-                Console.Error.WriteLine("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
+                _logger.LogError("Invalid format for permission. Acceptable format: --permissions \"<<role>>:<<actions>>\"");
                 return false;
             }
 
@@ -200,7 +210,7 @@ namespace Cli
                 options,
                 out object? source))
             {
-                Console.Error.WriteLine("Unable to create the source object.");
+                _logger.LogError("Unable to create the source object.");
                 return false;
             }
 
@@ -240,7 +250,7 @@ namespace Cli
                     options.SourceType,
                     out SourceType objectType))
             {
-                Console.Error.WriteLine(
+                _logger.LogError(
                     SourceTypeEnumConverter.GenerateMessageForInvalidSourceType(options.SourceType!)
                 );
                 return false;
@@ -278,7 +288,7 @@ namespace Cli
                     sourceKeyFields,
                     out sourceObject))
             {
-                Console.Error.WriteLine("Unable to parse the given source.");
+                _logger.LogError("Unable to parse the given source.");
                 return false;
             }
 
@@ -298,7 +308,7 @@ namespace Cli
             string? role, operations;
             if (!TryGetRoleAndOperationFromPermission(permissions, out role, out operations))
             {
-                Console.Error.Write($"Failed to fetch the role and operation from the given permission string: {string.Join(SEPARATOR, permissions.ToArray())}.");
+                _logger.LogError($"Failed to fetch the role and operation from the given permission string: {string.Join(SEPARATOR, permissions.ToArray())}.");
                 return null;
             }
 
@@ -329,13 +339,13 @@ namespace Cli
 
             if (!TryReadRuntimeConfig(runtimeConfigFile, out string runtimeConfigJson))
             {
-                Console.Error.Write($"Failed to read the config file: {runtimeConfigFile}.");
+                _logger.LogError($"Failed to read the config file: {runtimeConfigFile}.");
                 return false;
             }
 
             if (!TryUpdateExistingEntity(options, ref runtimeConfigJson))
             {
-                Console.Error.Write($"Failed to update the Entity: {options.Entity}.");
+                _logger.LogError($"Failed to update the Entity: {options.Entity}.");
                 return false;
             }
 
@@ -364,7 +374,7 @@ namespace Cli
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Failed with exception: {e}.");
+                _logger.LogError($"Failed with exception: {e}.");
                 return false;
             }
 
@@ -373,13 +383,13 @@ namespace Cli
             Entity? entity;
             if (!runtimeConfig.Entities.TryGetValue(options.Entity, out entity))
             {
-                Console.WriteLine($"Entity:{options.Entity} not found. Please add the entity first.");
+                _logger.LogError($"Entity:{options.Entity} not found. Please add the entity first.");
                 return false;
             }
 
             if (!TryGetUpdatedSourceObjectWithOptions(options, entity, out object? updatedSource))
             {
-                Console.Error.WriteLine("Failed to update the source object.");
+                _logger.LogError("Failed to update the source object.");
                 return false;
             }
 
@@ -393,7 +403,7 @@ namespace Cli
 
             if (false.Equals(updatedGraphQLDetails))
             {
-                Console.WriteLine("WARNING: Disabling GraphQL for this entity will restrict it's usage in relationships");
+                _logger.LogWarning("Disabling GraphQL for this entity will restrict it's usage in relationships");
             }
 
             if (options.Permissions is not null && options.Permissions.Any())
@@ -404,7 +414,7 @@ namespace Cli
 
                 if (updatedPermissions is null)
                 {
-                    Console.WriteLine($"Failed to update permissions.");
+                    _logger.LogError($"Failed to update permissions.");
                     return false;
                 }
             }
@@ -414,13 +424,13 @@ namespace Cli
                 if (options.FieldsToInclude is not null && options.FieldsToInclude.Any()
                     || options.FieldsToExclude is not null && options.FieldsToExclude.Any())
                 {
-                    Console.WriteLine($"--permissions is mandatory with --fields.include and --fields.exclude.");
+                    _logger.LogInformation($"--permissions is mandatory with --fields.include and --fields.exclude.");
                     return false;
                 }
 
                 if (options.PolicyRequest is not null || options.PolicyDatabase is not null)
                 {
-                    Console.WriteLine($"--permissions is mandatory with --policy-request and --policy-database.");
+                    _logger.LogInformation($"--permissions is mandatory with --policy-request and --policy-database.");
                     return false;
                 }
             }
@@ -486,7 +496,7 @@ namespace Cli
             //
             if (!TryGetRoleAndOperationFromPermission(permissions, out newRole, out newOperations))
             {
-                Console.Error.Write($"Failed to fetch the role and operation from the given permission string: {permissions}.");
+                _logger.LogError($"Failed to fetch the role and operation from the given permission string: {permissions}.");
                 return null;
             }
 
@@ -631,7 +641,7 @@ namespace Cli
             {
                 if (!SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out updatedSourceType))
                 {
-                    Console.Error.WriteLine(
+                    _logger.LogError(
                         SourceTypeEnumConverter.GenerateMessageForInvalidSourceType(options.SourceType)
                     );
                     return false;
@@ -698,14 +708,14 @@ namespace Cli
             // CosmosDB doesn't support Relationship
             if (runtimeConfig.DataSource.DatabaseType.Equals(DatabaseType.cosmos))
             {
-                Console.Error.WriteLine("Adding/updating Relationships is currently not supported in CosmosDB.");
+                _logger.LogError("Adding/updating Relationships is currently not supported in CosmosDB.");
                 return false;
             }
 
             // Checking if both cardinality and targetEntity is provided.
             if (cardinality is null || targetEntity is null)
             {
-                Console.WriteLine("cardinality and target entity is mandatory to update/add a relationship.");
+                _logger.LogError("Mandatory fields (cardinality and targetEntity) required to update/add a relationship is not provided.");
                 return false;
             }
 
@@ -718,7 +728,7 @@ namespace Cli
 
                 if (graphQLGlobalSettings is not null && !graphQLGlobalSettings.Enabled)
                 {
-                    Console.WriteLine("Cannot add/update relationship as GraphQL is disabled in the" +
+                    _logger.LogError("Cannot add/update relationship as GraphQL is disabled in the" +
                     " global runtime settings of the config.");
                     return false;
                 }
@@ -727,7 +737,7 @@ namespace Cli
             // Both the source entity and target entity needs to present in config to establish relationship.
             if (!runtimeConfig.Entities.ContainsKey(targetEntity))
             {
-                Console.WriteLine($"Entity:{targetEntity} is not present. Relationship cannot be added.");
+                _logger.LogError($"Entity:{targetEntity} is not present. Relationship cannot be added.");
                 return false;
             }
 
@@ -735,14 +745,14 @@ namespace Cli
             if (!string.Equals(cardinality, Cardinality.One.ToString(), StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(cardinality, Cardinality.Many.ToString(), StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine($"Failed to parse the given cardinality : {cardinality}. Supported values are one/many.");
+                _logger.LogError($"Failed to parse the given cardinality : {cardinality}. Supported values are one/many.");
                 return false;
             }
 
             // If GraphQL is disabled, entity cannot be used in relationship
             if (false.Equals(runtimeConfig.Entities[targetEntity].GraphQL))
             {
-                Console.WriteLine($"Entity: {targetEntity} cannot be used in relationship as it is disabled for GraphQL.");
+                _logger.LogError($"Entity: {targetEntity} cannot be used in relationship as it is disabled for GraphQL.");
                 return false;
             }
 
@@ -769,7 +779,7 @@ namespace Cli
                 //
                 if (options.RelationshipFields.Count() != 2)
                 {
-                    Console.WriteLine("Please provide the --relationship.fields in the correct format using ':' between source and target fields.");
+                    _logger.LogError("Please provide the --relationship.fields in the correct format using ':' between source and target fields.");
                     return null;
                 }
 
@@ -795,7 +805,7 @@ namespace Cli
         {
             if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
             {
-                Console.Error.WriteLine("Config not provided and default config file doesn't exist.");
+                _logger.LogError("Config not provided and default config file doesn't exist.");
                 return false;
             }
 
@@ -813,7 +823,7 @@ namespace Cli
             {
                 if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
                 {
-                    Console.WriteLine($"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}, see: " +
+                    _logger.LogError($"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}, see: " +
                         $"https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-7.0");
                     return false;
                 }

@@ -787,7 +787,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 bool isResultFieldNullable = element.GetProperty("is_nullable").GetBoolean();
 
                 // Store the dictionary containing result set field with it's type as Columns
-                storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType){ IsNullable = isResultFieldNullable});
+                storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType) { IsNullable = isResultFieldNullable });
             }
         }
 

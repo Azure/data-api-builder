@@ -1,6 +1,3 @@
-using Microsoft.Extensions.Logging;
-using Moq;
-
 namespace Cli.Tests;
 
 /// <summary>

@@ -5,8 +5,8 @@ using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
 using Humanizer;
-using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 using Microsoft.Extensions.Logging;
+using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>
 /// Contains the methods for transforming objects, serialization options.
@@ -265,7 +265,7 @@ namespace Cli
                 string[] map = item.Split(SEPARATOR);
                 if (map.Length != 2)
                 {
-                    _logger.LogError("Invalid format for --map." + 
+                    _logger.LogError("Invalid format for --map." +
                         "Acceptable format --map \"backendName1:exposedName1,backendName2:exposedName2,...\".");
                     return false;
                 }

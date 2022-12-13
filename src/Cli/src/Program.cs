@@ -1,6 +1,6 @@
 using CommandLine;
-using static Cli.Utils;
 using Microsoft.Extensions.Logging;
+using static Cli.Utils;
 
 namespace Cli
 {

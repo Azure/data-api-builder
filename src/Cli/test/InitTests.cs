@@ -19,7 +19,6 @@ namespace Cli.Tests
             ConfigGenerator.SetLoggerFactoryForCLi(configGeneratorLogger.Object, utilsLogger.Object);
         }
 
-
         /// <summary>
         /// Test the simple init config for mssql database. PG and MySQL should be similar.
         /// There is no need for a separate test.

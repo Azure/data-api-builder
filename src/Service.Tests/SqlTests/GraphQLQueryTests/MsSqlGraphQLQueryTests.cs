@@ -303,6 +303,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await TestStoredProcedureQueryForGettingTotalNumberOfRows(msSqlQuery);
         }
 
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that counts the total number of rows
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryWithResultsContainingNull()
+        {
+            string msSqlQuery = $"EXEC dbo.get_authors_history_by_first_name @firstName='Aaron'";
+            await TestStoredProcedureQueryWithResultsContainingNull(msSqlQuery);
+        }
+
         [TestMethod]
         public async Task TestQueryOnCompositeView()
         {

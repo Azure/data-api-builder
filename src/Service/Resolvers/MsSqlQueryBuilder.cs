@@ -201,7 +201,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
         {
             string query = "SELECT " +
-                            "name as result_field_name, system_type_name, column_ordinal " +
+                            "name as result_field_name, TYPE_NAME(system_type_id) as result_type, is_nullable " +
                             "FROM " +
                             "sys.dm_exec_describe_first_result_set_for_object (" +
                             $"OBJECT_ID('{databaseObjectName}'), 0) " +

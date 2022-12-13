@@ -783,10 +783,11 @@ namespace Azure.DataApiBuilder.Service.Services
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
             {
                 string resultFieldName = element.GetProperty("result_field_name").ToString();
-                Type resultFieldType = SqlToCLRType(element.GetProperty("system_type_name").ToString());
+                Type resultFieldType = SqlToCLRType(element.GetProperty("result_type").ToString());
+                bool isResultFieldNullable = element.GetProperty("is_nullable").GetBoolean();
 
                 // Store the dictionary containing result set field with it's type as Columns
-                storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType));
+                storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType){ IsNullable = isResultFieldNullable});
             }
         }
 

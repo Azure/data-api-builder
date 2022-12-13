@@ -1033,6 +1033,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Test to verify Stored Procedure can handle nullable result columns
+        /// </summary>
+        public async Task TestStoredProcedureQueryWithResultsContainingNull(string dbQuery)
+        {
+            string graphQLQueryName = "GetAuthorsHistoryByFirstName";
+            string graphQLQuery = @"{
+                GetAuthorsHistoryByFirstName(firstName: ""Aaron"") {
+                    author_name
+                    first_publish_year
+                    total_books_published
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery, false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// Query a composite view (contains columns from multiple tables)
         /// </summary>
         [TestMethod]

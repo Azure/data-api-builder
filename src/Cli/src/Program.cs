@@ -1,7 +1,6 @@
 using CommandLine;
 using static Cli.Utils;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 
 namespace Cli
 {
@@ -24,17 +23,37 @@ namespace Cli
                 }
             );
 
-            ILoggerFactory loggerFactory = LoggerFactory
-                .Create(builder =>
-                {
-                    builder.AddConsole(options => options.FormatterName = nameof(CustomLoggingFormatter))
-                        .AddConsoleFormatter<CustomLoggingFormatter, ConsoleFormatterOptions>();
-                });
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            // ILoggerFactory loggerFactory = LoggerFactory
+            //     .Create(builder =>
+            //     {
+            //         // For CLI, there won't be separate option to change LogLevel as we have for the engine
+            //         // CLI is set to LogLevel.Information, and it will display errors as well along with information.
+            //         LogLevel logLevel = LogLevel.Trace;
+            //         // Category defines the namespace we will log from
+            //         builder.AddFilter(category: "Microsoft", logLevel);
+            //         builder.AddFilter(category: "Cli", logLevel);
+            //         builder.AddFilter(category: "Default", logLevel);
+            //         builder.AddConsole();
+            //         // builder.AddSimpleConsole(formatterOptions =>{ 
+            //         //     formatterOptions.SingleLine = true;
+            //         // });
+            //         // builder.AddConsoleFormatter
+            //     });
+            
+            loggerFactory.AddProvider(new CustomLoggerProvider());
 
             ILogger<Program> cliLogger = loggerFactory.CreateLogger<Program>();
             ILogger<ConfigGenerator> configGeneratorLogger = loggerFactory.CreateLogger<ConfigGenerator>();
             ILogger<Utils> cliUtilsLogger = loggerFactory.CreateLogger<Utils>();
             ConfigGenerator.SetLoggerFactoryForCLi(configGeneratorLogger, cliUtilsLogger);
+
+            cliLogger.LogCritical("critical");
+            cliLogger.LogDebug("debug");
+            cliLogger.LogError("error");
+            cliLogger.LogInformation("information");
+            cliLogger.LogTrace("trace");
+            cliLogger.LogWarning("warning");
 
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
                 .WithParsed<InitOptions>(options =>

@@ -232,7 +232,7 @@ The following steps outline an alternative way of generating config files to ass
 
 1. The **ConfigGenerators** directory contains text files with DAB commands for each database type.
 2. Based on your choice of database, in the respective text file, update the **connection-string** property of the **init** command.
-3. Execute the command `dotnet build -p:generateConfigFiles=true` in the directory `data-api-builder\src` to build the project and generate the config file that can be used when starting DAB. The config files will be generated in the directory `data-api-builder\src\Service`.
+3. Execute the command `dotnet build -p:generateConfigFileForDbType=<database_type>` in the directory `data-api-builder\src` to build the project and generate the config file that can be used when starting DAB. The config file will be generated in the directory `data-api-builder\src\Service`. `MsSql`, `PostgreSql`,`Cosmos` and `MySql` are the values that can be used with `generateConfigFileForDbType`. Only the config file for the specified database type will be generated.
 4. DAB can be started using one of the various methods outlined in this document.
 
 #### Which configuration file is used?

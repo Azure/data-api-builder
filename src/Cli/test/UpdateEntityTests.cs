@@ -1575,7 +1575,7 @@ namespace Cli.Tests
         /// Test to verify Invalid inputs to create a relationship
         /// </summary>
         [DataTestMethod]
-        [DataRow("cosmos", "one", "MyEntity", DisplayName = "CosmosDb does not support relationships")]
+        [DataRow("cosmosdb_nosql", "one", "MyEntity", DisplayName = "CosmosDb does not support relationships")]
         [DataRow("mssql", null, "MyEntity", DisplayName = "Cardinality should not be null")]
         [DataRow("mssql", "manyx", "MyEntity", DisplayName = "Cardinality should be one/many")]
         [DataRow("mssql", "one", null, DisplayName = "Target entity should not be null")]

@@ -8,11 +8,12 @@
 The full list of release notes for this version is available here: [version 0.4.10 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.4.10-alpha)
 
 - [Public JSON Schema](./whats-new-0.4.10.md#public-json-schema)
-- [Updated `data-source` section for Cosmos DB]
-- [`database-type` value renamed for Cosmos DB]
-- [Managed Identity now supported with Postgres]
-- [AAD User Authentication now supported with MySQL]
+- [Updated JSON schema for `data-source` section](./whats-new-0.4.10.md#updated-json-schema-for-data-source-section)
 - [Support for filter on nested objects within a document in Azure SQL and SQL Server](./whats-new-0.4.10.md#support-for-filter-on-nested-objects-within-a-document-in-azure-sql-and-sql-server)
+- [`database-type` value renamed for Cosmos DB](./whats-new-0.4.10.md#database-type-value-renamed-for-cosmos-db)
+- [Renaming CLI properties for `cosmosdb_nosql](./whats-new-0.4.10.md#renaming-cli-properties-for-cosmosdb_nosql)
+- [Managed Identity now supported with Postgres](./whats-new-0.4.10.md#managed-identity-now-supported-with-postgres)
+- [Support AAD User authentication for Azure MySQL Service](./whats-new-0.4.10.md#support-aad-user-authentication-for-azure-mysql-service)
 
 ## Version 0.3.7
 

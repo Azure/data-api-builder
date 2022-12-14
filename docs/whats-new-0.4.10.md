@@ -21,13 +21,16 @@ Please note that if you are using DAB CLI to create and manage the `dab-config.j
 
 ## Support for filter on nested objects within a document in Azure SQL and SQL Server
 
-With Azure Cosmos DB, You can use the object or array relationship defined in your schema which enables to do filter operations on the nested objects.
+With Azure SQL and SQL Server, you can use the object or array relationship defined in your schema which enables to do filter operations on the nested objects.
 
 ```graphql
 query {
-  books(first: 1, filter : { author : { profile : { twitter : {eq : ""@founder""}}}})
-    id
-    name
+  books(filter: { series: { name: { eq: "Foundation" } } } ) {
+    items {
+      title
+      year
+      pages
+    }
   }
 }
 ```

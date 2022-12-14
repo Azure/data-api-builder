@@ -46,7 +46,7 @@ foreach($databaseType in $databaseTypes){
     }
     else{
         $commandFile = "CosmosCommands.txt";
-        $configFile = "dab-config.Cosmos.json";
+        $configFile = "dab-config.CosmosDb_NoSql.json";
     }
 
     # If a config file with the same name exists, it is deleted to avoid writing to

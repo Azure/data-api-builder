@@ -16,7 +16,7 @@ public class EndToEndTests
     public void TestInitForCosmosDBNoSql()
     {
         string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_nosql",
-                          "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "True", "--cosmosdb_nosql-database",
+                          "--connection-string", "localhost:5000", "--cosmosdb_nosql-database",
                           "graphqldb", "--cosmosdb_nosql-container", "planet", "--graphql-schema", "schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
 
@@ -30,7 +30,6 @@ public class EndToEndTests
         Assert.AreEqual("planet", runtimeConfig.DataSource.CosmosDbNoSql.Container);
         Assert.AreEqual("schema.gql", runtimeConfig.DataSource.CosmosDbNoSql.GraphQLSchemaPath);
         Assert.IsNotNull(runtimeConfig.RuntimeSettings);
-        Assert.AreEqual(true, runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated);
         JsonElement jsonRestSettings = (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Rest];
 
         RestGlobalSettings? restGlobalSettings = JsonSerializer.Deserialize<RestGlobalSettings>(jsonRestSettings, RuntimeConfig.SerializerOptions);
@@ -50,8 +49,7 @@ public class EndToEndTests
     public void TestInitForCosmosDBPostgreSql()
     {
         string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_postgresql",
-                          "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "True",
-                          "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
+                          "--connection-string", "localhost:5000", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -60,7 +58,6 @@ public class EndToEndTests
         Assert.AreEqual(DatabaseType.cosmosdb_postgresql, runtimeConfig.DatabaseType);
         Assert.IsNull(runtimeConfig.DataSource.CosmosDbPostgreSql);
         Assert.IsNotNull(runtimeConfig.RuntimeSettings);
-        Assert.AreEqual(true, runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated);
         JsonElement jsonRestSettings = (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Rest];
 
         RestGlobalSettings? restGlobalSettings = JsonSerializer.Deserialize<RestGlobalSettings>(jsonRestSettings, RuntimeConfig.SerializerOptions);
@@ -79,7 +76,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestAddEntity()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--host-mode", "development", "--database-type", "mssql", "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "false" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--host-mode", "development", "--database-type", "mssql", "--connection-string", "localhost:5000" };
         Program.Main(initArgs);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -90,7 +87,6 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
         Assert.AreEqual(HostModeType.Development, runtimeConfig.HostGlobalSettings.Mode);
-        Assert.AreEqual(false, runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated);
 
         string[] addArgs = {"add", "todo", "-c", _testRuntimeConfig, "--source", "s001.todo",
                             "--rest", "todo", "--graphql", "todo", "--permissions", "anonymous:*"};
@@ -424,7 +420,6 @@ public class EndToEndTests
     /// are caught before starting the engine.
     /// </summary>
     [DataRow(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE, true, DisplayName = "Correct Config")]
-    [DataRow(CONFIG_WITH_INVALID_DEVMODE_REQUEST_AUTH_TYPE, BASIC_ENTITY_WITH_ANONYMOUS_ROLE, false, DisplayName = "Invalid devmode auth request type")]
     [DataRow(INITIAL_CONFIG, SINGLE_ENTITY_WITH_INVALID_GRAPHQL_TYPE, false, DisplayName = "Invalid GraphQL type for entity")]
     [DataTestMethod]
     public void TestExitOfRuntimeEngineWithInvalidConfig(

@@ -197,11 +197,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return parameterList.Length > 0 ? parameterList[..^2] : parameterList;
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Builds the query to fetch result set details of stored-procedure.
+        /// result_field_name is the name of the result column.
+        /// result_type contains the sql type, i.e char,int,varchar. Using TYPE_NAME method
+        /// allows us to get the type without size constraints. example: TYPE_NAME for both
+        /// varchar(100) and varchar(max) would be varchar.
+        /// is_nullable is a boolean value to know if the result column is nullable or not.
+        /// </summary>
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
         {
             string query = "SELECT " +
-                            "name as result_field_name, system_type_name, column_ordinal " +
+                            "name as result_field_name, TYPE_NAME(system_type_id) as result_type, is_nullable " +
                             "FROM " +
                             "sys.dm_exec_describe_first_result_set_for_object (" +
                             $"OBJECT_ID('{databaseObjectName}'), 0) " +

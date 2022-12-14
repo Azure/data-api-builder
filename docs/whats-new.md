@@ -11,7 +11,7 @@ The full list of release notes for this version is available here: [version 0.4.
 - [Updated JSON schema for `data-source` section](./whats-new-0.4.10.md#updated-json-schema-for-data-source-section)
 - [Support for filter on nested objects within a document in Azure SQL and SQL Server](./whats-new-0.4.10.md#support-for-filter-on-nested-objects-within-a-document-in-azure-sql-and-sql-server)
 - [`database-type` value renamed for Cosmos DB](./whats-new-0.4.10.md#database-type-value-renamed-for-cosmos-db)
-- [Renaming CLI properties for `cosmosdb_nosql](./whats-new-0.4.10.md#renaming-cli-properties-for-cosmosdb_nosql)
+- [Renaming CLI properties for `cosmosdb_nosql`](./whats-new-0.4.10.md#renaming-cli-properties-for-cosmosdb_nosql)
 - [Managed Identity now supported with Postgres](./whats-new-0.4.10.md#managed-identity-now-supported-with-postgres)
 - [Support AAD User authentication for Azure MySQL Service](./whats-new-0.4.10.md#support-aad-user-authentication-for-azure-mysql-service)
 

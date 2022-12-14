@@ -4,7 +4,7 @@
 - [Updated JSON schema for `data-source` section](#updated-json-schema-for-data-source-section)
 - [Support for filter on nested objects within a document in Azure SQL and SQL Server](#support-for-filter-on-nested-objects-within-a-document-in-azure-sql-and-sql-server)
 - [`database-type` value renamed for Cosmos DB](#database-type-value-renamed-for-cosmos-db)
-- [Renaming CLI properties for `cosmosdb_nosql](#renaming-cli-properties-for-cosmosdb_nosql)
+- [Renaming CLI properties for `cosmosdb_nosql`](#renaming-cli-properties-for-cosmosdb_nosql)
 - [Managed Identity now supported with Postgres](#managed-identity-now-supported-with-postgres)
 - [Support AAD User authentication for Azure MySQL Service](#support-aad-user-authentication-for-azure-mysql-service)
 

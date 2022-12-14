@@ -669,7 +669,7 @@ namespace Cli
                 Console.Error.WriteLine("Stored Procedure supports only 1 CRUD operation.");
                 return false;
             }
-            
+
             return true;
         }
 

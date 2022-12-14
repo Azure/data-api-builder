@@ -647,7 +647,7 @@ namespace Cli
             PermissionSetting[] permissionSettings
         )
         {
-            foreach(PermissionSetting permissionSetting in permissionSettings)
+            foreach (PermissionSetting permissionSetting in permissionSettings)
             {
                 if (permissionSetting.Operations.Length > 1
                     || Operation.All.Equals(GetOperationName(permissionSetting.Operations.First())))
@@ -656,6 +656,7 @@ namespace Cli
                     return false;
                 }
             }
+
             return true;
         }
 

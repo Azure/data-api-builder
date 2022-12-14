@@ -976,29 +976,29 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow(SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" },
             null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, null, false, true,
-            DisplayName="PASS:Converting table to stored-procedure with parameters.")]
+            DisplayName = "PASS:Converting table to stored-procedure with parameters.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, new string[] { "col1", "col2" },
             SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "read" }, false, false,
-            DisplayName="FAIL:Converting table to stored-procedure with KeyFields.")]
+            DisplayName = "FAIL:Converting table to stored-procedure with KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, null,
-            true, false, DisplayName="FAIL:Converting table with all CRUD operation to stored-procedure.")]
+            true, false, DisplayName = "FAIL:Converting table with all CRUD operation to stored-procedure.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, new string[] { "id", "name" },
             SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, new string[] { "anonymous", "*" }, false, true,
-            DisplayName="PASS:Converting stored-procedure to table with KeyFields.")]
+            DisplayName = "PASS:Converting stored-procedure to table with KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "view", null, new string[] { "col1", "col2" },
             SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, new string[] { "anonymous", "*" }, false, true,
-            DisplayName="PASS:Converting stored-procedure to view with KeyFields.")]
+            DisplayName = "PASS:Converting stored-procedure to view with KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", new string[] { "param1:kind", "param2:true" },
             null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, null, false, false,
-            DisplayName="FAIL:Converting stored-procedure to table with parameters.")]
+            DisplayName = "FAIL:Converting stored-procedure to table with parameters.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, null,
-            true, true, DisplayName="PASS:Converting stored-procedure to table with no parameters or KeyFields.")]
+            true, true, DisplayName = "PASS:Converting stored-procedure to table with no parameters or KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", null, new string[] { "col1", "col2" },
             SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, null, false, true,
-            DisplayName="PASS:Converting table to view with KeyFields.")]
+            DisplayName = "PASS:Converting table to view with KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", new string[] { "param1:kind", "param2:true" }, null,
             SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, null, false, false,
-            DisplayName="FAIL:Converting table to view with parameters.")]
+            DisplayName = "FAIL:Converting table to view with parameters.")]
         public void TestConversionOfSourceObject(
             string initialSourceObjectEntity,
             string sourceType,

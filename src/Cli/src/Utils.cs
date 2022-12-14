@@ -640,6 +640,39 @@ namespace Cli
         }
 
         /// <summary>
+        /// This method checks that every role specified for stored-procedure entity
+        /// has only one CRUD operation.
+        /// </summary>
+        public static bool VerifyPermissionOperationsForStoredProcedures(
+            PermissionSetting[] permissionSettings
+        )
+        {
+            foreach(PermissionSetting permissionSetting in permissionSettings)
+            {
+                if (permissionSetting.Operations.Length > 1
+                    || Operation.All.Equals(GetOperationName(permissionSetting.Operations.First())))
+                {
+                    Console.Error.WriteLine("Stored Procedure supports only 1 CRUD operation.");
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public static Operation GetOperationName(object operation)
+        {
+            JsonElement operationJson = JsonSerializer.SerializeToElement(operation);
+            if (operationJson.ValueKind is JsonValueKind.String)
+            {
+                TryConvertOperationNameToOperation(operationJson.GetString()!, out Operation op);
+                return op;
+            }
+
+            PermissionOperation action = JsonSerializer.Deserialize<PermissionOperation>(operationJson)!;
+            return action.Name;
+        }
+
+        /// <summary>
         /// Converts string into either integer, double, or boolean value.
         /// If the given string is neither of the above, it returns as string.
         /// </summary>

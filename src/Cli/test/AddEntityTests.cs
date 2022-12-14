@@ -170,7 +170,7 @@ namespace Cli.Tests
         {
             AddOptions options = new(
                 source: "s001.book",
-                permissions: new string[] { "anonymous", "*" },
+                permissions: new string[] { "anonymous", "read" },
                 entity: "MyEntity",
                 sourceType: "stored-procedure",
                 sourceParameters: new string[] { "param1:123", "param2:hello", "param3:true" },

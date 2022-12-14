@@ -27,7 +27,7 @@ namespace Cli
             // File existence checked to avoid overwriting the existing configuration.
             if (File.Exists(runtimeConfigFile))
             {
-                Console.Error.Write($"Config file: {runtimeConfigFile} already exists. " +
+                Console.Error.WriteLine($"Config file: {runtimeConfigFile} already exists. " +
                     "Please provide a different name or remove the existing config file.");
                 return false;
             }
@@ -35,7 +35,7 @@ namespace Cli
             // Creating a new json file with runtime configuration
             if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
             {
-                Console.Error.Write($"Failed to create the runtime config file.");
+                Console.Error.WriteLine($"Failed to create the runtime config file.");
                 return false;
             }
 
@@ -138,13 +138,13 @@ namespace Cli
 
             if (!TryReadRuntimeConfig(runtimeConfigFile, out string runtimeConfigJson))
             {
-                Console.Error.Write($"Failed to read the config file: {runtimeConfigFile}.");
+                Console.Error.WriteLine($"Failed to read the config file: {runtimeConfigFile}.");
                 return false;
             }
 
             if (!TryAddNewEntity(options, ref runtimeConfigJson))
             {
-                Console.Error.Write("Failed to add a new entity.");
+                Console.Error.WriteLine("Failed to add a new entity.");
                 return false;
             }
 
@@ -303,7 +303,7 @@ namespace Cli
             string? role, operations;
             if (!TryGetRoleAndOperationFromPermission(permissions, out role, out operations))
             {
-                Console.Error.Write($"Failed to fetch the role and operation from the given permission string: {string.Join(SEPARATOR, permissions.ToArray())}.");
+                Console.Error.WriteLine($"Failed to fetch the role and operation from the given permission string: {string.Join(SEPARATOR, permissions.ToArray())}.");
                 return null;
             }
 
@@ -338,13 +338,12 @@ namespace Cli
 
             if (!TryReadRuntimeConfig(runtimeConfigFile, out string runtimeConfigJson))
             {
-                Console.Error.Write($"Failed to read the config file: {runtimeConfigFile}.");
+                Console.Error.WriteLine($"Failed to read the config file: {runtimeConfigFile}.");
                 return false;
             }
 
             if (!TryUpdateExistingEntity(options, ref runtimeConfigJson))
             {
-                Console.Error.Write($"Failed to update the Entity: {options.Entity}.");
                 return false;
             }
 
@@ -405,12 +404,12 @@ namespace Cli
                 Console.WriteLine("WARNING: Disabling GraphQL for this entity will restrict it's usage in relationships");
             }
 
-            SourceType sourceType = ((DatabaseObjectSource)updatedSource).Type;
+            SourceType updatedSourceType = SourceTypeEnumConverter.GetSourceTypeFromSource(updatedSource);
 
             if (options.Permissions is not null && options.Permissions.Any())
             {
                 // Get the Updated Permission Settings
-                updatedPermissions = GetUpdatedPermissionSettings(entity, options.Permissions, updatedPolicy, updatedFields, sourceType);
+                updatedPermissions = GetUpdatedPermissionSettings(entity, options.Permissions, updatedPolicy, updatedFields, updatedSourceType);
 
                 if (updatedPermissions is null)
                 {
@@ -431,6 +430,12 @@ namespace Cli
                 if (options.PolicyRequest is not null || options.PolicyDatabase is not null)
                 {
                     Console.WriteLine($"--permissions is mandatory with --policy-request and --policy-database.");
+                    return false;
+                }
+
+                if (updatedSourceType is SourceType.StoredProcedure &&
+                    !VerifyPermissionOperationsForStoredProcedures(entity.Permissions))
+                {
                     return false;
                 }
             }
@@ -497,7 +502,7 @@ namespace Cli
             //
             if (!TryGetRoleAndOperationFromPermission(permissions, out newRole, out newOperations))
             {
-                Console.Error.Write($"Failed to fetch the role and operation from the given permission string: {permissions}.");
+                Console.Error.WriteLine($"Failed to fetch the role and operation from the given permission string: {permissions}.");
                 return null;
             }
 

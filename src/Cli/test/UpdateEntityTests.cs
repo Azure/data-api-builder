@@ -814,14 +814,15 @@ namespace Cli.Tests
         /// Simple test to verify success on updating a source from string to source object for valid fields.
         /// </summary>
         [DataTestMethod]
-        [DataRow("s001.book", null, null, null, "UpdateSourceName", DisplayName = "Both KeyFields and Parameters provided for source.")]
-        [DataRow(null, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" }, null, "ConvertToStoredProcedure", DisplayName = "SourceParameters with stored procedure.")]
-        [DataRow(null, "view", null, new string[] { "col1", "col2" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
-        [DataRow(null, "table", null, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
-        [DataRow(null, null, null, new string[] { "id", "name" }, "ConvertToDefaultType", DisplayName = "Source KeyFields with SourceType not provided")]
+        [DataRow("s001.book", null, new string[] { "anonymous", "*" }, null, null, "UpdateSourceName", DisplayName = "Both KeyFields and Parameters provided for source.")]
+        [DataRow(null, "stored-procedure", null, new string[] { "param1:123", "param2:hello", "param3:true" }, null, "ConvertToStoredProcedure", DisplayName = "SourceParameters with stored procedure.")]
+        [DataRow(null, "view", null, null, new string[] { "col1", "col2" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
+        [DataRow(null, "table", null, null, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
+        [DataRow(null, null, null, null, new string[] { "id", "name" }, "ConvertToDefaultType", DisplayName = "Source KeyFields with SourceType not provided")]
         public void TestUpdateSourceStringToDatabaseSourceObject(
             string? source,
             string? sourceType,
+            string[]? permissions,
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields,
             string task)
@@ -829,7 +830,7 @@ namespace Cli.Tests
 
             UpdateOptions options = new(
                 source: source,
-                permissions: new string[] { "anonymous", "*" },
+                permissions: permissions,
                 entity: "MyEntity",
                 sourceType: sourceType,
                 sourceParameters: parameters,
@@ -860,6 +861,7 @@ namespace Cli.Tests
                     expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
                     break;
                 case "ConvertToStoredProcedure":
+                    actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION);
                     expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
                     break;
                 case "ConvertToView":
@@ -889,7 +891,7 @@ namespace Cli.Tests
         {
             UpdateOptions options = new(
                 source: source,
-                permissions: new string[] { "anonymous", "*" },
+                permissions: new string[] { "anonymous", "read" },
                 entity: "MyEntity",
                 sourceType: null,
                 sourceParameters: parameters,
@@ -969,38 +971,47 @@ namespace Cli.Tests
         /// Converts one source object type to another.
         /// Also testing automatic update for parameter and keyfields to null in case
         /// of table/view, and stored-procedure respectively.
+        /// Updating Table with all supported CRUD action to Stored-Procedure should fail.
         /// </summary>
         [DataTestMethod]
-        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" },
-            null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, false, true)]
+        [DataRow(SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" },
+            null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, null, false, true,
+            DisplayName="PASS:Converting table to stored-procedure with parameters.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, new string[] { "col1", "col2" },
-            SINGLE_ENTITY_WITH_STORED_PROCEDURE, false, false)]
-        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, null, SINGLE_ENTITY_WITH_STORED_PROCEDURE,
-            true, true)]
+            SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "read" }, false, false,
+            DisplayName="FAIL:Converting table to stored-procedure with KeyFields.")]
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, null,
+            true, false, DisplayName="FAIL:Converting table with all CRUD operation to stored-procedure.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, new string[] { "id", "name" },
-            SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, false, true)]
+            SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, new string[] { "anonymous", "*" }, false, true,
+            DisplayName="PASS:Converting stored-procedure to table with KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "view", null, new string[] { "col1", "col2" },
-            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, false, true)]
+            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, new string[] { "anonymous", "*" }, false, true,
+            DisplayName="PASS:Converting stored-procedure to view with KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", new string[] { "param1:kind", "param2:true" },
-            null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, false, false)]
-        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE,
-            true, true)]
+            null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, null, false, false,
+            DisplayName="FAIL:Converting stored-procedure to table with parameters.")]
+        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, null,
+            true, true, DisplayName="PASS:Converting stored-procedure to table with no parameters or KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", null, new string[] { "col1", "col2" },
-            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, false, true)]
+            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, null, false, true,
+            DisplayName="PASS:Converting table to view with KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", new string[] { "param1:kind", "param2:true" }, null,
-            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, false, false)]
+            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, null, false, false,
+            DisplayName="FAIL:Converting table to view with parameters.")]
         public void TestConversionOfSourceObject(
             string initialSourceObjectEntity,
             string sourceType,
             IEnumerable<string>? parameters,
             string[]? keyFields,
             string updatedSourceObjectEntity,
+            string[]? permissions,
             bool expectNoKeyFieldsAndParameters,
             bool expectSuccess)
         {
             UpdateOptions options = new(
                 source: "s001.book",
-                permissions: new string[] { "anonymous", "*" },
+                permissions: permissions,
                 entity: "MyEntity",
                 sourceType: sourceType,
                 sourceParameters: parameters,

@@ -427,7 +427,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsNotNull(configuration, "TryGetRuntimeConfiguration should set the config in the out parameter.");
             Assert.IsTrue(isConfigSet, "TryGetRuntimeConfiguration should return true when the config is set.");
 
-            Assert.AreEqual(DatabaseType.cosmos, configuration.DatabaseType, "Expected cosmos database type after configuring the runtime with cosmos settings.");
+            Assert.AreEqual(DatabaseType.cosmosdb_nosql, configuration.DatabaseType, "Expected cosmos database type after configuring the runtime with cosmos settings.");
             Assert.AreEqual(config.Schema, configuration.DataSource.CosmosDbNoSql.GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
             Assert.AreEqual(config.ConnectionString, configuration.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
             string db = configProvider.GetRuntimeConfiguration().DataSource.CosmosDbNoSql.Database;

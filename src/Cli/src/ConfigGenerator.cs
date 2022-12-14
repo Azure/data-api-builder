@@ -58,7 +58,6 @@ namespace Cli
 
             switch (dbType)
             {
-                case DatabaseType.cosmos:
                 case DatabaseType.cosmosdb_nosql:
                     string? cosmosDatabase = options.CosmosNoSqlDatabase;
                     string? cosmosContainer = options.CosmosNoSqlContainer;
@@ -696,9 +695,9 @@ namespace Cli
         public static bool VerifyCanUpdateRelationship(RuntimeConfig runtimeConfig, string? cardinality, string? targetEntity)
         {
             // CosmosDB doesn't support Relationship
-            if (runtimeConfig.DataSource.DatabaseType.Equals(DatabaseType.cosmos))
+            if (runtimeConfig.DataSource.DatabaseType.Equals(DatabaseType.cosmosdb_nosql))
             {
-                Console.Error.WriteLine("Adding/updating Relationships is currently not supported in CosmosDB.");
+                Console.Error.WriteLine("Adding/updating Relationships is currently not supported in CosmosDB_NoSql.");
                 return false;
             }
 

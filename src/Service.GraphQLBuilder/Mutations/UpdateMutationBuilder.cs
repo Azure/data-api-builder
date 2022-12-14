@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
             // When updating, you don't need to provide the data for nested models, but you will for other nested types
             // For cosmos, allow updating nested objects
-            if (definition is not null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType) && databaseType is not DatabaseType.cosmos)
+            if (definition is not null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType) && databaseType is not DatabaseType.cosmosdb_nosql)
             {
                 return false;
             }
@@ -96,7 +96,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 /// There is a different between Cosmos and relational databases on generating required simple field types for update mutations.
                 /// Cosmos is calling replace item whereas for sql is doing incremental update.
                 /// That's why sql allows nullable update input fields even for non-nullable simple fields. 
-                (databaseType == DatabaseType.cosmos) ? f.Type : f.Type.NullableType(),
+                (databaseType == DatabaseType.cosmosdb_nosql) ? f.Type : f.Type.NullableType(),
                 defaultValue: null,
                 new List<DirectiveNode>()
             );

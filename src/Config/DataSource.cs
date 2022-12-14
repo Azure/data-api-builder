@@ -41,7 +41,6 @@ namespace Azure.DataApiBuilder.Config
 
             switch (DatabaseType)
             {
-                case DatabaseType.cosmos:
                 case DatabaseType.cosmosdb_nosql:
                     CosmosDbNoSql = ((JsonElement)DbOptions).Deserialize<CosmosDbOptions>(RuntimeConfig.SerializerOptions)!;
                     break;
@@ -117,7 +116,6 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     public enum DatabaseType
     {
-        cosmos,
         cosmosdb_postgresql,
         cosmosdb_nosql,
         mssql,

@@ -69,7 +69,7 @@ the `dab-config.json` file will look like the following:
 }
 ```
 
-The `parameters` object is optional, and is used to provide default values to be passed to the stored procedure parameters, if those are not provided in the HTTP request.
+The `parameters` defines which parameters should be exposed and to provide default values to be passed to the stored procedure parameters, if those are not provided in the HTTP request.
 
 **ATTENTION**:
 1. Only the first result set returned by the stored procedure will be used by Data API Builder.
@@ -92,4 +92,22 @@ If a parameter is specified both in the configuration file and in the URL query 
 
 ### GraphQL support for stored procedures
 
-Stored procedure are not supported, at the moment, in GraphQL. No query or mutation will be generated for an entity based on a stored procedure.
+Just like for REST, entities backed by a stored procedure, do not have all the capabilities automatically provided for entities backed by tables, collections or views. An entity using a stored procedure will not have support for pagination, ordering, filtering or for returning an item by specifying the primary key values.
+
+Depending on the `action` defined in the configuration file a GraphQL query object will be generated - if `read` action has been specified - or a mutation object will be created - if `create`, `update` or `delete` action has been specified.
+
+If the stored procedure accepts parameters, those can be passed as parameter of the query or mutation. For example:
+
+```graphql
+query {
+  GetCowrittenBooksByAuthor(author:"asimov")
+   {
+    id
+    title
+    pages
+    year
+  }
+}
+```
+
+If a parameter is specified both in the configuration file and in the URL query string, the one in the URL query string will take precedence.

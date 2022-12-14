@@ -124,7 +124,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             string? configFileName = configPath?.ConfigFileName;
             string? runtimeConfigJson = GetRuntimeConfigJsonString(configFileName);
-
+            Console.WriteLine(configFileName);
+            Console.WriteLine(runtimeConfigJson);
             if (!string.IsNullOrEmpty(runtimeConfigJson) &&
                 RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     runtimeConfigJson,
@@ -232,7 +233,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
             }
 
-            Console.WriteLine("Trying to load from config from a string");
             if (RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     configuration,
                     out RuntimeConfig? runtimeConfig,
@@ -242,14 +242,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName(ConfigProviderLogger);
                 RuntimeConfiguration!.ConnectionString = connectionString;
 
-                if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmosdb_nosql)
+                if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmos)
                 {
                     if (string.IsNullOrEmpty(schema))
                     {
                         throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
                     }
 
-                    CosmosDbNoSqlOptions? cosmosDb = RuntimeConfiguration.DataSource.CosmosDbNoSql! with { GraphQLSchema = schema };
+                    CosmosDbOptions? cosmosDb = RuntimeConfiguration.DataSource.CosmosDbNoSql! with { GraphQLSchema = schema };
 
                     if (!string.IsNullOrEmpty(database))
                     {

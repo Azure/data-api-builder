@@ -124,8 +124,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             string? configFileName = configPath?.ConfigFileName;
             string? runtimeConfigJson = GetRuntimeConfigJsonString(configFileName);
-            Console.WriteLine(configFileName);
-            Console.WriteLine(runtimeConfigJson);
             if (!string.IsNullOrEmpty(runtimeConfigJson) &&
                 RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     runtimeConfigJson,

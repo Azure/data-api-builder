@@ -150,7 +150,7 @@ namespace Cli.Tests
                     ""options"": {
                         ""database"": ""testdb"",
                         ""container"": ""testcontainer"",
-                        ""schema"": ""schemafile""
+                        ""graphql-schema"": ""schemafile""
                     }
                 },
                 ""entities"": {}

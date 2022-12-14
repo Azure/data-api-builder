@@ -51,14 +51,14 @@
                 "description": "Name of the container",
                 "type": "string"
               },
-              "schema": {
+              "graphql-schema": {
                 "description": "Path to the GraphQL schema file",
                 "type": "string"
               }
             },
             "required": [
               "database",
-              "schema"
+              "graphql-schema"
             ]
           }
         },

@@ -304,7 +304,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Test to execute stored-procedure in graphQL that counts the total number of rows
+        /// Test to execute stored-procedure in graphQL that contains null in the result set.
         /// </summary>
         [TestMethod]
         public async Task TestStoredProcedureQueryWithResultsContainingNull()

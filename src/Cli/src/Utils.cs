@@ -398,9 +398,8 @@ namespace Cli
 
             // Currently, Stored Procedures can be configured with only 1 CRUD Operation.
             if (sourceType is SourceType.StoredProcedure
-                    && (operations.Length > 1 || WILDCARD.Equals(operations.First())))
+                    && !VerifySingleOperationForStoredProcedure(operations))
             {
-                Console.Error.WriteLine("Only one CRUD operation supported for stored-procedures.");
                 return false;
             }
 
@@ -641,19 +640,16 @@ namespace Cli
         }
 
         /// <summary>
-        /// This method checks that every role specified for stored-procedure entity
-        /// has only one CRUD operation.
+        /// This method loops through every role specified for stored-procedure entity
+        ///  and checks if it has only one CRUD operation.
         /// </summary>
         public static bool VerifyPermissionOperationsForStoredProcedures(
-            PermissionSetting[] permissionSettings
-        )
+            PermissionSetting[] permissionSettings)
         {
             foreach (PermissionSetting permissionSetting in permissionSettings)
             {
-                if (permissionSetting.Operations.Length > 1
-                    || Operation.All.Equals(GetOperationName(permissionSetting.Operations.First())))
+                if (!VerifySingleOperationForStoredProcedure(permissionSetting.Operations))
                 {
-                    Console.Error.WriteLine("Stored Procedure supports only 1 CRUD operation.");
                     return false;
                 }
             }
@@ -661,6 +657,26 @@ namespace Cli
             return true;
         }
 
+        /// <summary>
+        /// This method checks that stored-procedure entity
+        /// has only one CRUD operation.
+        /// </summary>
+        private static bool VerifySingleOperationForStoredProcedure(object[] operations)
+        {
+            if (operations.Length > 1
+                || Operation.All.Equals(GetOperationName(operations.First())))
+            {
+                Console.Error.WriteLine("Stored Procedure supports only 1 CRUD operation.");
+                return false;
+            }
+            
+            return true;
+        }
+
+        /// <summary>
+        /// Checks if the operation is string or PermissionOperation object
+        /// and return the operation name accordingly.
+        /// </summary>
         public static Operation GetOperationName(object operation)
         {
             JsonElement operationJson = JsonSerializer.SerializeToElement(operation);

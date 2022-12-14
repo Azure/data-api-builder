@@ -25,7 +25,7 @@ With Azure SQL and SQL Server, you can use the object or array relationship defi
 
 ```graphql
 query {
-  books(filter: { series: { name: { eq: "Foundation" } } } ) {
+  books(filter: { series: { name: { eq: "Foundation" } } }) {
     items {
       title
       year
@@ -35,3 +35,41 @@ query {
 }
 ```
 
+## Updated data-source section for Cosmos DB APIs
+
+We've consolidated the custom database configuration options into the `data-source` section in the configuration file which enables options related to database connections as one object to make it easier to identify and manage.
+
+```json
+{
+  "$schema": "dab.draft.schema.json",
+  "data-source": {
+    "database-type": "cosmosdb_nosql",
+    "options": {
+      "database": "PlaygroundDB",
+      "graphql-schema": "schema.gql"
+    },
+    "connection-string": "AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;"
+  }
+}
+```
+
+## Renamed `database-type` value for Cosmos DB
+
+We've added support for PostgreSQL API with Cosmos DB. With a consolidated `data-source` section, the attribute `database-type` will denote the type of database. Since Cosmos DB supports multiple APIs, the
+currently supported database types are 'cosmosdb-nosql' and 'cosmosdb-postgresql'.
+
+```json
+  "data-source": {
+    "database-type": "cosmosdb-nosql",
+    "options": {
+      "database": "PlaygroundDB",
+      "graphql-schema": "schema.gql"
+    }
+  }
+```
+
+Based on this configuration, now CLI properties are renamed accordingly as `cosmosdb_nosql-database` and `cosmosdb_nosql-container` for Cosmos DB NoSQL API.
+
+```bash
+dab init --database-type "cosmosdb_nosql" --graphql-schema schema.gql --cosmosdb_nosql-database PlaygroundDB  --cosmosdb_nosql-container "books" --connection-string "AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;" --host-mode "Development"
+```

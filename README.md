@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Latest version of Data API builder is  **0.3.7** (aka **Oct2022** release) [What's new?](./docs/whats-new.md#version-037)
+Latest version of Data API builder is  **0.4.10** [What's new?](./docs/whats-new.md#version-0410)
 
 ## About
 
@@ -18,10 +18,10 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 - Support authentication via JWT and EasyAuth
 - Role-based authorization using received claims
 - Item-level security via policy expressions
-- REST 
+- REST
   - CRUD operations via POST, GET, PUT, PATCH, DELETE
   - filtering, sorting and pagination
-- GraphQL 
+- GraphQL
   - queries and mutations
   - filtering, sorting and pagination
   - relationship navigation
@@ -30,7 +30,6 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 ## Limitations
 
 - JWT only supports Azure AD
-- MySQL, MariaDB and PostgreSQL are not yet fully supported
 
 ## Known Issues
 

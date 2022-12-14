@@ -46,7 +46,7 @@ steps:
   inputs:
     command: build
     projects: '**/*.csproj'
-    arguments: '-p:generateConfigFile=Cosmos --configuration $(buildConfiguration)' # Update this to match your need
+    arguments: '-p:generateConfigFileForDbType=Cosmos --configuration $(buildConfiguration)' # Update this to match your need
 
 - task: FileTransform@1.206.0
   displayName: 'Generate dab-config.Cosmos.json'

@@ -70,5 +70,5 @@ We've added the support for PostgreSQL API with Cosmos DB. With the consolidated
 Based on this configuration, now CLI properties are renamed accordingly as `cosmosdb_nosql-database` and `cosmosdb_nosql-container` for Cosmos DB NOSQL API.
 
 ```bash
-init --database-type "cosmos" --graphql-schema schema.gql --cosmosdb_nosql-database PlaygroundDB  --connection-string "AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;" --host-mode "Development"
+dab nit --database-type "cosmosdb_nosql" --graphql-schema schema.gql --cosmosdb_nosql-database PlaygroundDB  --cosmosdb_nosql-container "books" --connection-string "AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;" --host-mode "Development"
 ```

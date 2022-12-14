@@ -65,11 +65,13 @@ namespace Cli.Tests
                 config: _testRuntimeConfig,
                 devModeDefaultAuth: "true");
 
-            try{
+            try
+            {
                 string runtimeConfigJson;
                 ConfigGenerator.TryCreateRuntimeConfig(options, out runtimeConfigJson);
             }
-            catch (Exception ex){
+            catch (Exception ex)
+            {
                 Assert.AreEqual($"DatabaseType: cosmos not supported.Please provide a valid database-type.", ex.Message);
             }
         }

@@ -989,7 +989,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery, false);
+            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -1009,7 +1009,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery, false);
+            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -1027,7 +1027,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery, false);
+            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Test to verify Stored Procedure can handle nullable result columns
+        /// The result will contain a row which has columns containing null value.
+        /// Columns:[first_publish_year and total_books_published] in the result set are nullable.
+        /// </summary>
+        public async Task TestStoredProcedureQueryWithResultsContainingNull(string dbQuery)
+        {
+            string graphQLQueryName = "GetAuthorsHistoryByFirstName";
+            string graphQLQuery = @"{
+                GetAuthorsHistoryByFirstName(firstName: ""Aaron"") {
+                    author_name
+                    first_publish_year
+                    total_books_published
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }

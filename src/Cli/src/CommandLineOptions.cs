@@ -48,7 +48,7 @@ namespace Cli
             DevModeDefaultAuth = devModeDefaultAuth;
         }
 
-        [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmos, mysql, postgresql")]
+        [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, mysql, postgresql, cosmosdb_postgresql and cosmosdb_nosql.")]
         public DatabaseType DatabaseType { get; }
 
         [Option("connection-string", Required = false, HelpText = "(Default: '') Connection details to connect to the database.")]

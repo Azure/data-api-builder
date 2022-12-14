@@ -58,7 +58,6 @@ namespace Cli
 
             switch (dbType)
             {
-                case DatabaseType.cosmos:
                 case DatabaseType.cosmosdb_nosql:
                     string? cosmosDatabase = options.CosmosNoSqlDatabase;
                     string? cosmosContainer = options.CosmosNoSqlContainer;
@@ -78,7 +77,7 @@ namespace Cli
                 case DatabaseType.cosmosdb_postgresql:
                     break;
                 default:
-                    throw new Exception($"DatabaseType: ${dbType} not supported.Please provide a valid database-type.");
+                    throw new Exception($"DatabaseType: {dbType} not supported.Please provide a valid database-type.");
             }
 
             DataSource dataSource = new(dbType, DbOptions: cosmosDbNoSqlOptions);

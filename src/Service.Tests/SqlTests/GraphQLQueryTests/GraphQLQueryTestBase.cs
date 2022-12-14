@@ -989,7 +989,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -1009,7 +1009,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -1027,7 +1027,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -1049,7 +1049,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }

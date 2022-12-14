@@ -52,7 +52,7 @@ namespace Cli.Tests
         /// Test the simple init config for cosmos database.
         /// </summary>
         [TestMethod]
-        public void CosmoslDatabase()
+        public void CosmosDatabase()
         {
             InitOptions options = new(
                 databaseType: DatabaseType.cosmos,

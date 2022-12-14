@@ -967,7 +967,7 @@ namespace Cli.Tests
 
         /// <summary>
         /// Converts one source object type to another.
-        /// Also testing automatic update for parameter and keyfield to null in case
+        /// Also testing automatic update for parameter and keyfields to null in case
         /// of table/view, and stored-procedure respectively.
         /// </summary>
         [DataTestMethod]
@@ -1393,20 +1393,23 @@ namespace Cli.Tests
         /// Simple test to verify failure on updating source of an entity with invalid fields.
         /// </summary>
         [DataTestMethod]
-        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, DisplayName = "Both KeyFields and Parameters provided for source.")]
-        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, DisplayName = "KeyFields with stored procedure.")]
-        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, DisplayName = "Parameters with duplicate keys for stored procedure.")]
-        [DataRow("view", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with View")]
-        [DataRow("table", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with Table")]
-        [DataRow("table-view", new string[] { "param1:value1" }, null, DisplayName = "Invalid Source Type.")]
+        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "*", DisplayName = "Both KeyFields and Parameters provided for source.")]
+        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, "create", DisplayName = "KeyFields with stored procedure.")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, "read", DisplayName = "Parameters with duplicate keys for stored procedure.")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "create,read", DisplayName = "Stored procedure with more than 1 CRUD operations.")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "*", DisplayName = "Stored procedure with all CRUD operations.")]
+        [DataRow("view", new string[] { "param1:value1" }, null, "*", DisplayName = "Source Parameters with View")]
+        [DataRow("table", new string[] { "param1:value1" }, null, "*", DisplayName = "Source Parameters with Table")]
+        [DataRow("table-view", new string[] { "param1:value1" }, null, "*", DisplayName = "Invalid Source Type.")]
         public void TestUpdateSourceObjectWithInvalidFields(
             string? sourceType,
             IEnumerable<string>? parameters,
-            IEnumerable<string>? keyFields)
+            IEnumerable<string>? keyFields,
+            string operations)
         {
             UpdateOptions options = new(
                 source: "MyTable",
-                permissions: new string[] { "anonymous", "*,create,read" },
+                permissions: new string[] { "anonymous", operations },
                 entity: "MyEntity",
                 sourceType: sourceType,
                 sourceParameters: parameters,

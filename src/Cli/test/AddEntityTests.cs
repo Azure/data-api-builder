@@ -192,27 +192,29 @@ namespace Cli.Tests
         /// Simple test to verify success on adding a new entity with source object for valid fields.
         /// </summary>
         [DataTestMethod]
-        [DataRow(null, null, null, true, DisplayName = "Both KeyFields and Parameters not provided for source.")]
-        [DataRow("stored-procedure", new string[] { "param1:value1" }, null, true, DisplayName = "SourceParameters with stored procedure.")]
-        [DataRow("Stored-Procedure", new string[] { "param1:value1" }, null, true, DisplayName = "SourceParameters with stored procedure Case Insensitive.")]
-        [DataRow("view", null, new string[] { "col1", "col2" }, true, DisplayName = "Source KeyFields with View")]
-        [DataRow("table", null, new string[] { "col1", "col2" }, true, DisplayName = "Source KeyFields with Table")]
-        [DataRow(null, null, new string[] { "col1", "col2" }, true, DisplayName = "Source KeyFields with SourceType not provided")]
-        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, false, DisplayName = "Both KeyFields and Parameters provided for source.")]
-        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, false, DisplayName = "KeyFields with stored procedure.")]
-        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, false, DisplayName = "Parameters with duplicate keys for stored procedure.")]
-        [DataRow("view", new string[] { "param1:value1" }, null, false, DisplayName = "Source Parameters with View")]
-        [DataRow("table", new string[] { "param1:value1" }, null, false, DisplayName = "Source Parameters with Table")]
-        [DataRow("table-view", new string[] { "param1:value1" }, null, false, DisplayName = "Invalid Source Type.")]
+        [DataRow(null, null, null, "*", true, DisplayName = "Both KeyFields and Parameters not provided for source.")]
+        [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "create", true, DisplayName = "SourceParameters with stored procedure.")]
+        [DataRow("Stored-Procedure", new string[] { "param1:value1" }, null, "read", true, DisplayName = "SourceParameters with stored procedure Case Insensitive.")]
+        [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Stored procedure with all CRUD action.")]
+        [DataRow("view", null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields with View")]
+        [DataRow("table", null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields with Table")]
+        [DataRow(null, null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields with SourceType not provided")]
+        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "*", false, DisplayName = "Both KeyFields and Parameters provided for source.")]
+        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, "*", false, DisplayName = "KeyFields with stored procedure.")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, "*", false, DisplayName = "Parameters with duplicate keys for stored procedure.")]
+        [DataRow("view", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Source Parameters with View")]
+        [DataRow("table", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Source Parameters with Table")]
+        [DataRow("table-view", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Invalid Source Type.")]
         public void TestAddNewEntityWithSourceObjectHavingValidFields(
             string? sourceType,
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields,
+            string operations,
             bool expectSuccess)
         {
             AddOptions options = new(
                 source: "testSource",
-                permissions: new string[] { "anonymous", "*" },
+                permissions: new string[] { "anonymous", operations },
                 entity: "book",
                 sourceType: sourceType,
                 sourceParameters: parameters,

@@ -384,7 +384,7 @@ namespace Cli
         /// </summary>
         /// <param name="operations">array of string containing operations for permissions</param>
         /// <returns>True if no invalid operation is found.</returns>
-        public static bool VerifyOperations(string[] operations)
+        public static bool VerifyOperations(string[] operations, SourceType sourceType)
         {
             // Check if there are any duplicate operations
             // Ex: read,read,create
@@ -392,6 +392,14 @@ namespace Cli
             if (uniqueOperations.Count() != operations.Length)
             {
                 Console.Error.WriteLine("Duplicate action found in --permissions");
+                return false;
+            }
+
+            // Currently, Stored Procedures can be configured with only 1 CRUD Operation.
+            if (sourceType is SourceType.StoredProcedure 
+                    && (operations.Length > 1 || WILDCARD.Equals(operations.First())))
+            {
+                Console.Error.WriteLine("Only one CRUD operation supported for stored-procedures.");
                 return false;
             }
 

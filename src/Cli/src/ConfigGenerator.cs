@@ -185,22 +185,22 @@ namespace Cli
                 return false;
             }
 
-            Policy? policy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
-            Field? field = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
-
-            PermissionSetting[]? permissionSettings = ParsePermission(options.Permissions, policy, field);
-            if (permissionSettings is null)
-            {
-                Console.Error.WriteLine("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
-                return false;
-            }
-
             // Try to get the source object as string or DatabaseObjectSource for new Entity
             if (!TryCreateSourceObjectForNewEntity(
                 options,
                 out object? source))
             {
                 Console.Error.WriteLine("Unable to create the source object.");
+                return false;
+            }
+
+            Policy? policy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
+            Field? field = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
+
+            PermissionSetting[]? permissionSettings = ParsePermission(options.Permissions, policy, field, options.SourceType);
+            if (permissionSettings is null)
+            {
+                Console.Error.WriteLine("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
                 return false;
             }
 
@@ -291,8 +291,13 @@ namespace Cli
         /// <param name="permissions">Permission input string as IEnumerable.</param>
         /// <param name="policy">policy to add for this permission.</param>
         /// <param name="fields">fields to include and exclude for this permission.</param>
+        /// <param name="sourceType">type of source object.</param>
         /// <returns></returns>
-        public static PermissionSetting[]? ParsePermission(IEnumerable<string> permissions, Policy? policy, Field? fields)
+        public static PermissionSetting[]? ParsePermission(
+            IEnumerable<string> permissions,
+            Policy? policy,
+            Field? fields,
+            string? sourceType)
         {
             // Getting Role and Operations from permission string
             string? role, operations;
@@ -302,8 +307,12 @@ namespace Cli
                 return null;
             }
 
+            // Parse the SourceType.
+            // Parsing won't fail as this check is already done during source object creation.
+            SourceTypeEnumConverter.TryGetSourceType(sourceType, out SourceType sourceObjectType);
+
             // Check if provided operations are valid
-            if (!VerifyOperations(operations!.Split(",")))
+            if (!VerifyOperations(operations!.Split(","), sourceObjectType))
             {
                 return null;
             }
@@ -396,11 +405,12 @@ namespace Cli
                 Console.WriteLine("WARNING: Disabling GraphQL for this entity will restrict it's usage in relationships");
             }
 
+            SourceType sourceType = ((DatabaseObjectSource)updatedSource).Type;
+
             if (options.Permissions is not null && options.Permissions.Any())
             {
                 // Get the Updated Permission Settings
-                //
-                updatedPermissions = GetUpdatedPermissionSettings(entity, options.Permissions, updatedPolicy, updatedFields);
+                updatedPermissions = GetUpdatedPermissionSettings(entity, options.Permissions, updatedPolicy, updatedFields, sourceType);
 
                 if (updatedPermissions is null)
                 {
@@ -478,7 +488,8 @@ namespace Cli
         private static PermissionSetting[]? GetUpdatedPermissionSettings(Entity entityToUpdate,
                                                                         IEnumerable<string> permissions,
                                                                         Policy? policy,
-                                                                        Field? fields)
+                                                                        Field? fields,
+                                                                        SourceType sourceType)
         {
             string? newRole, newOperations;
 
@@ -493,7 +504,7 @@ namespace Cli
             List<PermissionSetting> updatedPermissionsList = new();
             string[] newOperationArray = newOperations!.Split(",");
 
-            if (!VerifyOperations(newOperationArray))
+            if (!VerifyOperations(newOperationArray, sourceType))
             {
                 return null;
             }

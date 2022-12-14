@@ -127,6 +127,28 @@ namespace Cli.Tests
             Assert.AreEqual(sourceParameters.GetValueOrDefault("param5"), "dab");
         }
 
+        /// <summary>
+        /// Test to check the precedence logic for config file in CLI
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(new string[]{"*"}, SourceType.StoredProcedure, false, DisplayName = "FAIL: Stored-Procedure with all CRUD operations.")]
+        [DataRow(new string[]{"create"}, SourceType.StoredProcedure, true, DisplayName = "PASS: Stored-Procedure with 1 CRUD operations.")]
+        [DataRow(new string[]{"create", "read"}, SourceType.StoredProcedure, false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operations.")]
+        [DataRow(new string[]{"*"}, SourceType.Table, true, DisplayName = "PASS: Table with all CRUD operations.")]
+        [DataRow(new string[]{"create"}, SourceType.Table, true, DisplayName = "PASS: Table with 1 CRUD operations.")]
+        [DataRow(new string[]{"create", "read"}, SourceType.Table, true, DisplayName = "PASS: Table with more than 1 CRUD operations.")]
+        [DataRow(new string[]{"*"}, SourceType.View, true, DisplayName = "PASS: View with all CRUD operations.")]
+        [DataRow(new string[]{"create"}, SourceType.View, true, DisplayName = "PASS: View with 1 CRUD operations.")]
+        [DataRow(new string[]{"create", "read"}, SourceType.View, true, DisplayName = "PASS: View with more than 1 CRUD operations.")]
+
+        public void TestStoredProcedurePermissions(
+            string[] operations,
+            SourceType sourceType,
+            bool isSuccess)
+        {
+            Assert.AreEqual(isSuccess, Utils.VerifyOperations(operations, sourceType));
+        }
+
         [ClassCleanup]
         public static void Cleanup()
         {

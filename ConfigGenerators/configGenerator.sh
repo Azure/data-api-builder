@@ -10,7 +10,7 @@ if [[ $# -eq 0 ]]; then
     databaseTypes=("mssql" "mysql" "postgresql" "cosmosdb_nosql")
 elif [[ $# -eq 1 ]]; then
     databaseType=$1;
-    if ! { [ $databaseType == "mssql" ] || [ $databaseType == "mysql" ] || [ $databaseType == "postgresql" ] || [ $databaseType == "cosmos" ]; }; then
+    if ! { [ $databaseType == "mssql" ] || [ $databaseType == "mysql" ] || [ $databaseType == "postgresql" ] || [ $databaseType == "cosmosdb_nosql" ]; }; then
         echo "Valid arguments are mssql, mysql, postgresql or cosmosdb_nosql";
         exit 1;
     fi

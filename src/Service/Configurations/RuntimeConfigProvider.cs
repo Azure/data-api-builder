@@ -232,6 +232,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
             }
 
+            Console.WriteLine("Trying to load from config from a string");
             if (RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     configuration,
                     out RuntimeConfig? runtimeConfig,

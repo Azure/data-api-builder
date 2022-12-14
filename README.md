@@ -14,7 +14,7 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 
 ## Features
 
-- Allow collections, tables, views amd stored procedures to be accessed via REST and GraphQL
+- Allow collections, tables, views and stored procedures to be accessed via REST and GraphQL
 - Support authentication via JWT and EasyAuth
 - Role-based authorization using received claims
 - Item-level security via policy expressions

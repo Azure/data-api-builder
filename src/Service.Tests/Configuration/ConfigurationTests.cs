@@ -504,7 +504,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsNotNull(runtimeConfig.Schema);
             Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
             Assert.IsTrue(runtimeConfig.DataSource.CosmosDbNoSql == null
-                || runtimeConfig.DataSource.CosmosDbNoSql.GetType() == typeof(CosmosDbOptions));
+                || runtimeConfig.DataSource.CosmosDbNoSql.GetType() == typeof(CosmosDbNoSqlOptions));
             Assert.IsTrue(runtimeConfig.DataSource.MsSql == null
                 || runtimeConfig.DataSource.MsSql.GetType() == typeof(MsSqlOptions));
             Assert.IsTrue(runtimeConfig.DataSource.PostgreSql == null

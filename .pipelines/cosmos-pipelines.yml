@@ -46,7 +46,7 @@ steps:
   inputs:
     command: build
     projects: '**/*.csproj'
-    arguments: '-p:generateConfigFileForDbType=Cosmos --configuration $(buildConfiguration)' # Update this to match your need
+    arguments: '-p:generateConfigFileForDbType=cosmosdb_nosql --configuration $(buildConfiguration)' # Update this to match your need
 
 - task: FileTransform@1.206.0
   displayName: 'Generate dab-config.Cosmos.json'
@@ -56,10 +56,10 @@ steps:
     targetFiles: 'src/out/tests/net6.0/dab-config.Cosmos.json'
 
 - task: DotNetCoreCLI@2
-  displayName: 'Run Cosmos DB Integration Tests'
+  displayName: 'Run CosmosDb_NoSql Integration Tests'
   inputs:
     command: test
-    arguments: '--filter "TestCategory=Cosmos" --no-build --configuration $(buildConfiguration) $(ADDITIONAL_TEST_ARGS)'
+    arguments: '--filter "TestCategory=CosmosDb_NoSql" --no-build --configuration $(buildConfiguration) $(ADDITIONAL_TEST_ARGS)'
     projects: '**/*Tests/*.csproj'
 
 # '/XPlat Code coverage --results-directory /home/vsts/work/1/s/TestResults/'

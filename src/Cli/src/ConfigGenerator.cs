@@ -54,7 +54,7 @@ namespace Cli
 
             DatabaseType dbType = options.DatabaseType;
 
-            CosmosDbOptions? cosmosDbNoSqlOptions = null;
+            CosmosDbNoSqlOptions? cosmosDbNoSqlOptions = null;
 
             switch (dbType)
             {
@@ -68,7 +68,7 @@ namespace Cli
                         return false;
                     }
 
-                    cosmosDbNoSqlOptions = new CosmosDbOptions(cosmosDatabase, cosmosContainer, graphQLSchemaPath, GraphQLSchema: null);
+                    cosmosDbNoSqlOptions = new CosmosDbNoSqlOptions(cosmosDatabase, cosmosContainer, graphQLSchemaPath, GraphQLSchema: null);
                     break;
 
                 case DatabaseType.mssql:

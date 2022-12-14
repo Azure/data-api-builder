@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Config
 
         [property: JsonPropertyName(CONNSTRING_PROPERTY_NAME)]
         public string ConnectionString { get; set; } = string.Empty;
-        public CosmosDbOptions? CosmosDbNoSql { get; set; }
+        public CosmosDbNoSqlOptions? CosmosDbNoSql { get; set; }
         public CosmosDbPostgreSqlOptions? CosmosDbPostgreSql { get; set; }
         public MsSqlOptions? MsSql { get; set; }
         public PostgreSqlOptions? PostgreSql { get; set; }
@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Config
             switch (DatabaseType)
             {
                 case DatabaseType.cosmosdb_nosql:
-                    CosmosDbNoSql = ((JsonElement)DbOptions).Deserialize<CosmosDbOptions>(RuntimeConfig.SerializerOptions)!;
+                    CosmosDbNoSql = ((JsonElement)DbOptions).Deserialize<CosmosDbNoSqlOptions>(RuntimeConfig.SerializerOptions)!;
                     break;
                 case DatabaseType.mssql:
                     MsSql = ((JsonElement)DbOptions).Deserialize<MsSqlOptions>(RuntimeConfig.SerializerOptions)!;
@@ -63,12 +63,12 @@ namespace Azure.DataApiBuilder.Config
     }
 
     /// <summary>
-    /// Options for CosmosDb database.
+    /// Options for cosmosdb_nosql database.
     /// </summary>
-    public record CosmosDbOptions(
+    public record CosmosDbNoSqlOptions(
         string Database,
         string? Container,
-        [property: JsonPropertyName(CosmosDbOptions.GRAPHQL_SCHEMA_PATH_PROPERTY_NAME)]
+        [property: JsonPropertyName(CosmosDbNoSqlOptions.GRAPHQL_SCHEMA_PATH_PROPERTY_NAME)]
         string? GraphQLSchemaPath,
         [property: JsonIgnore]
         string? GraphQLSchema)

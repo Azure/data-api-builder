@@ -21,12 +21,10 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     public class ClientRoleHeaderAuthenticationMiddleware
     {
         private readonly RequestDelegate _nextMiddleware;
-        private readonly RuntimeConfigProvider _runtimeConfigurationProvider;
 
-        public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next, RuntimeConfigProvider runtimeConfigurationProvider)
+        public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next)
         {
             _nextMiddleware = next;
-            _runtimeConfigurationProvider = runtimeConfigurationProvider;
         }
 
         /// <summary>

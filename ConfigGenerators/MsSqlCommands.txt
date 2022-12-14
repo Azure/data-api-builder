@@ -1,4 +1,4 @@
-init --config "dab-config.MsSql.json" --database-type mssql --connection-string "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;" --host-mode Development --authenticate-devmode-requests false --cors-origin "http://localhost:5000"
+init --config "dab-config.MsSql.json" --database-type mssql --connection-string "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;" --host-mode Development --cors-origin "http://localhost:5000"
 add Publisher --config "dab-config.MsSql.json" --source publishers --permissions "anonymous:read"
 add Stock --config "dab-config.MsSql.json" --source stocks --permissions "anonymous:create,read,update"
 add Book --config "dab-config.MsSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"

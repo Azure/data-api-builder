@@ -381,6 +381,7 @@ namespace Cli
         /// * -> Valid
         /// fetch, read -> Invalid
         /// read, delete -> Valid
+        /// Also verifies that stored-procedures are not allowed with more than 1 CRUD operations.
         /// </summary>
         /// <param name="operations">array of string containing operations for permissions</param>
         /// <returns>True if no invalid operation is found.</returns>

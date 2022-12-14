@@ -128,7 +128,7 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to check the precedence logic for config file in CLI
+        /// Test to verify that stored-procedures contain only 1 CRUD operation.
         /// </summary>
         [DataTestMethod]
         [DataRow(new string[] { "*" }, SourceType.StoredProcedure, false, DisplayName = "FAIL: Stored-Procedure with all CRUD operations.")]

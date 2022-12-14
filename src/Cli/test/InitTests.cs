@@ -49,6 +49,32 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Test the simple init config for cosmos database.
+        /// </summary>
+        [TestMethod]
+        public void CosmoslDatabase()
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.cosmos,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                hostMode: HostModeType.Development,
+                corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                config: _testRuntimeConfig,
+                devModeDefaultAuth: "true");
+
+            try{
+                string runtimeConfigJson;
+                ConfigGenerator.TryCreateRuntimeConfig(options, out runtimeConfigJson);
+            }
+            catch (Exception ex){
+                Assert.AreEqual($"DatabaseType: cosmos not supported.Please provide a valid database-type.", ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Test the simple init config for cosmosdb_postgresql database.
         /// </summary>
         [TestMethod]

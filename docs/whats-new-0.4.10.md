@@ -41,7 +41,7 @@ We've consolidated the custom database configuration options into the `data-sour
 
 ```json
 {
-  "$schema": "dab.draft-01.schema.json",
+  "$schema": "dab.draft.schema.json",
   "data-source": {
     "database-type": "cosmosdb-nosql",
     "options": {
@@ -55,7 +55,8 @@ We've consolidated the custom database configuration options into the `data-sour
 
 ## Renamed `database-type` value for Cosmos DB
 
-We've added the support for PostgreSQL API with Cosmos DB. With the consolidated `data-source` section, where attribute `database-type` will denote the type of database. Since Cosmos DB supports multiple APIs, it will be either 'cosmosdb-nosql' or 'cosmosdb-postgresql'.
+We've added support for PostgreSQL API with Cosmos DB. With a consolidated `data-source` section, the attribute `database-type` will denote the type of database. Since Cosmos DB supports multiple APIs, the
+currently supported database types are 'cosmosdb-nosql' and 'cosmosdb-postgresql'.
 
 ```json
   "data-source": {
@@ -67,8 +68,8 @@ We've added the support for PostgreSQL API with Cosmos DB. With the consolidated
   }
 ```
 
-Based on this configuration, now CLI properties are renamed accordingly as `cosmosdb_nosql-database` and `cosmosdb_nosql-container` for Cosmos DB NOSQL API.
+Based on this configuration, now CLI properties are renamed accordingly as `cosmosdb_nosql-database` and `cosmosdb_nosql-container` for Cosmos DB NoSQL API.
 
 ```bash
-dab nit --database-type "cosmosdb_nosql" --graphql-schema schema.gql --cosmosdb_nosql-database PlaygroundDB  --cosmosdb_nosql-container "books" --connection-string "AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;" --host-mode "Development"
+dab init --database-type "cosmosdb_nosql" --graphql-schema schema.gql --cosmosdb_nosql-database PlaygroundDB  --cosmosdb_nosql-container "books" --connection-string "AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;" --host-mode "Development"
 ```

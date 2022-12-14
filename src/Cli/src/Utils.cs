@@ -396,7 +396,7 @@ namespace Cli
             }
 
             // Currently, Stored Procedures can be configured with only 1 CRUD Operation.
-            if (sourceType is SourceType.StoredProcedure 
+            if (sourceType is SourceType.StoredProcedure
                     && (operations.Length > 1 || WILDCARD.Equals(operations.First())))
             {
                 Console.Error.WriteLine("Only one CRUD operation supported for stored-procedures.");

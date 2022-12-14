@@ -71,7 +71,7 @@ the `dab-config.json` file will look like the following:
 
 The `parameters` object is optional, and is used to provide default values to be passed to the stored procedure parameters, if those are not provided in the HTTP request.
 
-**ATTENTION**: 
+**ATTENTION**:
 1. Only the first result set returned by the stored procedure will be used by Data API Builder.
 2. Currently we only support simple StoredProcedures,i.e. stored procedure that requires only 1 CRUD action to execute.
 3. If more than one CRUD action is specified in the config, runtime initialization will fail due to config validation error.

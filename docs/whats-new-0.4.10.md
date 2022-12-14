@@ -43,7 +43,7 @@ We've consolidated the custom database configuration options into the `data-sour
 {
   "$schema": "dab.draft.schema.json",
   "data-source": {
-    "database-type": "cosmosdb-nosql",
+    "database-type": "cosmosdb_nosql",
     "options": {
       "database": "PlaygroundDB",
       "graphql-schema": "schema.gql"

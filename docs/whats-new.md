@@ -1,8 +1,8 @@
 # What's New in Data API Builder
 
-## Version 0.4.10
+## Release Notes
 
-The full list of release notes for this version is available here: [version 0.4.10 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.4.10-alpha)
+The full list of new features and enhancements for the latest version of Data API Builder can be found on the [release notes](https://github.com/Azure/data-api-builder/tags) page.
 
 - [Nested filtering GraphQL support for MsSql](#nested-filtering-graphql-support-for-mssql)
 - [AAD User authentication Support for MySQL](#aad-user-authentication-support-for-mysql)
@@ -31,9 +31,9 @@ Added nested filtering support for relational databases:
 }
 ```
 
-### AAD User authentication Support for MySQL
+### Azure AD User authentication Support for MySQL
 
-AAD User authentication are now supported for MySQL, added user token as password field to authenticate with MySQL with AAD plugin.
+Azure AD User authentication is now supported for MySQL enabling the use of a user token as the password field value to authenticate with the MySQL Azure AD plugin.
 
 ### Stored Procedures GraphQL Support
 
@@ -73,7 +73,7 @@ The user now can specify the access token in the config to authenticate with man
 
 ### Runtime Configuration Updates in Cosmos DB
 
-- Reading comsos options from data-source/options instead of "cosmos" object.
+- Reading cosmos options from data-source/options instead of "cosmos" object.
 - Honor the database name being set by SWA during runtime configuration.
 
 

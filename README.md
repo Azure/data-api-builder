@@ -27,14 +27,6 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
   - relationship navigation
 - Easy development via dedicated CLI
 
-## Limitations
-
-- JWT only supports Azure AD
-
-## Known Issues
-
-List of known issues and possible workarounds, where applicable and possible, is available here: [Known Issues](./docs/known-issues.md).
-
 ## Getting Started
 
 To get started quickly with Data API builder for Azure Databases, you can use the [Getting Started](./docs/getting-started/getting-started.md) tutorial, that will help to get familiar with some basic tools and concepts while giving you a good experience on how much Data API builder for Azure Databases can make you more efficient, but removing the need to write a lot of plumbing code.
@@ -42,6 +34,14 @@ To get started quickly with Data API builder for Azure Databases, you can use th
 ## Documentation
 
 Documentation is available in the [`docs`](./docs) folder.
+
+## Limitations
+
+- JWT only supports Azure AD
+
+## Known Issues
+
+List of known issues and possible workarounds, where applicable and possible, is available here: [Known Issues](./docs/known-issues.md).
 
 ## How to Contribute
 

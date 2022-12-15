@@ -68,7 +68,6 @@ namespace Azure.DataApiBuilder.Service.Services
                     return typeof(DateTimeOffset);
                 case "char":
                 case "varchar":
-                case "varchar(max)":
                 case "text":
                 case "nchar":
                 case "nvarchar":

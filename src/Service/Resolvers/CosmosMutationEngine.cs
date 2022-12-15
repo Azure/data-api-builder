@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             CosmosClient? client = _clientProvider.Client;
-            if (client == null)
+            if (client is null)
             {
                 throw new DataApiBuilderException(
                     message: "Cosmos DB has not been properly initialized",

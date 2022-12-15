@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = _databaseType switch
             {
-                DatabaseType.cosmos => GenerateCosmosGraphQLObjects(),
+                DatabaseType.cosmosdb_nosql => GenerateCosmosGraphQLObjects(),
                 DatabaseType.mssql or
                 DatabaseType.postgresql or
                 DatabaseType.mysql => GenerateSqlGraphQLObjects(_entities),

@@ -122,7 +122,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
 
             // Schema file should be present in the directory if not specified in the config
-            // when using cosmos database.
+            // when using cosmosdb_nosql database.
             if (runtimeConfig.DatabaseType is DatabaseType.cosmosdb_nosql)
             {
                 CosmosDbNoSqlOptions cosmosDbNoSql = runtimeConfig.DataSource.CosmosDbNoSql!;

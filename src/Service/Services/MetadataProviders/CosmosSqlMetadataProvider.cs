@@ -98,7 +98,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
 
         /// <summary>
         /// Even though there is no source definition for underlying entity names for
-        /// cosmos db, we return back an empty source definition required for
+        /// cosmosdb_nosql, we return back an empty source definition required for
         /// graphql filter parser.
         /// </summary>
         /// <param name="entityName"></param>

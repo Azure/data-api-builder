@@ -302,7 +302,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
         }
 
-        [TestMethod("Validates that local cosmos settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod("Validates that local cosmosdb_nosql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestLoadingLocalCosmosSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
@@ -427,7 +427,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsNotNull(configuration, "TryGetRuntimeConfiguration should set the config in the out parameter.");
             Assert.IsTrue(isConfigSet, "TryGetRuntimeConfiguration should return true when the config is set.");
 
-            Assert.AreEqual(DatabaseType.cosmosdb_nosql, configuration.DatabaseType, "Expected cosmos database type after configuring the runtime with cosmos settings.");
+            Assert.AreEqual(DatabaseType.cosmosdb_nosql, configuration.DatabaseType, "Expected cosmosdb_nosql database type after configuring the runtime with cosmosdb_nosql settings.");
             Assert.AreEqual(config.Schema, configuration.DataSource.CosmosDbNoSql.GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
             Assert.AreEqual(config.ConnectionString, configuration.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
             string db = configProvider.GetRuntimeConfiguration().DataSource.CosmosDbNoSql.Database;
@@ -486,7 +486,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// This test reads the dab-config.CosmosDb_NoSql.json file and validates that the
         /// deserialization succeeds.
         /// </summary>
-        [TestMethod("Validates if deserialization of the cosmos config file succeeds."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod("Validates if deserialization of the cosmosdb_nosql config file succeeds."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestReadingRuntimeConfigForCosmos()
         {
             ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"));

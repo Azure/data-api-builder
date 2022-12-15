@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         {
             if (IsBuiltInType(field.Type))
             {
-                // Cosmos doesn't have the concept of "auto increment" for the ID field, nor does it have "auto generate"
+                // cosmosdb_nosql doesn't have the concept of "auto increment" for the ID field, nor does it have "auto generate"
                 // fields like timestap/etc. like SQL, so we're assuming that any built-in type will be user-settable
                 // during the create mutation
                 return databaseType switch

@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Config
         [property: JsonIgnore]
         string? GraphQLSchema)
     {
-        public const string GRAPHQL_SCHEMA_PATH_PROPERTY_NAME = "graphql-schema";
+        public const string GRAPHQL_SCHEMA_PATH_PROPERTY_NAME = "schema";
     }
 
     /// <summary>

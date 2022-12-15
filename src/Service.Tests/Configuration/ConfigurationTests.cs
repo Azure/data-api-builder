@@ -483,7 +483,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// This test reads the dab-config.Cosmos.json file and validates that the
+        /// This test reads the dab-config.CosmosDb_NoSql.json file and validates that the
         /// deserialization succeeds.
         /// </summary>
         [TestMethod("Validates if deserialization of the cosmos config file succeeds."), TestCategory(TestCategory.COSMOSDBNOSQL)]

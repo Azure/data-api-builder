@@ -1359,13 +1359,13 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Retrieving the partition key path, for Cosmos only
+        /// Retrieving the partition key path, for cosmosdb_nosql only
         /// </summary>
         public string? GetPartitionKeyPath(string database, string container)
             => throw new NotImplementedException();
 
         /// <summary>
-        /// Setting the partition key path, for Cosmos only
+        /// Setting the partition key path, for cosmosdb_nosql only
         /// </summary>
         public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
             => throw new NotImplementedException();

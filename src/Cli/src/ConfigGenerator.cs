@@ -489,6 +489,7 @@ namespace Cli
         /// <param name="permissions">New permission to be applied.</param>
         /// <param name="policy">policy to added for this permission</param>
         /// <param name="fields">fields to be included and excluded from the operation permission.</param>
+        /// <param name="sourceType">Type of Source object.</param>
         /// <returns> On failure, returns null. Else updated PermissionSettings array will be returned.</returns>
         private static PermissionSetting[]? GetUpdatedPermissionSettings(Entity entityToUpdate,
                                                                         IEnumerable<string> permissions,

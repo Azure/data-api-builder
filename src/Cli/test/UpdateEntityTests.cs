@@ -976,29 +976,29 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow(SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" },
             null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, null, false, true,
-            DisplayName = "PASS:Converting table to stored-procedure with parameters.")]
+            DisplayName = "PASS:Convert table to stored-procedure with valid parameters.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, new string[] { "col1", "col2" },
             SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "read" }, false, false,
-            DisplayName = "FAIL:Converting table to stored-procedure with KeyFields.")]
+            DisplayName = "FAIL:Convert table to stored-procedure with invalid KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, null,
-            true, false, DisplayName = "FAIL:Converting table with all CRUD operation to stored-procedure.")]
+            true, false, DisplayName = "FAIL:Convert table with wildcard CRUD operation to stored-procedure.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, new string[] { "id", "name" },
             SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, new string[] { "anonymous", "*" }, false, true,
-            DisplayName = "PASS:Converting stored-procedure to table with KeyFields.")]
+            DisplayName = "PASS:Convert stored-procedure to table with valid KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "view", null, new string[] { "col1", "col2" },
             SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, new string[] { "anonymous", "*" }, false, true,
-            DisplayName = "PASS:Converting stored-procedure to view with KeyFields.")]
+            DisplayName = "PASS:Convert stored-procedure to view with valid KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", new string[] { "param1:kind", "param2:true" },
             null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, null, false, false,
-            DisplayName = "FAIL:Converting stored-procedure to table with parameters.")]
+            DisplayName = "FAIL:Convert stored-procedure to table with parameters is not allowed.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, null,
-            true, true, DisplayName = "PASS:Converting stored-procedure to table with no parameters or KeyFields.")]
+            true, true, DisplayName = "PASS:Convert stored-procedure to table with no parameters or KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", null, new string[] { "col1", "col2" },
             SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, null, false, true,
-            DisplayName = "PASS:Converting table to view with KeyFields.")]
+            DisplayName = "PASS:Convert table to view with KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", new string[] { "param1:kind", "param2:true" }, null,
             SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, null, false, false,
-            DisplayName = "FAIL:Converting table to view with parameters.")]
+            DisplayName = "FAIL:Convert table to view with parameters is not allowed.")]
         public void TestConversionOfSourceObject(
             string initialSourceObjectEntity,
             string sourceType,
@@ -1404,14 +1404,14 @@ namespace Cli.Tests
         /// Simple test to verify failure on updating source of an entity with invalid fields.
         /// </summary>
         [DataTestMethod]
-        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "*", DisplayName = "Both KeyFields and Parameters provided for source.")]
-        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, "create", DisplayName = "KeyFields with stored procedure.")]
-        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, "read", DisplayName = "Parameters with duplicate keys for stored procedure.")]
-        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "create,read", DisplayName = "Stored procedure with more than 1 CRUD operations.")]
-        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "*", DisplayName = "Stored procedure with all CRUD operations.")]
-        [DataRow("view", new string[] { "param1:value1" }, null, "*", DisplayName = "Source Parameters with View")]
-        [DataRow("table", new string[] { "param1:value1" }, null, "*", DisplayName = "Source Parameters with Table")]
-        [DataRow("table-view", new string[] { "param1:value1" }, null, "*", DisplayName = "Invalid Source Type.")]
+        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "*", DisplayName = "Both KeyFields and Parameters provided for source")]
+        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, "create", DisplayName = "KeyFields incorrectly used with stored procedure")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, "read", DisplayName = "Parameters with duplicate keys for stored procedure")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "create,read", DisplayName = "Stored procedure with more than 1 CRUD operation")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "*", DisplayName = "Stored procedure with wildcard CRUD operation")]
+        [DataRow("view", new string[] { "param1:value1" }, null, "*", DisplayName = "Source Parameters incorrectly used with View")]
+        [DataRow("table", new string[] { "param1:value1" }, null, "*", DisplayName = "Source Parameters incorrectly used with Table")]
+        [DataRow("table-view", new string[] { "param1:value1" }, null, "*", DisplayName = "Invalid Source Type")]
         public void TestUpdateSourceObjectWithInvalidFields(
             string? sourceType,
             IEnumerable<string>? parameters,

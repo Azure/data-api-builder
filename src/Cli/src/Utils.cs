@@ -96,16 +96,17 @@ namespace Cli
         /// <param name="operationName">operation string.</param>
         /// <param name="operation">Operation Enum output.</param>
         /// <returns>True if convert is successful. False otherwise.</returns>
-        public static bool TryConvertOperationNameToOperation(string operationName, out Operation operation)
+        public static bool TryConvertOperationNameToOperation(string? operationName, out Operation operation)
         {
             if (!Enum.TryParse(operationName, ignoreCase: true, out operation))
             {
-                if (operationName.Equals(WILDCARD, StringComparison.OrdinalIgnoreCase))
+                if (operationName is not null && operationName.Equals(WILDCARD, StringComparison.OrdinalIgnoreCase))
                 {
                     operation = Operation.All;
                 }
                 else
                 {
+                    Console.Error.WriteLine($"Invalid operation Name: {operationName}.");
                     return false;
                 }
             }
@@ -563,12 +564,12 @@ namespace Cli
         /// Creates source object by using valid type, params, and keyfields.
         /// </summary>
         /// <param name="name">Name of the source.</param>
-        /// <param name="type">Type of the soure. i.e, table,view, and stored-procedure.</param>
+        /// <param name="type">Type of the source. i.e, table,view, and stored-procedure.</param>
         /// <param name="parameters">Dictionary for parameters if source is stored-procedure</param>
         /// <param name="keyFields">Array of string containing key columns for table/view type.</param>
         /// <param name="sourceObject">Outputs the created source object.
         /// It can be null, string, or DatabaseObjectSource</param>
-        /// <returns>True in case of succesful creation of source object.</returns>
+        /// <returns>True in case of successful creation of source object.</returns>
         public static bool TryCreateSourceObject(
             string name,
             SourceType type,
@@ -664,7 +665,8 @@ namespace Cli
         private static bool VerifySingleOperationForStoredProcedure(object[] operations)
         {
             if (operations.Length > 1
-                || Operation.All.Equals(GetOperationName(operations.First())))
+                || !TryGetOperationName(operations.First(), out Operation operationName)
+                || Operation.All.Equals(operationName))
             {
                 Console.Error.WriteLine("Stored Procedure supports only 1 CRUD operation.");
                 return false;
@@ -675,19 +677,27 @@ namespace Cli
 
         /// <summary>
         /// Checks if the operation is string or PermissionOperation object
-        /// and return the operation name accordingly.
+        /// and tries to parse the operation name accordingly.
+        /// Returns true on successful parsing.
         /// </summary>
-        public static Operation GetOperationName(object operation)
+        public static bool TryGetOperationName(object operation, out Operation operationName)
         {
             JsonElement operationJson = JsonSerializer.SerializeToElement(operation);
             if (operationJson.ValueKind is JsonValueKind.String)
             {
-                TryConvertOperationNameToOperation(operationJson.GetString()!, out Operation op);
-                return op;
+                return TryConvertOperationNameToOperation(operationJson.GetString(), out operationName);
             }
 
-            PermissionOperation action = JsonSerializer.Deserialize<PermissionOperation>(operationJson)!;
-            return action.Name;
+            PermissionOperation? action = JsonSerializer.Deserialize<PermissionOperation>(operationJson);
+            if (action is null)
+            {
+                Console.Error.WriteLine($"Failed to parse the operation: {operation}.");
+                operationName = Operation.None;
+                return false;
+            }
+
+            operationName = action.Name;
+            return true;
         }
 
         /// <summary>

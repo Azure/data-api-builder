@@ -192,19 +192,19 @@ namespace Cli.Tests
         /// Simple test to verify success on adding a new entity with source object for valid fields.
         /// </summary>
         [DataTestMethod]
-        [DataRow(null, null, null, "*", true, DisplayName = "Both KeyFields and Parameters not provided for source.")]
-        [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "create", true, DisplayName = "SourceParameters with stored procedure.")]
-        [DataRow("Stored-Procedure", new string[] { "param1:value1" }, null, "read", true, DisplayName = "SourceParameters with stored procedure Case Insensitive.")]
-        [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Stored procedure with all CRUD action.")]
-        [DataRow("view", null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields with View")]
-        [DataRow("table", null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields with Table")]
-        [DataRow(null, null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields with SourceType not provided")]
-        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "*", false, DisplayName = "Both KeyFields and Parameters provided for source.")]
-        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, "*", false, DisplayName = "KeyFields with stored procedure.")]
-        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, "*", false, DisplayName = "Parameters with duplicate keys for stored procedure.")]
-        [DataRow("view", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Source Parameters with View")]
-        [DataRow("table", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Source Parameters with Table")]
-        [DataRow("table-view", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Invalid Source Type.")]
+        [DataRow(null, null, null, "*", true, DisplayName = "Both KeyFields and Parameters not provided for source")]
+        [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "create", true, DisplayName = "SourceParameters correctly included with stored procedure")]
+        [DataRow("Stored-Procedure", new string[] { "param1:value1" }, null, "read", true, DisplayName = "Stored procedure type check for Case Insensitivity")]
+        [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Stored procedure incorrectly configured with wildcard CRUD action")]
+        [DataRow("view", null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields correctly included with with View")]
+        [DataRow("table", null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields correctly included with with Table")]
+        [DataRow(null, null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source Type of table created when type not specified")]
+        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "*", false, DisplayName = "KeyFields and Parameters incorrectly configured for default sourceType")]
+        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, "*", false, DisplayName = "KeyFields incorrectly configured with stored procedure")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, "*", false, DisplayName = "Parameters containing duplicate keys are not allowed")]
+        [DataRow("view", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Source Parameters incorrectly used with View")]
+        [DataRow("table", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Source Parameters incorrectly used with Table")]
+        [DataRow("table-view", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Invalid Source Type")]
         public void TestAddNewEntityWithSourceObjectHavingValidFields(
             string? sourceType,
             IEnumerable<string>? parameters,

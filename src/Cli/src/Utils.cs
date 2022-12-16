@@ -96,16 +96,17 @@ namespace Cli
         /// <param name="operationName">operation string.</param>
         /// <param name="operation">Operation Enum output.</param>
         /// <returns>True if convert is successful. False otherwise.</returns>
-        public static bool TryConvertOperationNameToOperation(string operationName, out Operation operation)
+        public static bool TryConvertOperationNameToOperation(string? operationName, out Operation operation)
         {
             if (!Enum.TryParse(operationName, ignoreCase: true, out operation))
             {
-                if (operationName.Equals(WILDCARD, StringComparison.OrdinalIgnoreCase))
+                if (operationName is not null && operationName.Equals(WILDCARD, StringComparison.OrdinalIgnoreCase))
                 {
                     operation = Operation.All;
                 }
                 else
                 {
+                    Console.Error.WriteLine($"Invalid operation Name: {operationName}.");
                     return false;
                 }
             }
@@ -381,10 +382,11 @@ namespace Cli
         /// * -> Valid
         /// fetch, read -> Invalid
         /// read, delete -> Valid
+        /// Also verifies that stored-procedures are not allowed with more than 1 CRUD operations.
         /// </summary>
         /// <param name="operations">array of string containing operations for permissions</param>
         /// <returns>True if no invalid operation is found.</returns>
-        public static bool VerifyOperations(string[] operations)
+        public static bool VerifyOperations(string[] operations, SourceType sourceType)
         {
             // Check if there are any duplicate operations
             // Ex: read,read,create
@@ -392,6 +394,13 @@ namespace Cli
             if (uniqueOperations.Count() != operations.Length)
             {
                 Console.Error.WriteLine("Duplicate action found in --permissions");
+                return false;
+            }
+
+            // Currently, Stored Procedures can be configured with only 1 CRUD Operation.
+            if (sourceType is SourceType.StoredProcedure
+                    && !VerifySingleOperationForStoredProcedure(operations))
+            {
                 return false;
             }
 
@@ -555,12 +564,12 @@ namespace Cli
         /// Creates source object by using valid type, params, and keyfields.
         /// </summary>
         /// <param name="name">Name of the source.</param>
-        /// <param name="type">Type of the soure. i.e, table,view, and stored-procedure.</param>
+        /// <param name="type">Type of the source. i.e, table,view, and stored-procedure.</param>
         /// <param name="parameters">Dictionary for parameters if source is stored-procedure</param>
         /// <param name="keyFields">Array of string containing key columns for table/view type.</param>
         /// <param name="sourceObject">Outputs the created source object.
         /// It can be null, string, or DatabaseObjectSource</param>
-        /// <returns>True in case of succesful creation of source object.</returns>
+        /// <returns>True in case of successful creation of source object.</returns>
         public static bool TryCreateSourceObject(
             string name,
             SourceType type,
@@ -628,6 +637,66 @@ namespace Cli
                 sourceParameters = null;
             }
 
+            return true;
+        }
+
+        /// <summary>
+        /// This method loops through every role specified for stored-procedure entity
+        ///  and checks if it has only one CRUD operation.
+        /// </summary>
+        public static bool VerifyPermissionOperationsForStoredProcedures(
+            PermissionSetting[] permissionSettings)
+        {
+            foreach (PermissionSetting permissionSetting in permissionSettings)
+            {
+                if (!VerifySingleOperationForStoredProcedure(permissionSetting.Operations))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// This method checks that stored-procedure entity
+        /// has only one CRUD operation.
+        /// </summary>
+        private static bool VerifySingleOperationForStoredProcedure(object[] operations)
+        {
+            if (operations.Length > 1
+                || !TryGetOperationName(operations.First(), out Operation operationName)
+                || Operation.All.Equals(operationName))
+            {
+                Console.Error.WriteLine("Stored Procedure supports only 1 CRUD operation.");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Checks if the operation is string or PermissionOperation object
+        /// and tries to parse the operation name accordingly.
+        /// Returns true on successful parsing.
+        /// </summary>
+        public static bool TryGetOperationName(object operation, out Operation operationName)
+        {
+            JsonElement operationJson = JsonSerializer.SerializeToElement(operation);
+            if (operationJson.ValueKind is JsonValueKind.String)
+            {
+                return TryConvertOperationNameToOperation(operationJson.GetString(), out operationName);
+            }
+
+            PermissionOperation? action = JsonSerializer.Deserialize<PermissionOperation>(operationJson);
+            if (action is null)
+            {
+                Console.Error.WriteLine($"Failed to parse the operation: {operation}.");
+                operationName = Operation.None;
+                return false;
+            }
+
+            operationName = action.Name;
             return true;
         }
 

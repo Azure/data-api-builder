@@ -25,7 +25,7 @@ For Installation of CLI tool, Refer [README:HAWAII-CLI](https://github.com/Azure
 
 ### 2. Configure Database Engine
 
-You will need to provide a database to run behind DataGateway. DataGateway supports SQL Server, CosmosDB, PostgreSQL, and MySQL.
+You will need to provide a database to run behind DataGateway. DataGateway supports SQL Server, CosmosDB_NoSql, PostgreSQL, and MySQL.
 
 #### 2.1 Configure Database Account
 
@@ -84,11 +84,11 @@ LocalDB Instance
 }
 ```
 
-#### CosmosDB
+#### CosmosDB_NoSql
 
 ```json
 "data-source": {
-  "database-type": "cosmos",
+  "database-type": "cosmosdb_nosql",
   "connection-string": "AccountEndpoint=https://<REPLACEME>.documents.azure.com:443/;AccountKey=<REPLACEME>"
 }
 ```
@@ -196,7 +196,7 @@ Configure **Bearer token authentication** with identity providers like Azure AD.
 
 ```json
   "data-source": {
-  "database-type": "cosmos",
+  "database-type": "cosmosdb_nosql",
   "connection-string": "AccountEndpoint=https://<REPLACEME>.documents.azure.com:443/;AccountKey=<REPLACEME>"
   },
   "runtime": {
@@ -242,7 +242,7 @@ The following steps outline an alternative way of generating config files to ass
 #### Command Line
 
 1. Based on your preferred mode of specifying the configuration file name, there are different ways to launch the runtime.
-2. Set the `DAB_ENVIRONMENT` or `ASPNETCORE_ENVIRONMENT`, typically using their value to be database type `MsSql`, `PostgreSql`,`Cosmos`, or `MySql`.
+2. Set the `DAB_ENVIRONMENT` or `ASPNETCORE_ENVIRONMENT`, typically using their value to be database type `MsSql`, `PostgreSql`,`CosmosDb_NoSql`, or `MySql`.
 
     Example: `ASPNETCORE_ENVIRONMENT=PostgreSql`
 

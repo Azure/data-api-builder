@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     "Cannot initialize a CosmosClientProvider without the runtime config.");
             }
 
-            if (configuration.DatabaseType != DatabaseType.cosmos)
+            if (configuration.DatabaseType is not DatabaseType.cosmosdb_nosql)
             {
                 throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
             }

@@ -621,7 +621,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <returns>Collection of columns in table definition.</returns>
         private IEnumerable<string> ResolveEntityDefinitionColumns(string entityName)
         {
-            if (_metadataProvider.GetDatabaseType() is DatabaseType.cosmos)
+            if (_metadataProvider.GetDatabaseType() is DatabaseType.cosmosdb_nosql)
             {
                 return new List<string>();
             }

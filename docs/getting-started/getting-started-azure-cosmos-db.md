@@ -62,7 +62,7 @@ The Data API builder for Azure Databases engine needs a [configuration file](../
 For this getting started guide you will use DAB CLI to initialize your configuration file. Run the following command:
 
 ```bash
-dab init --database-type "cosmos" --graphql-schema schema.gql --cosmos-database PlaygroundDB --connection-string "AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;" --host-mode "Development"
+dab init --database-type "cosmosdb_nosql" --graphql-schema schema.gql --cosmosdb_nosql-database PlaygroundDB --connection-string "AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;" --host-mode "Development"
 ```
 
 The command will generate a config file called `dab-config.json` looking like this:
@@ -71,12 +71,12 @@ The command will generate a config file called `dab-config.json` looking like th
 {
   "$schema": "dab.draft-01.schema.json",
   "data-source": {
-    "database-type": "cosmos",
+    "database-type": "cosmosdb_nosql",
     "connection-string": "AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;"
-  },
-  "cosmos": {
+    "options": {
     "database": "PlaygroundDB",
     "schema": "schema.gql"
+    }
   },
   "runtime": {
     "rest": {
@@ -103,7 +103,7 @@ The command will generate a config file called `dab-config.json` looking like th
 }
 ```
 
-As you can see there the `data-source` property specifies that our chosen `database-type` is `cosmos`, with the `connection-string` we passed to DAB CLI.
+As you can see there the `data-source` property specifies that our chosen `database-type` is `cosmosdb_nosql`, with the `connection-string` we passed to DAB CLI.
 
 >Take a look at the [DAB Configuration File Guide](../configuration-file.md) document to learn more about the configuration file.
 

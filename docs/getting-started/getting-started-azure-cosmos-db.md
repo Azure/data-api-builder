@@ -62,7 +62,7 @@ The Data API builder for Azure Databases engine needs a [configuration file](../
 For this getting started guide you will use DAB CLI to initialize your configuration file. Run the following command:
 
 ```bash
-dab nit --database-type "cosmosdb_nosql" --graphql-schema schema.gql --cosmosdb_nosql-database PlaygroundDB --connection-string "AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;" --host-mode "Development"
+dab init --database-type "cosmosdb_nosql" --graphql-schema schema.gql --cosmosdb_nosql-database PlaygroundDB --connection-string "AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;" --host-mode "Development"
 ```
 
 The command will generate a config file called `dab-config.json` looking like this:

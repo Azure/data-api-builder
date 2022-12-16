@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
 using System;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Models;
@@ -18,7 +17,7 @@ namespace Azure.DataApiBuilder.Service.Services
         public async Task Invoke(HttpContext httpContext)
         {
             if (!httpContext.Request.Headers.TryGetValue(HttpHeaders.CORRELATION_ID, out _)) {
-                httpContext.Request.Headers.TryAdd(HttpHeaders.CORRELATION_ID, Guid.NewGuid().ToString());
+                httpContext.Items.TryAdd(HttpHeaders.CORRELATION_ID, Guid.NewGuid().ToString());
             }
 
             httpContext.Response.OnStarting(() =>

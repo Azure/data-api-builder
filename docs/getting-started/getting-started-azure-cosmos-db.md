@@ -71,12 +71,12 @@ The command will generate a config file called `dab-config.json` looking like th
 {
   "$schema": "dab.draft.schema.json",
   "data-source": {
-    "database-type": "cosmosdb-nosql",
-    "options": {
-      "database": "PlaygroundDB",
-      "schema": "schema.gql"
-    },
+    "database-type": "cosmosdb_nosql",
     "connection-string": "AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;"
+    "options": {
+    "database": "PlaygroundDB",
+    "schema": "schema.gql"
+    }
   },
   "runtime": {
     "rest": {
@@ -101,7 +101,7 @@ The command will generate a config file called `dab-config.json` looking like th
 }
 ```
 
-As you can see there the `data-source` property specifies that our chosen `database-type` is `cosmosdb-nosql`, with the `connection-string` we passed to DAB CLI.
+As you can see there the `data-source` property specifies that our chosen `database-type` is `cosmosdb_nosql`, with the `connection-string` we passed to DAB CLI.
 
 > Take a look at the [DAB Configuration File Guide](../configuration-file.md) document to learn more about the configuration file.
 

@@ -202,6 +202,23 @@ namespace Cli.Tests
               }
           }";
 
+        public const string SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION = @"
+          {
+              ""entities"": {
+                  ""MyEntity"": {
+                  ""source"": ""s001.book"",
+                  ""permissions"": [
+                      {
+                      ""role"": ""anonymous"",
+                      ""actions"": [
+                          ""read""
+                      ]
+                      }
+                  ]
+                  }
+              }
+          }";
+
         /// <summary>
         /// Entity containing invalid graphQL type
         /// </summary>
@@ -242,7 +259,7 @@ namespace Cli.Tests
                   {
                     ""role"": ""anonymous"",
                     ""actions"": [
-                      ""*""
+                      ""read""
                     ]
                   }
                 ]

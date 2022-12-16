@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
@@ -48,7 +48,7 @@
 
 
     <ItemGroup>
-        <Watch Remove="dab-config.Cosmos.json" />
+        <Watch Remove="dab-config.CosmosDb_NoSql.json" />
         <Watch Remove="dab-config.json" />
         <Watch Remove="dab-config.MsSql.json" />
         <Watch Remove="dab-config.MySql.json" />

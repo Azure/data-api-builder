@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Config
         // Common Operations
         Delete, Read,
 
-        // Cosmos operations
+        // cosmosdb_nosql operations
         Upsert, Create,
 
         // Sql operations

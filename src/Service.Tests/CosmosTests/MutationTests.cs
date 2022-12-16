@@ -8,7 +8,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
-    [TestClass, TestCategory(TestCategory.COSMOS)]
+    [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
     public class MutationTests : TestBase
     {
         private static readonly string _containerName = Guid.NewGuid().ToString();

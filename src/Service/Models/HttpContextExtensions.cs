@@ -11,19 +11,14 @@ namespace Azure.DataApiBuilder.Service.Models
         {
             string? correlationId = null;
 
-            if (context.Request.Headers.TryGetValue(HttpHeaders.CORRELATION_ID, out StringValues correlationIdHeader))
+            if (context.Request.Headers.TryGetValue(HttpHeaders.CORRELATION_ID, out StringValues correlationIdHeader)
+                && Guid.TryParse(correlationIdHeader, out _))
             {
                 correlationId = correlationIdHeader.ToString();
             }
             else if (context.Items.TryGetValue(HttpHeaders.CORRELATION_ID, out object? correlationIdItem))
             {
                 correlationId = correlationIdItem as string;
-            }
-
-            if (!string.IsNullOrEmpty(correlationId) && !Guid.TryParse(correlationId, out _))
-            {
-                // Remove correlation id if it's not a valid Guid
-                correlationId = null;
             }
 
             return correlationId;

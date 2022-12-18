@@ -3,6 +3,7 @@ using System;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Models;
 using System.Collections.Generic;
+using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -16,7 +17,9 @@ namespace Azure.DataApiBuilder.Service.Services
 
         public async Task Invoke(HttpContext httpContext)
         {
-            if (!httpContext.Request.Headers.TryGetValue(HttpHeaders.CORRELATION_ID, out _)) {
+            if (!httpContext.Request.Headers.TryGetValue(HttpHeaders.CORRELATION_ID, out StringValues correlationId)
+                || !Guid.TryParse(correlationId, out _))
+            {
                 httpContext.Items.TryAdd(HttpHeaders.CORRELATION_ID, Guid.NewGuid().ToString());
             }
 

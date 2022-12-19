@@ -8,8 +8,8 @@ This tutorial assumes that you have already a [Cosmos DB SQL API database accoun
 
 Create the necessary database containers needed to represent Authors and Books.
 
--   `authors`: Collection containing authors with 'id' as the partition key
--   `books`: Collection containing books with 'id' as the partition key
+- `authors`: Collection containing authors with 'id' as the partition key
+- `books`: Collection containing books with 'id' as the partition key
 
 Read more about [choosing partition key](https://docs.microsoft.com/en-us/azure/cosmos-db/partitioning-overview#choose-partitionkey) and [data modelling](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/modeling-data)
 
@@ -23,21 +23,21 @@ Start by adding the `Author` and `Book` schema:
 
 ```graphql
 type Author @model {
-    id : ID,
-    first_name : String,
-    middle_name: String,
-    last_name: String,
-    Books: [Book]
+  id: ID
+  first_name: String
+  middle_name: String
+  last_name: String
+  Books: [Book]
 }
 
 type Book @model {
-    id : ID,
-    title : String,
-    Authors: [String]
+  id: ID
+  title: String
+  Authors: [String]
 }
 ```
 
-> **BEST PRACTICE**: It is recommended to use the *singular* form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a *list* of entity items will be returned. More on this behavior in the [GraphQL documentation](./../graphql.md).
+> **BEST PRACTICE**: It is recommended to use the _singular_ form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a _list_ of entity items will be returned. More on this behavior in the [GraphQL documentation](./../graphql.md).
 
 ## Get the Cosmos DB Account connection string
 
@@ -69,23 +69,21 @@ The command will generate a config file called `dab-config.json` looking like th
 
 ```json
 {
-  "$schema": "dab.draft-01.schema.json",
+  "$schema": "dab.draft.schema.json",
   "data-source": {
     "database-type": "cosmosdb_nosql",
     "connection-string": "AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;"
     "options": {
-    "database": "PlaygroundDB",
-    "schema": "schema.gql"
+        "database": "PlaygroundDB",
+        "schema": "schema.gql"
     }
   },
   "runtime": {
     "rest": {
-      "enabled": false,
       "path": "/api"
     },
     "graphql": {
       "allow-introspection": true,
-      "enabled": true,
       "path": "/graphql"
     },
     "host": {
@@ -105,7 +103,7 @@ The command will generate a config file called `dab-config.json` looking like th
 
 As you can see there the `data-source` property specifies that our chosen `database-type` is `cosmosdb_nosql`, with the `connection-string` we passed to DAB CLI.
 
->Take a look at the [DAB Configuration File Guide](../configuration-file.md) document to learn more about the configuration file.
+> Take a look at the [DAB Configuration File Guide](../configuration-file.md) document to learn more about the configuration file.
 
 With the configuration file in place, then it's time to start defining which entities you want to expose via the API.
 
@@ -144,9 +142,9 @@ within the `entities` object you can create any entity with any name (as long as
 
 After that, you need to specify the permission for the exposed entity, so that you can be sure only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial we're just allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `Author` entity.
 
-You can also add the `Book` entity now, applying the same concepts you just learnt for the `Author` entity. 
+You can also add the `Book` entity now, applying the same concepts you just learnt for the `Author` entity.
 
-CLI add command : 
+CLI add command :
 
 ```bash
   dab add Book --source books --permissions "anonymous:*"
@@ -196,9 +194,10 @@ Once you have added the `Author` entity, the `entities` object of configuration 
     }
   }
 ```
+
 that's all is needed at the moment. Data API builder is ready to be run.
 
-> **BEST PRACTICE**: It is recommended to use the *singular* form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a *list* of entity items will be returned. More on this behaviour in the [GraphQL documentation](./../graphql.md).
+> **BEST PRACTICE**: It is recommended to use the _singular_ form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a _list_ of entity items will be returned. More on this behaviour in the [GraphQL documentation](./../graphql.md).
 
 ## Start Data API builder for Azure Cosmos DB
 
@@ -256,31 +255,26 @@ will return the first five books ordered by title in descending order.
 
 ## GraphQL operations on entity relationships
 
-With your GraphQL endpoint operational, you probably want to take advantage  of GraphQL's ability to handle complex requests.For example, you may want to get all the Books in your library along with the Authors they have written. In order to achieve that, you need to let Data API Builder know that you want that relationship to be available to be used in queries. We have defined the 
+With your GraphQL endpoint operational, you probably want to take advantage of GraphQL's ability to handle complex requests.For example, you may want to get all the Books in your library along with the Authors they have written. In order to achieve that, you need to let Data API Builder know that you want that relationship to be available to be used in queries. We have defined the
 data models in such a way that they can be queried at once.
 
 Using GraphQL you can now execute queries like:
 
 ```graphql
 {
-  books(filter: { title: { eq: "Foundation" } })
-  {
+  books(filter: { title: { eq: "Foundation" } }) {
     items {
       id
       title
       authors {
- 
-          first_name
-          last_name
-        
+        first_name
+        last_name
       }
     }
   }
 }
-
 ```
+
 This query will return list of Books and its Authors.
 
 Congratulations, you have just created a fully working backend to support your modern applications!
-
- 

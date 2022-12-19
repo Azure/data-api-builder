@@ -1,5 +1,9 @@
 # Known Issues and Limitations
 
+## Stored Procedures only support `read` action
+
+Stored procedures only support `read` action both in REST and GraphQL. Specifying other actions will not generate any error at startup but will generate errors when invoking the related REST endpoint and will generate an unexpected result set when used via GraphQL.
+
 ## Table with triggers error out on UPDATE
 
 See issue [#452](https://github.com/Azure/data-api-builder/issues/452)

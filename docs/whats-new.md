@@ -3,6 +3,8 @@
 - [Version 0.4.11](#version-0411)
 - [Version 0.3.7](#version-037)
 
+Details on how to install the latest version are here: [Installing DAB CLI](./getting-started/getting-started.md#installing-dab-cli)
+
 ## Version 0.4.11
 
 The full list of release notes for this version is available here: [version 0.4.11 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.4.11-alpha)

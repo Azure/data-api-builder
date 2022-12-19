@@ -10,6 +10,8 @@
 
 The full list of release notes for this version is available here: [version 0.4.11 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.4.11-alpha)
 
+Details on how to install the latest version are here: [Installing DAB CLI](./getting-started/getting-started.md#installing-dab-cli)
+
 ## Public JSON Schema
 
 JSON Schema has been published here:

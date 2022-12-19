@@ -8,7 +8,7 @@
 - [Managed Identity now supported with Postgres](#managed-identity-now-supported-with-postgres)
 - [Support AAD User authentication for Azure MySQL Service](#support-aad-user-authentication-for-azure-mysql-service)
 
-The full list of release notes for this version is available here: [version 0.4.10 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.4.10-alpha)
+The full list of release notes for this version is available here: [version 0.4.11 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.4.11-alpha)
 
 ## Public JSON Schema
 

@@ -26,7 +26,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -66,7 +65,7 @@ namespace Azure.DataApiBuilder.Service
 
                 switch (runtimeConfig.DatabaseType)
                 {
-                    case DatabaseType.cosmos:
+                    case DatabaseType.cosmosdb_nosql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosQueryEngine>(serviceProvider);
                     case DatabaseType.mssql:
                     case DatabaseType.postgresql:
@@ -84,7 +83,7 @@ namespace Azure.DataApiBuilder.Service
 
                 switch (runtimeConfig.DatabaseType)
                 {
-                    case DatabaseType.cosmos:
+                    case DatabaseType.cosmosdb_nosql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosMutationEngine>(serviceProvider);
                     case DatabaseType.mssql:
                     case DatabaseType.postgresql:
@@ -102,12 +101,12 @@ namespace Azure.DataApiBuilder.Service
 
                 switch (runtimeConfig.DatabaseType)
                 {
-                    case DatabaseType.cosmos:
+                    case DatabaseType.cosmosdb_nosql:
                         return null!;
                     case DatabaseType.mssql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryExecutor>(serviceProvider);
                     case DatabaseType.postgresql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<QueryExecutor<NpgsqlConnection>>(serviceProvider);
+                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlQueryExecutor>(serviceProvider);
                     case DatabaseType.mysql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryExecutor>(serviceProvider);
                     default:
@@ -123,7 +122,7 @@ namespace Azure.DataApiBuilder.Service
 
                 switch (runtimeConfig.DatabaseType)
                 {
-                    case DatabaseType.cosmos:
+                    case DatabaseType.cosmosdb_nosql:
                         return null!;
                     case DatabaseType.mssql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryBuilder>(serviceProvider);
@@ -143,7 +142,7 @@ namespace Azure.DataApiBuilder.Service
 
                 switch (runtimeConfig.DatabaseType)
                 {
-                    case DatabaseType.cosmos:
+                    case DatabaseType.cosmosdb_nosql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<CosmosSqlMetadataProvider>(serviceProvider);
                     case DatabaseType.mssql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlMetadataProvider>(serviceProvider);
@@ -163,7 +162,7 @@ namespace Azure.DataApiBuilder.Service
 
                 switch (runtimeConfig.DatabaseType)
                 {
-                    case DatabaseType.cosmos:
+                    case DatabaseType.cosmosdb_nosql:
                         return null!;
                     case DatabaseType.mssql:
                         return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlDbExceptionParser>(serviceProvider);

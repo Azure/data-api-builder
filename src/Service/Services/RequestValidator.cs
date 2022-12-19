@@ -385,7 +385,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     }
                 }
 
-                bool isReplacementUpdate = (upsertRequestCtx.OperationType == Operation.Upsert) ? true : false;
+                bool isReplacementUpdate = (upsertRequestCtx.OperationType == Config.Operation.Upsert) ? true : false;
                 if (ValidateColumn(column.Value, exposedName!, fieldsInRequestBody, isReplacementUpdate))
                 {
                     unValidatedFields.Remove(exposedName!);

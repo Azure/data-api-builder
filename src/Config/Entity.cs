@@ -253,6 +253,19 @@ namespace Azure.DataApiBuilder.Config
         }
 
         /// <summary>
+        /// Returns the source type of the given source object.
+        /// </summary>
+        public static SourceType GetSourceTypeFromSource(object source)
+        {
+            if (typeof(string).Equals(source.GetType()))
+            {
+                return SourceType.Table;
+            }
+
+            return ((DatabaseObjectSource)source).Type;
+        }
+
+        /// <summary>
         /// Generates an error message for invalid source type.
         /// Message also includes the acceptable values of source type.
         /// </summary>

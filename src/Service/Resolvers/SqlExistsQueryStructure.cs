@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
@@ -48,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             // This adds any required DBPolicyPredicates to this Exists query structure.
             AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                Operation.Read,
+                Config.Operation.Read,
                 queryStructure: this,
                 httpContext,
                 authorizationResolver,

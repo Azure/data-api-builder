@@ -47,14 +47,14 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// <param name="operations">Actions performed on entity to resolve authorization permissions.</param>
         /// <param name="roles">Collection of role names allowed to perform action on entity.</param>
         /// <returns>EntityPermissionsMap Key/Value collection.</returns>
-        public static Dictionary<string, EntityMetadata> CreateStubEntityPermissionsMap(string[] entityNames, IEnumerable<Operation> operations, IEnumerable<string> roles)
+        public static Dictionary<string, EntityMetadata> CreateStubEntityPermissionsMap(string[] entityNames, IEnumerable<Config.Operation> operations, IEnumerable<string> roles)
         {
             EntityMetadata entityMetadata = new()
             {
-                OperationToRolesMap = new Dictionary<Operation, List<string>>()
+                OperationToRolesMap = new Dictionary<Config.Operation, List<string>>()
             };
 
-            foreach (Operation operation in operations)
+            foreach (Config.Operation operation in operations)
             {
                 entityMetadata.OperationToRolesMap.Add(operation, roles.ToList());
             }

@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
     public class ConfigurationTests
     {
         private const string ASP_NET_CORE_ENVIRONMENT_VAR_NAME = "ASPNETCORE_ENVIRONMENT";
-        private const string COSMOS_ENVIRONMENT = TestCategory.COSMOS;
+        private const string COSMOS_ENVIRONMENT = TestCategory.COSMOSDBNOSQL;
         private const string MSSQL_ENVIRONMENT = TestCategory.MSSQL;
         private const string MYSQL_ENVIRONMENT = TestCategory.MYSQL;
         private const string POSTGRESQL_ENVIRONMENT = TestCategory.POSTGRESQL;
@@ -166,7 +166,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 entityName: "MyEntity",
                 entitySource: entitySource,
                 roleName: "Anonymous",
-                operation: Operation.All,
+                operation: Config.Operation.All,
                 includedCols: null,
                 excludedCols: null,
                 databasePolicy: null
@@ -202,7 +202,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
-        [TestMethod("Validates that once the configuration is set, the config controller isn't reachable."), TestCategory(TestCategory.COSMOS)]
+        [TestMethod("Validates that once the configuration is set, the config controller isn't reachable."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestConflictAlreadySetConfiguration()
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
@@ -217,7 +217,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
         }
 
-        [TestMethod("Validates that the config controller returns a conflict when using local configuration."), TestCategory(TestCategory.COSMOS)]
+        [TestMethod("Validates that the config controller returns a conflict when using local configuration."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestConflictLocalConfiguration()
         {
             Environment.SetEnvironmentVariable
@@ -234,7 +234,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
         }
 
-        [TestMethod("Validates setting the configuration at runtime."), TestCategory(TestCategory.COSMOS)]
+        [TestMethod("Validates setting the configuration at runtime."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestSettingConfigurations()
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
@@ -272,7 +272,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 entityName: POST_STARTUP_CONFIG_ENTITY,
                 entitySource: POST_STARTUP_CONFIG_ENTITY_SOURCE,
                 roleName: POST_STARTUP_CONFIG_ROLE,
-                operation: Operation.Read,
+                operation: Config.Operation.Read,
                 includedCols: new HashSet<string>() { "*" });
 
             ConfigurationPostParameters config = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration);
@@ -302,7 +302,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
         }
 
-        [TestMethod("Validates that local cosmos settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.COSMOS)]
+        [TestMethod("Validates that local cosmosdb_nosql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestLoadingLocalCosmosSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
@@ -311,7 +311,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
-        [TestMethod("Validates access token is correctly loaded when Account Key is not present for Cosmos."), TestCategory(TestCategory.COSMOS)]
+        [TestMethod("Validates access token is correctly loaded when Account Key is not present for Cosmos."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestLoadingAccessTokenForCosmosClient()
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
@@ -393,7 +393,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MySqlMetadataProvider));
         }
 
-        [TestMethod("Validates that trying to override configs that are already set fail."), TestCategory(TestCategory.COSMOS)]
+        [TestMethod("Validates that trying to override configs that are already set fail."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestOverridingLocalSettingsFails()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
@@ -406,7 +406,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.Conflict, postResult.StatusCode);
         }
 
-        [TestMethod("Validates that setting the configuration at runtime will instantiate the proper classes."), TestCategory(TestCategory.COSMOS)]
+        [TestMethod("Validates that setting the configuration at runtime will instantiate the proper classes."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestSettingConfigurationCreatesCorrectClasses()
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
@@ -427,7 +427,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsNotNull(configuration, "TryGetRuntimeConfiguration should set the config in the out parameter.");
             Assert.IsTrue(isConfigSet, "TryGetRuntimeConfiguration should return true when the config is set.");
 
-            Assert.AreEqual(DatabaseType.cosmos, configuration.DatabaseType, "Expected cosmos database type after configuring the runtime with cosmos settings.");
+            Assert.AreEqual(DatabaseType.cosmosdb_nosql, configuration.DatabaseType, "Expected cosmosdb_nosql database type after configuring the runtime with cosmosdb_nosql settings.");
             Assert.AreEqual(config.Schema, configuration.DataSource.CosmosDbNoSql.GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
             Assert.AreEqual(config.ConnectionString, configuration.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
             string db = configProvider.GetRuntimeConfiguration().DataSource.CosmosDbNoSql.Database;
@@ -483,10 +483,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// This test reads the dab-config.Cosmos.json file and validates that the
+        /// This test reads the dab-config.CosmosDb_NoSql.json file and validates that the
         /// deserialization succeeds.
         /// </summary>
-        [TestMethod("Validates if deserialization of the cosmos config file succeeds."), TestCategory(TestCategory.COSMOS)]
+        [TestMethod("Validates if deserialization of the cosmosdb_nosql config file succeeds."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestReadingRuntimeConfigForCosmos()
         {
             ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"));
@@ -504,7 +504,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsNotNull(runtimeConfig.Schema);
             Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
             Assert.IsTrue(runtimeConfig.DataSource.CosmosDbNoSql == null
-                || runtimeConfig.DataSource.CosmosDbNoSql.GetType() == typeof(CosmosDbOptions));
+                || runtimeConfig.DataSource.CosmosDbNoSql.GetType() == typeof(CosmosDbNoSqlOptions));
             Assert.IsTrue(runtimeConfig.DataSource.MsSql == null
                 || runtimeConfig.DataSource.MsSql.GetType() == typeof(MsSqlOptions));
             Assert.IsTrue(runtimeConfig.DataSource.PostgreSql == null
@@ -534,9 +534,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 {
                     foreach (object operation in permission.Operations)
                     {
-                        HashSet<Operation> allowedActions =
-                            new() { Operation.All, Operation.Create, Operation.Read,
-                                Operation.Update, Operation.Delete };
+                        HashSet<Config.Operation> allowedActions =
+                            new() { Config.Operation.All, Config.Operation.Create, Config.Operation.Read,
+                                Config.Operation.Update, Config.Operation.Delete };
                         Assert.IsTrue(((JsonElement)operation).ValueKind == JsonValueKind.String ||
                             ((JsonElement)operation).ValueKind == JsonValueKind.Object);
                         if (((JsonElement)operation).ValueKind == JsonValueKind.Object)
@@ -551,7 +551,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         }
                         else
                         {
-                            Operation name = AuthorizationResolver.WILDCARD.Equals(operation.ToString()) ? Operation.All : ((JsonElement)operation).Deserialize<Operation>(RuntimeConfig.SerializerOptions);
+                            Config.Operation name = AuthorizationResolver.WILDCARD.Equals(operation.ToString()) ? Config.Operation.All : ((JsonElement)operation).Deserialize<Config.Operation>(RuntimeConfig.SerializerOptions);
                             Assert.IsTrue(allowedActions.Contains(name));
                         }
                     }
@@ -570,7 +570,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// This function verifies command line configuration provider takes higher
         /// precendence than default configuration file dab-config.json
         /// </summary>
-        [TestMethod("Validates command line configuration provider."), TestCategory(TestCategory.COSMOS)]
+        [TestMethod("Validates command line configuration provider."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestCommandLineConfigurationProvider()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
@@ -589,7 +589,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// This function verifies the environment variable DAB_ENVIRONMENT
         /// takes precendence than ASPNETCORE_ENVIRONMENT for the configuration file.
         /// </summary>
-        [TestMethod("Validates precedence is given to DAB_ENVIRONMENT environment variable name."), TestCategory(TestCategory.COSMOS)]
+        [TestMethod("Validates precedence is given to DAB_ENVIRONMENT environment variable name."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestRuntimeEnvironmentVariable()
         {
             Environment.SetEnvironmentVariable(
@@ -625,7 +625,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// has highest precedence irrespective of what the connection string is in the config file.
         /// Verifying the Exception thrown.
         /// </summary>
-        [TestMethod("Validates that environment variable DAB_CONNSTRING has highest precedence."), TestCategory(TestCategory.COSMOS)]
+        [TestMethod("Validates that environment variable DAB_CONNSTRING has highest precedence."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestConnectionStringEnvVarHasHighestPrecedence()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
@@ -1098,7 +1098,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public static PermissionSetting GetMinimalPermissionConfig(string roleName)
         {
             PermissionOperation actionForRole = new(
-                Name: Operation.All,
+                Name: Config.Operation.All,
                 Fields: null,
                 Policy: new(request: null, database: null)
                 );

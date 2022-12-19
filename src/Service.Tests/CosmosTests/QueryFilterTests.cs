@@ -11,7 +11,7 @@ using QueryBuilder = Azure.DataApiBuilder.Service.GraphQLBuilder.Queries.QueryBu
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
 
-    [TestClass, TestCategory(TestCategory.COSMOS)]
+    [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
     public class QueryFilterTests : TestBase
     {
         private static readonly string _containerName = Guid.NewGuid().ToString();

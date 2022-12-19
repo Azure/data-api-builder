@@ -783,10 +783,11 @@ namespace Azure.DataApiBuilder.Service.Services
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
             {
                 string resultFieldName = element.GetProperty("result_field_name").ToString();
-                Type resultFieldType = SqlToCLRType(element.GetProperty("system_type_name").ToString());
+                Type resultFieldType = SqlToCLRType(element.GetProperty("result_type").ToString());
+                bool isResultFieldNullable = element.GetProperty("is_nullable").GetBoolean();
 
-                // Store the dictionary containing result set field with it's type as Columns
-                storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType));
+                // Store the dictionary containing result set field with its type as Columns
+                storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType) { IsNullable = isResultFieldNullable });
             }
         }
 
@@ -1358,13 +1359,13 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Retrieving the partition key path, for Cosmos only
+        /// Retrieving the partition key path, for cosmosdb_nosql only
         /// </summary>
         public string? GetPartitionKeyPath(string database, string container)
             => throw new NotImplementedException();
 
         /// <summary>
-        /// Setting the partition key path, for Cosmos only
+        /// Setting the partition key path, for cosmosdb_nosql only
         /// </summary>
         public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
             => throw new NotImplementedException();

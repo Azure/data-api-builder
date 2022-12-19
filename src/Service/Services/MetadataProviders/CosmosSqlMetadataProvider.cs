@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         private readonly IFileSystem _fileSystem;
         private readonly DatabaseType _databaseType;
         private readonly Dictionary<string, Entity> _entities;
-        private CosmosDbOptions _cosmosDb;
+        private CosmosDbNoSqlOptions _cosmosDb;
         private readonly RuntimeConfig _runtimeConfig;
         private Dictionary<string, string> _partitionKeyPaths = new();
         private Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             _databaseType = _runtimeConfig.DatabaseType;
             _graphQLSingularTypeToEntityNameMap = _runtimeConfig.GraphQLSingularTypeToEntityNameMap;
 
-            CosmosDbOptions? cosmosDb = _runtimeConfig.DataSource.CosmosDbNoSql;
+            CosmosDbNoSqlOptions? cosmosDb = _runtimeConfig.DataSource.CosmosDbNoSql;
 
             if (cosmosDb is null)
             {
@@ -98,7 +98,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
 
         /// <summary>
         /// Even though there is no source definition for underlying entity names for
-        /// cosmos db, we return back an empty source definition required for
+        /// cosmosdb_nosql, we return back an empty source definition required for
         /// graphql filter parser.
         /// </summary>
         /// <param name="entityName"></param>

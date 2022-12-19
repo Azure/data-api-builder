@@ -84,7 +84,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
             _runtimeConfigProvider = TestHelper.GetMockRuntimeConfigProvider(configPath, string.Empty);
 
-            // Add magazines entity to the 
+            // Add magazines entity to the config
             if (TestCategory.MYSQL.Equals(DatabaseEngine))
             {
                 TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "magazine", "magazines");
@@ -230,11 +230,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             switch (DatabaseEngine)
             {
                 case TestCategory.POSTGRESQL:
-                    Mock<ILogger<QueryExecutor<NpgsqlConnection>>> pgQueryExecutorLogger = new();
+                    Mock<ILogger<PostgreSqlQueryExecutor>> pgQueryExecutorLogger = new();
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
                     _dbExceptionParser = new PostgreSqlDbExceptionParser(_runtimeConfigProvider);
-                    _queryExecutor = new QueryExecutor<NpgsqlConnection>(
+                    _queryExecutor = new PostgreSqlQueryExecutor(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
                         pgQueryExecutorLogger.Object);
@@ -346,7 +346,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string queryString,
             string entityNameOrPath,
             string sqlQuery,
-            Operation operationType = Operation.Read,
+            Config.Operation operationType = Config.Operation.Read,
             string restPath = "api",
             IHeaderDictionary headers = null,
             string requestBody = null,
@@ -422,11 +422,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Initial DELETE request results in 204 no content, no exception thrown.
             // Subsequent DELETE requests result in 404, which result in an exception.
             string expected;
-            if ((operationType is Operation.Delete ||
-                 operationType is Operation.Upsert ||
-                 operationType is Operation.UpsertIncremental ||
-                 operationType is Operation.Update ||
-                 operationType is Operation.UpdateIncremental)
+            if ((operationType is Config.Operation.Delete ||
+                 operationType is Config.Operation.Upsert ||
+                 operationType is Config.Operation.UpsertIncremental ||
+                 operationType is Config.Operation.Update ||
+                 operationType is Config.Operation.UpdateIncremental)
                  && response.StatusCode == HttpStatusCode.NoContent
                 )
             {
@@ -452,7 +452,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
                     string dbResult = await GetDatabaseResultAsync(sqlQuery, expectJson);
                     // For FIND requests, null result signifies an empty result set
-                    dbResult = (operationType is Operation.Read && dbResult is null) ? "[]" : dbResult;
+                    dbResult = (operationType is Config.Operation.Read && dbResult is null) ? "[]" : dbResult;
                     expected = $"{{\"{SqlTestHelper.jsonResultTopLevelKey}\":" +
                         $"{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";
                 }

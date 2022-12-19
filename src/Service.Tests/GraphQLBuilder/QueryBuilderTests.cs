@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new Operation[] { Operation.Read },
+                    new Config.Operation[] { Config.Operation.Read },
                     new string[] { "anonymous", "authenticated" }
                     );
         }
@@ -57,11 +57,11 @@ type Foo @model(name:""Foo"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new Operation[] { Operation.Read },
+                    new Config.Operation[] { Config.Operation.Read },
                     roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmos,
+                DatabaseType.cosmosdb_nosql,
                 new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: entityPermissionsMap
@@ -91,7 +91,7 @@ type Foo @model(name:""Foo"") {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmos,
+                DatabaseType.cosmosdb_nosql,
                 new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
@@ -132,11 +132,11 @@ type foo @model(name:""foo"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "foo" },
-                    new Operation[] { Operation.Read },
+                    new Config.Operation[] { Config.Operation.Read },
                     roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmos,
+                DatabaseType.cosmosdb_nosql,
                 new Dictionary<string, Entity> { { "foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: entityPermissionsMap
@@ -166,7 +166,7 @@ type Foo @model(name:""Foo"") {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmos,
+                DatabaseType.cosmosdb_nosql,
                 new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
@@ -223,7 +223,7 @@ type Foo @model(name:""Foo"") {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                             root,
-                            DatabaseType.cosmos,
+                            DatabaseType.cosmosdb_nosql,
                             new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                             inputTypes: new(),
                             entityPermissionsMap: _entityPermissions
@@ -334,7 +334,7 @@ type Table @model(name: ""table"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { entityName },
-                    new Operation[] { Operation.Read },
+                    new Config.Operation[] { Config.Operation.Read },
                     new string[] { "anonymous", "authenticated" });
 
             Entity entity = (singularName is not null)
@@ -343,7 +343,7 @@ type Table @model(name: ""table"") {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmos,
+                DatabaseType.cosmosdb_nosql,
                 new Dictionary<string, Entity> { { entityName, entity } },
                 inputTypes: new(),
                 entityPermissionsMap: entityPermissionsMap

@@ -74,8 +74,8 @@ The command will generate a config file called `dab-config.json` looking like th
     "database-type": "cosmosdb_nosql",
     "connection-string": "AccountEndpoint=https://localhost:8081/;AccountKey=REPLACEME;"
     "options": {
-    "database": "PlaygroundDB",
-    "schema": "schema.gql"
+        "database": "PlaygroundDB",
+        "schema": "schema.gql"
     }
   },
   "runtime": {

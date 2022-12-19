@@ -3,6 +3,7 @@
 - [Public JSON Schema](#public-json-schema)
 - [Updated JSON schema for `data-source` section](#updated-json-schema-for-data-source-section)
 - [Support for filter on nested objects within a document in Azure SQL and SQL Server](#support-for-filter-on-nested-objects-within-a-document-in-azure-sql-and-sql-server)
+- [Improved Stored Procedure support](#improved-stored-procedure-support)
 - [`database-type` value renamed for Cosmos DB](#database-type-value-renamed-for-cosmos-db)
 - [Renaming CLI properties for `cosmosdb_nosql`](#renaming-cli-properties-for-cosmosdb_nosql)
 - [Managed Identity now supported with Postgres](#managed-identity-now-supported-with-postgres)
@@ -59,6 +60,10 @@ query {
   }
 }
 ```
+
+## Improved Stored Procedure support
+
+Full support for stored procedure in REST and GraphQL. Stored procedure with parameters now 100% supported. Check out the [Stored Procedures](./views-and-stored-procedures.md#stored-procedures) documentation to learn how to use use Data API Builder with stored procedures.
 
 ## `database-type` value renamed for Cosmos DB
 

@@ -1,4 +1,4 @@
-# What's New in Data API Builder 0.4.10
+# What's New in Data API Builder 0.4.11
 
 - [Public JSON Schema](#public-json-schema)
 - [Updated JSON schema for `data-source` section](#updated-json-schema-for-data-source-section)

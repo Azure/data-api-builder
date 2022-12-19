@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         {
             List<FieldDefinitionNode> fieldDefinitionNodes = new();
 
-            if (databaseType == DatabaseType.cosmos)
+            if (databaseType is DatabaseType.cosmosdb_nosql)
             {
                 fieldDefinitionNodes.Add(
                     new FieldDefinitionNode(

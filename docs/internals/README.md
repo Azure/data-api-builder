@@ -25,7 +25,7 @@ For Installation of CLI tool, Refer [README:HAWAII-CLI](https://github.com/Azure
 
 ### 2. Configure Database Engine
 
-You will need to provide a database to run behind DataGateway. DataGateway supports SQL Server, CosmosDB, PostgreSQL, and MySQL.
+You will need to provide a database to run behind DataGateway. DataGateway supports SQL Server, CosmosDB_NoSql, PostgreSQL, and MySQL.
 
 #### 2.1 Configure Database Account
 
@@ -84,11 +84,11 @@ LocalDB Instance
 }
 ```
 
-#### CosmosDB
+#### CosmosDB_NoSql
 
 ```json
 "data-source": {
-  "database-type": "cosmos",
+  "database-type": "cosmosdb_nosql",
   "connection-string": "AccountEndpoint=https://<REPLACEME>.documents.azure.com:443/;AccountKey=<REPLACEME>"
 }
 ```
@@ -196,7 +196,7 @@ Configure **Bearer token authentication** with identity providers like Azure AD.
 
 ```json
   "data-source": {
-  "database-type": "cosmos",
+  "database-type": "cosmosdb_nosql",
   "connection-string": "AccountEndpoint=https://<REPLACEME>.documents.azure.com:443/;AccountKey=<REPLACEME>"
   },
   "runtime": {
@@ -221,7 +221,7 @@ HTTP requests must have the `Authorization` HTTP header set with the value `Bear
 #### Visual Studio
 
 1. Select the **Startup Project** `Azure.DataGateway.Service`.
-2. Select a **debug profile** for database type: `MsSql`, `PostgreSql`,`Cosmos`, or `MySql`.
+2. Select a **debug profile** for database type: `MsSql`, `PostgreSql`,`CosmosDb_NoSql`, or `MySql`.
 3. Select **Clean Solution**
 4. Select **Build Solution** (Do not select rebuild, as any changes to configuration files may not be reflected in the build folder.)
 5. Start runtime
@@ -232,7 +232,7 @@ The following steps outline an alternative way of generating config files to ass
 
 1. The **ConfigGenerators** directory contains text files with DAB commands for each database type.
 2. Based on your choice of database, in the respective text file, update the **connection-string** property of the **init** command.
-3. Execute the command `dotnet build -p:generateConfigFiles=true` in the directory `data-api-builder\src` to build the project and generate the config file that can be used when starting DAB. The config files will be generated in the directory `data-api-builder\src\Service`.
+3. Execute the command `dotnet build -p:generateConfigFileForDbType=<database_type>` in the directory `data-api-builder\src` to build the project and generate the config file that can be used when starting DAB. The config file will be generated in the directory `data-api-builder\src\Service`. `mssql`, `postgresql`,`cosmosdb_nosql` and `mysql` are the values that can be used with `generateConfigFileForDbType`. Only the config file for the specified database type will be generated.
 4. DAB can be started using one of the various methods outlined in this document.
 
 #### Which configuration file is used?
@@ -242,7 +242,7 @@ The following steps outline an alternative way of generating config files to ass
 #### Command Line
 
 1. Based on your preferred mode of specifying the configuration file name, there are different ways to launch the runtime.
-2. Set the `DAB_ENVIRONMENT` or `ASPNETCORE_ENVIRONMENT`, typically using their value to be database type `MsSql`, `PostgreSql`,`Cosmos`, or `MySql`.
+2. Set the `DAB_ENVIRONMENT` or `ASPNETCORE_ENVIRONMENT`, typically using their value to be database type `MsSql`, `PostgreSql`,`CosmosDb_NoSql`, or `MySql`.
 
     Example: `ASPNETCORE_ENVIRONMENT=PostgreSql`
 

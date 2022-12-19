@@ -48,16 +48,16 @@ namespace Cli
             DevModeDefaultAuth = devModeDefaultAuth;
         }
 
-        [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmos, mysql, postgresql")]
+        [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]
         public DatabaseType DatabaseType { get; }
 
         [Option("connection-string", Required = false, HelpText = "(Default: '') Connection details to connect to the database.")]
         public string? ConnectionString { get; }
 
-        [Option("cosmosdb_nosql-database", Required = false, HelpText = "Database name for Cosmos DB.")]
+        [Option("cosmosdb_nosql-database", Required = false, HelpText = "Database name for Cosmos DB for NoSql.")]
         public string? CosmosNoSqlDatabase { get; }
 
-        [Option("cosmosdb_nosql-container", Required = false, HelpText = "Container name for Cosmos DB.")]
+        [Option("cosmosdb_nosql-container", Required = false, HelpText = "Container name for Cosmos DB for NoSql.")]
         public string? CosmosNoSqlContainer { get; }
 
         [Option("graphql-schema", Required = false, HelpText = "GraphQL schema Path.")]

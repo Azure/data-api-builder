@@ -12,9 +12,7 @@ namespace Cli.Tests
         [TestInitialize]
         public void SetupLoggerForCLI()
         {
-            // Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
             Mock<ILogger<Utils>> utilsLogger = new();
-            // ConfigGenerator.SetLoggerForCliConfigGenertor(configGeneratorLogger.Object);
             Utils.SetCliUtilsLogger(utilsLogger.Object);
         }
 

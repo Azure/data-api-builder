@@ -62,9 +62,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// returns an empty list in case of no result 
         /// or stored-procedure is trying to read from DB without READ permission.
         /// </summary>
-        public static List<JsonDocument> FormatStoredProcedureResultAsJsonList(bool IsReadAllowed, JsonDocument jsonDocument)
+        public static List<JsonDocument> FormatStoredProcedureResultAsJsonList(JsonDocument jsonDocument)
         {
-            if (jsonDocument is null || !IsReadAllowed)
+            if (jsonDocument is null)
             {
                 return new List<JsonDocument>();
             }

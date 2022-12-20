@@ -32,6 +32,7 @@ add CountBooks --config "dab-config.MsSql.json" --source "count_books" --source.
 add DeleteLastInsertedBook --config "dab-config.MsSql.json" --source "delete_last_inserted_book" --source.type "stored-procedure" --permissions "anonymous:delete" --rest true --graphql true
 add UpdateBookTitle --config "dab-config.MsSql.json" --source "update_book_title" --source.type "stored-procedure" --source.params "id:1,title:Testing Tonight" --permissions "anonymous:update" --rest true --graphql true
 add GetAuthorsHistoryByFirstName --config "dab-config.MsSql.json" --source "get_authors_history_by_first_name" --source.type "stored-procedure" --source.params "firstName:Aaron" --permissions "anonymous:read" --rest true --graphql true
+add InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.MsSql.json" --source "insert_and_display_all_books_for_given_publisher" --source.type "stored-procedure" --source.params "title:MyTitle,publisher_name:MyPublisher" --permissions "anonymous:create" --rest true --graphql true
 update Publisher --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_01:create,delete"
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_01:update" --fields.include "*"
@@ -121,3 +122,4 @@ update DeleteLastInsertedBook --config "dab-config.MsSql.json" --permissions "au
 update UpdateBookTitle --config "dab-config.MsSql.json" --permissions "authenticated:update"
 update Sales --config "dab-config.MsSql.json" --permissions "authenticated:*"
 update GetAuthorsHistoryByFirstName --config "dab-config.MsSql.json" --permissions "authenticated:read"
+update InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.MsSql.json" --permissions "authenticated:read"

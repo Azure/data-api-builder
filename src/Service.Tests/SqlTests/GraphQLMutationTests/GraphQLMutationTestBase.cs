@@ -169,6 +169,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Insert a new book with a given title and publisher name.
+        /// and returns all the books under the given publisher.
+        /// <code>Check: </code> If the intended book is inserted into the DB and
+        /// verifies the non-empty response.
+        /// </summary>
+        public async Task TestStoredProcedureMutationNonEmptyResponse(string dbQuery)
+        {
+            string graphQLMutationName = "InsertAndDisplayAllBooksUnderGivenPublisher";
+            string graphQLMutation = @"
+                mutation{
+                    InsertAndDisplayAllBooksUnderGivenPublisher(title: ""Orange Tomato"" publisher_name: ""Big Company""){
+                        id
+                        title
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// <code>Do: </code> updates a book title from the books table with given id
         /// and new title.
         /// <code>Check: </code> The book title should be updated with the given id

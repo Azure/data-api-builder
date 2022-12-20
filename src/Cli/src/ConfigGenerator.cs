@@ -15,12 +15,10 @@ namespace Cli
     {
         private static ILogger<ConfigGenerator> _logger;
 
-        public static void SetLoggerFactoryForCLi(
-            ILogger<ConfigGenerator> configGeneratorLoggerFactory,
-            ILogger<Utils> utilsLoggerFactory)
+        public static void SetLoggerForCliConfigGenerator(
+            ILogger<ConfigGenerator> configGeneratorLoggerFactory)
         {
             _logger = configGeneratorLoggerFactory;
-            Utils._logger = utilsLoggerFactory;
         }
 
         /// <summary>
@@ -74,7 +72,7 @@ namespace Cli
                     string? graphQLSchemaPath = options.GraphQLSchemaPath;
                     if (string.IsNullOrEmpty(cosmosDatabase) || string.IsNullOrEmpty(graphQLSchemaPath))
                     {
-                        _logger.LogError($"Not all the mandatory options provided for CosmosDB_NoSql: --cosmosdb_nosql-database, and --graphql-schema");
+                        _logger.LogError($"Missing mandatory option configuration for CosmosDB_NoSql: --cosmosdb_nosql-database, and --graphql-schema");
                         return false;
                     }
 
@@ -186,7 +184,7 @@ namespace Cli
                 return false;
             }
 
-            // If entity exist, we cannot add. Display warning
+            // If entity exists, we cannot add. Display warning
             //
             if (runtimeConfig!.Entities.ContainsKey(options.Entity))
             {
@@ -732,7 +730,7 @@ namespace Cli
             // Checking if both cardinality and targetEntity is provided.
             if (cardinality is null || targetEntity is null)
             {
-                _logger.LogError("Mandatory fields (cardinality and targetEntity) required to update/add a relationship is not provided.");
+                _logger.LogError("Missing mandatory fields (cardinality and targetEntity) required to configure a relationship.");
                 return false;
             }
 

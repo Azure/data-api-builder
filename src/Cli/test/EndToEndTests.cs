@@ -14,7 +14,8 @@ public class EndToEndTests
     {
         Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
         Mock<ILogger<Utils>> utilsLogger = new();
-        ConfigGenerator.SetLoggerFactoryForCLi(configGeneratorLogger.Object, utilsLogger.Object);
+        ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger.Object);
+        Utils.SetCliUtilsLogger(utilsLogger.Object);
     }
 
     /// <summary>

@@ -18,7 +18,12 @@ namespace Cli
         public const string WILDCARD = "*";
         public static readonly string SEPARATOR = ":";
 
-        public static ILogger<Utils> _logger;
+        private static ILogger<Utils> _logger;
+
+        public static void SetCliUtilsLogger(ILogger<Utils> cliUtilsLogger)
+        {
+            _logger = cliUtilsLogger;
+        }
 
         /// <summary>
         /// Creates the rest object which can be either a boolean value
@@ -366,8 +371,8 @@ namespace Cli
 
             if (!File.Exists(file))
             {
-                _logger.LogError($"Couldn't find config  file: {file}.");
-                _logger.LogInformation($"Please run: dab init <options> to create a new config file.");
+                _logger.LogError($"Couldn't find config  file: {file}." +
+                    "Please run: dab init <options> to create a new config file.");
                 return false;
             }
 
@@ -477,7 +482,7 @@ namespace Cli
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
                 /// The existence of user provided config file is not checked here.
-                _logger.LogInformation($"Using config file: {userProvidedConfigFile}");
+                _logger.LogInformation($"User provided config file: {userProvidedConfigFile}");
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;
@@ -624,8 +629,8 @@ namespace Cli
                 if (items.Length != 2)
                 {
                     sourceParameters = null;
-                    _logger.LogError("Invalid format for --source.params");
-                    _logger.LogInformation("Correct source parameter syntax: --source.params \"key1:value1,key2:value2,...\".");
+                    _logger.LogError("Invalid format for --source.params" +
+                        "Correct source parameter syntax: --source.params \"key1:value1,key2:value2,...\".");
                     return false;
                 }
 

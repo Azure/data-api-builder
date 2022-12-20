@@ -1,8 +1,13 @@
 using Microsoft.Extensions.Logging;
+
+/// <summary>
+/// LoggerProvider to generate Custom Log message
+/// </summary>
 public class CustomLoggerProvider : ILoggerProvider
 {
     public void Dispose() { }
 
+    /// <inheritdoc/>
     public ILogger CreateLogger(string categoryName)
     {
         return new CustomConsoleLogger();
@@ -10,9 +15,21 @@ public class CustomLoggerProvider : ILoggerProvider
 
     public class CustomConsoleLogger : ILogger
     {
+        // Minimum LogLevel. LogLevel below this would be disabled.
         private readonly LogLevel _minimumLogLevel = LogLevel.Information;
 
-        // Color values are same as the default values.
+        //  Color values based on LogLevel
+        //  LogLevel    Foreground      Background
+        //  Trace         White           Black
+        //  Debug         White           Gray
+        //  Information   Green           Black
+        //  Warning       Yellow          Black
+        //  Error         White           Red
+        //  Critical      White           DarkRed
+
+        /// <summary>
+        /// Foreground color for Console message based on LogLevel
+        /// </summary>
         Dictionary<LogLevel, ConsoleColor> _logLevelToForeGroundConsoleColorMap = new()
         {
             {LogLevel.Trace, ConsoleColor.White},
@@ -23,6 +40,9 @@ public class CustomLoggerProvider : ILoggerProvider
             {LogLevel.Critical, ConsoleColor.White}
         };
 
+        /// <summary>
+        /// Background color for Console message based on LogLevel
+        /// </summary>
         Dictionary<LogLevel, ConsoleColor> _logLevelToBackGroundConsoleColorMap = new()
         {
             {LogLevel.Trace, ConsoleColor.Black},
@@ -33,6 +53,9 @@ public class CustomLoggerProvider : ILoggerProvider
             {LogLevel.Critical, ConsoleColor.DarkRed}
         };
 
+        /// <summary>
+        /// Creates Log message by setting console message color based on LogLevel.
+        /// </summary>
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
             if (!IsEnabled(logLevel) || logLevel < _minimumLogLevel)
@@ -50,11 +73,13 @@ public class CustomLoggerProvider : ILoggerProvider
             Console.WriteLine($" {formatter(state, exception)}");
         }
 
+        /// <inheritdoc/>
         public bool IsEnabled(LogLevel logLevel)
         {
             return true;
         }
 
+        /// <inheritdoc/>
         public IDisposable BeginScope<TState>(TState state)
         {
             return null;

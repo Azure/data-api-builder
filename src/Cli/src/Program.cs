@@ -23,13 +23,15 @@ namespace Cli
                 }
             );
 
+            // Setting up Logger for CLI.
             ILoggerFactory loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(new CustomLoggerProvider());
 
             ILogger<Program> cliLogger = loggerFactory.CreateLogger<Program>();
             ILogger<ConfigGenerator> configGeneratorLogger = loggerFactory.CreateLogger<ConfigGenerator>();
             ILogger<Utils> cliUtilsLogger = loggerFactory.CreateLogger<Utils>();
-            ConfigGenerator.SetLoggerFactoryForCLi(configGeneratorLogger, cliUtilsLogger);
+            ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
+            Utils.SetCliUtilsLogger(cliUtilsLogger);
 
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
                 .WithParsed<InitOptions>(options =>
@@ -70,7 +72,7 @@ namespace Cli
                     }
                     else
                     {
-                        cliLogger.LogInformation($"Could not update the entity: {options.Entity}.");
+                        cliLogger.LogError($"Could not update the entity: {options.Entity}.");
                     }
                 })
                 .WithParsed<StartOptions>(options =>

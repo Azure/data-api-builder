@@ -3,6 +3,8 @@
 - [Version 0.4.11](#version-0411)
 - [Version 0.3.7](#version-037)
 
+Details on how to install the latest version are here: [Installing DAB CLI](./getting-started/getting-started.md#installing-dab-cli)
+
 ## Version 0.4.11
 
 The full list of release notes for this version is available here: [version 0.4.11 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.4.11-alpha)
@@ -10,6 +12,7 @@ The full list of release notes for this version is available here: [version 0.4.
 - [Public JSON Schema](./whats-new-0.4.11.md#public-json-schema)
 - [Updated JSON schema for `data-source` section](./whats-new-0.4.11.md#updated-json-schema-for-data-source-section)
 - [Support for filter on nested objects within a document in Azure SQL and SQL Server](./whats-new-0.4.11.md#support-for-filter-on-nested-objects-within-a-document-in-azure-sql-and-sql-server)
+- [Improved Stored Procedure support](./whats-new-0.4.11.md#improved-stored-procedure-support)
 - [`database-type` value renamed for Cosmos DB](./whats-new-0.4.11.md#database-type-value-renamed-for-cosmos-db)
 - [Renaming CLI properties for `cosmosdb_nosql`](./whats-new-0.4.11.md#renaming-cli-properties-for-cosmosdb_nosql)
 - [Managed Identity now supported with Postgres](./whats-new-0.4.11.md#managed-identity-now-supported-with-postgres)

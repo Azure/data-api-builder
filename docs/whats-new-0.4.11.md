@@ -3,6 +3,7 @@
 - [Public JSON Schema](#public-json-schema)
 - [Updated JSON schema for `data-source` section](#updated-json-schema-for-data-source-section)
 - [Support for filter on nested objects within a document in Azure SQL and SQL Server](#support-for-filter-on-nested-objects-within-a-document-in-azure-sql-and-sql-server)
+- [Improved Stored Procedure support](#improved-stored-procedure-support)
 - [`database-type` value renamed for Cosmos DB](#database-type-value-renamed-for-cosmos-db)
 - [Renaming CLI properties for `cosmosdb_nosql`](#renaming-cli-properties-for-cosmosdb_nosql)
 - [Managed Identity now supported with Postgres](#managed-identity-now-supported-with-postgres)
@@ -10,12 +11,14 @@
 
 The full list of release notes for this version is available here: [version 0.4.11 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.4.11-alpha)
 
+Details on how to install the latest version are here: [Installing DAB CLI](./getting-started/getting-started.md#installing-dab-cli)
+
 ## Public JSON Schema
 
 JSON Schema has been published here:
 
 ```text
-https://dataapibuilder.blob.core.windows.net/schemas/v0.4.11-alpha/dab.draft.schema.json
+https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json
 ```
 
 This will give you intellisense if you are using an IDE, like VS Code, that supports JSON Schemas. Take a look at `basic-empty-dab-config.json` in the `samples` folder, to have a starting point when manually creating the `dab-config.json` file.
@@ -28,7 +31,7 @@ The `data-source` section in the configuration file has been updated to be consi
 
 ```json
 {
-  "$schema": "https://dataapibuilder.blob.core.windows.net/schemas/v0.4.11-alpha/dab.draft.schema.json",
+  "$schema": "https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json",
   "data-source": {
     "database-type": "cosmosdb_nosql",
     "options": {
@@ -57,6 +60,10 @@ query {
   }
 }
 ```
+
+## Improved Stored Procedure support
+
+Full support for stored procedure in REST and GraphQL. Stored procedure with parameters now 100% supported. Check out the [Stored Procedures](./views-and-stored-procedures.md#stored-procedures) documentation to learn how to use use Data API Builder with stored procedures.
 
 ## `database-type` value renamed for Cosmos DB
 

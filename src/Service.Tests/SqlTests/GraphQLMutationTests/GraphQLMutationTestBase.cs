@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -204,7 +205,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string graphQLMutation = @"
                 mutation {
                     UpdateBookTitle(id: 14, title: ""Before Midnight"") {
-                        result
+                        id
+                        title
+                        publisher_id
                     }
                 }
             ";
@@ -212,9 +215,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string beforeUpdate = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings("{\"id\":14,\"title\":\"Before Sunset\",\"publisher_id\":1234}", beforeUpdate);
             JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            SqlTestHelper.PerformTestEqualJsonStrings("[]", graphQLResponse.ToString());
             string afterUpdate = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings("{\"id\":14,\"title\":\"Before Midnight\",\"publisher_id\":1234}", afterUpdate);
+            SqlTestHelper.PerformTestEqualJsonStrings(afterUpdate.ToString(), graphQLResponse.EnumerateArray().First().ToString());
         }
 
         /// <summary>

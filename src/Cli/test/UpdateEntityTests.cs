@@ -1404,31 +1404,33 @@ namespace Cli.Tests
         /// Simple test to verify failure on updating source of an entity with invalid fields.
         /// </summary>
         [DataTestMethod]
-        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "*", DisplayName = "Both KeyFields and Parameters provided for source")]
-        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, "create", DisplayName = "KeyFields incorrectly used with stored procedure")]
-        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, "read", DisplayName = "Parameters with duplicate keys for stored procedure")]
-        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "create,read", DisplayName = "Stored procedure with more than 1 CRUD operation")]
-        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "*", DisplayName = "Stored procedure with wildcard CRUD operation")]
-        [DataRow("view", new string[] { "param1:value1" }, null, "*", DisplayName = "Source Parameters incorrectly used with View")]
-        [DataRow("table", new string[] { "param1:value1" }, null, "*", DisplayName = "Source Parameters incorrectly used with Table")]
-        [DataRow("table-view", new string[] { "param1:value1" }, null, "*", DisplayName = "Invalid Source Type")]
+        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "anonymous", "*", DisplayName = "Both KeyFields and Parameters provided for source")]
+        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, "anonymous", "create", DisplayName = "KeyFields incorrectly used with stored procedure")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, "anonymous", "read", DisplayName = "Parameters with duplicate keys for stored procedure")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "anonymous", "create,read", DisplayName = "Stored procedure with more than 1 CRUD operation")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "anonymous", "*", DisplayName = "Stored procedure with wildcard CRUD operation")]
+        [DataRow("view", new string[] { "param1:value1" }, null, "anonymous", "*", DisplayName = "Source Parameters incorrectly used with View")]
+        [DataRow("table", new string[] { "param1:value1" }, null, "anonymous", "*", DisplayName = "Source Parameters incorrectly used with Table")]
+        [DataRow("table-view", new string[] { "param1:value1" }, null, "anonymous", "*", DisplayName = "Invalid Source Type")]
+        [DataRow(null, null, null, "authenticated", "create", DisplayName = "Stored procedure incorrectly configured with different CRUD operation for different roles")]
         public void TestUpdateSourceObjectWithInvalidFields(
             string? sourceType,
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields,
+            string role,
             string operations)
         {
             UpdateOptions options = new(
                 source: "MyTable",
-                permissions: new string[] { "anonymous", operations },
+                permissions: new string[] { role, operations },
                 entity: "MyEntity",
                 sourceType: sourceType,
                 sourceParameters: parameters,
                 sourceKeyFields: keyFields,
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: new string[] { "id", "rating" },
-                fieldsToExclude: new string[] { "level" },
+                fieldsToInclude: null,
+                fieldsToExclude: null,
                 relationship: null,
                 cardinality: null,
                 targetEntity: null,

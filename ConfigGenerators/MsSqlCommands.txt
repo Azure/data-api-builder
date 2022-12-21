@@ -122,4 +122,4 @@ update DeleteLastInsertedBook --config "dab-config.MsSql.json" --permissions "au
 update UpdateBookTitle --config "dab-config.MsSql.json" --permissions "authenticated:update"
 update Sales --config "dab-config.MsSql.json" --permissions "authenticated:*"
 update GetAuthorsHistoryByFirstName --config "dab-config.MsSql.json" --permissions "authenticated:read"
-update InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.MsSql.json" --permissions "authenticated:read"
+update InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.MsSql.json" --permissions "authenticated:create"

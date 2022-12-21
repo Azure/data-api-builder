@@ -178,21 +178,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         [TestMethod]
         public async Task TestStoredProcedureMutationNonEmptyResponse()
         {
-            string dbQueryToVerifyDeletion = @"
-                SELECT id, title
+            string dbQuery = @"
+                SELECT [table0].id, [table0].title
                 FROM [books] AS [table0]
-                WHERE
-                    [table0].[publisher_id] = (
-                        SELECT id
-                        FROM publishers
-                        WHERE name='Big Company'
-                    )
+                JOIN (
+                    SELECT id
+                    FROM [publishers]
+                    WHERE name = 'Big Company') AS [table1]
+                ON [table0].publisher_id = [table1].id
+                ORDER BY [table0].id
                 FOR JSON PATH,
-                    INCLUDE_NULL_VALUES,
-                    WITHOUT_ARRAY_WRAPPER
+                    INCLUDE_NULL_VALUES
             ";
 
-            await TestStoredProcedureMutationNonEmptyResponse(dbQueryToVerifyDeletion);
+            await TestStoredProcedureMutationNonEmptyResponse(dbQuery);
         }
 
         /// <summary>

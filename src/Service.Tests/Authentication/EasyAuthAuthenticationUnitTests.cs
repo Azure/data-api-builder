@@ -385,7 +385,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// Sends a request with an EasyAuth header to the TestServer created.
         /// </summary>
         /// <param name="token">The EasyAuth header value(base64 encoded token) to test against the TestServer</param>
+        /// <param name="easyAuthType">EasyAuth type - one among StaticWebApps/AppService</param>
         /// <param name="sendAuthorizationHeader">Whether to add authorization header to header dictionary</param>
+        /// <param name="clientRoleHeader">Custom role header provided by client in the http request header.</param>
+        /// <param name="useAuthorizationMiddleware">Boolean variable indicating whether we want the request to pass through
+        /// authorization middleware.</param>
         /// <returns></returns>
         public static async Task<HttpContext> SendRequestAndGetHttpContextState(
             string? token,

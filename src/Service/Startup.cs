@@ -292,8 +292,8 @@ namespace Azure.DataApiBuilder.Service
 
             // URL Rewrite middleware MUST be called prior to UseRouting().
             // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location
-            app.UsePathRewriteMiddleware();
             app.UseMiddleware<CorrelationIdMiddleware>();
+            app.UsePathRewriteMiddleware();
             app.UseRouting();
 
             // Adding CORS Middleware

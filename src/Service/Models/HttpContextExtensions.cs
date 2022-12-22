@@ -1,7 +1,6 @@
+using System;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
-using Microsoft.VisualBasic;
-using System;
 
 namespace Azure.DataApiBuilder.Service.Models
 {

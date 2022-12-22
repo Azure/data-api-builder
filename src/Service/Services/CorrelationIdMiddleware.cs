@@ -1,8 +1,8 @@
-using Microsoft.AspNetCore.Http;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Models;
-using System.Collections.Generic;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Service.Services

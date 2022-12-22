@@ -9,7 +9,7 @@ namespace Azure.DataApiBuilder.Service.Models
         public const string POST = "POST";
         public const string PATCH = "PATCH";
         public const string PUT = "PUT";
-        public const string DELETE = "DELETE"; 
+        public const string DELETE = "DELETE";
     }
 
     public static class HttpHeaders

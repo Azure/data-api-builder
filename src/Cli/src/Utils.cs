@@ -286,15 +286,14 @@ namespace Cli
         /// Returns the default global settings.
         /// </summary>
         public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(HostModeType hostMode,
-                                                                                      IEnumerable<string>? corsOrigin,
-                                                                                      bool? devModeDefaultAuth)
+                                                                                      IEnumerable<string>? corsOrigin)
         {
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
             defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings());
             defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
             defaultGlobalSettings.Add(
                 GlobalSettingsType.Host,
-                GetDefaultHostGlobalSettings(hostMode, corsOrigin, devModeDefaultAuth));
+                GetDefaultHostGlobalSettings(hostMode, corsOrigin));
             return defaultGlobalSettings;
         }
 
@@ -315,8 +314,7 @@ namespace Cli
         /// </summary>
         public static HostGlobalSettings GetDefaultHostGlobalSettings(
             HostModeType hostMode,
-            IEnumerable<string>? corsOrigin,
-            bool? devModeDefaultAuth)
+            IEnumerable<string>? corsOrigin)
         {
             string[]? corsOriginArray = corsOrigin is null ? new string[] { } : corsOrigin.ToArray();
             Cors cors = new(Origins: corsOriginArray);
@@ -324,7 +322,6 @@ namespace Cli
 
             return new HostGlobalSettings(
                 Mode: hostMode,
-                IsDevModeDefaultRequestAuthenticated: devModeDefaultAuth,
                 Cors: cors,
                 Authentication: authenticationConfig);
         }

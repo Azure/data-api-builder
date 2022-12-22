@@ -648,7 +648,8 @@ namespace Cli
         {
             foreach (PermissionSetting permissionSetting in permissionSettings)
             {
-                if ((roleToUpdate).Equals(permissionSetting.Role)) {
+                if ((roleToUpdate).Equals(permissionSetting.Role))
+                {
                     // If the role already exists we break from the loop
                     // and do normal update.
                     break;

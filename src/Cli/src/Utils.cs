@@ -645,12 +645,12 @@ namespace Cli
         ///  and checks if it has only one CRUD operation.
         /// </summary>
         public static bool VerifySameOperationsForEachRoleInStoredProcedures(
-            PermissionSetting[] permissionSettings, string newOperationName)
+            PermissionSetting[] permissionSettings,
+            string newOperationName)
         {
             foreach (PermissionSetting permissionSetting in permissionSettings)
             {
-                if (!VerifySingleOperationForStoredProcedure(permissionSetting.Operations) ||
-                    !TryGetOperationName(permissionSetting.Operations.First(), out Operation existingOperation) ||
+                if (!TryGetOperationName(permissionSetting.Operations.First(), out Operation existingOperation) ||
                     !TryConvertOperationNameToOperation(newOperationName, out Operation newOperation) ||
                     !newOperation.Equals(existingOperation))
                 {
@@ -661,6 +661,20 @@ namespace Cli
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// This method checks if the given role is already present in the permission
+        /// settings for a particular entity.
+        /// </summary>
+        public static bool IsRoleExistingInPermissions(PermissionSetting[] permissionSettings, string role)
+        {
+            foreach (PermissionSetting permissionSetting in permissionSettings)
+            {
+                return role.Equals(permissionSetting.Role);
+            }
+
+            return false;
         }
 
         /// <summary>

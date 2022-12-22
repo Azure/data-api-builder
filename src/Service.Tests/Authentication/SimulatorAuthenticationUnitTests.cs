@@ -61,7 +61,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         {
             using IHost host = await WebHostBuilderHelper.CreateWebHost(
                 provider: SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME,
-                treatAsAuthenticatedRequest: false,
                 useAuthorizationMiddleware: true);
 
             TestServer server = host.GetTestServer();

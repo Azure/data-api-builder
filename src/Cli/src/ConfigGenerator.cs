@@ -497,8 +497,7 @@ namespace Cli
             // This check only happens when we update permissions for a new role.
             // Example: Anonymous role and authenticated role cannot have different operation specified for them.
             if (sourceType is SourceType.StoredProcedure &&
-                !IsRoleExistingInPermissions(entityToUpdate.Permissions, newRole!) &&
-                !VerifySameOperationsForEachRoleInStoredProcedures(entityToUpdate.Permissions, newOperationArray.First()))
+                !VerifySameOperationsForEachRoleInStoredProcedures(entityToUpdate.Permissions, newRole!, newOperationArray.First()))
             {
                 return null;
             }

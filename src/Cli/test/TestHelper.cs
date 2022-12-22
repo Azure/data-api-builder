@@ -137,37 +137,6 @@ namespace Cli.Tests
             ""entities"": {}" +
           "}";
 
-        /// <summary>
-        /// Config containing authenticate-devmode-request type as string
-        /// instead of boolean for Host global settings.
-        /// </summary>
-        public const string CONFIG_WITH_INVALID_DEVMODE_REQUEST_AUTH_TYPE =
-          "{" +
-            SAMPLE_SCHEMA_DATA_SOURCE + "," +
-            @"
-            ""runtime"": {
-              ""rest"": {
-                ""path"": ""/api""
-              },
-              ""graphql"": {
-                ""path"": ""/graphql"",
-                ""allow-introspection"": true
-              },
-              ""host"": {
-                ""mode"": ""development"",
-                ""authenticate-devmode-requests"": ""false"",
-                ""cors"": {
-                  ""origins"": [],
-                  ""allow-credentials"": false
-                },
-                ""authentication"": {
-                  ""provider"": ""StaticWebApps""
-                }
-              }
-            },
-            ""entities"": {}" +
-          "}";
-
         public const string SINGLE_ENTITY = @"
           {
               ""entities"": {
@@ -435,14 +404,12 @@ namespace Cli.Tests
         /// </summary>
         public static string GetDefaultTestRuntimeSettingString(
             HostModeType hostModeType = HostModeType.Production,
-            IEnumerable<string>? corsOrigins = null,
-            bool? authenticateDevModeRequest = null)
+            IEnumerable<string>? corsOrigins = null)
         {
             Dictionary<string, object> runtimeSettingDict = new();
             Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(
                 hostMode: hostModeType,
-                corsOrigin: corsOrigins,
-                devModeDefaultAuth: authenticateDevModeRequest);
+                corsOrigin: corsOrigins);
 
             runtimeSettingDict.Add("runtime", defaultGlobalSetting);
 

@@ -94,34 +94,11 @@ namespace Cli
                 DataSource: dataSource,
                 RuntimeSettings: GetDefaultGlobalSettings(
                     options.HostMode,
-                    options.CorsOrigin,
-                    devModeDefaultAuth: GetDevModeDefaultAuth(options.DevModeDefaultAuth)),
+                    options.CorsOrigin),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
             return true;
-        }
-
-        /// <summary>
-        /// Helper method to parse the devModeDefaultAuth string into its corresponding boolean representation.
-        /// </summary>
-        /// <param name="devModeDefaultAuth">string to be parsed into bool value.</param>
-        /// <returns></returns>
-        /// <exception cref="Exception">throws exception if string is not null and cannot be parsed into a bool value.</exception>
-        private static bool? GetDevModeDefaultAuth(string? devModeDefaultAuth)
-        {
-            if (devModeDefaultAuth is null)
-            {
-                return null;
-            }
-
-            if (bool.TryParse(devModeDefaultAuth, out bool parsedBoolVar))
-            {
-                return parsedBoolVar;
-            }
-
-            throw new Exception($"{devModeDefaultAuth} is an invalid value for the property authenticate-devmode-requests." +
-                $" It can only assume boolean values true/false.");
         }
 
         /// <summary>

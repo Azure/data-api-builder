@@ -95,18 +95,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            _sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(context.Field.Name.Value, out DatabaseObject databaseObject);
+            string entityName = _sqlMetadataProvider.GetEntityName(context.Field.Name.Value);
+            _sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject databaseObject);
             if (databaseObject is not null && databaseObject.SourceType is SourceType.StoredProcedure)
             {
                 SqlExecuteStructure sqlExecuteStructure = new(
-                    context.FieldSelection.Name.Value,
+                    entityName,
                     _sqlMetadataProvider,
                     _authorizationResolver,
                     _gQLFilterParser,
                     parameters);
 
                 // checking if role has read permission on the result
-                _authorizationResolver.EntityPermissionsMap.TryGetValue(context.Field.Name.Value, out EntityMetadata entityMetadata);
+                _authorizationResolver.EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata entityMetadata);
                 string role = context.ContextData[CLIENT_ROLE_HEADER].ToString();
                 bool IsReadAllowed = entityMetadata.RoleToOperationMap[role].OperationToColumnMap.ContainsKey(Config.Operation.Read);
 

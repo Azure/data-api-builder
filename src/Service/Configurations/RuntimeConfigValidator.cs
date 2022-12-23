@@ -180,22 +180,25 @@ namespace Azure.DataApiBuilder.Service.Configurations
             foreach ((string entityName, Entity entity) in entityCollection)
             {
                 entity.TryPopulateSourceFields();
-                if (
-                    entity.ObjectType is SourceType.StoredProcedure ||
-                    entity.GraphQL is null
+                if (entity.GraphQL is null
                     || (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
                 {
                     continue;
                 }
 
-                // For entities that have graphQL exposed, two queries would be generated.
+                //TODO: Add Check for stored-procedure
+                // For entities (table/view) that have graphQL exposed, two queries would be generated.
                 // Primary Key Query: For fetching an item using its primary key.
                 // List Query: To fetch a paginated list of items
                 // Query names for both these queries are determined.
                 string pkQueryName = GenerateByPKQueryName(entityName, entity);
                 string listQueryName = GenerateListQueryName(entityName, entity);
 
-                if (!graphQLQueries.Add(pkQueryName) || !graphQLQueries.Add(listQueryName))
+                // For Stored Procedures single query is generated.
+                string storedProcedureQueryName = GenerateStoredProcedureQueryName(entityName);
+
+                if (!graphQLQueries.Add(pkQueryName) || !graphQLQueries.Add(listQueryName)
+                        || !graphQLQueries.Add(storedProcedureQueryName))
                 {
                     throw new DataApiBuilderException(
                         message: $"Entity {entityName} generates queries that already exist",

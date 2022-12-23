@@ -200,5 +200,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         {
             return FormatNameForField(Pluralize(entityName, entity).Value);
         }
+
+        /// <summary>
+        /// Generates the stored-procedure query's name for an entity exposed for GraphQL.
+        /// </summary>
+        /// <param name="entityName">Name of the entity</param>
+        /// <returns>Name of the list query</returns>
+        public static string GenerateStoredProcedureQueryName(string entityName)
+        {
+            return FormatNameForField(entityName);
+        }
     }
 }

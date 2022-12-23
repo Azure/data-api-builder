@@ -110,8 +110,8 @@ namespace Azure.DataApiBuilder.Config
         public static string GetPublishedDraftSchemaLink()
         {
             string schemaFileContent = File.ReadAllText("../../schemas/dab.draft.schema.json");
-            Dictionary<string,object> jsonDictionary = JsonSerializer.Deserialize<Dictionary<string,object>>(schemaFileContent)!;
-            Dictionary<string,string> properties = JsonSerializer.Deserialize<Dictionary<string,string>>(jsonDictionary["additionalProperties"].ToString())!;
+            Dictionary<string, object> jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent)!;
+            Dictionary<string, string> properties = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonDictionary["additionalProperties"].ToString())!;
             return properties["version"];
         }
 

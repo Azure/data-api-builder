@@ -641,15 +641,10 @@ namespace Cli
         /// This method loops through every role specified for stored-procedure entity
         ///  and fails if the new role has different CRUD action specified than the existing ones.
         /// </summary>
-<<<<<<< HEAD
-        public static bool VerifySameOperationForEachRoleInStoredProcedures(
-            PermissionSetting[] permissionSettings, string newOperationName)
-=======
         public static bool VerifySameOperationsForEachRoleInStoredProcedures(
             PermissionSetting[] permissionSettings,
             string roleToUpdate,
             string newOperationName)
->>>>>>> 53bfe892f01b25d88e5cc854dbf6eeb3d7b489b3
         {
             foreach (PermissionSetting permissionSetting in permissionSettings)
             {

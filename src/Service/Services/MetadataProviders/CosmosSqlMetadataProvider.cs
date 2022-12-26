@@ -153,6 +153,12 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
+        /// <inheritdoc/>
+        public bool IsStoreProcedureQueryOrMutation(string exposedGraphQLQueryOrMutationName)
+        {
+            throw new NotImplementedException();
+        }
+
         public (string, string) ParseSchemaAndDbTableName(string source)
         {
             throw new NotImplementedException();

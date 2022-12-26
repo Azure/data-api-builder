@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -34,7 +35,12 @@ namespace Azure.DataApiBuilder.Service.Services
         private readonly Dictionary<string, Entity> _entities;
 
         // Dictionary mapping singular graphql types to entity name keys in the configuration
-        private readonly Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
+        // Making it Case Insensitive since two entities cannot differ 
+        private readonly Dictionary<string, string> _graphQLSingularTypeToEntityNameMap =
+            new(StringComparer.InvariantCultureIgnoreCase);
+
+        // HashSet containing graphQL stored procedure exposed query/mutation name
+        private HashSet<string> _graphQLStoredProcedureExposedNames = new();
 
         // Contains all the referencing and referenced columns for each pair
         // of referencing and referenced tables.
@@ -231,8 +237,9 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private async Task FillSchemaForStoredProcedureAsync(
             Entity procedureEntity,
+            string entityName,
             string schemaName,
-            string storedProcedureName,
+            string storedProcedureSourceName,
             StoredProcedureDefinition storedProcedureDefinition)
         {
             using ConnectionT conn = new();
@@ -247,7 +254,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // To restrict the parameters for the current stored procedure, specify its name
             procedureRestrictions[0] = conn.Database;
             procedureRestrictions[1] = schemaName;
-            procedureRestrictions[2] = storedProcedureName;
+            procedureRestrictions[2] = storedProcedureSourceName;
 
             DataTable procedureMetadata = await conn.GetSchemaAsync(collectionName: "Procedures", restrictionValues: procedureRestrictions);
 
@@ -255,7 +262,7 @@ namespace Azure.DataApiBuilder.Service.Services
             if (procedureMetadata.Rows.Count == 0)
             {
                 throw new DataApiBuilderException(
-                    message: $"No stored procedure definition found for the given database object {storedProcedureName}",
+                    message: $"No stored procedure definition found for the given database object {storedProcedureSourceName}",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
@@ -286,7 +293,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     if (!storedProcedureDefinition.Parameters.TryGetValue(configParamKey, out ParameterDefinition? parameterDefinition))
                     {
                         throw new DataApiBuilderException(
-                            message: $"Could not find parameter \"{configParamKey}\" specified in config for procedure \"{schemaName}.{storedProcedureName}\"",
+                            message: $"Could not find parameter \"{configParamKey}\" specified in config for procedure \"{schemaName}.{storedProcedureSourceName}\"",
                             statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
@@ -297,6 +304,9 @@ namespace Azure.DataApiBuilder.Service.Services
                     }
                 }
             }
+
+            // Generating exposed stored-procedure query/mutation name and adding to the Hashset.
+            _graphQLStoredProcedureExposedNames.Add(GenerateStoredProcedureQueryName(entityName, procedureEntity));
         }
 
         /// <summary>
@@ -317,7 +327,7 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 Entity entity = _entities[entityName];
                 string path = GetEntityPath(entity, entityName).TrimStart('/');
-                ValidateEntityandGraphQLPathUniqueness(path, graphQLGlobalPath);
+                ValidateEntityAndGraphQLPathUniqueness(path, graphQLGlobalPath);
 
                 if (!string.IsNullOrEmpty(path))
                 {
@@ -333,7 +343,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="path">Entity's calculated REST path.</param>
         /// <param name="graphQLGlobalPath">Developer configured GraphQL Path</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateEntityandGraphQLPathUniqueness(string path, string graphQLGlobalPath)
+        public static void ValidateEntityAndGraphQLPathUniqueness(string path, string graphQLGlobalPath)
         {
             // Handle case when path does not have forward slash (/) prefix
             // by adding one if not present or ignoring an existing slash.
@@ -719,6 +729,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     await FillSchemaForStoredProcedureAsync(
                         entity,
+                        entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         GetStoredProcedureDefinition(entityName));
@@ -1356,6 +1367,15 @@ namespace Azure.DataApiBuilder.Service.Services
             RelationShipPair pairBA = new(databaseTableB, databaseTableA);
 
             return (_pairToFkDefinition.ContainsKey(pairAB) || _pairToFkDefinition.ContainsKey(pairBA));
+        }
+
+        /// <summary>
+        /// For the given exposed graphQL query/mutation name, it checks if it is present in the HashSet
+        /// containing all the stored-procedure exposed name.
+        /// </summary>
+        public bool IsStoreProcedureQueryOrMutation(string exposedGraphQLQueryOrMutationName)
+        {
+            return _graphQLStoredProcedureExposedNames.Contains(exposedGraphQLQueryOrMutationName);
         }
 
         /// <summary>

@@ -206,9 +206,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// </summary>
         /// <param name="entityName">Name of the entity</param>
         /// <returns>Name of the list query</returns>
-        public static string GenerateStoredProcedureQueryName(string entityName)
+        public static string GenerateStoredProcedureQueryName(string entityName, Entity entity)
         {
-            return FormatNameForField(entityName);
+            return FormatNameForField(GetDefinedSingularName(entityName, entity));
         }
     }
 }

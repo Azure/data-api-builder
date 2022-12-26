@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 ValidateGlobalEndpointRouteConfig(runtimeConfig);
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
-                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
+                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
             }
         }
 
@@ -168,12 +168,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// All these entities will create queries with the following field names
         /// pk query name: book_by_pk
         /// List query name: books
-        /// NOTE: we don't do this check for storedProcedure, because the name of the query is same
-        /// as that provided in the config, and two different entity can't have same name in the config.
+        /// create mutation name: createBooks
+        /// update mutation name: updateBooks
+        /// delete mutation name: deleteBooks
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateEntitiesDoNotGenerateDuplicateQueries(IDictionary<string, Entity> entityCollection)
+        public static void ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(IDictionary<string, Entity> entityCollection)
         {
             HashSet<string> graphQLQueries = new();
 
@@ -185,23 +186,41 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 {
                     continue;
                 }
+                
+                bool containsDuplicateQueries = false;
+                if (entity.ObjectType is SourceType.StoredProcedure)
+                {
+                    // For Stored Procedures single query/mutation is generated.
+                    string storedProcedureQueryName = GenerateStoredProcedureQueryName(entityName, entity);
 
-                //TODO: Add Check for stored-procedure
-                // For entities (table/view) that have graphQL exposed, two queries would be generated.
-                // Primary Key Query: For fetching an item using its primary key.
-                // List Query: To fetch a paginated list of items
-                // Query names for both these queries are determined.
-                string pkQueryName = GenerateByPKQueryName(entityName, entity);
-                string listQueryName = GenerateListQueryName(entityName, entity);
+                    if (!graphQLQueries.Add(storedProcedureQueryName)) {
+                        containsDuplicateQueries = true;
+                    }
+                }
+                else {
+                    // For entities (table/view) that have graphQL exposed, two queries and three mutations would be generated.
+                    // Primary Key Query: For fetching an item using its primary key.
+                    // List Query: To fetch a paginated list of items.
+                    // Query names for both these queries are determined.
+                    string pkQueryName = GenerateByPKQueryName(entityName, entity);
+                    string listQueryName = GenerateListQueryName(entityName, entity);
 
-                // For Stored Procedures single query is generated.
-                string storedProcedureQueryName = GenerateStoredProcedureQueryName(entityName);
+                    // Mutations names for the exposed entities are determined.
+                    string createMutationName = $"create{GetDefinedSingularName(entityName, entity)}";
+                    string updateMutationName = $"update{GetDefinedSingularName(entityName, entity)}";
+                    string deleteMutationName = $"delete{GetDefinedSingularName(entityName, entity)}";
 
-                if (!graphQLQueries.Add(pkQueryName) || !graphQLQueries.Add(listQueryName)
-                        || !graphQLQueries.Add(storedProcedureQueryName))
+                    if (!graphQLQueries.Add(pkQueryName) || !graphQLQueries.Add(listQueryName)
+                        || !graphQLQueries.Add(createMutationName) || !graphQLQueries.Add(updateMutationName) || !graphQLQueries.Add(deleteMutationName))
+                    {
+                        containsDuplicateQueries = true;
+                    }
+                }
+
+                if (containsDuplicateQueries)
                 {
                     throw new DataApiBuilderException(
-                        message: $"Entity {entityName} generates queries that already exist",
+                        message: $"Entity {entityName} generates queries/mutation that already exist",
                         statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }

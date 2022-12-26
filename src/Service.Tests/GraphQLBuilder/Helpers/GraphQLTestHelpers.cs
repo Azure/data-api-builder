@@ -69,9 +69,14 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
             return entityPermissionsMap;
         }
 
-        public static Entity GenerateEmptyEntity()
+        public static Entity GenerateEmptyEntity(SourceType sourceType = SourceType.Table)
         {
-            return new Entity("foo", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
+            return new Entity(Source: new DatabaseObjectSource(sourceType, Name: "foo", Parameters: null, KeyFields: null),
+                              Rest: null,
+                              GraphQL: null,
+                              Array.Empty<PermissionSetting>(),
+                              Relationships: new(),
+                              Mappings: new());
         }
 
         /// <summary>
@@ -79,9 +84,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// </summary>
         /// <param name="singularNameForEntity"> Singular name defined by user in the config.</param>
         /// <param name="pluralNameForEntity"> Plural name defined by user in the config.</param>
-        public static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity)
+        public static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity, SourceType sourceType = SourceType.Table)
         {
-            return new Entity(Source: "foo",
+            return new Entity(Source: new DatabaseObjectSource(sourceType, Name: "foo", Parameters: null, KeyFields: null),
                               Rest: null,
                               GraphQL: new GraphQLEntitySettings(new SingularPlural(singularNameForEntity, pluralNameForEntity)),
                               Permissions: Array.Empty<PermissionSetting>(),
@@ -94,9 +99,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
-        public static Entity GenerateEntityWithStringType(string type)
+        public static Entity GenerateEntityWithStringType(string type, SourceType sourceType = SourceType.Table)
         {
-            return new Entity(Source: "foo",
+            return new Entity(Source: new DatabaseObjectSource(sourceType, Name: "foo", Parameters: null, KeyFields: null),
                               Rest: null,
                               GraphQL: new GraphQLEntitySettings(type),
                               Permissions: Array.Empty<PermissionSetting>(),

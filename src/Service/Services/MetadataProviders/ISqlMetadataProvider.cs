@@ -66,6 +66,12 @@ namespace Azure.DataApiBuilder.Service.Services
         bool TryGetExposedColumnName(string entityName, string backingFieldName, out string? name);
 
         /// <summary>
+        /// Given the exposed graphQL query or mutation name, Returns true if it belongs to a
+        /// stored procedure.
+        /// </summary>
+        bool IsStoreProcedureQueryOrMutation(string exposedGraphQLQueryOrMutationName);
+
+        /// <summary>
         /// For the entity that is provided as an argument,
         /// try to get the underlying backing column name associated
         /// with the provided field, if it exists, save in out

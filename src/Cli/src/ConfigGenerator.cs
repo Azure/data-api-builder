@@ -494,9 +494,10 @@ namespace Cli
             }
 
             // Verifies that every role on stored-procedure has the same single operation.
+            // This check only happens when we update permissions for a new role.
             // Example: Anonymous role and authenticated role cannot have different operation specified for them.
             if (sourceType is SourceType.StoredProcedure &&
-                !VerifySameOperationForEachRoleInStoredProcedures(entityToUpdate.Permissions, newOperationArray.First()))
+                !VerifySameOperationsForEachRoleInStoredProcedures(entityToUpdate.Permissions, newRole!, newOperationArray.First()))
             {
                 return null;
             }
@@ -506,10 +507,15 @@ namespace Cli
             foreach (PermissionSetting permission in entityToUpdate.Permissions)
             {
                 // Find the role that needs to be updated
-                if (permission.Role.Equals(newRole!))
+                if (permission.Role.Equals(newRole))
                 {
                     role_found = true;
-                    if (newOperationArray.Length is 1 && WILDCARD.Equals(newOperationArray[0]))
+                    if (sourceType is SourceType.StoredProcedure)
+                    {
+                        // Since, Stored-Procedures can have only 1 CRUD action. So, when update is requested with new action, we simply replace it.
+                        updatedPermissionsList.Add(CreatePermissions(newRole, newOperationArray.First(), policy: null, fields: null));
+                    }
+                    else if (newOperationArray.Length is 1 && WILDCARD.Equals(newOperationArray[0]))
                     {
                         // If the user inputs WILDCARD as operation, we overwrite the existing operations.
                         updatedPermissionsList.Add(CreatePermissions(newRole!, WILDCARD, policy, fields));

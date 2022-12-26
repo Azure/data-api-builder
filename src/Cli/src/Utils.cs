@@ -639,15 +639,28 @@ namespace Cli
 
         /// <summary>
         /// This method loops through every role specified for stored-procedure entity
-        ///  and checks if it has only one CRUD operation.
+        ///  and fails if the new role has different CRUD action specified than the existing ones.
         /// </summary>
+<<<<<<< HEAD
         public static bool VerifySameOperationForEachRoleInStoredProcedures(
             PermissionSetting[] permissionSettings, string newOperationName)
+=======
+        public static bool VerifySameOperationsForEachRoleInStoredProcedures(
+            PermissionSetting[] permissionSettings,
+            string roleToUpdate,
+            string newOperationName)
+>>>>>>> 53bfe892f01b25d88e5cc854dbf6eeb3d7b489b3
         {
             foreach (PermissionSetting permissionSetting in permissionSettings)
             {
-                if (!VerifySingleOperationForStoredProcedure(permissionSetting.Operations) ||
-                    !TryGetOperationName(permissionSetting.Operations.First(), out Operation existingOperation) ||
+                if ((roleToUpdate).Equals(permissionSetting.Role))
+                {
+                    // If the role already exists we break from the loop
+                    // and do normal update.
+                    break;
+                }
+
+                if (!TryGetOperationName(permissionSetting.Operations.First(), out Operation existingOperation) ||
                     !TryConvertOperationNameToOperation(newOperationName, out Operation newOperation) ||
                     !newOperation.Equals(existingOperation))
                 {

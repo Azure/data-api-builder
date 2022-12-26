@@ -444,7 +444,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
 
-                        if ((totalSupportedOperationsFromAllRoles.Count > 1))
+                        if ((totalSupportedOperationsFromAllRoles.Count != 1))
                         {
                             throw new DataApiBuilderException(
                                 message: $"Invalid Operations for Entity: {entityName}. " +

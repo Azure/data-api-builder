@@ -641,7 +641,7 @@ namespace Cli
         /// This method loops through every role specified for stored-procedure entity
         ///  and checks if it has only one CRUD operation.
         /// </summary>
-        public static bool VerifySameOperationsForEachRoleInStoredProcedures(
+        public static bool VerifySameOperationForEachRoleInStoredProcedures(
             PermissionSetting[] permissionSettings, string newOperationName)
         {
             foreach (PermissionSetting permissionSetting in permissionSettings)

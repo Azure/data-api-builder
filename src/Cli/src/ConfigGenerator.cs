@@ -486,7 +486,7 @@ namespace Cli
             List<PermissionSetting> updatedPermissionsList = new();
             string[] newOperationArray = newOperations!.Split(",");
 
-            // Verifies operations based on sourceType.
+            // Verifies that the list of operations declared are valid for the specified sourceType.
             // Example: Stored-procedure can only have 1 operation.
             if (!VerifyOperations(newOperationArray, sourceType))
             {
@@ -496,7 +496,7 @@ namespace Cli
             // Verifies that every role on stored-procedure has the same single operation.
             // Example: Anonymous role and authenticated role cannot have different operation specified for them.
             if (sourceType is SourceType.StoredProcedure &&
-                !VerifySameOperationsForEachRoleInStoredProcedures(entityToUpdate.Permissions, newOperationArray.First()))
+                !VerifySameOperationForEachRoleInStoredProcedures(entityToUpdate.Permissions, newOperationArray.First()))
             {
                 return null;
             }

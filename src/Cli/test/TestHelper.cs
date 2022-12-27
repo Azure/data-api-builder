@@ -422,10 +422,10 @@ namespace Cli.Tests
         /// </summary>
         public static void SetupTestLoggerForCLI()
         {
-          Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
-          Mock<ILogger<Utils>> utilsLogger = new();
-          ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger.Object);
-          Utils.SetCliUtilsLogger(utilsLogger.Object);
+            Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
+            Mock<ILogger<Utils>> utilsLogger = new();
+            ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger.Object);
+            Utils.SetCliUtilsLogger(utilsLogger.Object);
         }
     }
 }

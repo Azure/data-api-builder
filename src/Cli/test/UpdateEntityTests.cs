@@ -6,6 +6,15 @@ namespace Cli.Tests
     [TestClass]
     public class UpdateEntityTests
     {
+        /// <summary>
+        /// Setup the logger for CLI
+        /// </summary>
+        [TestInitialize]
+        public void SetupLoggerForCLI()
+        {
+            TestHelper.SetupTestLoggerForCLI();
+        }
+
         #region  Positive Tests
         /// <summary>
         /// Simple test to update an entity permission by adding a new action.

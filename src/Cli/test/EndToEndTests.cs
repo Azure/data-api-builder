@@ -1,6 +1,3 @@
-using Microsoft.Extensions.Logging;
-using Moq;
-
 namespace Cli.Tests;
 
 /// <summary>
@@ -9,6 +6,15 @@ namespace Cli.Tests;
 [TestClass]
 public class EndToEndTests
 {
+    /// <summary>
+    /// Setup the logger for CLI
+    /// </summary>
+    [TestInitialize]
+    public void SetupLoggerForCLI()
+    {
+        TestHelper.SetupTestLoggerForCLI();
+    }
+
     /// <summary>
     /// Initializing config for cosmosdb_nosql.
     /// </summary>
@@ -438,17 +444,17 @@ public class EndToEndTests
         Assert.IsNotNull(output);
         Assert.IsTrue(output.Contains($"User provided config file: {_testRuntimeConfig}"));
         output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
         if (expectSuccess)
         {
-            Assert.IsNotNull(output);
             Assert.IsTrue(output.Contains("Starting the runtime engine..."));
         }
         else
         {
-            Assert.IsNull(output);
-            string? err = process.StandardError.ReadToEnd();
-            Assert.IsTrue(err.Contains($"Deserialization of the configuration file failed."));
-            Assert.IsTrue(err.Contains("Failed to start the engine."));
+            Assert.IsTrue(output.Contains($"Failed to parse the config file: {_testRuntimeConfig}."));
+            output = process.StandardOutput.ReadLine();
+            Assert.IsNotNull(output);
+            Assert.IsTrue(output.Contains($"Failed to start the engine."));
         }
 
         process.Kill();

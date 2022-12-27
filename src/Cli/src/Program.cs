@@ -1,4 +1,5 @@
 using CommandLine;
+using Microsoft.Extensions.Logging;
 using static Cli.Utils;
 
 namespace Cli
@@ -21,18 +22,30 @@ namespace Cli
                     settings.HelpWriter = Console.Out;
                 }
             );
+
+            // Setting up Logger for CLI.
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            loggerFactory.AddProvider(new CustomLoggerProvider());
+
+            ILogger<Program> cliLogger = loggerFactory.CreateLogger<Program>();
+            ILogger<ConfigGenerator> configGeneratorLogger = loggerFactory.CreateLogger<ConfigGenerator>();
+            ILogger<Utils> cliUtilsLogger = loggerFactory.CreateLogger<Utils>();
+            ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
+            Utils.SetCliUtilsLogger(cliUtilsLogger);
+
+            // Parsing user arguments and executing required methods.
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
                 .WithParsed<InitOptions>(options =>
                 {
                     bool isSuccess = ConfigGenerator.TryGenerateConfig(options);
                     if (isSuccess)
                     {
-                        Console.WriteLine($"Config file generated.");
-                        Console.WriteLine($"SUGGESTION: Use 'dab add <options>' to add new entities in your config.");
+                        cliLogger.LogInformation($"Config file generated.");
+                        cliLogger.LogInformation($"SUGGESTION: Use 'dab add <options>' to add new entities in your config.");
                     }
                     else
                     {
-                        Console.WriteLine($"ERROR: Could not generate config file.");
+                        cliLogger.LogError($"Could not generate config file.");
                     }
                 })
                 .WithParsed<AddOptions>(options =>
@@ -40,13 +53,13 @@ namespace Cli
                     bool isSuccess = ConfigGenerator.TryAddEntityToConfigWithOptions(options);
                     if (isSuccess)
                     {
-                        Console.WriteLine($"Added new entity: {options.Entity} with source: {options.Source} to config: {options.Config}" +
+                        cliLogger.LogInformation($"Added new entity: {options.Entity} with source: {options.Source} to config: {options.Config}" +
                             $" with permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
-                        Console.WriteLine($"SUGGESTION: Use 'dab update <options>' to update any entities in your config.");
+                        cliLogger.LogInformation($"SUGGESTION: Use 'dab update <options>' to update any entities in your config.");
                     }
                     else
                     {
-                        Console.WriteLine($"ERROR: Could not add entity: {options.Entity} source: {options.Source} to config: {options.Config}" +
+                        cliLogger.LogError($"Could not add entity: {options.Entity} source: {options.Source} to config: {options.Config}" +
                             $" with permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
                     }
                 })
@@ -56,11 +69,11 @@ namespace Cli
 
                     if (isSuccess)
                     {
-                        Console.WriteLine($"Updated the entity:{options.Entity} in the config.");
+                        cliLogger.LogInformation($"Updated the entity:{options.Entity} in the config.");
                     }
                     else
                     {
-                        Console.WriteLine($"Could not update the entity: {options.Entity}.");
+                        cliLogger.LogError($"Could not update the entity: {options.Entity}.");
                     }
                 })
                 .WithParsed<StartOptions>(options =>
@@ -69,7 +82,7 @@ namespace Cli
 
                     if (!isSuccess)
                     {
-                        Console.Error.WriteLine("Failed to start the engine.");
+                        cliLogger.LogError("Failed to start the engine.");
                     }
                 });
 

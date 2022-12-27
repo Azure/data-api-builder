@@ -186,18 +186,20 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 {
                     continue;
                 }
-                
+
                 bool containsDuplicateQueries = false;
                 if (entity.ObjectType is SourceType.StoredProcedure)
                 {
                     // For Stored Procedures single query/mutation is generated.
                     string storedProcedureQueryName = GenerateStoredProcedureQueryName(entityName, entity);
 
-                    if (!graphQLQueries.Add(storedProcedureQueryName)) {
+                    if (!graphQLQueries.Add(storedProcedureQueryName))
+                    {
                         containsDuplicateQueries = true;
                     }
                 }
-                else {
+                else
+                {
                     // For entities (table/view) that have graphQL exposed, two queries and three mutations would be generated.
                     // Primary Key Query: For fetching an item using its primary key.
                     // List Query: To fetch a paginated list of items.
@@ -345,6 +347,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 entity.TryPopulateSourceFields();
+                HashSet<Config.Operation> totalSupportedOperationsFromAllRoles = new();
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
                 {
                     string roleName = permissionSetting.Role;
@@ -448,9 +451,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         }
 
                         operationsList.Add(actionOp);
+                        totalSupportedOperationsFromAllRoles.Add(actionOp);
                     }
 
                     // Only one of the CRUD actions is allowed for stored procedure.
+                    // All the roles should have the same CRUD action.
                     if (entity.ObjectType is SourceType.StoredProcedure)
                     {
                         if ((operationsList.Count > 1)
@@ -459,6 +464,15 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             throw new DataApiBuilderException(
                                 message: $"Invalid Operations for Entity: {entityName}. " +
                                     $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        }
+
+                        if ((totalSupportedOperationsFromAllRoles.Count != 1))
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"Invalid Operations for Entity: {entityName}. " +
+                                    $"StoredProcedure should have the same single CRUD action specified for every role.",
                                 statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }

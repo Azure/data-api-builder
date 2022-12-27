@@ -1,3 +1,4 @@
+#nullable enable
 using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
@@ -49,28 +50,47 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test method to validate that only 1 CRUD operation is supported for stored procedure.
+        /// Test method to validate that only 1 CRUD operation is supported for stored procedure
+        /// and every role has that same single operation.
         /// </summary>
         [DataTestMethod]
-        [DataRow(new object[] { "create", "read" }, false, DisplayName = "Stored-procedure with create-read permission")]
-        [DataRow(new object[] { "update", "read" }, false, DisplayName = "Stored-procedure with update-read permission")]
-        [DataRow(new object[] { "delete", "read" }, false, DisplayName = "Stored-procedure with delete-read permission")]
-        [DataRow(new object[] { "create" }, true, DisplayName = "Stored-procedure with only create permission")]
-        [DataRow(new object[] { "read" }, true, DisplayName = "Stored-procedure with only read permission")]
-        [DataRow(new object[] { "update" }, true, DisplayName = "Stored-procedure with only update permission")]
-        [DataRow(new object[] { "delete" }, true, DisplayName = "Stored-procedure with only delete permission")]
-        [DataRow(new object[] { "update", "create" }, false, DisplayName = "Stored-procedure with update-create permission")]
-        [DataRow(new object[] { "delete", "read", "update" }, false, DisplayName = "Stored-procedure with delete-read-update permission")]
-        public void InvalidCRUDForStoredProcedure(object[] operations, bool isValid)
+        [DataRow("anonymous", new object[] { "create", "read" }, null, null, false, false, DisplayName = "Stored-procedure with create-read permission")]
+        [DataRow("anonymous", new object[] { "update", "read" }, null, null, false, false, DisplayName = "Stored-procedure with update-read permission")]
+        [DataRow("anonymous", new object[] { "delete", "read" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read permission")]
+        [DataRow("anonymous", new object[] { "create" }, null, null, true, false, DisplayName = "Stored-procedure with only create permission")]
+        [DataRow("anonymous", new object[] { "read" }, null, null, true, false, DisplayName = "Stored-procedure with only read permission")]
+        [DataRow("anonymous", new object[] { "update" }, null, null, true, false, DisplayName = "Stored-procedure with only update permission")]
+        [DataRow("anonymous", new object[] { "delete" }, null, null, true, false, DisplayName = "Stored-procedure with only delete permission")]
+        [DataRow("anonymous", new object[] { "update", "create" }, null, null, false, false, DisplayName = "Stored-procedure with update-create permission")]
+        [DataRow("anonymous", new object[] { "delete", "read", "update" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read-update permission")]
+        [DataRow("anonymous", new object[] { "create" }, "authenticated", new object[] { "create" }, true, false, DisplayName = "Stored-procedure with only create permission")]
+        [DataRow("anonymous", new object[] { "read" }, "authenticated", new object[] { "create" }, false, true, DisplayName = "Stored-procedure with only read permission")]
+        public void InvalidCRUDForStoredProcedure(
+            string role1,
+            object[] operationsRole1,
+            string? role2,
+            object[]? operationsRole2,
+            bool isValid,
+            bool differentOperationDifferentRoleFailure)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE
             );
 
-            PermissionSetting permissionForEntity = new(
-                role: AuthorizationHelpers.TEST_ROLE,
-                operations: operations);
+            List<PermissionSetting> permissionSettings = new();
+
+            permissionSettings.Add(new(
+                role: role1,
+                operations: operationsRole1));
+
+            // Adding another role for the entity.
+            if (role2 is not null && operationsRole2 is not null)
+            {
+                permissionSettings.Add(new(
+                    role: role2,
+                    operations: operationsRole2));
+            }
 
             object entitySource = new DatabaseObjectSource(
                     Type: SourceType.StoredProcedure,
@@ -83,7 +103,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Source: entitySource,
                 Rest: true,
                 GraphQL: true,
-                Permissions: new PermissionSetting[] { permissionForEntity },
+                Permissions: permissionSettings.ToArray(),
                 Relationships: null,
                 Mappings: null
             );
@@ -98,8 +118,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             catch (DataApiBuilderException ex)
             {
                 Assert.AreEqual(false, isValid);
-                Assert.AreEqual("Invalid Operations for Entity: SampleEntity. " +
-                    $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.", ex.Message);
+                if (differentOperationDifferentRoleFailure)
+                {
+                    Assert.AreEqual("Invalid Operations for Entity: SampleEntity. " +
+                        $"StoredProcedure should have the same single CRUD action specified for every role.", ex.Message);
+                }
+                else
+                {
+                    Assert.AreEqual("Invalid Operations for Entity: SampleEntity. " +
+                        $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.", ex.Message);
+                }
+
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }

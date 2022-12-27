@@ -39,8 +39,9 @@ namespace Azure.DataApiBuilder.Service.Services
         private readonly Dictionary<string, string> _graphQLSingularTypeToEntityNameMap =
             new(StringComparer.InvariantCultureIgnoreCase);
 
-        // HashSet containing graphQL stored procedure exposed query/mutation name
-        private HashSet<string> _graphQLStoredProcedureExposedNames = new();
+        // Dictionary containing mapping of graphQL stored procedure exposed query/mutation name
+        // to their corresponding entity names defined in the config.
+        public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
 
         // Contains all the referencing and referenced columns for each pair
         // of referencing and referenced tables.
@@ -305,8 +306,8 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
             }
 
-            // Generating exposed stored-procedure query/mutation name and adding to the Hashset.
-            _graphQLStoredProcedureExposedNames.Add(GenerateStoredProcedureQueryName(entityName, procedureEntity));
+            // Generating exposed stored-procedure query/mutation name and adding to the dictionary mapping it to its entity name.
+            GraphQLStoredProcedureExposedNameToEntityNameMap.TryAdd(GenerateStoredProcedureQueryName(entityName, procedureEntity), entityName);
         }
 
         /// <summary>
@@ -1369,14 +1370,14 @@ namespace Azure.DataApiBuilder.Service.Services
             return (_pairToFkDefinition.ContainsKey(pairAB) || _pairToFkDefinition.ContainsKey(pairBA));
         }
 
-        /// <summary>
-        /// For the given exposed graphQL query/mutation name, it checks if it is present in the HashSet
-        /// containing all the stored-procedure exposed name.
-        /// </summary>
-        public bool IsStoreProcedureQueryOrMutation(string exposedGraphQLQueryOrMutationName)
-        {
-            return _graphQLStoredProcedureExposedNames.Contains(exposedGraphQLQueryOrMutationName);
-        }
+        // /// <summary>
+        // /// For the given exposed graphQL query/mutation name, it checks if it is present in the HashSet
+        // /// containing all the stored-procedure exposed name.
+        // /// </summary>
+        // public bool IsStoreProcedureQueryOrMutation(string exposedGraphQLQueryOrMutationName)
+        // {
+        //     return _graphQLStoredProcedureExposedNames.Contains(exposedGraphQLQueryOrMutationName);
+        // }
 
         /// <summary>
         /// Retrieving the partition key path, for cosmosdb_nosql only

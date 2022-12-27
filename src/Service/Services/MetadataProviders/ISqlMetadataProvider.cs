@@ -48,6 +48,11 @@ namespace Azure.DataApiBuilder.Service.Services
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
 
         /// <summary>
+        /// Contains mapping of exposed graphQL names of StoredProcedure to EntityName defined in the config.
+        /// </summary>
+        Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; }
+
+        /// <summary>
         /// Obtains the underlying OData parser.
         /// </summary>
         /// <returns></returns>
@@ -69,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Given the exposed graphQL query or mutation name, Returns true if it belongs to a
         /// stored procedure.
         /// </summary>
-        bool IsStoreProcedureQueryOrMutation(string exposedGraphQLQueryOrMutationName);
+        // bool _graphQLStoredProcedureExposedNameToEntityNameMap(string exposedGraphQLQueryOrMutationName);
 
         /// <summary>
         /// For the entity that is provided as an argument,

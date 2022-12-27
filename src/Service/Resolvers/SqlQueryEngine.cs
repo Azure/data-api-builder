@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
@@ -16,7 +15,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Service.Authorization.AuthorizationResolver;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -95,9 +93,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            string entityName = _sqlMetadataProvider.GetEntityName(context.Field.Name.Value);
+            // string entityName = _sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap[context.Field.Name.Value];
             // _sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject databaseObject);
-            if (_sqlMetadataProvider.IsStoreProcedureQueryOrMutation(context.Field.Name.Value))
+            if (_sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Field.Name.Value, out string entityName))
             {
                 SqlExecuteStructure sqlExecuteStructure = new(
                     entityName,
@@ -106,13 +104,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _gQLFilterParser,
                     parameters);
 
-                // checking if role has read permission on the result
-                _authorizationResolver.EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata entityMetadata);
-                string role = context.ContextData[CLIENT_ROLE_HEADER].ToString();
-                bool IsReadAllowed = entityMetadata.RoleToOperationMap[role].OperationToColumnMap.ContainsKey(Config.Operation.Read);
-
                 return new Tuple<IEnumerable<JsonDocument>, IMetadata>(
-                        FormatStoredProcedureResultAsJsonList(IsReadAllowed, await ExecuteAsync(sqlExecuteStructure)),
+                        FormatStoredProcedureResultAsJsonList(await ExecuteAsync(sqlExecuteStructure)),
                         PaginationMetadata.MakeEmptyPaginationMetadata());
             }
             else

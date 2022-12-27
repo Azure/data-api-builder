@@ -650,9 +650,8 @@ namespace Cli
             {
                 if ((roleToUpdate).Equals(permissionSetting.Role))
                 {
-                    // If the role already exists we break from the loop
-                    // and do normal update.
-                    break;
+                    // If the role already exists we skip check for this role
+                    continue;
                 }
 
                 if (!TryGetOperationName(permissionSetting.Operations.First(), out Operation existingOperation) ||

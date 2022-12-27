@@ -1,7 +1,9 @@
 global using System.Diagnostics;
 global using System.Text.Json;
 global using Azure.DataApiBuilder.Config;
+global using Microsoft.Extensions.Logging;
 global using Microsoft.VisualStudio.TestTools.UnitTesting;
+global using Moq;
 global using Newtonsoft.Json.Linq;
 global using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
 global using static Cli.ConfigGenerator;

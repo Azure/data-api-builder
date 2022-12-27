@@ -7,6 +7,15 @@ namespace Cli.Tests
     public class AddEntityTests
     {
         /// <summary>
+        /// Setup the logger for CLI
+        /// </summary>
+        [TestInitialize]
+        public void SetupLoggerForCLI()
+        {
+            TestHelper.SetupTestLoggerForCLI();
+        }
+
+        /// <summary>
         /// Simple test to add a new entity to json config when there is no existing entity.
         /// By Default an empty collection is generated during initialization
         /// entities: {}

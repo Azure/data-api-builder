@@ -271,7 +271,7 @@ namespace Cli
                 string[] map = item.Split(SEPARATOR);
                 if (map.Length != 2)
                 {
-                    _logger.LogError("Invalid format for --map." +
+                    _logger.LogError("Invalid format for --map. " +
                         "Acceptable format --map \"backendName1:exposedName1,backendName2:exposedName2,...\".");
                     return false;
                 }
@@ -368,7 +368,7 @@ namespace Cli
 
             if (!File.Exists(file))
             {
-                _logger.LogError($"Couldn't find config  file: {file}." +
+                _logger.LogError($"Couldn't find config  file: {file}. " +
                     "Please run: dab init <options> to create a new config file.");
                 return false;
             }

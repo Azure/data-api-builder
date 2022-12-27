@@ -12,10 +12,7 @@ public class EndToEndTests
     [TestInitialize]
     public void SetupLoggerForCLI()
     {
-        Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
-        Mock<ILogger<Utils>> utilsLogger = new();
-        ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger.Object);
-        Utils.SetCliUtilsLogger(utilsLogger.Object);
+        TestHelper.SetupTestLoggerForCLI();
     }
 
     /// <summary>

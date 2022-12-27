@@ -72,7 +72,7 @@ namespace Cli
                     string? graphQLSchemaPath = options.GraphQLSchemaPath;
                     if (string.IsNullOrEmpty(cosmosDatabase) || string.IsNullOrEmpty(graphQLSchemaPath))
                     {
-                        _logger.LogError($"Missing mandatory option configuration for CosmosDB_NoSql: --cosmosdb_nosql-database, and --graphql-schema");
+                        _logger.LogError($"Missing mandatory configuration option for CosmosDB_NoSql: --cosmosdb_nosql-database, and --graphql-schema");
                         return false;
                     }
 

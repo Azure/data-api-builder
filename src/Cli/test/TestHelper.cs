@@ -415,5 +415,17 @@ namespace Cli.Tests
 
             return JsonSerializer.Serialize(runtimeSettingDict, GetSerializationOptions());
         }
+
+        /// <summary>
+        /// Helper method to setup Logger factory
+        /// for CLI related classes.
+        /// </summary>
+        public static void SetupTestLoggerForCLI()
+        {
+          Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
+          Mock<ILogger<Utils>> utilsLogger = new();
+          ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger.Object);
+          Utils.SetCliUtilsLogger(utilsLogger.Object);
+        }
     }
 }

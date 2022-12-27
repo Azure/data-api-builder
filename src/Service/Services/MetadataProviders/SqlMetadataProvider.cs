@@ -35,9 +35,7 @@ namespace Azure.DataApiBuilder.Service.Services
         private readonly Dictionary<string, Entity> _entities;
 
         // Dictionary mapping singular graphql types to entity name keys in the configuration
-        // Making it Case Insensitive since two entities cannot differ 
-        private readonly Dictionary<string, string> _graphQLSingularTypeToEntityNameMap =
-            new(StringComparer.InvariantCultureIgnoreCase);
+        private readonly Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
 
         // Dictionary containing mapping of graphQL stored procedure exposed query/mutation name
         // to their corresponding entity names defined in the config.
@@ -1369,15 +1367,6 @@ namespace Azure.DataApiBuilder.Service.Services
 
             return (_pairToFkDefinition.ContainsKey(pairAB) || _pairToFkDefinition.ContainsKey(pairBA));
         }
-
-        // /// <summary>
-        // /// For the given exposed graphQL query/mutation name, it checks if it is present in the HashSet
-        // /// containing all the stored-procedure exposed name.
-        // /// </summary>
-        // public bool IsStoreProcedureQueryOrMutation(string exposedGraphQLQueryOrMutationName)
-        // {
-        //     return _graphQLStoredProcedureExposedNames.Contains(exposedGraphQLQueryOrMutationName);
-        // }
 
         /// <summary>
         /// Retrieving the partition key path, for cosmosdb_nosql only

@@ -93,8 +93,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            // string entityName = _sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap[context.Field.Name.Value];
-            // _sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject databaseObject);
             if (_sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Field.Name.Value, out string entityName))
             {
                 SqlExecuteStructure sqlExecuteStructure = new(

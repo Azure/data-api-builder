@@ -57,6 +57,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     {
                         if (entity.ObjectType is SourceType.StoredProcedure)
                         {
+                            // This will make sure we don't create graphQL pagination objects for stored-procedures.
                             paginationReturnType = null;
                             queryFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entity, rolesAllowedForRead));
                         }

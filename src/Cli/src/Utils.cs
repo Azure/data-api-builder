@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
 using Humanizer;
+using Microsoft.Extensions.Logging;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>
@@ -16,6 +17,13 @@ namespace Cli
     {
         public const string WILDCARD = "*";
         public static readonly string SEPARATOR = ":";
+
+        private static ILogger<Utils> _logger;
+
+        public static void SetCliUtilsLogger(ILogger<Utils> cliUtilsLogger)
+        {
+            _logger = cliUtilsLogger;
+        }
 
         /// <summary>
         /// Creates the rest object which can be either a boolean value
@@ -68,7 +76,7 @@ namespace Cli
                     string[] arr = graphQL.Split(SEPARATOR);
                     if (arr.Length != 2)
                     {
-                        Console.Error.WriteLine($"Invalid format for --graphql. Accepted values are true/false," +
+                        _logger.LogError($"Invalid format for --graphql. Accepted values are true/false," +
                                                 "a string, or a pair of string in the format <singular>:<plural>");
                         return null;
                     }
@@ -263,8 +271,8 @@ namespace Cli
                 string[] map = item.Split(SEPARATOR);
                 if (map.Length != 2)
                 {
-                    Console.Error.WriteLine("Invalid format for --map");
-                    Console.WriteLine("It should be in this format --map \"backendName1:exposedName1,backendName2:exposedName2,...\".");
+                    _logger.LogError("Invalid format for --map. " +
+                        "Acceptable format --map \"backendName1:exposedName1,backendName2:exposedName2,...\".");
                     return false;
                 }
 
@@ -360,8 +368,8 @@ namespace Cli
 
             if (!File.Exists(file))
             {
-                Console.WriteLine($"ERROR: Couldn't find config  file: {file}.");
-                Console.WriteLine($"Please run: dab init <options> to create a new config file.");
+                _logger.LogError($"Couldn't find config  file: {file}. " +
+                    "Please run: dab init <options> to create a new config file.");
                 return false;
             }
 
@@ -390,7 +398,7 @@ namespace Cli
             HashSet<string> uniqueOperations = operations.ToHashSet();
             if (uniqueOperations.Count() != operations.Length)
             {
-                Console.Error.WriteLine("Duplicate action found in --permissions");
+                _logger.LogError("Duplicate action found in --permissions");
                 return false;
             }
 
@@ -412,14 +420,14 @@ namespace Cli
                     }
                     else if (!PermissionOperation.ValidPermissionOperations.Contains(op))
                     {
-                        Console.Error.WriteLine("Invalid actions found in --permissions");
+                        _logger.LogError("Invalid actions found in --permissions");
                         return false;
                     }
                 }
                 else
                 {
                     // Check for invalid operation.
-                    Console.Error.WriteLine("Invalid actions found in --permissions");
+                    _logger.LogError("Invalid actions found in --permissions");
                     return false;
                 }
             }
@@ -427,7 +435,7 @@ namespace Cli
             // Check for WILDCARD operation with CRUD operations.
             if (containsWildcardOperation && uniqueOperations.Count() > 1)
             {
-                Console.Error.WriteLine(" WILDCARD(*) along with other CRUD operations in a single operation is not allowed.");
+                _logger.LogError("WILDCARD(*) along with other CRUD operations in a single operation is not allowed.");
                 return false;
             }
 
@@ -447,7 +455,7 @@ namespace Cli
             operations = null;
             if (permissions.Count() != 2)
             {
-                Console.WriteLine("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
+                _logger.LogError("Invalid format for permission. Acceptable format: --permissions \"<<role>>:<<actions>>\"");
                 return false;
             }
 
@@ -471,14 +479,14 @@ namespace Cli
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
                 /// The existence of user provided config file is not checked here.
-                Console.WriteLine($"User provided config file: {userProvidedConfigFile}");
+                _logger.LogInformation($"User provided config file: {userProvidedConfigFile}");
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;
             }
             else
             {
-                Console.WriteLine("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
+                _logger.LogInformation("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
                 /// Need to reset to true explicitly so any that any re-invocations of this function
                 /// get simulated as being called for the first time specifically useful for tests.
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = true;
@@ -502,7 +510,7 @@ namespace Cli
         {
             if (!TryReadRuntimeConfig(configFile, out string runtimeConfigJson))
             {
-                Console.Error.WriteLine($"Failed to read the config file: {configFile}.");
+                _logger.LogError($"Failed to read the config file: {configFile}.");
                 return false;
             }
 
@@ -511,13 +519,13 @@ namespace Cli
                     out RuntimeConfig? deserializedRuntimeConfig,
                     logger: null))
             {
-                Console.Error.WriteLine($"Failed to parse the config file: {configFile}.");
+                _logger.LogError($"Failed to parse the config file: {configFile}.");
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.ConnectionString))
             {
-                Console.Error.WriteLine($"Invalid connection-string provided in the config.");
+                _logger.LogError($"Invalid connection-string provided in the config.");
                 return false;
             }
 
@@ -541,7 +549,7 @@ namespace Cli
             {
                 if (keyFields is not null && keyFields.Any())
                 {
-                    Console.Error.WriteLine("Stored Procedures don't support keyfields.");
+                    _logger.LogError("Stored Procedures don't support keyfields.");
                     return false;
                 }
             }
@@ -549,7 +557,7 @@ namespace Cli
             {
                 if (parameters is not null && parameters.Any())
                 {
-                    Console.Error.WriteLine("Tables/Views don't support parameters.");
+                    _logger.LogError("Tables/Views don't support parameters.");
                     return false;
                 }
             }
@@ -618,8 +626,8 @@ namespace Cli
                 if (items.Length != 2)
                 {
                     sourceParameters = null;
-                    Console.Error.WriteLine("Invalid format for --source.params");
-                    Console.WriteLine("Correct source parameter syntax: --source.params \"key1:value1,key2:value2,...\".");
+                    _logger.LogError("Invalid format for --source.params");
+                    _logger.LogError("Correct source parameter syntax: --source.params \"key1:value1,key2:value2,...\".");
                     return false;
                 }
 
@@ -761,7 +769,7 @@ namespace Cli
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine($"Failed to generate the config file, operation failed with exception:{e}.");
+                _logger.LogError($"Failed to generate the config file, operation failed with exception:{e}.");
                 return false;
             }
 

@@ -626,8 +626,8 @@ namespace Cli
                 if (items.Length != 2)
                 {
                     sourceParameters = null;
-                    _logger.LogError("Invalid format for --source.params" +
-                        "Correct source parameter syntax: --source.params \"key1:value1,key2:value2,...\".");
+                    _logger.LogError("Invalid format for --source.params");
+                    _logger.LogError("Correct source parameter syntax: --source.params \"key1:value1,key2:value2,...\".");
                     return false;
                 }
 

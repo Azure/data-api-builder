@@ -307,6 +307,32 @@ namespace Cli.Tests
             }
         }";
 
+        public const string STORED_PROCEDURE_WITH_TWO_ROLES = @"
+          {
+            ""entities"": {
+                ""MyEntity"": {
+                  ""source"": {
+                    ""object"": ""MySp"",
+                    ""type"": ""stored-procedure""
+                  }
+                  ""permissions"": [
+                      {
+                      ""role"": ""anonymous"",
+                      ""actions"": [
+                            ""read""
+                        ]
+                      },
+                      {
+                      ""role"": ""authenticated"",
+                      ""actions"": [
+                            ""read""
+                        ]
+                      }
+                    ]
+                }
+            }
+        }";
+
         public const string ENTITY_CONFIG_WITH_ACTION_FIELDS = @"
           {
             ""entities"": {

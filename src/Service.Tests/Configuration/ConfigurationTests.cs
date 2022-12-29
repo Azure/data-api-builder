@@ -132,6 +132,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
+        [TestMethod]
+        public void TestingSomething(){
+            string x = RuntimeConfig.GetPublishedDraftSchemaLink();
+            Console.WriteLine(x);
+        }
+
         /// <summary>
         /// Checks correct serialization and deserialization of Source Type from 
         /// Enum to String and vice-versa.

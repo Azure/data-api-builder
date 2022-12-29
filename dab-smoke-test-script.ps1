@@ -67,6 +67,7 @@ describe SmokeTest {
         $parsedSchema = Get-Content -Raw -Path $configFileName | ConvertFrom-Json
         Write-Host($parsedSchema)
         $genratedSchemaPath = $parsedSchema.'$schema'
+        Write-Host($parsedSchema.'$schema');
         Write-Host($"generated schema: {$genratedSchemaPath}");
         Write-Host($"expected schema: {$expectedSchemaPath}");
         $genratedSchemaPath.Equals($expectedSchemaPath) | Should -Be True

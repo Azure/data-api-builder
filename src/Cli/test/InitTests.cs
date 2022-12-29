@@ -30,7 +30,7 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
-                setSessionContext: false,
+                setSessionContext: true,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 config: _testRuntimeConfig);
@@ -40,7 +40,10 @@ namespace Cli.Tests
                 ""$schema"": ""dab.draft.schema.json"",
                 ""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring""
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"":{
+                        ""set-session-context"": true
+                    }
                 },
                 ""entities"": {}
             }";
@@ -116,7 +119,10 @@ namespace Cli.Tests
                 ""$schema"": ""dab.draft.schema.json"",
                 ""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": """"
+                    ""connection-string"": """",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
                 },
                 ""entities"": {}
             }";

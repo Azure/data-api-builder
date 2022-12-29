@@ -62,7 +62,10 @@ namespace Cli.Tests
         public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
               ""database-type"": ""mssql"",
-              ""connection-string"": ""testconnectionstring""
+              ""connection-string"": ""testconnectionstring"",
+              ""options"":{
+                ""set-session-context"": true
+                }
             }
         ";
 
@@ -362,7 +365,10 @@ namespace Cli.Tests
         ""$schema"": ""dab.draft.schema.json"",
         ""data-source"": {
           ""database-type"": ""mssql"",
-          ""connection-string"": ""localhost:5000""
+          ""connection-string"": ""localhost:5000"",
+          ""options"":{
+            ""set-session-context"": true
+          }
         },
         ""runtime"": {
           ""rest"": {

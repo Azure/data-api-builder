@@ -180,7 +180,8 @@ public class EndToEndTests
     [TestMethod]
     public void TestConfigGeneratedAfterAddingEntityWithoutIEnumerables()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--connection-string", "localhost:5000",
+            "--set-session-context", "true" };
         Program.Main(initArgs);
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
@@ -196,7 +197,8 @@ public class EndToEndTests
     [TestMethod]
     public void TestConfigGeneratedAfterAddingEntityWithSourceAsStoredProcedure()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--host-mode", "Development", "--connection-string", "testconnectionstring" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql",
+            "--host-mode", "Development", "--connection-string", "testconnectionstring", "--set-session-context", "true" };
         Program.Main(initArgs);
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
@@ -256,7 +258,8 @@ public class EndToEndTests
     [TestMethod]
     public void TestConfigGeneratedAfterAddingEntityWithSourceWithDefaultType()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--host-mode", "Development", "--connection-string", "testconnectionstring" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--host-mode", "Development",
+            "--connection-string", "testconnectionstring", "--set-session-context", "true"  };
         Program.Main(initArgs);
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);

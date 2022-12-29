@@ -65,7 +65,7 @@ describe SmokeTest {
         $expectedSchemaPath = "https://dataapibuilder.azureedge.net/schemas/v{$dabVersion}-alpha/dab.draft.schema.json";
         $parsedSchema = Get-Content -Raw -Path $configFileName | ConvertFrom-Json
         Write-Host($parsedSchema)
-        $genratedSchemaPath = $parsedSchema.additionalProperties.version
+        $genratedSchemaPath = $parsedSchema.'$schema'
 
         $genratedSchemaPath.Equals($expectedSchemaPath) | Should -Be True
     }

@@ -133,7 +133,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod]
-        public void TestingSomething(){
+        public void TestingSomething()
+        {
             string x = RuntimeConfig.GetPublishedDraftSchemaLink();
             Console.WriteLine(x);
         }

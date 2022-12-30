@@ -7,12 +7,14 @@ namespace Cli.Tests;
 public class EndToEndTests
 {
     /// <summary>
-    /// Setup the logger for CLI
+    /// Setup the logger for CLI.
+    /// Setup Dab Schema File for picking up the correct path for dab schema.
     /// </summary>
     [TestInitialize]
-    public void SetupLoggerForCLI()
+    public void Setup()
     {
         TestHelper.SetupTestLoggerForCLI();
+        TestHelper.SetUpDabSchemaFileForTest();
     }
 
     /// <summary>

@@ -7,12 +7,14 @@ namespace Cli.Tests
     public class UpdateEntityTests
     {
         /// <summary>
-        /// Setup the logger for CLI
+        /// Setup the logger for CLI.
+        /// Setup Dab Schema File for picking up the correct path for dab schema.
         /// </summary>
         [TestInitialize]
-        public void SetupLoggerForCLI()
+        public void Setup()
         {
             TestHelper.SetupTestLoggerForCLI();
+            TestHelper.SetUpDabSchemaFileForTest();
         }
 
         #region  Positive Tests
@@ -1801,10 +1803,9 @@ namespace Cli.Tests
 
         private static string GetInitialConfigString()
         {
-            return @"
-                        {
-                        ""$schema"": ""dab.draft-01.schema.json"",
-                        ""data-source"": {
+            return @"{" +
+                        @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                        @"""data-source"": {
                             ""database-type"": ""mssql"",
                             ""connection-string"": ""testconnectionstring""
                         },

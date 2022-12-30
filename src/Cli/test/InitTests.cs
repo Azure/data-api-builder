@@ -9,12 +9,14 @@ namespace Cli.Tests
         private string _basicRuntimeConfig = string.Empty;
 
         /// <summary>
-        /// Setup the logger for CLI
+        /// Setup the logger for CLI.
+        /// Setup Dab Schema File for picking up the correct path for dab schema.
         /// </summary>
         [TestInitialize]
-        public void SetupLoggerForCLI()
+        public void Setup()
         {
             TestHelper.SetupTestLoggerForCLI();
+            TestHelper.SetUpDabSchemaFileForTest();
         }
 
         /// <summary>
@@ -35,9 +37,9 @@ namespace Cli.Tests
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""mssql"",
                     ""connection-string"": ""testconnectionstring""
                 },
@@ -72,9 +74,9 @@ namespace Cli.Tests
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""cosmosdb_postgresql"",
                     ""connection-string"": ""testconnectionstring""
                 },
@@ -109,9 +111,9 @@ namespace Cli.Tests
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""mssql"",
                     ""connection-string"": """"
                 },
@@ -144,9 +146,10 @@ namespace Cli.Tests
                 corsOrigin: null,
                 config: _testRuntimeConfig);
 
-            _basicRuntimeConfig = @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            _basicRuntimeConfig =
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""cosmosdb_nosql"",
                     ""connection-string"": ""testconnectionstring"",
                     ""options"": {

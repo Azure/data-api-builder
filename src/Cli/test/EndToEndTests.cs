@@ -189,6 +189,8 @@ public class EndToEndTests
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
         string[] addArgs = { "add", "book", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:*" };
         Program.Main(addArgs);
+        Console.WriteLine(JObject.Parse(CONFIG_WITH_SINGLE_ENTITY));
+        Console.WriteLine(JObject.Parse(File.ReadAllText(_testRuntimeConfig)));
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(CONFIG_WITH_SINGLE_ENTITY), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
     }
 

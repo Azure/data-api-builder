@@ -108,6 +108,10 @@ namespace Azure.DataApiBuilder.Config
             }
         }
 
+        /// <summary>
+        /// This method reads the dab.draft.schema.json which contains the link for online published
+        /// schema for dab, based on the version of dab being used to generate the runtime config.
+        /// </summary>
         public static string GetPublishedDraftSchemaLink()
         {
             string assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);

@@ -428,22 +428,5 @@ namespace Cli.Tests
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger.Object);
             Utils.SetCliUtilsLogger(utilsLogger.Object);
         }
-
-        /// <summary>
-        /// Helper method to setup draft schema file for
-        /// dab to test the generated config contains the 
-        /// correct schema path.
-        /// </summary>
-        public static void SetUpDabSchemaFileForTest()
-        {
-            // string targetPath = @"schemas";
-            // string fileName = @"dab.draft.schema.json";
-            // if (!Directory.Exists(targetPath))
-            // {
-            //     Directory.CreateDirectory(targetPath);
-            // }
-
-            // File.Copy(fileName, Path.Combine(targetPath, fileName), overwrite: true);
-        }
     }
 }

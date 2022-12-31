@@ -9,14 +9,12 @@ namespace Cli.Tests
         private string _basicRuntimeConfig = string.Empty;
 
         /// <summary>
-        /// Setup the logger for CLI.
-        /// Setup Dab Schema File for picking up the correct path for dab schema.
+        /// Setup the logger for CLI
         /// </summary>
         [TestInitialize]
-        public void Setup()
+        public void SetupLoggerForCLI()
         {
             TestHelper.SetupTestLoggerForCLI();
-            TestHelper.SetUpDabSchemaFileForTest();
         }
 
         /// <summary>

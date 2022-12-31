@@ -7,14 +7,12 @@ namespace Cli.Tests
     public class UpdateEntityTests
     {
         /// <summary>
-        /// Setup the logger for CLI.
-        /// Setup Dab Schema File for picking up the correct path for dab schema.
+        /// Setup the logger for CLI
         /// </summary>
         [TestInitialize]
-        public void Setup()
+        public void SetupLoggerForCLI()
         {
             TestHelper.SetupTestLoggerForCLI();
-            TestHelper.SetUpDabSchemaFileForTest();
         }
 
         #region  Positive Tests

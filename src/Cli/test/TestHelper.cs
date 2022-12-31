@@ -436,14 +436,14 @@ namespace Cli.Tests
         /// </summary>
         public static void SetUpDabSchemaFileForTest()
         {
-            // string targetPath = @"schemas";
-            // string fileName = @"dab.draft.schema.json";
-            // if (!Directory.Exists(targetPath))
-            // {
-            //     Directory.CreateDirectory(targetPath);
-            // }
+            string targetPath = @"schemas";
+            string fileName = @"dab.draft.schema.json";
+            if (!Directory.Exists(targetPath))
+            {
+                Directory.CreateDirectory(targetPath);
+            }
 
-            // File.Copy(fileName, Path.Combine(targetPath, fileName), overwrite: true);
+            File.Copy(fileName, Path.Combine(targetPath, fileName), overwrite: true);
         }
     }
 }

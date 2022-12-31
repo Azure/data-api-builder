@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace Azure.DataApiBuilder.Config
 {
@@ -109,7 +110,10 @@ namespace Azure.DataApiBuilder.Config
 
         public static string GetPublishedDraftSchemaLink()
         {
-            string schemaFileContent = File.ReadAllText("./schemas/dab.draft.schema.json");
+            string assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            string schemaPath = Path.Combine(assemblyDirectory, "dab.draft.schema.json");
+        
+            string schemaFileContent = File.ReadAllText(schemaPath);
             Dictionary<string, object> jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent)!;
             Dictionary<string, string> properties = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonDictionary["additionalProperties"].ToString())!;
             return properties["version"];

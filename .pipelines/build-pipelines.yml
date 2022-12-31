@@ -94,7 +94,7 @@ steps:
   inputs:
     sourceFolder: '$(Build.SourcesDirectory)/schemas'
     contents: 'dab.draft.schema.json'
-    targetFolder: '$(Build.ArtifactStagingDirectory)/schemas'
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
 
 - template: templates/code-signing.yml
   parameters:

@@ -18,7 +18,7 @@ namespace Azure.DataApiBuilder.Service.Services
         public async Task Invoke(HttpContext httpContext)
         {
             if (!httpContext.Request.Headers.TryGetValue(HttpHeaders.CORRELATION_ID, out StringValues correlationId)
-                || !Guid.TryParse(correlationId, out _))
+                && Guid.TryParse(correlationId, out _))
             {
                 httpContext.Items.TryAdd(HttpHeaders.CORRELATION_ID, Guid.NewGuid().ToString());
             }

@@ -24,6 +24,7 @@ switch ($OsName) {
 
 $executableFileDirectory = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab"
 $executableDAB = "$executableFileDirectory/dab"
+$configFileName = "dab-config-smoke-test.json"
 
 describe SmokeTest {
     it 'Check Version' {
@@ -51,9 +52,20 @@ describe SmokeTest {
     }
 
     it 'Check Config File is generated' {
-        $configFileName = "dab-config-smoke-test.json"
         Invoke-expression "$executableDAB init -c $configFileName --database-type mssql --connection-string xxxx"
         Test-Path -Path $configFileName | Should -Be True
+    }
+
+    it 'Check Generated Config contains the correct path of dab schema' {
+        if ($dabVersion.Contains("-"))
+        {
+            $dabVersion = $dabVersion.Substring(0, $dabVersion.IndexOf("-"));
+        }
+
+        $expectedSchemaPath = "https://dataapibuilder.azureedge.net/schemas/v$dabVersion-alpha/dab.draft.schema.json";
+        $parsedSchema = Get-Content -Raw -Path $configFileName | ConvertFrom-Json
+        $genratedSchemaPath = $parsedSchema.'$schema'
+        $genratedSchemaPath.Equals($expectedSchemaPath) | Should -Be True
     }
 }
 

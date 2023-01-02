@@ -196,7 +196,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     if (!graphQLOperationNames.Add(storedProcedureQueryName))
                     {
                         containsDuplicateOperationNames = true;
-                        break;
                     }
                 }
                 else
@@ -220,7 +219,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         || !graphQLOperationNames.Add(deleteMutationName))
                     {
                         containsDuplicateOperationNames = true;
-                        break;
                     }
                 }
 

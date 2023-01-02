@@ -63,7 +63,7 @@ the `dab-config.json` file will look like the following:
     }
   },
   "rest": true,
-  "graphql": true
+  "graphql": true,
   "permissions": [{
    "role": "anonymous",
     "actions": [ "read" ]

@@ -48,6 +48,11 @@ namespace Azure.DataApiBuilder.Service.Services
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
 
         /// <summary>
+        /// Contains mapping of exposed graphQL names of StoredProcedure to EntityName defined in the config.
+        /// </summary>
+        Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; }
+
+        /// <summary>
         /// Obtains the underlying OData parser.
         /// </summary>
         /// <returns></returns>

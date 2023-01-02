@@ -116,10 +116,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationForInsertion(string dbQuery)
         {
-            string graphQLMutationName = "InsertBook";
+            string graphQLMutationName = "insertBook";
             string graphQLMutation = @"
                 mutation {
-                    InsertBook(title: ""Random Book"", publisher_id: 1234 ) {
+                    insertBook(title: ""Random Book"", publisher_id: 1234 ) {
                         result
                     }
                 }
@@ -146,10 +146,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationForDeletion(string dbQueryToVerifyDeletion)
         {
-            string graphQLMutationName = "DeleteLastInsertedBook";
+            string graphQLMutationName = "deleteLastInsertedBook";
             string graphQLMutation = @"
                 mutation {
-                    DeleteLastInsertedBook {
+                    deleteLastInsertedBook {
                         result
                     }
                 }
@@ -177,10 +177,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationNonEmptyResponse(string dbQuery)
         {
-            string graphQLMutationName = "InsertAndDisplayAllBooksUnderGivenPublisher";
+            string graphQLMutationName = "insertAndDisplayAllBooksUnderGivenPublisher";
             string graphQLMutation = @"
                 mutation{
-                    InsertAndDisplayAllBooksUnderGivenPublisher(title: ""Orange Tomato"" publisher_name: ""Big Company""){
+                    insertAndDisplayAllBooksUnderGivenPublisher(title: ""Orange Tomato"" publisher_name: ""Big Company""){
                         id
                         title
                     }
@@ -201,10 +201,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationForUpdate(string dbQuery)
         {
-            string graphQLMutationName = "UpdateBookTitle";
+            string graphQLMutationName = "updateBookTitle";
             string graphQLMutation = @"
                 mutation {
-                    UpdateBookTitle(id: 14, title: ""Before Midnight"") {
+                    updateBookTitle(id: 14, title: ""Before Midnight"") {
                         id
                         title
                         publisher_id

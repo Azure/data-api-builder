@@ -69,6 +69,10 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
             return entityPermissionsMap;
         }
 
+        /// <summary>
+        /// Creates an empty entity with no permissions or exposed rest/graphQL endpoints.
+        /// </summary>
+        /// <param name="sourceType">type of source object. Default is Table.</param>
         public static Entity GenerateEmptyEntity(SourceType sourceType = SourceType.Table)
         {
             return new Entity(Source: new DatabaseObjectSource(sourceType, Name: "foo", Parameters: null, KeyFields: null),
@@ -84,6 +88,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// </summary>
         /// <param name="singularNameForEntity"> Singular name defined by user in the config.</param>
         /// <param name="pluralNameForEntity"> Plural name defined by user in the config.</param>
+        /// <param name="sourceType">type of source object. Default is Table.</param>
         public static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity, SourceType sourceType = SourceType.Table)
         {
             return new Entity(Source: new DatabaseObjectSource(sourceType, Name: "foo", Parameters: null, KeyFields: null),
@@ -98,6 +103,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// Creates an entity with a string GraphQL type.
         /// </summary>
         /// <param name="type"></param>
+        /// <param name="sourceType">type of source object. Default is Table.</param>
         /// <returns></returns>
         public static Entity GenerateEntityWithStringType(string type, SourceType sourceType = SourceType.Table)
         {

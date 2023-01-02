@@ -168,15 +168,15 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// All these entities will create queries with the following field names
         /// pk query name: book_by_pk
         /// List query name: books
-        /// create mutation name: createBooks
-        /// update mutation name: updateBooks
-        /// delete mutation name: deleteBooks
+        /// create mutation name: createBook
+        /// update mutation name: updateBook
+        /// delete mutation name: deleteBook
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
         /// <exception cref="DataApiBuilderException"></exception>
         public static void ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(IDictionary<string, Entity> entityCollection)
         {
-            HashSet<string> graphQLQueries = new();
+            HashSet<string> graphQLOperationNames = new();
 
             foreach ((string entityName, Entity entity) in entityCollection)
             {
@@ -187,15 +187,16 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     continue;
                 }
 
-                bool containsDuplicateQueries = false;
+                bool containsDuplicateOperationNames = false;
                 if (entity.ObjectType is SourceType.StoredProcedure)
                 {
-                    // For Stored Procedures single query/mutation is generated.
+                    // For Stored Procedures a single query/mutation is generated.
                     string storedProcedureQueryName = GenerateStoredProcedureQueryName(entityName, entity);
 
-                    if (!graphQLQueries.Add(storedProcedureQueryName))
+                    if (!graphQLOperationNames.Add(storedProcedureQueryName))
                     {
-                        containsDuplicateQueries = true;
+                        containsDuplicateOperationNames = true;
+                        break;
                     }
                 }
                 else
@@ -212,14 +213,18 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     string updateMutationName = $"update{GetDefinedSingularName(entityName, entity)}";
                     string deleteMutationName = $"delete{GetDefinedSingularName(entityName, entity)}";
 
-                    if (!graphQLQueries.Add(pkQueryName) || !graphQLQueries.Add(listQueryName)
-                        || !graphQLQueries.Add(createMutationName) || !graphQLQueries.Add(updateMutationName) || !graphQLQueries.Add(deleteMutationName))
+                    if (!graphQLOperationNames.Add(pkQueryName)
+                        || !graphQLOperationNames.Add(listQueryName)
+                        || !graphQLOperationNames.Add(createMutationName)
+                        || !graphQLOperationNames.Add(updateMutationName)
+                        || !graphQLOperationNames.Add(deleteMutationName))
                     {
-                        containsDuplicateQueries = true;
+                        containsDuplicateOperationNames = true;
+                        break;
                     }
                 }
 
-                if (containsDuplicateQueries)
+                if (containsDuplicateOperationNames)
                 {
                     throw new DataApiBuilderException(
                         message: $"Entity {entityName} generates queries/mutation that already exist",

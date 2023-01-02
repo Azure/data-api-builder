@@ -202,7 +202,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Generates the stored-procedure query's name for an entity exposed for GraphQL.
+        /// Generates the query name of a stored procedure exposed for GraphQL.
         /// </summary>
         /// <param name="entityName">Name of the entity</param>
         /// <returns>Name of the list query</returns>

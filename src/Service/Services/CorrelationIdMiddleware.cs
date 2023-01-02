@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 if (!string.IsNullOrEmpty(correlationId))
                 {
-                    httpContext.Response.Headers.Add(HttpHeaders.CORRELATION_ID, correlationId);
+                    httpContext.Response.Headers.TryAdd(HttpHeaders.CORRELATION_ID, correlationId);
                 }
 
                 return Task.CompletedTask;

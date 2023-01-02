@@ -163,7 +163,6 @@ public class EndToEndTests
         Assert.AreEqual(1, runtimeConfig.Entities.Count()); // 1 new entity added
         Assert.IsTrue(runtimeConfig.Entities.ContainsKey("book"));
         Entity entity = runtimeConfig.Entities["book"];
-        Console.WriteLine(JsonSerializer.Serialize(entity));
         Assert.IsNull(entity.Rest);
         Assert.IsNull(entity.GraphQL);
         Assert.AreEqual(1, entity.Permissions.Length);

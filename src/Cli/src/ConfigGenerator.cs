@@ -184,7 +184,7 @@ namespace Cli
             PermissionSetting[]? permissionSettings = ParsePermission(options.Permissions, policy, field, options.SourceType);
             if (permissionSettings is null)
             {
-                Console.Error.WriteLine("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
+                _logger.LogError("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
                 return false;
             }
 

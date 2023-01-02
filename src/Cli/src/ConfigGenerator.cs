@@ -502,15 +502,6 @@ namespace Cli
                 return null;
             }
 
-            // Verifies that every role on stored-procedure has the same single operation.
-            // This check only happens when we update permissions for a new role.
-            // Example: Anonymous role and authenticated role cannot have different operation specified for them.
-            if (sourceType is SourceType.StoredProcedure &&
-                !VerifySameOperationsForEachRoleInStoredProcedures(entityToUpdate.Permissions, newRole!, newOperationArray.First()))
-            {
-                return null;
-            }
-
             bool role_found = false;
             // Loop through the current permissions
             foreach (PermissionSetting permission in entityToUpdate.Permissions)

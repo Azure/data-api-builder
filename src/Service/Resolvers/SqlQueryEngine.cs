@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
@@ -94,11 +93,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            _sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(context.Field.Name.Value, out DatabaseObject databaseObject);
-            if (databaseObject is not null && databaseObject.SourceType is SourceType.StoredProcedure)
+            if (_sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Field.Name.Value, out string entityName))
             {
                 SqlExecuteStructure sqlExecuteStructure = new(
-                    context.FieldSelection.Name.Value,
+                    entityName,
                     _sqlMetadataProvider,
                     _authorizationResolver,
                     _gQLFilterParser,

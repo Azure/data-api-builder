@@ -454,7 +454,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         queryString,
                         queryParameters,
                         _queryExecutor.ExtractRowFromDbDataReader,
-                        sourceDefinition.PrimaryKey);
+                        sourceDefinition.PrimaryKey,
+                        _httpContextAccessor.HttpContext!);
 
                 if (resultRecord is not null && resultRecord.Item1 is null)
                 {

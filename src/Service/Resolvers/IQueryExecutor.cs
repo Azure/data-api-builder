@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -26,7 +27,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string sqltext,
             IDictionary<string, object?> parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
-            List<string>? args = null);
+            List<string>? args = null,
+            HttpContext? httpContext = null);
 
         /// <summary>
         /// Extracts the rows from the given DbDataReader to populate

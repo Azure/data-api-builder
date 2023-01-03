@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 Claim claim = new(ClaimTypes.Role, clientDefinedRole, ClaimValueTypes.String);
 
                 // To set the IsAuthenticated value as false, omit the authenticationType.
-                ClaimsIdentity identity = new();
+                ClaimsIdentity identity = new("DAB-VERIFIED");
                 identity.AddClaim(claim);
                 httpContext.User.AddIdentity(identity);
             }

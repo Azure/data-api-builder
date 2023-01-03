@@ -4,6 +4,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
+using System.Security.Principal;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Auth;
@@ -431,41 +432,50 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// </summary>
         /// <param name="context">HttpContext object used to extract the authenticated user's claims.</param>
         /// <returns>Dictionary with claimType -> claim mappings.</returns>
-        private static Dictionary<string, Claim> GetAllUserClaims(HttpContext context)
+        public static Dictionary<string, Claim> GetAllUserClaims(HttpContext context)
         {
             Dictionary<string, Claim> claimsInRequestContext = new();
-            ClaimsIdentity? identity = (ClaimsIdentity?)context.User.Identity;
-
-            if (identity is null)
+            if (context is null)
             {
                 return claimsInRequestContext;
             }
 
-            foreach (Claim claim in identity.Claims)
+            foreach (IIdentity iidentity in context.User.Identities)
             {
-                /*
-                 * An example claim would be of format:
-                 * claim.Type: "user_email"
-                 * claim.Value: "authz@microsoft.com"
-                 * claim.ValueType: "string"
-                 */
-                // At this point, only add non-role claims to the collection and only throw an exception for duplicate non-role claims.
-                if (claim.Type is not AuthenticationConfig.ROLE_CLAIM_TYPE && !claimsInRequestContext.TryAdd(claim.Type, claim))
-                {
-                    // If there are duplicate claims present in the request, return an exception.
-                    throw new DataApiBuilderException(
-                        message: "Duplicate claims are not allowed within a request.",
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
-                        );
-                }
-            }
+                ClaimsIdentity? identity = iidentity as ClaimsIdentity;
 
-            // Only add a role claim which represents the role context evaluated for the request.
-            string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
-            if (identity.HasClaim(type: AuthenticationConfig.ROLE_CLAIM_TYPE, value: clientRoleHeader))
-            {
-                claimsInRequestContext.Add(AuthenticationConfig.ROLE_CLAIM_TYPE, new Claim(AuthenticationConfig.ROLE_CLAIM_TYPE, clientRoleHeader, ClaimValueTypes.String));
+                if(identity is null || identity.IsAuthenticated is false)
+                {
+                    continue;
+                }
+
+                foreach (Claim claim in identity.Claims)
+                {
+                    /*
+                     * An example claim would be of format:
+                     * claim.Type: "user_email"
+                     * claim.Value: "authz@microsoft.com"
+                     * claim.ValueType: "string"
+                     */
+                    // At this point, only add non-role claims to the collection and only throw an exception for duplicate non-role claims.
+                    if (claim.Type is not AuthenticationConfig.ROLE_CLAIM_TYPE && !claimsInRequestContext.TryAdd(claim.Type, claim))
+                    {
+                        // If there are duplicate claims present in the request, return an exception.
+                        throw new DataApiBuilderException(
+                            message: "Duplicate claims are not allowed within a request.",
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                            );
+                    }
+                }
+
+                // Only add a role claim which represents the role context evaluated for the request.
+                string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
+                if (!claimsInRequestContext.ContainsKey(AuthenticationConfig.ROLE_CLAIM_TYPE) &&
+                    identity.HasClaim(type: AuthenticationConfig.ROLE_CLAIM_TYPE, value: clientRoleHeader))
+                {
+                    claimsInRequestContext.Add(AuthenticationConfig.ROLE_CLAIM_TYPE, new Claim(AuthenticationConfig.ROLE_CLAIM_TYPE, clientRoleHeader, ClaimValueTypes.String));
+                }
             }
 
             return claimsInRequestContext;

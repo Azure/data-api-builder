@@ -304,7 +304,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     structure.Parameters,
-                    _queryExecutor.GetJsonResultAsync<JsonDocument>);
+                    _queryExecutor.GetJsonResultAsync<JsonDocument>,
+                    httpContext: _httpContextAccessor.HttpContext!);
             return jsonDocument;
         }
 

@@ -59,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 // the header payload failed to parse -> Authentication Failure.
                 if (identity is null)
                 {
-                    return Task.FromResult(AuthenticateResult.Fail(failureMessage: EasyAuthAuthenticationDefaults.INVALID_PAYLOAD_ERROR));
+                   return Task.FromResult(AuthenticateResult.Fail(failureMessage: EasyAuthAuthenticationDefaults.INVALID_PAYLOAD_ERROR));
                 }
 
                 if (HasOnlyAnonymousRole(identity.Claims))

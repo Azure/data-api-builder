@@ -247,6 +247,40 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
         }
 
+        [TestMethod("Validates an invalid configuration returns a bad request."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+        public async Task TestInvalidConfigurationAtRuntime()
+        {
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            HttpClient httpClient = server.CreateClient();
+
+            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
+            config = config with { Configuration = "invalidString" };
+
+            HttpResponseMessage postResult =
+                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            Assert.AreEqual(HttpStatusCode.BadRequest, postResult.StatusCode);
+        }
+
+        [TestMethod("Validates a failure in one of the config updated handlers returns a bad request."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+        public async Task TestSettingFailureConfigurations()
+        {
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            HttpClient httpClient = server.CreateClient();
+
+            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
+
+            RuntimeConfigProvider runtimeConfigProvider = server.Services.GetService<RuntimeConfigProvider>();
+            runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add((_, _) =>
+            {
+                return Task.FromResult(false);
+            });
+
+            HttpResponseMessage postResult =
+                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+
+            Assert.AreEqual(HttpStatusCode.BadRequest, postResult.StatusCode);
+        }
+
         /// <summary>
         /// Tests that sending configuration to the DAB engine post-startup will properly hydrate
         /// the AuthorizationResolver by:

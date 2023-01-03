@@ -164,7 +164,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         /// and returns all the books under that publisher.
         /// </summary>
         [TestMethod]
-        public virtual async Task InsertOneWithStoredProcedureTest()
+        public async Task InsertOneWithStoredProcedureTest()
         {
             string requestBody = @"
             {

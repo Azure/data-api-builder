@@ -146,6 +146,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"AND [title] = ' '' UNION SELECT * FROM books/*' " +
                 $"AND [publisher_id] = 1234 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneWithStoredProcedureTest",
+                // This query is the query for the result we get back from the database
+                // after the insert operation. Not the query that we generate to perform
+                // the insertion.
+                $"SELECT table0.[id], table0.[title], table0.[publisher_id] FROM books AS table0 " +
+                $"JOIN (SELECT id FROM publishers WHERE name = 'The First Publisher') AS table1 " +
+                $"ON table0.[publisher_id] = table1.[id] " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
 

@@ -18,6 +18,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
                 // actual delete query.
                 $"SELECT [id] FROM { _integrationTableName } " +
                 $"WHERE id = 5 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "DeleteOneWithStoredProcedureTest",
+                // This query is used to confirm that the item no longer exists, not the
+                // actual delete query.
+                $"SELECT [id] FROM { _integrationTableName } " +
+                $"WHERE id = 14 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
         #region Test Fixture Setup

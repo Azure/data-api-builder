@@ -158,6 +158,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
+        /// Tests the InsertOne functionality with a REST POST request
+        /// using stored procedure.
+        /// The below request tries to insert a book for a given publisher
+        /// and returns all the books under that publisher.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithStoredProcedureTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Happy New Year"",
+                ""publisher_name"": ""The First Publisher""
+            }";
+
+            string expectedLocationHeader = _integrationProcedureInsertOneAndDisplay_EntityName;
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationProcedureInsertOneAndDisplay_EntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithStoredProcedureTest)),
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
         /// Tests InsertOne into a table that has a composite primary key
         /// with a REST POST request.
         /// </summary>

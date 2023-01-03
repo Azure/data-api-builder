@@ -114,6 +114,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
         }
+
+        /// <summary>
+        /// Delete the last inserted row (row with max id) from books.
+        /// Verify that the row doesn't exist anymore.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task DeleteOneWithStoredProcedureTest()
+        {
+            // Delete one from view based on books table.
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: null,
+                    queryString: null,
+                    entityNameOrPath: _integrationProcedureDeleteOne_EntityName,
+                    sqlQuery: GetQuery(nameof(DeleteOneWithStoredProcedureTest)),
+                    operationType: Config.Operation.Delete,
+                    requestBody: null,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
         #endregion
 
         #region Negative Tests

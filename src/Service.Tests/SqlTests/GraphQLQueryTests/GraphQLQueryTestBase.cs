@@ -980,9 +980,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// </summary>
         public async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
         {
-            string graphQLQueryName = "GetPublisher";
+            string graphQLQueryName = "getPublisher";
             string graphQLQuery = @"{
-                GetPublisher(id: 1234) {
+                getPublisher(id: 1234) {
                     id
                     name
                 }
@@ -999,9 +999,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// </summary>
         public async Task TestStoredProcedureQueryForGettingMultipleRows(string dbQuery)
         {
-            string graphQLQueryName = "GetBooks";
+            string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
-                GetBooks {
+                getBooks {
                     id
                     title
                     publisher_id
@@ -1019,9 +1019,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// </summary>
         public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows(string dbQuery)
         {
-            string graphQLQueryName = "CountBooks";
+            string graphQLQueryName = "countBooks";
             string graphQLQuery = @"{
-                CountBooks {
+                countBooks {
                     total_books
                 }
             }";
@@ -1039,9 +1039,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// </summary>
         public async Task TestStoredProcedureQueryWithResultsContainingNull(string dbQuery)
         {
-            string graphQLQueryName = "GetAuthorsHistoryByFirstName";
+            string graphQLQueryName = "searchAuthorByFirstName";
             string graphQLQuery = @"{
-                GetAuthorsHistoryByFirstName(firstName: ""Aaron"") {
+                searchAuthorByFirstName(firstName: ""Aaron"") {
                     author_name
                     first_publish_year
                     total_books_published

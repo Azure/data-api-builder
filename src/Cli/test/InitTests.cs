@@ -35,9 +35,9 @@ namespace Cli.Tests
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""mssql"",
                     ""connection-string"": ""testconnectionstring""
                 },
@@ -72,9 +72,9 @@ namespace Cli.Tests
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""cosmosdb_postgresql"",
                     ""connection-string"": ""testconnectionstring""
                 },
@@ -109,9 +109,9 @@ namespace Cli.Tests
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""mssql"",
                     ""connection-string"": """"
                 },
@@ -144,9 +144,10 @@ namespace Cli.Tests
                 corsOrigin: null,
                 config: _testRuntimeConfig);
 
-            _basicRuntimeConfig = @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            _basicRuntimeConfig =
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""cosmosdb_nosql"",
                     ""connection-string"": ""testconnectionstring"",
                     ""options"": {

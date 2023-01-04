@@ -204,7 +204,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 case Config.Operation.Upsert:
                 case Config.Operation.UpsertIncremental:
                     // Since we cannot check if anything was created, just return a 200 Ok response with first result set output
-                    // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the  result set
+                    // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the result set
                     if (resultArray is not null && resultArray.Count > 0)
                     {
                         jsonDocument = JsonDocument.Parse(resultArray.ToJsonString());

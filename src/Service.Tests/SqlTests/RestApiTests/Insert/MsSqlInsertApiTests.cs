@@ -146,6 +146,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"AND [title] = ' '' UNION SELECT * FROM books/*' " +
                 $"AND [publisher_id] = 1234 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneAndReturnMultipleRowsWithStoredProcedureTest",
+                // This query is the query for the result we get back from the database
+                // after the insert operation. Not the query that we generate to perform
+                // the insertion.
+                $"SELECT table0.[id], table0.[title], table0.[publisher_id] FROM books AS table0 " +
+                $"JOIN (SELECT id FROM publishers WHERE name = 'Big Company') AS table1 " +
+                $"ON table0.[publisher_id] = table1.[id] "
             }
         };
 
@@ -209,6 +218,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         {
             _ = $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
                                           $"because the modification affects multiple base tables.";
+        }
+
+        /// <summary>
+        /// Tests the InsertOne and return multiple rows functionality with a REST POST request
+        /// using stored procedure.
+        /// The below request tries to insert a book for a given publisher
+        /// and returns all the books under that publisher.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertOneAndReturnMultipleRowsWithStoredProcedureTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Happy New Year"",
+                ""publisher_name"": ""Big Company""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationProcedureInsertOneAndDisplay_EntityName,
+                sqlQuery: GetQuery(nameof(InsertOneAndReturnMultipleRowsWithStoredProcedureTest)),
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: _integrationProcedureInsertOneAndDisplay_EntityName,
+                expectJson: false
+            );
         }
 
         #region RestApiTestBase Overrides

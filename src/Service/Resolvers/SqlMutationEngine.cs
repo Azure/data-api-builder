@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
+using System.Text.Json.Nodes;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -162,11 +163,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string queryText = _queryBuilder.Build(executeQueryStructure);
             _logger.LogInformation(queryText);
 
-            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRowAndProperties =
+            JsonArray? resultArray =
                 await _queryExecutor.ExecuteQueryAsync(
                     queryText,
                     executeQueryStructure.Parameters,
-                    _queryExecutor.ExtractRowFromDbDataReader);
+                    _queryExecutor.GetJsonArrayAsync);
+
+            JsonDocument jsonDocument;
 
             // A note on returning stored procedure results:
             // We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes
@@ -180,11 +183,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     return new NoContentResult();
                 case Config.Operation.Insert:
                     // Returns a 201 Created with whatever the first result set is returned from the procedure
-                    // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the first and only result set
-                    if (resultRowAndProperties is not null &&
-                        DoesResultHaveRows(resultRowAndProperties.Item2))
+                    // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the result set
+                    if (resultArray is not null && resultArray.Count > 0)
                     {
-                        return new CreatedResult(location: context.EntityName, OkMutationResponse(resultRowAndProperties.Item1).Value);
+                        jsonDocument = JsonDocument.Parse(resultArray.ToJsonString());
+                        return new CreatedResult(location: context.EntityName, OkMutationResponse(jsonDocument.RootElement.Clone()).Value);
                     }
                     else
                     {   // If no result set returned, just return a 201 Created with empty array instead of array with single null value
@@ -201,11 +204,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 case Config.Operation.Upsert:
                 case Config.Operation.UpsertIncremental:
                     // Since we cannot check if anything was created, just return a 200 Ok response with first result set output
-                    // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the first and only result set
-                    if (resultRowAndProperties is not null &&
-                        DoesResultHaveRows(resultRowAndProperties.Item2))
+                    // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the  result set
+                    if (resultArray is not null && resultArray.Count > 0)
                     {
-                        return OkMutationResponse(resultRowAndProperties.Item1);
+                        jsonDocument = JsonDocument.Parse(resultArray.ToJsonString());
+                        return OkMutationResponse(jsonDocument.RootElement.Clone());
                     }
                     else
                     {
@@ -338,6 +341,28 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // Convert Dictionary to array of JsonElements
             string jsonString = $"[{JsonSerializer.Serialize(result)}]";
             JsonElement jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
+            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
+
+            return new OkObjectResult(new
+            {
+                value = resultEnumerated
+            });
+        }
+
+        /// <summary>
+        /// Helper function returns an OkObjectResult with provided arguments in a
+        /// form that complies with vNext Api guidelines.
+        /// </summary>
+        /// <param name="jsonResult">Value representing the Json results of the client's request.</param>
+        private static OkObjectResult OkMutationResponse(JsonElement jsonResult)
+        {
+            // For consistency we return all values as type Array
+            if (jsonResult.ValueKind != JsonValueKind.Array)
+            {
+                string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
+                jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
+            }
+
             IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
 
             return new OkObjectResult(new

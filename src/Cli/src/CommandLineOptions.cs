@@ -63,7 +63,7 @@ namespace Cli
         [Option("graphql-schema", Required = false, HelpText = "GraphQL schema Path.")]
         public string? GraphQLSchemaPath { get; }
 
-        [Option("set-session-context", Required = false, HelpText = "Whether session context is enabled for MsSql.")]
+        [Option("set-session-context", Default = false, Required = false, HelpText = "Enable sending data to MsSql using session context.")]
         public bool SetSessionContext { get; }
 
         [Option("host-mode", Default = HostModeType.Production, Required = false, HelpText = "Specify the Host mode - Development or Production")]

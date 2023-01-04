@@ -148,7 +148,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "InsertOneWithStoredProcedureTest",
+                "InsertOneAndReturnSingleRowWithStoredProcedureTest",
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform
                 // the insertion.
@@ -222,13 +222,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
-        /// Tests the InsertOne functionality with a REST POST request
+        /// Tests the Insert one and return single row functionality with a REST POST request
         /// using stored procedure.
         /// The below request tries to insert a book for a given publisher
         /// and returns all the books under that publisher.
         /// </summary>
         [TestMethod]
-        public async Task InsertOneWithStoredProcedureTest()
+        public async Task InsertOneAndReturnSingleRowWithStoredProcedureTest()
         {
             string requestBody = @"
             {
@@ -240,7 +240,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 primaryKeyRoute: null,
                 queryString: null,
                 entityNameOrPath: _integrationProcedureInsertOneAndDisplay_EntityName,
-                sqlQuery: GetQuery(nameof(InsertOneWithStoredProcedureTest)),
+                sqlQuery: GetQuery(nameof(InsertOneAndReturnSingleRowWithStoredProcedureTest)),
                 operationType: Config.Operation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,

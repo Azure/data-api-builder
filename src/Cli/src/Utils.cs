@@ -114,7 +114,7 @@ namespace Cli
                 }
                 else
                 {
-                    Console.Error.WriteLine($"Invalid operation Name: {operationName}.");
+                    _logger.LogError($"Invalid operation Name: {operationName}.");
                     return false;
                 }
             }
@@ -673,7 +673,7 @@ namespace Cli
                 || !TryGetOperationName(operations.First(), out Operation operationName)
                 || Operation.All.Equals(operationName))
             {
-                Console.Error.WriteLine("Stored Procedure supports only 1 CRUD operation.");
+                _logger.LogError("Stored Procedure supports only 1 CRUD operation.");
                 return false;
             }
 
@@ -696,7 +696,7 @@ namespace Cli
             PermissionOperation? action = JsonSerializer.Deserialize<PermissionOperation>(operationJson);
             if (action is null)
             {
-                Console.Error.WriteLine($"Failed to parse the operation: {operation}.");
+                _logger.LogError($"Failed to parse the operation: {operation}.");
                 operationName = Operation.None;
                 return false;
             }

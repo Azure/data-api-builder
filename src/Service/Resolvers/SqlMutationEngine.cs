@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
@@ -21,7 +22,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
-using System.Text.Json.Nodes;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -666,18 +666,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return parameters;
-        }
-
-        /// <summary>
-        /// Checks if the given dictionary has a property named `HasRows`
-        /// and if its true.
-        /// </summary>
-        /// <param name="properties">A dictionary of properties of a Db Data Reader like RecordsAffected, HasRows.</param>
-        /// <returns>True if HasRows is true, false otherwise.</returns>
-        private static bool DoesResultHaveRows(Dictionary<string, object> properties)
-        {
-            return properties.TryGetValue(nameof(DbDataReader.HasRows), out object? hasRows) &&
-                   Convert.ToBoolean(hasRows);
         }
 
         /// <summary>

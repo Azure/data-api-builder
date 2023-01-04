@@ -112,4 +112,4 @@ query {
 }
 ```
 
-If a parameter is specified both in the configuration file and in the URL query string, the one in the URL query string will take precedence.
+If a parameter is specified both in the configuration file and in the URL query string for a stored procedure, the one in the URL query string will take precedence.

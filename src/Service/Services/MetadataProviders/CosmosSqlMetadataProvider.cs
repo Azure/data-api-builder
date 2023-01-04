@@ -22,6 +22,9 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         private Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
 
         /// <inheritdoc />
+        public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
+
+        /// <inheritdoc />
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
 
         public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)

@@ -97,8 +97,10 @@ namespace Cli
                 dataSource.ConnectionString = options.ConnectionString;
             }
 
+            string dabSchemaLink = RuntimeConfig.GetPublishedDraftSchemaLink();
+
             RuntimeConfig runtimeConfig = new(
-                Schema: RuntimeConfig.SCHEMA,
+                Schema: dabSchemaLink,
                 DataSource: dataSource,
                 RuntimeSettings: GetDefaultGlobalSettings(
                     options.HostMode,

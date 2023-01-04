@@ -4,6 +4,7 @@ namespace Cli.Tests
     {
         // Config file name for tests
         public static string _testRuntimeConfig = "dab-config-test.json";
+        public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-alpha/dab.draft.schema.json";
 
         /// <summary>
         /// Adds the entity properties to the configuration and returns the updated configuration json as a string.
@@ -53,7 +54,7 @@ namespace Cli.Tests
         /// for unit tests
         /// </summary>
         public const string SCHEMA_PROPERTY = @"
-          ""$schema"": """ + Azure.DataApiBuilder.Config.RuntimeConfig.SCHEMA + @"""";
+          ""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""";
 
         /// <summary>
         /// Data source property of the config json. This is used for constructing the required config json strings
@@ -357,10 +358,10 @@ namespace Cli.Tests
             }
         }";
 
-        public const string CONFIG_WITH_SINGLE_ENTITY = @"
-          {
-        ""$schema"": ""dab.draft.schema.json"",
-        ""data-source"": {
+        public const string CONFIG_WITH_SINGLE_ENTITY =
+        @"{" +
+          @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+          @"""data-source"": {
           ""database-type"": ""mssql"",
           ""connection-string"": ""localhost:5000""
         },

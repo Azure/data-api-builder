@@ -236,7 +236,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 ""publisher_name"": ""The First Publisher""
             }";
 
-            string expectedLocationHeader = _integrationProcedureInsertOneAndDisplay_EntityName;
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
@@ -245,7 +244,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 operationType: Config.Operation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
-                expectedLocationHeader: expectedLocationHeader
+                expectedLocationHeader: _integrationProcedureInsertOneAndDisplay_EntityName
             );
         }
 

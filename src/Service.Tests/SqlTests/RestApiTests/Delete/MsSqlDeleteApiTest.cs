@@ -65,7 +65,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
         /// Delete the last inserted row (row with max id) from books.
         /// Verify that the row doesn't exist anymore.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public async Task DeleteOneWithStoredProcedureTest()
         {

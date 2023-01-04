@@ -43,7 +43,7 @@ foreach ($RID in $RIDs) {
 
 # Generating hash for nuget
 $nugetFileName = "dab.$DabVersion.nupkg"
-$nugetFilePath = "$BuildOutputDir/nupkg/$fileName"
+$nugetFilePath = "$BuildOutputDir/nupkg/$nugetFileName"
 $fileHashInfo = Get-FileHash $nugetFilePath
 $nuget_file_hash = $fileHashInfo.Hash
 $download_url_nuget = "https://dataapibuilder.azureedge.net/releases/download/$versionTag/$nugetFileName"

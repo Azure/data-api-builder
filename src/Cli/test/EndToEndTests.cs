@@ -477,7 +477,7 @@ public class EndToEndTests
     {
         if (!File.Exists(_testRuntimeConfig))
         {
-            string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql"};
+            string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql" };
             Program.Main(initArgs);
         }
 

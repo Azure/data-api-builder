@@ -6,20 +6,22 @@ namespace Azure.DataApiBuilder.Service.Models
 {
     public static class HttpContextExtensions
     {
-        public static string? GetCorrelationId(this HttpContext context)
+        /// <summary>
+        /// Retrieving correaltion id from http context
+        /// </summary>
+        /// <param name="context">http context for current request</param>
+        /// <returns></returns>
+        public static Guid GetCorrelationId(this HttpContext context)
         {
-            string? correlationId = null;
-
-            if (context.Request.Headers.TryGetValue(HttpHeaders.CORRELATION_ID, out StringValues correlationIdHeader)
-                && Guid.TryParse(correlationIdHeader, out _))
+            Guid correlationId;
+            if (context.Request.Headers.TryGetValue(HttpHeaders.CORRELATION_ID, out StringValues correlationIdFromHeader)
+                && Guid.TryParse(correlationIdFromHeader, out correlationId))
             {
-                correlationId = correlationIdHeader.ToString();
-            }
-            else if (context.Items.TryGetValue(HttpHeaders.CORRELATION_ID, out object? correlationIdItem))
-            {
-                correlationId = correlationIdItem as string;
+                return correlationId;
             }
 
+            context.Items.TryGetValue(HttpHeaders.CORRELATION_ID, out object? correlationIdItem);
+            Guid.TryParse(correlationIdItem as string, out correlationId);
             return correlationId;
         }
     }

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
@@ -30,15 +29,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Guid guid = Guid.NewGuid();
             IHost host = await CreateCorrelationIdConfiguredWebHost();
             TestServer server = host.GetTestServer();
-            HttpClient client = server.CreateClient();
             HttpContext returnContext = await server.SendAsync(context =>
             {
                 KeyValuePair<string, StringValues> correlationIdHeader = new(HttpHeaders.CORRELATION_ID, guid.ToString());
                 context.Request.Headers.Add(correlationIdHeader);
             });
 
-            Assert.IsNotNull(returnContext.Response.Headers[HttpHeaders.CORRELATION_ID]);
-            Assert.AreEqual<string>(expected: guid.ToString(), actual: returnContext.Response.Headers[HttpHeaders.CORRELATION_ID]);
+            string actualCorrelationId = returnContext.Response.Headers[HttpHeaders.CORRELATION_ID];
+            Assert.IsFalse(string.IsNullOrEmpty(actualCorrelationId));
+            Assert.AreEqual<string>(expected: guid.ToString(), actual: actualCorrelationId);
         }
 
         /// <summary>
@@ -49,7 +48,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             IHost host = await CreateCorrelationIdConfiguredWebHost();
             TestServer server = host.GetTestServer();
-            HttpClient client = server.CreateClient();
             HttpContext returnContext = await server.SendAsync(context =>
             {
                 context.Request.Headers.Remove(HttpHeaders.CORRELATION_ID);
@@ -71,7 +69,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             IHost host = await CreateCorrelationIdConfiguredWebHost();
             TestServer server = host.GetTestServer();
-            HttpClient client = server.CreateClient();
             HttpContext returnContext = await server.SendAsync(context =>
             {
                 KeyValuePair<string, StringValues> correlationIdHeader = new(HttpHeaders.CORRELATION_ID, "Invalid Guid");
@@ -79,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             });
 
             Assert.IsNotNull(returnContext.Response.Headers[HttpHeaders.CORRELATION_ID]);
-            Assert.IsTrue(Guid.TryParse(returnContext.Response.Headers[HttpHeaders.CORRELATION_ID], out _));
+            Assert.IsTrue(Guid.TryParse(returnContext.Response.Headers[HttpHeaders.CORRELATION_ID], out _), message: "Response headers contain correlation id in a valid Guid format.");
         }
 
         #endregion

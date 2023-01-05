@@ -11,9 +11,4 @@ namespace Azure.DataApiBuilder.Service.Models
         public const string PUT = "PUT";
         public const string DELETE = "DELETE";
     }
-
-    public static class HttpHeaders
-    {
-        public const string CORRELATION_ID = "x-ms-correlation-id";
-    }
 }

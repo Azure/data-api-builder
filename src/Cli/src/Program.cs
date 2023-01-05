@@ -50,6 +50,14 @@ namespace Cli
                 })
                 .WithParsed<AddOptions>(options =>
                 {
+                    if (!options.IsEntityProvidedByUser())
+                    {
+                        cliLogger.LogError($"Entity name is missing. " +
+                            $"Usage: dab add [entity-name] [add-options]");
+                        
+                        return;
+                    }
+
                     bool isSuccess = ConfigGenerator.TryAddEntityToConfigWithOptions(options);
                     if (isSuccess)
                     {
@@ -65,11 +73,19 @@ namespace Cli
                 })
                 .WithParsed<UpdateOptions>(options =>
                 {
+                    if (!options.IsEntityProvidedByUser())
+                    {
+                        cliLogger.LogError($"Entity name is missing. " +
+                            $"Usage: dab update [entity-name] [update-options]");
+                        
+                        return;
+                    }
+
                     bool isSuccess = ConfigGenerator.TryUpdateEntityWithOptions(options);
 
                     if (isSuccess)
                     {
-                        cliLogger.LogInformation($"Updated the entity:{options.Entity} in the config.");
+                        cliLogger.LogInformation($"Updated the entity: {options.Entity} in the config.");
                     }
                     else
                     {

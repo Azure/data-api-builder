@@ -39,7 +39,7 @@ Stored procedures are now supported for REST requests. If you have a stored proc
 
 ```sh
 
-dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" --permissions "anonymous:read"
+dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" --permissions "anonymous:read" --rest true
 ```
 
 The parameter can be passed in the URL query string when calling the REST endpoint:

@@ -48,7 +48,7 @@ Stored procedures can be used as objects related to entities exposed by Data API
 If you have a stored procedure, for example [`dbo.stp_get_all_cowritten_books_by_author`](../samples/getting-started/azure-sql-db/library.azure-sql.sql#L138) it can be exposed using the following `dab` command:
 
 ```sh
-dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" source.params "searchType:s" --permissions "anonymous:read"
+dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" source.params "searchType:s" --permissions "anonymous:read" --rest true --graphql true
 ```
 
 the `dab-config.json` file will look like the following:
@@ -62,6 +62,8 @@ the `dab-config.json` file will look like the following:
       "searchType": "s"
     }
   },
+  "rest": true,
+  "graphql": true,
   "permissions": [{
    "role": "anonymous",
     "actions": [ "read" ]
@@ -110,4 +112,4 @@ query {
 }
 ```
 
-If a parameter is specified both in the configuration file and in the URL query string, the one in the URL query string will take precedence.
+If a parameter is specified both in the configuration file and in the URL query string for a stored procedure, the one in the URL query string will take precedence.

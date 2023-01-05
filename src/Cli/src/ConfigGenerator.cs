@@ -99,12 +99,24 @@ namespace Cli
 
             string dabSchemaLink = RuntimeConfig.GetPublishedDraftSchemaLink();
 
+            // Default Authentication Provider is StaticWebApps of type EasyAuth.
+            string authenticationProvider = options.AuthenticationProvider ?? EasyAuthType.StaticWebApps.ToString();
+
+            if (!ValidateAudienceAndIssuerForAuthenticationProvider(authenticationProvider, options.Audience, options.Issuer))
+            {
+                _logger.LogError($"Authentication provider other than EasyAuth and Simulator requires both Audience and Issuer.");
+                return false;
+            }
+
             RuntimeConfig runtimeConfig = new(
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 RuntimeSettings: GetDefaultGlobalSettings(
                     options.HostMode,
-                    options.CorsOrigin),
+                    options.CorsOrigin,
+                    authenticationProvider,
+                    options.Audience,
+                    options.Issuer),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());

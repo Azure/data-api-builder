@@ -6,6 +6,7 @@ using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
 using Humanizer;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Config.AuthenticationConfig;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>
@@ -286,14 +287,21 @@ namespace Cli
         /// Returns the default global settings.
         /// </summary>
         public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(HostModeType hostMode,
-                                                                                      IEnumerable<string>? corsOrigin)
+                                                                                      IEnumerable<string>? corsOrigin,
+                                                                                      string authenticationProvider,
+                                                                                      string? audience = null,
+                                                                                      string? issuer = null)
         {
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
             defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings());
             defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
             defaultGlobalSettings.Add(
                 GlobalSettingsType.Host,
-                GetDefaultHostGlobalSettings(hostMode, corsOrigin));
+                GetDefaultHostGlobalSettings(hostMode,
+                    corsOrigin,
+                    authenticationProvider,
+                    audience,
+                    issuer));
             return defaultGlobalSettings;
         }
 
@@ -314,11 +322,26 @@ namespace Cli
         /// </summary>
         public static HostGlobalSettings GetDefaultHostGlobalSettings(
             HostModeType hostMode,
-            IEnumerable<string>? corsOrigin)
+            IEnumerable<string>? corsOrigin,
+            string authenticationProvider,
+            string? audience,
+            string? issuer)
         {
             string[]? corsOriginArray = corsOrigin is null ? new string[] { } : corsOrigin.ToArray();
             Cors cors = new(Origins: corsOriginArray);
-            AuthenticationConfig authenticationConfig = new(Provider: EasyAuthType.StaticWebApps.ToString());
+            AuthenticationConfig authenticationConfig;
+            if (Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _)
+                || SIMULATOR_AUTHENTICATION.Equals(authenticationProvider))
+            {
+                authenticationConfig = new(Provider: authenticationProvider);
+            }
+            else
+            {
+                authenticationConfig = new(
+                    Provider: authenticationProvider,
+                    Jwt: new(audience, issuer)
+                );
+            }
 
             return new HostGlobalSettings(
                 Mode: hostMode,
@@ -702,6 +725,23 @@ namespace Cli
             }
 
             operationName = action.Name;
+            return true;
+        }
+
+        /// <summary>
+        /// Check both Audience and Issuer is specified, when Authentication provider is EasyAuthType or Simulator.
+        /// </summary>
+        public static bool ValidateAudienceAndIssuerForAuthenticationProvider(
+            string authenticationProvider,
+            string? audience,
+            string? issuer)
+        {
+            if (!(Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _))
+               && !(SIMULATOR_AUTHENTICATION.Equals(authenticationProvider)))
+            {
+                return (audience is not null) && (issuer is not null);
+            }
+
             return true;
         }
 

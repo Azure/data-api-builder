@@ -32,6 +32,9 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                audience: null,
+                issuer: null,
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
@@ -69,6 +72,9 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                audience: null,
+                issuer: null,
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
@@ -106,6 +112,9 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                audience: null,
+                issuer: null,
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
@@ -142,6 +151,9 @@ namespace Cli.Tests
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                audience: null,
+                issuer: null,
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
@@ -189,6 +201,9 @@ namespace Cli.Tests
                 graphQLSchemaPath: graphQLSchema,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                audience: null,
+                issuer: null,
                 config: _testRuntimeConfig);
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
@@ -209,6 +224,9 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { },
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                audience: null,
+                issuer: null,
                 config: _testRuntimeConfig);
 
             // Config generated successfully for the first time.
@@ -217,6 +235,58 @@ namespace Cli.Tests
             // Error is thrown because the config file with the same name
             // already exists.
             Assert.AreEqual(false, ConfigGenerator.TryGenerateConfig(options));
+        }
+
+        /// <summary>
+        /// Test to verify that an error is thrown when user tries to
+        /// initialize a config with a file name that already exists.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("StaticWebApps", "aud-xxx", "issuer-xxx", DisplayName = "StaticWebApps with both audience and issuer specified.")]
+        [DataRow("StaticWebApps", null, "issuer-xxx", DisplayName = "StaticWebApps with no audience specified.")]
+        [DataRow("StaticWebApps", "aud-xxx", null, DisplayName = "StaticWebApps with no issuer specified.")]
+        [DataRow("StaticWebApps", null, null, DisplayName = "StaticWebApps with no audience and no issuer specified.")]
+        [DataRow("Simulator", "aud-xxx", "issuer-xxx", DisplayName = "Simulator with both audience and issuer specified.")]
+        [DataRow("Simulator", null, "issuer-xxx", DisplayName = "Simulator with no audience specified.")]
+        [DataRow("Simulator", "aud-xxx", null, DisplayName = "Simulator with no issuer specified.")]
+        [DataRow("Simulator", null, null, DisplayName = "Simulator with no audience and no issuer specified.")]
+        [DataRow("AzureAD", "aud-xxx", "issuer-xxx", DisplayName = "AzureAD with both audience and issuer specified.")]
+        public void EnsureAuthenticationIsCorrectlyConfiguredWithCLI(
+            string? authenticationProvider,
+            string? audience,
+            string? issuer)
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                hostMode: HostModeType.Production,
+                corsOrigin: null,
+                authenticationProvider: authenticationProvider,
+                audience: audience,
+                issuer: issuer,
+                config: _testRuntimeConfig);
+
+            _basicRuntimeConfig =
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring""
+                },
+                ""entities"": {}
+            }";
+
+            // Adding runtime settings to the above basic config
+            string expectedRuntimeConfig = AddPropertiesToJson(
+                _basicRuntimeConfig,
+                GetDefaultTestRuntimeSettingString(
+                    authenticationProvider: authenticationProvider,
+                    audience: audience,
+                    issuer: issuer));
+            RunTest(options, expectedRuntimeConfig);
         }
 
         /// <summary>
@@ -272,6 +342,9 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Production,
                 corsOrigin: new List<string>() { },
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                audience: null,
+                issuer: null,
                 config: fileName);
 
             return options;

@@ -179,6 +179,36 @@ namespace Cli.Tests
             }
         }
 
+        /// <summary>
+        /// Test to verify that both Audience and Issuer is mandatory when Authentication Provider is 
+        /// neither EasyAuthType or Simulator. If Authentication Provider is either EasyAuth or Simulator
+        /// audience and issuer is ignored.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("StaticWebApps", "aud-xxx", "issuer-xxx", true, DisplayName = "PASS: StaticWebApps with both audience and issuer specified.")]
+        [DataRow("StaticWebApps", null, "issuer-xxx", true, DisplayName = "PASS: StaticWebApps with no audience specified.")]
+        [DataRow("StaticWebApps", "aud-xxx", null, true, DisplayName = "PASS: StaticWebApps with no issuer specified.")]
+        [DataRow("StaticWebApps", null, null, true, DisplayName = "PASS: StaticWebApps with no audience and no issuer specified.")]
+        [DataRow("Simulator", "aud-xxx", "issuer-xxx", true, DisplayName = "PASS: Simulator with both audience and issuer specified.")]
+        [DataRow("Simulator", null, "issuer-xxx", true, DisplayName = "PASS: Simulator with no audience specified.")]
+        [DataRow("Simulator", "aud-xxx", null, true, DisplayName = "PASS: Simulator with no issuer specified.")]
+        [DataRow("Simulator", null, null, true, DisplayName = "PASS: Simulator with no audience and no issuer specified.")]
+        [DataRow("AzureAD", "aud-xxx", "issuer-xxx", true, DisplayName = "PASS: AzureAD with both audience and issuer specified.")]
+        [DataRow("AzureAD", null, "issuer-xxx", false, DisplayName = "FAIL: AzureAD with no audience specified.")]
+        [DataRow("AzureAD", "aud-xxx", null, false, DisplayName = "FAIL: AzureAD with no issuer specified.")]
+        [DataRow("AzureAD", null, null, false, DisplayName = "FAIL: AzureAD with no audience and no issuer specified.")]
+        public void TestValidateAudienceAndIssuerForAuthenticationProvider(
+            string authenticationProvider,
+            string? audience,
+            string? issuer,
+            bool expectSuccess)
+        {
+            Assert.AreEqual(
+                expectSuccess,
+                ValidateAudienceAndIssuerForAuthenticationProvider(authenticationProvider, audience, issuer)
+            );
+        }
+
         [ClassCleanup]
         public static void Cleanup()
         {

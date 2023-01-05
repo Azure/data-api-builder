@@ -34,6 +34,9 @@ namespace Cli
             string? graphQLSchemaPath,
             HostModeType hostMode,
             IEnumerable<string>? corsOrigin,
+            string? authenticationProvider,
+            string? audience,
+            string? issuer,
             string config)
             : base(config)
         {
@@ -44,6 +47,9 @@ namespace Cli
             GraphQLSchemaPath = graphQLSchemaPath;
             HostMode = hostMode;
             CorsOrigin = corsOrigin;
+            AuthenticationProvider = authenticationProvider;
+            Audience = audience;
+            Issuer = issuer;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]
@@ -66,6 +72,15 @@ namespace Cli
 
         [Option("cors-origin", Separator = ',', Required = false, HelpText = "Specify the list of allowed origins.")]
         public IEnumerable<string>? CorsOrigin { get; }
+
+        [Option("auth.provider", Required = false, HelpText = "Specify the Identity Provider.")]
+        public string? AuthenticationProvider { get; }
+
+        [Option("audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]
+        public string? Audience { get; }
+
+        [Option("issuer", Required = false, HelpText = "Specify the party that issued the jwt token.")]
+        public string? Issuer { get; }
     }
 
     /// <summary>

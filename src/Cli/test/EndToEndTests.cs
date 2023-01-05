@@ -460,6 +460,43 @@ public class EndToEndTests
 
     }
 
+    /// <summary>
+    /// Test to verify that if entity is not specified in the add/update
+    /// command, a custom (more user friendly) message is displayed.
+    /// </summary>
+    [DataRow("add", "", "-s my_entity --permissions anonymous:create", false)]
+    [DataRow("add", "MyEntity", "-s my_entity --permissions anonymous:create", true)]
+    [DataRow("update", "", "-s my_entity --permissions authenticate:*", false)]
+    [DataRow("update", "MyEntity", "-s my_entity --permissions authenticate:*", true)]
+    [DataTestMethod]
+    public void TestMissingEntityFromCommand(
+        string command,
+        string entityName,
+        string flags,
+        bool expectSuccess)
+    {
+        if (!File.Exists(_testRuntimeConfig))
+        {
+            string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql"};
+            Program.Main(initArgs);
+        }
+
+        using Process process = StartDabProcess(
+            command: $"{command} {entityName}",
+            flags: $"-c {_testRuntimeConfig} {flags}"
+        );
+
+        string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+        if (!expectSuccess)
+        {
+            Assert.IsTrue(output.Contains($"Error: Entity name is missing. Usage: dab {command} [entity-name] [{command}-options]"));
+        }
+
+        process.Kill();
+
+    }
+
     public static RuntimeConfig? TryGetRuntimeConfig(string testRuntimeConfig)
     {
         ILogger logger = new Mock<ILogger>().Object;

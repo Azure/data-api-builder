@@ -149,9 +149,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             },
             {
                 "InsertOneAndReturnSingleRowWithStoredProcedureTest",
-                // This query is the query for the result we get back from the database
-                // after the insert operation. Not the query that we generate to perform
-                // the insertion.
+                // This query attempts retrieval of the stored procedure insert operation result,
+                // and is explicitly not representative of the engine generated insert statement.
                 $"SELECT table0.[id], table0.[title], table0.[publisher_id] FROM books AS table0 " +
                 $"JOIN (SELECT id FROM publishers WHERE name = 'The First Publisher') AS table1 " +
                 $"ON table0.[publisher_id] = table1.[id] " +
@@ -224,8 +223,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         /// <summary>
         /// Tests the Insert one and return single row functionality with a REST POST request
         /// using stored procedure.
-        /// The below request tries to insert a book for a given publisher
-        /// and returns all the books under that publisher.
+        /// The request executes a stored procedure which attempts to insert a book for a given publisher
+        /// and then returns all books under that publisher.
         /// </summary>
         [TestMethod]
         public async Task InsertOneAndReturnSingleRowWithStoredProcedureTest()

@@ -42,8 +42,11 @@ namespace Azure.DataApiBuilder.Service.Services
 
             httpContext.Response.OnStarting(() =>
             {
-                Guid correlationId = httpContext.GetCorrelationId();
-                httpContext.Response.Headers.TryAdd(HttpHeaders.CORRELATION_ID, correlationId.ToString());
+                Guid? correlationId = httpContext.GetCorrelationId();
+                if (correlationId is not null)
+                {
+                    httpContext.Response.Headers.TryAdd(HttpHeaders.CORRELATION_ID, correlationId.ToString());
+                }
 
                 return Task.CompletedTask;
             });

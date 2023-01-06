@@ -11,7 +11,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// </summary>
         /// <param name="context">http context for current request</param>
         /// <returns></returns>
-        public static Guid GetCorrelationId(this HttpContext context)
+        public static Guid? GetCorrelationId(this HttpContext context)
         {
             Guid correlationId;
             if (context.Request.Headers.TryGetValue(HttpHeaders.CORRELATION_ID, out StringValues correlationIdFromHeader)
@@ -20,9 +20,13 @@ namespace Azure.DataApiBuilder.Service.Models
                 return correlationId;
             }
 
-            context.Items.TryGetValue(HttpHeaders.CORRELATION_ID, out object? correlationIdItem);
-            Guid.TryParse(correlationIdItem as string, out correlationId);
-            return correlationId;
+            if (context.Items.TryGetValue(HttpHeaders.CORRELATION_ID, out object? correlationIdItem))
+            {
+                Guid.TryParse(correlationIdItem as string, out correlationId);
+                return correlationId;
+            }
+
+            return null;
         }
     }
 }

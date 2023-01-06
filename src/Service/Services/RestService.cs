@@ -271,7 +271,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     // Stored procedure call is semantically identical for all methods except Find, so we can
                     // effectively reuse the ValidateInsertRequest - throws error if query string is nonempty
                     // and parses the body into json
-                    JsonElement requestPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
+                    JsonElement requestPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
                     context = new StoredProcedureRequestContext(
                         entityName,
                         dbo: dbObject,
